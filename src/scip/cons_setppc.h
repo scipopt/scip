@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.h,v 1.19 2005/05/31 17:20:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.h,v 1.20 2005/06/29 11:08:05 bzfpfend Exp $"
 
 /**@file   cons_setppc.h
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -113,6 +113,13 @@ RETCODE SCIPaddCoefSetppc(
 /** gets the dual solution of the set partitioning / packing / covering constraint in the current LP */
 extern
 Real SCIPgetDualsolSetppc(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint data */
+   );
+
+/** gets the dual farkas value of the set partitioning / packing / covering constraint in the current infeasible LP */
+extern
+Real SCIPgetDualfarkasSetppc(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons                /**< constraint data */
    );

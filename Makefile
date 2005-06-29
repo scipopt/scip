@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.112 2005/06/23 16:30:03 bzfberth Exp $
+# $Id: Makefile,v 1.113 2005/06/29 11:08:03 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -141,7 +141,8 @@ endif
 ifeq ($(LPS),clp)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/clpinc
-LPSLDFLAGS	=	-lclp.$(OSTYPE).$(ARCH).$(COMP) -lcoin.$(OSTYPE).$(ARCH).$(COMP)
+#LPSLDFLAGS	=	-lclp.$(OSTYPE).$(ARCH).$(COMP) -lcoin.$(OSTYPE).$(ARCH).$(COMP)
+LPSLDFLAGS	=	-L$(LIBDIR)/clpinc/../lib -Wl,-rpath,$(LIBDIR)/clpinc/../lib -lClp -lCoin
 LPILIBOBJ	=	scip/lpi_clp.o scip/bitencode.o scip/memory.o
 LPILIBSRC	=	src/scip/lpi_clp.cpp src/scip/bitencode.c src/scip/memory.c
 endif

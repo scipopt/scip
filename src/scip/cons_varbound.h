@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.h,v 1.8 2005/05/31 17:20:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.h,v 1.9 2005/06/29 11:08:05 bzfpfend Exp $"
 
 /**@file   cons_varbound.h
  * @brief  constraint handler for varbound constraints
@@ -56,6 +56,20 @@ RETCODE SCIPcreateConsVarbound(
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    Bool             dynamic,            /**< is constraint subject to aging? */
    Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   );
+
+/** gets the dual solution of the varbound constraint in the current LP */
+extern
+Real SCIPgetDualsolVarbound(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint data */
+   );
+
+/** gets the dual farkas value of the varbound constraint in the current infeasible LP */
+extern
+Real SCIPgetDualfarkasVarbound(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint data */
    );
 
 #endif

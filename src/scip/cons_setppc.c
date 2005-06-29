@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.84 2005/05/31 17:20:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.85 2005/06/29 11:08:04 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -2841,6 +2841,29 @@ Real SCIPgetDualsolSetppc(
 
    if( consdata->row != NULL )
       return SCIProwGetDualsol(consdata->row);
+   else
+      return 0.0;
+}
+
+/** gets the dual farkas value of the set partitioning / packing / covering constraint in the current infeasible LP */
+Real SCIPgetDualfarkasSetppc(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint data */
+   )
+{
+   CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      errorMessage("constraint is not a set partitioning / packing / covering constraint\n");
+      abort();
+   }
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->row != NULL )
+      return SCIProwGetDualfarkas(consdata->row);
    else
       return 0.0;
 }

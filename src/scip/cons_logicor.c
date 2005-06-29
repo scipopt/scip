@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.82 2005/05/31 17:20:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.83 2005/06/29 11:08:04 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -1772,6 +1772,29 @@ Real SCIPgetDualsolLogicor(
 
    if( consdata->row != NULL )
       return SCIProwGetDualsol(consdata->row);
+   else
+      return 0.0;
+}
+
+/** gets the dual farkas value of the logic or constraint in the current infeasible LP */
+Real SCIPgetDualfarkasLogicor(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint data */
+   )
+{
+   CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      errorMessage("constraint is not a logic or constraint\n");
+      abort();
+   }
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->row != NULL )
+      return SCIProwGetDualfarkas(consdata->row);
    else
       return 0.0;
 }

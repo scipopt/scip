@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.h,v 1.37 2005/05/31 17:20:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.h,v 1.38 2005/06/29 11:08:04 bzfpfend Exp $"
 
 /**@file   cons_linear.h
  * @brief  constraint handler for linear constraints
@@ -173,6 +173,13 @@ Real SCIPgetFeasibilityLinear(
 /** gets the dual solution of the linear constraint in the current LP */
 extern
 Real SCIPgetDualsolLinear(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint data */
+   );
+
+/** gets the dual farkas value of the linear constraint in the current infeasible LP */
+extern
+Real SCIPgetDualfarkasLinear(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons                /**< constraint data */
    );

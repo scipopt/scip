@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.h,v 1.22 2005/05/31 17:20:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.h,v 1.23 2005/06/29 11:08:04 bzfpfend Exp $"
 
 /**@file   cons_knapsack.h
  * @brief  constraint handler for knapsack constraints
@@ -64,6 +64,20 @@ RETCODE SCIPaddCoefKnapsack(
    CONS*            cons,               /**< constraint data */
    VAR*             var,                /**< item variable */
    Longint          weight              /**< item weight */
+   );
+
+/** gets the dual solution of the knapsack constraint in the current LP */
+extern
+Real SCIPgetDualsolKnapsack(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint data */
+   );
+
+/** gets the dual farkas value of the knapsack constraint in the current infeasible LP */
+extern
+Real SCIPgetDualfarkasKnapsack(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint data */
    );
 
 /** solves knapsack problem with dynamic programming;

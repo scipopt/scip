@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.49 2005/05/31 17:20:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.50 2005/06/29 11:08:06 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2
@@ -2332,7 +2332,7 @@ RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_LPINFO:
       assert(ival == TRUE || ival == FALSE);
       if( ival )
-         Param::setVerbose(3);
+         Param::setVerbose(2);
       else 
          Param::setVerbose(0);
       break;

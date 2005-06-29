@@ -20,6 +20,7 @@ interface:
 - new method SCIPnodeGetNumber()
 - new method SCIPsolveProbingLP() to solve the LP in a probing node (enables mixing of propagation and LP solving
   for diving heuristics)
+- new method SCIProwGetDualfarkas()
 
 plugins:
 - added command "write solution" to default dialog
@@ -30,12 +31,20 @@ plugins:
 - new primal heuristic "octane"
 - slightly changed feaspump heuristic, s.t. after finding a new best solution the target integral solution is modified
   randomly
+- new method SCIPgetDualfarkasLinear() of linear constraint handler
+- new method SCIPgetDualfarkasLogicor() of logicor constraint handler
+- new method SCIPgetDualfarkasSetppc() of setppc constraint handler
+- new method SCIPgetDualsolKnapsack() of knapsack constraint handler
+- new method SCIPgetDualfarkasKnapsack() of knapsack constraint handler
+- new method SCIPgetDualsolVarbound() of varbound constraint handler
+- new method SCIPgetDualfarkasVarbound() of varbound constraint handler
 
 parameters:
 - replaced parameter presolving/restartbdchgs with parameters presolving/maxrestarts and presolving/restartfac
 - new parameter conflict/maxclauses
 - new parameter conflict/allowlocal
 - new parameter branching/fullstrong/reevalage
+- changed default values of heuristics/*/maxdiveavgquot and heuristics/*/maxdiveavgquotnosol to 0
 
 features:
 - reactivated multiaggregation in cons_linear.c on binary variables again (possible due to bug fix below)
@@ -45,6 +54,8 @@ features:
   "conflict/maxclauses" clauses are added permanently to the problem; the remaining clauses are only added
   temporarily, if they can be used for repropagation
 - improved debugging for infeasible cuts and propagations, given a primal feasible solution
+- slightly changed LP resolving loop in conflict analysis
+- diving heuristics now apply propagation at each step
 
 fixed bugs:
 - LP primal feasibility for bounds is now defined as absolute measure (was relative to the bound before);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.22 2005/05/31 17:20:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.23 2005/06/29 11:08:06 bzfpfend Exp $"
 
 /**@file   heur_rootsoldiving.c
  * @brief  LP diving heuristic that changes variable's objective values using root LP solution as guide
@@ -162,6 +162,8 @@ DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    int nintvars;
    int nlpcands;
    LPSOLSTAT lpsolstat; 
+   Real absstartobjval;
+   Real objstep;
    Real alpha;
    Real oldobj;
    Real newobj;
@@ -248,6 +250,12 @@ DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    for( i = 0; i < nbinvars + nintvars; i++ )
       rootsol[i] = SCIPvarGetRootSol(vars[i]);
 
+   /* get current LP objective value, and calculate length of a single step in an objective coefficient */
+   absstartobjval = SCIPgetLPObjval(scip);
+   absstartobjval = ABS(absstartobjval);
+   absstartobjval = MAX(absstartobjval, 1.0);
+   objstep = absstartobjval / 10.0;
+
    /* initialize array storing the preferred soft rounding direction for the variables */
    CHECK_OKAY( SCIPallocBufferArray(scip, &softroundings, nbinvars + nintvars) );
    clearMemoryArray(softroundings, nbinvars + nintvars);
@@ -258,8 +266,9 @@ DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    /* get number of fractional variables, that should be integral */
    nlpcands = SCIPgetNLPBranchCands(scip);
 
-   debugMessage("(node %lld) executing rootsoldiving heuristic: depth=%d, %d fractionals, dualbound=%g, maxnlpiterations=%lld, maxdivedepth=%d\n",
-      SCIPgetNNodes(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), maxnlpiterations, maxdivedepth);
+   debugMessage("(node %lld) executing rootsoldiving heuristic: depth=%d, %d fractionals, dualbound=%g, maxnlpiterations=%lld, maxdivedepth=%d, LPobj=%g, objstep=%g\n",
+      SCIPgetNNodes(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), maxnlpiterations, maxdivedepth,
+      SCIPgetLPObjval(scip), objstep);
 
    lperror = FALSE;
    divedepth = 0;
@@ -273,7 +282,11 @@ DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
          || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations)) )
    {
       Bool success;
-         
+      int hardroundingidx;
+      int hardroundingdir;
+      Real hardroundingoldbd;
+      Real hardroundingnewbd;
+
       /* create solution from diving LP and try to round it */
       CHECK_OKAY( SCIPlinkLPSol(scip, heurdata->sol) );
       CHECK_OKAY( SCIProundSol(scip, heurdata->sol, &success) );
@@ -294,7 +307,13 @@ DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       }
 
       divedepth++;
+      hardroundingidx = -1;
+      hardroundingdir = 0;
+      hardroundingoldbd = 0.0;
+      hardroundingnewbd = 0.0;
 
+      debugMessage("dive %d/%d, LP iter %lld/%lld:\n", divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations);
+         
       /* round solution x* from diving LP: 
        *   - x~_j = down(x*_j)    if x*_j is integer or binary variable and x*_j <= root solution_j
        *   - x~_j = up(x*_j)      if x*_j is integer or binary variable and x*_j  > root solution_j
@@ -333,12 +352,18 @@ DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
              * otherwise, apply soft rounding by changing the objective value
              */
             softroundings[i]--;
-            if( softroundings[i] <= -10 )
+            if( softroundings[i] <= -10 && hardroundingidx == -1 )
             {
-               CHECK_OKAY( SCIPchgVarUbDive(scip, var, SCIPfeasFloor(scip, solval)) );
+               debugMessage(" -> hard rounding <%s>[%g] <= %g\n", 
+                  SCIPvarGetName(var), solval, SCIPfeasFloor(scip, solval));
+               hardroundingidx = i;
+               hardroundingdir = -1;
+               hardroundingoldbd = SCIPgetVarUbDive(scip, var);
+               hardroundingnewbd = SCIPfeasFloor(scip, solval);
+               CHECK_OKAY( SCIPchgVarUbDive(scip, var, hardroundingnewbd) );
             }
             else
-               newobj = alpha * oldobj + 1.0;
+               newobj = alpha * oldobj + objstep;
          }
          else
          {
@@ -346,17 +371,22 @@ DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
              * otherwise, apply soft rounding by changing the objective value
              */
             softroundings[i]++;
-            if( softroundings[i] >= +10 )
+            if( softroundings[i] >= +10 && hardroundingidx == -1 )
             {
-               CHECK_OKAY( SCIPchgVarLbDive(scip, var, SCIPfeasCeil(scip, solval)) );
+               debugMessage(" -> hard rounding <%s>[%g] >= %g\n", 
+                  SCIPvarGetName(var), solval, SCIPfeasCeil(scip, solval));
+               hardroundingidx = i;
+               hardroundingdir = +1;
+               hardroundingoldbd = SCIPgetVarLbDive(scip, var);
+               hardroundingnewbd = SCIPfeasCeil(scip, solval);
+               CHECK_OKAY( SCIPchgVarLbDive(scip, var, hardroundingnewbd) );
             }
             else
-               newobj = alpha * oldobj - 1.0;
+               newobj = alpha * oldobj - objstep;
          }
          
-         debugMessage("dive %d/%d, LP iter %lld/%lld: i=%d  var <%s>, solval= %g, rootsol=%g, oldobj=%g, newobj=%g\n",
-            divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations, i,
-            SCIPvarGetName(var), solval, rootsol[i], oldobj, newobj);
+         debugMessage(" -> i=%d  var <%s>, solval=%g, rootsol=%g, oldobj=%g, newobj=%g\n",
+            i, SCIPvarGetName(var), solval, rootsol[i], oldobj, newobj);
          
          CHECK_OKAY( SCIPchgVarObjDive(scip, var, newobj) ); 
       }
@@ -367,16 +397,16 @@ DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
          VAR* var;
 
          var = vars[i];
-         oldobj = SCIPvarGetObj(var);
+         oldobj = SCIPgetVarObjDive(scip, var);
          newobj = alpha * oldobj;
          
-         debugMessage("dive %d/%d, LP iter %lld/%lld: i=%d  var <%s>, oldobj=%g, newobj=%g\n",
-            divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations, i,
-            SCIPvarGetName(var), oldobj, newobj);
+         debugMessage(" -> i=%d  var <%s>, solval=%g, oldobj=%g, newobj=%g\n", 
+            i, SCIPvarGetName(var), SCIPvarGetLPSol(var), oldobj, newobj);
          
          CHECK_OKAY( SCIPchgVarObjDive(scip, var, newobj) ); 
       }
 
+   SOLVEAGAIN:
       /* resolve the diving LP */
       nlpiterations = SCIPgetNLPIterations(scip);
       CHECK_OKAY( SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
@@ -394,6 +424,28 @@ DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
 
       /* get LP solution status and number of fractional variables, that should be integral */
       lpsolstat = SCIPgetLPSolstat(scip);
+      if( lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE && hardroundingidx != -1 )
+      {
+         VAR* var;
+
+         var = vars[hardroundingidx];
+
+         /* round the hard rounded variable to the opposite direction and resolve the LP */
+         if( hardroundingdir == -1 )
+         {
+            debugMessage(" -> opposite hard rounding <%s> >= %g\n", SCIPvarGetName(var), hardroundingnewbd + 1.0);
+            CHECK_OKAY( SCIPchgVarUbDive(scip, var, hardroundingoldbd) );
+            CHECK_OKAY( SCIPchgVarLbDive(scip, var, hardroundingnewbd + 1.0) );
+         }
+         else
+         {
+            debugMessage(" -> opposite hard rounding <%s> <= %g\n", SCIPvarGetName(var), hardroundingnewbd - 1.0);
+            CHECK_OKAY( SCIPchgVarLbDive(scip, var, hardroundingoldbd) );
+            CHECK_OKAY( SCIPchgVarUbDive(scip, var, hardroundingnewbd - 1.0) );
+         }
+         hardroundingidx = -1;
+         goto SOLVEAGAIN;
+      }
       if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
          nlpcands = SCIPgetNLPBranchCands(scip);
       debugMessage("   -> lpsolstat=%d, nfrac=%d\n", lpsolstat, nlpcands);

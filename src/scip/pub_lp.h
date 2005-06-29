@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.25 2005/05/31 17:20:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.26 2005/06/29 11:08:06 bzfpfend Exp $"
 
 /**@file   pub_lp.h
  * @brief  public methods for LP management
@@ -333,6 +333,12 @@ Real SCIProwGetDualsol(
    ROW*             row                 /**< LP row */
    );
 
+/** gets the dual farkas coefficient of a row in an infeasible LP */
+extern
+Real SCIProwGetDualfarkas(
+   ROW*             row                 /**< LP row */
+   );
+
 /** gets the basis status of a row in the LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL
  *  and with SCIPisLPSolBasic(scip) == TRUE; returns SCIP_BASESTAT_BASIC for rows not in the current LP
  */
@@ -411,6 +417,7 @@ Bool SCIProwIsInLP(
 #define SCIProwGetLhs(row)              (row)->lhs
 #define SCIProwGetRhs(row)              (row)->rhs
 #define SCIProwGetDualsol(row)          ((row)->lppos >= 0 ? (row)->dualsol : 0.0)
+#define SCIProwGetDualfarkas(row)       ((row)->lppos >= 0 ? (row)->dualfarkas : 0.0)
 #define SCIProwGetBasisStatus(row)      ((row)->basisstatus)
 #define SCIProwGetName(row)             (row)->name
 #define SCIProwGetIndex(row)            (row)->index

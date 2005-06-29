@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.37 2005/05/31 17:20:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.38 2005/06/29 11:08:07 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -241,6 +241,7 @@ struct Lp
    Bool             primalfeasible;     /**< is current LP solution primal feasible? */
    Bool             dualfeasible;       /**< is current LP solution dual feasible? */
    Bool             solisbasic;         /**< is current LP solution a basic solution? */
+   Bool             probing;            /**< are we currently in probing mode? */
    Bool             diving;             /**< LP is used for diving: col bounds and obj don't corresond to variables */
    Bool             divingobjchg;       /**< objective values were changed in diving: LP objective is invalid */
    Bool             lpifromscratch;     /**< current FROMSCRATCH setting in LPI */

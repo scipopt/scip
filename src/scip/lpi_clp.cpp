@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.19 2005/05/31 17:20:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.20 2005/06/29 11:08:06 bzfpfend Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -1188,7 +1188,7 @@ RETCODE SCIPlpiIgnoreInstability(
    debugMessage("calling SCIPlpiIgnoreInstability()\n");
 
    assert(lpi != NULL);
-   assert(lpi->spx != NULL);
+   assert(lpi->clp != NULL);
 
    /* instable situations cannot be ignored */
    *success = FALSE;
@@ -1458,7 +1458,11 @@ RETCODE SCIPlpiStrongbranch(
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching column down */
    Real*            up,                 /**< stores dual bound after branching column up */
-   int*             iter                /**< stores total number of strong branching iterations, or -1; may be 0 */
+   Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
+                                         *   otherwise, it can only be used as an estimate value */
+   Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
+                                         *   otherwise, it can only be used as an estimate value */
+   int*             iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
    debugMessage("calling SCIPlpiStrongbranch() on variable %d (%d iterations)\n", col, itlim);
@@ -1467,6 +1471,8 @@ RETCODE SCIPlpiStrongbranch(
    assert(lpi->clp != 0);
    assert(down != 0);
    assert(up != 0);
+   assert(downvalid != 0);
+   assert(upvalid != 0);
 
    ClpSimplex* clp = lpi->clp;
 
@@ -1503,6 +1509,8 @@ RETCODE SCIPlpiStrongbranch(
 
    *down += objval;
    *up += objval;
+   *downvalid = TRUE;
+   *upvalid = TRUE;
 
    if (iter)
       *iter = outputIterations[0] + outputIterations[1];

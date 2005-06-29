@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.294 2005/06/23 16:02:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.295 2005/06/29 11:08:06 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8953,7 +8953,9 @@ RETCODE SCIPsolveDiveLP(
    return SCIP_OKAY;
 }
 
-/** returns the number of the node in the current branch and bound run, where the last LP diving was applied */
+/** returns the number of the node in the current branch and bound run, where the last LP was solved in diving
+ *  or probing mode
+ */
 Longint SCIPgetLastDivenode(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -10846,7 +10848,7 @@ Longint SCIPgetNNodeInitLPIterations(
    return scip->stat->ninitlpiterations;
 }
 
-/** gets total number of LPs solved so far during diving */
+/** gets total number of LPs solved so far during diving and probing */
 int SCIPgetNDivingLPs(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -10856,7 +10858,7 @@ int SCIPgetNDivingLPs(
    return scip->stat->ndivinglps;
 }
 
-/** gets total number of simplex iterations used so far during diving */
+/** gets total number of simplex iterations used so far during diving and probing */
 Longint SCIPgetNDivingLPIterations(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -11889,7 +11891,7 @@ void printLPStatistics(
    else
       fprintf(file, "          -\n");
 
-   fprintf(file, "  diving LP        : %10.2f %10d %10lld %10.2f",
+   fprintf(file, "  diving/probing LP: %10.2f %10d %10lld %10.2f",
       SCIPclockGetTime(scip->stat->divinglptime),
       scip->stat->ndivinglps, 
       scip->stat->ndivinglpiterations,

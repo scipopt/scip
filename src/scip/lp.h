@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.105 2005/06/23 16:02:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.106 2005/06/29 11:08:06 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -1006,6 +1006,18 @@ RETCODE SCIPlpEndDive(
    PROB*            prob,               /**< problem data */
    VAR**            vars,               /**< array with all active variables */
    int              nvars               /**< number of active variables */
+   );
+
+/** informs the LP that probing mode was initiated */
+extern
+RETCODE SCIPlpStartProbing(
+   LP*              lp                  /**< current LP data */
+   );
+
+/** informs the LP that probing mode was finished */
+extern
+RETCODE SCIPlpEndProbing(
+   LP*              lp                  /**< current LP data */
    );
 
 /** gets proven lower (dual) bound of last LP solution */

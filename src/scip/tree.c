@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.149 2005/06/23 16:02:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.150 2005/06/29 11:08:07 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -3454,6 +3454,9 @@ RETCODE SCIPtreeStartProbing(
    debugMessage("probing started in depth %d (LP flushed: %d, LP solved: %d, solstat: %d), probing root in depth %d\n",
       tree->pathlen-1, lp->flushed, lp->solved, SCIPlpGetSolstat(lp), tree->pathlen);
 
+   /* inform LP about probing mode */
+   CHECK_OKAY( SCIPlpStartProbing(lp) );
+
    /* remember, whether the LP was flushed and solved */
    if( set->stage == SCIP_STAGE_SOLVING )
    {
@@ -3638,6 +3641,9 @@ RETCODE SCIPtreeEndProbing(
    assert(tree->probinglpistate == NULL);
    tree->probinglpwasflushed = FALSE;
    tree->probinglpwassolved = FALSE;
+
+   /* inform LP about end of probing mode */
+   CHECK_OKAY( SCIPlpEndProbing(lp) );
 
    debugMessage("probing ended in depth %d (LP flushed: %d, solstat: %d)\n",
       tree->pathlen-1, lp->flushed, SCIPlpGetSolstat(lp));

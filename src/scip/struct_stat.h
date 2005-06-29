@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.35 2005/05/31 17:20:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.36 2005/06/29 11:08:07 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -45,7 +45,7 @@ struct Stat
    Longint          ndualresolvelpiterations;    /**< number of dual LP iterations with advanced start basis */
    Longint          nnodelpiterations;  /**< number of iterations for totally solving node relaxations */
    Longint          ninitlpiterations;  /**< number of iterations for solving nodes' initial relaxations */
-   Longint          ndivinglpiterations;/**< number of iterations in diving */
+   Longint          ndivinglpiterations;/**< number of iterations in diving and probing */
    Longint          nsblpiterations;    /**< number of simplex iterations used in strong branching */
    Longint          nrootsblpiterations;/**< number of simplex iterations used in strong branching at the root node */
    Longint          nconflictlpiterations;/**< number of simplex iterations used in conflict analysis */
@@ -75,7 +75,7 @@ struct Stat
    CLOCK*           primallptime;       /**< primal LP solution time */
    CLOCK*           duallptime;         /**< dual LP solution time */
    CLOCK*           barrierlptime;      /**< barrier LP solution time */
-   CLOCK*           divinglptime;       /**< diving LP solution time */
+   CLOCK*           divinglptime;       /**< diving and probing LP solution time */
    CLOCK*           strongbranchtime;   /**< strong branching time */
    CLOCK*           conflictlptime;     /**< conflict analysis LP solution time */
    CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
@@ -105,7 +105,7 @@ struct Stat
    int              ndualresolvelps;    /**< number of dual LPs solved with advanced start basis and at least 1 iteration */
    int              nnodelps;           /**< number of LPs solved for node relaxations */
    int              ninitlps;           /**< number of LPs solved for nodes' initial relaxations */
-   int              ndivinglps;         /**< number of LPs solved during diving */
+   int              ndivinglps;         /**< number of LPs solved during diving and probing */
    int              nstrongbranchs;     /**< number of strong branching calls */
    int              nrootstrongbranchs; /**< number of strong branching calls at the root node */
    int              nconflictlps;       /**< number of LPs solved during conflict analysis */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.h,v 1.17 2005/05/31 17:20:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.h,v 1.18 2005/06/29 11:08:04 bzfpfend Exp $"
 
 /**@file   cons_logicor.h
  * @brief  constraint handler for logicor constraints
@@ -59,6 +59,13 @@ RETCODE SCIPcreateConsLogicor(
 /** gets the dual solution of the logic or constraint in the current LP */
 extern
 Real SCIPgetDualsolLogicor(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint data */
+   );
+
+/** gets the dual farkas value of the logic or constraint in the current infeasible LP */
+extern
+Real SCIPgetDualfarkasLogicor(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons                /**< constraint data */
    );

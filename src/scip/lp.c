@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.197 2005/06/23 18:12:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.198 2005/06/29 11:08:06 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6028,6 +6028,7 @@ RETCODE SCIPlpCreate(
    (*lp)->primalfeasible = TRUE;
    (*lp)->dualfeasible = TRUE;
    (*lp)->solisbasic = FALSE;
+   (*lp)->probing = FALSE;
    (*lp)->diving = FALSE;
    (*lp)->divingobjchg = FALSE;
    (*lp)->divelpistate = NULL;
@@ -8525,7 +8526,7 @@ RETCODE lpPrimalSimplex(
    *lperror = FALSE;
 
 #if 0
-   if( stat->nnodes == 1 && !lp->diving  )
+   if( stat->nnodes == 1 && !lp->diving && !lp->probing )
    {
       char fname[MAXSTRLEN];
       sprintf(fname, "lp%lld_%d.mps", stat->nnodes, stat->lpcount);
@@ -8537,7 +8538,7 @@ RETCODE lpPrimalSimplex(
 #endif
 
    /* start timing */
-   if( lp->diving )
+   if( lp->diving || lp->probing )
       SCIPclockStart(stat->divinglptime, set);
    else
       SCIPclockStart(stat->primallptime, set);
@@ -8557,7 +8558,7 @@ RETCODE lpPrimalSimplex(
    lp->solisbasic = TRUE;
 
    /* stop timing */
-   if( lp->diving )
+   if( lp->diving || lp->probing )
       SCIPclockStop(stat->divinglptime, set);
    else
       SCIPclockStop(stat->primallptime, set);
@@ -8574,8 +8575,9 @@ RETCODE lpPrimalSimplex(
          stat->nprimalresolvelps++;
          stat->nprimalresolvelpiterations += iterations;
       }
-      if( lp->diving )
+      if( lp->diving || lp->probing )
       {
+         stat->lastdivenode = stat->nnodes;
          stat->ndivinglps++;
          stat->ndivinglpiterations += iterations;
       }
@@ -8625,7 +8627,7 @@ RETCODE lpDualSimplex(
    *lperror = FALSE;
 
 #if 0
-   if( stat->nnodes == 1 && !lp->diving )
+   if( stat->nnodes == 1 && !lp->diving && !lp->probing )
    {
       char fname[MAXSTRLEN];
       sprintf(fname, "lp%lld_%d.mps", stat->nnodes, stat->lpcount);
@@ -8637,7 +8639,7 @@ RETCODE lpDualSimplex(
 #endif
 
    /* start timing */
-   if( lp->diving )
+   if( lp->diving || lp->probing )
       SCIPclockStart(stat->divinglptime, set);
    else
       SCIPclockStart(stat->duallptime, set);
@@ -8657,7 +8659,7 @@ RETCODE lpDualSimplex(
    lp->solisbasic = TRUE;
 
    /* stop timing */
-   if( lp->diving )
+   if( lp->diving || lp->probing )
       SCIPclockStop(stat->divinglptime, set);
    else
       SCIPclockStop(stat->duallptime, set);
@@ -8674,8 +8676,9 @@ RETCODE lpDualSimplex(
          stat->ndualresolvelps++;
          stat->ndualresolvelpiterations += iterations;
       }
-      if( lp->diving )
+      if( lp->diving || lp->probing )
       {
+         stat->lastdivenode = stat->nnodes;
          stat->ndivinglps++;
          stat->ndivinglpiterations += iterations;
       }
@@ -8725,7 +8728,7 @@ RETCODE lpBarrier(
    *lperror = FALSE;
 
 #if 0
-   if( stat->nnodes == 1 && !lp->diving  )
+   if( stat->nnodes == 1 && !lp->diving && !lp->probing )
    {
       char fname[MAXSTRLEN];
       sprintf(fname, "lp%lld_%d.mps", stat->nnodes, stat->lpcount);
@@ -8737,7 +8740,7 @@ RETCODE lpBarrier(
 #endif
 
    /* start timing */
-   if( lp->diving )
+   if( lp->diving || lp->probing )
       SCIPclockStart(stat->divinglptime, set);
    else
       SCIPclockStart(stat->barrierlptime, set);
@@ -8757,7 +8760,7 @@ RETCODE lpBarrier(
    lp->solisbasic = crossover;
 
    /* stop timing */
-   if( lp->diving )
+   if( lp->diving || lp->probing )
       SCIPclockStop(stat->divinglptime, set);
    else
       SCIPclockStop(stat->barrierlptime, set);
@@ -8769,8 +8772,9 @@ RETCODE lpBarrier(
    {
       stat->nlps++;
       stat->nlpiterations += iterations;
-      if( lp->diving )
+      if( lp->diving || lp->probing )
       {
+         stat->lastdivenode = stat->nnodes;
          stat->ndivinglps++;
          stat->ndivinglpiterations += iterations;
       }
@@ -9390,8 +9394,8 @@ RETCODE SCIPlpSolveAndEval(
    assert(prob->nvars >= lp->ncols);
    assert(lperror != NULL);
 
-   debugMessage("solving LP: %d rows, %d cols, primalfeasible=%d, dualfeasible=%d, solved=%d, diving=%d, cutoff=%g\n", 
-      lp->nrows, lp->ncols, lp->primalfeasible, lp->dualfeasible, lp->solved, lp->diving, lp->cutoffbound);
+   debugMessage("solving LP: %d rows, %d cols, primalfeasible=%d, dualfeasible=%d, solved=%d, diving=%d, probing=%d, cutoff=%g\n", 
+      lp->nrows, lp->ncols, lp->primalfeasible, lp->dualfeasible, lp->solved, lp->diving, lp->probing, lp->cutoffbound);
 
    *lperror = FALSE;
 
@@ -9441,7 +9445,7 @@ RETCODE SCIPlpSolveAndEval(
             primalfeasible = TRUE;
             dualfeasible = TRUE;
          }
-         if( primalfeasible && dualfeasible && aging && !lp->diving && stat->nlps > oldnlps )
+         if( primalfeasible && dualfeasible && aging && !lp->diving && !lp->probing && stat->nlps > oldnlps )
          {
             /* update ages and remove obsolete columns and rows from LP */
             CHECK_OKAY( SCIPlpUpdateAges(lp, stat) );
@@ -11241,6 +11245,7 @@ RETCODE SCIPlpStartDive(
    assert(lp->solved);
    assert(lp->flushed);
    assert(!lp->diving);
+   assert(!lp->probing);
    assert(lp->divelpistate == NULL);
    assert(set != NULL);
 
@@ -11326,10 +11331,9 @@ RETCODE SCIPlpEndDive(
          "(node %lld) unresolved numerical troubles while resolving LP %d after diving\n", stat->nnodes, stat->nlps);
    }
 
-   /* switch to standard (non-diving) mode and remember the diving node */
+   /* switch to standard (non-diving) mode */
    lp->diving = FALSE;
    lp->divingobjchg = FALSE;
-   stat->lastdivenode = stat->nnodes;
 
 #ifndef NDEBUG
    {
@@ -11346,6 +11350,32 @@ RETCODE SCIPlpEndDive(
       }
    }
 #endif
+
+   return SCIP_OKAY;
+}
+
+/** informs the LP that probing mode was initiated */
+RETCODE SCIPlpStartProbing(
+   LP*              lp                  /**< current LP data */
+   )
+{
+   assert(lp != NULL);
+   assert(!lp->probing);
+
+   lp->probing = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** informs the LP that probing mode was finished */
+RETCODE SCIPlpEndProbing(
+   LP*              lp                  /**< current LP data */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->probing);
+
+   lp->probing = FALSE;
 
    return SCIP_OKAY;
 }
@@ -11580,6 +11610,7 @@ RETCODE SCIPlpWrite(
 #undef SCIProwGetLhs
 #undef SCIProwGetRhs
 #undef SCIProwGetDualsol
+#undef SCIProwGetDualfarkas
 #undef SCIProwGetBasisStatus
 #undef SCIProwGetName
 #undef SCIProwGetIndex
@@ -11918,6 +11949,19 @@ Real SCIProwGetDualsol(
 
    if( row->lppos >= 0 )
       return row->dualsol;
+   else
+      return 0.0;
+}
+
+/** gets the dual farkas coefficient of a row in an infeasible LP */
+Real SCIProwGetDualfarkas(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   if( row->lppos >= 0 )
+      return row->dualfarkas;
    else
       return 0.0;
 }

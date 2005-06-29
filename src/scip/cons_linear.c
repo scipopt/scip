@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.168 2005/06/21 16:55:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.169 2005/06/29 11:08:04 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2555,6 +2555,7 @@ RETCODE tightenVarBounds(
    return SCIP_OKAY;
 }
 
+#define MAXTIGHTENROUNDS 10
 /** tightens bounds of variables in constraint due to activity bounds */
 static
 RETCODE tightenBounds(
@@ -2569,6 +2570,7 @@ RETCODE tightenBounds(
    Real* vals;
    int nvars;
    int nrounds;
+   int lastchange;
 
    assert(nchgbds != NULL);
    assert(cutoff != NULL);
@@ -2582,41 +2584,32 @@ RETCODE tightenBounds(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /* check, if the bounds are already tightened */
-   if( consdata->boundstightened )
-      return SCIP_OKAY;
-
    nvars = consdata->nvars;
-   if( nvars > 0 )
-   {
-      int lastnchgbds;
-      int lastsuccess;
-      int v;
-   
-      vars = consdata->vars;
-      vals = consdata->vals;
-      assert(vars != NULL);
-      assert(vals != NULL);
-      lastsuccess = 0;
-      v = 0;
-      nrounds = 0;
-      do
-      {
-         assert(0 <= v && v < nvars);
-         nrounds++;
-         lastnchgbds = *nchgbds;
-         CHECK_OKAY( tightenVarBounds(scip, cons, vars[v], vals[v], cutoff, nchgbds) );
-         if( *nchgbds > lastnchgbds )
-            lastsuccess = v;
-         v++;
-         if( v == nvars )
-            v = 0;
-      }
-      while( v != lastsuccess && !(*cutoff) && nrounds < 100 );
-   }
+   vars = consdata->vars;
+   vals = consdata->vals;
+   assert(vars != NULL);
+   assert(vals != NULL);
 
-   /* mark the constraint to have the variables' bounds tightened */
-   consdata->boundstightened = TRUE;
+   /* as long as the bounds might be tightened again, try to tighten them; abort after a maximal number of rounds */
+   lastchange = -1;
+   for( nrounds = 0; !consdata->boundstightened && nrounds < MAXTIGHTENROUNDS; ++nrounds )
+   {
+      int v;
+
+      /* mark the constraint to have the variables' bounds tightened */
+      consdata->boundstightened = TRUE;
+
+      /* try to tighten the bounds of each variable in the constraint */
+      for( v = 0; v < nvars && v != lastchange && !(*cutoff); ++v )
+      {
+         int oldnchgbds;
+
+         oldnchgbds = *nchgbds;
+         CHECK_OKAY( tightenVarBounds(scip, cons, vars[v], vals[v], cutoff, nchgbds) );
+         if( *nchgbds > oldnchgbds )
+            lastchange = v;
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -2658,7 +2651,8 @@ RETCODE checkCons(
    
    debugMessage("  consdata feasibility=%g (lhs=%g, rhs=%g, row=%p, checklprows=%d, rowinlp=%d, sol=%p, hascurrentnodelp=%d)\n",
       feasibility, consdata->lhs, consdata->rhs, consdata->row, checklprows,
-      consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), sol, SCIPhasCurrentNodeLP(scip));
+      consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), sol,
+      consdata->row == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
 
    if( SCIPisFeasNegative(scip, feasibility) )
    {
@@ -5274,6 +5268,7 @@ DECL_EVENTEXEC(eventExecLinear)
    {
       Real oldbound;
       Real newbound;
+      Real val;
       int varpos;
 
       varpos = eventdata->varpos;
@@ -5286,19 +5281,42 @@ DECL_EVENTEXEC(eventExecLinear)
       /*debugMessage(" -> eventtype=0x%x, var=<%s>, oldbound=%g, newbound=%g => activity: [%g,%g]", 
         eventtype, SCIPvarGetName(consdatadata->vars[varpos]), oldbound, newbound, consdatadata->minactivity, 
         consdatadata->maxactivity);*/
-      
+
+      val = consdata->vals[varpos];
       if( (eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
-         consdataUpdateChgLb(scip, consdata, var, oldbound, newbound, consdata->vals[varpos]);
+         consdataUpdateChgLb(scip, consdata, var, oldbound, newbound, val);
       else
       {
          assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0);
-         consdataUpdateChgUb(scip, consdata, var, oldbound, newbound, consdata->vals[varpos]);
+         consdataUpdateChgUb(scip, consdata, var, oldbound, newbound, val);
       }
       /*debug(printf(" -> [%g,%g]\n", consdatadata->minactivity, consdatadata->maxactivity));*/
 
-      consdata->propagated = FALSE;
-      consdata->boundstightened = FALSE;
       consdata->presolved = FALSE;
+
+      /* bound change can turn the constraint infeasible or redundant only if it was a tightening */
+      if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != 0 )
+         consdata->propagated = FALSE;
+
+      /* check whether bound tightening might now be successful (if the current bound was relaxed, it might be
+       * that it can be tightened again)
+       */
+      if( consdata->boundstightened )
+      {
+         switch( eventtype )
+         {
+         case SCIP_EVENTTYPE_LBTIGHTENED:
+         case SCIP_EVENTTYPE_UBRELAXED:
+            consdata->boundstightened = (val > 0.0 && SCIPisInfinity(scip, consdata->rhs))
+               || (val < 0.0 && SCIPisInfinity(scip, -consdata->lhs));
+            break;
+         case SCIP_EVENTTYPE_LBRELAXED:
+         case SCIP_EVENTTYPE_UBTIGHTENED:
+            consdata->boundstightened = (val > 0.0 && SCIPisInfinity(scip, -consdata->lhs))
+               || (val < 0.0 && SCIPisInfinity(scip, consdata->rhs));
+            break;
+         }
+      }
    }
 
    if( (eventtype & SCIP_EVENTTYPE_VARFIXED) != 0 )
@@ -5697,6 +5715,29 @@ Real SCIPgetDualsolLinear(
 
    if( consdata->row != NULL )
       return SCIProwGetDualsol(consdata->row);
+   else
+      return 0.0;
+}
+
+/** gets the dual farkas value of the linear constraint in the current infeasible LP */
+Real SCIPgetDualfarkasLinear(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint data */
+   )
+{
+   CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      errorMessage("constraint is not linear\n");
+      abort();
+   }
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->row != NULL )
+      return SCIProwGetDualfarkas(consdata->row);
    else
       return 0.0;
 }

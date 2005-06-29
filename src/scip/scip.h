@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.228 2005/06/23 16:02:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.229 2005/06/29 11:08:07 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3373,7 +3373,9 @@ RETCODE SCIPsolveDiveLP(
    Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    );
 
-/** returns the number of the node in the current branch and bound run, where the last LP diving was applied */
+/** returns the number of the node in the current branch and bound run, where the last LP was solved in diving
+ *  or probing mode
+ */
 extern
 Longint SCIPgetLastDivenode(
    SCIP*            scip                /**< SCIP data structure */
@@ -4270,13 +4272,13 @@ Longint SCIPgetNNodeInitLPIterations(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets total number of LPs solved so far during diving */
+/** gets total number of LPs solved so far during diving and probing */
 extern
 int SCIPgetNDivingLPs(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets total number of simplex iterations used so far during diving */
+/** gets total number of simplex iterations used so far during diving and probing */
 extern
 Longint SCIPgetNDivingLPIterations(
    SCIP*            scip                /**< SCIP data structure */

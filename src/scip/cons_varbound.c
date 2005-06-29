@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.32 2005/05/31 17:20:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.33 2005/06/29 11:08:05 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -1149,5 +1149,51 @@ RETCODE SCIPcreateConsVarbound(
          local, modifiable, dynamic, removeable) );
 
    return SCIP_OKAY;
+}
+
+/** gets the dual solution of the varbound constraint in the current LP */
+Real SCIPgetDualsolVarbound(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint data */
+   )
+{
+   CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      errorMessage("constraint is not a varbound constraint\n");
+      abort();
+   }
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->row != NULL )
+      return SCIProwGetDualsol(consdata->row);
+   else
+      return 0.0;
+}
+
+/** gets the dual farkas value of the varbound constraint in the current infeasible LP */
+Real SCIPgetDualfarkasVarbound(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint data */
+   )
+{
+   CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      errorMessage("constraint is not a varbound constraint\n");
+      abort();
+   }
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->row != NULL )
+      return SCIProwGetDualfarkas(consdata->row);
+   else
+      return 0.0;
 }
 

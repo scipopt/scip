@@ -994,21 +994,21 @@ heuristics/coefdiving/maxlpiterquot = 0.05
 # [type: int, range: [0,2147483647], default: 1000]
 heuristics/coefdiving/maxlpiterofs = 1000
 
-# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
+# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed (0.0: no limit)
 # [type: real, range: [0,1], default: 0.8]
 heuristics/coefdiving/maxdiveubquot = 0.8
 
-# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
-# [type: real, range: [0,1.79769313486232e+308], default: 4]
-heuristics/coefdiving/maxdiveavgquot = 4
+# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+heuristics/coefdiving/maxdiveavgquot = 0
 
-# maximal UBQUOT when no solution was found yet
+# maximal UBQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1], default: 0.1]
 heuristics/coefdiving/maxdiveubquotnosol = 0.1
 
-# maximal AVGQUOT when no solution was found yet
-# [type: real, range: [0,1.79769313486232e+308], default: 8]
-heuristics/coefdiving/maxdiveavgquotnosol = 8
+# maximal AVGQUOT when no solution was found yet (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+heuristics/coefdiving/maxdiveavgquotnosol = 0
 
 # priority of heuristic <feaspump>
 # [type: int, range: [-2147483648,2147483647], default: -1000000]
@@ -1114,21 +1114,21 @@ heuristics/fracdiving/maxlpiterquot = 0.05
 # [type: int, range: [0,2147483647], default: 1000]
 heuristics/fracdiving/maxlpiterofs = 1000
 
-# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
+# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed (0.0: no limit)
 # [type: real, range: [0,1], default: 0.8]
 heuristics/fracdiving/maxdiveubquot = 0.8
 
-# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
-# [type: real, range: [0,1.79769313486232e+308], default: 4]
-heuristics/fracdiving/maxdiveavgquot = 4
+# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+heuristics/fracdiving/maxdiveavgquot = 0
 
-# maximal UBQUOT when no solution was found yet
+# maximal UBQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1], default: 0.1]
 heuristics/fracdiving/maxdiveubquotnosol = 0.1
 
-# maximal AVGQUOT when no solution was found yet
-# [type: real, range: [0,1.79769313486232e+308], default: 8]
-heuristics/fracdiving/maxdiveavgquotnosol = 8
+# maximal AVGQUOT when no solution was found yet (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+heuristics/fracdiving/maxdiveavgquotnosol = 0
 
 # priority of heuristic <guideddiving>
 # [type: int, range: [-2147483648,2147483647], default: -1007000]
@@ -1162,21 +1162,13 @@ heuristics/guideddiving/maxlpiterquot = 0.05
 # [type: int, range: [0,2147483647], default: 1000]
 heuristics/guideddiving/maxlpiterofs = 1000
 
-# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
+# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed (0.0: no limit)
 # [type: real, range: [0,1], default: 0.8]
 heuristics/guideddiving/maxdiveubquot = 0.8
 
-# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
-# [type: real, range: [0,1.79769313486232e+308], default: 4]
-heuristics/guideddiving/maxdiveavgquot = 4
-
-# maximal UBQUOT when no solution was found yet
-# [type: real, range: [0,1], default: 0.1]
-heuristics/guideddiving/maxdiveubquotnosol = 0.1
-
-# maximal AVGQUOT when no solution was found yet
-# [type: real, range: [0,1.79769313486232e+308], default: 8]
-heuristics/guideddiving/maxdiveavgquotnosol = 8
+# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+heuristics/guideddiving/maxdiveavgquot = 0
 
 # priority of heuristic <linesearchdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1006000]
@@ -1210,21 +1202,21 @@ heuristics/linesearchdiving/maxlpiterquot = 0.05
 # [type: int, range: [0,2147483647], default: 1000]
 heuristics/linesearchdiving/maxlpiterofs = 1000
 
-# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
+# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed (0.0: no limit)
 # [type: real, range: [0,1], default: 0.8]
 heuristics/linesearchdiving/maxdiveubquot = 0.8
 
-# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
-# [type: real, range: [0,1.79769313486232e+308], default: 4]
-heuristics/linesearchdiving/maxdiveavgquot = 4
+# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+heuristics/linesearchdiving/maxdiveavgquot = 0
 
-# maximal UBQUOT when no solution was found yet
+# maximal UBQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1], default: 0.1]
 heuristics/linesearchdiving/maxdiveubquotnosol = 0.1
 
-# maximal AVGQUOT when no solution was found yet
-# [type: real, range: [0,1.79769313486232e+308], default: 8]
-heuristics/linesearchdiving/maxdiveavgquotnosol = 8
+# maximal AVGQUOT when no solution was found yet (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+heuristics/linesearchdiving/maxdiveavgquotnosol = 0
 
 # priority of heuristic <objpscostdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1004000]
@@ -1346,21 +1338,21 @@ heuristics/pscostdiving/maxlpiterquot = 0.05
 # [type: int, range: [0,2147483647], default: 1000]
 heuristics/pscostdiving/maxlpiterofs = 1000
 
-# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
+# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed (0.0: no limit)
 # [type: real, range: [0,1], default: 0.8]
 heuristics/pscostdiving/maxdiveubquot = 0.8
 
-# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
-# [type: real, range: [0,1.79769313486232e+308], default: 4]
-heuristics/pscostdiving/maxdiveavgquot = 4
+# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+heuristics/pscostdiving/maxdiveavgquot = 0
 
-# maximal UBQUOT when no solution was found yet
+# maximal UBQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1], default: 0.1]
 heuristics/pscostdiving/maxdiveubquotnosol = 0.1
 
-# maximal AVGQUOT when no solution was found yet
-# [type: real, range: [0,1.79769313486232e+308], default: 8]
-heuristics/pscostdiving/maxdiveavgquotnosol = 8
+# maximal AVGQUOT when no solution was found yet (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+heuristics/pscostdiving/maxdiveavgquotnosol = 0
 
 # priority of heuristic <rootsoldiving>
 # [type: int, range: [-2147483648,2147483647], default: -1005000]
