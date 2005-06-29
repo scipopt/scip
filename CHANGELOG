@@ -87,6 +87,8 @@ fixed bugs:
 - fixed bug in linear constraint handler with variables fixed to infinity
 - fixed bug with potential infinite loop if a separator is delayed and the LP is infeasible
 - fixed numerical bug in pseudo objective propagator with only slightly tightened bounds
+- fixed bug with constraint handlers that can only enforce their constraints by adding cuts, but the maximal number of
+  cuts to separate is set to 0; now, cuts that are generated in the constraint enforcement are used in any case
 
 
 SCIP version 0.79

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sepastore.h,v 1.13 2005/05/31 17:20:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_sepastore.h,v 1.14 2005/06/29 16:23:00 bzfberth Exp $"
 
 /**@file   struct_sepastore.h
  * @brief  datastructures for storing separated cuts
@@ -56,6 +56,7 @@ struct SepaStore
    int              ncutsstored;        /**< total number of cuts stored (and possibly removed again) in this round */
    int              ncutsapplied;       /**< total number of cuts (and bound changes) applied to the LPs */
    Bool             initiallp;          /**< is the separation storage currently being filled with the initial LP rows? */
+   Bool             forcecuts;          /**< should the cuts be used despite the number of cuts parameter limit? */
 };
 
 

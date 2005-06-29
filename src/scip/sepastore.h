@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.h,v 1.20 2005/05/31 17:20:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.h,v 1.21 2005/06/29 16:23:00 bzfberth Exp $"
 
 /**@file   sepastore.h
  * @brief  internal methods for storing separated cuts
@@ -61,6 +61,18 @@ void SCIPsepastoreStartInitialLP(
 /** informs separation storage, that the setup of the initial LP is now finished */
 extern
 void SCIPsepastoreEndInitialLP(
+   SEPASTORE*       sepastore           /**< separation storage */
+   );
+
+/** informs separation storage, that the following cuts should be used in any case */
+extern
+void SCIPsepastoreStartForceCuts(
+   SEPASTORE*       sepastore           /**< separation storage */
+   );
+
+/** informs separation storage, that the following cuts should no longer be used in any case */
+extern
+void SCIPsepastoreEndForceCuts(
    SEPASTORE*       sepastore           /**< separation storage */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.38 2005/05/31 17:20:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.39 2005/06/29 16:22:59 bzfberth Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -125,6 +125,7 @@ RETCODE SCIPsepastoreCreate(
    (*sepastore)->ncutsstored = 0;
    (*sepastore)->ncutsapplied = 0;
    (*sepastore)->initiallp = FALSE;
+   (*sepastore)->forcecuts = FALSE;
 
    return SCIP_OKAY;
 }
@@ -176,6 +177,28 @@ void SCIPsepastoreEndInitialLP(
    assert(sepastore->nbdchgs == 0);
 
    sepastore->initiallp = FALSE;
+}
+
+/** informs separation storage, that the following cuts should be used in any case */
+void SCIPsepastoreStartForceCuts(
+   SEPASTORE*       sepastore           /**< separation storage */
+   )
+{
+   assert(sepastore != NULL);
+   assert(!sepastore->forcecuts);
+
+   sepastore->forcecuts = TRUE;
+}
+
+/** informs separation storage, that the following cuts should no longer be used in any case */
+void SCIPsepastoreEndForceCuts(
+   SEPASTORE*       sepastore           /**< separation storage */
+   )
+{
+   assert(sepastore != NULL);
+   assert(sepastore->forcecuts);
+
+   sepastore->forcecuts = FALSE;
 }
 
 /** checks cut for redundancy due to activity bounds */
@@ -267,7 +290,7 @@ RETCODE sepastoreAddCut(
     *  - use all cuts that have infinite score factor
     *  - the remaining cuts are only forwarded to the LP, if they fit into the maximal separation size
     */
-   forcecut = forcecut || sepastore->initiallp;
+   forcecut = forcecut || sepastore->initiallp || sepastore->forcecuts;
    if( forcecut )
       maxsepacuts = INT_MAX;
    else

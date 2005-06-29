@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.181 2005/06/22 08:27:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.182 2005/06/29 16:23:00 bzfberth Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1444,6 +1444,11 @@ RETCODE enforceConstraints(
       objinfeasible = SCIPsetIsLT(set, pseudoobjval, SCIPnodeGetLowerbound(SCIPtreeGetFocusNode(tree)));
    }
 
+   /* during constraint enforcemenst, generated cuts should enter the LP in any case; otherwise, a constraint handler
+    * would fail to enforce its constraints if it relies on the modification of the LP relaxation
+    */
+   SCIPsepastoreStartForceCuts(sepastore);
+
    /* enforce constraints until a handler resolved an infeasibility with cutting off the node, branching, 
     * reducing a domain, or separating a cut
     * if a constraint handler introduced new constraints to enforce his constraints, the newly added constraints
@@ -1572,6 +1577,9 @@ RETCODE enforceConstraints(
    assert(!objinfeasible || *infeasible);
    assert(resolved == (*branched || *cutoff || *propagateagain || *solvelpagain));
    assert(*cutoff || *solvelpagain || SCIPsepastoreGetNCuts(sepastore) == 0);
+
+   /* deactivate the cut forcing of the constraint enforcement */
+   SCIPsepastoreEndForceCuts(sepastore);
 
    debugMessage(" -> enforcing result: branched=%d, cutoff=%d, infeasible=%d, propagateagain=%d, solvelpagain=%d, resolved=%d\n",
       *branched, *cutoff, *infeasible, *propagateagain, *solvelpagain, resolved);
