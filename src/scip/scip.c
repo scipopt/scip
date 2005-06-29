@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.295 2005/06/29 11:08:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.296 2005/06/29 12:29:30 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2105,9 +2105,6 @@ RETCODE SCIPautoselectDisps(
  * user interactive dialog methods
  */
 
-/**@name User Interactive Dialog Methods */
-/**@{ */
-
 /** creates and captures a dialog */
 RETCODE SCIPcreateDialog(
    SCIP*            scip,               /**< SCIP data structure */
@@ -2204,8 +2201,6 @@ RETCODE SCIPstartInteraction(
 
    return SCIP_OKAY;
 }
-
-/**@} */
 
 
 
@@ -10450,6 +10445,16 @@ RETCODE SCIPdropVarEvent(
 /*
  * tree methods
  */
+
+/** gets current node in the tree */
+NODE* SCIPgetCurrentNode(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetCurrentNode", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPtreeGetCurrentNode(scip->tree);
+}
 
 /** gets children of focus node along with the number of children */
 RETCODE SCIPgetChildren(

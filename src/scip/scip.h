@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.229 2005/06/29 11:08:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.230 2005/06/29 12:29:30 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3390,7 +3390,7 @@ Longint SCIPgetLastDivenode(
  * probing methods
  */
 
-/**@name LP Diving Methods */
+/**@name Probing Methods */
 /**@{ */
 
 /** returns whether we are in probing mode */
@@ -4030,6 +4030,12 @@ RETCODE SCIPdropVarEvent(
 
 /**@name Tree Methods */
 /**@{ */
+
+/** gets current node in the tree */
+extern
+NODE* SCIPgetCurrentNode(
+   SCIP*            scip                /**< SCIP data structure */
+   );
 
 /** gets children of focus node along with the number of children */
 extern
