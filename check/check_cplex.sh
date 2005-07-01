@@ -15,14 +15,14 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.sh,v 1.11 2005/05/31 17:20:06 bzfpfend Exp $
-CPLEXBIN=cplex
+# $Id: check_cplex.sh,v 1.12 2005/07/01 14:59:55 bzfpfend Exp $
 TSTNAME=$1
-BINNAME=$CPLEXBIN.$2
-TIMELIMIT=$3
-NODELIMIT=$4
-MEMLIMIT=$5
-FEASTOL=$6
+CPLEXBIN=$2
+BINNAME=$CPLEXBIN.$3
+TIMELIMIT=$4
+NODELIMIT=$5
+MEMLIMIT=$6
+FEASTOL=$7
 
 OUTFILE=results/check.$TSTNAME.$BINNAME.out
 ERRFILE=results/check.$TSTNAME.$BINNAME.err

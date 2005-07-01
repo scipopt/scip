@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.113 2005/06/29 11:08:03 bzfpfend Exp $
+# $Id: Makefile,v 1.114 2005/07/01 14:59:55 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -58,6 +58,7 @@ AR		=	ar
 RANLIB		=	ranlib
 LINT		=	flexelint
 DOXY		=	doxygen
+CPLEX		=	cplex
 
 FLAGS		=	-I$(SRCDIR)
 OFLAGS		=
@@ -338,7 +339,7 @@ test:
 
 testcplex:		
 		cd check; \
-		/bin/sh ./check_cplex.sh $(TEST) $(OSTYPE).$(ARCH).$(MACHINENAME) $(TIME) $(NODES) $(MEM) $(FEASTOL);
+		/bin/sh ./check_cplex.sh $(TEST) $(CPLEX) $(OSTYPE).$(ARCH).$(MACHINENAME) $(TIME) $(NODES) $(MEM) $(FEASTOL);
 
 $(OBJDIR):	
 		-mkdir -p $(OBJDIR)

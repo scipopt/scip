@@ -57,6 +57,10 @@ features:
 - improved debugging for infeasible cuts and propagations, given a primal feasible solution
 - slightly changed LP resolving loop in conflict analysis
 - diving heuristics now apply propagation at each step
+- if CPLEX returns that the LP exceeds the bound and if no additional LP solves are allowed in conflict analysis,
+  we have to perform one additional simplex iteration to get the dual solution that actually violates the objective
+  limit
+- modified the influence of the depth level in conflict analysis
 
 fixed bugs:
 - LP primal feasibility for bounds is now defined as absolute measure (was relative to the bound before);
