@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax_xxx.c,v 1.3 2005/05/31 17:20:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: relax_xxx.c,v 1.4 2005/07/15 17:20:16 bzfpfend Exp $"
 
 /**@file   relax_xxx.c
  * @brief  xxx relaxator
@@ -71,7 +71,7 @@ static
 DECL_RELAXFREE(relaxFreeXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx relaxator not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -86,7 +86,7 @@ static
 DECL_RELAXINIT(relaxInitXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx relaxator not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -101,7 +101,7 @@ static
 DECL_RELAXEXIT(relaxExitXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx relaxator not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -116,7 +116,7 @@ static
 DECL_RELAXINITSOL(relaxInitsolXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx relaxator not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -131,7 +131,7 @@ static
 DECL_RELAXEXITSOL(relaxExitsolXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx relaxator not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -145,7 +145,7 @@ static
 DECL_RELAXEXEC(relaxExecXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx relaxator not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }

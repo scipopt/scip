@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.57 2005/05/31 17:20:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.58 2005/07/15 17:20:05 bzfpfend Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -449,18 +449,15 @@ void consdataPrint(
 
    assert(consdata != NULL);
 
-   if( file == NULL )
-      file = stdout;
-
    /* print coefficients */
-   fprintf(file, "<%s> == and(", SCIPvarGetName(consdata->resvar));
+   SCIPinfoMessage(scip, file, "<%s> == and(", SCIPvarGetName(consdata->resvar));
    for( v = 0; v < consdata->nvars; ++v )
    {
       if( v > 0 )
-         fprintf(file, ", ");
-      fprintf(file, "<%s>", SCIPvarGetName(consdata->vars[v]));
+         SCIPinfoMessage(scip, file, ", ");
+      SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName(consdata->vars[v]));
    }
-   fprintf(file, ")\n");
+   SCIPinfoMessage(scip, file, ")\n");
 }
 
 /** deletes coefficient at given position from and constraint data */

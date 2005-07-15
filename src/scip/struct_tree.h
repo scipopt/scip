@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.24 2005/06/23 16:02:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.25 2005/07/15 17:20:21 bzfpfend Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __STRUCT_TREE_H__
-#define __STRUCT_TREE_H__
+#ifndef __SCIP_STRUCT_TREE_H__
+#define __SCIP_STRUCT_TREE_H__
 
 
 #include "scip/def.h"

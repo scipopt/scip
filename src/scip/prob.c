@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.75 2005/05/31 17:20:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.76 2005/07/15 17:20:14 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -539,7 +539,7 @@ void probRemoveVar(
       break;
    default:
       errorMessage("unknown variable type\n");
-      abort();
+      SCIPABORT();
    }
 
    /* move last binary, last integer, last implicit, and last continuous variable forward to fill the free slot */
@@ -1317,9 +1317,9 @@ void SCIPprobPrintPseudoSol(
       assert(var != NULL);
       solval = SCIPvarGetPseudoSol(var);
       if( !SCIPsetIsZero(set, solval) )
-         printf(" <%s>=%g", SCIPvarGetName(var), solval);
+         SCIPmessagePrintInfo(" <%s>=%g", SCIPvarGetName(var), solval);
    }
-   printf("\n");
+   SCIPmessagePrintInfo("\n");
 }
 
 /** outputs problem statistics */
@@ -1330,13 +1330,10 @@ void SCIPprobPrintStatistics(
 {
    assert(prob != NULL);
 
-   if( file == NULL )
-      file = stdout;
-
-   fprintf(file, "  Problem name     : %s\n", prob->name);
-   fprintf(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
+   SCIPmessageFPrintInfo(file, "  Problem name     : %s\n", prob->name);
+   SCIPmessageFPrintInfo(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
-   fprintf(file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
+   SCIPmessageFPrintInfo(file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
 }
 
 /** outputs problem to file stream */
@@ -1350,36 +1347,33 @@ RETCODE SCIPprobPrint(
 
    assert(prob != NULL);
 
-   if( file == NULL )
-      file = stdout;
-
-   fprintf(file, "STATISTICS\n");
+   SCIPmessageFPrintInfo(file, "STATISTICS\n");
    SCIPprobPrintStatistics(prob, file);
 
    if( prob->nvars > 0 )
    {
-      fprintf(file, "VARIABLES\n");
+      SCIPmessageFPrintInfo(file, "VARIABLES\n");
       for( i = 0; i < prob->nvars; ++i )
          SCIPvarPrint(prob->vars[i], set, file);
    }
 
    if( prob->nfixedvars > 0 )
    {
-      fprintf(file, "FIXED\n");
+      SCIPmessageFPrintInfo(file, "FIXED\n");
       for( i = 0; i < prob->nfixedvars; ++i )
          SCIPvarPrint(prob->fixedvars[i], set, file);
    }
 
    if( prob->nconss > 0 )
    {
-      fprintf(file, "CONSTRAINTS\n");
+      SCIPmessageFPrintInfo(file, "CONSTRAINTS\n");
       for( i = 0; i < prob->nconss; ++i )
       {
          CHECK_OKAY( SCIPconsPrint(prob->conss[i], set, file) );
       }
    }
 
-   fprintf(file, "END\n");
+   SCIPmessageFPrintInfo(file, "END\n");
 
    return SCIP_OKAY;
 }

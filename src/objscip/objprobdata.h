@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.h,v 1.11 2005/05/31 17:20:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprobdata.h,v 1.12 2005/07/15 17:20:03 bzfpfend Exp $"
 
 /**@file   objprobdata.h
  * @brief  C++ wrapper for user problem data
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __OBJPROBDATA_H__
-#define __OBJPROBDATA_H__
+#ifndef __SCIP_OBJPROBDATA_H__
+#define __SCIP_OBJPROBDATA_H__
 
 
 #include <cassert>

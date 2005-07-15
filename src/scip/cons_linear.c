@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.169 2005/06/29 11:08:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.170 2005/07/15 17:20:06 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -643,33 +643,30 @@ void consdataPrint(
 
    assert(consdata != NULL);
 
-   if( file == NULL )
-      file = stdout;
-
    /* print left hand side for ranged rows */
    if( !SCIPisInfinity(scip, -consdata->lhs)
       && !SCIPisInfinity(scip, consdata->rhs)
       && !SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
-      fprintf(file, "%g <= ", consdata->lhs);
+      SCIPinfoMessage(scip, file, "%g <= ", consdata->lhs);
 
    /* print coefficients */
    if( consdata->nvars == 0 )
-      fprintf(file, "0 ");
+      SCIPinfoMessage(scip, file, "0 ");
    for( v = 0; v < consdata->nvars; ++v )
    {
       assert(consdata->vars[v] != NULL);
-      fprintf(file, "%+g<%s> ", consdata->vals[v], SCIPvarGetName(consdata->vars[v]));
+      SCIPinfoMessage(scip, file, "%+g<%s> ", consdata->vals[v], SCIPvarGetName(consdata->vars[v]));
    }
 
    /* print right hand side */
    if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
-      fprintf(file, "== %g\n", consdata->rhs);
+      SCIPinfoMessage(scip, file, "== %g\n", consdata->rhs);
    else if( !SCIPisInfinity(scip, consdata->rhs) )
-      fprintf(file, "<= %g\n", consdata->rhs);
+      SCIPinfoMessage(scip, file, "<= %g\n", consdata->rhs);
    else if( !SCIPisInfinity(scip, -consdata->lhs) )
-      fprintf(file, ">= %g\n", consdata->lhs);
+      SCIPinfoMessage(scip, file, ">= %g\n", consdata->lhs);
    else
-      fprintf(file, " [free]\n");
+      SCIPinfoMessage(scip, file, " [free]\n");
 }
 
 /** updates minimum and maximum activity for a change in lower bound */
@@ -2180,7 +2177,7 @@ RETCODE applyFixings(
 
          default:
             errorMessage("unknown variable status\n");
-            abort();
+            SCIPABORT();
          }
       }
       consdata->removedfixings = TRUE;
@@ -2966,10 +2963,10 @@ RETCODE separateRelaxedKnapsack(
          act = 0.0;
          for( i = 0; i < nconsvars; ++i )
          {
-            printf(" %+lld<%s>(%g)", consvals[i], SCIPvarGetName(consvars[i]), SCIPvarGetLPSol(consvars[i]));
+            debugPrintf(" %+lld<%s>(%g)", consvals[i], SCIPvarGetName(consvars[i]), SCIPvarGetLPSol(consvars[i]));
             act += consvals[i] * SCIPvarGetLPSol(consvars[i]);
          }
-         printf(" <= %lld (%g) [act: %g, max: %lld]\n", capacity, rhs, act, maxact);
+         debugPrintf(" <= %lld (%g) [act: %g, max: %lld]\n", capacity, rhs, act, maxact);
 #endif
          
          /* separate lifted cut from relaxed knapsack constraint */
@@ -3611,9 +3608,9 @@ RETCODE convertLongEquality(
       for( v = 0; v < consdata->nvars; ++v )
       {
          scalars[v] = -consdata->vals[v]/slackcoef;
-         debug(printf(" %+g<%s>", scalars[v], SCIPvarGetName(consdata->vars[v])));
+         debugPrintf(" %+g<%s>", scalars[v], SCIPvarGetName(consdata->vars[v]));
       }
-      debug(printf(" %+g, bounds of <%s>: [%g,%g]\n", aggrconst, SCIPvarGetName(slackvar), slackvarlb, slackvarub));
+      debugPrintf(" %+g, bounds of <%s>: [%g,%g]\n", aggrconst, SCIPvarGetName(slackvar), slackvarlb, slackvarub);
 
       /* perform the multi-aggregation */
       CHECK_OKAY( SCIPmultiaggregateVar(scip, slackvar, consdata->nvars, consdata->vars, scalars, aggrconst,
@@ -3758,7 +3755,7 @@ int getVarWeight(
       return CONTWEIGHT;
    default:
       errorMessage("invalid variable type\n");
-      abort();
+      SCIPABORT();
    }
 }
 
@@ -4224,7 +4221,10 @@ RETCODE preprocessConstraintPairs(
 
          default:
             errorMessage("invalid comparison result\n");
-            abort();
+            var = NULL;
+            val0 = 0.0;
+            val1 = 0.0;
+            SCIPABORT();
          }
          assert(var != NULL);
 
@@ -5290,7 +5290,7 @@ DECL_EVENTEXEC(eventExecLinear)
          assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0);
          consdataUpdateChgUb(scip, consdata, var, oldbound, newbound, val);
       }
-      /*debug(printf(" -> [%g,%g]\n", consdatadata->minactivity, consdatadata->maxactivity));*/
+      /*debugPrintf(" -> [%g,%g]\n", consdatadata->minactivity, consdatadata->maxactivity);*/
 
       consdata->presolved = FALSE;
 
@@ -5583,7 +5583,7 @@ Real SCIPgetLhsLinear(
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not linear\n");
-      abort();
+      SCIPABORT();
    }
    
    consdata = SCIPconsGetData(cons);
@@ -5603,7 +5603,7 @@ Real SCIPgetRhsLinear(
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not linear\n");
-      abort();
+      SCIPABORT();
    }
    
    consdata = SCIPconsGetData(cons);
@@ -5660,7 +5660,7 @@ Real SCIPgetActivityLinear(
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not linear\n");
-      abort();
+      SCIPABORT();
    }
    
    consdata = SCIPconsGetData(cons);
@@ -5684,7 +5684,7 @@ Real SCIPgetFeasibilityLinear(
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not linear\n");
-      abort();
+      SCIPABORT();
    }
    
    consdata = SCIPconsGetData(cons);
@@ -5707,7 +5707,7 @@ Real SCIPgetDualsolLinear(
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not linear\n");
-      abort();
+      SCIPABORT();
    }
    
    consdata = SCIPconsGetData(cons);
@@ -5730,7 +5730,7 @@ Real SCIPgetDualfarkasLinear(
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not linear\n");
-      abort();
+      SCIPABORT();
    }
    
    consdata = SCIPconsGetData(cons);

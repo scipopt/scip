@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_xxx.c,v 1.12 2005/05/31 17:20:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_xxx.c,v 1.13 2005/07/15 17:20:18 bzfpfend Exp $"
 
 /**@file   sepa_xxx.c
  * @brief  xxx separator
@@ -72,7 +72,7 @@ static
 DECL_SEPAFREE(sepaFreeXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx separator not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -87,7 +87,7 @@ static
 DECL_SEPAINIT(sepaInitXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx separator not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -102,7 +102,7 @@ static
 DECL_SEPAEXIT(sepaExitXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx separator not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -117,7 +117,7 @@ static
 DECL_SEPAINITSOL(sepaInitsolXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx separator not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -132,7 +132,7 @@ static
 DECL_SEPAEXITSOL(sepaExitsolXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx separator not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -146,7 +146,7 @@ static
 DECL_SEPAEXEC(sepaExecXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx separator not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }

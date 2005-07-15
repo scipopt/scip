@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objnodesel.h,v 1.12 2005/05/31 17:20:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objnodesel.h,v 1.13 2005/07/15 17:20:03 bzfpfend Exp $"
 
 /**@file   objnodesel.h
  * @brief  C++ wrapper for node selectors
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __OBJNODESEL_H__
-#define __OBJNODESEL_H__
+#ifndef __SCIP_OBJNODESEL_H__
+#define __SCIP_OBJNODESEL_H__
 
 
 extern "C" 

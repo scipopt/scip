@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.h,v 1.5 2005/05/31 17:20:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: intervalarith.h,v 1.6 2005/07/15 17:20:10 bzfpfend Exp $"
 
 /**@file   intervalarith.h
  * @brief  interval arithmetics for provable bounds
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __INTERVALARITH_H__
-#define __INTERVALARITH_H__
+#ifndef __SCIP_INTERVALARITH_H__
+#define __SCIP_INTERVALARITH_H__
 
 
 #include "scip/def.h"

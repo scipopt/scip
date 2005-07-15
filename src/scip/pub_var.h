@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.45 2005/05/31 17:20:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.46 2005/07/15 17:20:16 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __PUB_VAR_H__
-#define __PUB_VAR_H__
+#ifndef __SCIP_PUB_VAR_H__
+#define __SCIP_PUB_VAR_H__
 
 
 #include "scip/def.h"

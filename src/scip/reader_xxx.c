@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_xxx.c,v 1.11 2005/05/31 17:20:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_xxx.c,v 1.12 2005/07/15 17:20:16 bzfpfend Exp $"
 
 /**@file   reader_xxx.c
  * @brief  XXX file reader
@@ -69,7 +69,7 @@ static
 DECL_READERFREE(readerFreeXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx reader not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -83,7 +83,7 @@ static
 DECL_READERREAD(readerReadXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx reader not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }

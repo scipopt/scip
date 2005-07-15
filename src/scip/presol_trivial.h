@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_trivial.h,v 1.7 2005/05/31 17:20:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_trivial.h,v 1.8 2005/07/15 17:20:13 bzfpfend Exp $"
 
 /**@file   presol_trivial.h
  * @brief  trivial presolver: round fractional bounds on integer variables, fix variables with equal bounds
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __PRESOL_TRIVIAL_H__
-#define __PRESOL_TRIVIAL_H__
+#ifndef __SCIP_PRESOL_TRIVIAL_H__
+#define __SCIP_PRESOL_TRIVIAL_H__
 
 
 #include "scip/scip.h"

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.h,v 1.21 2005/06/29 16:23:00 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepastore.h,v 1.22 2005/07/15 17:20:18 bzfpfend Exp $"
 
 /**@file   sepastore.h
  * @brief  internal methods for storing separated cuts
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SEPASTORE_H__
-#define __SEPASTORE_H__
+#ifndef __SCIP_SEPASTORE_H__
+#define __SCIP_SEPASTORE_H__
 
 
 #include "scip/def.h"

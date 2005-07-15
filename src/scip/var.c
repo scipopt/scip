@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.169 2005/06/21 16:55:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.170 2005/07/15 17:20:25 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1285,57 +1285,6 @@ RETCODE SCIPdomchgAddHolechg(
  * methods for variable bounds
  */
 
-#if 0
-static
-void vboundsPrint(
-   VBOUNDS*         vbounds             /**< variable bounds data structure, or NULL */
-   )
-{
-   int i;
-
-   if( vbounds == NULL )
-   {
-      printf("no variable bounds\n");
-      return;
-   }
-
-   for( i = 0; i < vbounds->len; ++i )
-   {
-      printf(" [%g<%s>%+g]", vbounds->coefs[i], SCIPvarGetName(vbounds->vars[i]), vbounds->constants[i]);
-   }
-   printf("\n");
-}
-static
-void implicsPrint(
-   IMPLICS*         implics             /**< implications data structure */
-   )
-{
-   Bool varfixing;
-   int i;
-
-   if( implics == NULL )
-   {
-      printf("no implications\n");
-      return;
-   }
-
-   varfixing = FALSE;
-   do
-   {
-      printf("x == %d:", varfixing);
-      for( i = 0; i < implics->nimpls[varfixing]; ++i )
-      {
-         printf(" [<%s> %s %g]", SCIPvarGetName(implics->implvars[varfixing][i]),
-            implics->impltypes[varfixing][i] == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-            implics->implbounds[varfixing][i]);
-      }
-      printf("\n");
-      varfixing = !varfixing;
-   }
-   while( varfixing );
-}
-#endif
-
 /** creates a variable bounds data structure */
 static
 RETCODE vboundsCreate(
@@ -2322,10 +2271,18 @@ RETCODE varAddImplic(
 
    *infeasible = FALSE;
 
+   /* check, if the implication is redundant or infeasible */
+   checkImplic(set, implvar, impltype, implbound, &redundant, &conflict);
+   assert(!redundant || !conflict);
+   if( redundant )
+      return SCIP_OKAY;
+
    if( var == implvar )
    {
       /* variable implies itself: x == varfixing  =>  x == (impltype == SCIP_BOUNDTYPE_LOWER) */
       assert(SCIPsetIsEQ(set, implbound, 0.0) || SCIPsetIsEQ(set, implbound, 1.0));
+      assert(SCIPsetIsEQ(set, implbound, 0.0) == (impltype == SCIP_BOUNDTYPE_UPPER));
+      assert(SCIPsetIsEQ(set, implbound, 1.0) == (impltype == SCIP_BOUNDTYPE_LOWER));
       *infeasible = ((varfixing == TRUE) == (impltype == SCIP_BOUNDTYPE_UPPER));
       return SCIP_OKAY;
    }
@@ -2341,12 +2298,6 @@ RETCODE varAddImplic(
       }
       return SCIP_OKAY;
    }
-
-   /* check, if the implication is redundant or infeasible */
-   checkImplic(set, implvar, impltype, implbound, &redundant, &conflict);
-   assert(!redundant || !conflict);
-   if( redundant )
-      return SCIP_OKAY;
 
    assert((impltype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, implbound, SCIPvarGetLbGlobal(implvar)))
       || (impltype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, implbound, SCIPvarGetUbGlobal(implvar))));
@@ -3177,34 +3128,31 @@ void SCIPvarPrint(
 
    assert(var != NULL);
 
-   if( file == NULL )
-      file = stdout;
-
    /* type of variable */
    switch( SCIPvarGetType(var) )
    {
    case SCIP_VARTYPE_BINARY:
-      fprintf(file, "  [binary]");
+      SCIPmessageFPrintInfo(file, "  [binary]");
       break;
    case SCIP_VARTYPE_INTEGER:
-      fprintf(file, "  [integer]");
+      SCIPmessageFPrintInfo(file, "  [integer]");
       break;
    case SCIP_VARTYPE_IMPLINT:
-      fprintf(file, "  [implicit]");
+      SCIPmessageFPrintInfo(file, "  [implicit]");
       break;
    case SCIP_VARTYPE_CONTINUOUS:
-      fprintf(file, "  [continuous]");
+      SCIPmessageFPrintInfo(file, "  [continuous]");
       break;
    default:
       errorMessage("unknown variable type\n");
-      abort();
+      SCIPABORT();
    }
 
    /* name */
-   fprintf(file, " <%s>:", var->name);
+   SCIPmessageFPrintInfo(file, " <%s>:", var->name);
 
    /* objective value */
-   fprintf(file, " obj=%g", var->obj);
+   SCIPmessageFPrintInfo(file, " obj=%g", var->obj);
 
    /* bounds (global bounds for transformed variables, original bounds for original variables) */
    if( SCIPvarIsTransformed(var) )
@@ -3217,19 +3165,19 @@ void SCIPvarPrint(
       lb = SCIPvarGetLbOriginal(var);
       ub = SCIPvarGetUbOriginal(var);
    }
-   fprintf(file, ", bounds=");
+   SCIPmessageFPrintInfo(file, ", bounds=");
    if( SCIPsetIsInfinity(set, lb) )
-      fprintf(file, "[+inf,");
+      SCIPmessageFPrintInfo(file, "[+inf,");
    else if( SCIPsetIsInfinity(set, -lb) )
-      fprintf(file, "[-inf,");
+      SCIPmessageFPrintInfo(file, "[-inf,");
    else
-      fprintf(file, "[%g,", lb);
+      SCIPmessageFPrintInfo(file, "[%g,", lb);
    if( SCIPsetIsInfinity(set, ub) )
-      fprintf(file, "+inf]");
+      SCIPmessageFPrintInfo(file, "+inf]");
    else if( SCIPsetIsInfinity(set, -ub) )
-      fprintf(file, "-inf]");
+      SCIPmessageFPrintInfo(file, "-inf]");
    else
-      fprintf(file, "%g]", ub);
+      SCIPmessageFPrintInfo(file, "%g]", ub);
 
    /* holes */
    /**@todo print holes */
@@ -3243,40 +3191,40 @@ void SCIPvarPrint(
       break;
 
    case SCIP_VARSTATUS_FIXED:
-      fprintf(file, ", fixed:");
+      SCIPmessageFPrintInfo(file, ", fixed:");
       if( SCIPsetIsInfinity(set, var->glbdom.lb) )
-         fprintf(file, "+inf");
+         SCIPmessageFPrintInfo(file, "+inf");
       else if( SCIPsetIsInfinity(set, -var->glbdom.lb) )
-         fprintf(file, "-inf");
+         SCIPmessageFPrintInfo(file, "-inf");
       else
-         fprintf(file, "%g", var->glbdom.lb);
+         SCIPmessageFPrintInfo(file, "%g", var->glbdom.lb);
       break;
 
    case SCIP_VARSTATUS_AGGREGATED:
-      fprintf(file, ", aggregated:");
+      SCIPmessageFPrintInfo(file, ", aggregated:");
       if( !SCIPsetIsZero(set, var->data.aggregate.constant) )
-         fprintf(file, " %g", var->data.aggregate.constant);
-      fprintf(file, " %+g<%s>", var->data.aggregate.scalar, SCIPvarGetName(var->data.aggregate.var));
+         SCIPmessageFPrintInfo(file, " %g", var->data.aggregate.constant);
+      SCIPmessageFPrintInfo(file, " %+g<%s>", var->data.aggregate.scalar, SCIPvarGetName(var->data.aggregate.var));
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
-      fprintf(file, ", aggregated:");
+      SCIPmessageFPrintInfo(file, ", aggregated:");
       if( !SCIPsetIsZero(set, var->data.multaggr.constant) )
-         fprintf(file, " %g", var->data.multaggr.constant);
+         SCIPmessageFPrintInfo(file, " %g", var->data.multaggr.constant);
       for( i = 0; i < var->data.multaggr.nvars; ++i )
-         fprintf(file, " %+g<%s>", var->data.multaggr.scalars[i], SCIPvarGetName(var->data.multaggr.vars[i]));
+         SCIPmessageFPrintInfo(file, " %+g<%s>", var->data.multaggr.scalars[i], SCIPvarGetName(var->data.multaggr.vars[i]));
       break;
 
    case SCIP_VARSTATUS_NEGATED:
-      fprintf(file, ", negated: %g - <%s>", var->data.negate.constant, SCIPvarGetName(var->negatedvar));
+      SCIPmessageFPrintInfo(file, ", negated: %g - <%s>", var->data.negate.constant, SCIPvarGetName(var->negatedvar));
       break;
 
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
    }
 
-   fprintf(file, "\n");
+   SCIPmessageFPrintInfo(file, "\n");
 }
 
 /** issues a LOCKSCHANGED event on the given variable */
@@ -3437,7 +3385,8 @@ int SCIPvarGetNLocksDown(
 
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0;
    }
 }
 
@@ -3490,7 +3439,8 @@ int SCIPvarGetNLocksUp(
 
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0;
    }
 }
 
@@ -6294,6 +6244,10 @@ RETCODE SCIPvarAddVlb(
          }
          assert(minvlb <= maxvlb);
 
+         /* adjust bounds due to integrality of vlb variable */
+         minvlb = adjustedLb(set, SCIPvarGetType(vlbvar), minvlb);
+         maxvlb = adjustedLb(set, SCIPvarGetType(vlbvar), maxvlb);
+
          /* improve global lower bound of variable */
          if( SCIPsetIsFeasGT(set, minvlb, xub) )
          {
@@ -6514,6 +6468,10 @@ RETCODE SCIPvarAddVub(
             maxvub = vubcoef * zlb + vubconstant;
          }
          assert(minvub <= maxvub);
+
+         /* adjust bounds due to integrality of vub variable */
+         minvub = adjustedUb(set, SCIPvarGetType(vubvar), minvub);
+         maxvub = adjustedUb(set, SCIPvarGetType(vubvar), maxvub);
 
          /* improve global upper bound of variable */
          if( SCIPsetIsFeasLT(set, maxvub, xlb) )
@@ -6894,8 +6852,9 @@ void varProcessChgBranchFactor(
       case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_MULTAGGR:
          errorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
-         abort();
-      
+         SCIPABORT();
+         break;
+
       case SCIP_VARSTATUS_AGGREGATED:
       case SCIP_VARSTATUS_NEGATED:
          varProcessChgBranchFactor(parentvar, set, branchfactor);
@@ -6903,7 +6862,7 @@ void varProcessChgBranchFactor(
 
       default:
          errorMessage("unknown variable status\n");
-         abort();
+         SCIPABORT();
       }
    }
 }
@@ -6966,7 +6925,7 @@ void SCIPvarChgBranchFactor(
          
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
    }
 }
 
@@ -7008,8 +6967,9 @@ void varProcessChgBranchPriority(
       case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_MULTAGGR:
          errorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
-         abort();
-      
+         SCIPABORT();
+         break;
+
       case SCIP_VARSTATUS_AGGREGATED:
       case SCIP_VARSTATUS_NEGATED:
          varProcessChgBranchPriority(parentvar, branchpriority);
@@ -7017,7 +6977,7 @@ void varProcessChgBranchPriority(
 
       default:
          errorMessage("unknown variable status\n");
-         abort();
+         SCIPABORT();
       }
    }
 }
@@ -7074,7 +7034,7 @@ void SCIPvarChgBranchPriority(
          
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
    }
 }
 
@@ -7116,8 +7076,9 @@ void varProcessChgBranchDirection(
       case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_MULTAGGR:
          errorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
-         abort();
-      
+         SCIPABORT();
+         break;
+
       case SCIP_VARSTATUS_AGGREGATED:
          if( parentvar->data.aggregate.scalar > 0.0 )
             varProcessChgBranchDirection(parentvar, branchdirection);
@@ -7131,7 +7092,7 @@ void varProcessChgBranchDirection(
 
       default:
          errorMessage("unknown variable status\n");
-         abort();
+         SCIPABORT();
       }
    }
 }
@@ -7201,7 +7162,7 @@ void SCIPvarChgBranchDirection(
          
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
    }
 }
 
@@ -7260,7 +7221,8 @@ VAR* SCIPvarGetProbvar(
 
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return NULL;
    }
 }
 
@@ -7566,8 +7528,9 @@ Real SCIPvarGetObjLP(
       
    case SCIP_VARSTATUS_MULTAGGR:
       errorMessage("cannot get the objective value of a multiple aggregated variable\n");
-      abort();
-      
+      SCIPABORT();
+      return 0.0;
+
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
@@ -7576,7 +7539,8 @@ Real SCIPvarGetObjLP(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
    }
 }
 
@@ -7619,13 +7583,15 @@ Real SCIPvarGetLbLP(
       else
       {
          errorMessage("scalar is zero in aggregation\n");
-         abort();
+         SCIPABORT();
+         return 0.0;
       }
       
    case SCIP_VARSTATUS_MULTAGGR:
       /**@todo get the sides of the corresponding linear constraint */
       errorMessage("getting the bounds of a multiple aggregated variable is not implemented yet\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
       
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
@@ -7635,7 +7601,8 @@ Real SCIPvarGetLbLP(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
    }
 }
 
@@ -7678,13 +7645,15 @@ Real SCIPvarGetUbLP(
       else
       {
          errorMessage("scalar is zero in aggregation\n");
-         abort();
+         SCIPABORT();
+         return 0.0;
       }
       
    case SCIP_VARSTATUS_MULTAGGR:
       /**@todo get the sides of the corresponding linear constraint */
       errorMessage("getting the bounds of a multiple aggregated variable is not implemented yet\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
       
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
@@ -7694,7 +7663,8 @@ Real SCIPvarGetUbLP(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
    }
 }
 
@@ -7799,7 +7769,8 @@ Real SCIPvarGetLPSol(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
    }
 }
 
@@ -7849,7 +7820,8 @@ Real SCIPvarGetPseudoSol(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
    }
 }
 
@@ -7924,7 +7896,8 @@ Real SCIPvarGetRootSol(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
    }
 }
 
@@ -7978,7 +7951,8 @@ Real SCIPvarGetAvgSol(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
    }
 }
 
@@ -8166,7 +8140,8 @@ Real SCIPvarGetPseudocost(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
    }
 }
 
@@ -8214,7 +8189,8 @@ Real SCIPvarGetPseudocostCurrentRun(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
    }
 }
 
@@ -8256,7 +8232,8 @@ Real SCIPvarGetPseudocostCount(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
    }
 }
 
@@ -8300,7 +8277,8 @@ Real SCIPvarGetPseudocostCountCurrentRun(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
    }
 }
 
@@ -8523,7 +8501,8 @@ Longint SCIPvarGetNBranchings(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0;
    }
 }
 
@@ -8567,7 +8546,8 @@ Longint SCIPvarGetNBranchingsCurrentRun(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0;
    }
 }
 
@@ -8609,7 +8589,8 @@ Real SCIPvarGetAvgBranchdepth(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
    }
 }
 
@@ -8653,7 +8634,8 @@ Real SCIPvarGetAvgBranchdepthCurrentRun(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
    }
 }
 
@@ -8695,7 +8677,8 @@ Longint SCIPvarGetNInferences(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0;
    }
 }
 
@@ -8739,7 +8722,8 @@ Longint SCIPvarGetNInferencesCurrentRun(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0;
    }
 }
 
@@ -8785,7 +8769,8 @@ Real SCIPvarGetAvgInferences(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
    }
 }
 
@@ -8833,7 +8818,8 @@ Real SCIPvarGetAvgInferencesCurrentRun(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
    }
 }
 
@@ -8875,7 +8861,8 @@ Longint SCIPvarGetNCutoffs(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0;
    }
 }
 
@@ -8917,7 +8904,8 @@ Longint SCIPvarGetNCutoffsCurrentRun(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0;
    }
 }
 
@@ -8963,7 +8951,8 @@ Real SCIPvarGetAvgCutoffs(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
    }
 }
 
@@ -9009,7 +8998,8 @@ Real SCIPvarGetAvgCutoffsCurrentRun(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
    }
 }
 
@@ -9177,13 +9167,15 @@ Real SCIPvarGetLbAtIndex(
       else
       {
          errorMessage("scalar is zero in aggregation\n");
-         abort();
+         SCIPABORT();
+         return 0.0;
       }
       
    case SCIP_VARSTATUS_MULTAGGR:
       /**@todo get the sides of the corresponding linear constraint */
       errorMessage("getting the bounds of a multiple aggregated variable is not implemented yet\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
       
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
@@ -9193,7 +9185,8 @@ Real SCIPvarGetLbAtIndex(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
    }
 }
 
@@ -9250,13 +9243,15 @@ Real SCIPvarGetUbAtIndex(
       else
       {
          errorMessage("scalar is zero in aggregation\n");
-         abort();
+         SCIPABORT();
+         return 0.0;
       }
       
    case SCIP_VARSTATUS_MULTAGGR:
       /**@todo get the sides of the corresponding linear constraint */
       errorMessage("getting the bounds of a multiple aggregated variable is not implemented yet\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
       
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
@@ -9266,7 +9261,8 @@ Real SCIPvarGetUbAtIndex(
       
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
    }
 }
 

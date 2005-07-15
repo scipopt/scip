@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.28 2005/05/31 17:20:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.29 2005/07/15 17:20:06 bzfpfend Exp $"
 
 /**@file   cons_eqknapsack.c
  * @brief  constraint handler for eqknapsack constraints
@@ -73,7 +73,7 @@ static
 DECL_CONSFREE(consFreeEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -88,7 +88,7 @@ static
 DECL_CONSINIT(consInitEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -103,7 +103,7 @@ static
 DECL_CONSEXIT(consExitEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -118,7 +118,7 @@ static
 DECL_CONSINITPRE(consInitpreEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -133,7 +133,7 @@ static
 DECL_CONSEXITPRE(consExitpreEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -148,7 +148,7 @@ static
 DECL_CONSINITSOL(consInitsolEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -163,7 +163,7 @@ static
 DECL_CONSEXITSOL(consExitsolEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -178,7 +178,7 @@ static
 DECL_CONSDELETE(consDeleteEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -193,7 +193,7 @@ static
 DECL_CONSTRANS(consTransEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -208,7 +208,7 @@ static
 DECL_CONSINITLP(consInitlpEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -223,7 +223,7 @@ static
 DECL_CONSSEPA(consSepaEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -237,7 +237,7 @@ static
 DECL_CONSENFOLP(consEnfolpEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -248,7 +248,7 @@ static
 DECL_CONSENFOPS(consEnfopsEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -259,7 +259,7 @@ static
 DECL_CONSCHECK(consCheckEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -271,7 +271,7 @@ static
 DECL_CONSPROP(consPropEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -286,7 +286,7 @@ static
 DECL_CONSPRESOL(consPresolEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -301,7 +301,7 @@ static
 DECL_CONSRESPROP(consRespropEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -315,7 +315,7 @@ static
 DECL_CONSLOCK(consLockEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -327,7 +327,7 @@ static
 DECL_CONSACTIVE(consActiveEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -342,7 +342,7 @@ static
 DECL_CONSDEACTIVE(consDeactiveEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -357,7 +357,7 @@ static
 DECL_CONSENABLE(consEnableEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -372,7 +372,7 @@ static
 DECL_CONSDISABLE(consDisableEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -386,7 +386,7 @@ static
 DECL_CONSPRINT(consPrintEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -503,7 +503,7 @@ RETCODE SCIPcreateConsEqknapsack(
    CONSDATA* consdata;
 
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527} --e{715}*/
+   SCIPABORT(); /*lint --e{527} --e{715}*/
 
    /* find the eqknapsack constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);

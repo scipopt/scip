@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.8 2005/05/31 17:20:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.9 2005/07/15 17:20:17 bzfpfend Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -397,9 +397,9 @@ RETCODE loadTcliquedata(
          tcliqueGetNNodes(sepadata->tcliquedata), tcliqueGetNEdges(sepadata->tcliquedata));
 
 #if 0
-      debug(printf("---v---- tcliquedata ----v---\n"));
+      debugPrintf("---v---- tcliquedata ----v---\n");
       debug(tcliquePrintData(sepadata->tcliquedata));
-      debug(printf("---^---- tcliquedata ----^---\n"));
+      debugPrintf("---^---- tcliquedata ----^---\n");
 #endif
    }
 
@@ -496,9 +496,9 @@ TCLIQUE_USRCALLBACK(tcliqueNewClique)
          {
             assert(cliquenodes[i] < nvars);
             CHECK_ABORT( SCIPaddVarToRow(sepadata->scip, cut, vars[cliquenodes[i]], 1.0) );
-            debug(printf(" [%d]<%s>", cliquenodes[i], SCIPvarGetName(vars[cliquenodes[i]])));
+            debugPrintf(" [%d]<%s>", cliquenodes[i], SCIPvarGetName(vars[cliquenodes[i]]));
          }
-         debug(printf("\n"));
+         debugPrintf("\n");
          CHECK_ABORT( SCIPflushRowExtensions(sepadata->scip, cut) );
 
          debugMessage("found clique cut (act=%g): ", unscaledweight);

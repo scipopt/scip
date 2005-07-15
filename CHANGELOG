@@ -22,6 +22,13 @@ interface:
   for diving heuristics)
 - new method SCIProwGetDualfarkas()
 - new method SCIPgetCurrentNode()
+- new method SCIPinterruptSolve()
+- new file i/o methods SCIPfopen(), SCIPfclose(), SCIPfprintf(), ... that operate on the data type SCIPFILE;
+  these methods automatically use zlib methods if the zlib is enabled
+- additional parameter "branchdir" for SCIPbranchVar()
+- replaced method SCIPmessage() by SCIPverbMessage() with additional parameter "file"
+- new methods SCIPerrorMessage(), SCIPwarningMessage(), SCIPdialogMessage(), and SCIPinfoMessage()
+- new methods SCIPsetMessagehdlr(), SCIPsetDefaultMessagehdlr(), and SCIPgetMessagehdlr()
 
 plugins:
 - added command "write solution" to default dialog
@@ -39,6 +46,8 @@ plugins:
 - new method SCIPgetDualfarkasKnapsack() of knapsack constraint handler
 - new method SCIPgetDualsolVarbound() of varbound constraint handler
 - new method SCIPgetDualfarkasVarbound() of varbound constraint handler
+- new Message Handler plugin
+- added commands "write problem" and "write transproblem" to default dialog
 
 parameters:
 - replaced parameter presolving/restartbdchgs with parameters presolving/maxrestarts and presolving/restartfac
@@ -46,6 +55,7 @@ parameters:
 - new parameter conflict/allowlocal
 - new parameter branching/fullstrong/reevalage
 - changed default values of heuristics/*/maxdiveavgquot and heuristics/*/maxdiveavgquotnosol to 0
+- additional setting SCIP_VERBLEVEL_DIALOG in display/verblevel parameter
 
 features:
 - reactivated multiaggregation in cons_linear.c on binary variables again (possible due to bug fix below)
@@ -61,6 +71,10 @@ features:
   we have to perform one additional simplex iteration to get the dual solution that actually violates the objective
   limit
 - modified the influence of the depth level in conflict analysis
+- new event type SCIP_EVENTTYPE_PRESOLVEROUND
+- added zlib support
+- replaced all abort() calls by SCIPABORT(); this is defined in def.h to be assert(FALSE)
+- modified the Makefile to accept an additional parameter VERBOSE={true,false}
 
 fixed bugs:
 - LP primal feasibility for bounds is now defined as absolute measure (was relative to the bound before);
@@ -93,6 +107,9 @@ fixed bugs:
 - fixed numerical bug in pseudo objective propagator with only slightly tightened bounds
 - fixed bug with constraint handlers that can only enforce their constraints by adding cuts, but the maximal number of
   cuts to separate is set to 0; now, cuts that are generated in the constraint enforcement are used in any case
+- removed bug in SCIPvarAddVlb() and SCIPvarAddVub() with fractional vlb/vubcoefs
+- removed bug that an LP might be declared to be solved even if it was marked erroneous due to numerical problems
+- fixed bug with redundant self implications that wrongly lead to the detection of infeasibility
 
 
 SCIP version 0.79

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_xxx.c,v 1.9 2005/05/31 17:20:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer_xxx.c,v 1.10 2005/07/15 17:20:13 bzfpfend Exp $"
 
 /**@file   pricer_xxx.c
  * @brief  xxx variable pricer
@@ -70,7 +70,7 @@ static
 DECL_PRICERFREE(pricerFreeXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx variable pricer not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -85,7 +85,7 @@ static
 DECL_PRICERINIT(pricerInitXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx variable pricer not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -100,7 +100,7 @@ static
 DECL_PRICEREXIT(pricerExitXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx variable pricer not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -115,7 +115,7 @@ static
 DECL_PRICERINITSOL(pricerInitsolXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx variable pricer not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -130,7 +130,7 @@ static
 DECL_PRICEREXITSOL(pricerExitsolXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx variable pricer not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -144,7 +144,7 @@ static
 DECL_PRICERREDCOST(pricerRedcostXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx variable pricer not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -156,7 +156,7 @@ static
 DECL_PRICERREDCOST(pricerFarkasXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx variable pricer not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }

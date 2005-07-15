@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_sol.h,v 1.7 2005/05/31 17:20:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_sol.h,v 1.8 2005/07/15 17:20:24 bzfpfend Exp $"
 
 /**@file   type_sol.h
  * @brief  type definitions for storing primal CIP solutions
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __TYPE_SOL_H__
-#define __TYPE_SOL_H__
+#ifndef __SCIP_TYPE_SOL_H__
+#define __SCIP_TYPE_SOL_H__
 
 
 /** origin of solution: where to retrieve uncached elements */

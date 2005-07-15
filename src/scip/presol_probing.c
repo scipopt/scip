@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.17 2005/05/31 17:20:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.18 2005/07/15 17:20:12 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -398,13 +398,15 @@ DECL_PRESOLEXEC(presolExecProbing)
       /* display probing status */
       if( (i+1) % 1000 == 0 )
       {
-         SCIPmessage(scip, SCIP_VERBLEVEL_FULL, "   (%.1fs) probing: %d/%d (%.1f%%) - %d fixings, %d aggregations, %d implications, %d bound changes\n", 
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+            "   (%.1fs) probing: %d/%d (%.1f%%) - %d fixings, %d aggregations, %d implications, %d bound changes\n", 
             SCIPgetSolvingTime(scip), i+1, nbinvars, 100.0*(Real)(i+1)/(Real)nbinvars,
             presoldata->nfixings, presoldata->naggregations, presoldata->nimplications, presoldata->nbdchgs);
       }
 
       /* ignore variables, that were fixed, aggregated, or deleted in prior probings */
-      if( !SCIPvarIsActive(vars[i]) || SCIPvarIsDeleted(vars[i]) )
+      if( !SCIPvarIsActive(vars[i]) || SCIPvarIsDeleted(vars[i])
+         || SCIPvarGetLbGlobal(vars[i]) > 0.5 || SCIPvarGetUbGlobal(vars[i]) < 0.5 )
          continue;
 
       nuseless++;

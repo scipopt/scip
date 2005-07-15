@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.47 2005/05/31 17:20:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.48 2005/07/15 17:20:08 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -494,15 +494,18 @@ VAR* SCIPeventGetVar(
 
    case SCIP_EVENTTYPE_HOLEADDED:
       errorMessage("HOLEADDED event not implemented yet\n");
-      abort();
+      SCIPABORT();
+      return NULL;
 
    case SCIP_EVENTTYPE_HOLEREMOVED:
       errorMessage("HOLEREMOVED event not implemented yet\n");
-      abort();
+      SCIPABORT();
+      return NULL;
 
    default:
       errorMessage("event does not belong to a variable\n");
-      abort();
+      SCIPABORT();
+      return NULL;
    }  /*lint !e788*/
 }
 
@@ -555,7 +558,8 @@ Real SCIPeventGetOldbound(
 
    default:
       errorMessage("event is not a bound change event\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
    }  /*lint !e788*/
 }
 
@@ -576,7 +580,8 @@ Real SCIPeventGetNewbound(
 
    default:
       errorMessage("event is not a bound change event\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
    }  /*lint !e788*/
 }
 
@@ -673,6 +678,7 @@ RETCODE SCIPeventProcess(
 
    case SCIP_EVENTTYPE_VARADDED:
    case SCIP_EVENTTYPE_VARDELETED:
+   case SCIP_EVENTTYPE_PRESOLVEROUND:
    case SCIP_EVENTTYPE_NODEFOCUSED:
    case SCIP_EVENTTYPE_NODEFEASIBLE:
    case SCIP_EVENTTYPE_NODEINFEASIBLE:
@@ -771,11 +777,11 @@ RETCODE SCIPeventProcess(
 
    case SCIP_EVENTTYPE_HOLEADDED:
       errorMessage("HOLEADDED event not implemented yet\n");
-      abort();
+      SCIPABORT();
 
    case SCIP_EVENTTYPE_HOLEREMOVED:
       errorMessage("HOLEREMOVED event not implemented yet\n");
-      abort();
+      SCIPABORT();
 
    default:
       errorMessage("unknown event type <%d>\n", event->eventtype);
@@ -1266,6 +1272,7 @@ RETCODE SCIPeventqueueAdd(
       case SCIP_EVENTTYPE_VARDELETED:
       case SCIP_EVENTTYPE_VARFIXED:
       case SCIP_EVENTTYPE_LOCKSCHANGED:
+      case SCIP_EVENTTYPE_PRESOLVEROUND:
       case SCIP_EVENTTYPE_NODEFOCUSED:
       case SCIP_EVENTTYPE_NODEFEASIBLE:
       case SCIP_EVENTTYPE_NODEINFEASIBLE:
@@ -1419,11 +1426,11 @@ RETCODE SCIPeventqueueAdd(
 
       case SCIP_EVENTTYPE_HOLEADDED:
          errorMessage("HOLEADDED event not implemented yet\n");
-         abort();
+         SCIPABORT();
 
       case SCIP_EVENTTYPE_HOLEREMOVED:
          errorMessage("HOLEREMOVED event not implemented yet\n");
-         abort();
+         SCIPABORT();
 
       default:
          errorMessage("unknown event type <%d>\n", (*event)->eventtype);

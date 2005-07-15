@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.h,v 1.1 2005/06/23 16:30:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_octane.h,v 1.2 2005/07/15 17:20:09 bzfpfend Exp $"
 
 /**@file   heur_octane.h
  * @brief  octane primal heuristic based on Balas, Ceria, Dawande, Margot, and Pataki
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __HEUR_OCTANE_H__
-#define __HEUR_OCTANE_H__
+#ifndef __SCIP_HEUR_OCTANE_H__
+#define __SCIP_HEUR_OCTANE_H__
 
 
 #include "scip/scip.h"

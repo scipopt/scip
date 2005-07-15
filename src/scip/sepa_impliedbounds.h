@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_impliedbounds.h,v 1.3 2005/05/31 17:20:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_impliedbounds.h,v 1.4 2005/07/15 17:20:17 bzfpfend Exp $"
 
 /**@file   sepa_impliedbounds.h
  * @brief  implied bounds separator
@@ -24,8 +24,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SEPA_IMPLIEDBOUNDS_H__
-#define __SEPA_IMPLIEDBOUNDS_H__
+#ifndef __SCIP_SEPA_IMPLIEDBOUNDS_H__
+#define __SCIP_SEPA_IMPLIEDBOUNDS_H__
 
 
 #include "scip/scip.h"

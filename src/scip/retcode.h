@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: retcode.h,v 1.21 2005/05/31 17:20:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: retcode.h,v 1.22 2005/07/15 17:20:16 bzfpfend Exp $"
 
 /**@file   retcode.h
  * @brief  internal methods for return codes for SCIP methods
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __RETCODE_H__
-#define __RETCODE_H__
+#ifndef __SCIP_RETCODE_H__
+#define __SCIP_RETCODE_H__
 
 #include <stdio.h>
 

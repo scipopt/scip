@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.35 2005/05/31 17:20:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.36 2005/07/15 17:20:04 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -483,7 +483,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
          /* check for an error in strong branching */
          if( lperror )
          {
-            SCIPmessage(scip, SCIP_VERBLEVEL_HIGH,
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "(node %lld) error in strong branching call for variable <%s> with solution %g\n", 
                SCIPgetNNodes(scip), SCIPvarGetName(lpcands[c]), lpcandssol[c]);
             break;

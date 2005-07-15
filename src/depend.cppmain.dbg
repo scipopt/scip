@@ -1,5 +1,6 @@
-$(OBJDIR)/cppmain.o: src/cppmain.cpp src/scip/scip.h src/scip/def.h \
-  src/scip/type_retcode.h src/scip/message.h src/scip/memory.h \
+$(BINOBJDIR)/cppmain.o: src/cppmain.cpp src/scip/scip.h src/scip/def.h \
+  src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
+  src/scip/struct_message.h src/scip/pub_message.h src/scip/memory.h \
   src/scip/type_result.h src/scip/type_clock.h src/scip/type_misc.h \
   src/scip/type_paramset.h src/scip/type_scip.h src/scip/type_event.h \
   src/scip/type_lp.h src/scip/type_var.h src/scip/type_prob.h \
@@ -10,10 +11,11 @@ $(OBJDIR)/cppmain.o: src/cppmain.cpp src/scip/scip.h src/scip/def.h \
   src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_prop.h \
   src/scip/pub_branch.h src/scip/pub_conflict.h src/scip/pub_cons.h \
   src/scip/pub_cutpool.h src/scip/type_cutpool.h src/scip/pub_dialog.h \
-  src/scip/pub_disp.h src/scip/pub_event.h src/scip/pub_heur.h \
-  src/scip/pub_lp.h src/scip/type_set.h src/scip/type_stat.h \
-  src/scip/type_lpi.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
-  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
-  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
-  src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
-  src/scip/pub_var.h src/scip/type_history.h src/scip/scipdefplugins.h
+  src/scip/pub_disp.h src/scip/pub_event.h src/scip/pub_fileio.h \
+  src/scip/pub_heur.h src/scip/pub_lp.h src/scip/type_set.h \
+  src/scip/type_stat.h src/scip/type_lpi.h src/scip/pub_misc.h \
+  src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
+  src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
+  src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
+  src/scip/pub_tree.h src/scip/pub_var.h src/scip/type_history.h \
+  src/scip/scipdefplugins.h

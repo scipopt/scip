@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.55 2005/05/31 17:20:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.56 2005/07/15 17:20:16 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  mps file reader
@@ -48,15 +48,15 @@
 #define BLANK         ' '
 
 enum MpsSection
-   {
-      MPS_NAME, MPS_OBJSEN, MPS_OBJNAME, MPS_ROWS, MPS_COLUMNS, MPS_RHS, MPS_RANGES, MPS_BOUNDS, MPS_ENDATA
-   };
+{
+   MPS_NAME, MPS_OBJSEN, MPS_OBJNAME, MPS_ROWS, MPS_COLUMNS, MPS_RHS, MPS_RANGES, MPS_BOUNDS, MPS_ENDATA
+};
 typedef enum MpsSection MPSSECTION;
 
 struct MpsInput
 {
    MPSSECTION      section;
-   FILE*           fp;
+   SCIPFILE*       fp;
    int             lineno;
    OBJSENSE        objsense;
    Bool            haserror;
@@ -80,7 +80,7 @@ static
 RETCODE mpsinputCreate(
    SCIP*            scip,
    MPSINPUT**       mpsi,
-   FILE*            fp
+   SCIPFILE*        fp
    )
 {
    assert(mpsi != NULL);
@@ -306,7 +306,7 @@ void mpsinputSyntaxerror(
 {
    assert(mpsi != NULL);
 
-   fprintf(stderr, "Syntax error in line %d\n", mpsi->lineno);
+   SCIPwarningMessage("Syntax error in line %d\n", mpsi->lineno);
    mpsi->section  = MPS_ENDATA;
    mpsi->haserror = TRUE;
 }
@@ -327,8 +327,8 @@ void mpsinputEntryIgnored(
    assert(entity      != NULL);
    assert(entity_name != NULL);
 
-   SCIPmessage(scip, SCIP_VERBLEVEL_FULL, "Warning line %d: %s \"%s\" for %s \"%s\" ignored\n",
-      mpsi->lineno, what, what_name, entity, entity_name);
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+      "Warning line %d: %s \"%s\" for %s \"%s\" ignored\n", mpsi->lineno, what, what_name, entity, entity_name);
 }
 
 /* fill the line from \p pos up to column 80 with blanks.
@@ -390,7 +390,7 @@ Bool mpsinputReadLine(
        */
       do
       {
-         if (NULL == fgets(mpsi->buf, sizeof(mpsi->buf), mpsi->fp))
+         if (NULL == SCIPfgets(mpsi->buf, sizeof(mpsi->buf), mpsi->fp))
             return FALSE;
          mpsi->lineno++;
       } 
@@ -1257,14 +1257,14 @@ RETCODE readMps(
    const char*      filename            /**< name of the input file */
    )
 {
-   FILE*     fp;
+   SCIPFILE* fp;
    MPSINPUT* mpsi;
    Bool      error;
 
    assert(scip != NULL);
    assert(filename != NULL);
 
-   if (NULL == (fp = fopen(filename, "r")))
+   if (NULL == (fp = SCIPfopen(filename, "r")))
    {
       errorMessage("cannot open file <%s> for reading\n", filename);
       perror(filename);
@@ -1308,7 +1308,7 @@ RETCODE readMps(
    if (mpsinputSection(mpsi) != MPS_ENDATA)
       mpsinputSyntaxerror(mpsi);
 
-   fclose(fp);
+   SCIPfclose(fp);
 
    error = mpsinputHasError(mpsi);
 

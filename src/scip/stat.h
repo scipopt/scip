@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.h,v 1.37 2005/05/31 17:20:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.h,v 1.38 2005/07/15 17:20:19 bzfpfend Exp $"
 
 /**@file   stat.h
  * @brief  internal methods for problem statistics
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __STAT_H__
-#define __STAT_H__
+#ifndef __SCIP_STAT_H__
+#define __SCIP_STAT_H__
 
 
 #include "scip/def.h"

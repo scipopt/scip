@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.62 2005/05/31 17:20:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.63 2005/07/15 17:20:18 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -69,6 +69,7 @@ RETCODE SCIPstatCreate(
    (*stat)->marked_nvaridx = 0;
    (*stat)->marked_ncolidx = 0;
    (*stat)->marked_nrowidx = 0;
+   (*stat)->userinterrupt = FALSE;
 
    SCIPstatReset(*stat);
 
@@ -294,7 +295,7 @@ void SCIPstatUpdateMemsaveMode(
       if( !stat->memsavemode && memused >= set->mem_savefac * set->limit_memory * 1024.0 * 1024.0 )
       {
          /* switch to memory saving mode */
-         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
             "(node %lld) switching to memory saving mode (mem: %.1fM/%.1fM)\n", 
             stat->nnodes, (Real)memused/(1024.0*1024.0), set->limit_memory);
          stat->memsavemode = TRUE;
@@ -303,7 +304,7 @@ void SCIPstatUpdateMemsaveMode(
       else if( stat->memsavemode && memused < 0.5 * set->mem_savefac * set->limit_memory * 1024.0 * 1024.0 )
       {
          /* switch to standard mode */
-         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
             "(node %lld) switching to standard mode (mem: %.1fM/%.1fM)\n", 
             stat->nnodes, (Real)memused/(1024.0*1024.0), set->limit_memory);
          stat->memsavemode = FALSE;

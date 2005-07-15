@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.50 2005/06/29 11:08:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.51 2005/07/15 17:20:11 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2
@@ -22,6 +22,11 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/* turn off asserts; otherwise there is an assert(ptr == 0) failure at OneSpin Solutions */
+#ifndef NDEBUG
+#define NDEBUG
+#endif
 
 /* remember the original value of the DEBUG define and undefine it */
 #ifdef DEBUG
@@ -392,7 +397,8 @@ SPxLP::SPxSense spxObjsen(
       return SPxLP::MINIMIZE;
    default:
       errorMessage("invalid objective sense\n");
-      abort();
+      SCIPABORT();
+      return SPxLP::MINIMIZE;
    }
 }
 
@@ -1931,7 +1937,7 @@ RETCODE SCIPlpiGetBase(
             return SCIP_LPERROR;
          default:
             errorMessage("invalid basis status\n");
-            abort();
+            SCIPABORT();
          }
       }
    }
@@ -1963,7 +1969,7 @@ RETCODE SCIPlpiGetBase(
             break;
          default:
             errorMessage("invalid basis status\n");
-            abort();
+            SCIPABORT();
          }
       }
    }
@@ -2008,7 +2014,7 @@ RETCODE SCIPlpiSetBase(
          return SCIP_LPERROR;
       default:
          errorMessage("invalid basis status\n");
-         abort();
+         SCIPABORT();
       }
    }
 
@@ -2030,7 +2036,7 @@ RETCODE SCIPlpiSetBase(
          break;
       default:
          errorMessage("invalid basis status\n");
-         abort();
+         SCIPABORT();
       }
    }
    lpi->spx->setBasis(spxrstat, spxcstat);

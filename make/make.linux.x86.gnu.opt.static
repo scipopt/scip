@@ -1,0 +1,7 @@
+#--- $Id: make.linux.x86.gnu.opt.static,v 1.1 2005/07/15 17:19:59 bzfpfend Exp $
+FLAGS		+=	-DNDEBUG -DROUNDING_FE -DWITH_READLINE
+OFLAGS		+=	-O3 -march=pentiumpro -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
+CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
+CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
+ARFLAGS		=	crs
+LDFLAGS		+=	-lreadline -lz -lncurses # -static

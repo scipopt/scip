@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.h,v 1.38 2005/06/29 11:08:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.h,v 1.39 2005/07/15 17:20:06 bzfpfend Exp $"
 
 /**@file   cons_linear.h
  * @brief  constraint handler for linear constraints
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __CONS_LINEAR_H__
-#define __CONS_LINEAR_H__
+#ifndef __SCIP_CONS_LINEAR_H__
+#define __SCIP_CONS_LINEAR_H__
 
 
 typedef struct LinConsUpgrade LINCONSUPGRADE; /**< linear constraint update method */

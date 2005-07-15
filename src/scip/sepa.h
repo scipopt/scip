@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.h,v 1.38 2005/05/31 17:20:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.h,v 1.39 2005/07/15 17:20:17 bzfpfend Exp $"
 
 /**@file   sepa.h
  * @brief  internal methods for separators
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SEPA_H__
-#define __SEPA_H__
+#ifndef __SCIP_SEPA_H__
+#define __SCIP_SEPA_H__
 
 
 #include "scip/def.h"

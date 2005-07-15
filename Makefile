@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.114 2005/07/01 14:59:55 bzfpfend Exp $
+# $Id: Makefile,v 1.115 2005/07/15 17:19:58 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -38,9 +38,6 @@ MACHINENAME	:=	$(shell uname -n | tr '[:upper:]' '[:lower:]')
 # default settings
 #-----------------------------------------------------------------------------
 
-OPT		=	dbg
-LPS		=	cpx
-COMP		=	gnu
 TIME     	=  	3600
 NODES           =       2100000000
 MEM		=	1024
@@ -48,6 +45,12 @@ FEASTOL		=	default
 TEST		=	miplib
 SETTINGS        =       default
 
+VERBOSE		=	false
+OPT		=	opt
+LPS		=	cpx
+COMP		=	gnu
+LINK		=	static
+LIBEXT		=	a
 LINKER  	=	C
 
 CC		=	gcc
@@ -81,9 +84,11 @@ GXXWARN		=	-Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
 			-Woverloaded-virtual -Wsign-promo -Wsynth \
 			-Wcast-qual -Wno-unused-parameter # -Wold-style-cast -Wshadow -Wundef
 
-BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
+BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LINK)
 OBJDIR		=	obj/O.$(BASE)
-OBJSUBDIRS      =	scip objscip
+BINOBJDIR	=	$(OBJDIR)/bin
+LIBOBJDIR	=	$(OBJDIR)/lib
+LIBOBJSUBDIRS	=	scip objscip
 SRCDIR		=	src
 BINDIR		=	bin
 LIBDIR		=	lib
@@ -157,8 +162,8 @@ LPILIBSRC	=	src/scip/lpi_clp.cpp src/scip/bitencode.c src/scip/memory.c
 endif
 
 LPILIB		=	$(LPILIBNAME).$(BASE)
-LPILIBFILE	=	$(LIBDIR)/lib$(LPILIB).a
-LPILIBXXX	=	$(addprefix $(OBJDIR)/,$(LPILIBOBJ))
+LPILIBFILE	=	$(LIBDIR)/lib$(LPILIB).$(LIBEXT)
+LPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(LPILIBOBJ))
 LPILIBDEP	=	src/depend.lpilib.$(LPS).$(OPT)
 
 
@@ -262,8 +267,8 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/tclique_graph.o
 
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
-SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).a
-SCIPLIBXXX	=	$(addprefix $(OBJDIR)/,$(SCIPLIBOBJ))
+SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).$(LIBEXT)
+SCIPLIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SCIPLIBOBJ))
 SCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(SCIPLIBOBJ:.o=.c))
 SCIPLIBDEP	=	src/depend.sciplib.$(OPT)
 
@@ -277,6 +282,7 @@ OBJSCIPLIBOBJ	=	objscip/objbranchrule.o \
 			objscip/objconshdlr.o \
 			objscip/objeventhdlr.o \
 			objscip/objheur.o \
+			objscip/objmessagehdlr.o \
 			objscip/objnodesel.o \
 			objscip/objpresol.o \
 			objscip/objpricer.o \
@@ -287,8 +293,8 @@ OBJSCIPLIBOBJ	=	objscip/objbranchrule.o \
 			objscip/objvardata.o
 
 OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
-OBJSCIPLIBFILE	=	$(LIBDIR)/lib$(OBJSCIPLIB).a
-OBJSCIPLIBXXX	=	$(addprefix $(OBJDIR)/,$(OBJSCIPLIBOBJ))
+OBJSCIPLIBFILE	=	$(LIBDIR)/lib$(OBJSCIPLIB).$(LIBEXT)
+OBJSCIPLIBOBJFILES=	$(addprefix $(LIBOBJDIR)/,$(OBJSCIPLIBOBJ))
 OBJSCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(OBJSCIPLIBOBJ:.o=.cpp))
 OBJSCIPLIBDEP	=	src/depend.objsciplib.$(OPT)
 
@@ -312,7 +318,7 @@ endif
 
 MAIN		=	$(MAINNAME).$(BASE).$(LPS)
 MAINFILE	=	$(BINDIR)/$(MAIN)
-MAINXXX		=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
+MAINOBJFILES	=	$(addprefix $(BINOBJDIR)/,$(MAINOBJ))
 
 
 #-----------------------------------------------------------------------------
@@ -321,7 +327,7 @@ MAINXXX		=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
 
 all:            $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE)
 
-lint:		$(SCIPLIBSRC) $(LPILIBSRC) $(MAINSRC) $(OBJSCIPLIBSRC)
+lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(MAINSRC)
 		-rm -f lint.out
 		$(SHELL) -ec 'for i in $^; \
 			do \
@@ -342,16 +348,22 @@ testcplex:
 		/bin/sh ./check_cplex.sh $(TEST) $(CPLEX) $(OSTYPE).$(ARCH).$(MACHINENAME) $(TIME) $(NODES) $(MEM) $(FEASTOL);
 
 $(OBJDIR):	
-		-mkdir -p $(OBJDIR)
+		@-mkdir -p $(OBJDIR)
 
-$(OBJSUBDIRS):	$(OBJDIR)
-		-mkdir -p $(OBJDIR)/$@
+$(BINOBJDIR):	$(OBJDIR)
+		@-mkdir -p $(BINOBJDIR)
+
+$(LIBOBJDIR):	$(OBJDIR)
+		@-mkdir -p $(LIBOBJDIR)
+
+$(LIBOBJSUBDIRS):	$(LIBOBJDIR)
+		@-mkdir -p $(LIBOBJDIR)/$@
 
 $(LIBDIR):
-		-mkdir -p $(LIBDIR)
+		@-mkdir -p $(LIBDIR)
 
 $(BINDIR):
-		-mkdir -p $(BINDIR)
+		@-mkdir -p $(BINDIR)
 
 clean:
 		-rm -rf $(OBJDIR)/* $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE)
@@ -359,24 +371,24 @@ clean:
 lpidepend:
 ifeq ($(LINKER),C)
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(LPILIBSRC) \
-		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/scip/\1.o|g'\'' \
+		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(LIBOBJDIR\)/scip/\1.o|g'\'' \
 		>$(LPILIBDEP)'
 endif
 ifeq ($(LINKER),CPP)
 		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(LPILIBSRC) \
-		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/scip/\1.o|g'\'' \
+		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(LIBOBJDIR\)/scip/\1.o|g'\'' \
 		>$(LPILIBDEP)'
 endif
 
 depend:		lpidepend
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(MAINSRC) \
-		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/\1.o|g'\'' \
+		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(BINOBJDIR\)/\1.o|g'\'' \
 		>$(MAINDEP)'
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(SCIPLIBSRC) \
-		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/scip/\1.o|g'\'' \
+		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(LIBOBJDIR\)/scip/\1.o|g'\'' \
 		>$(SCIPLIBDEP)'
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(OBJSCIPLIBSRC) \
-		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/objscip/\1.o|g'\'' \
+		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(LIBOBJDIR\)/objscip/\1.o|g'\'' \
 		>$(OBJSCIPLIBDEP)'
 
 -include	$(MAINDEP)
@@ -384,37 +396,109 @@ depend:		lpidepend
 -include	$(OBJSCIPLIBDEP)
 -include 	$(LPILIBDEP)
 
-$(MAINFILE):	$(BINDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINXXX)
+$(MAINFILE):	$(BINDIR) $(BINOBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINOBJFILES)
+		@echo "-> linking $@"
 ifeq ($(LINKER),C)
-		$(CC) $(MAINXXX) \
+ifeq ($(VERBOSE), true)
+		$(CC) $(MAINOBJFILES) \
 		-L$(LIBDIR) -l$(SCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) -o $@
+else
+		@$(CC) $(MAINOBJFILES) \
+		-L$(LIBDIR) -l$(SCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
+		$(LDFLAGS) -o $@
+endif
 endif
 ifeq ($(LINKER),CPP)
-		$(CXX) $(MAINXXX) \
+ifeq ($(VERBOSE), true)
+		$(CXX) $(MAINOBJFILES) \
+		-L$(LIBDIR) -l$(SCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
+		$(LDFLAGS) -o $@
+else
+		@$(CXX) $(MAINOBJFILES) \
 		-L$(LIBDIR) -l$(SCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) -o $@
 endif
+endif
 
-$(SCIPLIBFILE):	$(OBJSUBDIRS) $(LIBDIR) $(SCIPLIBXXX) 
+$(SCIPLIBFILE):	$(LIBOBJSUBDIRS) $(LIBDIR) $(SCIPLIBOBJFILES) 
+		@echo "-> generating library $@"
+ifeq ($(VERBOSE), true)
 		-rm -f $@
-		$(AR) $(ARFLAGS) $@ $(SCIPLIBXXX) 
+		$(AR) $(ARFLAGS) $@ $(SCIPLIBOBJFILES) 
+ifneq ($(RANLIB),)
 		$(RANLIB) $@
+endif
+else
+		@-rm -f $@
+		@$(AR) $(ARFLAGS) $@ $(SCIPLIBOBJFILES) 
+ifneq ($(RANLIB),)
+		@$(RANLIB) $@
+endif
+endif
 
-$(OBJSCIPLIBFILE):	$(OBJSUBDIRS) $(LIBDIR) $(OBJSCIPLIBXXX) 
+$(OBJSCIPLIBFILE):	$(LIBOBJSUBDIRS) $(LIBDIR) $(OBJSCIPLIBOBJFILES) 
+		@echo "-> generating library $@"
+ifeq ($(VERBOSE), true)
 		-rm -f $@
-		$(AR) $(ARFLAGS) $@ $(OBJSCIPLIBXXX) 
+		$(AR) $(ARFLAGS) $@ $(OBJSCIPLIBOBJFILES) 
+ifneq ($(RANLIB),)
 		$(RANLIB) $@
+endif
+else
+		@-rm -f $@
+		@$(AR) $(ARFLAGS) $@ $(OBJSCIPLIBOBJFILES) 
+ifneq ($(RANLIB),)
+		@$(RANLIB) $@
+endif
+endif
 
-$(LPILIBFILE):	$(OBJSUBDIRS) $(LIBDIR) $(LPILIBXXX)
+$(LPILIBFILE):	$(OBJSUBDIRS) $(LIBDIR) $(LPILIBOBJFILES)
+		@echo "-> generating library $@"
+ifeq ($(VERBOSE), true)
 		-rm -f $@
-		$(AR) $(ARFLAGS) $@ $(LPILIBXXX)
+		$(AR) $(ARFLAGS) $@ $(LPILIBOBJFILES)
+ifneq ($(RANLIB),)
 		$(RANLIB) $@
+endif
+else
+		@-rm -f $@
+		@$(AR) $(ARFLAGS) $@ $(LPILIBOBJFILES)
+ifneq ($(RANLIB),)
+		@$(RANLIB) $@
+endif
+endif
 
-$(OBJDIR)/%.o:	$(SRCDIR)/%.c
-		$(CC) $(FLAGS) $(OFLAGS) $(CFLAGS) -c $< -o $@
+$(BINOBJDIR)/%.o:	$(SRCDIR)/%.c
+		@echo "-> compiling $@"
+ifeq ($(VERBOSE), true)
+		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< -o $@
+else
+		@$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< -o $@
+endif
 
-$(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
-		$(CXX) $(FLAGS) $(OFLAGS) $(CXXFLAGS) -c $< -o $@
+$(BINOBJDIR)/%.o:	$(SRCDIR)/%.cpp
+		@echo "-> compiling $@"
+ifeq ($(VERBOSE), true)
+		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< -o $@
+else
+		@$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< -o $@
+endif
+
+$(LIBOBJDIR)/%.o:	$(SRCDIR)/%.c
+		@echo "-> compiling $@"
+ifeq ($(VERBOSE), true)
+		$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) -c $< -o $@
+else
+		@$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) -c $< -o $@
+endif
+
+$(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp
+		@echo "-> compiling $@"
+ifeq ($(VERBOSE), true)
+		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) -c $< -o $@
+else
+		@$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) -c $< -o $@
+endif
 
 # --- EOF ---------------------------------------------------------------------

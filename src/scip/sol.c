@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.60 2005/06/21 16:55:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.61 2005/07/15 17:20:18 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -144,7 +144,7 @@ Real solGetArrayVal(
 
       default:
          errorMessage("unknown solution origin <%d>\n", sol->solorigin);
-         abort();
+         SCIPABORT();
       }
    }
 }
@@ -792,7 +792,8 @@ Real SCIPsolGetVal(
 
    default:
       errorMessage("unknown variable status\n");
-      abort();
+      SCIPABORT();
+      return 0.0;
    }
 }
 
@@ -876,7 +877,7 @@ RETCODE SCIPsolCheck(
 
 #ifdef DEBUG
          if( !(*feasible) )
-            printf("  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var), lb, ub);
+            debugPrintf("  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var), lb, ub);
 #endif
       }
    }
@@ -889,7 +890,7 @@ RETCODE SCIPsolCheck(
 
 #ifdef DEBUG
       if( !(*feasible) )
-         printf("  -> infeasibility detected in constraint handler <%s>\n", SCIPconshdlrGetName(set->conshdlrs[h])); 
+         debugPrintf("  -> infeasibility detected in constraint handler <%s>\n", SCIPconshdlrGetName(set->conshdlrs[h])); 
 #endif
    }
 
@@ -1053,9 +1054,6 @@ RETCODE SCIPsolPrint(
    assert(prob != NULL);
    assert(prob->transformed || transprob != NULL);
 
-   if( file == NULL )
-      file = stdout;
-
    /* display variables of problem data */
    for( v = 0; v < prob->nfixedvars; ++v )
    {
@@ -1063,14 +1061,14 @@ RETCODE SCIPsolPrint(
       solval = SCIPsolGetVal(sol, set, stat, prob->fixedvars[v]);
       if( !SCIPsetIsZero(set, solval) )
       {
-         fprintf(file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
+         SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
          if( SCIPsetIsInfinity(set, solval) )
-            fprintf(file, " +infinity");
+            SCIPmessageFPrintInfo(file, " +infinity");
          else if( SCIPsetIsInfinity(set, -solval) )
-            fprintf(file, " -infinity");
+            SCIPmessageFPrintInfo(file, " -infinity");
          else
-            fprintf(file, " %f", solval);
-         fprintf(file, " \t(obj:%g)\n", SCIPvarGetObj(prob->fixedvars[v]));
+            SCIPmessageFPrintInfo(file, " %f", solval);
+         SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(prob->fixedvars[v]));
       }
    }
    for( v = 0; v < prob->nvars; ++v )
@@ -1079,14 +1077,14 @@ RETCODE SCIPsolPrint(
       solval = SCIPsolGetVal(sol, set, stat, prob->vars[v]);
       if( !SCIPsetIsZero(set, solval) )
       {
-         fprintf(file, "%-32s", SCIPvarGetName(prob->vars[v]));
+         SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(prob->vars[v]));
          if( SCIPsetIsInfinity(set, solval) )
-            fprintf(file, " +infinity");
+            SCIPmessageFPrintInfo(file, " +infinity");
          else if( SCIPsetIsInfinity(set, -solval) )
-            fprintf(file, " -infinity");
+            SCIPmessageFPrintInfo(file, " -infinity");
          else
-            fprintf(file, " %f", solval);
-         fprintf(file, " \t(obj:%g)\n", SCIPvarGetObj(prob->vars[v]));
+            SCIPmessageFPrintInfo(file, " %f", solval);
+         SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(prob->vars[v]));
       }
    }
 
@@ -1103,14 +1101,14 @@ RETCODE SCIPsolPrint(
          solval = SCIPsolGetVal(sol, set, stat, transprob->fixedvars[v]);
          if( !SCIPsetIsZero(set, solval) )
          {
-            fprintf(file, "%-32s", SCIPvarGetName(transprob->fixedvars[v]));
+            SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(transprob->fixedvars[v]));
             if( SCIPsetIsInfinity(set, solval) )
-               fprintf(file, " +infinity");
+               SCIPmessageFPrintInfo(file, " +infinity");
             else if( SCIPsetIsInfinity(set, -solval) )
-               fprintf(file, " -infinity");
+               SCIPmessageFPrintInfo(file, " -infinity");
             else
-               fprintf(file, " %f", solval);
-            fprintf(file, " \t(obj:%g)\n", SCIPvarGetObj(transprob->fixedvars[v]));
+               SCIPmessageFPrintInfo(file, " %f", solval);
+            SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(transprob->fixedvars[v]));
          }
       }
       for( v = 0; v < transprob->nvars; ++v )
@@ -1122,14 +1120,14 @@ RETCODE SCIPsolPrint(
          solval = SCIPsolGetVal(sol, set, stat, transprob->vars[v]);
          if( !SCIPsetIsZero(set, solval) )
          {
-            fprintf(file, "%-32s", SCIPvarGetName(transprob->vars[v]));
+            SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(transprob->vars[v]));
             if( SCIPsetIsInfinity(set, solval) )
-               fprintf(file, " +infinity");
+               SCIPmessageFPrintInfo(file, " +infinity");
             else if( SCIPsetIsInfinity(set, -solval) )
-               fprintf(file, " -infinity");
+               SCIPmessageFPrintInfo(file, " -infinity");
             else
-               fprintf(file, " %f", solval);
-            fprintf(file, " \t(obj:%g)\n", SCIPvarGetObj(transprob->vars[v]));
+               SCIPmessageFPrintInfo(file, " %f", solval);
+            SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(transprob->vars[v]));
          }
       }
    }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.95 2005/06/29 11:08:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.96 2005/07/15 17:20:06 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -2012,10 +2012,10 @@ DECL_CONSPRINT(consPrintKnapsack)
    for( i = 0; i < consdata->nvars; ++i )
    {
       if( i > 0 )
-         fprintf(file, " ");
-      fprintf(file, "%+lld<%s>", consdata->weights[i], SCIPvarGetName(consdata->vars[i]));
+         SCIPinfoMessage(scip, file, " ");
+      SCIPinfoMessage(scip, file, "%+lld<%s>", consdata->weights[i], SCIPvarGetName(consdata->vars[i]));
    }
-   fprintf(file, " <= %lld\n", consdata->capacity);
+   SCIPinfoMessage(scip, file, " <= %lld\n", consdata->capacity);
 
    return SCIP_OKAY;
 }
@@ -2335,7 +2335,7 @@ Real SCIPgetDualsolKnapsack(
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not a knapsack constraint\n");
-      abort();
+      SCIPABORT();
    }
    
    consdata = SCIPconsGetData(cons);
@@ -2358,7 +2358,7 @@ Real SCIPgetDualfarkasKnapsack(
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not a knapsack constraint\n");
-      abort();
+      SCIPABORT();
    }
    
    consdata = SCIPconsGetData(cons);

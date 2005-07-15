@@ -1,4 +1,4 @@
-#--- $Id: make.sunos.sparc.sun.dbg,v 1.6 2005/05/03 14:47:59 bzfpfend Exp $
+#--- $Id: make.sunos.sparc.sun.dbg.static,v 1.1 2005/07/15 17:20:01 bzfpfend Exp $
 CC		=	cc
 CXX		=	CC
 FLAGS		+=	-DROUNDING_FE -DWITH_READLINE -I/client/include

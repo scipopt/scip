@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.h,v 1.10 2005/05/31 17:20:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.h,v 1.11 2005/07/15 17:20:16 bzfpfend Exp $"
 
 /**@file   reader_mps.h
  * @brief  mps file reader
@@ -24,8 +24,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __READER_MPS_H__
-#define __READER_MPS_H__
+#ifndef __SCIP_READER_MPS_H__
+#define __SCIP_READER_MPS_H__
 
 
 #include "scip/scip.h"

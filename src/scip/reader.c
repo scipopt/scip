@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.26 2005/05/31 17:20:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.27 2005/07/15 17:20:16 bzfpfend Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -115,6 +115,7 @@ RETCODE SCIPreaderRead(
    char* path;
    char* name;
    char* extension;
+   char* compression;
 
    assert(reader != NULL);
    assert(reader->readerread != NULL);
@@ -124,7 +125,7 @@ RETCODE SCIPreaderRead(
 
    /* get path, name and extension from filename */
    ALLOC_OKAY( duplicateMemoryArray(&tmpfilename, filename, strlen(filename)+1) );
-   SCIPsplitFilename(tmpfilename, &path, &name, &extension);
+   SCIPsplitFilename(tmpfilename, &path, &name, &extension, &compression);
 
    /* check, if reader is applicable on the given file */
    if( readerIsApplicable(reader, extension) )

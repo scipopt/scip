@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.150 2005/06/20 10:57:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.151 2005/07/15 17:20:18 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -2279,13 +2279,13 @@ RETCODE SCIPsetInitprePlugins(
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
-         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "presolver <%s> detected infeasibility\n", SCIPpresolGetName(set->presols[i]));
       }
       else if( result == SCIP_UNBOUNDED )
       {
          *unbounded = TRUE;
-         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(set->presols[i]));
       }
    }
@@ -2297,13 +2297,13 @@ RETCODE SCIPsetInitprePlugins(
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
-         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "constraint handler <%s> detected infeasibility\n", SCIPconshdlrGetName(set->conshdlrs[i]));
       }
       else if( result == SCIP_UNBOUNDED )
       {
          *unbounded = TRUE;
-         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "constraint handler <%s> detected unboundness (or infeasibility)\n",
             SCIPconshdlrGetName(set->conshdlrs[i]));
       }
@@ -2335,13 +2335,13 @@ RETCODE SCIPsetExitprePlugins(
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
-         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "presolver <%s> detected infeasibility\n", SCIPpresolGetName(set->presols[i]));
       }
       else if( result == SCIP_UNBOUNDED )
       {
          *unbounded = TRUE;
-         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(set->presols[i]));
       }
    }
@@ -2353,13 +2353,13 @@ RETCODE SCIPsetExitprePlugins(
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
-         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "constraint handler <%s> detected infeasibility\n", SCIPconshdlrGetName(set->conshdlrs[i]));
       }
       else if( result == SCIP_UNBOUNDED )
       {
          *unbounded = TRUE;
-         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "constraint handler <%s> detected unboundness (or infeasibility)\n",
             SCIPconshdlrGetName(set->conshdlrs[i]));
       }

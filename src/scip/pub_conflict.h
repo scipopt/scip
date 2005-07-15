@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_conflict.h,v 1.7 2005/05/31 17:20:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_conflict.h,v 1.8 2005/07/15 17:20:14 bzfpfend Exp $"
 
 /**@file   pub_conflict.h
  * @brief  public methods for conflict analysis handlers
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __PUB_CONFLICT_H__
-#define __PUB_CONFLICT_H__
+#ifndef __SCIP_PUB_CONFLICT_H__
+#define __SCIP_PUB_CONFLICT_H__
 
 
 

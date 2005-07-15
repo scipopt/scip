@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.36 2005/05/31 17:20:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.37 2005/07/15 17:20:17 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -506,10 +506,10 @@ RETCODE aggregation(
       for( c = 0; c < ncols; ++c )
       {
          if( aggrcoefs[c] != 0.0 )
-            printf(" %+g<%s>(%g)", aggrcoefs[c], SCIPvarGetName(SCIPcolGetVar(cols[c])),
+            debugPrintf(" %+g<%s>(%g)", aggrcoefs[c], SCIPvarGetName(SCIPcolGetVar(cols[c])),
                SCIPvarGetLPSol(SCIPcolGetVar(cols[c])));
       }
-      printf("\n");
+      debugPrintf("\n");
 #endif
 
       /* Step 1: try to generate a MIR cut out of the current aggregation */

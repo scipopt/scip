@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.46 2005/05/31 17:20:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.47 2005/07/15 17:20:14 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __PROB_H__
-#define __PROB_H__
+#ifndef __SCIP_PROB_H__
+#define __SCIP_PROB_H__
 
 
 #include "scip/def.h"

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.122 2005/05/31 17:20:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.123 2005/07/15 17:20:05 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -2662,7 +2662,7 @@ RETCODE SCIPconshdlrPropagate(
             /* call external method */
             CHECK_OKAY( conshdlr->consprop(set->scip, conshdlr, conss, nconss, nusefulconss, result) );
             debugMessage(" -> propagation returned result <%d>\n", *result);
-      
+
             /* stop timing */
             SCIPclockStop(conshdlr->proptime, set);
 
@@ -4047,16 +4047,13 @@ RETCODE SCIPconsPrint(
    conshdlr = cons->conshdlr;
    assert(conshdlr != NULL);
 
-   if( file == NULL )
-      file = stdout;
-
-   fprintf(file, "  [%s] <%s>: ", conshdlr->name, cons->name);
+   SCIPmessageFPrintInfo(file, "  [%s] <%s>: ", conshdlr->name, cons->name);
    if( conshdlr->consprint != NULL )
    {
       CHECK_OKAY( conshdlr->consprint(set->scip, conshdlr, cons, file) );
    }
    else
-      fprintf(file, "constraint handler <%s> doesn't support printing constraints\n", conshdlr->name);
+      SCIPmessageFPrintInfo(file, "constraint handler <%s> doesn't support printing constraints\n", conshdlr->name);
 
    return SCIP_OKAY;
 }

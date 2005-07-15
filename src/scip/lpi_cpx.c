@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.95 2005/05/31 17:20:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.96 2005/07/15 17:20:11 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -44,7 +44,7 @@
                         if( (_restat_ = (x)) != 0 )                                 \
                         {                                                           \
                            errorMessage("LP Error: CPLEX returned %d\n", _restat_); \
-                           abort();                                                 \
+                           SCIPABORT();                                                 \
                         }                                                           \
                       }
 
@@ -505,7 +505,7 @@ int getIntParam(LPI* lpi, const int param)
          return lpi->cpxparam.intparval[i];
 
    errorMessage("unknown CPLEX integer parameter\n");
-   abort();
+   SCIPABORT();
 }
 
 static
@@ -520,7 +520,7 @@ double getDblParam(LPI* lpi, const int param)
          return lpi->cpxparam.dblparval[i];
 
    errorMessage("unknown CPLEX double parameter\n");
-   abort();
+   SCIPABORT();
 }
 
 static
@@ -538,7 +538,7 @@ void setIntParam(LPI* lpi, const int param, int parval)
       }
 
    errorMessage("unknown CPLEX integer parameter\n");
-   abort();
+   SCIPABORT();
 }
 
 static
@@ -556,7 +556,7 @@ void setDblParam(LPI* lpi, const int param, double parval)
       }
 
    errorMessage("unknown CPLEX double parameter\n");
-   abort();
+   SCIPABORT();
 }
 
 static
@@ -577,7 +577,7 @@ int cpxObjsen(OBJSEN objsen)
       return CPX_MIN;
    default:
       errorMessage("invalid objective sense\n");
-      abort();
+      SCIPABORT();
    }
 }
 
@@ -698,7 +698,7 @@ void reconvertBothSides(
          
       default:
          errorMessage("invalid row sense\n");
-         abort();
+         SCIPABORT();
       }
       assert(lhs[i] <= rhs[i]);
    }
@@ -747,7 +747,7 @@ void reconvertLhs(
          
       default:
          errorMessage("invalid row sense\n");
-         abort();
+         SCIPABORT();
       }
    }
 }
@@ -795,7 +795,7 @@ void reconvertRhs(
          
       default:
          errorMessage("invalid row sense\n");
-         abort();
+         SCIPABORT();
       }
    }
 }
@@ -1238,7 +1238,7 @@ RETCODE SCIPlpiChgBounds(
    {
       int i;
       for( i = 0; i < ncols; ++i )
-         printf("  col %d: [%g,%g]\n", ind[i], lb[i], ub[i]);
+         debugPrintf("  col %d: [%g,%g]\n", ind[i], lb[i], ub[i]);
    }
 #endif
 

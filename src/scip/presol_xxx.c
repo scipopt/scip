@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_xxx.c,v 1.15 2005/05/31 17:20:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_xxx.c,v 1.16 2005/07/15 17:20:13 bzfpfend Exp $"
 
 /**@file   presol_xxx.c
  * @brief  xxx presolver
@@ -72,7 +72,7 @@ static
 DECL_PRESOLFREE(presolFreeXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx presolver not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -87,7 +87,7 @@ static
 DECL_PRESOLINIT(presolInitXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx presolver not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -102,7 +102,7 @@ static
 DECL_PRESOLEXIT(presolExitXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx presolver not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -117,7 +117,7 @@ static
 DECL_PRESOLINITPRE(presolInitpreXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx presolver not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -132,7 +132,7 @@ static
 DECL_PRESOLEXITPRE(presolExitpreXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx presolver not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -146,7 +146,7 @@ static
 DECL_PRESOLEXEC(presolExecXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx presolver not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }

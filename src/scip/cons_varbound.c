@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.33 2005/06/29 11:08:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.34 2005/07/15 17:20:07 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -961,11 +961,11 @@ DECL_CONSPRINT(consPrintVarbound)
    assert(consdata != NULL);
 
    if( !SCIPisInfinity(scip, -consdata->lhs) )
-      fprintf(file, "%g <= ", consdata->lhs);
-   fprintf(file, "<%s> + %g<%s>", SCIPvarGetName(consdata->var), consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar));
+      SCIPinfoMessage(scip, file, "%g <= ", consdata->lhs);
+   SCIPinfoMessage(scip, file, "<%s> + %g<%s>", SCIPvarGetName(consdata->var), consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar));
    if( !SCIPisInfinity(scip, consdata->rhs) )
-      fprintf(file, " <= %g", consdata->rhs);
-   fprintf(file, "\n");
+      SCIPinfoMessage(scip, file, " <= %g", consdata->rhs);
+   SCIPinfoMessage(scip, file, "\n");
 
    return SCIP_OKAY;
 }
@@ -1162,7 +1162,7 @@ Real SCIPgetDualsolVarbound(
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not a varbound constraint\n");
-      abort();
+      SCIPABORT();
    }
    
    consdata = SCIPconsGetData(cons);
@@ -1185,7 +1185,7 @@ Real SCIPgetDualfarkasVarbound(
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not a varbound constraint\n");
-      abort();
+      SCIPABORT();
    }
    
    consdata = SCIPconsGetData(cons);

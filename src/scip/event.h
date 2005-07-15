@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.h,v 1.36 2005/05/31 17:20:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.h,v 1.37 2005/07/15 17:20:08 bzfpfend Exp $"
 
 /**@file   event.h
  * @brief  internal methods for managing events
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __EVENT_H__
-#define __EVENT_H__
+#ifndef __SCIP_EVENT_H__
+#define __SCIP_EVENT_H__
 
 
 #include "scip/def.h"

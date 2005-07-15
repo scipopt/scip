@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.230 2005/06/29 12:29:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.231 2005/07/15 17:20:17 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -26,8 +26,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_H__
-#define __SCIP_H__
+#ifndef __SCIP_SCIP_H__
+#define __SCIP_SCIP_H__
 
 
 #include <stdio.h>
@@ -69,8 +69,10 @@
 #include "scip/pub_dialog.h"
 #include "scip/pub_disp.h"
 #include "scip/pub_event.h"
+#include "scip/pub_fileio.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_lp.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_nodesel.h"
 #include "scip/pub_paramset.h"
@@ -158,15 +160,6 @@ RETCODE SCIPfree(
    SCIP**           scip                /**< pointer to SCIP data structure */
    );
 
-/** prints a message depending on the verbosity level */
-extern
-void SCIPmessage(
-   SCIP*            scip,               /**< SCIP data structure */
-   VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
-   const char*      formatstr,          /**< format string like in printf() function */
-   ...                                  /**< format arguments line in printf() function */
-   );
-
 /** returns current stage of SCIP */
 extern
 STAGE SCIPgetStage(
@@ -208,6 +201,94 @@ Bool SCIPisExactSolve(
 extern
 Bool SCIPpressedCtrlC(
    SCIP*            scip                /**< SCIP data structure */
+   );
+
+/**@} */
+
+
+
+
+/*
+ * message output methods
+ */
+
+/**@name Method Output Methods */
+/**@{ */
+
+/** creates a message handler; this method can already be called before SCIPcreate() */
+extern
+RETCODE SCIPcreateMessagehdlr(
+   MESSAGEHDLR**    messagehdlr,        /**< pointer to store the message handler */
+   Bool             bufferedoutput,     /**< should the output be buffered up to the next newline? */
+   DECL_MESSAGEERROR((*messageerror)),  /**< error message print method of message handler */
+   DECL_MESSAGEWARNING((*messagewarning)),/**< warning message print method of message handler */
+   DECL_MESSAGEDIALOG((*messagedialog)),/**< dialog message print method of message handler */
+   DECL_MESSAGEINFO ((*messageinfo)),   /**< info message print method of message handler */
+   MESSAGEHDLRDATA* messagehdlrdata     /**< message handler data */
+   );
+
+/** frees message handler; this method can be called after SCIPfree() */
+extern
+RETCODE SCIPfreeMessagehdlr(
+   MESSAGEHDLR**    messagehdlr         /**< pointer to the message handler */
+   );
+
+/** installs the given message handler, such that all messages are passed to this handler;
+ *  this method can already be called before SCIPcreate()
+ */
+extern
+RETCODE SCIPsetMessagehdlr(
+   MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
+   );
+
+/** installs the default message handler, such that all messages are printed to stdout and stderr;
+ *  this method can already be called before SCIPcreate()
+ */
+extern
+RETCODE SCIPsetDefaultMessagehdlr(
+   void
+   );
+
+/** returns the currently installed message handler, or NULL if messages are currently suppressed;
+ *  this method can already be called before SCIPcreate()
+ */
+extern
+MESSAGEHDLR* SCIPgetMessagehdlr(
+   void
+   );
+
+/** prints an error message */
+#define SCIPerrorMessage      errorMessage
+
+/** prints a warning message */
+#define SCIPwarningMessage    warningMessage
+
+/** prints a dialog message that requests user interaction or is a direct response to a user interactive command */
+extern
+void SCIPdialogMessage(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file,               /**< file stream to print into, or NULL for stdout */
+   const char*      formatstr,          /**< format string like in printf() function */
+   ...                                  /**< format arguments line in printf() function */
+   );
+
+/** prints a message */
+extern
+void SCIPinfoMessage(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file,               /**< file stream to print into, or NULL for stdout */
+   const char*      formatstr,          /**< format string like in printf() function */
+   ...                                  /**< format arguments line in printf() function */
+   );
+
+/** prints a message depending on the verbosity level */
+extern
+void SCIPverbMessage(
+   SCIP*            scip,               /**< SCIP data structure */
+   VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
+   FILE*            file,               /**< file stream to print into, or NULL for stdout */
+   const char*      formatstr,          /**< format string like in printf() function */
+   ...                                  /**< format arguments line in printf() function */
    );
 
 /**@} */
@@ -1602,6 +1683,12 @@ RETCODE SCIPfreeSolve(
 /** frees all solution process data including presolving and transformed problem, only original problem is kept */
 extern
 RETCODE SCIPfreeTransform(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** interrupts solving process as soon as possible (e.g., after the current node has been solved) */
+extern
+RETCODE SCIPinterruptSolve(
    SCIP*            scip                /**< SCIP data structure */
    );
 
@@ -3602,7 +3689,8 @@ RETCODE SCIPcreateChild(
 extern
 RETCODE SCIPbranchVar(
    SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var                 /**< variable to branch on */
+   VAR*             var,                /**< variable to branch on */
+   BRANCHDIR        branchdir           /**< preferred branching direction; maybe overridden by user settings */
    );
 
 /** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN;
@@ -3825,7 +3913,7 @@ HEUR* SCIPgetSolHeur(
 extern
 RETCODE SCIPprintSol(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL*             sol,                /**< primal solution */
+   SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    FILE*            file                /**< output file (or NULL for standard output) */
    );
 
@@ -3833,7 +3921,7 @@ RETCODE SCIPprintSol(
 extern
 RETCODE SCIPprintTransSol(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL*             sol,                /**< primal solution */
+   SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    FILE*            file                /**< output file (or NULL for standard output) */
    );
 

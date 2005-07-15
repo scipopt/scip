@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_xxx.h,v 1.6 2005/05/31 17:20:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_xxx.h,v 1.7 2005/07/15 17:20:12 bzfpfend Exp $"
 
 /**@file   nodesel_xxx.h
  * @brief  xxx node selector
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __NODESEL_XXX_H__
-#define __NODESEL_XXX_H__
+#ifndef __SCIP_NODESEL_XXX_H__
+#define __SCIP_NODESEL_XXX_H__
 
 
 #include "scip/scip.h"

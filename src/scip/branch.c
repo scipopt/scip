@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.66 2005/05/31 17:20:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.67 2005/07/15 17:20:03 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -1337,7 +1337,8 @@ Real SCIPbranchGetScore(
 
    default:
       errorMessage("invalid branching score function <%c>\n", set->branch_scorefunc);
-      abort();
+      score = 0.0;
+      SCIPABORT();
    }
 
    /* apply the branch factor of the variable */
@@ -1468,7 +1469,7 @@ RETCODE SCIPbranchExecLP(
       assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-      CHECK_OKAY( SCIPtreeBranchVar(tree, blkmem, set, stat, lp, branchcand, eventqueue, var) );
+      CHECK_OKAY( SCIPtreeBranchVar(tree, blkmem, set, stat, lp, branchcand, eventqueue, var, SCIP_BRANCHDIR_AUTO) );
 
       *result = SCIP_BRANCHED;
    }
@@ -1544,7 +1545,7 @@ RETCODE SCIPbranchExecPseudo(
       assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-      CHECK_OKAY( SCIPtreeBranchVar(tree, blkmem, set, stat, lp, branchcand, eventqueue, var) );
+      CHECK_OKAY( SCIPtreeBranchVar(tree, blkmem, set, stat, lp, branchcand, eventqueue, var, SCIP_BRANCHDIR_AUTO) );
 
       *result = SCIP_BRANCHED;
    }

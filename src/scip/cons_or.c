@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.42 2005/05/31 17:20:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.43 2005/07/15 17:20:07 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -449,18 +449,15 @@ void consdataPrint(
 
    assert(consdata != NULL);
 
-   if( file == NULL )
-      file = stdout;
-
    /* print coefficients */
-   fprintf(file, "<%s> == or(", SCIPvarGetName(consdata->resvar));
+   SCIPinfoMessage(scip, file, "<%s> == or(", SCIPvarGetName(consdata->resvar));
    for( v = 0; v < consdata->nvars; ++v )
    {
       if( v > 0 )
-         fprintf(file, ", ");
-      fprintf(file, "<%s>", SCIPvarGetName(consdata->vars[v]));
+         SCIPinfoMessage(scip, file, ", ");
+      SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName(consdata->vars[v]));
    }
-   fprintf(file, ")\n");
+   SCIPinfoMessage(scip, file, ")\n");
 }
 
 /** deletes coefficient at given position from or constraint data */

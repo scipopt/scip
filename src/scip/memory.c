@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.41 2005/05/31 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.42 2005/07/15 17:20:11 bzfpfend Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -28,28 +28,11 @@
 #include <assert.h>
 #include <string.h>
 
+#include "scip/def.h"
 #include "scip/memory.h"
+#include "scip/message.h"
 
 /*#define CHECKMEM*/
-
-
-
-
-/*****************
- * Global Defines
- *****************/
-
-#ifdef DEBUG
-#define debugMessage                    printf("[%s:%d] debug: ", __FILE__, __LINE__); printf
-#else
-#define debugMessage(...)               /**/
-#endif
-
-#define TRUE  1                         /**< boolean value TRUE */
-#define FALSE 0                         /**< boolean value FALSE */
-
-#define MAX(x,y) ((x) >= (y) ? (x) : (y))     /**< returns maximum of x and y */
-#define MIN(x,y) ((x) <= (y) ? (x) : (y))     /**< returns minimum of x and y */
 
 
 
@@ -154,7 +137,10 @@ void removeMemlistEntry(
       free(list);
    }
    else
-      fprintf(stderr, "[%s:%d] ERROR: Tried to free unknown pointer <%p>\n", filename, line, ptr);
+   {
+      SCIPmessagePrintErrorHeader(filename, line);
+      SCIPmessagePrintError("Tried to free unknown pointer <%p>\n", ptr);
+   }
    checkMemlist();
 }
 
@@ -182,19 +168,20 @@ void displayMemory_call(
    MEMLIST* list;
    long long used;
 
-   printf("Allocated memory:\n");
+   SCIPmessagePrintInfo("Allocated memory:\n");
    list = memlist;
    used = 0;
    while( list != NULL )
    {
-      printf("%12p %8lld %s:%d\n", list->ptr, (long long)(list->size), list->filename, list->line);
+      SCIPmessagePrintInfo("%12p %8lld %s:%d\n", list->ptr, (long long)(list->size), list->filename, list->line);
       used += (long long)list->size;
       list = list->next;
    }
-   printf("Total:    %8lld\n", memused);
+   SCIPmessagePrintInfo("Total:    %8lld\n", memused);
    if( used != memused )
-      fprintf(stderr, "[%s:%d] ERROR: Used memory in list sums up to %lld instead of %lld\n",
-	 __FILE__, __LINE__, used, memused);
+   {
+      errorMessage("Used memory in list sums up to %lld instead of %lld\n", used, memused);
+   }
    checkMemlist();
 }
 
@@ -205,7 +192,7 @@ void checkEmptyMemory_call(
 {
    if( memlist != NULL || memused > 0 )
    {
-      printf("Warning! Memory list not empty.\n");
+      warningMessage("Memory list not empty.\n");
       displayMemory_call();
    }
 }
@@ -237,7 +224,7 @@ void displayMemory_call(
    void
    )
 {
-   printf("optimized version of memory shell linked - no memory diagnostics available\n");
+   SCIPmessagePrintInfo("optimized version of memory shell linked - no memory diagnostics available\n");
 }
 
 /** displays a warning message on the screen, if allocated memory exists */
@@ -245,7 +232,7 @@ void checkEmptyMemory_call(
    void
    )
 {
-   printf("optimized version of memory shell linked - no memory leakage check available\n");
+   SCIPmessagePrintInfo("optimized version of memory shell linked - no memory leakage check available\n");
 }
 
 /** returns total number of allocated bytes */
@@ -274,8 +261,10 @@ void* allocMemory_call(
    ptr = malloc(size);
 
    if( ptr == NULL )
-      fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for allocation of %lld bytes\n", 
-         filename, line, (long long) size);
+   {
+      SCIPmessagePrintErrorHeader(filename, line);
+      SCIPmessagePrintError("Insufficient memory for allocation of %lld bytes\n", (long long) size);
+   }
 #ifndef NDEBUG
    else
       addMemlistEntry(ptr, size, filename, line);
@@ -303,8 +292,10 @@ void* reallocMemory_call(
    newptr = realloc(ptr, size);
 
    if( newptr == NULL )
-      fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for reallocation of %lld bytes\n", 
-         filename, line, (long long) size);
+   {
+      SCIPmessagePrintErrorHeader(filename, line);
+      SCIPmessagePrintError("Insufficient memory for reallocation of %lld bytes\n", (long long) size);
+   }
 #ifndef NDEBUG
    else
       addMemlistEntry(newptr, size, filename, line);
@@ -374,7 +365,10 @@ void freeMemory_call(
       *ptr = NULL;
    }
    else
-      fprintf(stderr, "[%s:%d] ERROR: Tried to free null pointer\n", filename, line);
+   {
+      SCIPmessagePrintErrorHeader(filename, line);
+      SCIPmessagePrintError("Tried to free null pointer\n");
+   }
 }
 
 
@@ -1134,8 +1128,9 @@ void garbagecollectChkmem(
       chunk = findChunk(chkmem, (void*)lazyfree);
 #ifndef NDEBUG
       if( chunk == NULL )
-         fprintf(stderr, "[%s:%d] ERROR: chunk for lazy free chunk %p not found in chunk block %p\n",
-            __FILE__, __LINE__, lazyfree, chkmem);
+      {
+         errorMessage("chunk for lazy free chunk %p not found in chunk block %p\n", lazyfree, chkmem);
+      }
 #endif
       assert(chunk != NULL);
 
@@ -1181,8 +1176,9 @@ void freeChkmemElement(
    {
       CHKMEM* correctchkmem;
 
-      fprintf(stderr, "[%s:%d] ERROR: pointer %p does not belong to chunk block %p (size: %lld)\n", 
-         filename, line, ptr, chkmem, (long long)(chkmem->elemsize));
+      SCIPmessagePrintErrorHeader(filename, line);
+      SCIPmessagePrintError("pointer %p does not belong to chunk block %p (size: %lld)\n", 
+         ptr, chkmem, (long long)(chkmem->elemsize));
    }
 #endif
 
@@ -1216,8 +1212,10 @@ CHKMEM* createChunkMemory_call(
 
    chkmem = createChkmem(size, initchunksize, garbagefactor);
    if( chkmem == NULL )
-      fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for chunk block\n", filename, line);
-
+   {
+      SCIPmessagePrintErrorHeader(filename, line);
+      SCIPmessagePrintError("Insufficient memory for chunk block\n");
+   }
    debugMessage("created chunk memory %p [elemsize: %d]\n", chkmem, size);
 
    return chkmem;
@@ -1235,7 +1233,10 @@ void clearChunkMemory_call(
    if( chkmem != NULL )
       clearChkmem(chkmem);
    else
-      fprintf(stderr, "[%s:%d] ERROR: Tried to clear null chunk block\n", filename, line);
+   {
+      SCIPmessagePrintErrorHeader(filename, line);
+      SCIPmessagePrintError("Tried to clear null chunk block\n");
+   }
 }
 
 /** destroys and frees a chunk block data structure */
@@ -1252,7 +1253,10 @@ void destroyChunkMemory_call(
    if( *chkmem != NULL )
       destroyChkmem(chkmem);
    else
-      fprintf(stderr, "[%s:%d] ERROR: Tried to destroy null chunk block\n", filename, line);
+   {
+      SCIPmessagePrintErrorHeader(filename, line);
+      SCIPmessagePrintError("Tried to destroy null chunk block\n");
+   }
 }
 
 /** allocates a memory element of the given chunk block */
@@ -1271,7 +1275,10 @@ void* allocChunkMemory_call(
    /* get memory inside the chunk block */
    ptr = allocChkmemElement(chkmem);
    if( ptr == NULL )
-      fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for new chunk\n", filename, line);
+   {
+      SCIPmessagePrintErrorHeader(filename, line);
+      SCIPmessagePrintError("Insufficient memory for new chunk\n");
+   }
    debugMessage("alloced %8lld bytes in %p [%s:%d]\n", (long long)size, ptr, filename, line);
 
    checkChkmem(chkmem);
@@ -1318,7 +1325,8 @@ void freeChunkMemory_call(
 
    if( *ptr == NULL )
    {
-      fprintf(stderr, "[%s:%d] ERROR: Tried to free null block pointer\n", filename, line);
+      SCIPmessagePrintErrorHeader(filename, line);
+      SCIPmessagePrintError("Tried to free null block pointer\n");
       return;
    }
 
@@ -1469,7 +1477,10 @@ BLKMEM* createBlockMemory_call(
       blkmem->memused = 0;
    }
    else
-      fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for block memory header\n", filename, line);
+   {
+      SCIPmessagePrintErrorHeader(filename, line);
+      SCIPmessagePrintError("Insufficient memory for block memory header\n");
+   }
 
    return blkmem;
 }
@@ -1501,7 +1512,10 @@ void clearBlockMemory_call(
       blkmem->memused = 0;
    }
    else
-      fprintf(stderr, "[%s:%d] ERROR: Tried to clear null block memory\n", filename, line);
+   {
+      SCIPmessagePrintErrorHeader(filename, line);
+      SCIPmessagePrintError("Tried to clear null block memory\n");
+   }
 }
 
 /** clears and deletes block memory */
@@ -1520,7 +1534,10 @@ void destroyBlockMemory_call(
       assert(*blkmem == NULL);
    }
    else
-      fprintf(stderr, "[%s:%d] ERROR: Tried to destroy null block memory\n", filename, line);
+   {
+      SCIPmessagePrintErrorHeader(filename, line);
+      SCIPmessagePrintError("Tried to destroy null block memory\n");
+   }
 }
 
 /** allocates memory in the block memory pool */
@@ -1550,7 +1567,8 @@ void* allocBlockMemory_call(
       *chkmemptr = createChkmem((int)size, blkmem->initchunksize, blkmem->garbagefactor);
       if( *chkmemptr == NULL )
       {
-	 fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for chunk block\n", filename, line);
+	 SCIPmessagePrintErrorHeader(filename, line);
+         SCIPmessagePrintError("Insufficient memory for chunk block\n");
 	 return NULL;
       }
 #ifndef NDEBUG
@@ -1562,7 +1580,10 @@ void* allocBlockMemory_call(
    /* get memory inside the chunk block */
    ptr = allocChkmemElement(*chkmemptr);
    if( ptr == NULL )
-      fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for new chunk\n", filename, line);
+   {
+      SCIPmessagePrintErrorHeader(filename, line);
+      SCIPmessagePrintError("Insufficient memory for new chunk\n");
+   }
    debugMessage("alloced %8lld bytes in %p [%s:%d]\n", (long long)size, ptr, filename, line);
 
    blkmem->memused += size;
@@ -1650,8 +1671,9 @@ void freeBlockMemory_call(
 	 chkmem = chkmem->nextchkmem;
       if( chkmem == NULL )
       {
-	 fprintf(stderr, "[%s:%d] ERROR: Tried to free pointer <%p> in block memory <%p> of unknown size %lld\n",
-            filename, line, *ptr, blkmem, (long long) size);
+	 SCIPmessagePrintErrorHeader(filename, line);
+         SCIPmessagePrintError("Tried to free pointer <%p> in block memory <%p> of unknown size %lld\n",
+            *ptr, blkmem, (long long) size);
 	 return;
       }
       assert(chkmem->elemsize == (int)size);
@@ -1664,7 +1686,10 @@ void freeBlockMemory_call(
       assert(blkmem->memused >= 0);
    }
    else
-      fprintf(stderr, "[%s:%d] ERROR: Tried to free null block pointer\n", filename, line);
+   {
+      SCIPmessagePrintErrorHeader(filename, line);
+      SCIPmessagePrintError("Tried to free null block pointer\n");
+   }
 
    checkBlkmem(blkmem);
 }
@@ -1755,9 +1780,9 @@ void displayBlockMemory_call(
    int c;
 
 #ifndef NDEBUG
-   printf(" ElSize #Chunk #Eag  #Elems  #EagFr  #LazFr  #GCl #GFr  Free  First Allocator\n");
+   SCIPmessagePrintInfo(" ElSize #Chunk #Eag  #Elems  #EagFr  #LazFr  #GCl #GFr  Free  First Allocator\n");
 #else
-   printf(" ElSize #Chunk #Eag  #Elems  #EagFr  #LazFr  Free\n");
+   SCIPmessagePrintInfo(" ElSize #Chunk #Eag  #Elems  #EagFr  #LazFr  Free\n");
 #endif
 
    assert(blkmem != NULL);
@@ -1799,13 +1824,13 @@ void displayBlockMemory_call(
 	    freemem += (long long)chkmem->elemsize * ((long long)neagerelems + (long long)chkmem->lazyfreesize);
 
 #ifndef NDEBUG
-	    printf("%7lld %4d %4d %7d %7d %7d %5d %4d %5.1f%% %s:%d\n",
+	    SCIPmessagePrintInfo("%7lld %4d %4d %7d %7d %7d %5d %4d %5.1f%% %s:%d\n",
 	       (long long)(chkmem->elemsize), nchunks, neagerchunks, nelems,
 	       neagerelems, chkmem->lazyfreesize, chkmem->ngarbagecalls, chkmem->ngarbagefrees,
 	       100.0 * (double) (neagerelems + chkmem->lazyfreesize) / (double) (nelems), 
                chkmem->filename, chkmem->line);
 #else
-	    printf("%7lld %4d %4d %7d %7d %7d %5.1f%%\n",
+	    SCIPmessagePrintInfo("%7lld %4d %4d %7d %7d %7d %5.1f%%\n",
 	       (long long)(chkmem->elemsize), nchunks, neagerchunks, nelems,
 	       neagerelems, chkmem->lazyfreesize,
 	       100.0 * (double) (neagerelems + chkmem->lazyfreesize) / (double) (nelems));
@@ -1814,11 +1839,11 @@ void displayBlockMemory_call(
 	 else
 	 {
 #ifndef NDEBUG
-	    printf("%7lld <unused>                          %5d %4d        %s:%d\n",
+	    SCIPmessagePrintInfo("%7lld <unused>                          %5d %4d        %s:%d\n",
 	       (long long)(chkmem->elemsize), chkmem->ngarbagecalls, chkmem->ngarbagefrees, 
                chkmem->filename, chkmem->line);
 #else
-	    printf("%7lld <unused>\n", (long long)(chkmem->elemsize));
+	    SCIPmessagePrintInfo("%7lld <unused>\n", (long long)(chkmem->elemsize));
 #endif
 	    nunusedblocks++;
 	 }
@@ -1835,20 +1860,20 @@ void displayBlockMemory_call(
       }
    }
 #ifndef NDEBUG
-   printf("  Total %4d %4d %7d %7d %7d %5d %4d %5.1f%%\n",
+   SCIPmessagePrintInfo("  Total %4d %4d %7d %7d %7d %5d %4d %5.1f%%\n",
       totalnchunks, totalneagerchunks, totalnelems, totalneagerelems, totalnlazyelems, 
       totalngarbagecalls, totalngarbagefrees,
       totalnelems > 0 ? 100.0 * (double) (totalneagerelems + totalnlazyelems) / (double) (totalnelems) : 0.0);
 #else
-   printf("  Total %4d %4d %7d %7d %7d %5.1f%%\n",
+   SCIPmessagePrintInfo("  Total %4d %4d %7d %7d %7d %5.1f%%\n",
       totalnchunks, totalneagerchunks, totalnelems, totalneagerelems, totalnlazyelems, 
       totalnelems > 0 ? 100.0 * (double) (totalneagerelems + totalnlazyelems) / (double) (totalnelems) : 0.0);
 #endif
-   printf("%d blocks (%d unused), %lld bytes allocated, %lld bytes free",
+   SCIPmessagePrintInfo("%d blocks (%d unused), %lld bytes allocated, %lld bytes free",
       nblocks + nunusedblocks, nunusedblocks, allocedmem, freemem);
    if( allocedmem > 0 )
-      printf(" (%.1f%%)", 100.0 * (double) freemem / (double) allocedmem);
-   printf("\n");
+      SCIPmessagePrintInfo(" (%.1f%%)", 100.0 * (double) freemem / (double) allocedmem);
+   SCIPmessagePrintInfo("\n");
 }
 
 /** outputs warning messages, if there are allocated elements in the block memory */
@@ -1898,13 +1923,13 @@ void checkEmptyBlockMemory_call(
             if( nelems != neagerelems + chkmem->lazyfreesize )
             {
 #ifndef NDEBUG
-               printf("%lld bytes (%d elements of size %lld) not freed. First Allocator: %s:%d\n",
+               SCIPmessagePrintInfo("%lld bytes (%d elements of size %lld) not freed. First Allocator: %s:%d\n",
                   (((long long)nelems - (long long)neagerelems) - (long long)chkmem->lazyfreesize)
                   * (long long)(chkmem->elemsize),
                   (nelems - neagerelems) - chkmem->lazyfreesize, (long long)(chkmem->elemsize),
                   chkmem->filename, chkmem->line);
 #else
-               printf("%lld bytes (%d elements of size %lld) not freed.\n",
+               SCIPmessagePrintInfo("%lld bytes (%d elements of size %lld) not freed.\n",
                   ((nelems - neagerelems) - chkmem->lazyfreesize) * (long long)(chkmem->elemsize),
                   (nelems - neagerelems) - chkmem->lazyfreesize, (long long)(chkmem->elemsize));
 #endif
@@ -1915,5 +1940,5 @@ void checkEmptyBlockMemory_call(
    }
 
    if( allocedmem != freemem )
-      printf("%lld bytes not freed in total.\n", allocedmem - freemem);
+      SCIPmessagePrintInfo("%lld bytes not freed in total.\n", allocedmem - freemem);
 }

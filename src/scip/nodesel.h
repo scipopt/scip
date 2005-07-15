@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.h,v 1.40 2005/05/31 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.h,v 1.41 2005/07/15 17:20:11 bzfpfend Exp $"
 
 /**@file   nodesel.h
  * @brief  internal methods for node selectors and node priority queues
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __NODESEL_H__
-#define __NODESEL_H__
+#ifndef __SCIP_NODESEL_H__
+#define __SCIP_NODESEL_H__
 
 
 #include "scip/def.h"

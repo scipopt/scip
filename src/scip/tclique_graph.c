@@ -25,7 +25,7 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.c,v 1.6 2005/05/31 17:20:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_graph.c,v 1.7 2005/07/15 17:20:21 bzfpfend Exp $"
 
 /**@file   tclique_graph.c
  * @brief  tclique data part of algorithm for maximum cliques
@@ -41,18 +41,18 @@
 #include <assert.h>
 
 #include "scip/def.h"
+#include "scip/message.h"
 #include "scip/memory.h"
 #include "scip/tclique_graph.h" 
 
 
 
-#define ALLOC_FALSE(x)  do                                                 \
+#define ALLOC_FALSE(x)  do                                              \
    {                                                                    \
       if( NULL == (x) )                                                 \
       {                                                                 \
-         printf("[%s:%d] ERROR: No memory in function call\n", __FILE__, __LINE__); \
-         fflush(stdout);                                                \
-         return FALSE;                                                     \
+         errorMessage("No memory in function call\n");                  \
+         return FALSE;                                                  \
       }                                                                 \
    }                                                                    \
    while( FALSE )
@@ -459,7 +459,7 @@ Bool tcliqueLoadFile(
    {
       if( (file = fopen("default.dat", "r")) == NULL )
       {
-         printf("\nCan't open file: %s", filename);
+        infoMessage("\nCan't open file: %s", filename);
          return FALSE;
       }
    }
@@ -530,24 +530,24 @@ Bool tcliqueSaveFile(
    /* create file */
    if( (file = fopen(filename, "w")) == NULL )
    {
-      printf("\nCan't create file: %s", filename);
+     infoMessage("\nCan't create file: %s", filename);
       return FALSE;
    }
  
    /* write name of problem, number of nodes and number of edges in graph */
-   fprintf(file, "%s\n", probname);
-   fprintf(file, "%d\n", tcliquedata->nnodes);
-   fprintf(file, "%d\n", tcliquedata->nedges);
+   SCIPmessageFPrintInfo(file, "%s\n", probname);
+   SCIPmessageFPrintInfo(file, "%d\n", tcliquedata->nnodes);
+   SCIPmessageFPrintInfo(file, "%d\n", tcliquedata->nedges);
    
    /* write weights of all nodes (scaled!) */
    for( i = 0; i < tcliquedata->nnodes; i++ )
-      fprintf(file, "%f\n", (double)tcliquedata->weights[i]/scaleval);
+      SCIPmessageFPrintInfo(file, "%f\n", (double)tcliquedata->weights[i]/scaleval);
 
    /* write edges */
    for( i = 0; i < tcliquedata->nnodes; i++ )
    {
       for( j = tcliquedata->adjedges[i].first; j < tcliquedata->adjedges[i].last; j++ )
-         fprintf(file, "%d %d\n", i, tcliquedata->adjnodes[j]);
+         SCIPmessageFPrintInfo(file, "%d %d\n", i, tcliquedata->adjnodes[j]);
    }
 
    /* close file */
@@ -782,13 +782,13 @@ void tcliquePrintData(
    degrees = tcliqueGetDegrees(tcliquedata);
    weights = tcliqueGetWeights(tcliquedata);
 
-   printf("nnodes=%d, nedges=%d\n", tcliqueGetNNodes(tcliquedata), tcliqueGetNEdges(tcliquedata));
+  infoMessage("nnodes=%d, nedges=%d\n", tcliqueGetNNodes(tcliquedata), tcliqueGetNEdges(tcliquedata));
    for( i = 0; i < tcliqueGetNNodes(tcliquedata); i++ )
    {
       int* currentadjedge;
       int* lastadjedge;
 
-      printf("node %d: weight=%d, degree=%d, adjnodes=\n[ ", i, weights[i], degrees[i]);  
+     infoMessage("node %d: weight=%d, degree=%d, adjnodes=\n[ ", i, weights[i], degrees[i]);  
 
       currentadjedge = tcliqueGetFirstAdjedge(tcliquedata, i);
       lastadjedge = tcliqueGetLastAdjedge(tcliquedata, i);
@@ -796,8 +796,8 @@ void tcliquePrintData(
 
       for( ; currentadjedge <= lastadjedge; currentadjedge++ )
       {
-         printf("%d, ", *currentadjedge);
+        infoMessage("%d, ", *currentadjedge);
       }
-      printf("]\n");
+     infoMessage("]\n");
    }
 }

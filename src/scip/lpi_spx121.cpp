@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.30 2005/05/31 17:20:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.31 2005/07/15 17:20:11 bzfpfend Exp $"
 
 /**@file   lpi_spx121.cpp
  * @brief  LP interface for SOPLEX 1.2.1
@@ -405,7 +405,7 @@ SPxLP::SPxSense spxObjsen(
       return SPxLP::MINIMIZE;
    default:
       errorMessage("invalid objective sense\n");
-      abort();
+      SCIPABORT();
    }
 }
 
@@ -1937,7 +1937,7 @@ RETCODE SCIPlpiGetBase(
             return SCIP_LPERROR;
          default:
             errorMessage("invalid basis status\n");
-            abort();
+            SCIPABORT();
          }
       }
    }
@@ -1969,7 +1969,7 @@ RETCODE SCIPlpiGetBase(
             break;
          default:
             errorMessage("invalid basis status\n");
-            abort();
+            SCIPABORT();
          }
       }
    }
@@ -2014,7 +2014,7 @@ RETCODE SCIPlpiSetBase(
          return SCIP_LPERROR;
       default:
          errorMessage("invalid basis status\n");
-         abort();
+         SCIPABORT();
       }
    }
 
@@ -2036,7 +2036,7 @@ RETCODE SCIPlpiSetBase(
          break;
       default:
          errorMessage("invalid basis status\n");
-         abort();
+         SCIPABORT();
       }
    }
    lpi->spx->setBasis(spxrstat, spxcstat);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.182 2005/06/29 16:23:00 bzfberth Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.183 2005/07/15 17:20:18 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -71,8 +71,11 @@ Bool SCIPsolveIsStopped(
    assert(set != NULL);
    assert(stat != NULL);
 
-   if( SCIPinterrupted() )
+   if( SCIPinterrupted() || stat->userinterrupt )
+   {
       stat->status = SCIP_STATUS_USERINTERRUPT;
+      stat->userinterrupt = FALSE;
+   }
    else if( set->limit_nodes >= 0 && stat->nnodes >= set->limit_nodes )
       stat->status = SCIP_STATUS_NODELIMIT;
    else if( SCIPclockGetTime(stat->solvingtime) >= set->limit_time )
@@ -285,7 +288,6 @@ RETCODE redcostStrengthening(
    NODE* node;
    COL** cols;
    VAR* var;
-   int* cstat;
    Real lpobjval;
    Real redcost;
    Real oldlb;
@@ -330,17 +332,13 @@ RETCODE redcostStrengthening(
    /* start redcost strengthening timer */
    SCIPclockStart(stat->redcoststrtime, set);
 
-   /* get temporary memory */
-   CHECK_OKAY( SCIPsetAllocBufferArray(set, &cstat, ncols) );
-
-   /* get basis status for columns and LP objective value */
-   CHECK_OKAY( SCIPlpGetBase(lp, cstat, NULL) );
+   /* get LP objective value */
    lpobjval = SCIPlpGetObjval(lp, set);
 
    /* check reduced costs for non-basic columns */
    for( c = 0; c < ncols; ++c )
    {
-      switch( cstat[c] )
+      switch( cols[c]->basisstatus )
       {
       case SCIP_BASESTAT_LOWER:
          redcost = SCIPcolGetRedcost(cols[c], stat, lp);
@@ -437,9 +435,6 @@ RETCODE redcostStrengthening(
          return SCIP_INVALIDDATA;
       }
    }
-
-   /* free temporary memory */
-   SCIPsetFreeBufferArray(set, &cstat);
 
    /* stop redcost strengthening activation timer */
    SCIPclockStop(stat->redcoststrtime, set);
@@ -1831,7 +1826,7 @@ RETCODE solveNode(
                }
                SCIPtreeSetFocusNodeLP(tree, FALSE);
                nlperrors++;
-               infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %lld) unresolved numerical troubles in LP %d -- using pseudo solution instead (loop %d)\n", 
                   stat->nnodes, stat->nlps, nlperrors);
             }
@@ -1853,7 +1848,7 @@ RETCODE solveNode(
                else
                {
                   SCIPtreeSetFocusNodeLP(tree, FALSE);
-                  infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                  SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                      "(node %lld) could not prove infeasibility of LP %d -- using pseudo solution (%d unfixed vars) instead\n", 
                      stat->nnodes, stat->nlps, SCIPbranchcandGetNPseudoCands(branchcand));
                }

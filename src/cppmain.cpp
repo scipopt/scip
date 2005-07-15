@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.6 2005/02/14 13:35:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.7 2005/07/15 17:20:01 bzfpfend Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for C++ compilation
@@ -42,15 +42,15 @@ RETCODE readParams(
    {
       if( SCIPfileExists(filename) )
       {
-         printf("reading parameter file <%s>\n", filename);
+         SCIPinfoMessage(scip, NULL, "reading parameter file <%s>\n", filename);
          CHECK_OKAY( SCIPreadParams(scip, filename) );
       }
       else
-         printf("parameter file <%s> not found - using default parameters\n", filename);
+         SCIPinfoMessage(scip, NULL, "parameter file <%s> not found - using default parameters\n", filename);
    }
    else if( SCIPfileExists("scip.set") )
    {
-      printf("reading parameter file <scip.set>\n");
+      SCIPinfoMessage(scip, NULL, "reading parameter file <scip.set>\n");
       CHECK_OKAY( SCIPreadParams(scip, "scip.set") );
    }
 
@@ -67,8 +67,8 @@ RETCODE fromCommandLine(
     * Problem Creation *
     ********************/
 
-   printf("\nread problem <%s>\n", filename);
-   printf("============\n\n");
+   SCIPinfoMessage(scip, NULL, "\nread problem <%s>\n", filename);
+   SCIPinfoMessage(scip, NULL, "============\n\n");
    CHECK_OKAY( SCIPreadProb(scip, filename) );
 
 
@@ -77,12 +77,12 @@ RETCODE fromCommandLine(
     *******************/
 
    /* solve problem */
-   printf("\nsolve problem\n");
-   printf("=============\n\n");
+   SCIPinfoMessage(scip, NULL, "\nsolve problem\n");
+   SCIPinfoMessage(scip, NULL, "=============\n\n");
    CHECK_OKAY( SCIPsolve(scip) );
 
-   printf("\nprimal solution:\n");
-   printf("================\n\n");
+   SCIPinfoMessage(scip, NULL, "\nprimal solution:\n");
+   SCIPinfoMessage(scip, NULL, "================\n\n");
    CHECK_OKAY( SCIPprintBestSol(scip, NULL) );
 
 
@@ -90,8 +90,8 @@ RETCODE fromCommandLine(
     * Statistics *
     **************/
 
-   printf("\nStatistics\n");
-   printf("==========\n\n");
+   SCIPinfoMessage(scip, NULL, "\nStatistics\n");
+   SCIPinfoMessage(scip, NULL, "==========\n\n");
 
    CHECK_OKAY( SCIPprintStatistics(scip, NULL) );
 
@@ -123,7 +123,6 @@ RETCODE runSCIP(
     ***********************/
 
    SCIPprintVersion(NULL);
-   printf("\n");
 
 
    /*********
@@ -132,7 +131,7 @@ RETCODE runSCIP(
 
    /* initialize SCIP */
    CHECK_OKAY( SCIPcreate(&scip) );
-
+   SCIPinfoMessage(scip, NULL, "\n");
 
    /* include default SCIP plugins */
    CHECK_OKAY( SCIPincludeDefaultPlugins(scip) );
@@ -163,7 +162,7 @@ RETCODE runSCIP(
    }
    else
    {
-      printf("\n");
+      SCIPinfoMessage(scip, NULL, "\n");
 
       CHECK_OKAY( interactive(scip) );
    }

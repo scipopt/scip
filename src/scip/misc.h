@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.h,v 1.21 2005/05/31 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.h,v 1.22 2005/07/15 17:20:11 bzfpfend Exp $"
 
 /**@file   misc.h
  * @brief  internal miscellaneous methods
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __MISC_H__
-#define __MISC_H__
+#ifndef __SCIP_MISC_H__
+#define __SCIP_MISC_H__
 
 
 #include "scip/def.h"

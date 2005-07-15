@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_xxx.c,v 1.12 2005/05/31 17:20:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_xxx.c,v 1.13 2005/07/15 17:20:05 bzfpfend Exp $"
 
 /**@file   branch_xxx.c
  * @brief  xxx branching rule
@@ -71,7 +71,7 @@ static
 DECL_BRANCHFREE(branchFreeXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx branching rule not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -86,7 +86,7 @@ static
 DECL_BRANCHINIT(branchInitXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx branching rule not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -101,7 +101,7 @@ static
 DECL_BRANCHEXIT(branchExitXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx branching rule not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -116,7 +116,7 @@ static
 DECL_BRANCHINITSOL(branchInitsolXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx branching rule not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -131,7 +131,7 @@ static
 DECL_BRANCHEXITSOL(branchExitsolXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx branching rule not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -146,7 +146,7 @@ static
 DECL_BRANCHEXECLP(branchExeclpXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx branching rule not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -161,7 +161,7 @@ static
 DECL_BRANCHEXECPS(branchExecpsXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx branching rule not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }

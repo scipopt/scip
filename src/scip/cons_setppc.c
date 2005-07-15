@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.85 2005/06/29 11:08:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.86 2005/07/15 17:20:07 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -430,6 +430,7 @@ RETCODE consdataFree(
 /** prints set partitioning / packing / covering constraint to file stream */
 static
 void consdataPrint(
+   SCIP*            scip,               /**< SCIP data structure */
    CONSDATA*        consdata,           /**< set partitioning / packing / covering constraint data */
    FILE*            file                /**< output file (or NULL for standard output) */
    )
@@ -438,33 +439,30 @@ void consdataPrint(
 
    assert(consdata != NULL);
 
-   if( file == NULL )
-      file = stdout;
-
    /* print coefficients */
    if( consdata->nvars == 0 )
-      fprintf(file, "0 ");
+      SCIPinfoMessage(scip, file, "0 ");
    for( v = 0; v < consdata->nvars; ++v )
    {
       assert(consdata->vars[v] != NULL);
-      fprintf(file, "+<%s> ", SCIPvarGetName(consdata->vars[v]));
+      SCIPinfoMessage(scip, file, "+<%s> ", SCIPvarGetName(consdata->vars[v]));
    }
 
    /* print right hand side */
    switch( consdata->setppctype )
    {
    case SCIP_SETPPCTYPE_PARTITIONING:
-      fprintf(file, "== 1\n");
+      SCIPinfoMessage(scip, file, "== 1\n");
       break;
    case SCIP_SETPPCTYPE_PACKING:
-      fprintf(file, "<= 1\n");
+      SCIPinfoMessage(scip, file, "<= 1\n");
       break;
    case SCIP_SETPPCTYPE_COVERING:
-      fprintf(file, ">= 1\n");
+      SCIPinfoMessage(scip, file, ">= 1\n");
       break;
    default:
       errorMessage("unknown setppc type\n");
-      abort();
+      SCIPABORT();
    }
 }
 
@@ -1058,7 +1056,8 @@ Bool checkCons(
       return SCIPisFeasGE(scip, sum, 1.0);
    default:
       errorMessage("unknown setppc type\n");
-      abort();
+      SCIPABORT();
+      return FALSE;
    }
 }
 
@@ -1609,8 +1608,8 @@ RETCODE branchLP(
 #ifdef DEBUG
          debugMessage("binary set branching: nselcands=%d/%d, weight(S)=%g, A={", nselcands, nlpcands, branchweight);
          for( i = 0; i < nselcands; ++i )
-            printf(" %s[%g]", SCIPvarGetName(sortcands[i]), SCIPgetSolVal(scip, NULL, sortcands[i]));
-         printf(" }\n");
+            debugPrintf(" %s[%g]", SCIPvarGetName(sortcands[i]), SCIPgetSolVal(scip, NULL, sortcands[i]));
+         debugPrintf(" }\n");
 #endif
       }
    }
@@ -2384,7 +2383,7 @@ DECL_CONSDEACTIVE(consDeactiveSetppc)
 static
 DECL_CONSPRINT(consPrintSetppc)
 {  /*lint --e{715}*/
-   consdataPrint(SCIPconsGetData(cons), file);
+   consdataPrint(scip, SCIPconsGetData(cons), file);
 
    return SCIP_OKAY;
 }
@@ -2833,7 +2832,7 @@ Real SCIPgetDualsolSetppc(
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not a set partitioning / packing / covering constraint\n");
-      abort();
+      SCIPABORT();
    }
    
    consdata = SCIPconsGetData(cons);
@@ -2856,7 +2855,7 @@ Real SCIPgetDualfarkasSetppc(
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not a set partitioning / packing / covering constraint\n");
-      abort();
+      SCIPABORT();
    }
    
    consdata = SCIPconsGetData(cons);
@@ -2879,7 +2878,7 @@ VAR** SCIPgetVarsSetppc(
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not a set partitioning / packing / covering constraint\n");
-      abort();
+      SCIPABORT();
    }
    
    consdata = SCIPconsGetData(cons);
@@ -2899,7 +2898,7 @@ int SCIPgetNVarsSetppc(
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not a set partitioning / packing / covering constraint\n");
-      abort();
+      SCIPABORT();
    }
    
    consdata = SCIPconsGetData(cons);
@@ -2919,7 +2918,7 @@ SETPPCTYPE SCIPgetTypeSetppc(
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not a set partitioning / packing / covering constraint\n");
-      abort();
+      SCIPABORT();
    }
    
    consdata = SCIPconsGetData(cons);

@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_branch.h,v 1.11 2005/05/31 17:20:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_branch.h,v 1.12 2005/07/15 17:20:22 bzfpfend Exp $"
 
 /**@file   type_branch.h
  * @brief  type definitions for branching rules
@@ -22,8 +22,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __TYPE_BRANCH_H__
-#define __TYPE_BRANCH_H__
+#ifndef __SCIP_TYPE_BRANCH_H__
+#define __SCIP_TYPE_BRANCH_H__
 
 
 typedef struct BranchCand BRANCHCAND;   /**< branching candidate storage */

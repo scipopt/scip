@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop.h,v 1.10 2005/05/31 17:20:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop.h,v 1.11 2005/07/15 17:20:14 bzfpfend Exp $"
 
 /**@file   prop.h
  * @brief  internal methods for propagators
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __PROP_H__
-#define __PROP_H__
+#ifndef __SCIP_PROP_H__
+#define __SCIP_PROP_H__
 
 
 #include "scip/def.h"

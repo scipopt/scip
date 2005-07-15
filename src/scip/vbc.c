@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.13 2005/05/31 17:20:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.14 2005/07/15 17:20:25 bzfpfend Exp $"
 
 /**@file   vbc.c
  * @brief  methods for VBC Tool output
@@ -135,7 +135,8 @@ RETCODE SCIPvbcInit(
    if( set->vbc_filename[0] == '-' && set->vbc_filename[1] == '\0' )
       return SCIP_OKAY;
 
-   infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_NORMAL, "storing VBC information in file <%s>\n", set->vbc_filename);
+   SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+      "storing VBC information in file <%s>\n", set->vbc_filename);
    vbc->file = fopen(set->vbc_filename, "w");
    vbc->timestep = 0;
    vbc->userealtime = set->vbc_realtime;
@@ -146,11 +147,11 @@ RETCODE SCIPvbcInit(
       return SCIP_FILECREATEERROR;
    }
 
-   fprintf(vbc->file, "#TYPE: COMPLETE TREE\n");
-   fprintf(vbc->file, "#TIME: SET\n");
-   fprintf(vbc->file, "#BOUNDS: SET\n");
-   fprintf(vbc->file, "#INFORMATION: STANDARD\n");
-   fprintf(vbc->file, "#NODE_NUMBER: NONE\n");
+   SCIPmessageFPrintInfo(vbc->file, "#TYPE: COMPLETE TREE\n");
+   SCIPmessageFPrintInfo(vbc->file, "#TIME: SET\n");
+   SCIPmessageFPrintInfo(vbc->file, "#BOUNDS: SET\n");
+   SCIPmessageFPrintInfo(vbc->file, "#INFORMATION: STANDARD\n");
+   SCIPmessageFPrintInfo(vbc->file, "#NODE_NUMBER: NONE\n");
 
    CHECK_OKAY( SCIPhashmapCreate(&vbc->nodenum, blkmem, SCIP_HASHSIZE_VBC) );
 
@@ -168,7 +169,7 @@ void SCIPvbcExit(
 
    if( vbc->file != NULL )
    {
-      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL, "closing VBC information file\n");
+      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL, "closing VBC information file\n");
       
       fclose(vbc->file);
       vbc->file = NULL;
@@ -212,7 +213,7 @@ void printTime(
    step %= 100;
    hunds = (int)step;
 
-   fprintf(vbc->file, "%02d:%02d:%02d.%02d ", hours, mins, secs, hunds);
+   SCIPmessageFPrintInfo(vbc->file, "%02d:%02d:%02d.%02d ", hours, mins, secs, hunds);
 }
 
 /** creates a new node entry in the VBC output file */
@@ -253,9 +254,9 @@ RETCODE SCIPvbcNewChild(
    branchvar = getBranchVar(node);
 
    printTime(vbc, stat);
-   fprintf(vbc->file, "N %d %d %d\n", parentnodenum, nodenum, SCIP_VBCCOLOR_UNSOLVED);
+   SCIPmessageFPrintInfo(vbc->file, "N %d %d %d\n", parentnodenum, nodenum, SCIP_VBCCOLOR_UNSOLVED);
    printTime(vbc, stat);
-   fprintf(vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s\\nbound:\\t%f\n",
+   SCIPmessageFPrintInfo(vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s\\nbound:\\t%f\n",
       nodenum, nodenum, node, SCIPnodeGetDepth(node),
       branchvar == NULL ? "-" : SCIPvarGetName(branchvar), SCIPnodeGetLowerbound(node));
 
@@ -281,7 +282,7 @@ void vbcSetColor(
       nodenum = (int)SCIPhashmapGetImage(vbc->nodenum, node);
       assert(nodenum > 0);
       printTime(vbc, stat);
-      fprintf(vbc->file, "P %d %d\n", nodenum, color);
+      SCIPmessageFPrintInfo(vbc->file, "P %d %d\n", nodenum, color);
    }
 }
 
@@ -311,7 +312,7 @@ void SCIPvbcSolvedNode(
    branchvar = getBranchVar(node);
 
    printTime(vbc, stat);
-   fprintf(vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s\\nbound:\\t%f\\nnr:\\t%lld\n", 
+   SCIPmessageFPrintInfo(vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s\\nbound:\\t%f\\nnr:\\t%lld\n", 
       nodenum, nodenum, node, SCIPnodeGetDepth(node),
       branchvar == NULL ? "-" : SCIPvarGetName(branchvar), SCIPnodeGetLowerbound(node), stat->nnodes);
 
@@ -382,7 +383,7 @@ void SCIPvbcLowerbound(
       return;
 
    printTime(vbc, stat);
-   fprintf(vbc->file, "L %f\n", lowerbound);
+   SCIPmessageFPrintInfo(vbc->file, "L %f\n", lowerbound);
 }
 
 /** outputs a new global upper bound to the VBC output file */
@@ -399,6 +400,6 @@ void SCIPvbcUpperbound(
       return;
 
    printTime(vbc, stat);
-   fprintf(vbc->file, "U %f\n", upperbound);
+   SCIPmessageFPrintInfo(vbc->file, "U %f\n", upperbound);
 }
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_presol.h,v 1.10 2005/05/31 17:20:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_presol.h,v 1.11 2005/07/15 17:20:23 bzfpfend Exp $"
 
 /**@file   type_presol.h
  * @brief  type definitions for presolvers
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __TYPE_PRESOL_H__
-#define __TYPE_PRESOL_H__
+#ifndef __SCIP_TYPE_PRESOL_H__
+#define __SCIP_TYPE_PRESOL_H__
 
 
 typedef struct Presol PRESOL;           /**< presolver data structure */

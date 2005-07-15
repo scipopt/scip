@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.h,v 1.20 2005/05/31 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: message.h,v 1.21 2005/07/15 17:20:11 bzfpfend Exp $"
 
 /**@file   message.h
  * @brief  message output methods
@@ -37,32 +37,24 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __MESSAGE_H__
-#define __MESSAGE_H__
+#ifndef __SCIP_MESSAGE_H__
+#define __SCIP_MESSAGE_H__
 
 
-
-/** verbosity levels of output */
-enum VerbLevel
-{
-   SCIP_VERBLEVEL_NONE    = 0,           /**< only error and warning messages are displayed */
-   SCIP_VERBLEVEL_MINIMAL = 1,           /**< a reduced number of messages are displayed */
-   SCIP_VERBLEVEL_NORMAL  = 2,           /**< standard messages are displayed */
-   SCIP_VERBLEVEL_HIGH    = 3,           /**< a lot of information is displayed */
-   SCIP_VERBLEVEL_FULL    = 4            /**< all messages are displayed */
-};
-typedef enum VerbLevel VERBLEVEL;
-
-
-#define errorMessage                    printf("[%s:%d] ERROR: ", __FILE__, __LINE__); printf
-#define warningMessage                  printf("[%s:%d] Warning: ", __FILE__, __LINE__); printf
+#define errorMessage                    SCIPmessagePrintErrorHeader(__FILE__, __LINE__); \
+                                        SCIPmessagePrintError
+#define warningMessage                  SCIPmessagePrintWarningHeader(__FILE__, __LINE__); \
+                                        SCIPmessagePrintWarning
+#define infoMessage                     SCIPmessagePrintInfo
 
 #ifdef DEBUG
 #define debug(x)                        x
 #define debugMessage                    printf("[%s:%d] debug: ", __FILE__, __LINE__); printf
+#define debugPrintf                     printf
 #else
 #define debug(x)                        /**/
 #define debugMessage                    while( FALSE ) printf
+#define debugPrintf                     while( FALSE ) printf
 #endif
 
 
@@ -70,12 +62,139 @@ typedef enum VerbLevel VERBLEVEL;
 #include <stdarg.h>
 
 #include "scip/def.h"
+#include "scip/type_message.h"
+#include "scip/struct_message.h"
+#include "scip/pub_message.h"
 
 
 
-/** prints a message depending on the verbosity level */
+/** creates a message handler */
 extern
-void infoMessage(
+RETCODE SCIPmessagehdlrCreate(
+   MESSAGEHDLR**    messagehdlr,        /**< pointer to store the message handler */
+   Bool             bufferedoutput,     /**< should the output be buffered up to the next newline? */
+   DECL_MESSAGEERROR((*messageerror)),  /**< error message print method of message handler */
+   DECL_MESSAGEWARNING((*messagewarning)),/**< warning message print method of message handler */
+   DECL_MESSAGEDIALOG((*messagedialog)),/**< dialog message print method of message handler */
+   DECL_MESSAGEINFO ((*messageinfo)),   /**< info message print method of message handler */
+   MESSAGEHDLRDATA* messagehdlrdata     /**< message handler data */
+   );
+
+/** frees message handler */
+extern
+void SCIPmessagehdlrFree(
+   MESSAGEHDLR**    messagehdlr         /**< pointer to the message handler */
+   );
+
+/** installs the given message handler */
+extern
+void SCIPmessageSetHandler(
+   MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
+   );
+
+/** installs the default message handler that prints messages to stdout or stderr */
+extern
+void SCIPmessageSetDefaultHandler(
+   void
+   );
+
+/** returns the currently installed message handler, or NULL if messages are currently suppressed */
+extern
+MESSAGEHDLR* SCIPmessageGetHandler(
+   void
+   );
+
+/** prints the header with source file location for an error message */
+extern
+void SCIPmessagePrintErrorHeader(
+   const char*      sourcefile,         /**< name of the source file that called the function */
+   int              sourceline          /**< line in the source file where the function was called */
+   );
+
+/** prints an error message, acting like the printf() command */
+extern
+void SCIPmessagePrintError(
+   const char*      formatstr,          /**< format string like in printf() function */
+   ...                                  /**< format arguments line in printf() function */
+   );
+
+/** prints the header with source file location for an error message */
+extern
+void SCIPmessagePrintWarningHeader(
+   const char*      sourcefile,         /**< name of the source file that called the function */
+   int              sourceline          /**< line in the source file where the function was called */
+   );
+
+/** prints a warning message, acting like the printf() command */
+extern
+void SCIPmessagePrintWarning(
+   const char*      formatstr,          /**< format string like in printf() function */
+   ...                                  /**< format arguments line in printf() function */
+   );
+
+/** prints a dialog message that requests user interaction, acting like the printf() command */
+extern
+void SCIPmessagePrintDialog(
+   const char*      formatstr,          /**< format string like in printf() function */
+   ...                                  /**< format arguments line in printf() function */
+   );
+
+/** prints a dialog message that requests user interaction, acting like the vprintf() command */
+extern
+void SCIPmessageVPrintDialog(
+   const char*      formatstr,          /**< format string like in printf() function */
+   va_list          ap                  /**< variable argument list */
+   );
+
+/** prints a dialog message that requests user interaction into a file, acting like the fprintf() command */
+extern
+void SCIPmessageFPrintDialog(
+   FILE*            file,               /**< file stream to print into, or NULL for stdout */
+   const char*      formatstr,          /**< format string like in printf() function */
+   ...                                  /**< format arguments line in printf() function */
+   );
+
+/** prints a dialog message that requests user interaction into a file, acting like the vfprintf() command */
+extern
+void SCIPmessageVFPrintDialog(
+   FILE*            file,               /**< file stream to print into, or NULL for stdout */
+   const char*      formatstr,          /**< format string like in printf() function */
+   va_list          ap                  /**< variable argument list */
+   );
+
+/** prints a message, acting like the printf() command */
+extern
+void SCIPmessagePrintInfo(
+   const char*      formatstr,          /**< format string like in printf() function */
+   ...                                  /**< format arguments line in printf() function */
+   );
+
+/** prints a message, acting like the vprintf() command */
+extern
+void SCIPmessageVPrintInfo(
+   const char*      formatstr,          /**< format string like in printf() function */
+   va_list          ap                  /**< variable argument list */
+   );
+
+/** prints a message into a file, acting like the fprintf() command */
+extern
+void SCIPmessageFPrintInfo(
+   FILE*            file,               /**< file stream to print into, or NULL for stdout */
+   const char*      formatstr,          /**< format string like in printf() function */
+   ...                                  /**< format arguments line in printf() function */
+   );
+
+/** prints a message into a file, acting like the vfprintf() command */
+extern
+void SCIPmessageVFPrintInfo(
+   FILE*            file,               /**< file stream to print into, or NULL for stdout */
+   const char*      formatstr,          /**< format string like in printf() function */
+   va_list          ap                  /**< variable argument list */
+   );
+
+/** prints a message depending on the verbosity level, acting like the printf() command */
+extern
+void SCIPmessagePrintVerbInfo(
    VERBLEVEL        verblevel,          /**< current verbosity level */
    VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
    const char*      formatstr,          /**< format string like in printf() function */
@@ -84,9 +203,29 @@ void infoMessage(
 
 /** prints a message depending on the verbosity level, acting like the vprintf() command */
 extern
-void vinfoMessage(
+void SCIPmessageVPrintVerbInfo(
    VERBLEVEL        verblevel,          /**< current verbosity level */
    VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
+   const char*      formatstr,          /**< format string like in printf() function */
+   va_list          ap                  /**< variable argument list */
+   );
+
+/** prints a message into a file depending on the verbosity level, acting like the fprintf() command */
+extern
+void SCIPmessageFPrintVerbInfo(
+   VERBLEVEL        verblevel,          /**< current verbosity level */
+   VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
+   FILE*            file,               /**< file stream to print into, or NULL for stdout */
+   const char*      formatstr,          /**< format string like in printf() function */
+   ...                                  /**< format arguments line in printf() function */
+   );
+
+/** prints a message into a file depending on the verbosity level, acting like the vfprintf() command */
+extern
+void SCIPmessageVFPrintVerbInfo(
+   VERBLEVEL        verblevel,          /**< current verbosity level */
+   VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
+   FILE*            file,               /**< file stream to print into, or NULL for stdout */
    const char*      formatstr,          /**< format string like in printf() function */
    va_list          ap                  /**< variable argument list */
    );

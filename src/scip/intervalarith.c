@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.10 2005/05/31 17:20:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.11 2005/07/15 17:20:10 bzfpfend Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -56,7 +56,7 @@ void setRoundingMode(
    if( fesetround(roundmode) != 0 )
    {
       errorMessage("error setting rounding mode to %d\n", roundmode);
-      abort();
+      SCIPABORT();
    }
 }
 
@@ -97,7 +97,7 @@ void setRoundingMode(
    if( write_rnd(roundmode) != 0 )
    {
       errorMessage("error setting rounding mode to %d\n", roundmode);
-      abort();
+      SCIPABORT();
    }
 }
 

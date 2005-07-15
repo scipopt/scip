@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.52 2005/06/20 10:57:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.53 2005/07/15 17:20:21 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __STRUCT_SET_H__
-#define __STRUCT_SET_H__
+#ifndef __SCIP_STRUCT_SET_H__
+#define __SCIP_STRUCT_SET_H__
 
 
 #include "scip/def.h"

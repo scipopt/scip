@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.35 2005/05/31 17:20:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.36 2005/07/15 17:20:18 bzfpfend Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SOLVE_H__
-#define __SOLVE_H__
+#ifndef __SCIP_SOLVE_H__
+#define __SCIP_SOLVE_H__
 
 
 #include <stdio.h>

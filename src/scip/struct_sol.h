@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sol.h,v 1.12 2005/05/31 17:20:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_sol.h,v 1.13 2005/07/15 17:20:21 bzfpfend Exp $"
 
 /**@file   struct_sol.h
  * @brief  datastructures for storing primal CIP solutions
@@ -24,8 +24,8 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 
-#ifndef __STRUCT_SOL_H__
-#define __STRUCT_SOL_H__
+#ifndef __SCIP_STRUCT_SOL_H__
+#define __SCIP_STRUCT_SOL_H__
 
 
 #include "scip/def.h"

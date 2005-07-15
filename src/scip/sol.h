@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.40 2005/06/21 16:55:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.41 2005/07/15 17:20:18 bzfpfend Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SOL_H__
-#define __SOL_H__
+#ifndef __SCIP_SOL_H__
+#define __SCIP_SOL_H__
 
 
 #include <stdio.h>

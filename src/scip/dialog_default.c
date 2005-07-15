@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.50 2005/06/21 15:51:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.51 2005/07/15 17:20:08 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -70,15 +70,15 @@ RETCODE dialogExecMenu(
       /* check result */
       if( nfound == 0 )
       {
-         printf("command <%s> not available\n", command);
+         SCIPdialogMessage(scip, NULL, "command <%s> not available\n", command);
          SCIPdialoghdlrClearBuffer(dialoghdlr);
          *nextdialog = dialog;
       }
       else if( nfound >= 2 )
       {
-         printf("\npossible completions:\n");
+         SCIPdialogMessage(scip, NULL, "\npossible completions:\n");
          CHECK_OKAY( SCIPdialogDisplayCompletions(dialog, scip, command) );
-         printf("\n");
+         SCIPdialogMessage(scip, NULL, "\n");
          SCIPdialoghdlrClearBuffer(dialoghdlr);
          again = TRUE;
       }
@@ -94,9 +94,9 @@ DECL_DIALOGEXEC(SCIPdialogExecMenu)
    /* if remaining command string is empty, display menu of available options */
    if( SCIPdialoghdlrIsBufferEmpty(dialoghdlr) )
    {
-      printf("\n");
+      SCIPdialogMessage(scip, NULL, "\n");
       CHECK_OKAY( SCIPdialogDisplayMenu(dialog, scip) );
-      printf("\n");
+      SCIPdialogMessage(scip, NULL, "\n");
    }
 
    CHECK_OKAY( dialogExecMenu(scip, dialog, dialoghdlr, nextdialog) );
@@ -122,32 +122,33 @@ DECL_DIALOGEXEC(SCIPdialogExecChecksol)
 
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
    if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
       sol = SCIPgetBestSol(scip);
    else
       sol = NULL;
 
    if( sol == NULL )
-      printf("no feasible solution available\n");
+      SCIPdialogMessage(scip, NULL, "no feasible solution available\n");
    else
    {
       CHECK_OKAY( SCIPcheckSolOrig(scip, sol, &feasible, &infeasconshdlr, &infeascons) );
       
       if( feasible )
-         printf("best solution is feasible in original problem\n");
+         SCIPdialogMessage(scip, NULL, "best solution is feasible in original problem\n");
       else if( infeascons == NULL )
       { 
-         printf("best solution violates constraint handler [%s]\n", SCIPconshdlrGetName(infeasconshdlr));
+         SCIPdialogMessage(scip, NULL, "best solution violates constraint handler [%s]\n",
+            SCIPconshdlrGetName(infeasconshdlr));
       }
       else
       { 
-         printf("best solution violates constraint <%s> [%s] of original problem:\n", 
+         SCIPdialogMessage(scip, NULL, "best solution violates constraint <%s> [%s] of original problem:\n", 
             SCIPconsGetName(infeascons), SCIPconshdlrGetName(infeasconshdlr));
          CHECK_OKAY( SCIPprintCons(scip, infeascons, NULL) );
       }
    }
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialogGetParent(dialog);
 
@@ -162,7 +163,7 @@ DECL_DIALOGEXEC(SCIPdialogExecConflictgraph)
 
    if( !SCIPisTransformed(scip) )
    {
-      printf("cannot call method before problem was transformed\n");
+      SCIPdialogMessage(scip, NULL, "cannot call method before problem was transformed\n");
       SCIPdialoghdlrClearBuffer(dialoghdlr);
    }
    else
@@ -175,7 +176,7 @@ DECL_DIALOGEXEC(SCIPdialogExecConflictgraph)
 
          retcode = SCIPwriteImplicationConflictGraph(scip, filename);
          if( retcode == SCIP_FILECREATEERROR )
-            printf("error writing file <%s>\n", filename);
+            SCIPdialogMessage(scip, NULL, "error writing file <%s>\n", filename);
          else
          {
             CHECK_OKAY( retcode );
@@ -208,20 +209,20 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayBranching)
    SCIPbsortPtr((void**)sorted, nbranchrules, SCIPbranchruleComp);
 
    /* display sorted list of branching rules */
-   printf("\n");
-   printf(" branching rule       priority maxdepth maxbddist  description\n");
-   printf(" --------------       -------- -------- ---------  -----------\n");
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " branching rule       priority maxdepth maxbddist  description\n");
+   SCIPdialogMessage(scip, NULL, " --------------       -------- -------- ---------  -----------\n");
    for( i = 0; i < nbranchrules; ++i )
    {
-      printf(" %-20s ", SCIPbranchruleGetName(sorted[i]));
+      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPbranchruleGetName(sorted[i]));
       if( strlen(SCIPbranchruleGetName(sorted[i])) > 20 )
-         printf("\n %20s ", "-->");
-      printf("%8d %8d %8.1f%%  ", SCIPbranchruleGetPriority(sorted[i]), SCIPbranchruleGetMaxdepth(sorted[i]),
-         100.0 * SCIPbranchruleGetMaxbounddist(sorted[i]));
-      printf(SCIPbranchruleGetDesc(sorted[i]));
-      printf("\n");
+         SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
+      SCIPdialogMessage(scip, NULL, "%8d %8d %8.1f%%  ", SCIPbranchruleGetPriority(sorted[i]), 
+         SCIPbranchruleGetMaxdepth(sorted[i]), 100.0 * SCIPbranchruleGetMaxbounddist(sorted[i]));
+      SCIPdialogMessage(scip, NULL, SCIPbranchruleGetDesc(sorted[i]));
+      SCIPdialogMessage(scip, NULL, "\n");
    }
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &sorted);
@@ -251,19 +252,19 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayConflict)
    SCIPbsortPtr((void**)sorted, nconflicthdlrs, SCIPconflicthdlrComp);
 
    /* display sorted list of conflict handlers */
-   printf("\n");
-   printf(" conflict handler     priority  description\n");
-   printf(" ----------------     --------  -----------\n");
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " conflict handler     priority  description\n");
+   SCIPdialogMessage(scip, NULL, " ----------------     --------  -----------\n");
    for( i = 0; i < nconflicthdlrs; ++i )
    {
-      printf(" %-20s ", SCIPconflicthdlrGetName(sorted[i]));
+      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPconflicthdlrGetName(sorted[i]));
       if( strlen(SCIPconflicthdlrGetName(sorted[i])) > 20 )
-         printf("\n %20s ", "-->");
-      printf("%8d  ", SCIPconflicthdlrGetPriority(sorted[i]));
-      printf(SCIPconflicthdlrGetDesc(sorted[i]));
-      printf("\n");
+         SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
+      SCIPdialogMessage(scip, NULL, "%8d  ", SCIPconflicthdlrGetPriority(sorted[i]));
+      SCIPdialogMessage(scip, NULL, SCIPconflicthdlrGetDesc(sorted[i]));
+      SCIPdialogMessage(scip, NULL, "\n");
    }
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &sorted);
@@ -286,25 +287,25 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayConshdlrs)
    nconshdlrs = SCIPgetNConshdlrs(scip);
 
    /* display list of constraint handlers */
-   printf("\n");
-   printf(" constraint handler   chckprio enfoprio sepaprio sepaf propf eager  description\n");
-   printf(" ------------------   -------- -------- -------- ----- ----- -----  -----------\n");
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " constraint handler   chckprio enfoprio sepaprio sepaf propf eager  description\n");
+   SCIPdialogMessage(scip, NULL, " ------------------   -------- -------- -------- ----- ----- -----  -----------\n");
    for( i = 0; i < nconshdlrs; ++i )
    {
-      printf(" %-20s ", SCIPconshdlrGetName(conshdlrs[i]));
+      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPconshdlrGetName(conshdlrs[i]));
       if( strlen(SCIPconshdlrGetName(conshdlrs[i])) > 20 )
-         printf("\n %20s ", "-->");
-      printf("%8d %8d %8d %5d %5d %5d  ",
+         SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
+      SCIPdialogMessage(scip, NULL, "%8d %8d %8d %5d %5d %5d  ",
          SCIPconshdlrGetCheckPriority(conshdlrs[i]),
          SCIPconshdlrGetEnfoPriority(conshdlrs[i]),
          SCIPconshdlrGetSepaPriority(conshdlrs[i]),
          SCIPconshdlrGetSepaFreq(conshdlrs[i]),
          SCIPconshdlrGetPropFreq(conshdlrs[i]),
          SCIPconshdlrGetEagerFreq(conshdlrs[i]));
-      printf(SCIPconshdlrGetDesc(conshdlrs[i]));
-      printf("\n");
+      SCIPdialogMessage(scip, NULL, SCIPconshdlrGetDesc(conshdlrs[i]));
+      SCIPdialogMessage(scip, NULL, "\n");
    }
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -324,39 +325,39 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayDisplaycols)
    ndisps = SCIPgetNDisps(scip);
 
    /* display list of display columns */
-   printf("\n");
-   printf(" display column       header           position width priority status  description\n");
-   printf(" --------------       ------           -------- ----- -------- ------  -----------\n");
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " display column       header           position width priority status  description\n");
+   SCIPdialogMessage(scip, NULL, " --------------       ------           -------- ----- -------- ------  -----------\n");
    for( i = 0; i < ndisps; ++i )
    {
-      printf(" %-20s ", SCIPdispGetName(disps[i]));
+      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPdispGetName(disps[i]));
       if( strlen(SCIPdispGetName(disps[i])) > 20 )
-         printf("\n %20s ", "-->");
-      printf("%-16s ", SCIPdispGetHeader(disps[i]));
+         SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
+      SCIPdialogMessage(scip, NULL, "%-16s ", SCIPdispGetHeader(disps[i]));
       if( strlen(SCIPdispGetHeader(disps[i])) > 16 )
-         printf("\n %20s %16s ", "", "-->");
-      printf("%8d ", SCIPdispGetPosition(disps[i]));
-      printf("%5d ", SCIPdispGetWidth(disps[i]));
-      printf("%8d ", SCIPdispGetPriority(disps[i]));
+         SCIPdialogMessage(scip, NULL, "\n %20s %16s ", "", "-->");
+      SCIPdialogMessage(scip, NULL, "%8d ", SCIPdispGetPosition(disps[i]));
+      SCIPdialogMessage(scip, NULL, "%5d ", SCIPdispGetWidth(disps[i]));
+      SCIPdialogMessage(scip, NULL, "%8d ", SCIPdispGetPriority(disps[i]));
       switch( SCIPdispGetStatus(disps[i]) )
       {
       case SCIP_DISPSTATUS_OFF:
-         printf("%6s  ", "off");
+         SCIPdialogMessage(scip, NULL, "%6s  ", "off");
          break;
       case SCIP_DISPSTATUS_AUTO:
-         printf("%6s  ", "auto");
+         SCIPdialogMessage(scip, NULL, "%6s  ", "auto");
          break;
       case SCIP_DISPSTATUS_ON:
-         printf("%6s  ", "on");
+         SCIPdialogMessage(scip, NULL, "%6s  ", "on");
          break;
       default:
-         printf("%6s  ", "???");
+         SCIPdialogMessage(scip, NULL, "%6s  ", "???");
          break;
       }
-      printf(SCIPdispGetDesc(disps[i]));
-      printf("\n");
+      SCIPdialogMessage(scip, NULL, SCIPdispGetDesc(disps[i]));
+      SCIPdialogMessage(scip, NULL, "\n");
    }
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -376,22 +377,22 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics)
    nheurs = SCIPgetNHeurs(scip);
 
    /* display list of primal heuristics */
-   printf("\n");
-   printf(" primal heuristic     c priority freq ofs  description\n");
-   printf(" ----------------     - -------- ---- ---  -----------\n");
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " primal heuristic     c priority freq ofs  description\n");
+   SCIPdialogMessage(scip, NULL, " ----------------     - -------- ---- ---  -----------\n");
    for( i = 0; i < nheurs; ++i )
    {
-      printf(" %-20s ", SCIPheurGetName(heurs[i]));
+      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPheurGetName(heurs[i]));
       if( strlen(SCIPheurGetName(heurs[i])) > 20 )
-         printf("\n %20s ", "-->");
-      printf("%c ", SCIPheurGetDispchar(heurs[i]));
-      printf("%8d ", SCIPheurGetPriority(heurs[i]));
-      printf("%4d ", SCIPheurGetFreq(heurs[i]));
-      printf("%3d  ", SCIPheurGetFreqofs(heurs[i]));
-      printf(SCIPheurGetDesc(heurs[i]));
-      printf("\n");
+         SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
+      SCIPdialogMessage(scip, NULL, "%c ", SCIPheurGetDispchar(heurs[i]));
+      SCIPdialogMessage(scip, NULL, "%8d ", SCIPheurGetPriority(heurs[i]));
+      SCIPdialogMessage(scip, NULL, "%4d ", SCIPheurGetFreq(heurs[i]));
+      SCIPdialogMessage(scip, NULL, "%3d  ", SCIPheurGetFreqofs(heurs[i]));
+      SCIPdialogMessage(scip, NULL, SCIPheurGetDesc(heurs[i]));
+      SCIPdialogMessage(scip, NULL, "\n");
    }
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -403,9 +404,9 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayMemory)
 {  /*lint --e{715}*/
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
    SCIPprintMemoryDiagnostic(scip);
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -425,20 +426,20 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayNodeselectors)
    nnodesels = SCIPgetNNodesels(scip);
 
    /* display list of node selectors */
-   printf("\n");
-   printf(" node selector        std priority memsave prio  description\n");
-   printf(" -------------        ------------ ------------  -----------\n");
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " node selector        std priority memsave prio  description\n");
+   SCIPdialogMessage(scip, NULL, " -------------        ------------ ------------  -----------\n");
    for( i = 0; i < nnodesels; ++i )
    {
-      printf(" %-20s ", SCIPnodeselGetName(nodesels[i]));
+      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPnodeselGetName(nodesels[i]));
       if( strlen(SCIPnodeselGetName(nodesels[i])) > 20 )
-         printf("\n %20s ", "-->");
-      printf("%12d ", SCIPnodeselGetStdPriority(nodesels[i]));
-      printf("%12d  ", SCIPnodeselGetMemsavePriority(nodesels[i]));
-      printf(SCIPnodeselGetDesc(nodesels[i]));
-      printf("\n");
+         SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
+      SCIPdialogMessage(scip, NULL, "%12d ", SCIPnodeselGetStdPriority(nodesels[i]));
+      SCIPdialogMessage(scip, NULL, "%12d  ", SCIPnodeselGetMemsavePriority(nodesels[i]));
+      SCIPdialogMessage(scip, NULL, SCIPnodeselGetDesc(nodesels[i]));
+      SCIPdialogMessage(scip, NULL, "\n");
    }
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -458,19 +459,20 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayPresolvers)
    npresols = SCIPgetNPresols(scip);
 
    /* display list of presolvers */
-   printf("\n");
-   printf(" presolver            priority  description\n");
-   printf(" ---------            --------  -----------\n");
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " presolver            priority  description\n");
+   SCIPdialogMessage(scip, NULL, " ---------            --------  -----------\n");
    for( i = 0; i < npresols; ++i )
    {
-      printf(" %-20s ", SCIPpresolGetName(presols[i]));
+      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPpresolGetName(presols[i]));
       if( strlen(SCIPpresolGetName(presols[i])) > 20 )
-         printf("\n %20s ", "-->");
-      printf("%8d%c ", SCIPpresolGetPriority(presols[i]), SCIPpresolIsDelayed(presols[i]) ? 'd' : ' ');
-      printf(SCIPpresolGetDesc(presols[i]));
-      printf("\n");
+         SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
+      SCIPdialogMessage(scip, NULL, "%8d%c ", SCIPpresolGetPriority(presols[i]),
+         SCIPpresolIsDelayed(presols[i]) ? 'd' : ' ');
+      SCIPdialogMessage(scip, NULL, SCIPpresolGetDesc(presols[i]));
+      SCIPdialogMessage(scip, NULL, "\n");
    }
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -482,9 +484,9 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayProblem)
 {  /*lint --e{715}*/
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
    CHECK_OKAY( SCIPprintOrigProblem(scip, NULL) );
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -504,20 +506,20 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayPropagators)
    nprops = SCIPgetNProps(scip);
 
    /* display list of propagators */
-   printf("\n");
-   printf(" propagator           priority  freq  description\n");
-   printf(" ----------           --------  ----  -----------\n");
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " propagator           priority  freq  description\n");
+   SCIPdialogMessage(scip, NULL, " ----------           --------  ----  -----------\n");
    for( i = 0; i < nprops; ++i )
    {
-      printf(" %-20s ", SCIPpropGetName(props[i]));
+      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPpropGetName(props[i]));
       if( strlen(SCIPpropGetName(props[i])) > 20 )
-         printf("\n %20s ", "-->");
-      printf("%8d%c ", SCIPpropGetPriority(props[i]), SCIPpropIsDelayed(props[i]) ? 'd' : ' ');
-      printf("%4d  ", SCIPpropGetFreq(props[i]));
-      printf(SCIPpropGetDesc(props[i]));
-      printf("\n");
+         SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
+      SCIPdialogMessage(scip, NULL, "%8d%c ", SCIPpropGetPriority(props[i]), SCIPpropIsDelayed(props[i]) ? 'd' : ' ');
+      SCIPdialogMessage(scip, NULL, "%4d  ", SCIPpropGetFreq(props[i]));
+      SCIPdialogMessage(scip, NULL, SCIPpropGetDesc(props[i]));
+      SCIPdialogMessage(scip, NULL, "\n");
    }
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -537,19 +539,19 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayReaders)
    nreaders = SCIPgetNReaders(scip);
 
    /* display list of readers */
-   printf("\n");
-   printf(" file reader          extension  description\n");
-   printf(" -----------          ---------  -----------\n");
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " file reader          extension  description\n");
+   SCIPdialogMessage(scip, NULL, " -----------          ---------  -----------\n");
    for( i = 0; i < nreaders; ++i )
    {
-      printf(" %-20s ", SCIPreaderGetName(readers[i]));
+      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPreaderGetName(readers[i]));
       if( strlen(SCIPreaderGetName(readers[i])) > 20 )
-         printf("\n %20s ", "-->");
-      printf("%9s  ", SCIPreaderGetExtension(readers[i]));
-      printf(SCIPreaderGetDesc(readers[i]));
-      printf("\n");
+         SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
+      SCIPdialogMessage(scip, NULL, "%9s  ", SCIPreaderGetExtension(readers[i]));
+      SCIPdialogMessage(scip, NULL, SCIPreaderGetDesc(readers[i]));
+      SCIPdialogMessage(scip, NULL, "\n");
    }
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -569,20 +571,20 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplaySeparators)
    nsepas = SCIPgetNSepas(scip);
 
    /* display list of separators */
-   printf("\n");
-   printf(" separator            priority  freq  description\n");
-   printf(" ---------            --------  ----  -----------\n");
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " separator            priority  freq  description\n");
+   SCIPdialogMessage(scip, NULL, " ---------            --------  ----  -----------\n");
    for( i = 0; i < nsepas; ++i )
    {
-      printf(" %-20s ", SCIPsepaGetName(sepas[i]));
+      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPsepaGetName(sepas[i]));
       if( strlen(SCIPsepaGetName(sepas[i])) > 20 )
-         printf("\n %20s ", "-->");
-      printf("%8d%c ", SCIPsepaGetPriority(sepas[i]), SCIPsepaIsDelayed(sepas[i]) ? 'd' : ' ');
-      printf("%4d  ", SCIPsepaGetFreq(sepas[i]));
-      printf(SCIPsepaGetDesc(sepas[i]));
-      printf("\n");
+         SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
+      SCIPdialogMessage(scip, NULL, "%8d%c ", SCIPsepaGetPriority(sepas[i]), SCIPsepaIsDelayed(sepas[i]) ? 'd' : ' ');
+      SCIPdialogMessage(scip, NULL, "%4d  ", SCIPsepaGetFreq(sepas[i]));
+      SCIPdialogMessage(scip, NULL, SCIPsepaGetDesc(sepas[i]));
+      SCIPdialogMessage(scip, NULL, "\n");
    }
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -594,9 +596,9 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution)
 {  /*lint --e{715}*/
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
    CHECK_OKAY( SCIPprintBestSol(scip, NULL) );
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -608,9 +610,9 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics)
 {  /*lint --e{715}*/
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
    CHECK_OKAY( SCIPprintStatistics(scip, NULL) );
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -622,9 +624,9 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayTransproblem)
 {  /*lint --e{715}*/
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
    CHECK_OKAY( SCIPprintTransProblem(scip, NULL) );
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -639,7 +641,7 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayValue)
    const char* varname;
    Real solval;
 
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
       sol = SCIPgetBestSol(scip);
@@ -648,7 +650,7 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayValue)
 
    if( sol == NULL )
    {
-      printf("no feasible solution available\n");
+      SCIPdialogMessage(scip, NULL, "no feasible solution available\n");
       SCIPdialoghdlrClearBuffer(dialoghdlr);
    }
    else
@@ -661,22 +663,22 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayValue)
 
          var = SCIPfindVar(scip, varname);
          if( var == NULL )
-            printf("variable <%s> not found\n", varname);
+            SCIPdialogMessage(scip, NULL, "variable <%s> not found\n", varname);
          else
          {
             solval = SCIPgetSolVal(scip, sol, var);
-            printf("%-32s", SCIPvarGetName(var));
+            SCIPdialogMessage(scip, NULL, "%-32s", SCIPvarGetName(var));
             if( SCIPisInfinity(scip, solval) )
-               printf(" +infinity");
+               SCIPdialogMessage(scip, NULL, " +infinity");
             else if( SCIPisInfinity(scip, -solval) )
-               printf(" -infinity");
+               SCIPdialogMessage(scip, NULL, " -infinity");
             else
-               printf(" %f", solval);
-            printf(" \t(obj:%g)\n", SCIPvarGetObj(var));
+               SCIPdialogMessage(scip, NULL, " %f", solval);
+            SCIPdialogMessage(scip, NULL, " \t(obj:%g)\n", SCIPvarGetObj(var));
          }
       }
    }
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -688,9 +690,9 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayVarbranchstatistics)
 {  /*lint --e{715}*/
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
    CHECK_OKAY( SCIPprintBranchingStatistics(scip, NULL) );
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -702,9 +704,9 @@ DECL_DIALOGEXEC(SCIPdialogExecHelp)
 {  /*lint --e{715}*/
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
    CHECK_OKAY( SCIPdialogDisplayMenu(SCIPdialogGetParent(dialog), scip) );
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialogGetParent(dialog);
 
@@ -716,12 +718,12 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayTranssolution)
 {  /*lint --e{715}*/
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
    if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
    {
       if( SCIPsolGetOrigin(SCIPgetBestSol(scip)) == SCIP_SOLORIGIN_ORIGINAL )
       {
-         printf("best solution exists only in original problem space\n");
+         SCIPdialogMessage(scip, NULL, "best solution exists only in original problem space\n");
       }
       else
       {
@@ -729,8 +731,8 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayTranssolution)
       }
    }
    else
-      printf("no solution available\n");
-   printf("\n");
+      SCIPdialogMessage(scip, NULL, "no solution available\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -766,11 +768,11 @@ DECL_DIALOGEXEC(SCIPdialogExecOptimize)
 {  /*lint --e{715}*/
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
    switch( SCIPgetStage(scip) )
    {
    case SCIP_STAGE_INIT:
-      printf("no problem exists\n");
+      SCIPdialogMessage(scip, NULL, "no problem exists\n");
       break;
 
    case SCIP_STAGE_PROBLEM:
@@ -782,7 +784,7 @@ DECL_DIALOGEXEC(SCIPdialogExecOptimize)
       break;
 
    case SCIP_STAGE_SOLVED:
-      printf("problem is already solved\n");
+      SCIPdialogMessage(scip, NULL, "problem is already solved\n");
       break;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -793,7 +795,7 @@ DECL_DIALOGEXEC(SCIPdialogExecOptimize)
       errorMessage("invalid SCIP stage\n");
       return SCIP_INVALIDCALL;
    }
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -805,11 +807,11 @@ DECL_DIALOGEXEC(SCIPdialogExecPresolve)
 {  /*lint --e{715}*/
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
    switch( SCIPgetStage(scip) )
    {
    case SCIP_STAGE_INIT:
-      printf("no problem exists\n");
+      SCIPdialogMessage(scip, NULL, "no problem exists\n");
       break;
 
    case SCIP_STAGE_PROBLEM:
@@ -820,11 +822,11 @@ DECL_DIALOGEXEC(SCIPdialogExecPresolve)
 
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      printf("problem is already presolved\n");
+      SCIPdialogMessage(scip, NULL, "problem is already presolved\n");
       break;
 
    case SCIP_STAGE_SOLVED:
-      printf("problem is already solved\n");
+      SCIPdialogMessage(scip, NULL, "problem is already solved\n");
       break;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -835,7 +837,7 @@ DECL_DIALOGEXEC(SCIPdialogExecPresolve)
       errorMessage("invalid SCIP stage\n");
       return SCIP_INVALIDCALL;
    }
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -845,7 +847,7 @@ DECL_DIALOGEXEC(SCIPdialogExecPresolve)
 /** dialog execution method for the quit command */
 DECL_DIALOGEXEC(SCIPdialogExecQuit)
 {  /*lint --e{715}*/
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = NULL;
 
@@ -869,7 +871,7 @@ DECL_DIALOGEXEC(SCIPdialogExecRead)
          retcode = SCIPreadProb(scip, filename);
          if( retcode == SCIP_READERROR || retcode == SCIP_NOFILE || retcode == SCIP_PARSEERROR )
          {
-            printf("error reading file <%s>\n", filename);
+            SCIPdialogMessage(scip, NULL, "error reading file <%s>\n", filename);
             CHECK_OKAY( SCIPfreeProb(scip) );
          }
          else
@@ -879,7 +881,7 @@ DECL_DIALOGEXEC(SCIPdialogExecRead)
       }
       else
       {
-         printf("file <%s> not found\n", filename);
+         SCIPdialogMessage(scip, NULL, "file <%s> not found\n", filename);
          SCIPdialoghdlrClearBuffer(dialoghdlr);
       }
    }
@@ -903,11 +905,11 @@ DECL_DIALOGEXEC(SCIPdialogExecSetLoad)
       if( SCIPfileExists(filename) )
       {
          CHECK_OKAY( SCIPreadParams(scip, filename) );
-         printf("loaded parameter file <%s>\n", filename);
+         SCIPdialogMessage(scip, NULL, "loaded parameter file <%s>\n", filename);
       }
       else
       {
-         printf("file <%s> not found\n", filename);
+         SCIPdialogMessage(scip, NULL, "file <%s> not found\n", filename);
          SCIPdialoghdlrClearBuffer(dialoghdlr);
       }
    }
@@ -929,7 +931,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetSave)
       CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename) );
 
       CHECK_OKAY( SCIPwriteParams(scip, filename, TRUE, FALSE) );
-      printf("saved parameter file <%s>\n", filename);
+      SCIPdialogMessage(scip, NULL, "saved parameter file <%s>\n", filename);
    }
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -949,7 +951,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetDiffsave)
       CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename) );
    
       CHECK_OKAY( SCIPwriteParams(scip, filename, TRUE, TRUE) );
-      printf("saved non-default parameter settings to file <%s>\n", filename);
+      SCIPdialogMessage(scip, NULL, "saved non-default parameter settings to file <%s>\n", filename);
    }
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -994,7 +996,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       case 'n':
       case 'N':
          CHECK_OKAY( SCIPparamSetBool(param, scip, FALSE) );
-         printf("parameter <%s> set to FALSE\n", SCIPparamGetName(param));
+         SCIPdialogMessage(scip, NULL, "parameter <%s> set to FALSE\n", SCIPparamGetName(param));
          break;
       case 't':
       case 'T':
@@ -1002,10 +1004,10 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       case 'y':
       case 'Y':
          CHECK_OKAY( SCIPparamSetBool(param, scip, TRUE) );
-         printf("parameter <%s> set to TRUE\n", SCIPparamGetName(param));
+         SCIPdialogMessage(scip, NULL, "parameter <%s> set to TRUE\n", SCIPparamGetName(param));
          break;
       default:
-         printf("\ninvalid parameter value <%s>\n\n", valuestr);
+         SCIPdialogMessage(scip, NULL, "\ninvalid parameter value <%s>\n\n", valuestr);
          break;
       }
       break;
@@ -1021,7 +1023,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       if( sscanf(valuestr, "%d", &intval) != 1 )
       {
-         printf("\ninvalid input <%s>\n\n", valuestr);
+         SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
          return SCIP_OKAY;
       }
       retcode = SCIPparamSetInt(param, scip, intval);
@@ -1029,7 +1031,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       {
          CHECK_OKAY( retcode );
       }
-      printf("parameter <%s> set to %d\n", SCIPparamGetName(param), SCIPparamGetInt(param));
+      SCIPdialogMessage(scip, NULL, "parameter <%s> set to %d\n", SCIPparamGetName(param), SCIPparamGetInt(param));
       break;
 
    case SCIP_PARAMTYPE_LONGINT:
@@ -1043,7 +1045,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       if( sscanf(valuestr, LONGINT_FORMAT, &longintval) != 1 )
       {
-         printf("\ninvalid input <%s>\n\n", valuestr);
+         SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
          return SCIP_OKAY;
       }
       retcode = SCIPparamSetLongint(param, scip, longintval);
@@ -1051,7 +1053,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       {
          CHECK_OKAY( retcode );
       }
-      printf("parameter <%s> set to %lld\n", SCIPparamGetName(param), SCIPparamGetLongint(param));
+      SCIPdialogMessage(scip, NULL, "parameter <%s> set to %lld\n", SCIPparamGetName(param), SCIPparamGetLongint(param));
       break;
 
    case SCIP_PARAMTYPE_REAL:
@@ -1065,7 +1067,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       if( sscanf(valuestr, REAL_FORMAT, &realval) != 1 )
       {
-         printf("\ninvalid input <%s>\n\n", valuestr);
+         SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
          return SCIP_OKAY;
       }
       retcode = SCIPparamSetReal(param, scip, realval);
@@ -1073,7 +1075,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       {
          CHECK_OKAY( retcode );
       }
-      printf("parameter <%s> set to %g\n", SCIPparamGetName(param), SCIPparamGetReal(param));
+      SCIPdialogMessage(scip, NULL, "parameter <%s> set to %g\n", SCIPparamGetName(param), SCIPparamGetReal(param));
       break;
 
    case SCIP_PARAMTYPE_CHAR:
@@ -1086,7 +1088,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       if( sscanf(valuestr, "%c", &charval) != 1 )
       {
-         printf("\ninvalid input <%s>\n\n", valuestr);
+         SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
          return SCIP_OKAY;
       }
       retcode = SCIPparamSetChar(param, scip, charval);
@@ -1094,7 +1096,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       {
          CHECK_OKAY( retcode );
       }
-      printf("parameter <%s> set to <%c>\n", SCIPparamGetName(param), SCIPparamGetChar(param));
+      SCIPdialogMessage(scip, NULL, "parameter <%s> set to <%c>\n", SCIPparamGetName(param), SCIPparamGetChar(param));
       break;
 
    case SCIP_PARAMTYPE_STRING:
@@ -1110,7 +1112,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       {
          CHECK_OKAY( retcode );
       }
-      printf("parameter <%s> set to <%s>\n", SCIPparamGetName(param), SCIPparamGetString(param));
+      SCIPdialogMessage(scip, NULL, "parameter <%s> set to <%s>\n", SCIPparamGetName(param), SCIPparamGetString(param));
       break;
 
    default:
@@ -1169,10 +1171,10 @@ DECL_DIALOGDESC(SCIPdialogDescSetParam)
    valuestr[MAXSTRLEN-1] = '\0';
 
    /* display parameter's description */
-   printf(SCIPparamGetDesc(param));
+   SCIPdialogMessage(scip, NULL, SCIPparamGetDesc(param));
 
    /* display parameter's current value */
-   printf(" [%s]", valuestr);
+   SCIPdialogMessage(scip, NULL, " [%s]", valuestr);
    
    return SCIP_OKAY;
 }
@@ -1190,7 +1192,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection)
    /* branching priorities cannot be set, if no problem was created */
    if( SCIPgetStage(scip) == SCIP_STAGE_INIT )
    {
-      printf("cannot set branching directions before problem was created\n");
+      SCIPdialogMessage(scip, NULL, "cannot set branching directions before problem was created\n");
       return SCIP_OKAY;
    }
 
@@ -1203,7 +1205,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection)
    var = SCIPfindVar(scip, valuestr);
    if( var == NULL )
    {
-      printf("variable <%s> does not exist in problem\n", valuestr);
+      SCIPdialogMessage(scip, NULL, "variable <%s> does not exist in problem\n", valuestr);
       return SCIP_OKAY;
    }
 
@@ -1234,12 +1236,12 @@ DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection)
 
    if( sscanf(valuestr, "%d", &direction) != 1 )
    {
-      printf("\ninvalid input <%s>\n\n", valuestr);
+      SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
       return SCIP_OKAY;
    }
    if( direction < -1 || direction > +1 )
    {
-      printf("\ninvalid input <%d>: direction must be -1, 0, or +1\n\n", direction);
+      SCIPdialogMessage(scip, NULL, "\ninvalid input <%d>: direction must be -1, 0, or +1\n\n", direction);
       return SCIP_OKAY;
    }
 
@@ -1251,7 +1253,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection)
    else
       CHECK_OKAY( SCIPchgVarBranchDirection(scip, var, SCIP_BRANCHDIR_UPWARDS) );
 
-   printf("branching direction of variable <%s> set to %d\n", SCIPvarGetName(var), direction);
+   SCIPdialogMessage(scip, NULL, "branching direction of variable <%s> set to %d\n", SCIPvarGetName(var), direction);
 
    return SCIP_OKAY;
 }
@@ -1269,7 +1271,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority)
    /* branching priorities cannot be set, if no problem was created */
    if( SCIPgetStage(scip) == SCIP_STAGE_INIT )
    {
-      printf("cannot set branching priorities before problem was created\n");
+      SCIPdialogMessage(scip, NULL, "cannot set branching priorities before problem was created\n");
       return SCIP_OKAY;
    }
 
@@ -1282,7 +1284,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority)
    var = SCIPfindVar(scip, valuestr);
    if( var == NULL )
    {
-      printf("variable <%s> does not exist in problem\n", valuestr);
+      SCIPdialogMessage(scip, NULL, "variable <%s> does not exist in problem\n", valuestr);
       return SCIP_OKAY;
    }
 
@@ -1297,13 +1299,13 @@ DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority)
 
    if( sscanf(valuestr, "%d", &priority) != 1 )
    {
-      printf("\ninvalid input <%s>\n\n", valuestr);
+      SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
       return SCIP_OKAY;
    }
    
    /* set new branching priority */
    CHECK_OKAY( SCIPchgVarBranchPriority(scip, var, priority) );
-   printf("branching priority of variable <%s> set to %d\n", SCIPvarGetName(var), SCIPvarGetBranchPriority(var));
+   SCIPdialogMessage(scip, NULL, "branching priority of variable <%s> set to %d\n", SCIPvarGetName(var), SCIPvarGetBranchPriority(var));
 
    return SCIP_OKAY;
 }
@@ -1320,7 +1322,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
    /* objective limit cannot be set, if no problem was created */
    if( SCIPgetStage(scip) == SCIP_STAGE_INIT )
    {
-      printf("cannot set objective limit before problem was created\n");
+      SCIPdialogMessage(scip, NULL, "cannot set objective limit before problem was created\n");
       return SCIP_OKAY;
    }
 
@@ -1334,7 +1336,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
 
    if( sscanf(valuestr, REAL_FORMAT, &objlim) != 1 )
    {
-      printf("\ninvalid input <%s>\n\n", valuestr);
+      SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
       return SCIP_OKAY;
    }
    
@@ -1342,25 +1344,25 @@ DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
    if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM
       && SCIPtransformObj(scip, objlim) > SCIPtransformObj(scip, SCIPgetObjlimit(scip)) )
    {
-      printf("\ncannot relax objective limit from %g to %g after problem was transformed\n\n",
+      SCIPdialogMessage(scip, NULL, "\ncannot relax objective limit from %g to %g after problem was transformed\n\n",
          SCIPgetObjlimit(scip), objlim);
       return SCIP_OKAY;
    }
 
    /* set new objective limit */
    CHECK_OKAY( SCIPsetObjlimit(scip, objlim) );
-   printf("objective value limit set to %g\n", SCIPgetObjlimit(scip));
+   SCIPdialogMessage(scip, NULL, "objective value limit set to %g\n", SCIPgetObjlimit(scip));
 
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the write solution command */
+/** dialog execution method for the write problem command */
 static
-DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
+DECL_DIALOGEXEC(SCIPdialogExecWriteProblem)
 {  /*lint --e{715}*/
    const char* filename;
 
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
 
    filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
    if( filename[0] != '\0' )
@@ -1372,21 +1374,93 @@ DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
       file = fopen(filename, "w");
       if( file == NULL )
       {
-         printf("error creating file <%s>\n", filename);
+         SCIPdialogMessage(scip, NULL, "error creating file <%s>\n", filename);
          SCIPdialoghdlrClearBuffer(dialoghdlr);
       }
       else
       {
-         fprintf(file, "solution status: ");
-         CHECK_OKAY( SCIPprintStatus(scip, file) );
-         fprintf(file, "\n");
-         CHECK_OKAY( SCIPprintBestSol(scip, file) );
-         printf("written solution information to file <%s>\n", filename);
+         CHECK_OKAY( SCIPprintOrigProblem(scip, file) );
+         SCIPdialogMessage(scip, NULL, "written original problem to file <%s>\n", filename);
          fclose(file);
       }
    }
 
-   printf("\n");
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the write solution command */
+static
+DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
+{  /*lint --e{715}*/
+   const char* filename;
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
+   if( filename[0] != '\0' )
+   {
+      FILE* file;
+
+      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename) );
+
+      file = fopen(filename, "w");
+      if( file == NULL )
+      {
+         SCIPdialogMessage(scip, NULL, "error creating file <%s>\n", filename);
+         SCIPdialoghdlrClearBuffer(dialoghdlr);
+      }
+      else
+      {
+         SCIPinfoMessage(scip, file, "solution status: ");
+         CHECK_OKAY( SCIPprintStatus(scip, file) );
+         SCIPinfoMessage(scip, file, "\n");
+         CHECK_OKAY( SCIPprintBestSol(scip, file) );
+         SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
+         fclose(file);
+      }
+   }
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the write transproblem command */
+static
+DECL_DIALOGEXEC(SCIPdialogExecWriteTransproblem)
+{  /*lint --e{715}*/
+   const char* filename;
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
+   if( filename[0] != '\0' )
+   {
+      FILE* file;
+
+      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename) );
+
+      file = fopen(filename, "w");
+      if( file == NULL )
+      {
+         SCIPdialogMessage(scip, NULL, "error creating file <%s>\n", filename);
+         SCIPdialoghdlrClearBuffer(dialoghdlr);
+      }
+      else
+      {
+         CHECK_OKAY( SCIPprintTransProblem(scip, file) );
+         SCIPdialogMessage(scip, NULL, "written transformed problem to file <%s>\n", filename);
+         fclose(file);
+      }
+   }
+
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -1682,11 +1756,29 @@ RETCODE SCIPincludeDialogDefault(
    if( SCIPdialogFindEntry(root, "write", &submenu) != 1 )
       return SCIP_PLUGINNOTFOUND;
    
-   /* display solution */
+   /* write problem */
+   if( !SCIPdialogHasEntry(submenu, "problem") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecWriteProblem, NULL,
+            "problem", "write original problem in CIP format to file", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
+   /* write solution */
    if( !SCIPdialogHasEntry(submenu, "solution") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecWriteSolution, NULL,
             "solution", "write best primal solution to file", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
+   /* write transproblem */
+   if( !SCIPdialogHasEntry(submenu, "transproblem") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecWriteTransproblem, NULL,
+            "transproblem", "write transformed (preprocessed) problem in CIP format to file", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }

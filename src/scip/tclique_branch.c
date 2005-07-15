@@ -25,7 +25,7 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.c,v 1.8 2005/05/31 17:20:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_branch.c,v 1.9 2005/07/15 17:20:21 bzfpfend Exp $"
 
 /**@file   tclique_branch.c
  * @brief  branch and bound part of algorithm for maximum cliques
@@ -275,15 +275,15 @@ void printCliquetable(
 
    assert(cliquetable != NULL);
 
-   printf("cliquetable (%d cliques):\n", cliquetable->ncliques);
+   debugMessage("cliquetable (%d cliques):\n", cliquetable->ncliques);
    for( i = 0; i < cliquetable->ncliques; ++i )
    {
       int j;
 
-      printf("%d:", i);
+      debugPrintf("%d:", i);
       for( j = 0; j < cliquetable->cliques[i]->nnodes; ++j )
-         printf(" %d", cliquetable->cliques[i]->nodes[j]);
-      printf("\n");
+         debugPrintf(" %d", cliquetable->cliques[i]->nodes[j]);
+      debugPrintf("\n");
    }
 }
 #endif
@@ -544,8 +544,8 @@ void newSolution(
    {
       int i;
       for( i = 0; i < ncurcliquenodes; ++i )
-         printf(" %d", curcliquenodes[i]);
-      printf("\n");
+         debugPrintf(" %d", curcliquenodes[i]);
+      debugPrintf("\n");
    }
 #endif
 }
@@ -771,20 +771,18 @@ Bool branch(
 
    /* increase the number of nodes, and stop solving, if the node limit is exceeded */
    (*ntreenodes)++;
+#ifdef DEBUG
    debugMessage("(level %d, treenode %d) maxclique = %d, curclique = %d [mem=%lld (%lld), cliques=%d]\n",
       level, *ntreenodes, *maxcliqueweight, *curcliqueweight, 
       getChunkMemoryUsed(mem), getMemoryUsed(), cliquetable->ncliques);
    debugMessage(" -> current branching (weight %d):", weightK);
-#ifdef DEBUG
    for( i = 0; i < level; ++i )
-      printf(" %d", K[i]);
-   printf("\n");
-#endif
+      debugPrintf(" %d", K[i]);
+   debugPrintf("\n");
    debugMessage(" -> branching candidates:");
-#ifdef DEBUG
    for( i = 0; i < nV; ++i )
-      printf(" %d", V[i]);
-   printf("\n");
+      debugPrintf(" %d", V[i]);
+   debugPrintf("\n");
 #endif
    if( *ntreenodes > maxntreenodes )
       return TRUE;
@@ -827,8 +825,8 @@ Bool branch(
       debugMessage(" -> new current clique with weight %d at node %d in level %d:",
          *curcliqueweight, *ntreenodes, level);
       for( i = 0; i < *ncurcliquenodes; ++i )
-         printf(" %d", curcliquenodes[i]);
-      printf("\n");
+         debugPrintf(" %d", curcliquenodes[i]);
+      debugPrintf("\n");
 #endif
    }
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_event.h,v 1.15 2005/05/31 17:20:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_event.h,v 1.16 2005/07/15 17:20:23 bzfpfend Exp $"
 
 /**@file   type_event.h
  * @brief  type definitions for managing events
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __TYPE_EVENT_H__
-#define __TYPE_EVENT_H__
+#ifndef __SCIP_TYPE_EVENT_H__
+#define __SCIP_TYPE_EVENT_H__
 
 
 /*
@@ -46,19 +46,22 @@
 #define SCIP_EVENTTYPE_HOLEADDED      0x00000200 /**< ??? TODO: a hole has been added to the hole list of a variable's domain */
 #define SCIP_EVENTTYPE_HOLEREMOVED    0x00000400 /**< ??? TODO: a hole has been removed from the hole list of a variable's domain */
 
+/* presolving events */
+#define SCIP_EVENTTYPE_PRESOLVEROUND  0x00000800 /**< a presolving round has been finished */
+
 /* node events */
-#define SCIP_EVENTTYPE_NODEFOCUSED    0x00000800 /**< a node has been focused and is now the focus node */
-#define SCIP_EVENTTYPE_NODEFEASIBLE   0x00001000 /**< the LP/pseudo solution of the node was feasible */
-#define SCIP_EVENTTYPE_NODEINFEASIBLE 0x00002000 /**< the focus node has been proven to be infeasible or was bounded */
-#define SCIP_EVENTTYPE_NODEBRANCHED   0x00004000 /**< the focus node has been solved by branching */
+#define SCIP_EVENTTYPE_NODEFOCUSED    0x00001000 /**< a node has been focused and is now the focus node */
+#define SCIP_EVENTTYPE_NODEFEASIBLE   0x00002000 /**< the LP/pseudo solution of the node was feasible */
+#define SCIP_EVENTTYPE_NODEINFEASIBLE 0x00004000 /**< the focus node has been proven to be infeasible or was bounded */
+#define SCIP_EVENTTYPE_NODEBRANCHED   0x00008000 /**< the focus node has been solved by branching */
 
 /* LP events */
-#define SCIP_EVENTTYPE_FIRSTLPSOLVED  0x00008000 /**< the node's initial LP was solved */
-#define SCIP_EVENTTYPE_LPSOLVED       0x00010000 /**< the node's LP was completely solved with cut & price */
+#define SCIP_EVENTTYPE_FIRSTLPSOLVED  0x00010000 /**< the node's initial LP was solved */
+#define SCIP_EVENTTYPE_LPSOLVED       0x00020000 /**< the node's LP was completely solved with cut & price */
 
 /* primal solution events */
-#define SCIP_EVENTTYPE_POORSOLFOUND   0x00020000 /**< a good enough primal feasible (but not new best) solution was found */
-#define SCIP_EVENTTYPE_BESTSOLFOUND   0x00040000 /**< a new best primal feasible solution was found */
+#define SCIP_EVENTTYPE_POORSOLFOUND   0x00040000 /**< a good enough primal feasible (but not new best) solution was found */
+#define SCIP_EVENTTYPE_BESTSOLFOUND   0x00080000 /**< a new best primal feasible solution was found */
 
 /* event masks for variable events */
 #define SCIP_EVENTTYPE_LBCHANGED      (SCIP_EVENTTYPE_LBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED)

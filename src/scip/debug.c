@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.4 2005/05/31 17:20:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.5 2005/07/15 17:20:07 bzfpfend Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -71,16 +71,23 @@ RETCODE readSolfile(
    solsize = 0;
    while( !feof(file) )
    {
+      char buf[MAXSTRLEN];
       char name[MAXSTRLEN];
       char objstring[MAXSTRLEN];
       Real val;
       int nread;
       int i;
 
-      nread = fscanf(file, "%s %lf %s\n", name, &val, objstring);
+      fgets(buf, MAXSTRLEN, file);
+
+      /* the lines "solution status: ..." and "objective value: ..." may preceed the solution information */
+      if( strncmp(buf, "solution", 8) == 0 || strncmp(buf, "objective", 9) == 0 )
+         continue;
+
+      nread = sscanf(buf, "%s %lf %s\n", name, &val, objstring);
       if( nread < 2 )
       {
-         printf("invalid input line %d in solution file <%s>\n", *nvals, DEBUG_SOLUTION);
+         printf("invalid input line %d in solution file <%s>: <%s>\n", *nvals, DEBUG_SOLUTION, name);
          fclose(file);
          return SCIP_READERROR;
       }
@@ -155,6 +162,7 @@ RETCODE getSolutionValue(
    /* ignore deleted variables */
    if( SCIPvarIsDeleted(var) )
    {
+      debugMessage("**** invalid solution value for deleted variable <%s>\n", SCIPvarGetName(var));
       *val = SCIP_INVALID;
       return SCIP_OKAY;
    }
@@ -232,7 +240,7 @@ RETCODE SCIPdebugCheckRow(
    rhs = SCIProwGetRhs(row);
 
    /* calculate row's activity on debugging solution */
-   minactivity = SCIProwGetConstant(row);;
+   minactivity = SCIProwGetConstant(row);
    maxactivity = minactivity;
    for( i = 0; i < nnonz; ++i )
    {
@@ -257,6 +265,8 @@ RETCODE SCIPdebugCheckRow(
          maxactivity += vals[i] * SCIPvarGetLbGlobal(var);
       }
    }
+   debugMessage("debugging solution on row <%s>: %g <= [%g,%g] <= %g\n", 
+      SCIProwGetName(row), lhs, minactivity, maxactivity, rhs);
 
    /* check row for violation */
    if( SCIPsetIsFeasLT(set, maxactivity, lhs) || SCIPsetIsFeasGT(set, minactivity, rhs) )
@@ -277,7 +287,7 @@ RETCODE SCIPdebugCheckRow(
       }
       printf(" <= %g\n", rhs);
 
-      abort();
+      SCIPABORT();
    }
 
    return SCIP_OKAY;
@@ -294,12 +304,13 @@ RETCODE SCIPdebugCheckLbGlobal(
 
    /* get solution value of variable */
    CHECK_OKAY( getSolutionValue(var, &varsol) );
+   debugMessage("debugging solution on lower bound of <%s>[%g] >= %g\n", SCIPvarGetName(var), varsol, lb);
 
    /* check validity of debugging solution */
    if( varsol != SCIP_INVALID && SCIPsetIsLT(set, varsol, lb) )
    {
       errorMessage("invalid global lower bound: <%s>[%g] >= %g\n", SCIPvarGetName(var), varsol, lb);
-      abort();
+      SCIPABORT();
    }
 
    return SCIP_OKAY;
@@ -316,12 +327,13 @@ RETCODE SCIPdebugCheckUbGlobal(
 
    /* get solution value of variable */
    CHECK_OKAY( getSolutionValue(var, &varsol) );
+   debugMessage("debugging solution on upper bound of <%s>[%g] <= %g\n", SCIPvarGetName(var), varsol, ub);
 
    /* check validity of debugging solution */
    if( varsol != SCIP_INVALID && SCIPsetIsGT(set, varsol, ub) )
    {
       errorMessage("invalid global upper bound: <%s>[%g] <= %g\n", SCIPvarGetName(var), varsol, ub);
-      abort();
+      SCIPABORT();
    }
 
    return SCIP_OKAY;
@@ -355,7 +367,7 @@ RETCODE isSolutionInNode(
       if( boolptr != &falseptr && boolptr != &trueptr )
       {
          errorMessage("wrong value in node hashmap\n");
-         abort();
+         SCIPABORT();
       }
       *solcontained = *boolptr;
       return SCIP_OKAY;
@@ -396,7 +408,7 @@ RETCODE isSolutionInNode(
                errorMessage("debugging solution was cut off in local node %p at depth %d by inference <%s>[%g] %s %g\n",
                   node, SCIPnodeGetDepth(node), SCIPvarGetName(boundchgs[i].var), varsol,
                   boundchgs[i].boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", boundchgs[i].newbound);
-               abort();
+               SCIPABORT();
             }
          }
       }
@@ -435,12 +447,12 @@ RETCODE SCIPdebugCheckInference(
       if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsLT(set, varsol, newbound) )
       {
          errorMessage("invalid local lower bound implication: <%s>[%g] >= %g\n", SCIPvarGetName(var), varsol, newbound);
-         abort();
+         SCIPABORT();
       }
       if( boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsGT(set, varsol, newbound) )
       {
          errorMessage("invalid local upper bound implication: <%s>[%g] <= %g\n", SCIPvarGetName(var), varsol, newbound);
-         abort();
+         SCIPABORT();
       }
    }
 
@@ -486,7 +498,7 @@ RETCODE SCIPdebugCheckVbound(
          errorMessage("invalid variable bound: <%s>[%g] %s %g<%s>[%g] %+g\n", 
             SCIPvarGetName(var), varsol, vbtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", vbcoef,
             SCIPvarGetName(vbvar), vbvarsol, vbconstant);
-         abort();
+         SCIPABORT();
       }
    }
 
@@ -528,7 +540,7 @@ RETCODE SCIPdebugCheckImplic(
       {
          errorMessage("invalid implication <%s> == %d -> <%s> >= %g (variable has value %g in solution)\n",
             SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), implbound, solval);
-         abort();
+         SCIPABORT();
       }
    }
    else
@@ -537,7 +549,7 @@ RETCODE SCIPdebugCheckImplic(
       {
          errorMessage("invalid implication <%s> == %d -> <%s> <= %g (variable has value %g in solution)\n",
             SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), implbound, solval);
-         abort();
+         SCIPABORT();
       }
    }
 
@@ -570,7 +582,7 @@ RETCODE SCIPdebugCheckConflict(
       if( SCIPvarGetType(conflictset[i]) != SCIP_VARTYPE_BINARY )
       {
          errorMessage("non-binary variable <%s> in conflict set\n", SCIPvarGetName(conflictset[i]));
-         abort();
+         SCIPABORT();
       }
 
       CHECK_OKAY( getSolutionValue(conflictset[i], &solval) );
@@ -587,7 +599,7 @@ RETCODE SCIPdebugCheckConflict(
       printf(" <%s>[%g]", SCIPvarGetName(conflictset[i]), solval);
    }
    printf("\n");
-   abort();
+   SCIPABORT();
 }
 
 
@@ -621,7 +633,7 @@ DECL_PROPEXEC(propExecDebug)
       if( solval == SCIP_INVALID )
       {
          errorMessage("original variable without debugging solution value\n");
-         abort();
+         SCIPABORT();
       }
 
       lb = SCIPvarGetLbGlobal(vars[i]);
@@ -630,7 +642,7 @@ DECL_PROPEXEC(propExecDebug)
       {
          errorMessage("solution value %g of <%s> outside bounds loc=[%g,%g], glb=[%g,%g]\n",
             solval, SCIPvarGetName(vars[i]), lb, ub, SCIPvarGetLbGlobal(vars[i]), SCIPvarGetUbGlobal(vars[i]));
-         abort();
+         SCIPABORT();
       }
       
       CHECK_OKAY( SCIPfixVar(scip, vars[i], solval, &infeasible, &fixed) );

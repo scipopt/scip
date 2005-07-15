@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_xxx.c,v 1.7 2005/05/31 17:20:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_xxx.c,v 1.8 2005/07/15 17:20:14 bzfpfend Exp $"
 
 /**@file   prop_xxx.c
  * @brief  xxx propagator
@@ -72,7 +72,7 @@ static
 DECL_PROPFREE(propFreeXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx propagator not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -87,7 +87,7 @@ static
 DECL_PROPINIT(propInitXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx propagator not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -102,7 +102,7 @@ static
 DECL_PROPEXIT(propExitXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx propagator not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -117,7 +117,7 @@ static
 DECL_PROPINITSOL(propInitsolXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx propagator not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -132,7 +132,7 @@ static
 DECL_PROPEXITSOL(propExitsolXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx propagator not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -146,7 +146,7 @@ static
 DECL_PROPEXEC(propExecXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx propagator not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -157,7 +157,7 @@ static
 DECL_PROPRESPROP(propRespropXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx propagator not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }

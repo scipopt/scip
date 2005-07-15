@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.54 2005/05/31 17:20:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.55 2005/07/15 17:20:08 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -254,11 +254,11 @@ DECL_DISPOUTPUT(SCIPdispOutputSolfound)
    dispdata = SCIPdispGetData(disp);
    if( sol != (SOL*)dispdata )
    {
-      fprintf(file, "%c", SCIPheurGetDispchar(SCIPgetSolHeur(scip, sol)));
+      SCIPinfoMessage(scip, file, "%c", SCIPheurGetDispchar(SCIPgetSolHeur(scip, sol)));
       SCIPdispSetData(disp, (DISPDATA*)sol);
    }
    else
-      fprintf(file, " ");
+      SCIPinfoMessage(scip, file, " ");
 
    return SCIP_OKAY;
 }
@@ -378,7 +378,7 @@ DECL_DISPOUTPUT(SCIPdispOutputNfrac)
    if( SCIPhasCurrentNodeLP(scip) && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
       SCIPdispInt(file, SCIPgetNLPBranchCands(scip), DISP_WIDT_NFRAC);
    else
-      fprintf(file, "   - ");
+      SCIPinfoMessage(scip, file, "   - ");
 
    return SCIP_OKAY;
 }
@@ -525,9 +525,9 @@ DECL_DISPOUTPUT(SCIPdispOutputCurdualbound)
 
    curdualbound = SCIPgetLocalDualbound(scip);
    if( SCIPisInfinity(scip, REALABS(curdualbound)) )
-      fprintf(file, "      --      ");
+      SCIPinfoMessage(scip, file, "      --      ");
    else
-      fprintf(file, "%13.6e ", curdualbound);
+      SCIPinfoMessage(scip, file, "%13.6e ", curdualbound);
 
    return SCIP_OKAY;
 }
@@ -544,9 +544,9 @@ DECL_DISPOUTPUT(SCIPdispOutputAvgdualbound)
 
    avgdualbound = SCIPgetAvgDualbound(scip);
    if( SCIPisInfinity(scip, REALABS(avgdualbound)) )
-      fprintf(file, "      --      ");
+      SCIPinfoMessage(scip, file, "      --      ");
    else
-      fprintf(file, "%13.6e ", avgdualbound);
+      SCIPinfoMessage(scip, file, "%13.6e ", avgdualbound);
 
    return SCIP_OKAY;
 }
@@ -563,9 +563,9 @@ DECL_DISPOUTPUT(SCIPdispOutputDualbound)
 
    dualbound = SCIPgetDualbound(scip);
    if( SCIPisInfinity(scip, REALABS(dualbound)) )
-      fprintf(file, "      --      ");
+      SCIPinfoMessage(scip, file, "      --      ");
    else
-      fprintf(file, "%13.6e ", dualbound);
+      SCIPinfoMessage(scip, file, "%13.6e ", dualbound);
 
    return SCIP_OKAY;
 }
@@ -582,9 +582,9 @@ DECL_DISPOUTPUT(SCIPdispOutputPrimalbound)
 
    primalbound = SCIPgetPrimalbound(scip);
    if( SCIPisInfinity(scip, REALABS(primalbound)) )
-      fprintf(file, "      --      ");
+      SCIPinfoMessage(scip, file, "      --      ");
    else
-      fprintf(file, "%13.6e%c", primalbound, SCIPisPrimalboundSol(scip) ? ' ' : '*');
+      SCIPinfoMessage(scip, file, "%13.6e%c", primalbound, SCIPisPrimalboundSol(scip) ? ' ' : '*');
 
    return SCIP_OKAY;
 }
@@ -602,11 +602,11 @@ DECL_DISPOUTPUT(SCIPdispOutputGap)
    gap = SCIPgetGap(scip);
 
    if( SCIPisInfinity(scip, gap) )
-      fprintf(file, "    Inf ");
+      SCIPinfoMessage(scip, file, "    Inf ");
    else if( gap >= 100.00 )
-      fprintf(file, "  Large ");
+      SCIPinfoMessage(scip, file, "  Large ");
    else
-      fprintf(file, "%7.2f%%", 100.0*gap);
+      SCIPinfoMessage(scip, file, "%7.2f%%", 100.0*gap);
 
    return SCIP_OKAY;
 }

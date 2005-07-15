@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_inference.c,v 1.11 2005/05/31 17:20:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_inference.c,v 1.12 2005/07/15 17:20:04 bzfpfend Exp $"
 
 /**@file   branch_inference.c
  * @brief  inference history branching rule
@@ -36,12 +36,14 @@
 #define BRANCHRULE_MAXBOUNDDIST  1.0
 
 #define DEFAULT_CUTOFFWEIGHT     1.0    /**< factor to weigh average number of cutoffs in branching score */
+#define DEFAULT_FRACTIONALS      TRUE   /**< should branching on LP solution be restricted to the fractional variables? */
 
 
 /** branching rule data */
 struct BranchruleData
 {
    Real             cutoffweight;       /**< factor to weigh average number of cutoffs in branching score */
+   Bool             fractionals;        /**< should branching on LP solution be restricted to the fractional variables? */
 };
 
 
@@ -55,10 +57,14 @@ RETCODE performBranching(
    Real             cutoffweight        /**< factor to weigh average number of cutoffs in branching score */
    )
 {
+   VAR* var;
+   BRANCHDIR branchdir;
    Real bestscore;
    Real score;
    int bestcand;
    int c;
+   Real downinfs;
+   Real upinfs;
 
    /* search for variable with best score w.r.t. average inferences per branching */
    bestscore = 0.0;
@@ -73,11 +79,22 @@ RETCODE performBranching(
       }
    }
    assert(0 <= bestcand && bestcand < ncands);
+   var = cands[bestcand];
+
+   /* select the preferred branching direction: try to find a conflict as fast as possible */
+   downinfs = SCIPgetVarAvgInferences(scip, var, SCIP_BRANCHDIR_DOWNWARDS);
+   upinfs = SCIPgetVarAvgInferences(scip, var, SCIP_BRANCHDIR_UPWARDS);
+   if( downinfs > upinfs + 1.0 )
+      branchdir = SCIP_BRANCHDIR_DOWNWARDS;
+   else if( downinfs < upinfs - 1.0 )
+      branchdir = SCIP_BRANCHDIR_UPWARDS;
+   else
+      branchdir = SCIP_BRANCHDIR_AUTO;
 
    /* perform the branching */
    debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%.12f, score=%g)\n",
-      ncands, bestcand, SCIPvarGetName(cands[bestcand]), SCIPgetVarSol(scip, cands[bestcand]), bestscore);
-   CHECK_OKAY( SCIPbranchVar(scip, cands[bestcand]) );
+      ncands, bestcand, SCIPvarGetName(var), SCIPgetVarSol(scip, var), bestscore);
+   CHECK_OKAY( SCIPbranchVar(scip, var, branchdir) );
 
    return SCIP_OKAY;
 }
@@ -125,8 +142,8 @@ static
 DECL_BRANCHEXECLP(branchExeclpInference)
 {  /*lint --e{715}*/
    BRANCHRULEDATA* branchruledata;
-   VAR** lpcands;
-   int nlpcands;
+   VAR** cands;
+   int ncands;
 
    debugMessage("Execlp method of inference branching\n");
    
@@ -134,11 +151,19 @@ DECL_BRANCHEXECLP(branchExeclpInference)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   /* get LP candidates (fractional integer variables) */
-   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, NULL, &nlpcands) );
+   if( branchruledata->fractionals )
+   {
+      /* get LP candidates (fractional integer variables) */
+      CHECK_OKAY( SCIPgetLPBranchCands(scip, &cands, NULL, NULL, NULL, &ncands) );
+   }
+   else
+   {
+      /* get pseudo candidates (non-fixed integer variables) */
+      CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &cands, NULL, &ncands) );
+   }
 
    /* perform the branching */
-   CHECK_OKAY( performBranching(scip, lpcands, nlpcands, branchruledata->cutoffweight) );
+   CHECK_OKAY( performBranching(scip, cands, ncands, branchruledata->cutoffweight) );
 
    *result = SCIP_BRANCHED;
    
@@ -151,8 +176,8 @@ static
 DECL_BRANCHEXECPS(branchExecpsInference)
 {  /*lint --e{715}*/
    BRANCHRULEDATA* branchruledata;
-   VAR** pseudocands;
-   int npseudocands;
+   VAR** cands;
+   int ncands;
 
    debugMessage("Execps method of inference branching\n");
    
@@ -161,10 +186,10 @@ DECL_BRANCHEXECPS(branchExecpsInference)
    assert(branchruledata != NULL);
 
    /* get pseudo candidates (non-fixed integer variables) */
-   CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &pseudocands, NULL, &npseudocands) );
+   CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &cands, NULL, &ncands) );
 
    /* perform the branching */
-   CHECK_OKAY( performBranching(scip, pseudocands, npseudocands, branchruledata->cutoffweight) );
+   CHECK_OKAY( performBranching(scip, cands, ncands, branchruledata->cutoffweight) );
 
    *result = SCIP_BRANCHED;
    
@@ -200,6 +225,10 @@ RETCODE SCIPincludeBranchruleInference(
          "branching/inference/cutoffweight", 
          "factor to weigh average number of cutoffs in branching score",
          &branchruledata->cutoffweight, DEFAULT_CUTOFFWEIGHT, 0.0, REAL_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddBoolParam(scip,
+         "branching/inference/fractionals", 
+         "should branching on LP solution be restricted to the fractional variables?",
+         &branchruledata->fractionals, DEFAULT_FRACTIONALS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

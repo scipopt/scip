@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: interrupt.c,v 1.16 2005/05/31 17:20:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: interrupt.c,v 1.17 2005/07/15 17:20:10 bzfpfend Exp $"
 
 /**@file   interrupt.c
  * @brief  methods and datastructures for catching the user CTRL-C interrupt
@@ -29,6 +29,7 @@
 #include <signal.h>
 
 #include "scip/def.h"
+#include "scip/message.h"
 #include "scip/memory.h"
 #include "scip/interrupt.h"
 
@@ -54,11 +55,11 @@ void interruptHandler(
    ninterrupts++;
    if( ninterrupts >= 5 )
    {
-      printf("pressed CTRL-C %d times. forcing termination.\n", ninterrupts);
+      SCIPmessagePrintInfo("pressed CTRL-C %d times. forcing termination.\n", ninterrupts);
       exit(1);
    }
    else
-      printf("pressed CTRL-C %d times (5 times for forcing termination)\n", ninterrupts);
+      SCIPmessagePrintInfo("pressed CTRL-C %d times (5 times for forcing termination)\n", ninterrupts);
 }
 
 /** creates a CTRL-C interrupt data */

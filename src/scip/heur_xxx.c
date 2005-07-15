@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_xxx.c,v 1.14 2005/05/31 17:20:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_xxx.c,v 1.15 2005/07/15 17:20:10 bzfpfend Exp $"
 
 /**@file   heur_xxx.c
  * @brief  xxx primal heuristic
@@ -77,7 +77,7 @@ static
 DECL_HEURFREE(heurFreeXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx primal heuristic not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -92,7 +92,7 @@ static
 DECL_HEURINIT(heurInitXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx primal heuristic not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -107,7 +107,7 @@ static
 DECL_HEUREXIT(heurExitXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx primal heuristic not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -122,7 +122,7 @@ static
 DECL_HEURINITSOL(heurInitsolXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx primal heuristic not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -137,7 +137,7 @@ static
 DECL_HEUREXITSOL(heurExitsolXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx primal heuristic not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -151,7 +151,7 @@ static
 DECL_HEUREXEC(heurExecXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx primal heuristic not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }

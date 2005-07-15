@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.92 2005/05/31 17:20:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.93 2005/07/15 17:20:05 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __CONS_H__
-#define __CONS_H__
+#ifndef __SCIP_CONS_H__
+#define __SCIP_CONS_H__
 
 
 #include "scip/def.h"

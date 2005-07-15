@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.78 2005/06/23 16:02:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.79 2005/07/15 17:20:22 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __TREE_H__
-#define __TREE_H__
+#ifndef __SCIP_TREE_H__
+#define __SCIP_TREE_H__
 
 
 #include "scip/def.h"
@@ -345,7 +345,8 @@ RETCODE SCIPtreeBranchVar(
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   VAR*             var                 /**< variable to branch on */
+   VAR*             var,                /**< variable to branch on */
+   BRANCHDIR        branchdir           /**< preferred branching direction; maybe overridden by user settings */
    );
 
 /** switches to probing mode and creates a probing root */

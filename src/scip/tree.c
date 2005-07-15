@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.150 2005/06/29 11:08:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.151 2005/07/15 17:20:22 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -223,7 +223,7 @@ void SCIPnodeCaptureLPIState(
       break;
    default:
       errorMessage("node for capturing the LPI state is neither fork nor subroot\n");
-      abort();
+      SCIPABORT();
    }  /*lint !e788*/
 }
 
@@ -1350,6 +1350,12 @@ RETCODE SCIPnodeAddBoundinfer(
 
       assert(!node->active || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
 
+#if 0 /*????????? remove this */
+      if( !SCIPtreeProbing(tree) && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY ) /*????????????????????????*/
+         printf("branching on <%s> %s %g\n", SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            newbound);
+#endif
+
       /* get the solution value of variable in last solved LP on the active path:
        *  - if the LP was solved at the current node, the LP values of the columns are valid
        *  - if the last solved LP was the one in the current lpfork, the LP value in the columns are still valid
@@ -1376,6 +1382,16 @@ RETCODE SCIPnodeAddBoundinfer(
    }
    else
    {
+#if 0 /*????????? remove this */
+      if( !SCIPtreeProbing(tree) && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY
+         && infercons == NULL && inferprop == NULL ) /*????????????????????????*/
+      {
+         printf("deduction on <%s> %s %g\n", SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            newbound);
+         abort();
+      }
+#endif
+
       /* check the infered bound change on the debugging solution */
       CHECK_OKAY( SCIPdebugCheckInference(blkmem, set, node, var, newbound, boundtype) ); /*lint !e506 !e774*/
 
@@ -1527,16 +1543,16 @@ void treeUpdatePathLPSize(
          break;
       case SCIP_NODETYPE_SIBLING:
          errorMessage("sibling cannot be in the active path\n");
-         abort();
+         SCIPABORT();
       case SCIP_NODETYPE_CHILD:
          errorMessage("child cannot be in the active path\n");
-         abort();
+         SCIPABORT();
       case SCIP_NODETYPE_LEAF:
          errorMessage("leaf cannot be in the active path\n");
-         abort();
+         SCIPABORT();
       case SCIP_NODETYPE_DEADEND:
          errorMessage("deadend cannot be in the active path\n");
-         abort();
+         SCIPABORT();
       case SCIP_NODETYPE_JUNCTION:
          break;
       case SCIP_NODETYPE_FORK:
@@ -1551,10 +1567,10 @@ void treeUpdatePathLPSize(
          break;
       case SCIP_NODETYPE_REFOCUSNODE:
          errorMessage("node cannot be of type REFOCUSNODE at this point\n");
-         abort();
+         SCIPABORT();
       default:
          errorMessage("unknown node type\n");
-         abort();
+         SCIPABORT();
       }
       tree->pathnlpcols[i] = ncols;
       tree->pathnlprows[i] = nrows;
@@ -2025,7 +2041,7 @@ void treeCheckPath(
       default:
          errorMessage("node at depth %d on active path has to be of type FORK, SUBROOT, FOCUSNODE, REFOCUSNODE, or PROBINGNODE, but is %d\n",
             d, SCIPnodeGetType(node));
-         abort();
+         SCIPABORT();
       }  /*lint !e788*/
       assert(tree->pathnlpcols[d] == ncols);
       assert(tree->pathnlprows[d] == nrows);
@@ -2377,7 +2393,7 @@ RETCODE focusnodeToFork(
     */
    if( lperror || SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
    {
-      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %lld) numerical troubles: LP %d not optimal -- convert node into junction instead of fork\n", 
          stat->nnodes, stat->nlps);
 
@@ -2481,7 +2497,7 @@ RETCODE focusnodeToSubroot(
     */
    if( lperror || SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
    {
-      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %lld) numerical troubles: LP %d not optimal -- convert node into junction instead of subroot\n", 
          stat->nnodes, stat->nlps);
 
@@ -3157,7 +3173,7 @@ RETCODE SCIPtreeSetNodesel(
       /* issue message */
       if( stat->nnodes > 0 )
       {
-         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %lld) switching to node selector <%s>\n", stat->nnodes, SCIPnodeselGetName(nodesel));
       }
    }
@@ -3238,7 +3254,8 @@ RETCODE SCIPtreeBranchVar(
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   VAR*             var                 /**< variable to branch on */
+   VAR*             var,                /**< variable to branch on */
+   BRANCHDIR        branchdir           /**< preferred branching direction; maybe overridden by user settings */
    )
 {
    NODE* node;
@@ -3273,7 +3290,7 @@ RETCODE SCIPtreeBranchVar(
    assert(SCIPsetIsLE(set, solval, SCIPvarGetUbLocal(var)));
 
    /* choose preferred branching direction */
-   switch( SCIPvarGetBranchDirection(var) )
+   switch( SCIPvarGetBranchDirection(var) )  /* first, look at the user settings for the specific variable */
    {
    case SCIP_BRANCHDIR_DOWNWARDS:
       downprio = 1.0;
@@ -3282,11 +3299,25 @@ RETCODE SCIPtreeBranchVar(
       downprio = -1.0;
       break;
    case SCIP_BRANCHDIR_AUTO:
-      if( SCIPtreeHasFocusNodeLP(tree) )
-         downprio = SCIPvarGetRootSol(var) - solval;
-      else
-         downprio = (Real)SCIPvarGetNInferences(var, SCIP_BRANCHDIR_UPWARDS)
+      switch( branchdir )                    /* second, look at what the caller wants */
+      {
+      case SCIP_BRANCHDIR_DOWNWARDS:
+         downprio = 1.0;
+         break;
+      case SCIP_BRANCHDIR_UPWARDS:
+         downprio = -1.0;
+         break;
+      case SCIP_BRANCHDIR_AUTO:
+         if( SCIPtreeHasFocusNodeLP(tree) )
+            downprio = SCIPvarGetRootSol(var) - solval;
+         else
+            downprio = (Real)SCIPvarGetNInferences(var, SCIP_BRANCHDIR_UPWARDS)
             - (Real)SCIPvarGetNInferences(var, SCIP_BRANCHDIR_DOWNWARDS);
+         break;
+      default:
+         errorMessage("invalid preferred automatic branching direction <%d> specified\n", SCIPvarGetBranchDirection(var));
+         return SCIP_INVALIDDATA;
+      }
       break;
    default:
       errorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 
@@ -3632,7 +3663,7 @@ RETCODE SCIPtreeEndProbing(
          CHECK_OKAY( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, FALSE, FALSE, &lperror) );
          if( lperror )
          {
-            infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                "(node %lld) unresolved numerical troubles while resolving LP %d after probing\n",
                stat->nnodes, stat->nlps);
          }

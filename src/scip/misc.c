@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.41 2005/05/31 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.42 2005/07/15 17:20:11 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -562,11 +562,12 @@ void SCIPhashtablePrintStatistics(
       }
    }
 
-   printf("%d hash entries, used %d/%d slots (%.1f%%)",
+   SCIPmessagePrintInfo("%d hash entries, used %d/%d slots (%.1f%%)",
       sumslotsize, usedslots, hashtable->nlists, 100.0*(Real)usedslots/(Real)(hashtable->nlists));
    if( usedslots > 0 )
-      printf(", avg. %.1f entries/used slot, max. %d entries in slot", (Real)sumslotsize/(Real)usedslots, maxslotsize);
-   printf("\n");
+      SCIPmessagePrintInfo(", avg. %.1f entries/used slot, max. %d entries in slot",
+         (Real)sumslotsize/(Real)usedslots, maxslotsize);
+   SCIPmessagePrintInfo("\n");
 }
 
 
@@ -946,11 +947,12 @@ void SCIPhashmapPrintStatistics(
       }
    }
 
-   printf("%d hash entries, used %d/%d slots (%.1f%%)",
+   SCIPmessagePrintInfo("%d hash entries, used %d/%d slots (%.1f%%)",
       sumslotsize, usedslots, hashmap->nlists, 100.0*(Real)usedslots/(Real)(hashmap->nlists));
    if( usedslots > 0 )
-      printf(", avg. %.1f entries/used slot, max. %d entries in slot", (Real)sumslotsize/(Real)usedslots, maxslotsize);
-   printf("\n");
+      SCIPmessagePrintInfo(", avg. %.1f entries/used slot, max. %d entries in slot", 
+         (Real)sumslotsize/(Real)usedslots, maxslotsize);
+   SCIPmessagePrintInfo("\n");
 }
 
 
@@ -3559,7 +3561,8 @@ void SCIPsplitFilename(
    char*            filename,           /**< filename to split; is destroyed (but not freed) during process */
    char**           path,               /**< pointer to store path, or NULL if not needed */
    char**           name,               /**< pointer to store name, or NULL if not needed */
-   char**           extension           /**< pointer to store extension, or NULL if not needed */
+   char**           extension,          /**< pointer to store extension, or NULL if not needed */
+   char**           compression         /**< pointer to store compression extension, or NULL if not needed */
    )
 {
    char* lastslash;
@@ -3571,6 +3574,29 @@ void SCIPsplitFilename(
    lastdot = strrchr(filename, '.');
    if( lastslash != NULL && lastdot != NULL && lastdot < lastslash ) /* is the last dot belonging to the path? */
       lastdot = NULL;
+
+   /* detect known compression extensions */
+#ifdef WITH_ZLIB
+   if( lastdot != NULL )
+   {
+      char* compext;
+
+      compext = lastdot+1;
+      if( strcmp(compext, "gz") == 0
+        || strcmp(compext, "z") == 0
+        || strcmp(compext, "Z") == 0 )
+      {
+         if( compression != NULL )
+            *compression = compext;
+         *lastdot = '\0';
+      }
+
+      /* find again the last dot in the filename without compression extension */
+      lastdot = strrchr(filename, '.');
+      if( lastslash != NULL && lastdot != NULL && lastdot < lastslash ) /* is the last dot belonging to the path? */
+         lastdot = NULL;
+   }
+#endif
 
    if( lastslash == NULL )
    {

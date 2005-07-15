@@ -1,4 +1,4 @@
-#--- $Id: make.osf1.alpha.gnu.dbg,v 1.7 2005/05/03 14:47:59 bzfpfend Exp $
+#--- $Id: make.osf1.alpha.gnu.dbg.static,v 1.1 2005/07/15 17:20:00 bzfpfend Exp $
 FLAGS		+=	# -DWITH_READLINE
 OFLAGS		+=	-O -g
 CFLAGS		+=	$(GCCWARN)

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_xxx.c,v 1.11 2005/05/31 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_xxx.c,v 1.12 2005/07/15 17:20:12 bzfpfend Exp $"
 
 /**@file   nodesel_xxx.c
  * @brief  xxx node selector
@@ -72,7 +72,7 @@ static
 DECL_NODESELFREE(nodeselFreeXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx node selector not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -87,7 +87,7 @@ static
 DECL_NODESELINIT(nodeselInitXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx node selector not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -102,7 +102,7 @@ static
 DECL_NODESELEXIT(nodeselExitXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx node selector not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -117,7 +117,7 @@ static
 DECL_NODESELINITSOL(nodeselInitsolXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx node selector not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -132,7 +132,7 @@ static
 DECL_NODESELEXITSOL(nodeselExitsolXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx node selector not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -146,7 +146,7 @@ static
 DECL_NODESELSELECT(nodeselSelectXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx node selector not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -156,7 +156,7 @@ static
 DECL_NODESELCOMP(nodeselCompXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx node selector not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return 0;
 }

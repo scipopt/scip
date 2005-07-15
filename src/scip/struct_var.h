@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.32 2005/05/31 17:20:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.33 2005/07/15 17:20:21 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __STRUCT_VAR_H__
-#define __STRUCT_VAR_H__
+#ifndef __SCIP_STRUCT_VAR_H__
+#define __SCIP_STRUCT_VAR_H__
 
 
 #include "scip/def.h"

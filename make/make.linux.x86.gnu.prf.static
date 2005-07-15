@@ -1,4 +1,4 @@
-#--- $Id: make.linux.x86.gnu.prf,v 1.10 2005/05/03 14:47:59 bzfpfend Exp $
+#--- $Id: make.linux.x86.gnu.prf.static,v 1.1 2005/07/15 17:19:59 bzfpfend Exp $
 #analysis of performance file: gprof bin/scip.linux.x86.gnu.prf.cpx gmon.out
 FLAGS		+=	-DNDEBUG -DROUNDING_FE -DWITH_READLINE
 OFLAGS		+=	-O2 -march=pentiumpro -g -pg -fno-inline

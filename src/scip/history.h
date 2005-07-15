@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.h,v 1.17 2005/05/31 17:20:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.h,v 1.18 2005/07/15 17:20:10 bzfpfend Exp $"
 
 /**@file   history.h
  * @brief  internal methods for branching and inference history
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __HISTORY_H__
-#define __HISTORY_H__
+#ifndef __SCIP_HISTORY_H__
+#define __SCIP_HISTORY_H__
 
 
 #include "scip/def.h"

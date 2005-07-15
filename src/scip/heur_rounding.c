@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.43 2005/05/31 17:20:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.44 2005/07/15 17:20:09 bzfpfend Exp $"
 
 /**@file   heur_rounding.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
@@ -650,7 +650,7 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
       if( stored )
       {
 #ifdef DEBUG
-         printf("found feasible rounded solution:\n");
+         debugMessage("found feasible rounded solution:\n");
          SCIPprintSol(scip, sol, NULL);
 #endif
          *result = SCIP_FOUNDSOL;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_trivial.c,v 1.23 2005/05/31 17:20:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_trivial.c,v 1.24 2005/07/15 17:20:13 bzfpfend Exp $"
 
 /**@file   presol_trivial.c
  * @brief  trivial presolver: round fractional bounds on integer variables, fix variables with equal bounds
@@ -106,7 +106,7 @@ DECL_PRESOLEXEC(presolExecTrivial)
          /* check bounds on variable for infeasibility */
          if( newlb > newub + 0.5 )
          {
-            SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL,
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
                "problem infeasible: integral variable <%s> has bounds [%.17f,%.17f] rounded to [%.17f,%.17f]\n",
                SCIPvarGetName(vars[v]), lb, ub, newlb, newub);
             *result = SCIP_CUTOFF;
@@ -152,7 +152,7 @@ DECL_PRESOLEXEC(presolExecTrivial)
          /* check bounds on continuous variable for infeasibility */
          if( SCIPisFeasGT(scip, lb, ub) )
          {
-            SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL,
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
                "problem infeasible: continuous variable <%s> has bounds [%.17f,%.17f]\n",
                SCIPvarGetName(vars[v]), lb, ub);
             *result = SCIP_CUTOFF;

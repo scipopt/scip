@@ -25,7 +25,7 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_coloring.c,v 1.7 2005/05/31 17:20:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_coloring.c,v 1.8 2005/07/15 17:20:21 bzfpfend Exp $"
 
 /**@file   tclique_coloring.c
  * @brief  coloring part of algorithm for maximum cliques
@@ -333,7 +333,7 @@ WEIGHT tcliqueColoring(
                /* colorinterval is the first added element of the list of neighborcolors of the adjacent node  */ 
                gsd[i].lcitv = colorinterval;
 
-               debug(printf("satdegnew=%d, nbc=[%d,%d]\n", gsd[i].satdeg, gsd[i].lcitv->itv.inf, gsd[i].lcitv->itv.sup));
+               debugPrintf("satdegnew=%d, nbc=[%d,%d]\n", gsd[i].satdeg, gsd[i].lcitv->itv.inf, gsd[i].lcitv->itv.sup);
             }
             break;
          }
@@ -417,10 +417,10 @@ WEIGHT tcliqueColoring(
 #ifdef DEBUG
             {
                int k;
-               printf("current clique (size:%d, weight:%d):", ncurrentclique, weightcurrentclique);
+               debugMessage("current clique (size:%d, weight:%d):", ncurrentclique, weightcurrentclique);
                for( k = 0; k < ncurrentclique; ++k )
-                  printf(" %d", currentclique[k]);
-               printf("\n");
+                  debugPrintf(" %d", currentclique[k]);
+               debugPrintf("\n");
             }
 #endif
          }
@@ -526,8 +526,7 @@ WEIGHT tcliqueColoring(
                   debugMessage("     nodeVindex=%d, node=%d, weight=%d, satdegold=%d  ->  ", 
                      j, V[j], weights[V[j]], gsd[j].satdeg); 
                   updateNeighbor(mem, &gsd[j], nwcitv.next);
-                  debug(printf("satdegnew=%d, nbc=[%d,%d]\n", 
-                        gsd[j].satdeg, gsd[j].lcitv->itv.inf, gsd[j].lcitv->itv.sup));
+                  debugPrintf("satdegnew=%d, nbc=[%d,%d]\n", gsd[j].satdeg, gsd[j].lcitv->itv.inf, gsd[j].lcitv->itv.sup);
                }
                break;
             }

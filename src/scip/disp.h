@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.h,v 1.27 2005/05/31 17:20:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.h,v 1.28 2005/07/15 17:20:08 bzfpfend Exp $"
 
 /**@file   disp.h
  * @brief  internal methods for displaying runtime statistics
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __DISP_H__
-#define __DISP_H__
+#ifndef __SCIP_DISP_H__
+#define __SCIP_DISP_H__
 
 
 #include <stdio.h>

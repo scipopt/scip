@@ -1,4 +1,4 @@
-#--- $Id: make.cygwin_nt-5.1.x86.gnu.dbg,v 1.1 2005/06/20 16:18:47 bzfpfend Exp $
+#--- $Id: make.cygwin_nt-5.1.x86.gnu.dbg.static,v 1.1 2005/07/15 17:19:58 bzfpfend Exp $
 FLAGS		+=	-DWITH_READLINE
 OFLAGS		+=	-O0 -g
 CFLAGS		+=	$(GCCWARN)

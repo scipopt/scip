@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.43 2005/05/31 17:20:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.44 2005/07/15 17:20:08 bzfpfend Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -233,9 +233,6 @@ RETCODE SCIPdispOutput(
    assert(disp->dispoutput != NULL);
    assert(set != NULL);
 
-   if( file == NULL )
-      file = stdout;
-
    CHECK_OKAY( disp->dispoutput(set->scip, disp, file) );
 
    return SCIP_OKAY;
@@ -367,10 +364,6 @@ RETCODE SCIPdispPrintLine(
       int j;
       Bool stripline;
 
-      /* use stdout, if file is unspecified */
-      if( file == NULL )
-         file = stdout;
-
       /* display header line */
       if( (set->disp_headerfreq == 0 && stat->ndisplines == 0)
          || (set->disp_headerfreq > 0 && stat->ndisplines % set->disp_headerfreq == 0) )
@@ -384,17 +377,17 @@ RETCODE SCIPdispPrintLine(
             if( set->disps[i]->active )
             {
                if( stripline )
-                  fprintf(file, "|");
+                  SCIPmessageFPrintInfo(file, "|");
                fillspace = set->disps[i]->width - (int)strlen(set->disps[i]->header);
                for( j = 0; j < (fillspace)/2; ++j )
-                  fprintf(file, " ");
-               fprintf(file, set->disps[i]->header);
+                  SCIPmessageFPrintInfo(file, " ");
+               SCIPmessageFPrintInfo(file, set->disps[i]->header);
                for( j = 0; j < (fillspace+1)/2; ++j )
-                  fprintf(file, " ");
+                  SCIPmessageFPrintInfo(file, " ");
                stripline = set->disps[i]->stripline;
             }
          }
-         fprintf(file, "\n");
+         SCIPmessageFPrintInfo(file, "\n");
       }
 
       /* display node information line */
@@ -405,12 +398,12 @@ RETCODE SCIPdispPrintLine(
          if( set->disps[i]->active )
          {
             if( stripline )
-               fprintf(file, "|");
+               SCIPmessageFPrintInfo(file, "|");
             CHECK_OKAY( SCIPdispOutput(set->disps[i], set, file) );
             stripline = set->disps[i]->stripline;
          }
       }
-      fprintf(file, "\n");
+      SCIPmessageFPrintInfo(file, "\n");
       fflush(stdout);
 
       stat->lastdispnode = stat->nnodes;
@@ -500,11 +493,11 @@ void SCIPdispLongint(
    if( width == 1 )
    {
       if( val < 0 )
-         fprintf(file, "-");
+         SCIPmessageFPrintInfo(file, "-");
       else if( val < 10 )
-         fprintf(file, "%lld", val);
+         SCIPmessageFPrintInfo(file, "%lld", val);
       else
-         fprintf(file, "+");
+         SCIPmessageFPrintInfo(file, "+");
    }
    else
    {
@@ -527,9 +520,9 @@ void SCIPdispLongint(
       sprintf(format, "%%%dlld%c", width-1, decpowerchar[decpower]);
 
       if( width == 2 && val < 0 )
-         fprintf(file, "-%c", decpowerchar[decpower]);
+         SCIPmessageFPrintInfo(file, "-%c", decpowerchar[decpower]);
       else
-         fprintf(file, format, val);
+         SCIPmessageFPrintInfo(file, format, val);
    }
 }
 
@@ -561,11 +554,11 @@ void SCIPdispTime(
    if( width == 1 )
    {
       if( val < 0.0 )
-         fprintf(file, "-");
+         SCIPmessageFPrintInfo(file, "-");
       else if( val < 10.0 )
-         fprintf(file, "%.0f", val);
+         SCIPmessageFPrintInfo(file, "%.0f", val);
       else
-         fprintf(file, "+");
+         SCIPmessageFPrintInfo(file, "+");
    }
    else
    {
@@ -591,8 +584,8 @@ void SCIPdispTime(
          sprintf(format, "%%%d.0f%c", width-1, timepowerchar[timepower]);
 
       if( width == 2 && val < 0.0 )
-         fprintf(file, "-%c", timepowerchar[timepower]);
+         SCIPmessageFPrintInfo(file, "-%c", timepowerchar[timepower]);
       else
-         fprintf(file, format, val);
+         SCIPmessageFPrintInfo(file, format, val);
    }
 }

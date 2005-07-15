@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.106 2005/06/29 11:08:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.107 2005/07/15 17:20:10 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -24,8 +24,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __LP_H__
-#define __LP_H__
+#ifndef __SCIP_LP_H__
+#define __SCIP_LP_H__
 
 
 #include <stdio.h>

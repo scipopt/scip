@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cnf.c,v 1.25 2005/05/31 17:20:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_cnf.c,v 1.26 2005/07/15 17:20:16 bzfpfend Exp $"
 
 /**@file   reader_cnf.c
  * @brief  cnf file reader
@@ -62,7 +62,7 @@ void readWarning(
 /** reads the next non-empty non-comment line of a cnf file */
 static
 RETCODE readCnfLine(
-   FILE*            file,               /**< input file */
+   SCIPFILE*        file,               /**< input file */
    char*            buffer,             /**< buffer for storing the input line */
    int              size,               /**< size of the buffer */
    int*             linecount           /**< pointer to the line number counter */
@@ -79,7 +79,7 @@ RETCODE readCnfLine(
    do
    {
       (*linecount)++;
-      line = fgets(buffer, size, file);
+      line = SCIPfgets(buffer, size, file);
       if( line != NULL )
       {
          linelen = (int)strlen(line);
@@ -119,7 +119,7 @@ RETCODE readCnfLine(
 static
 RETCODE readCnf(
    SCIP*            scip,               /**< SCIP data structure */   
-   FILE*            file                /**< input file */
+   SCIPFILE*        file                /**< input file */
    )
 {
    RETCODE retcode;
@@ -321,7 +321,7 @@ RETCODE readCnf(
 static
 DECL_READERREAD(readerReadCnf)
 {  /*lint --e{715}*/
-   FILE* f;
+   SCIPFILE* f;
    RETCODE retcode;
 
    assert(reader != NULL);
@@ -330,7 +330,7 @@ DECL_READERREAD(readerReadCnf)
    assert(result != NULL);
 
    /* open file */
-   f = fopen(filename, "r");
+   f = SCIPfopen(filename, "r");
    if( f == NULL )
    {
       errorMessage("cannot open file <%s> for reading\n", filename);
@@ -345,7 +345,7 @@ DECL_READERREAD(readerReadCnf)
    retcode = readCnf(scip, f);
 
    /* close file */
-   fclose(f);
+   SCIPfclose(f);
 
    *result = SCIP_SUCCESS;
 

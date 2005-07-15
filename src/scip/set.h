@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.85 2005/05/31 17:20:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.86 2005/07/15 17:20:18 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SET_H__
-#define __SET_H__
+#ifndef __SCIP_SET_H__
+#define __SCIP_SET_H__
 
 
 #include "scip/def.h"

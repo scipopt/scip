@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_conflict.h,v 1.17 2005/05/31 17:20:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_conflict.h,v 1.18 2005/07/15 17:20:19 bzfpfend Exp $"
 
 /**@file   struct_conflict.h
  * @brief  datastructures for conflict analysis
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __STRUCT_CONFLICT_H__
-#define __STRUCT_CONFLICT_H__
+#ifndef __SCIP_STRUCT_CONFLICT_H__
+#define __SCIP_STRUCT_CONFLICT_H__
 
 
 #include "scip/def.h"
@@ -67,10 +67,10 @@ struct Clause
 /** conflict analysis data structure */
 struct Conflict
 {
-   Longint          nappliedpermclauses; /**< total number of conflict clauses added permanently to the problem */
-   Longint          nappliedpermliterals;/**< total number of literals in permanently applied conflict clauses */
-   Longint          nappliedtempclauses; /**< total number of conflict clauses added temporarily to the problem */
-   Longint          nappliedtempliterals;/**< total number of literals in temporarily applied conflict clauses */
+   Longint          nappliedglbclauses; /**< total number of conflict clauses added globally to the problem */
+   Longint          nappliedglbliterals;/**< total number of literals in globally applied conflict clauses */
+   Longint          nappliedlocclauses; /**< total number of conflict clauses added locally to the problem */
+   Longint          nappliedlocliterals;/**< total number of literals in locally applied conflict clauses */
    Longint          npropcalls;         /**< number of calls to propagation conflict analysis */
    Longint          npropconfclauses;   /**< number of valid conflict clauses detected in propagation conflict analysis */
    Longint          npropconfliterals;  /**< total number of literals in valid propagation conflict clauses */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.36 2005/06/29 11:08:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.37 2005/07/15 17:20:21 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __STRUCT_STAT_H__
-#define __STRUCT_STAT_H__
+#ifndef __SCIP_STRUCT_STAT_H__
+#define __SCIP_STRUCT_STAT_H__
 
 
 #include "scip/def.h"
@@ -129,6 +129,7 @@ struct Stat
    int              npresolchgcoefs;    /**< number of presolving coefficient changes in current run */
    int              npresolchgsides;    /**< number of presolving side changes in current run */
    Bool             memsavemode;        /**< should algorithms be switched to memory saving mode? */
+   Bool             userinterrupt;      /**< has the user asked to interrupt the solving process? */
 };
 
 

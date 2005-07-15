@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.78 2005/06/23 16:02:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.79 2005/07/15 17:20:08 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -23,79 +23,19 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __DEF_H__
-#define __DEF_H__
+#ifndef __SCIP_DEF_H__
+#define __SCIP_DEF_H__
 
 
 #include <stdio.h>
 #include <math.h>
 #include <limits.h>
 #include <float.h>
-
-#include "scip/type_retcode.h"
-
+#include <assert.h>
 
 
 #define SCIP_VERSION                 79 /**< SCIP version number (multiplied by 100 to get integer number) */
 #define SCIP_SUBVERSION             "c" /**< SCIP sub version string */
-
-
-
-#define CHECK_ABORT_QUIET(x) do { if( (x) != SCIP_OKAY ) abort(); } while( FALSE )
-#define CHECK_OKAY_QUIET(x)  do { RETCODE _restat_; if( (_restat_ = (x)) != SCIP_OKAY ) return _restat_; } while( FALSE )
-#define ALLOC_ABORT_QUIET(x) do { if( NULL == (x) ) abort(); } while( FALSE )
-#define ALLOC_OKAY_QUIET(x)  do { if( NULL == (x) ) return SCIP_NOMEMORY; } while( FALSE )
-
-#define CHECK_ABORT(x) do                                                                                     \
-                       {                                                                                      \
-                          RETCODE _restat_;                                                                   \
-                          if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
-                          {                                                                                   \
-                             printf("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);   \
-                             fflush(stdout);                                                                  \
-                             abort();                                                                         \
-                          }                                                                                   \
-                       }                                                                                      \
-                       while( FALSE )
-
-#define ALLOC_ABORT(x) do                                                                                     \
-                       {                                                                                      \
-                          if( NULL == (x) )                                                                   \
-                          {                                                                                   \
-                             printf("[%s:%d] ERROR: No memory in function call\n", __FILE__, __LINE__);       \
-                             fflush(stdout);                                                                  \
-                             abort();                                                                         \
-                          }                                                                                   \
-                       }                                                                                      \
-                       while( FALSE )
-
-#ifndef NDEBUG
-#define CHECK_OKAY(x)  do                                                                                     \
-                       {                                                                                      \
-                          RETCODE _restat_;                                                                   \
-                          if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
-                          {                                                                                   \
-                             printf("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);   \
-                             fflush(stdout);                                                                  \
-                             return _restat_;                                                                 \
-                           }                                                                                  \
-                       }                                                                                      \
-                       while( FALSE )
-
-#define ALLOC_OKAY(x)  do                                                                                     \
-                       {                                                                                      \
-                          if( NULL == (x) )                                                                   \
-                          {                                                                                   \
-                             printf("[%s:%d] ERROR: No memory in function call\n", __FILE__, __LINE__);       \
-                             fflush(stdout);                                                                  \
-                             return SCIP_NOMEMORY;                                                            \
-                          }                                                                                   \
-                       }                                                                                      \
-                       while( FALSE )
-#else
-#define CHECK_OKAY(x)  CHECK_OKAY_QUIET(x)
-#define ALLOC_OKAY(x)  ALLOC_OKAY_QUIET(x)
-#endif
 
 
 /*
@@ -216,6 +156,70 @@
  */
 
 /*#define DEBUG*/
+
+
+
+
+#include "scip/type_retcode.h"
+#include "scip/message.h"
+
+/*
+ * Defines for handling SCIP return codes
+ */
+
+#define SCIPABORT() assert(FALSE)
+
+#define CHECK_ABORT_QUIET(x) do { if( (x) != SCIP_OKAY ) SCIPABORT(); } while( FALSE )
+#define CHECK_OKAY_QUIET(x)  do { RETCODE _restat_; if( (_restat_ = (x)) != SCIP_OKAY ) return _restat_; } while( FALSE )
+#define ALLOC_ABORT_QUIET(x) do { if( NULL == (x) ) SCIPABORT(); } while( FALSE )
+#define ALLOC_OKAY_QUIET(x)  do { if( NULL == (x) ) return SCIP_NOMEMORY; } while( FALSE )
+
+#define CHECK_ABORT(x) do                                                                                     \
+                       {                                                                                      \
+                          RETCODE _restat_;                                                                   \
+                          if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
+                          {                                                                                   \
+                             errorMessage("Error <%d> in function call\n", _restat_);                         \
+                             SCIPABORT();                                                                     \
+                          }                                                                                   \
+                       }                                                                                      \
+                       while( FALSE )
+
+#define ALLOC_ABORT(x) do                                                                                     \
+                       {                                                                                      \
+                          if( NULL == (x) )                                                                   \
+                          {                                                                                   \
+                             errorMessage("No memory in function call\n", __FILE__, __LINE__);                \
+                             SCIPABORT();                                                                     \
+                          }                                                                                   \
+                       }                                                                                      \
+                       while( FALSE )
+
+#ifndef NDEBUG
+#define CHECK_OKAY(x)  do                                                                                     \
+                       {                                                                                      \
+                          RETCODE _restat_;                                                                   \
+                          if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
+                          {                                                                                   \
+                             errorMessage("Error <%d> in function call\n", _restat_);                         \
+                             return _restat_;                                                                 \
+                           }                                                                                  \
+                       }                                                                                      \
+                       while( FALSE )
+
+#define ALLOC_OKAY(x)  do                                                                                     \
+                       {                                                                                      \
+                          if( NULL == (x) )                                                                   \
+                          {                                                                                   \
+                             errorMessage("No memory in function call\n");                                    \
+                             return SCIP_NOMEMORY;                                                            \
+                          }                                                                                   \
+                       }                                                                                      \
+                       while( FALSE )
+#else
+#define CHECK_OKAY(x)  CHECK_OKAY_QUIET(x)
+#define ALLOC_OKAY(x)  ALLOC_OKAY_QUIET(x)
+#endif
 
 
 #endif

@@ -1,4 +1,4 @@
-#--- $Id: make.linux.x86.insure.dbg,v 1.5 2005/05/03 14:47:59 bzfpfend Exp $
+#--- $Id: make.linux.x86.insure.dbg.static,v 1.1 2005/07/15 17:19:59 bzfpfend Exp $
 CC		=	insure gcc
 CXX		=	insure g++
 FLAGS		+=	-DROUNDING_FE -DWITH_READLINE

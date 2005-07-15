@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.96 2005/07/01 14:59:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.97 2005/07/15 17:20:05 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -569,8 +569,8 @@ void clausePrint(
    
    assert(clause != NULL);
    for( i = 0; i < clause->nvars; ++i )
-      printf(" <%s>[%d]", SCIPvarGetName(clause->vars[i]), SCIPvarGetLastBdchgDepth(clause->vars[i]));
-   printf("\n");
+      debugPrintf(" <%s>[%d]", SCIPvarGetName(clause->vars[i]), SCIPvarGetLastBdchgDepth(clause->vars[i]));
+   debugPrintf("\n");
 }
 #endif
 
@@ -792,15 +792,15 @@ RETCODE SCIPconflictFlushClauses(
             if( result == SCIP_CONSADDED )
             {
                success = TRUE;
-               if( temporary )
+               if( clause->validdepth > 0 )
                {
-                  conflict->nappliedtempclauses++;
-                  conflict->nappliedtempliterals += clause->nvars;
+                  conflict->nappliedlocclauses++;
+                  conflict->nappliedlocliterals += clause->nvars;
                }
                else
                {
-                  conflict->nappliedpermclauses++;
-                  conflict->nappliedpermliterals += clause->nvars;
+                  conflict->nappliedglbclauses++;
+                  conflict->nappliedglbliterals += clause->nvars;
                }
             }
             debugMessage(" -> calling conflict handler <%s> (prio=%d) to create conflict clause with %d literals returned result %d\n",
@@ -877,8 +877,16 @@ RETCODE conflictAddClauseCons(
       if( result == SCIP_CONSADDED )
       {
          *success = TRUE;
-         conflict->nappliedpermclauses++;
-         conflict->nappliedpermliterals += clause->nvars;
+         if( clause->validdepth > 0 )
+         {
+            conflict->nappliedlocclauses++;
+            conflict->nappliedlocliterals += clause->nvars;
+         }
+         else
+         {
+            conflict->nappliedglbclauses++;
+            conflict->nappliedglbliterals += clause->nvars;
+         }
       }
       debugMessage(" -> calling conflict handler <%s> (prio=%d) to create conflict clause with %d literals returned result %d\n",
          SCIPconflicthdlrGetName(set->conflicthdlrs[h]), SCIPconflicthdlrGetPriority(set->conflicthdlrs[h]),
@@ -919,6 +927,16 @@ RETCODE SCIPconflictFlushClauses(
    /* is there anything to do? */
    if( conflict->nclauses == 0 )
       return SCIP_OKAY;
+
+#if 0
+   { /*????????????????????? remove this! */
+      Bool global = FALSE;
+      for( i = 0; i < conflict->nclauses && !global; ++i )
+         global = (conflict->clauses[i]->validdepth == 0);
+      if( !global )
+         abort();
+   }
+#endif
 
    /* calculate the maximal number of conflict clauses to accept, and the maximal size of each accepted conflict clause */
    maxclauses = (set->conf_maxclauses == -1 ? INT_MAX : set->conf_maxclauses);
@@ -1062,7 +1080,7 @@ Longint SCIPconflictGetNAppliedClauses(
 {
    assert(conflict != NULL);
    
-   return conflict->nappliedpermclauses + conflict->nappliedtempclauses;
+   return conflict->nappliedglbclauses + conflict->nappliedlocclauses;
 }
 
 /** returns the total number of literals in conflict clauses that were added to the problem */
@@ -1072,47 +1090,47 @@ Longint SCIPconflictGetNAppliedLiterals(
 {
    assert(conflict != NULL);
    
-   return conflict->nappliedpermliterals + conflict->nappliedtempliterals;
+   return conflict->nappliedglbliterals + conflict->nappliedlocliterals;
 }
 
-/** returns the total number of conflict clauses that were added permanently to the problem */
-Longint SCIPconflictGetNAppliedPermClauses(
+/** returns the total number of conflict clauses that were added globally to the problem */
+Longint SCIPconflictGetNAppliedGlobalClauses(
    CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
    
-   return conflict->nappliedpermclauses;
+   return conflict->nappliedglbclauses;
 }
 
-/** returns the total number of literals in conflict clauses that were added permanently to the problem */
-Longint SCIPconflictGetNAppliedPermLiterals(
+/** returns the total number of literals in conflict clauses that were added globally to the problem */
+Longint SCIPconflictGetNAppliedGlobalLiterals(
    CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
    
-   return conflict->nappliedpermliterals;
+   return conflict->nappliedglbliterals;
 }
 
-/** returns the total number of conflict clauses that were added temporarily to the problem */
-Longint SCIPconflictGetNAppliedTempClauses(
+/** returns the total number of conflict clauses that were added locally to the problem */
+Longint SCIPconflictGetNAppliedLocalClauses(
    CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
    
-   return conflict->nappliedtempclauses;
+   return conflict->nappliedlocclauses;
 }
 
-/** returns the total number of literals in conflict clauses that were added temporarily to the problem */
-Longint SCIPconflictGetNAppliedTempLiterals(
+/** returns the total number of literals in conflict clauses that were added locally to the problem */
+Longint SCIPconflictGetNAppliedLocalLiterals(
    CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
    
-   return conflict->nappliedtempliterals;
+   return conflict->nappliedlocliterals;
 }
 
 
@@ -1289,10 +1307,10 @@ RETCODE SCIPconflictCreate(
    (*conflict)->count = 0;
    (*conflict)->clausessize = 0;
    (*conflict)->nclauses = 0;
-   (*conflict)->nappliedpermclauses = 0;
-   (*conflict)->nappliedpermliterals = 0;
-   (*conflict)->nappliedtempclauses = 0;
-   (*conflict)->nappliedtempliterals = 0;
+   (*conflict)->nappliedglbclauses = 0;
+   (*conflict)->nappliedglbliterals = 0;
+   (*conflict)->nappliedlocclauses = 0;
+   (*conflict)->nappliedlocliterals = 0;
    (*conflict)->npropcalls = 0;
    (*conflict)->npropconfclauses = 0;
    (*conflict)->npropconfliterals = 0;
@@ -1709,36 +1727,41 @@ RETCODE conflictResolveBound(
    {
       int v;
          
-      debugMessage("processing next conflicting bound (depth: %d, valid depth: %d, bdchgtype: %s, vartype: %d): [<%s> %s %g]\n",
+      debugMessage("processing next conflicting bound (depth: %d, valid depth: %d, bdchgtype: %s [%s], vartype: %d): [<%s> %s %g]\n",
          SCIPbdchginfoGetDepth(bdchginfo), *validdepth,
          SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING ? "branch"
          : SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER ? "cons" : "prop",
+         SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING ? "-"
+         : SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER
+         ? SCIPconsGetName(SCIPbdchginfoGetInferCons(bdchginfo))
+         : SCIPbdchginfoGetInferProp(bdchginfo) == NULL ? "-"
+         : SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo)),
          SCIPvarGetType(actvar), SCIPvarGetName(actvar), 
          SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
          SCIPbdchginfoGetNewbound(bdchginfo));
       debugMessage(" - conflict set             :");
       for( v = 0; v < conflict->nconflictvars; ++v )
-         printf(" <%s>[%d]", SCIPvarGetName(conflict->conflictvars[v]), 
+         debugPrintf(" <%s>[%d]", SCIPvarGetName(conflict->conflictvars[v]), 
             SCIPvarGetLastBdchgDepth(conflict->conflictvars[v]));
-      printf("\n");
+      debugPrintf("\n");
       debugMessage(" - candidate queue (non-bin):");
       for( v = 0; v < SCIPpqueueNElems(conflict->nonbinbdchgqueue); ++v )
       {
          BDCHGINFO* info = (BDCHGINFO*)(SCIPpqueueElems(conflict->nonbinbdchgqueue)[v]);
-         printf(" [%d:<%s> %s %g]", SCIPbdchginfoGetDepth(info), SCIPvarGetName(SCIPbdchginfoGetVar(info)),
+         debugPrintf(" [%d:<%s> %s %g]", SCIPbdchginfoGetDepth(info), SCIPvarGetName(SCIPbdchginfoGetVar(info)),
             SCIPbdchginfoGetBoundtype(info) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(info));
       }
-      printf("\n");
+      debugPrintf("\n");
       debugMessage(" - candidate queue (bin)    :");
       for( v = 0; v < SCIPpqueueNElems(conflict->binbdchgqueue); ++v )
       {
          BDCHGINFO* info = (BDCHGINFO*)(SCIPpqueueElems(conflict->binbdchgqueue)[v]);
-         printf(" [%d:<%s> %s %g]", SCIPbdchginfoGetDepth(info), SCIPvarGetName(SCIPbdchginfoGetVar(info)),
+         debugPrintf(" [%d:<%s> %s %g]", SCIPbdchginfoGetDepth(info), SCIPvarGetName(SCIPbdchginfoGetVar(info)),
             SCIPbdchginfoGetBoundtype(info) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(info));
       }
-      printf("\n");
+      debugPrintf("\n");
    }
 #endif
 

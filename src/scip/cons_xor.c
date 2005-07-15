@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.31 2005/05/31 17:20:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.32 2005/07/15 17:20:07 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -339,18 +339,15 @@ void consdataPrint(
    assert(consdata != NULL);
    assert(consdata->nvars >= 1);
 
-   if( file == NULL )
-      file = stdout;
-
    /* print coefficients */
-   fprintf(file, "<%s> == xor(", SCIPvarGetName(consdata->vars[0]));
+   SCIPinfoMessage(scip, file, "<%s> == xor(", SCIPvarGetName(consdata->vars[0]));
    for( v = 1; v < consdata->nvars; ++v )
    {
       if( v > 1 )
-         fprintf(file, ", ");
-      fprintf(file, "<%s>", SCIPvarGetName(consdata->vars[v]));
+         SCIPinfoMessage(scip, file, ", ");
+      SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName(consdata->vars[v]));
    }
-   fprintf(file, ")\n");
+   SCIPinfoMessage(scip, file, ")\n");
 }
 
 /** deletes coefficient at given position from xor constraint data */

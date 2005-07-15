@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.21 2005/06/20 13:48:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.22 2005/07/15 17:20:08 bzfpfend Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -121,7 +121,7 @@ RETCODE readLine(
    assert(dialoghdlr->buffer[dialoghdlr->bufferpos] == '\0');
 
    /* display prompt */
-   printf(prompt);
+   SCIPmessagePrintDialog(prompt);
 
    /* read line from stdin */
    (void)fgets(&dialoghdlr->buffer[dialoghdlr->bufferpos], dialoghdlr->buffersize - dialoghdlr->bufferpos, stdin);
@@ -707,7 +707,7 @@ RETCODE SCIPdialogDisplayMenu(
    }
 
    if( dialog->nsubdialogs == 0 )
-      printf("<no options available>\n");
+      SCIPmessagePrintDialog("<no options available>\n");
 
    return SCIP_OKAY;
 }
@@ -727,11 +727,11 @@ RETCODE SCIPdialogDisplayMenuEntry(
       sprintf(name, "<%s>", dialog->name);
    else
       sprintf(name, "%s", dialog->name);
-   printf("  %-21s ", name);
+   SCIPmessagePrintDialog("  %-21s ", name);
    if( strlen(name) > 21 )
    {
       /* break the line, and start the description in the next line */
-      printf("\n                   -->  ");
+      SCIPmessagePrintDialog("\n                   -->  ");
    }
 
    /* display the dialog's description */
@@ -740,8 +740,8 @@ RETCODE SCIPdialogDisplayMenuEntry(
       CHECK_OKAY( dialog->dialogdesc(scip, dialog) );
    }
    else
-      printf(dialog->desc);
-   printf("\n");
+      SCIPmessagePrintDialog(dialog->desc);
+   SCIPmessagePrintDialog("\n");
 
    return SCIP_OKAY;
 }

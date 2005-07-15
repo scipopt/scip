@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.296 2005/06/29 12:29:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.297 2005/07/15 17:20:16 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -381,21 +381,19 @@ void SCIPprintVersion(
    FILE*            file                /**< output file (or NULL for standard output) */
    )
 {
-   if( file == NULL )
-      file = stdout;
-
-   fprintf(file, "SCIP version %g%s [precision: %d byte]", SCIPversion(), SCIPsubversion(), (int)sizeof(Real));
+   SCIPmessageFPrintInfo(file, "SCIP version %g%s [precision: %d byte]",
+      SCIPversion(), SCIPsubversion(), (int)sizeof(Real));
 #ifndef NOBLOCKMEM
-   fprintf(file, " [memory: block]");
+   SCIPmessageFPrintInfo(file, " [memory: block]");
 #else
-   fprintf(file, " [memory: standard]");
+   SCIPmessageFPrintInfo(file, " [memory: standard]");
 #endif
 #ifndef NDEBUG
-   fprintf(file, " [mode: debug]");
+   SCIPmessageFPrintInfo(file, " [mode: debug]");
 #else
-   fprintf(file, " [mode: optimized]");
+   SCIPmessageFPrintInfo(file, " [mode: optimized]");
 #endif
-   fprintf(file, " [LP solver: %s]\n", SCIPlpiGetSolverName());
+   SCIPmessageFPrintInfo(file, " [LP solver: %s]\n", SCIPlpiGetSolverName());
 }
 
 /** prints error message for the given SCIP return code */
@@ -404,12 +402,9 @@ void SCIPprintError(
    FILE*            file                /**< output file (or NULL for standard output) */
    )
 {
-   if( file == NULL )
-      file = stdout;
-
-   fprintf(file, "SCIP Error (%d): ", retcode);
+   SCIPmessageFPrintInfo(file, "SCIP Error (%d): ", retcode);
    SCIPretcodePrint(file, retcode);
-   fprintf(file, "\n");
+   SCIPmessageFPrintInfo(file, "\n");
 }
 
 
@@ -474,23 +469,6 @@ RETCODE SCIPfree(
    return SCIP_OKAY;
 }
 
-/** prints a message depending on the verbosity level */
-void SCIPmessage(
-   SCIP*            scip,               /**< SCIP data structure */
-   VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
-   const char*      formatstr,          /**< format string like in printf() function */
-   ...                                  /**< format arguments line in printf() function */
-   )
-{
-   va_list ap;
-
-   CHECK_ABORT( checkStage(scip, "SCIPmessage", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-   
-   va_start(ap, formatstr); /*lint !e826*/
-   vinfoMessage(scip->set->disp_verblevel, msgverblevel, formatstr, ap);
-   va_end(ap);
-}
-
 /** returns current stage of SCIP */
 STAGE SCIPgetStage(
    SCIP*            scip                /**< SCIP data structure */
@@ -510,59 +488,56 @@ RETCODE SCIPprintStage(
 {
    CHECK_OKAY( checkStage(scip, "SCIPprintStage", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   if( file == NULL )
-      file = stdout;
-
    switch( scip->set->stage )
    {
    case SCIP_STAGE_INIT:
-      fprintf(file, "initialization");
+      SCIPmessageFPrintInfo(file, "initialization");
       break;
    case SCIP_STAGE_PROBLEM:
-      fprintf(file, "problem creation / modification");
+      SCIPmessageFPrintInfo(file, "problem creation / modification");
       break;
    case SCIP_STAGE_TRANSFORMING:
-      fprintf(file, "problem transformation");
+      SCIPmessageFPrintInfo(file, "problem transformation");
       break;
    case SCIP_STAGE_TRANSFORMED:
-      fprintf(file, "problem transformed");
+      SCIPmessageFPrintInfo(file, "problem transformed");
       break;
    case SCIP_STAGE_PRESOLVING:
       if( SCIPsolveIsStopped(scip->set, scip->stat) )
       {
-         fprintf(file, "solving was interrupted [");
+         SCIPmessageFPrintInfo(file, "solving was interrupted [");
          CHECK_OKAY( SCIPprintStatus(scip, file) );
-         fprintf(file, "]");
+         SCIPmessageFPrintInfo(file, "]");
       }
       else
-         fprintf(file, "presolving process is running");
+         SCIPmessageFPrintInfo(file, "presolving process is running");
       break;
    case SCIP_STAGE_PRESOLVED:
-      fprintf(file, "problem is presolved");
+      SCIPmessageFPrintInfo(file, "problem is presolved");
       break;
    case SCIP_STAGE_INITSOLVE:
-      fprintf(file, "solving process initialization");
+      SCIPmessageFPrintInfo(file, "solving process initialization");
       break;
    case SCIP_STAGE_SOLVING:
       if( SCIPsolveIsStopped(scip->set, scip->stat) )
       {
-         fprintf(file, "solving was interrupted [");
+         SCIPmessageFPrintInfo(file, "solving was interrupted [");
          CHECK_OKAY( SCIPprintStatus(scip, file) );
-         fprintf(file, "]");
+         SCIPmessageFPrintInfo(file, "]");
       }
       else
-         fprintf(file, "solving process is running");
+         SCIPmessageFPrintInfo(file, "solving process is running");
       break;
    case SCIP_STAGE_SOLVED:
-      fprintf(file, "problem is solved [");
+      SCIPmessageFPrintInfo(file, "problem is solved [");
       CHECK_OKAY( SCIPprintStatus(scip, file) );
-      fprintf(file, "]");
+      SCIPmessageFPrintInfo(file, "]");
       break;
    case SCIP_STAGE_FREESOLVE:
-      fprintf(file, "solving process deinitialization");
+      SCIPmessageFPrintInfo(file, "solving process deinitialization");
       break;
    case SCIP_STAGE_FREETRANS:
-      fprintf(file, "freeing transformed problem");
+      SCIPmessageFPrintInfo(file, "freeing transformed problem");
       break;
    default:
       errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
@@ -597,46 +572,43 @@ RETCODE SCIPprintStatus(
 {
    CHECK_OKAY( checkStage(scip, "SCIPprintStatus", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   if( file == NULL )
-      file = stdout;
-
    switch( SCIPgetStatus(scip) )
    {
    case SCIP_STATUS_UNKNOWN:
-      fprintf(file, "unknown");
+      SCIPmessageFPrintInfo(file, "unknown");
       break;
    case SCIP_STATUS_USERINTERRUPT:
-      fprintf(file, "user interrupt");
+      SCIPmessageFPrintInfo(file, "user interrupt");
       break;
    case SCIP_STATUS_NODELIMIT:
-      fprintf(file, "node limit reached");
+      SCIPmessageFPrintInfo(file, "node limit reached");
       break;
    case SCIP_STATUS_TIMELIMIT:
-      fprintf(file, "time limit reached");
+      SCIPmessageFPrintInfo(file, "time limit reached");
       break;
    case SCIP_STATUS_MEMLIMIT:
-      fprintf(file, "memory limit reached");
+      SCIPmessageFPrintInfo(file, "memory limit reached");
       break;
    case SCIP_STATUS_GAPLIMIT:
-      fprintf(file, "gap limit reached");
+      SCIPmessageFPrintInfo(file, "gap limit reached");
       break;
    case SCIP_STATUS_SOLLIMIT:
-      fprintf(file, "solution limit reached");
+      SCIPmessageFPrintInfo(file, "solution limit reached");
       break;
    case SCIP_STATUS_BESTSOLLIMIT:
-      fprintf(file, "solution improvement limit reached");
+      SCIPmessageFPrintInfo(file, "solution improvement limit reached");
       break;
    case SCIP_STATUS_OPTIMAL:
-      fprintf(file, "optimal solution found");
+      SCIPmessageFPrintInfo(file, "optimal solution found");
       break;
    case SCIP_STATUS_INFEASIBLE:
-      fprintf(file, "infeasible");
+      SCIPmessageFPrintInfo(file, "infeasible");
       break;
    case SCIP_STATUS_UNBOUNDED:
-      fprintf(file, "unbounded");
+      SCIPmessageFPrintInfo(file, "unbounded");
       break;
    case SCIP_STATUS_INFORUNBD:
-      fprintf(file, "infeasible or unbounded");
+      SCIPmessageFPrintInfo(file, "infeasible or unbounded");
       break;
    default:
       errorMessage("invalid status code <%d>\n", SCIPgetStatus(scip));
@@ -675,6 +647,126 @@ Bool SCIPpressedCtrlC(
    CHECK_ABORT( checkStage(scip, "SCIPpressedCtrlC", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return SCIPinterrupted();
+}
+
+
+
+
+/*
+ * message output methods
+ */
+
+/** creates a message handler; this method can already be called before SCIPcreate()c */
+RETCODE SCIPcreateMessagehdlr(
+   MESSAGEHDLR**    messagehdlr,        /**< pointer to store the message handler */
+   Bool             bufferedoutput,     /**< should the output be buffered up to the next newline? */
+   DECL_MESSAGEERROR((*messageerror)),  /**< error message print method of message handler */
+   DECL_MESSAGEWARNING((*messagewarning)),/**< warning message print method of message handler */
+   DECL_MESSAGEDIALOG((*messagedialog)),/**< dialog message print method of message handler */
+   DECL_MESSAGEINFO ((*messageinfo)),   /**< info message print method of message handler */
+   MESSAGEHDLRDATA* messagehdlrdata     /**< message handler data */
+   )
+{
+   CHECK_OKAY( SCIPmessagehdlrCreate(messagehdlr, bufferedoutput,
+                  messageerror, messagewarning, messagedialog, messageinfo, messagehdlrdata) );
+   
+   return SCIP_OKAY;
+}
+
+/** frees message handler; this method can be called after SCIPfree() */
+RETCODE SCIPfreeMessagehdlr(
+   MESSAGEHDLR**    messagehdlr         /**< pointer to the message handler */
+   )
+{
+   SCIPmessagehdlrFree(messagehdlr);
+
+   return SCIP_OKAY;
+}
+
+/** installs the given message handler, such that all messages are passed to this handler;
+ *  this method can already be called before SCIPcreate()
+ */
+RETCODE SCIPsetMessagehdlr(
+   MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
+   )
+{
+   SCIPmessageSetHandler(messagehdlr);
+   
+   return SCIP_OKAY;
+}
+
+/** installs the default message handler, such that all messages are printed to stdout and stderr;
+ *  this method can already be called before SCIPcreate()
+ */
+RETCODE SCIPsetDefaultMessagehdlr(
+   void
+   )
+{
+   SCIPmessageSetDefaultHandler();
+
+   return SCIP_OKAY;
+}
+
+/** returns the currently installed message handler, or NULL if messages are currently suppressed;
+ *  this method can already be called before SCIPcreate()
+ */
+MESSAGEHDLR* SCIPgetMessagehdlr(
+   void
+   )
+{
+   return SCIPmessageGetHandler();
+}
+
+/** prints a dialog message that requests user interaction or is a direct response to a user interactive command */
+void SCIPdialogMessage(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file,               /**< file stream to print into, or NULL for stdout */
+   const char*      formatstr,          /**< format string like in printf() function */
+   ...                                  /**< format arguments line in printf() function */
+   )
+{
+   va_list ap;
+
+   CHECK_ABORT( checkStage(scip, "SCIPdialogMessage", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   va_start(ap, formatstr); /*lint !e826*/
+   SCIPmessageVFPrintDialog(file, formatstr, ap);
+   va_end(ap);
+}
+
+/** prints a message */
+void SCIPinfoMessage(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file,               /**< file stream to print into, or NULL for stdout */
+   const char*      formatstr,          /**< format string like in printf() function */
+   ...                                  /**< format arguments line in printf() function */
+   )
+{
+   va_list ap;
+
+   CHECK_ABORT( checkStage(scip, "SCIPinfoMessage", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   va_start(ap, formatstr); /*lint !e826*/
+   SCIPmessageVFPrintInfo(file, formatstr, ap);
+   va_end(ap);
+}
+
+/** prints a message depending on the verbosity level */
+void SCIPverbMessage(
+   SCIP*            scip,               /**< SCIP data structure */
+   VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
+   FILE*            file,               /**< file stream to print into, or NULL for stdout */
+   const char*      formatstr,          /**< format string like in printf() function */
+   ...                                  /**< format arguments line in printf() function */
+   )
+{
+   va_list ap;
+
+   CHECK_ABORT( checkStage(scip, "SCIPverbMessage", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   va_start(ap, formatstr); /*lint !e826*/
+   SCIPmessageVFPrintVerbInfo(scip->set->disp_verblevel, msgverblevel, file, formatstr, ap);
+   va_end(ap);
 }
 
 
@@ -2272,17 +2364,11 @@ RETCODE SCIPreadProb(
    case SCIP_SUCCESS:
       if( scip->origprob != NULL )
       {      
-         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
             "original problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
             scip->origprob->nvars, scip->origprob->nbinvars, scip->origprob->nintvars,
             scip->origprob->nimplvars, scip->origprob->ncontvars,
             scip->origprob->nconss);
-#if 0
-         printf(" var names :  ");
-         SCIPhashtablePrintStatistics(scip->origprob->varnames);
-         printf(" cons names:  ");
-         SCIPhashtablePrintStatistics(scip->origprob->consnames);
-#endif
       }
       return SCIP_OKAY;
 
@@ -2352,7 +2438,8 @@ PROBDATA* SCIPgetProbData(
 
    default:
       errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      abort();
+      SCIPABORT();
+      return NULL;
    }  /*lint !e788*/
 }
 
@@ -2522,7 +2609,8 @@ Bool SCIPisObjIntegral(
 
    default:
       errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      abort();
+      SCIPABORT();
+      return FALSE;
    }  /*lint !e788*/
 }
 
@@ -2778,7 +2866,8 @@ VAR** SCIPgetVars(
 
    default:
       errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      abort();
+      SCIPABORT();
+      return NULL;
    }  /*lint !e788*/
 }
 
@@ -2803,7 +2892,8 @@ int SCIPgetNVars(
 
    default:
       errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      abort();
+      SCIPABORT();
+      return 0;
    }  /*lint !e788*/
 }
 
@@ -2828,7 +2918,8 @@ int SCIPgetNBinVars(
 
    default:
       errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      abort();
+      SCIPABORT();
+      return 0;
    }  /*lint !e788*/
 }
 
@@ -2853,7 +2944,8 @@ int SCIPgetNIntVars(
 
    default:
       errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      abort();
+      SCIPABORT();
+      return 0;
    }  /*lint !e788*/
 }
 
@@ -2878,7 +2970,8 @@ int SCIPgetNImplVars(
 
    default:
       errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      abort();
+      SCIPABORT();
+      return 0;
    }  /*lint !e788*/
 }
 
@@ -2903,7 +2996,8 @@ int SCIPgetNContVars(
 
    default:
       errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      abort();
+      SCIPABORT();
+      return 0;
    }  /*lint !e788*/
 }
 
@@ -3084,7 +3178,8 @@ VAR* SCIPfindVar(
 
    default:
       errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      abort();
+      SCIPABORT();
+      return NULL;
    }  /*lint !e788*/
 }
 
@@ -3204,7 +3299,8 @@ CONS* SCIPfindCons(
 
    default:
       errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      abort();
+      SCIPABORT();
+      return NULL;
    }  /*lint !e788*/
 }
 
@@ -3548,7 +3644,7 @@ RETCODE transformProb(
          scip->tree, scip->lp) );
 
    /* print transformed problem statistics */
-   infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+   SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
       "transformed problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
       scip->transprob->nvars, scip->transprob->nbinvars, scip->transprob->nintvars, scip->transprob->nimplvars,
       scip->transprob->ncontvars, scip->transprob->nconss);
@@ -3560,11 +3656,11 @@ RETCODE transformProb(
       nactiveconss = SCIPconshdlrGetNActiveConss(scip->set->conshdlrs[h]);
       if( nactiveconss > 0 )
       {
-         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "%7d constraints of type <%s>\n", nactiveconss, SCIPconshdlrGetName(scip->set->conshdlrs[h]));
       }
    }
-   infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL, "\n");
+   SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL, "\n");
 
    /* call init methods of plugins */
    CHECK_OKAY( SCIPsetInitPlugins(scip->set, scip->mem->solvemem, scip->stat) );
@@ -3721,6 +3817,7 @@ RETCODE presolveRound(
    )
 {
    RESULT result;
+   EVENT event;
    int i;
 
    assert(scip != NULL);
@@ -3747,13 +3844,13 @@ RETCODE presolveRound(
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
-         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i]));
       }
       else if( result == SCIP_UNBOUNDED )
       {
          *unbounded = TRUE;
-         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i]));
       }
       *delayed = *delayed || (result == SCIP_DELAYED);
@@ -3784,13 +3881,13 @@ RETCODE presolveRound(
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
-         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "constraint handler <%s> detected infeasibility\n", SCIPconshdlrGetName(scip->set->conshdlrs[i]));
       }
       else if( result == SCIP_UNBOUNDED )
       {
          *unbounded = TRUE;
-         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "constraint handler <%s> detected unboundness (or infeasibility)\n",
             SCIPconshdlrGetName(scip->set->conshdlrs[i]));
       }
@@ -3824,13 +3921,13 @@ RETCODE presolveRound(
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
-         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i]));
       }
       else if( result == SCIP_UNBOUNDED )
       {
          *unbounded = TRUE;
-         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i]));
       }
       *delayed = *delayed || (result == SCIP_DELAYED);
@@ -3846,6 +3943,10 @@ RETCODE presolveRound(
          return SCIP_OKAY;
       }
    }
+
+   /* issue PRESOLVEROUND event */
+   CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_PRESOLVEROUND) );
+   CHECK_OKAY( SCIPeventProcess(&event, scip->set, NULL, NULL, NULL, scip->eventfilter) );
 
    return SCIP_OKAY;
 }
@@ -3899,6 +4000,16 @@ RETCODE presolve(
    if( scip->set->stage == SCIP_STAGE_TRANSFORMED )
    {
       CHECK_OKAY( initPresolve(scip, unbounded, infeasible) );
+      if( *infeasible )
+      {
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "presolve initialization detected infeasibility\n");
+      }
+      else if( *unbounded )
+      {
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "presolve initialization detected unboundness\n");
+      }
    }
    assert(scip->set->stage == SCIP_STAGE_PRESOLVING);
 
@@ -3908,7 +4019,7 @@ RETCODE presolve(
 
    abortfac = scip->set->presol_abortfac;
 
-   infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "presolving:\n");
+   SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "presolving:\n");
 
    finished = (scip->stat->npresolrounds >= maxnrounds);
    stopped = SCIPsolveIsStopped(scip->set, scip->stat);
@@ -3955,8 +4066,8 @@ RETCODE presolve(
       if( !finished )
       {
          /* print presolving statistics */
-         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "(round %d)", scip->stat->npresolrounds);
-         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "(round %d)", scip->stat->npresolrounds);
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
             " %d del vars, %d del conss, %d chg bounds, %d add holes, %d chg sides, %d chg coeffs, %d upgd conss\n",
             scip->stat->npresolfixedvars + scip->stat->npresolaggrvars, scip->stat->npresoldelconss, 
             scip->stat->npresolchgbds, scip->stat->npresoladdholes, scip->stat->npresolchgsides, 
@@ -3975,11 +4086,22 @@ RETCODE presolve(
    {
       CHECK_OKAY( exitPresolve(scip, unbounded, infeasible) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
+      if( *infeasible )
+      {
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "presolve deinitialization detected infeasibility\n");
+      }
+      else if( *unbounded )
+      {
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "presolve deinitialization detected unboundness\n");
+      }
    }
 
    /* print presolving statistics */
-   infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL, "presolving (%d rounds):\n", scip->stat->npresolrounds);
-   infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+   SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+      "presolving (%d rounds):\n", scip->stat->npresolrounds);
+   SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
       " %d deleted vars, %d deleted constraints, %d tightened bounds, %d added holes, %d changed sides, %d changed coefficients\n",
       scip->stat->npresolfixedvars + scip->stat->npresolaggrvars, scip->stat->npresoldelconss, scip->stat->npresolchgbds, 
       scip->stat->npresoladdholes, scip->stat->npresolchgsides, scip->stat->npresolchgcoefs);
@@ -4215,7 +4337,8 @@ RETCODE SCIPpresolve(
             /* print solution message */
             if( infeasible )
             {
-               infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL, "presolving detected infeasibility\n");
+               SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+                  "presolving detected infeasibility\n");
 
                /* infeasibility in this round means, that the current best solution is optimal (if existing) */
                if( scip->primal->nsols > 0 )
@@ -4234,7 +4357,7 @@ RETCODE SCIPpresolve(
             }
             else if( scip->primal->nsols >= 1 )
             {
-               infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+               SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
                   "presolving detected unboundness\n");
 
                /* switch status to UNBOUNDED */
@@ -4242,7 +4365,7 @@ RETCODE SCIPpresolve(
             }
             else
             {
-               infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+               SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
                   "presolving detected unboundness (or infeasibility)\n");
 
                /* switch status to INFORUNBD */
@@ -4254,7 +4377,7 @@ RETCODE SCIPpresolve(
             int h;
 
             /* print presolved problem statistics */
-            infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+            SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
                "presolved problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
                scip->transprob->nvars, scip->transprob->nbinvars, scip->transprob->nintvars, scip->transprob->nimplvars,
                scip->transprob->ncontvars, scip->transprob->nconss);
@@ -4266,24 +4389,25 @@ RETCODE SCIPpresolve(
                nactiveconss = SCIPconshdlrGetNActiveConss(scip->set->conshdlrs[h]);
                if( nactiveconss > 0 )
                {
-                  infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+                  SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
                      "%7d constraints of type <%s>\n", nactiveconss, SCIPconshdlrGetName(scip->set->conshdlrs[h]));
                }
             }
 
             if( SCIPprobIsObjIntegral(scip->transprob) )
             {
-               infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "objective value is always integral\n");
+               SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+                  "objective value is always integral\n");
             }
          }
       }
       else
       {
-         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "presolving was interrupted.\n");
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "presolving was interrupted.\n");
       }
 
       /* display timing statistics */
-      infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+      SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
          "Presolving Time: %.2f\n", SCIPclockGetTime(scip->stat->presolvingtime));
       break;
 
@@ -4332,7 +4456,7 @@ RETCODE SCIPsolve(
       {
          /* free the solving process data in order to restart */
          assert(scip->set->stage == SCIP_STAGE_SOLVING);
-         SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL,
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
             "(run %d) restarting after %d root node bound changes\n\n",
             scip->stat->nruns, scip->stat->nrootboundchgsrun);
          CHECK_OKAY( SCIPfreeSolve(scip) );
@@ -4357,7 +4481,7 @@ RETCODE SCIPsolve(
          /* initialize solving process data structures */
          CHECK_OKAY( initSolve(scip) );
          assert(scip->set->stage == SCIP_STAGE_SOLVING);
-         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL, "\n");
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL, "\n");
       
          /*lint -fallthrough*/
 
@@ -4412,26 +4536,27 @@ RETCODE SCIPsolve(
    /* display most relevant statistics */
    if( scip->set->disp_verblevel >= SCIP_VERBLEVEL_NORMAL )
    {
-      printf("\n");
-      printf("SCIP Status        : ");
+      SCIPmessagePrintInfo("\n");
+      SCIPmessagePrintInfo("SCIP Status        : ");
       CHECK_OKAY( SCIPprintStage(scip, NULL) );
-      printf("\n");
-      printf("Solving Time (sec) : %.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
+      SCIPmessagePrintInfo("\n");
+      SCIPmessagePrintInfo("Solving Time (sec) : %.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
       if( scip->stat->nruns > 1 )
-         printf("Solving Nodes      : %lld (total of %lld nodes in %d runs)\n", 
+         SCIPmessagePrintInfo("Solving Nodes      : %lld (total of %lld nodes in %d runs)\n", 
             scip->stat->nnodes, scip->stat->ntotalnodes, scip->stat->nruns);
       else
-         printf("Solving Nodes      : %lld\n", scip->stat->nnodes);
+         SCIPmessagePrintInfo("Solving Nodes      : %lld\n", scip->stat->nnodes);
       if( scip->set->stage >= SCIP_STAGE_TRANSFORMED && scip->set->stage <= SCIP_STAGE_FREESOLVE )
-         printf("Primal Bound       : %+.14e (%lld solutions)\n", SCIPgetPrimalbound(scip), scip->primal->nsolsfound);
+         SCIPmessagePrintInfo("Primal Bound       : %+.14e (%lld solutions)\n", 
+            SCIPgetPrimalbound(scip), scip->primal->nsolsfound);
       if( scip->set->stage >= SCIP_STAGE_SOLVING && scip->set->stage <= SCIP_STAGE_SOLVED )
       {
-         printf("Dual Bound         : %+.14e\n", SCIPgetDualbound(scip));
-         printf("Gap                : ");
+         SCIPmessagePrintInfo("Dual Bound         : %+.14e\n", SCIPgetDualbound(scip));
+         SCIPmessagePrintInfo("Gap                : ");
          if( SCIPsetIsInfinity(scip->set, SCIPgetGap(scip)) )
-            printf("infinite\n");
+            SCIPmessagePrintInfo("infinite\n");
          else
-            printf("%.2f %%\n", 100.0*SCIPgetGap(scip));
+            SCIPmessagePrintInfo("%.2f %%\n", 100.0*SCIPgetGap(scip));
       }
 
       /* check solution for feasibility in original problem */
@@ -4450,17 +4575,18 @@ RETCODE SCIPsolve(
 
             if( !feasible )
             {
-               printf("\nbest solution is not feasible in original problem!\n");
+               SCIPmessagePrintInfo("\nbest solution is not feasible in original problem!\n");
                if( infeascons == NULL )
                { 
                   if( infeasconshdlr == NULL )
-                     printf("best solution violates bounds\n");
+                     SCIPmessagePrintInfo("best solution violates bounds\n");
                   else
-                     printf("best solution violates constraint handler [%s]\n", SCIPconshdlrGetName(infeasconshdlr));
+                     SCIPmessagePrintInfo("best solution violates constraint handler [%s]\n",
+                        SCIPconshdlrGetName(infeasconshdlr));
                }
                else
                { 
-                  printf("best solution violates constraint <%s> [%s] of original problem:\n", 
+                  SCIPmessagePrintInfo("best solution violates constraint <%s> [%s] of original problem:\n", 
                      SCIPconsGetName(infeascons), SCIPconshdlrGetName(infeasconshdlr));
                   CHECK_OKAY( SCIPprintCons(scip, infeascons, NULL) );
                }
@@ -4558,6 +4684,19 @@ RETCODE SCIPfreeTransform(
       errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
+}
+
+/** interrupts solving process as soon as possible (e.g., after the current node has been solved) */
+RETCODE SCIPinterruptSolve(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPinterruptSolve", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE) );
+
+   /* set the userinterrupt flag */
+   scip->stat->userinterrupt = TRUE;
+
+   return SCIP_OKAY;
 }
 
 
@@ -8874,7 +9013,7 @@ Real SCIPgetVarObjDive(
    if( !SCIPlpDiving(scip->lp) )
    {
       errorMessage("not in diving mode\n");
-      abort();
+      SCIPABORT();
    }
 
    return SCIPvarGetObjLP(var);
@@ -8891,7 +9030,7 @@ Real SCIPgetVarLbDive(
    if( !SCIPlpDiving(scip->lp) )
    {
       errorMessage("not in diving mode\n");
-      abort();
+      SCIPABORT();
    }
 
    return SCIPvarGetLbLP(var);
@@ -8908,7 +9047,7 @@ Real SCIPgetVarUbDive(
    if( !SCIPlpDiving(scip->lp) )
    {
       errorMessage("not in diving mode\n");
-      abort();
+      SCIPABORT();
    }
 
    return SCIPvarGetUbLP(var);
@@ -9034,7 +9173,7 @@ int SCIPgetProbingDepth(
    if( !SCIPtreeProbing(scip->tree) )
    {
       errorMessage("not in probing mode\n");
-      abort();
+      SCIPABORT();
    }
 
    return SCIPtreeGetProbingDepth(scip->tree);
@@ -9289,7 +9428,7 @@ int SCIPgetNLPBranchCands(
    if( SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_OPTIMAL )
    {
       errorMessage("LP not solved to optimality\n");
-      abort();
+      SCIPABORT();
    }
 
    CHECK_ABORT( SCIPbranchcandGetLPCands(scip->branchcand, scip->set, scip->stat, scip->lp,
@@ -9310,7 +9449,7 @@ int SCIPgetNPrioLPBranchCands(
    if( SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_OPTIMAL )
    {
       errorMessage("LP not solved to optimality\n");
-      abort();
+      SCIPABORT();
    }
 
    CHECK_ABORT( SCIPbranchcandGetLPCands(scip->branchcand, scip->set, scip->stat, scip->lp,
@@ -9433,7 +9572,8 @@ RETCODE SCIPcreateChild(
  */
 RETCODE SCIPbranchVar(
    SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var                 /**< variable to branch on */
+   VAR*             var,                /**< variable to branch on */
+   BRANCHDIR        branchdir           /**< preferred branching direction; maybe overridden by user settings */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPbranchVar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
@@ -9451,7 +9591,7 @@ RETCODE SCIPbranchVar(
    }
 
    CHECK_OKAY( SCIPtreeBranchVar(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->branchcand,
-         scip->eventqueue, var) );
+         scip->eventqueue, var, branchdir) );
 
    return SCIP_OKAY;
 }
@@ -9768,7 +9908,7 @@ Real SCIPgetSolVal(
       {
          errorMessage("cannot get value of transformed variable <%s> for original space solution\n",
             SCIPvarGetName(var));
-         abort();
+         SCIPABORT();
       }
       assert(!SCIPvarIsTransformed(var));
 
@@ -9936,21 +10076,34 @@ HEUR* SCIPgetSolHeur(
 /** outputs non-zero variables of solution in original problem space to file stream */
 RETCODE SCIPprintSol(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL*             sol,                /**< primal solution */
+   SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    FILE*            file                /**< output file (or NULL for standard output) */
    )
 {
+   Bool currentsol;
+
    CHECK_OKAY( checkStage(scip, "SCIPprintSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   if( file == NULL )
-      file = stdout;
+   currentsol = (sol == NULL);
+   if( currentsol )
+   {
+      /* create a temporary solution that is linked to the current solution */
+      CHECK_OKAY( SCIPsolCreateCurrentSol(&sol, scip->mem->solvemem, scip->set, scip->stat, scip->primal, scip->tree,
+                     scip->lp, NULL) );
+   }
 
-   fprintf(file, "objective value:                 ");
+   SCIPmessageFPrintInfo(file, "objective value:                 ");
    SCIPprintReal(scip, SCIPprobExternObjval(scip->transprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob)),
       file);
-   fprintf(file, "\n");
+   SCIPmessageFPrintInfo(file, "\n");
 
    CHECK_OKAY( SCIPsolPrint(sol, scip->set, scip->stat, scip->origprob, scip->transprob, file) );
+
+   if( currentsol )
+   {
+      /* free temporary solution */
+      CHECK_OKAY( SCIPsolFree(&sol, scip->mem->solvemem, scip->primal) );
+   }
 
    return SCIP_OKAY;
 }
@@ -9958,11 +10111,21 @@ RETCODE SCIPprintSol(
 /** outputs non-zero variables of solution in transformed problem space to file stream */
 RETCODE SCIPprintTransSol(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL*             sol,                /**< primal solution */
+   SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    FILE*            file                /**< output file (or NULL for standard output) */
    )
 {
+   Bool currentsol;
+
    CHECK_OKAY( checkStage(scip, "SCIPprintSolTrans", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   currentsol = (sol == NULL);
+   if( currentsol )
+   {
+      /* create a temporary solution that is linked to the current solution */
+      CHECK_OKAY( SCIPsolCreateCurrentSol(&sol, scip->mem->solvemem, scip->set, scip->stat, scip->primal, scip->tree,
+                     scip->lp, NULL) );
+   }
 
    if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
    {
@@ -9970,15 +10133,18 @@ RETCODE SCIPprintTransSol(
       return SCIP_INVALIDCALL;
    }
 
-   if( file == NULL )
-      file = stdout;
-
-   fprintf(file, "objective value:                 ");
+   SCIPmessageFPrintInfo(file, "objective value:                 ");
    SCIPprintReal(scip, SCIPsolGetObj(sol, scip->set, scip->transprob), file);
-   fprintf(file, "\n");
+   SCIPmessageFPrintInfo(file, "\n");
 
    CHECK_OKAY( SCIPsolPrint(sol, scip->set, scip->stat, scip->transprob, NULL, file) );
    
+   if( currentsol )
+   {
+      /* free temporary solution */
+      CHECK_OKAY( SCIPsolFree(&sol, scip->mem->solvemem, scip->primal) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -10030,11 +10196,8 @@ RETCODE SCIPprintBestSol(
 
    sol = SCIPgetBestSol(scip);
 
-   if( file == NULL )
-      file = stdout;
-
    if( sol == NULL )
-      fprintf(file, "no solution available\n");
+      SCIPmessageFPrintInfo(file, "no solution available\n");
    else
    {
       CHECK_OKAY( SCIPprintSol(scip, sol, file) );
@@ -10061,11 +10224,8 @@ RETCODE SCIPprintBestTransSol(
       return SCIP_INVALIDCALL;
    }
 
-   if( file == NULL )
-      file = stdout;
-
    if( sol == NULL )
-      fprintf(file, "no solution available\n");
+      SCIPmessageFPrintInfo(file, "no solution available\n");
    else
    {
       CHECK_OKAY( SCIPprintTransSol(scip, sol, file) );
@@ -10311,18 +10471,24 @@ RETCODE SCIPcheckSolOrig(
       }
    }
 
-   /* check original constraints */
+   /* check original constraints
+    * modifiable constraints can not be checked, because the variables to fulfill them might be missing in the
+    * original problem
+    */
    for( c = 0; c < scip->origprob->nconss; ++c )
    {
-      CHECK_OKAY( SCIPconsCheck(scip->origprob->conss[c], scip->set, sol, TRUE, TRUE, &result) );
-      if( result != SCIP_FEASIBLE )
+      if( SCIPconsIsChecked(scip->origprob->conss[c]) && !SCIPconsIsModifiable(scip->origprob->conss[c]) )
       {
-         *feasible = FALSE;
-         if( infeasconshdlr != NULL )
-            *infeasconshdlr = SCIPconsGetHdlr(scip->origprob->conss[c]);
-         if( infeascons != NULL )
-            *infeascons = scip->origprob->conss[c];
-         return SCIP_OKAY;
+         CHECK_OKAY( SCIPconsCheck(scip->origprob->conss[c], scip->set, sol, TRUE, TRUE, &result) );
+         if( result != SCIP_FEASIBLE )
+         {
+            *feasible = FALSE;
+            if( infeasconshdlr != NULL )
+               *infeasconshdlr = SCIPconsGetHdlr(scip->origprob->conss[c]);
+            if( infeascons != NULL )
+               *infeascons = scip->origprob->conss[c];
+            return SCIP_OKAY;
+         }
       }
    }
 
@@ -11120,7 +11286,8 @@ int SCIPgetNGlobalConss(
 
    default:
       errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      abort();
+      SCIPABORT();
+      return 0;
    }  /*lint !e788*/
 }
 
@@ -11419,11 +11586,8 @@ RETCODE SCIPprintOrigProblem(
 {
    CHECK_OKAY( checkStage(scip, "SCIPprintOrigProblem", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   if( file == NULL )
-      file = stdout;
-
    if( scip->origprob == NULL )
-      fprintf(file, "no problem available\n");
+      SCIPmessageFPrintInfo(file, "no problem available\n");
    else
    {
       CHECK_OKAY( SCIPprobPrint(scip->origprob, scip->set, file) );
@@ -11440,11 +11604,8 @@ RETCODE SCIPprintTransProblem(
 {
    CHECK_OKAY( checkStage(scip, "SCIPprintTransProblem", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   if( file == NULL )
-      file = stdout;
-
    if( scip->transprob == NULL )
-      fprintf(file, "no transformed problem available\n");
+      SCIPmessageFPrintInfo(file, "no transformed problem available\n");
    else
    {
       CHECK_OKAY( SCIPprobPrint(scip->transprob, scip->set, file) );
@@ -11472,9 +11633,8 @@ void printPresolverStatistics(
 
    assert(scip != NULL);
    assert(scip->set != NULL);
-   assert(file != NULL);
 
-   fprintf(file, "Presolvers         :       Time  FixedVars   AggrVars  ChgBounds   AddHoles    DelCons   ChgSides   ChgCoefs\n");
+   SCIPmessageFPrintInfo(file, "Presolvers         :       Time  FixedVars   AggrVars  ChgBounds   AddHoles    DelCons   ChgSides   ChgCoefs\n");
 
 #if 0
    nfixedvars = 0;
@@ -11492,8 +11652,8 @@ void printPresolverStatistics(
       PRESOL* presol;
       
       presol = scip->set->presols[i];
-      fprintf(file, "  %-17.17s:", SCIPpresolGetName(presol));
-      fprintf(file, " %10.2f %10d %10d %10d %10d %10d %10d %10d\n",
+      SCIPmessageFPrintInfo(file, "  %-17.17s:", SCIPpresolGetName(presol));
+      SCIPmessageFPrintInfo(file, " %10.2f %10d %10d %10d %10d %10d %10d %10d\n",
          SCIPpresolGetTime(presol),
          SCIPpresolGetNFixedVars(presol),
          SCIPpresolGetNAggrVars(presol),
@@ -11531,8 +11691,8 @@ void printPresolverStatistics(
             || SCIPconshdlrGetNChgSides(conshdlr) > 0
             || SCIPconshdlrGetNChgCoefs(conshdlr) > 0) )
       {
-         fprintf(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         fprintf(file, " %10.2f %10d %10d %10d %10d %10d %10d %10d\n",
+         SCIPmessageFPrintInfo(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
+         SCIPmessageFPrintInfo(file, " %10.2f %10d %10d %10d %10d %10d %10d %10d\n",
             SCIPconshdlrGetPresolTime(conshdlr),
             SCIPconshdlrGetNFixedVars(conshdlr),
             SCIPconshdlrGetNAggrVars(conshdlr),
@@ -11554,13 +11714,13 @@ void printPresolverStatistics(
    }
 
    /* root node bound changes */
-   fprintf(file, "  root node        :          -          -          - %10lld          -          -          -          -\n",
+   SCIPmessageFPrintInfo(file, "  root node        :          -          -          - %10lld          -          -          -          -\n",
       scip->stat->nrootboundchgs);
 
 #if 0
    /* print total */
-   fprintf(file, "  total            :");
-   fprintf(file, " %10.2f %10d %10d %10d %10d %10d %10d %10d\n",
+   SCIPmessageFPrintInfo(file, "  total            :");
+   SCIPmessageFPrintInfo(file, " %10.2f %10d %10d %10d %10d %10d %10d %10d\n",
       SCIPclockGetTime(scip->stat->presolvingtime),
       nfixedvars,
       naggrvars,
@@ -11582,10 +11742,9 @@ void printConstraintStatistics(
 
    assert(scip != NULL);
    assert(scip->set != NULL);
-   assert(file != NULL);
 
    /**@todo add constraint statistics: how many constraints (instead of cuts) have been added? */
-   fprintf(file, "Constraints        :     Number  #Separate #Propagate    #EnfoLP    #EnfoPS    Cutoffs    DomReds       Cuts      Conss   Children\n");
+   SCIPmessageFPrintInfo(file, "Constraints        :     Number  #Separate #Propagate    #EnfoLP    #EnfoPS    Cutoffs    DomReds       Cuts      Conss   Children\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
@@ -11598,8 +11757,8 @@ void printConstraintStatistics(
       maxnactiveconss = SCIPconshdlrGetMaxNActiveConss(conshdlr);
       if( maxnactiveconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
       {
-         fprintf(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         fprintf(file, " %10d%c%10lld %10lld %10lld %10lld %10lld %10lld %10lld %10lld %10lld\n",
+         SCIPmessageFPrintInfo(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
+         SCIPmessageFPrintInfo(file, " %10d%c%10lld %10lld %10lld %10lld %10lld %10lld %10lld %10lld %10lld\n",
             startnactiveconss,
             maxnactiveconss > startnactiveconss ? '+' : ' ',
             SCIPconshdlrGetNSepaCalls(conshdlr), 
@@ -11625,9 +11784,8 @@ void printConstraintTimingStatistics(
 
    assert(scip != NULL);
    assert(scip->set != NULL);
-   assert(file != NULL);
 
-   fprintf(file, "Constraint Timings :  TotalTime   Separate  Propagate     EnfoLP     EnfoPS\n");
+   SCIPmessageFPrintInfo(file, "Constraint Timings :  TotalTime   Separate  Propagate     EnfoLP     EnfoPS\n");
 
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
@@ -11638,8 +11796,8 @@ void printConstraintTimingStatistics(
       maxnactiveconss = SCIPconshdlrGetMaxNActiveConss(conshdlr);
       if( maxnactiveconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
       {
-         fprintf(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         fprintf(file, " %10.2f %10.2f %10.2f %10.2f %10.2f\n",
+         SCIPmessageFPrintInfo(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
+         SCIPmessageFPrintInfo(file, " %10.2f %10.2f %10.2f %10.2f %10.2f\n",
             SCIPconshdlrGetSepaTime(conshdlr) + SCIPconshdlrGetPropTime(conshdlr) + SCIPconshdlrGetEnfoLPTime(conshdlr)
             + SCIPconshdlrGetEnfoPSTime(conshdlr),
             SCIPconshdlrGetSepaTime(conshdlr), 
@@ -11660,17 +11818,16 @@ void printPropagatorStatistics(
 
    assert(scip != NULL);
    assert(scip->set != NULL);
-   assert(file != NULL);
 
-   fprintf(file, "Propagators        :       Time      Calls    Cutoffs    DomReds\n");
+   SCIPmessageFPrintInfo(file, "Propagators        :       Time      Calls    Cutoffs    DomReds\n");
 
-   fprintf(file, "  reduced cost str.: %10.2f %10lld          - %10lld\n",
+   SCIPmessageFPrintInfo(file, "  reduced cost str.: %10.2f %10lld          - %10lld\n",
       SCIPclockGetTime(scip->stat->redcoststrtime),
       scip->stat->nredcoststrcalls,
       scip->stat->nredcoststrfound);
 
    for( i = 0; i < scip->set->nprops; ++i )
-      fprintf(file, "  %-17.17s: %10.2f %10lld %10lld %10lld\n",
+      SCIPmessageFPrintInfo(file, "  %-17.17s: %10.2f %10lld %10lld %10lld\n",
          SCIPpropGetName(scip->set->props[i]),
          SCIPpropGetTime(scip->set->props[i]),
          SCIPpropGetNCalls(scip->set->props[i]),
@@ -11684,8 +11841,8 @@ void printConflictStatistics(
    FILE*            file                /**< output file */
    )
 {
-   fprintf(file, "Conflict Analysis  :       Time      Calls  Conflicts   Literals    Reconvs ReconvLits   LP Iters\n");
-   fprintf(file, "  propagation      : %10.2f %10lld %10lld %10.1f %10lld %10.1f          -\n",
+   SCIPmessageFPrintInfo(file, "Conflict Analysis  :       Time      Calls  Conflicts   Literals    Reconvs ReconvLits   LP Iters\n");
+   SCIPmessageFPrintInfo(file, "  propagation      : %10.2f %10lld %10lld %10.1f %10lld %10.1f          -\n",
       SCIPconflictGetPropTime(scip->conflict),
       SCIPconflictGetNPropCalls(scip->conflict),
       SCIPconflictGetNPropConflictClauses(scip->conflict),
@@ -11696,7 +11853,7 @@ void printConflictStatistics(
       SCIPconflictGetNPropReconvergenceClauses(scip->conflict) > 0
       ? (Real)SCIPconflictGetNPropReconvergenceLiterals(scip->conflict)
       / (Real)SCIPconflictGetNPropReconvergenceClauses(scip->conflict) : 0);
-   fprintf(file, "  infeasible LP    : %10.2f %10lld %10lld %10.1f %10lld %10.1f %10lld\n",
+   SCIPmessageFPrintInfo(file, "  infeasible LP    : %10.2f %10lld %10lld %10.1f %10lld %10.1f %10lld\n",
       SCIPconflictGetLPTime(scip->conflict),
       SCIPconflictGetNLPCalls(scip->conflict),
       SCIPconflictGetNLPConflictClauses(scip->conflict),
@@ -11708,7 +11865,7 @@ void printConflictStatistics(
       ? (Real)SCIPconflictGetNLPReconvergenceLiterals(scip->conflict)
       / (Real)SCIPconflictGetNLPReconvergenceClauses(scip->conflict) : 0,
       SCIPconflictGetNLPIterations(scip->conflict));
-   fprintf(file, "  strong branching : %10.2f %10lld %10lld %10.1f %10lld %10.1f %10lld\n",
+   SCIPmessageFPrintInfo(file, "  strong branching : %10.2f %10lld %10lld %10.1f %10lld %10.1f %10lld\n",
       SCIPconflictGetStrongbranchTime(scip->conflict),
       SCIPconflictGetNStrongbranchCalls(scip->conflict),
       SCIPconflictGetNStrongbranchConflictClauses(scip->conflict),
@@ -11720,7 +11877,7 @@ void printConflictStatistics(
       ? (Real)SCIPconflictGetNStrongbranchReconvergenceLiterals(scip->conflict)
       / (Real)SCIPconflictGetNStrongbranchReconvergenceClauses(scip->conflict) : 0,
       SCIPconflictGetNStrongbranchIterations(scip->conflict));
-   fprintf(file, "  pseudo solution  : %10.2f %10lld %10lld %10.1f %10lld %10.1f          -\n",
+   SCIPmessageFPrintInfo(file, "  pseudo solution  : %10.2f %10lld %10lld %10.1f %10lld %10.1f          -\n",
       SCIPconflictGetPseudoTime(scip->conflict),
       SCIPconflictGetNPseudoCalls(scip->conflict),
       SCIPconflictGetNPseudoConflictClauses(scip->conflict),
@@ -11731,16 +11888,16 @@ void printConflictStatistics(
       SCIPconflictGetNPseudoReconvergenceClauses(scip->conflict) > 0
       ? (Real)SCIPconflictGetNPseudoReconvergenceLiterals(scip->conflict)
       / (Real)SCIPconflictGetNPseudoReconvergenceClauses(scip->conflict) : 0);
-   fprintf(file, "  applied permanent:          -          - %10lld %10.1f          -          -          -\n",
-      SCIPconflictGetNAppliedPermClauses(scip->conflict),
-      SCIPconflictGetNAppliedPermClauses(scip->conflict) > 0
-      ? (Real)SCIPconflictGetNAppliedPermLiterals(scip->conflict)
-      / (Real)SCIPconflictGetNAppliedPermClauses(scip->conflict) : 0);
-   fprintf(file, "  applied temporary:          -          - %10lld %10.1f          -          -          -\n",
-      SCIPconflictGetNAppliedTempClauses(scip->conflict),
-      SCIPconflictGetNAppliedTempClauses(scip->conflict) > 0
-      ? (Real)SCIPconflictGetNAppliedTempLiterals(scip->conflict)
-      / (Real)SCIPconflictGetNAppliedTempClauses(scip->conflict) : 0);
+   SCIPmessageFPrintInfo(file, "  applied globally :          -          - %10lld %10.1f          -          -          -\n",
+      SCIPconflictGetNAppliedGlobalClauses(scip->conflict),
+      SCIPconflictGetNAppliedGlobalClauses(scip->conflict) > 0
+      ? (Real)SCIPconflictGetNAppliedGlobalLiterals(scip->conflict)
+      / (Real)SCIPconflictGetNAppliedGlobalClauses(scip->conflict) : 0);
+   SCIPmessageFPrintInfo(file, "  applied locally  :          -          - %10lld %10.1f          -          -          -\n",
+      SCIPconflictGetNAppliedLocalClauses(scip->conflict),
+      SCIPconflictGetNAppliedLocalClauses(scip->conflict) > 0
+      ? (Real)SCIPconflictGetNAppliedLocalLiterals(scip->conflict)
+      / (Real)SCIPconflictGetNAppliedLocalClauses(scip->conflict) : 0);
 }
 
 static
@@ -11753,17 +11910,16 @@ void printSeparatorStatistics(
 
    assert(scip != NULL);
    assert(scip->set != NULL);
-   assert(file != NULL);
 
-   fprintf(file, "Separators         :       Time      Calls       Cuts\n");
-   fprintf(file, "  cut pool         : %10.2f %10lld %10lld   (maximal pool size: %d)\n",
+   SCIPmessageFPrintInfo(file, "Separators         :       Time      Calls       Cuts\n");
+   SCIPmessageFPrintInfo(file, "  cut pool         : %10.2f %10lld %10lld   (maximal pool size: %d)\n",
       SCIPcutpoolGetTime(scip->cutpool), 
       SCIPcutpoolGetNCalls(scip->cutpool), 
       SCIPcutpoolGetNCutsFound(scip->cutpool),
       SCIPcutpoolGetMaxNCuts(scip->cutpool));
 
    for( i = 0; i < scip->set->nsepas; ++i )
-      fprintf(file, "  %-17.17s: %10.2f %10lld %10lld\n",
+      SCIPmessageFPrintInfo(file, "  %-17.17s: %10.2f %10lld %10lld\n",
          SCIPsepaGetName(scip->set->sepas[i]),
          SCIPsepaGetTime(scip->set->sepas[i]),
          SCIPsepaGetNCalls(scip->set->sepas[i]),
@@ -11780,16 +11936,15 @@ void printPricerStatistics(
 
    assert(scip != NULL);
    assert(scip->set != NULL);
-   assert(file != NULL);
 
-   fprintf(file, "Pricers            :       Time      Calls       Vars\n");
-   fprintf(file, "  problem variables: %10.2f %10d %10d\n",
+   SCIPmessageFPrintInfo(file, "Pricers            :       Time      Calls       Vars\n");
+   SCIPmessageFPrintInfo(file, "  problem variables: %10.2f %10d %10d\n",
       SCIPpricestoreGetProbPricingTime(scip->pricestore),
       SCIPpricestoreGetNProbPricings(scip->pricestore),
       SCIPpricestoreGetNProbvarsFound(scip->pricestore));
 
    for( i = 0; i < scip->set->nactivepricers; ++i )
-      fprintf(file, "  %-17.17s: %10.2f %10d %10d\n",
+      SCIPmessageFPrintInfo(file, "  %-17.17s: %10.2f %10d %10d\n",
          SCIPpricerGetName(scip->set->pricers[i]),
          SCIPpricerGetTime(scip->set->pricers[i]),
          SCIPpricerGetNCalls(scip->set->pricers[i]),
@@ -11806,12 +11961,11 @@ void printBranchruleStatistics(
 
    assert(scip != NULL);
    assert(scip->set != NULL);
-   assert(file != NULL);
 
-   fprintf(file, "Branching Rules    :       Time      Calls    Cutoffs    DomReds       Cuts      Conss   Children\n");
+   SCIPmessageFPrintInfo(file, "Branching Rules    :       Time      Calls    Cutoffs    DomReds       Cuts      Conss   Children\n");
 
    for( i = 0; i < scip->set->nbranchrules; ++i )
-      fprintf(file, "  %-17.17s: %10.2f %10lld %10lld %10lld %10lld %10lld %10lld\n",
+      SCIPmessageFPrintInfo(file, "  %-17.17s: %10.2f %10lld %10lld %10lld %10lld %10lld %10lld\n",
          SCIPbranchruleGetName(scip->set->branchrules[i]),
          SCIPbranchruleGetTime(scip->set->branchrules[i]),
          SCIPbranchruleGetNLPCalls(scip->set->branchrules[i]) + SCIPbranchruleGetNPseudoCalls(scip->set->branchrules[i]),
@@ -11833,20 +11987,19 @@ void printHeuristicStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
    assert(scip->tree != NULL);
-   assert(file != NULL);
 
-   fprintf(file, "Primal Heuristics  :       Time      Calls      Found\n");
-   fprintf(file, "  LP solutions     : %10.2f          - %10lld\n",
+   SCIPmessageFPrintInfo(file, "Primal Heuristics  :       Time      Calls      Found\n");
+   SCIPmessageFPrintInfo(file, "  LP solutions     : %10.2f          - %10lld\n",
       SCIPclockGetTime(scip->stat->lpsoltime),
       scip->stat->nlpsolsfound);
-   fprintf(file, "  pseudo solutions : %10.2f          - %10lld\n",
+   SCIPmessageFPrintInfo(file, "  pseudo solutions : %10.2f          - %10lld\n",
       SCIPclockGetTime(scip->stat->pseudosoltime),
       scip->stat->npssolsfound);
 
    SCIPsetSortHeurs(scip->set);
 
    for( i = 0; i < scip->set->nheurs; ++i )
-      fprintf(file, "  %-17.17s: %10.2f %10lld %10lld\n",
+      SCIPmessageFPrintInfo(file, "  %-17.17s: %10.2f %10lld %10lld\n",
          SCIPheurGetName(scip->set->heurs[i]),
          SCIPheurGetTime(scip->set->heurs[i]),
          SCIPheurGetNCalls(scip->set->heurs[i]),
@@ -11862,75 +12015,74 @@ void printLPStatistics(
    assert(scip != NULL);
    assert(scip->stat != NULL);
    assert(scip->lp != NULL);
-   assert(file != NULL);
 
-   fprintf(file, "LP                 :       Time      Calls Iterations  Iter/call   Iter/sec\n");
+   SCIPmessageFPrintInfo(file, "LP                 :       Time      Calls Iterations  Iter/call   Iter/sec\n");
 
-   fprintf(file, "  primal LP        : %10.2f %10d %10lld %10.2f",
+   SCIPmessageFPrintInfo(file, "  primal LP        : %10.2f %10d %10lld %10.2f",
       SCIPclockGetTime(scip->stat->primallptime),
       scip->stat->nprimallps,
       scip->stat->nprimallpiterations,
       scip->stat->nprimallps > 0 ? (Real)scip->stat->nprimallpiterations/(Real)scip->stat->nprimallps : 0.0);
    if( SCIPclockGetTime(scip->stat->primallptime) >= 0.01 )
-      fprintf(file, " %10.2f\n", (Real)scip->stat->nprimallpiterations/SCIPclockGetTime(scip->stat->primallptime));
+      SCIPmessageFPrintInfo(file, " %10.2f\n", (Real)scip->stat->nprimallpiterations/SCIPclockGetTime(scip->stat->primallptime));
    else
-      fprintf(file, "          -\n");
+      SCIPmessageFPrintInfo(file, "          -\n");
 
-   fprintf(file, "  dual LP          : %10.2f %10d %10lld %10.2f",
+   SCIPmessageFPrintInfo(file, "  dual LP          : %10.2f %10d %10lld %10.2f",
       SCIPclockGetTime(scip->stat->duallptime),
       scip->stat->nduallps, 
       scip->stat->nduallpiterations,
       scip->stat->nduallps > 0 ? (Real)scip->stat->nduallpiterations/(Real)scip->stat->nduallps : 0.0);
    if( SCIPclockGetTime(scip->stat->duallptime) >= 0.01 )
-      fprintf(file, " %10.2f\n", (Real)scip->stat->nduallpiterations/SCIPclockGetTime(scip->stat->duallptime));
+      SCIPmessageFPrintInfo(file, " %10.2f\n", (Real)scip->stat->nduallpiterations/SCIPclockGetTime(scip->stat->duallptime));
    else
-      fprintf(file, "          -\n");
+      SCIPmessageFPrintInfo(file, "          -\n");
 
-   fprintf(file, "  barrier LP       : %10.2f %10d %10lld %10.2f",
+   SCIPmessageFPrintInfo(file, "  barrier LP       : %10.2f %10d %10lld %10.2f",
       SCIPclockGetTime(scip->stat->barrierlptime),
       scip->stat->nbarrierlps, 
       scip->stat->nbarrierlpiterations,
       scip->stat->nbarrierlps > 0 ? (Real)scip->stat->nbarrierlpiterations/(Real)scip->stat->nbarrierlps : 0.0);
    if( SCIPclockGetTime(scip->stat->barrierlptime) >= 0.01 )
-      fprintf(file, " %10.2f\n", (Real)scip->stat->nbarrierlpiterations/SCIPclockGetTime(scip->stat->barrierlptime));
+      SCIPmessageFPrintInfo(file, " %10.2f\n", (Real)scip->stat->nbarrierlpiterations/SCIPclockGetTime(scip->stat->barrierlptime));
    else
-      fprintf(file, "          -\n");
+      SCIPmessageFPrintInfo(file, "          -\n");
 
-   fprintf(file, "  diving/probing LP: %10.2f %10d %10lld %10.2f",
+   SCIPmessageFPrintInfo(file, "  diving/probing LP: %10.2f %10d %10lld %10.2f",
       SCIPclockGetTime(scip->stat->divinglptime),
       scip->stat->ndivinglps, 
       scip->stat->ndivinglpiterations,
       scip->stat->ndivinglps > 0 ? (Real)scip->stat->ndivinglpiterations/(Real)scip->stat->ndivinglps : 0.0);
    if( SCIPclockGetTime(scip->stat->divinglptime) >= 0.01 )
-      fprintf(file, " %10.2f\n", (Real)scip->stat->ndivinglpiterations/SCIPclockGetTime(scip->stat->divinglptime));
+      SCIPmessageFPrintInfo(file, " %10.2f\n", (Real)scip->stat->ndivinglpiterations/SCIPclockGetTime(scip->stat->divinglptime));
    else
-      fprintf(file, "          -\n");
+      SCIPmessageFPrintInfo(file, "          -\n");
 
-   fprintf(file, "  strong branching : %10.2f %10d %10lld %10.2f",
+   SCIPmessageFPrintInfo(file, "  strong branching : %10.2f %10d %10lld %10.2f",
       SCIPclockGetTime(scip->stat->strongbranchtime),
       scip->stat->nstrongbranchs,
       scip->stat->nsblpiterations,
       scip->stat->nstrongbranchs > 0 ? (Real)scip->stat->nsblpiterations/(Real)scip->stat->nstrongbranchs : 0.0);
    if( SCIPclockGetTime(scip->stat->strongbranchtime) >= 0.01 )
-      fprintf(file, " %10.2f\n", (Real)scip->stat->nsblpiterations/SCIPclockGetTime(scip->stat->strongbranchtime));
+      SCIPmessageFPrintInfo(file, " %10.2f\n", (Real)scip->stat->nsblpiterations/SCIPclockGetTime(scip->stat->strongbranchtime));
    else
-      fprintf(file, "          -\n");
+      SCIPmessageFPrintInfo(file, "          -\n");
 
-   fprintf(file, "    (at root node) :          - %10d %10lld %10.2f          -\n",
+   SCIPmessageFPrintInfo(file, "    (at root node) :          - %10d %10lld %10.2f          -\n",
       scip->stat->nrootstrongbranchs,
       scip->stat->nrootsblpiterations,
       scip->stat->nrootstrongbranchs > 0
       ? (Real)scip->stat->nrootsblpiterations/(Real)scip->stat->nrootstrongbranchs : 0.0);
 
-   fprintf(file, "  conflict analysis: %10.2f %10d %10lld %10.2f",
+   SCIPmessageFPrintInfo(file, "  conflict analysis: %10.2f %10d %10lld %10.2f",
       SCIPclockGetTime(scip->stat->conflictlptime),
       scip->stat->nconflictlps, 
       scip->stat->nconflictlpiterations,
       scip->stat->nconflictlps > 0 ? (Real)scip->stat->nconflictlpiterations/(Real)scip->stat->nconflictlps : 0.0);
    if( SCIPclockGetTime(scip->stat->conflictlptime) >= 0.01 )
-      fprintf(file, " %10.2f\n", (Real)scip->stat->nconflictlpiterations/SCIPclockGetTime(scip->stat->conflictlptime));
+      SCIPmessageFPrintInfo(file, " %10.2f\n", (Real)scip->stat->nconflictlpiterations/SCIPclockGetTime(scip->stat->conflictlptime));
    else
-      fprintf(file, "          -\n");
+      SCIPmessageFPrintInfo(file, "          -\n");
 
 }
 
@@ -11944,15 +12096,14 @@ void printRelaxatorStatistics(
 
    assert(scip != NULL);
    assert(scip->set != NULL);
-   assert(file != NULL);
 
    if( scip->set->nrelaxs == 0 )
       return;
 
-   fprintf(file, "Relaxators         :       Time      Calls\n");
+   SCIPmessageFPrintInfo(file, "Relaxators         :       Time      Calls\n");
 
    for( i = 0; i < scip->set->nrelaxs; ++i )
-      fprintf(file, "  %-17.17s: %10.2f %10lld\n",
+      SCIPmessageFPrintInfo(file, "  %-17.17s: %10.2f %10lld\n",
          SCIPrelaxGetName(scip->set->relaxs[i]),
          SCIPrelaxGetTime(scip->set->relaxs[i]),
          SCIPrelaxGetNCalls(scip->set->relaxs[i]));
@@ -11967,23 +12118,22 @@ void printTreeStatistics(
    assert(scip != NULL);
    assert(scip->stat != NULL);
    assert(scip->tree != NULL);
-   assert(file != NULL);
 
-   fprintf(file, "B&B Tree           :\n");
-   fprintf(file, "  number of runs   : %10d\n", scip->stat->nruns);
-   fprintf(file, "  nodes            : %10lld\n", scip->stat->nnodes);
-   fprintf(file, "  nodes (total)    : %10lld\n", scip->stat->ntotalnodes);
-   fprintf(file, "  max depth        : %10d\n", scip->stat->maxdepth);
-   fprintf(file, "  max depth (total): %10d\n", scip->stat->maxtotaldepth);
-   fprintf(file, "  backtracks       : %10lld (%.1f%%)\n", scip->stat->nbacktracks, 
+   SCIPmessageFPrintInfo(file, "B&B Tree           :\n");
+   SCIPmessageFPrintInfo(file, "  number of runs   : %10d\n", scip->stat->nruns);
+   SCIPmessageFPrintInfo(file, "  nodes            : %10lld\n", scip->stat->nnodes);
+   SCIPmessageFPrintInfo(file, "  nodes (total)    : %10lld\n", scip->stat->ntotalnodes);
+   SCIPmessageFPrintInfo(file, "  max depth        : %10d\n", scip->stat->maxdepth);
+   SCIPmessageFPrintInfo(file, "  max depth (total): %10d\n", scip->stat->maxtotaldepth);
+   SCIPmessageFPrintInfo(file, "  backtracks       : %10lld (%.1f%%)\n", scip->stat->nbacktracks, 
       scip->stat->nnodes > 0 ? 100.0 * (Real)scip->stat->nbacktracks / (Real)scip->stat->nnodes : 0.0);
-   fprintf(file, "  delayed cutoffs  : %10lld\n", scip->stat->ndelayedcutoffs);
-   fprintf(file, "  repropagations   : %10lld (%lld domain reductions)\n", 
+   SCIPmessageFPrintInfo(file, "  delayed cutoffs  : %10lld\n", scip->stat->ndelayedcutoffs);
+   SCIPmessageFPrintInfo(file, "  repropagations   : %10lld (%lld domain reductions)\n", 
       scip->stat->nreprops, scip->stat->nrepropboundchgs);
-   fprintf(file, "  avg switch length: %10.2f\n", 
+   SCIPmessageFPrintInfo(file, "  avg switch length: %10.2f\n", 
       scip->stat->nnodes > 0
       ? (Real)(scip->stat->nactivatednodes + scip->stat->ndeactivatednodes) / (Real)scip->stat->nnodes : 0.0);
-   fprintf(file, "  switching time   : %10.2f\n", SCIPclockGetTime(scip->stat->nodeactivationtime));
+   SCIPmessageFPrintInfo(file, "  switching time   : %10.2f\n", SCIPclockGetTime(scip->stat->nodeactivationtime));
 }
 
 static
@@ -12001,42 +12151,41 @@ void printSolutionStatistics(
    assert(scip != NULL);
    assert(scip->stat != NULL);
    assert(scip->primal != NULL);
-   assert(file != NULL);
 
    primalbound = SCIPgetPrimalbound(scip);
    dualbound = SCIPgetDualbound(scip);
    dualboundroot = SCIPgetDualboundRoot(scip);
    gap = SCIPgetGap(scip);
 
-   fprintf(file, "Solution           :\n");
-   fprintf(file, "  Solutions found  : %10lld\n", scip->primal->nsolsfound);
+   SCIPmessageFPrintInfo(file, "Solution           :\n");
+   SCIPmessageFPrintInfo(file, "  Solutions found  : %10lld\n", scip->primal->nsolsfound);
    if( SCIPsetIsInfinity(scip->set, REALABS(primalbound)) )
    {
       if( scip->set->stage == SCIP_STAGE_SOLVED )
       {
          if( scip->primal->nsols == 0 )
-            fprintf(file, "  Primal Bound     : infeasible\n");
+            SCIPmessageFPrintInfo(file, "  Primal Bound     : infeasible\n");
          else
-            fprintf(file, "  Primal Bound     :  unbounded\n");
+            SCIPmessageFPrintInfo(file, "  Primal Bound     :  unbounded\n");
       }
       else
-         fprintf(file, "  Primal Bound     :          -\n");
+         SCIPmessageFPrintInfo(file, "  Primal Bound     :          -\n");
    }
    else
    {
-      fprintf(file, "  Primal Bound     : %+21.14e", primalbound);
+      SCIPmessageFPrintInfo(file, "  Primal Bound     : %+21.14e", primalbound);
       if( scip->primal->nsols == 0 )
-         fprintf(file, "   (user objective limit)\n");
+         SCIPmessageFPrintInfo(file, "   (user objective limit)\n");
       else
       {
          bestsol = SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob);
          bestsol = SCIPretransformObj(scip, bestsol);
          if( SCIPsetIsGT(scip->set, bestsol, primalbound) )
          {
-            fprintf(file, "   (user objective limit)\n");
-            fprintf(file, "  Best Solution    : %+21.14e", bestsol);
+            SCIPmessageFPrintInfo(file, "   (user objective limit)\n");
+            SCIPmessageFPrintInfo(file, "  Best Solution    : %+21.14e", bestsol);
          }
-         fprintf(file, "   (after %lld nodes, %.2f seconds, depth %d, found by <%s>)\n", 
+         SCIPmessageFPrintInfo(file, "   (after %lld nodes, %.2f seconds, depth %d, found by <%s>)\n", 
             SCIPsolGetNodenum(scip->primal->sols[0]), 
             SCIPsolGetTime(scip->primal->sols[0]),
             SCIPsolGetDepth(scip->primal->sols[0]),
@@ -12045,17 +12194,17 @@ void printSolutionStatistics(
       }
    }
    if( SCIPsetIsInfinity(scip->set, REALABS(dualbound)) )
-      fprintf(file, "  Dual Bound       :          -\n");
+      SCIPmessageFPrintInfo(file, "  Dual Bound       :          -\n");
    else
-      fprintf(file, "  Dual Bound       : %+21.14e\n", dualbound);
+      SCIPmessageFPrintInfo(file, "  Dual Bound       : %+21.14e\n", dualbound);
    if( SCIPsetIsInfinity(scip->set, gap) )
-      fprintf(file, "  Gap              :   infinite\n");
+      SCIPmessageFPrintInfo(file, "  Gap              :   infinite\n");
    else
-      fprintf(file, "  Gap              : %10.2f %%\n", 100.0 * gap);
+      SCIPmessageFPrintInfo(file, "  Gap              : %10.2f %%\n", 100.0 * gap);
    if( SCIPsetIsInfinity(scip->set, REALABS(dualboundroot)) )
-      fprintf(file, "  Root Dual Bound  :          -\n");
+      SCIPmessageFPrintInfo(file, "  Root Dual Bound  :          -\n");
    else
-      fprintf(file, "  Root Dual Bound  : %+21.14e\n", dualboundroot);
+      SCIPmessageFPrintInfo(file, "  Root Dual Bound  : %+21.14e\n", dualboundroot);
 }
 
 /** outputs solving statistics */
@@ -12066,31 +12215,28 @@ RETCODE SCIPprintStatistics(
 {
    CHECK_OKAY( checkStage(scip, "SCIPprintStatistics", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   if( file == NULL )
-      file = stdout;
-
-   fprintf(file, "SCIP Status        : ");
+   SCIPmessageFPrintInfo(file, "SCIP Status        : ");
    CHECK_OKAY( SCIPprintStage(scip, file) );
-   fprintf(file, "\n");
+   SCIPmessageFPrintInfo(file, "\n");
 
    switch( scip->set->stage )
    {
    case SCIP_STAGE_INIT:
-      fprintf(file, "Original Problem   : no problem exists.\n");
+      SCIPmessageFPrintInfo(file, "Original Problem   : no problem exists.\n");
       return SCIP_OKAY;
 
    case SCIP_STAGE_PROBLEM:
-      fprintf(file, "Original Problem   :\n");
+      SCIPmessageFPrintInfo(file, "Original Problem   :\n");
       SCIPprobPrintStatistics(scip->origprob, file);
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
-      fprintf(file, "Solving Time       : %10.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
-      fprintf(file, "Original Problem   :\n");
+      SCIPmessageFPrintInfo(file, "Solving Time       : %10.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
+      SCIPmessageFPrintInfo(file, "Original Problem   :\n");
       SCIPprobPrintStatistics(scip->origprob, file);
-      fprintf(file, "Presolved Problem  :\n");
+      SCIPmessageFPrintInfo(file, "Presolved Problem  :\n");
       SCIPprobPrintStatistics(scip->transprob, file);
       printPresolverStatistics(scip, file);
       printConstraintStatistics(scip, file);
@@ -12101,10 +12247,10 @@ RETCODE SCIPprintStatistics(
 
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
-      fprintf(file, "Solving Time       : %10.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
-      fprintf(file, "Original Problem   :\n");
+      SCIPmessageFPrintInfo(file, "Solving Time       : %10.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
+      SCIPmessageFPrintInfo(file, "Original Problem   :\n");
       SCIPprobPrintStatistics(scip->origprob, file);
-      fprintf(file, "Presolved Problem  :\n");
+      SCIPmessageFPrintInfo(file, "Presolved Problem  :\n");
       SCIPprobPrintStatistics(scip->transprob, file);
       printPresolverStatistics(scip, file);
       printConstraintStatistics(scip, file);
@@ -12142,14 +12288,11 @@ RETCODE SCIPprintBranchingStatistics(
 
    CHECK_OKAY( checkStage(scip, "SCIPprintBranchingHistory", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   if( file == NULL )
-      file = stdout;
-
    switch( scip->set->stage )
    {
    case SCIP_STAGE_INIT:
    case SCIP_STAGE_PROBLEM:
-      fprintf(file, "problem not yet solved. branching statistics not available.\n");
+      SCIPmessageFPrintInfo(file, "problem not yet solved. branching statistics not available.\n");
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMED:
@@ -12172,15 +12315,15 @@ RETCODE SCIPprintBranchingStatistics(
          depths[i] = depth;
       }
 
-      fprintf(file, "                                      locks              branchings              inferences      cutoffs            LP gain   \n");
-      fprintf(file, "variable          prio   factor   down     up  depth    down      up    sb     down       up   down     up      down        up\n");
+      SCIPmessageFPrintInfo(file, "                                      locks              branchings              inferences      cutoffs            LP gain   \n");
+      SCIPmessageFPrintInfo(file, "variable          prio   factor   down     up  depth    down      up    sb     down       up   down     up      down        up\n");
 
       for( v = 0; v < scip->transprob->nvars; ++v )
       {
          if( SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_DOWNWARDS) > 0
             || SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_UPWARDS) > 0 )
          {
-            fprintf(file, "%-16s %5d %8.1f %6d %6d %6.1f %7lld %7lld %5d %8.1f %8.1f %5.1f%% %5.1f%% %9.1f %9.1f\n",
+            SCIPmessageFPrintInfo(file, "%-16s %5d %8.1f %6d %6d %6.1f %7lld %7lld %5d %8.1f %8.1f %5.1f%% %5.1f%% %9.1f %9.1f\n",
                SCIPvarGetName(vars[v]),
                SCIPvarGetBranchPriority(vars[v]),
                SCIPvarGetBranchFactor(vars[v]),
@@ -12252,7 +12395,7 @@ RETCODE SCIPwriteImplicationConflictGraph(
 
    /* open file */
    if( filename == NULL )
-      file = stdout;
+      file = NULL;
    else
    {
       file = fopen(filename, "w");
@@ -12267,17 +12410,17 @@ RETCODE SCIPwriteImplicationConflictGraph(
    nvars = scip->transprob->nbinvars;
 
    /* write header */
-   fprintf(file, "digraph implconfgraph {\n");
+   SCIPmessageFPrintInfo(file, "digraph implconfgraph {\n");
 
    /* store nodes */
    for( v = 0; v < nvars; ++v )
    {
       if( SCIPvarGetNImpls(vars[v], TRUE) > 0 )
-         fprintf(file, "pos%d [label=\"%s\"];\n", v, SCIPvarGetName(vars[v]));
+         SCIPmessageFPrintInfo(file, "pos%d [label=\"%s\"];\n", v, SCIPvarGetName(vars[v]));
       if( SCIPvarGetNImpls(vars[v], FALSE) > 0 )
-         fprintf(file, "neg%d [style=filled,fillcolor=red,label=\"%s\"];\n", v, SCIPvarGetName(vars[v]));
+         SCIPmessageFPrintInfo(file, "neg%d [style=filled,fillcolor=red,label=\"%s\"];\n", v, SCIPvarGetName(vars[v]));
       if( SCIPvarGetNImpls(vars[v], TRUE) > 0 && SCIPvarGetNImpls(vars[v], FALSE) > 0 )
-         fprintf(file, "pos%d -> neg%d [dir=both];\n", v, v);
+         SCIPmessageFPrintInfo(file, "pos%d -> neg%d [dir=both];\n", v, v);
    }
    
    /* store edges */
@@ -12302,7 +12445,7 @@ RETCODE SCIPwriteImplicationConflictGraph(
             
             implidx = SCIPvarGetProbindex(implvars[i]);
             if( implidx > v )
-               fprintf(file, "%s%d -> %s%d [dir=none];\n", fix == TRUE ? "pos" : "neg", v, 
+               SCIPmessageFPrintInfo(file, "%s%d -> %s%d [dir=none];\n", fix == TRUE ? "pos" : "neg", v, 
                   impltypes[i] == SCIP_BOUNDTYPE_UPPER ? "pos" : "neg", implidx);
          }
          fix = !fix;
@@ -12311,7 +12454,7 @@ RETCODE SCIPwriteImplicationConflictGraph(
    }
 
    /* write footer */
-   fprintf(file, "}\n");
+   SCIPmessageFPrintInfo(file, "}\n");
 
    /* close file */
    if( filename != NULL )
@@ -12620,15 +12763,12 @@ void SCIPprintReal(
 {
    assert(scip != NULL);
 
-   if( file == NULL )
-      file = stdout;
-
    if( SCIPsetIsInfinity(scip->set, val) )
-      fprintf(file, "+infinity");
+      SCIPmessageFPrintInfo(file, "+infinity");
    else if( SCIPsetIsInfinity(scip->set, -val) )
-      fprintf(file, "-infinity");
+      SCIPmessageFPrintInfo(file, "-infinity");
    else
-      fprintf(file, "%f", val);
+      SCIPmessageFPrintInfo(file, "%f", val);
 }
 
 
@@ -12795,13 +12935,13 @@ void SCIPprintMemoryDiagnostic(
 
    displayMemory();
 
-   printf("\nParameter Block Memory (%p):\n", scip->mem->setmem);
+   SCIPmessagePrintInfo("\nParameter Block Memory (%p):\n", scip->mem->setmem);
    displayBlockMemory(scip->mem->setmem);
 
-   printf("\nProblem Block Memory (%p):\n", scip->mem->probmem);
+   SCIPmessagePrintInfo("\nProblem Block Memory (%p):\n", scip->mem->probmem);
    displayBlockMemory(scip->mem->probmem);
 
-   printf("\nSolution Block Memory (%p):\n", scip->mem->solvemem);
+   SCIPmessagePrintInfo("\nSolution Block Memory (%p):\n", scip->mem->solvemem);
    displayBlockMemory(scip->mem->solvemem);
 }
 

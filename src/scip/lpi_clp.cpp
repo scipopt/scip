@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.20 2005/06/29 11:08:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.21 2005/07/15 17:20:11 bzfpfend Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -2001,7 +2001,7 @@ RETCODE SCIPlpiGetBase(
 	    else
 	       rstat[i] = SCIP_BASESTAT_UPPER; 
 	    break;
-	 default: errorMessage("invalid basis status\n");  abort();
+	 default: errorMessage("invalid basis status\n");  SCIPABORT();
 	 }
       }
    }
@@ -2023,7 +2023,7 @@ RETCODE SCIPlpiGetBase(
 	    else
 	       cstat[j] = SCIP_BASESTAT_UPPER; 
 	    break;
-	 default: errorMessage("invalid basis status\n");  abort();
+	 default: errorMessage("invalid basis status\n");  SCIPABORT();
 	 }
       }
    }
@@ -2076,7 +2076,7 @@ RETCODE SCIPlpiSetBase(
 	 else
 	    clp->setRowStatus(i, ClpSimplex::atLowerBound); 
 	 break;
-      default: errorMessage("invalid basis status\n");  abort();
+      default: errorMessage("invalid basis status\n");  SCIPABORT();
       }
    }
 
@@ -2105,7 +2105,7 @@ RETCODE SCIPlpiSetBase(
 	 else
 	    clp->setColumnStatus(j, ClpSimplex::atLowerBound); 
 	 break;
-      default: errorMessage("invalid basis status\n");  abort();
+      default: errorMessage("invalid basis status\n");  SCIPABORT();
       }
    }
    
@@ -2417,7 +2417,7 @@ RETCODE SCIPlpiSetIntpar(
       case SCIP_PRICING_STEEP: primalmode = 1; dualmode = 0; break;
       case SCIP_PRICING_STEEPQSTART: primalmode = 1; dualmode = 2; break;
       case SCIP_PRICING_DEVEX: primalmode = 2; dualmode = 3; break;
-      default: errorMessage("unkown pricing parameter %d!\n", ival); abort();
+      default: errorMessage("unkown pricing parameter %d!\n", ival); SCIPABORT();
       }
       ClpPrimalColumnSteepest primalpivot(primalmode);
       lpi->clp->setPrimalColumnPivotAlgorithm(primalpivot);      
@@ -2435,7 +2435,7 @@ RETCODE SCIPlpiSetIntpar(
       lpi->clp->scaling(ival == TRUE ? 3 : 0);    // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later));
       break;
    case SCIP_LPPAR_PRICING:
-      abort();
+      SCIPABORT();
    case SCIP_LPPAR_LPINFO:
       assert(ival == TRUE || ival == FALSE);
       if( ival )

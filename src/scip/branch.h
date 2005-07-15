@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.40 2005/05/31 17:20:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.41 2005/07/15 17:20:04 bzfpfend Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -22,8 +22,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __BRANCH_H__
-#define __BRANCH_H__
+#ifndef __SCIP_BRANCH_H__
+#define __SCIP_BRANCH_H__
 
 
 #include "scip/def.h"

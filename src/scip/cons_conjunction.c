@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.19 2005/05/31 17:20:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.20 2005/07/15 17:20:06 bzfpfend Exp $"
 
 /**@file   cons_conjunction.c
  * @brief  constraint handler for conjunction constraints
@@ -484,14 +484,14 @@ DECL_CONSPRINT(consPrintConjunction)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   fprintf(file, "conjunction(");
+   SCIPinfoMessage(scip, file, "conjunction(");
    for( i = 0; i < consdata->nconss; ++i )
    {
       if( i > 0 )
-         fprintf(file, ", ");
-      fprintf(file, "<%s>", SCIPconsGetName(consdata->conss[i]));
+         SCIPinfoMessage(scip, file, ", ");
+      SCIPinfoMessage(scip, file, "<%s>", SCIPconsGetName(consdata->conss[i]));
    }
-   fprintf(file, ")\n");
+   SCIPinfoMessage(scip, file, ")\n");
 
    return SCIP_OKAY;
 }

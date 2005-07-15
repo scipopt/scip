@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.27 2005/05/31 17:20:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.28 2005/07/15 17:20:12 bzfpfend Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -651,7 +651,8 @@ Bool SCIPparamIsDefault(
       
    default:
       errorMessage("unknown parameter type\n");
-      abort();
+      SCIPABORT();
+      return FALSE;
    }
 }
 
@@ -940,7 +941,7 @@ void paramFree(
       break;
    default:
       errorMessage("invalid parameter type\n");
-      abort();
+      SCIPABORT();
    }
 
    freeMemoryArray(&(*param)->name);
@@ -1141,32 +1142,32 @@ RETCODE paramWrite(
    /* write parameter description, bounds, and defaults as comments */
    if( comments )
    {
-      fprintf(file, "# %s\n", param->desc);
+      SCIPmessageFPrintInfo(file, "# %s\n", param->desc);
       switch( param->paramtype )
       {
       case SCIP_PARAMTYPE_BOOL:
-         fprintf(file, "# [type: bool, range: {TRUE,FALSE}, default: %s]\n",
+         SCIPmessageFPrintInfo(file, "# [type: bool, range: {TRUE,FALSE}, default: %s]\n",
             param->data.boolparam.defaultvalue ? "TRUE" : "FALSE");
          break;
       case SCIP_PARAMTYPE_INT:
-         fprintf(file, "# [type: int, range: [%d,%d], default: %d]\n", 
+         SCIPmessageFPrintInfo(file, "# [type: int, range: [%d,%d], default: %d]\n", 
             param->data.intparam.minvalue, param->data.intparam.maxvalue, param->data.intparam.defaultvalue);
          break;
       case SCIP_PARAMTYPE_LONGINT:
-         fprintf(file, "# [type: longint, range: [%lld,%lld], default: %lld]\n", 
+         SCIPmessageFPrintInfo(file, "# [type: longint, range: [%lld,%lld], default: %lld]\n", 
             param->data.longintparam.minvalue, param->data.longintparam.maxvalue, param->data.longintparam.defaultvalue);
          break;
       case SCIP_PARAMTYPE_REAL:
-         fprintf(file, "# [type: real, range: [%.15g,%.15g], default: %.15g]\n",
+         SCIPmessageFPrintInfo(file, "# [type: real, range: [%.15g,%.15g], default: %.15g]\n",
             param->data.realparam.minvalue, param->data.realparam.maxvalue, param->data.realparam.defaultvalue);
          break;
       case SCIP_PARAMTYPE_CHAR:
-         fprintf(file, "# [type: char, range: {%s}, default: %c]\n",
+         SCIPmessageFPrintInfo(file, "# [type: char, range: {%s}, default: %c]\n",
             param->data.charparam.allowedvalues != NULL ? param->data.charparam.allowedvalues : "all chars",
             param->data.charparam.defaultvalue);
          break;
       case SCIP_PARAMTYPE_STRING:
-         fprintf(file, "# [type: string, default: \"%s\"]\n", param->data.stringparam.defaultvalue);
+         SCIPmessageFPrintInfo(file, "# [type: string, default: \"%s\"]\n", param->data.stringparam.defaultvalue);
          break;
       default:
          errorMessage("unknown parameter type\n");
@@ -1175,26 +1176,26 @@ RETCODE paramWrite(
    }
 
    /* write parameter value */
-   fprintf(file, "%s = ", param->name);
+   SCIPmessageFPrintInfo(file, "%s = ", param->name);
    switch( param->paramtype )
    {
    case SCIP_PARAMTYPE_BOOL:
-      fprintf(file, "%s\n", SCIPparamGetBool(param) ? "TRUE" : "FALSE");
+      SCIPmessageFPrintInfo(file, "%s\n", SCIPparamGetBool(param) ? "TRUE" : "FALSE");
       break;
    case SCIP_PARAMTYPE_INT:
-      fprintf(file, "%d\n", SCIPparamGetInt(param));
+      SCIPmessageFPrintInfo(file, "%d\n", SCIPparamGetInt(param));
       break;
    case SCIP_PARAMTYPE_LONGINT:
-      fprintf(file, "%lld\n", SCIPparamGetLongint(param));
+      SCIPmessageFPrintInfo(file, "%lld\n", SCIPparamGetLongint(param));
       break;
    case SCIP_PARAMTYPE_REAL:
-      fprintf(file, "%.15g\n", SCIPparamGetReal(param));
+      SCIPmessageFPrintInfo(file, "%.15g\n", SCIPparamGetReal(param));
       break;
    case SCIP_PARAMTYPE_CHAR:
-      fprintf(file, "%c\n", SCIPparamGetChar(param));
+      SCIPmessageFPrintInfo(file, "%c\n", SCIPparamGetChar(param));
       break;
    case SCIP_PARAMTYPE_STRING:
-      fprintf(file, "\"%s\"\n", SCIPparamGetString(param));
+      SCIPmessageFPrintInfo(file, "\"%s\"\n", SCIPparamGetString(param));
       break;
    default:
       errorMessage("unknown parameter type\n");
@@ -1202,7 +1203,7 @@ RETCODE paramWrite(
    }
 
    if( comments )
-      fprintf(file, "\n");
+      SCIPmessageFPrintInfo(file, "\n");
 
    return SCIP_OKAY;
 }
@@ -1947,7 +1948,7 @@ RETCODE SCIPparamsetWrite(
       }
    }
    else
-      file = stdout;
+      file = NULL;
 
    /* write the parameters to the file */
    for( i = 0; i < paramset->nparams; ++i )

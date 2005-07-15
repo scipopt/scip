@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.83 2005/06/29 11:08:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.84 2005/07/15 17:20:06 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -229,19 +229,16 @@ void consdataPrint(
 
    assert(consdata != NULL);
 
-   if( file == NULL )
-      file = stdout;
-
    /* print coefficients */
-   fprintf(file, "logicor(");
+   SCIPinfoMessage(scip, file, "logicor(");
    for( v = 0; v < consdata->nvars; ++v )
    {
       assert(consdata->vars[v] != NULL);
       if( v > 0 )
-         fprintf(file, ", ");
-      fprintf(file, "<%s>", SCIPvarGetName(consdata->vars[v]));
+         SCIPinfoMessage(scip, file, ", ");
+      SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName(consdata->vars[v]));
    }
-   fprintf(file, ")\n");
+   SCIPinfoMessage(scip, file, ")\n");
 }
 
 /** stores the given variable numbers as watched variables, and updates the event processing */
@@ -1764,7 +1761,7 @@ Real SCIPgetDualsolLogicor(
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not a logic or constraint\n");
-      abort();
+      SCIPABORT();
    }
    
    consdata = SCIPconsGetData(cons);
@@ -1787,7 +1784,7 @@ Real SCIPgetDualfarkasLogicor(
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not a logic or constraint\n");
-      abort();
+      SCIPABORT();
    }
    
    consdata = SCIPconsGetData(cons);
@@ -1810,7 +1807,7 @@ VAR** SCIPgetVarsLogicor(
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not a logic or constraint\n");
-      abort();
+      SCIPABORT();
    }
    
    consdata = SCIPconsGetData(cons);
@@ -1830,7 +1827,7 @@ int SCIPgetNVarsLogicor(
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       errorMessage("constraint is not a logic or constraint\n");
-      abort();
+      SCIPABORT();
    }
    
    consdata = SCIPconsGetData(cons);

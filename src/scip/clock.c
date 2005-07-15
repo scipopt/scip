@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.c,v 1.18 2005/05/31 17:20:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: clock.c,v 1.19 2005/07/15 17:20:05 bzfpfend Exp $"
 
 /**@file   clock.c
  * @brief  methods for clocks and timing issues
@@ -146,7 +146,7 @@ void SCIPclockReset(
       break;
    default:
       errorMessage("invalid clock type\n");
-      abort();
+      SCIPABORT();
    }
    clck->nruns = 0;
 }
@@ -236,7 +236,7 @@ void SCIPclockStart(
          case SCIP_CLOCKTYPE_DEFAULT:            
          default:
             errorMessage("invalid clock type\n");
-            abort();
+            SCIPABORT();
          }
       }
       clck->nruns++;
@@ -288,7 +288,7 @@ void SCIPclockStop(
          case SCIP_CLOCKTYPE_DEFAULT:
          default:
             errorMessage("invalid clock type\n");
-            abort();
+            SCIPABORT();
          }
       }
    }
@@ -391,7 +391,8 @@ Real SCIPclockGetTime(
 
       default:
          errorMessage("invalid clock type\n");
-         abort();
+         SCIPABORT();
+         return 0.0;
       }
    }
    else
@@ -418,7 +419,8 @@ Real SCIPclockGetTime(
       case SCIP_CLOCKTYPE_DEFAULT:
       default:
          errorMessage("invalid clock type\n");
-         abort();
+         SCIPABORT();
+         return 0.0;
       }
    }
 }
@@ -451,7 +453,7 @@ void SCIPclockSetTime(
    case SCIP_CLOCKTYPE_DEFAULT:
    default:
       errorMessage("invalid clock type\n");
-      abort();
+      SCIPABORT();
    }
    
    if( clck->nruns >= 1 )
@@ -484,7 +486,7 @@ void SCIPclockSetTime(
       case SCIP_CLOCKTYPE_DEFAULT:
       default:
          errorMessage("invalid clock type\n");
-         abort();
+         SCIPABORT();
       }
    }
 }

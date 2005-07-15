@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_mostinf.c,v 1.18 2005/05/31 17:20:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_mostinf.c,v 1.19 2005/07/15 17:20:04 bzfpfend Exp $"
 
 /**@file   branch_mostinf.c
  * @brief  most infeasible LP branching rule
@@ -117,7 +117,7 @@ DECL_BRANCHEXECLP(branchExeclpMostinf)
       SCIPvarGetBranchFactor(lpcands[bestcand]), bestscore);
 
    /* perform the branching */
-   CHECK_OKAY( SCIPbranchVar(scip, lpcands[bestcand]) );
+   CHECK_OKAY( SCIPbranchVar(scip, lpcands[bestcand], SCIP_BRANCHDIR_AUTO) );
    *result = SCIP_BRANCHED;
 
    return SCIP_OKAY;

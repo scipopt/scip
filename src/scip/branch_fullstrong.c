@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.41 2005/06/21 13:13:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.42 2005/07/15 17:20:04 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -227,7 +227,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
             /* check for an error in strong branching */
             if( lperror )
             {
-               SCIPmessage(scip, SCIP_VERBLEVEL_HIGH,
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                   "(node %lld) error in strong branching call for variable <%s> with solution %g\n", 
                   SCIPgetNNodes(scip), SCIPvarGetName(lpcands[c]), lpcandssol[c]);
                break;

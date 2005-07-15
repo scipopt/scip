@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_retcode.h,v 1.5 2005/05/31 17:20:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_retcode.h,v 1.6 2005/07/15 17:20:24 bzfpfend Exp $"
 
 /**@file   type_retcode.h
  * @brief  type definitions for return codes for SCIP methods
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __TYPE_RETCODE_H__
-#define __TYPE_RETCODE_H__
+#ifndef __SCIP_TYPE_RETCODE_H__
+#define __SCIP_TYPE_RETCODE_H__
 
 
 /** return codes for SCIP methods: non-positive return codes are errors */

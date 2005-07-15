@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.30 2005/05/31 17:20:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.31 2005/07/15 17:20:05 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __CONFLICT_H__
-#define __CONFLICT_H__
+#ifndef __SCIP_CONFLICT_H__
+#define __SCIP_CONFLICT_H__
 
 
 #include "scip/def.h"
@@ -203,27 +203,27 @@ Longint SCIPconflictGetNAppliedLiterals(
    CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** returns the total number of conflict clauses that were added permanently to the problem */
+/** returns the total number of conflict clauses that were added globally to the problem */
 extern
-Longint SCIPconflictGetNAppliedPermClauses(
+Longint SCIPconflictGetNAppliedGlobalClauses(
    CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** returns the total number of literals in conflict clauses that were added permanently to the problem */
+/** returns the total number of literals in conflict clauses that were added globally to the problem */
 extern
-Longint SCIPconflictGetNAppliedPermLiterals(
+Longint SCIPconflictGetNAppliedGlobalLiterals(
    CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** returns the total number of conflict clauses that were added temporarily to the problem */
+/** returns the total number of conflict clauses that were added locally to the problem */
 extern
-Longint SCIPconflictGetNAppliedTempClauses(
+Longint SCIPconflictGetNAppliedLocalClauses(
    CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** returns the total number of literals in conflict clauses that were added temporarily to the problem */
+/** returns the total number of literals in conflict clauses that were added locally to the problem */
 extern
-Longint SCIPconflictGetNAppliedTempLiterals(
+Longint SCIPconflictGetNAppliedLocalLiterals(
    CONFLICT*        conflict            /**< conflict analysis data */
    );
 
