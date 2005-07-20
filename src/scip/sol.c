@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.61 2005/07/15 17:20:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.62 2005/07/20 16:35:15 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -145,6 +145,7 @@ Real solGetArrayVal(
       default:
          errorMessage("unknown solution origin <%d>\n", sol->solorigin);
          SCIPABORT();
+         return 0.0;
       }
    }
 }

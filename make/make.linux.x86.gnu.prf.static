@@ -1,5 +1,5 @@
-#--- $Id: make.linux.x86.gnu.prf.static,v 1.1 2005/07/15 17:19:59 bzfpfend Exp $
-#analysis of performance file: gprof bin/scip.linux.x86.gnu.prf.cpx gmon.out
+#--- $Id: make.linux.x86.gnu.prf.static,v 1.2 2005/07/20 16:35:13 bzfpfend Exp $
+#analysis of performance file: gprof bin/scip.linux.x86.gnu.prf.static.cpx gmon.out
 FLAGS		+=	-DNDEBUG -DROUNDING_FE -DWITH_READLINE
 OFLAGS		+=	-O2 -march=pentiumpro -g -pg -fno-inline
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes

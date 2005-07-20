@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.96 2005/07/15 17:20:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.97 2005/07/20 16:35:14 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -118,6 +118,7 @@ struct LPi
    int              valsize;            /**< size of valarray and indarray */
    int              cstatsize;          /**< size of cstat array */
    int              rstatsize;          /**< size of rstat array */
+   int              iterations;         /**< number of iterations used in the last solving call */
    Bool             solisbasic;         /**< is current LP solution a basic solution? */
 };
 
@@ -506,6 +507,7 @@ int getIntParam(LPI* lpi, const int param)
 
    errorMessage("unknown CPLEX integer parameter\n");
    SCIPABORT();
+   return 0;
 }
 
 static
@@ -521,6 +523,7 @@ double getDblParam(LPI* lpi, const int param)
 
    errorMessage("unknown CPLEX double parameter\n");
    SCIPABORT();
+   return 0.0;
 }
 
 static
@@ -578,6 +581,7 @@ int cpxObjsen(OBJSEN objsen)
    default:
       errorMessage("invalid objective sense\n");
       SCIPABORT();
+      return 0;
    }
 }
 
@@ -906,6 +910,7 @@ RETCODE SCIPlpiCreate(
    (*lpi)->valsize = 0;
    (*lpi)->cstatsize = 0;
    (*lpi)->rstatsize = 0;
+   (*lpi)->iterations = 0;
    (*lpi)->solisbasic = TRUE;
    (*lpi)->cpxlp = CPXcreateprob(cpxenv, &restat, name);
    CHECK_ZERO( restat );
@@ -1808,10 +1813,12 @@ RETCODE SCIPlpiSolvePrimal(
       return SCIP_LPERROR;
    }
 
+   lpi->iterations = CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp);
    lpi->solisbasic = TRUE;
    lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
    CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
-   debugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d\n", lpi->solstat, primalfeasible, dualfeasible);
+   debugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
+      lpi->solstat, primalfeasible, dualfeasible, lpi->iterations);
 
    if( lpi->solstat == CPX_STAT_INForUNBD
       || (lpi->solstat == CPX_STAT_INFEASIBLE && !dualfeasible)
@@ -1837,8 +1844,9 @@ RETCODE SCIPlpiSolvePrimal(
             return SCIP_LPERROR;
          }
 
+         lpi->iterations += CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp);
          lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
-         debugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
+         debugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
          /* switch on preprocessing again */
          setIntParam(lpi, CPX_PARAM_PREIND, CPX_ON);
@@ -1886,10 +1894,12 @@ RETCODE SCIPlpiSolveDual(
       return SCIP_LPERROR;
    }
 
+   lpi->iterations = CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp);
    lpi->solisbasic = TRUE;
    lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
    CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
-   debugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d\n", lpi->solstat, primalfeasible, dualfeasible);
+   debugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
+      lpi->solstat, primalfeasible, dualfeasible, lpi->iterations);
 
    if( lpi->solstat == CPX_STAT_INForUNBD
       || (lpi->solstat == CPX_STAT_INFEASIBLE && !dualfeasible)
@@ -1915,8 +1925,10 @@ RETCODE SCIPlpiSolveDual(
             return SCIP_LPERROR;
          }
 
+         lpi->iterations += CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp);
          lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
-         debugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
+         CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
+         debugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
          /* switch on preprocessing again */
          setIntParam(lpi, CPX_PARAM_PREIND, CPX_ON);
@@ -1928,6 +1940,82 @@ RETCODE SCIPlpiSolveDual(
          errorMessage("CPLEX dual simplex returned CPX_STAT_INForUNBD after presolving was turned off\n");
       }
    }
+
+#if 0
+   /* this fixes the strange behaviour of CPLEX, that in case of the objective limit exceedance, it returns the
+    * solution for the basis preceeding the one with exceeding objective limit
+    * (using this "wrong" dual solution can cause column generation algorithms to fail to find an improving column)
+    */
+   if( SCIPlpiIsObjlimExc(lpi) )
+   {
+      Real objval;
+      Real llim;
+      Real ulim;
+      Real eps;
+
+      /* check, if the dual solution returned by CPLEX really exceeds the objective limit;
+       * CPLEX usually returns the basis one iteration before the one that exceeds the limit
+       */
+      CHECK_OKAY( SCIPlpiGetObjval(lpi, &objval) );
+      llim = getDblParam(lpi, CPX_PARAM_OBJLLIM);
+      ulim = getDblParam(lpi, CPX_PARAM_OBJULIM);
+      eps = getDblParam(lpi, CPX_PARAM_EPOPT);
+      if( objval >= llim - eps && objval <= ulim + eps )
+      {
+         int itlim;
+         int advind;
+
+         /* perform one additional simplex iteration without objective limit */
+         debugMessage("dual solution %g does not exceed objective limit [%g,%g] (%d iterations) -> calling CPLEX dual simplex again for one iteration\n",
+            objval, llim, ulim, lpi->iterations);
+         itlim = getIntParam(lpi, CPX_PARAM_ITLIM);
+         setIntParam(lpi, CPX_PARAM_ITLIM, 1);
+         advind = getIntParam(lpi, CPX_PARAM_ADVIND);
+         setIntParam(lpi, CPX_PARAM_ADVIND, CPX_ON);
+         setDblParam(lpi, CPX_PARAM_OBJLLIM, -CPX_INFBOUND);
+         setDblParam(lpi, CPX_PARAM_OBJULIM, CPX_INFBOUND);
+         CHECK_OKAY( setParameterValues(&(lpi->cpxparam)) );
+         CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_FINALFACTOR, FALSE) );
+         
+         retval = CPXdualopt(cpxenv, lpi->cpxlp);
+         switch( retval  )
+         {
+         case 0:
+            break;
+         case CPXERR_NO_MEMORY:
+            return SCIP_NOMEMORY;
+         default:
+            return SCIP_LPERROR;
+         }
+
+         lpi->iterations += CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp);
+
+         /* reset the iteration limit and objective bounds */
+         setIntParam(lpi, CPX_PARAM_ITLIM, itlim);
+         setIntParam(lpi, CPX_PARAM_ADVIND, advind);
+         setDblParam(lpi, CPX_PARAM_OBJLLIM, llim);
+         setDblParam(lpi, CPX_PARAM_OBJULIM, ulim);
+         CHECK_OKAY( setParameterValues(&(lpi->cpxparam)) );
+         CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_FINALFACTOR, TRUE) );
+         
+         /* resolve LP again in order to restore the status of exceeded objective limit */
+         retval = CPXdualopt(cpxenv, lpi->cpxlp);
+         switch( retval  )
+         {
+         case 0:
+            break;
+         case CPXERR_NO_MEMORY:
+            return SCIP_NOMEMORY;
+         default:
+            return SCIP_LPERROR;
+         }
+
+         lpi->iterations += CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp);
+         lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
+         debugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
+      }
+   }
+#endif
 
    return SCIP_OKAY;
 }
@@ -1963,9 +2051,10 @@ RETCODE SCIPlpiSolveBarrier(
       return SCIP_LPERROR;
    }
 
+   lpi->iterations = CPXgetbaritcnt(cpxenv, lpi->cpxlp);
    lpi->solisbasic = crossover;
    lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
-   debugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
+   debugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
    if( lpi->solstat == CPX_STAT_INForUNBD )
    {
@@ -1987,6 +2076,7 @@ RETCODE SCIPlpiSolveBarrier(
          return SCIP_LPERROR;
       }
 
+      lpi->iterations += CPXgetbaritcnt(cpxenv, lpi->cpxlp);
       lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
       debugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
 
@@ -2567,8 +2657,7 @@ RETCODE SCIPlpiGetIterations(
    assert(lpi->solstat >= 0);
    assert(iterations != NULL);
 
-   *iterations = CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp)
-      + CPXgetbaritcnt(cpxenv, lpi->cpxlp);
+   *iterations = lpi->iterations;
 
    return SCIP_OKAY;
 }
@@ -2666,6 +2755,7 @@ RETCODE SCIPlpiGetBInvRow(
    assert(lpi->cpxlp != NULL);
 
    debugMessage("getting binv-row %d\n", r);
+
    CHECK_ZERO( CPXbinvrow(cpxenv, lpi->cpxlp, r, coef) );
 
    return SCIP_OKAY;
@@ -2884,19 +2974,22 @@ RETCODE SCIPlpiGetIntpar(
       *ival = (getIntParam(lpi, CPX_PARAM_PREIND) == CPX_ON);
       break;
    case SCIP_LPPAR_PRICING:
-      switch( getIntParam(lpi, CPX_PARAM_DPRIIND) )
+      switch( getIntParam(lpi, CPX_PARAM_PPRIIND) )
       {
-      case CPX_DPRIIND_FULL:
+      case CPX_PPRIIND_FULL:
          *ival = (int)SCIP_PRICING_FULL;
          break;
-      case CPX_DPRIIND_STEEP:
+      case CPX_PPRIIND_PARTIAL:
+         *ival = (int)SCIP_PRICING_PARTIAL;
+         break;
+      case CPX_PPRIIND_STEEP:
          *ival = (int)SCIP_PRICING_STEEP;
          break;
-      case CPX_DPRIIND_STEEPQSTART:
+      case CPX_PPRIIND_STEEPQSTART:
          *ival = (int)SCIP_PRICING_STEEPQSTART;
          break;
 #if (CPX_VERSION >= 900)
-      case CPX_DPRIIND_DEVEX:
+      case CPX_PPRIIND_DEVEX:
          *ival = (int)SCIP_PRICING_DEVEX;
          break;
 #endif
@@ -2961,6 +3054,10 @@ RETCODE SCIPlpiSetIntpar(
       case SCIP_PRICING_FULL:
 	 setIntParam(lpi, CPX_PARAM_PPRIIND, CPX_PPRIIND_FULL);
 	 setIntParam(lpi, CPX_PARAM_DPRIIND, CPX_DPRIIND_FULL);
+         break;
+      case SCIP_PRICING_PARTIAL:
+	 setIntParam(lpi, CPX_PARAM_PPRIIND, CPX_PPRIIND_PARTIAL);
+	 setIntParam(lpi, CPX_PARAM_DPRIIND, CPX_DPRIIND_AUTO);
          break;
       case SCIP_PRICING_STEEP:
 	 setIntParam(lpi, CPX_PARAM_PPRIIND, CPX_PPRIIND_STEEP);

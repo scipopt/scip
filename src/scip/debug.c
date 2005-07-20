@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.5 2005/07/15 17:20:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.6 2005/07/20 16:35:14 bzfpfend Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -465,7 +465,10 @@ RETCODE SCIPdebugRemoveNode(
    )
 {
    /* remove node from the hash map */
-   CHECK_OKAY( SCIPhashmapRemove(solinnode, (void*)node) );
+   if( solinnode != NULL )
+   {
+      CHECK_OKAY( SCIPhashmapRemove(solinnode, (void*)node) );
+   }
 
    return SCIP_OKAY;
 }

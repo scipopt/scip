@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.297 2005/07/15 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.298 2005/07/20 16:35:15 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3672,8 +3672,8 @@ RETCODE transformProb(
 static
 RETCODE initPresolve(
    SCIP*            scip,               /**< SCIP data structure */
-   Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
-   Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
+   Bool*            unbounded,          /**< pointer to store whether presolving detected unboundness */
+   Bool*            infeasible          /**< pointer to store whether presolving detected infeasibility */
    )
 {
    assert(scip != NULL);
@@ -3682,6 +3682,11 @@ RETCODE initPresolve(
    assert(scip->stat != NULL);
    assert(scip->transprob != NULL);
    assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
+   assert(unbounded != NULL);
+   assert(infeasible != NULL);
+
+   *unbounded = FALSE;
+   *infeasible = FALSE;
 
    /* retransform all existing solutions to original problem space, because the transformed problem space may
     * get modified in presolving and the solutions may become invalid for the transformed problem
@@ -3714,8 +3719,8 @@ RETCODE initPresolve(
 static
 RETCODE exitPresolve(
    SCIP*            scip,               /**< SCIP data structure */
-   Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
-   Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
+   Bool*            unbounded,          /**< pointer to store whether presolving detected unboundness */
+   Bool*            infeasible          /**< pointer to store whether presolving detected infeasibility */
    )
 {
    assert(scip != NULL);
@@ -3724,6 +3729,9 @@ RETCODE exitPresolve(
    assert(scip->stat != NULL);
    assert(scip->transprob != NULL);
    assert(scip->set->stage == SCIP_STAGE_PRESOLVING);
+
+   *unbounded = FALSE;
+   *infeasible = FALSE;
 
    /* inform plugins that the presolving is finished, and perform final modifications */
    CHECK_OKAY( SCIPsetExitprePlugins(scip->set, scip->mem->solvemem, scip->stat, unbounded, infeasible) );
@@ -3827,6 +3835,8 @@ RETCODE presolveRound(
    assert(infeasible != NULL);
 
    *delayed = FALSE;
+   *unbounded = FALSE;
+   *infeasible = FALSE;
 
    /* call included presolvers with nonnegative priority */
    for( i = 0; i < scip->set->npresols && !(*unbounded) && !(*infeasible); ++i )
@@ -4021,7 +4031,7 @@ RETCODE presolve(
 
    SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "presolving:\n");
 
-   finished = (scip->stat->npresolrounds >= maxnrounds);
+   finished = (*unbounded || *infeasible || scip->stat->npresolrounds >= maxnrounds);
    stopped = SCIPsolveIsStopped(scip->set, scip->stat);
 
    /* perform presolving rounds */
@@ -4041,6 +4051,8 @@ RETCODE presolve(
       SCIPsetSortPresols(scip->set);
 
       /* perform the presolving round by calling the presolvers and constraint handlers */
+      assert(!(*unbounded));
+      assert(!(*infeasible));
       CHECK_OKAY( presolveRound(scip, FALSE, &delayed, unbounded, infeasible) );
 
       /* check, if we should abort presolving due to not enough changes in the last round */
@@ -4084,15 +4096,20 @@ RETCODE presolve(
    /* deinitialize presolving */
    if( finished )
    {
-      CHECK_OKAY( exitPresolve(scip, unbounded, infeasible) );
+      Bool unbd;
+      Bool infeas;
+
+      CHECK_OKAY( exitPresolve(scip, &unbd, &infeas) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
-      if( *infeasible )
+      if( infeas )
       {
+         *infeasible = TRUE;
          SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "presolve deinitialization detected infeasibility\n");
       }
-      else if( *unbounded )
+      else if( unbd )
       {
+         *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "presolve deinitialization detected unboundness\n");
       }

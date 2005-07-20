@@ -1,5 +1,5 @@
-#--- $Id: make.linux.x86.gnu.dbg.static,v 1.1 2005/07/15 17:19:58 bzfpfend Exp $
-FLAGS		+=	-DWITH_READLINE -DROUNDING_FE
+#--- $Id: make.linux.x86.gnu.dbg.static,v 1.2 2005/07/20 16:35:12 bzfpfend Exp $
+FLAGS		+=	-DWITH_READLINE -DROUNDING_FE -DWITH_ZLIB
 OFLAGS		+=	-O0 -g
 CFLAGS		+=	$(GCCWARN)
 CXXFLAGS	+=	$(GXXWARN)

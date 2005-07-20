@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.151 2005/07/15 17:20:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.152 2005/07/20 16:35:16 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1350,12 +1350,6 @@ RETCODE SCIPnodeAddBoundinfer(
 
       assert(!node->active || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
 
-#if 0 /*????????? remove this */
-      if( !SCIPtreeProbing(tree) && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY ) /*????????????????????????*/
-         printf("branching on <%s> %s %g\n", SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-            newbound);
-#endif
-
       /* get the solution value of variable in last solved LP on the active path:
        *  - if the LP was solved at the current node, the LP values of the columns are valid
        *  - if the last solved LP was the one in the current lpfork, the LP value in the columns are still valid
@@ -1382,16 +1376,6 @@ RETCODE SCIPnodeAddBoundinfer(
    }
    else
    {
-#if 0 /*????????? remove this */
-      if( !SCIPtreeProbing(tree) && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY
-         && infercons == NULL && inferprop == NULL ) /*????????????????????????*/
-      {
-         printf("deduction on <%s> %s %g\n", SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-            newbound);
-         abort();
-      }
-#endif
-
       /* check the infered bound change on the debugging solution */
       CHECK_OKAY( SCIPdebugCheckInference(blkmem, set, node, var, newbound, boundtype) ); /*lint !e506 !e774*/
 

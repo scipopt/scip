@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.33 2005/07/15 17:20:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.34 2005/07/20 16:35:15 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -111,6 +111,7 @@ struct Conshdlr
    Longint          lastpropdomchgcount;/**< last bound change number, where the domain propagation was called */
    Longint          lastenfolpdomchgcount;/**< last bound change number, where the LP enforcement was called */
    Longint          lastenfopsdomchgcount;/**< last bound change number, where the pseudo enforcement was called */
+   Real             ageresetavg;        /**< exp. decaying weighted average of constraint ages at moment of age reset */
    char*            name;               /**< name of constraint handler */
    char*            desc;               /**< description of constraint handler */
    DECL_CONSFREE    ((*consfree));      /**< destructor of constraint handler */

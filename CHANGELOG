@@ -56,6 +56,8 @@ parameters:
 - new parameter branching/fullstrong/reevalage
 - changed default values of heuristics/*/maxdiveavgquot and heuristics/*/maxdiveavgquotnosol to 0
 - additional setting SCIP_VERBLEVEL_DIALOG in display/verblevel parameter
+- additional LP pricing setting "partial"
+- parameters constraints/agelimit and constraints/obsoleteage now iterprete the value 0 as a dynamic setting
 
 features:
 - reactivated multiaggregation in cons_linear.c on binary variables again (possible due to bug fix below)
@@ -110,6 +112,8 @@ fixed bugs:
 - removed bug in SCIPvarAddVlb() and SCIPvarAddVub() with fractional vlb/vubcoefs
 - removed bug that an LP might be declared to be solved even if it was marked erroneous due to numerical problems
 - fixed bug with redundant self implications that wrongly lead to the detection of infeasibility
+- fixed bug that primal or dual rays might not be available because the wrong solver was used
+- included message.o in LPI library, s.t. one can link this library indepentent of SCIP
 
 
 SCIP version 0.79

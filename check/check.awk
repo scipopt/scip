@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.24 2005/05/31 17:20:06 bzfpfend Exp $
+# $Id: check.awk,v 1.25 2005/07/20 16:35:12 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -142,10 +142,16 @@ BEGIN {
       conftime += $4; #confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
    }
 }
-/^  applied permanent:/ {
+/^  applied globally :/ {
    if( inconflict == 1 )
    {
-      confclauses += $5; confliterals += $5 * $6;
+      confclauses += $6; confliterals += $6 * $7;
+   }
+}
+/^  applied locally  :/ {
+   if( inconflict == 1 )
+   {
+      confclauses += $6; confliterals += $6 * $7;
    }
 }
 /^Separators         :/ { inconflict = 0; }

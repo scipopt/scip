@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.199 2005/07/15 17:20:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.200 2005/07/20 16:35:14 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -2283,6 +2283,9 @@ RETCODE lpSetPricingChar(
       break;
    case 'f':
       pricing = SCIP_PRICING_FULL;
+      break;
+   case 'p':
+      pricing = SCIP_PRICING_PARTIAL;
       break;
    case 's':
       pricing = SCIP_PRICING_STEEP;
@@ -9193,6 +9196,8 @@ RETCODE lpSolve(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LPALGO           lpalgo,             /**< LP algorithm that should be applied */
+   Bool             needprimalray,      /**< if the LP is unbounded, do we need a primal ray? */
+   Bool             needdualray,        /**< if the LP is infeasible, do we need a dual ray? */
    Bool             resolve,            /**< is this a resolving call (starting with feasible basis)? */
    Bool             fastmip,            /**< should the FASTMIP setting of the LP solver be activated? */
    Bool             tightfeastol,       /**< should a tighter feasibility tolerance be used? */
@@ -9201,7 +9206,8 @@ RETCODE lpSolve(
    Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
-   Bool solvedagain;
+   Bool solvedprimal;
+   Bool solveddual;
 
    assert(lp != NULL);
    assert(lp->flushed);
@@ -9211,13 +9217,16 @@ RETCODE lpSolve(
 
    checkLinks(lp);
 
-   solvedagain = FALSE;
+   solvedprimal = FALSE;
+   solveddual = FALSE;
 
  SOLVEAGAIN:
    /* call simplex */
    CHECK_OKAY( lpSolveStable(lp, set, stat, lpalgo, resolve, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
    resolve = FALSE; /* only the first solve should be counted as resolving call */
-
+   solvedprimal = solvedprimal || (lpalgo == SCIP_LPALGO_PRIMALSIMPLEX);
+   solveddual = solveddual || (lpalgo == SCIP_LPALGO_DUALSIMPLEX);
+      
    /* check, if an error occured */
    if( *lperror )
    {
@@ -9258,11 +9267,23 @@ RETCODE lpSolve(
    }
    else if( SCIPlpiIsPrimalInfeasible(lp->lpi) )
    {
+      if( needdualray && !SCIPlpiHasDualRay(lp->lpi) && !solveddual )
+      {
+         assert(lpalgo != SCIP_LPALGO_DUALSIMPLEX);
+         lpalgo = SCIP_LPALGO_DUALSIMPLEX;
+         goto SOLVEAGAIN;
+      }
       lp->lpsolstat = SCIP_LPSOLSTAT_INFEASIBLE;
       lp->lpobjval = SCIPsetInfinity(set);
    }
    else if( SCIPlpiExistsPrimalRay(lp->lpi) )
    {
+      if( needprimalray && !SCIPlpiHasPrimalRay(lp->lpi) && !solvedprimal )
+      {
+         assert(lpalgo != SCIP_LPALGO_PRIMALSIMPLEX);
+         lpalgo = SCIP_LPALGO_PRIMALSIMPLEX;
+         goto SOLVEAGAIN;
+      }
       lp->lpsolstat = SCIP_LPSOLSTAT_UNBOUNDEDRAY;
       lp->lpobjval = -SCIPsetInfinity(set);
    }
@@ -9276,19 +9297,19 @@ RETCODE lpSolve(
       lp->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
       lp->lpobjval = -SCIPsetInfinity(set);
    }
-   else if( !solvedagain && lpalgo == SCIP_LPALGO_PRIMALSIMPLEX )
+   else if( !solveddual )
    {
+      assert(lpalgo != SCIP_LPALGO_DUALSIMPLEX);
       lpalgo = SCIP_LPALGO_DUALSIMPLEX;
-      solvedagain = TRUE;
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %lld) solution status of LP %d couldn't be proved (internal status:%d) -- solve again with %s\n", 
          stat->nnodes, stat->nlps, lpalgoName(lpalgo));
       goto SOLVEAGAIN;
    }
-   else if( !solvedagain && lpalgo == SCIP_LPALGO_DUALSIMPLEX )
+   else if( !solvedprimal )
    {
+      assert(lpalgo != SCIP_LPALGO_PRIMALSIMPLEX);
       lpalgo = SCIP_LPALGO_PRIMALSIMPLEX;
-      solvedagain = TRUE;
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %lld) solution status of LP %d couldn't be proved (internal status:%d) -- solve again with %s\n", 
          stat->nnodes, stat->nlps, lpalgoName(lpalgo));
@@ -9318,6 +9339,8 @@ RETCODE lpFlushAndSolve(
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   Bool             needprimalray,      /**< if the LP is unbounded, do we need a primal ray? */
+   Bool             needdualray,        /**< if the LP is infeasible, do we need a dual ray? */
    Bool             fastmip,            /**< should the FASTMIP setting of the LP solver be activated? */
    Bool             tightfeastol,       /**< should a tighter feasibility tolerance be used? */
    Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
@@ -9346,27 +9369,27 @@ RETCODE lpFlushAndSolve(
       if( lp->dualfeasible || !lp->primalfeasible )
       {
          debugMessage("solving dual LP\n");
-         CHECK_OKAY( lpSolve(lp, set, stat, SCIP_LPALGO_DUALSIMPLEX, resolve, fastmip, tightfeastol, fromscratch,
-                        keepsol, lperror) );
+         CHECK_OKAY( lpSolve(lp, set, stat, SCIP_LPALGO_DUALSIMPLEX, needprimalray, needdualray, resolve, fastmip,
+               tightfeastol, fromscratch, keepsol, lperror) );
       }
       else
       {
          debugMessage("solving primal LP\n");
-         CHECK_OKAY( lpSolve(lp, set, stat, SCIP_LPALGO_PRIMALSIMPLEX, resolve, fastmip, tightfeastol, fromscratch, 
-                        keepsol, lperror) );
+         CHECK_OKAY( lpSolve(lp, set, stat, SCIP_LPALGO_PRIMALSIMPLEX, needprimalray, needdualray, resolve, fastmip,
+               tightfeastol, fromscratch, keepsol, lperror) );
       }
       break;
 
    case 'b':
       debugMessage("solving barrier LP\n");
-      CHECK_OKAY( lpSolve(lp, set, stat, SCIP_LPALGO_BARRIER, resolve, fastmip, tightfeastol, fromscratch, 
-                     keepsol, lperror) );
+      CHECK_OKAY( lpSolve(lp, set, stat, SCIP_LPALGO_BARRIER, needprimalray, needdualray, resolve, fastmip,
+            tightfeastol, fromscratch, keepsol, lperror) );
       break;
 
    case 'c':
       debugMessage("solving barrier LP with crossover\n");
-      CHECK_OKAY( lpSolve(lp, set, stat, SCIP_LPALGO_BARRIERCROSSOVER, resolve, fastmip, tightfeastol, fromscratch, 
-                     keepsol, lperror) );
+      CHECK_OKAY( lpSolve(lp, set, stat, SCIP_LPALGO_BARRIERCROSSOVER, needprimalray, needdualray, resolve, fastmip,
+            tightfeastol, fromscratch, keepsol, lperror) );
       break;
 
    default:
@@ -9391,6 +9414,9 @@ RETCODE SCIPlpSolveAndEval(
    Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
+   Bool needprimalray;
+   Bool needdualray;
+
    assert(lp != NULL);
    assert(prob != NULL);
    assert(prob->nvars >= lp->ncols);
@@ -9400,6 +9426,10 @@ RETCODE SCIPlpSolveAndEval(
       lp->nrows, lp->ncols, lp->primalfeasible, lp->dualfeasible, lp->solved, lp->diving, lp->probing, lp->cutoffbound);
 
    *lperror = FALSE;
+
+   /* check whether we need a proof of unboundness or infeasibility by a primal or dual ray */
+   needprimalray = TRUE;
+   needdualray = (!SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve || set->conf_uselp);
 
    /* flush changes to the LP solver */
    CHECK_OKAY( SCIPlpFlush(lp, blkmem, set) );
@@ -9424,7 +9454,8 @@ RETCODE SCIPlpSolveAndEval(
    SOLVEAGAIN:
       /* solve the LP */
       oldnlps = stat->nlps;
-      CHECK_OKAY( lpFlushAndSolve(lp, blkmem, set, stat, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
+      CHECK_OKAY( lpFlushAndSolve(lp, blkmem, set, stat, needprimalray, needdualray, fastmip, tightfeastol, fromscratch,
+            keepsol, lperror) );
       debugMessage("lpFlushAndSolve() returned solstat %d (error=%d)\n", SCIPlpGetSolstat(lp), *lperror);
       assert(!(*lperror) || !lp->solved);
 

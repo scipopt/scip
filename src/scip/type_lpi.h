@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_lpi.h,v 1.15 2005/07/15 17:20:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_lpi.h,v 1.16 2005/07/20 16:35:16 bzfpfend Exp $"
 
 /**@file   type_lpi.h
  * @brief  type definitions for specific LP solvers interface
@@ -60,9 +60,10 @@ enum Pricing
 {
    SCIP_PRICING_AUTO        = 0,        /**< the LP solver should use its preferred strategy */
    SCIP_PRICING_FULL        = 1,        /**< full pricing */
-   SCIP_PRICING_STEEP       = 2,        /**< steepest edge pricing */
-   SCIP_PRICING_STEEPQSTART = 3,        /**< steepest edge pricing without initial dual norms */
-   SCIP_PRICING_DEVEX       = 4         /**< devex pricing */
+   SCIP_PRICING_PARTIAL     = 2,        /**< partial pricing */
+   SCIP_PRICING_STEEP       = 3,        /**< steepest edge pricing */
+   SCIP_PRICING_STEEPQSTART = 4,        /**< steepest edge pricing without initial dual norms */
+   SCIP_PRICING_DEVEX       = 5         /**< devex pricing */
 };
 typedef enum Pricing PRICING;
 

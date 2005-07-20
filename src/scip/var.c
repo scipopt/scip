@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.170 2005/07/15 17:20:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.171 2005/07/20 16:35:16 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -6244,9 +6244,9 @@ RETCODE SCIPvarAddVlb(
          }
          assert(minvlb <= maxvlb);
 
-         /* adjust bounds due to integrality of vlb variable */
-         minvlb = adjustedLb(set, SCIPvarGetType(vlbvar), minvlb);
-         maxvlb = adjustedLb(set, SCIPvarGetType(vlbvar), maxvlb);
+         /* adjust bounds due to integrality of variable */
+         minvlb = adjustedLb(set, SCIPvarGetType(var), minvlb);
+         maxvlb = adjustedLb(set, SCIPvarGetType(var), maxvlb);
 
          /* improve global lower bound of variable */
          if( SCIPsetIsFeasGT(set, minvlb, xub) )
@@ -6470,8 +6470,8 @@ RETCODE SCIPvarAddVub(
          assert(minvub <= maxvub);
 
          /* adjust bounds due to integrality of vub variable */
-         minvub = adjustedUb(set, SCIPvarGetType(vubvar), minvub);
-         maxvub = adjustedUb(set, SCIPvarGetType(vubvar), maxvub);
+         minvub = adjustedUb(set, SCIPvarGetType(var), minvub);
+         maxvub = adjustedUb(set, SCIPvarGetType(var), maxvub);
 
          /* improve global upper bound of variable */
          if( SCIPsetIsFeasLT(set, maxvub, xlb) )

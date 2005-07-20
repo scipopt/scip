@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.19 2005/05/31 17:20:06 bzfpfend Exp $
+# $Id: check.sh,v 1.20 2005/07/20 16:35:12 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -54,7 +54,7 @@ do
 	echo set limits nodes $NODELIMIT       >> $TMPFILE
 	echo set limits memory $MEMLIMIT       >> $TMPFILE
 	echo set timing clocktype 1            >> $TMPFILE
-	echo set display verblevel 3           >> $TMPFILE
+	echo set display verblevel 4           >> $TMPFILE
 	echo set display freq 10000            >> $TMPFILE
 	echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
 	echo set save $SETFILE                 >> $TMPFILE

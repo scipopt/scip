@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.170 2005/07/15 17:20:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.171 2005/07/20 16:35:13 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -95,10 +95,14 @@ struct ConsData
    Real             rhs;                /**< right hand side of row */
    Real             maxabsval;          /**< maximum absolute value of all coefficients */
    Real             pseudoactivity;     /**< pseudo activity value in current pseudo solution */
-   Real             minactivity;        /**< minimal value w.r.t. the variable's bounds for the constraint's activity,
-                                         *   ignoring the coefficients contributing with infinite value */
-   Real             maxactivity;        /**< maximal value w.r.t. the variable's bounds for the constraint's activity,
-                                         *   ignoring the coefficients contributing with infinite value */
+   Real             minactivity;        /**< minimal value w.r.t. the variable's local bounds for the constraint's
+                                         *   activity, ignoring the coefficients contributing with infinite value */
+   Real             maxactivity;        /**< maximal value w.r.t. the variable's local bounds for the constraint's
+                                         *   activity, ignoring the coefficients contributing with infinite value */
+   Real             glbminactivity;     /**< minimal value w.r.t. the variable's global bounds for the constraint's
+                                         *   activity, ignoring the coefficients contributing with infinite value */
+   Real             glbmaxactivity;     /**< maximal value w.r.t. the variable's global bounds for the constraint's
+                                         *   activity, ignoring the coefficients contributing with infinite value */
    ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
    VAR**            vars;               /**< variables of constraint entries */
    Real*            vals;               /**< coefficients of constraint entries */
@@ -107,10 +111,14 @@ struct ConsData
    int              minactivityposinf;  /**< number of coefficients contributing with pos. infinite value to minactivity */
    int              maxactivityneginf;  /**< number of coefficients contributing with neg. infinite value to maxactivity */
    int              maxactivityposinf;  /**< number of coefficients contributing with pos. infinite value to maxactivity */
+   int              glbminactivityneginf;/**< number of coefficients contrib. with neg. infinite value to glbminactivity */
+   int              glbminactivityposinf;/**< number of coefficients contrib. with pos. infinite value to glbminactivity */
+   int              glbmaxactivityneginf;/**< number of coefficients contrib. with neg. infinite value to glbmaxactivity */
+   int              glbmaxactivityposinf;/**< number of coefficients contrib. with pos. infinite value to glbmaxactivity */
    int              varssize;           /**< size of the vars- and vals-arrays */
    int              nvars;              /**< number of nonzeros in constraint */
    unsigned int     validmaxabsval:1;   /**< is the maximum absolute value valid? */
-   unsigned int     validactivities:1;  /**< are the pseudo activity and activity bounds valid? */
+   unsigned int     validactivities:1;  /**< are the pseudo activity and activity bounds (local and global) valid? */
    unsigned int     propagated:1;       /**< is constraint already propagated? */
    unsigned int     boundstightened:1;  /**< is constraint already propagated with bound tightening? */
    unsigned int     presolved:1;        /**< is constraint already presolved? */
@@ -162,10 +170,70 @@ struct LinConsUpgrade
 
 enum Proprule
 {
-   PROPRULE_1,                          /**< activity residuals of all other variables tighten bounds of single variable */
+   PROPRULE_1_RHS,                      /**< activity residuals of all other variables tighten bounds of single variable
+                                         *   due to the right hand side of the inequality */
+   PROPRULE_1_LHS,                      /**< activity residuals of all other variables tighten bounds of single variable
+                                         *   due to the left hand side of the inequality */
    PROPRULE_INVALID                     /**< propagation was applied without a specific propagation rule */
 };
 typedef enum Proprule PROPRULE;
+
+/** inference information */
+struct InferInfo
+{
+   unsigned int     proprule:8;         /**< propagation rule that was applied */
+   unsigned int     pos:24;             /**< variable position, the propagation rule was applied at */
+};
+typedef struct InferInfo INFERINFO;
+
+/** convers an integer into an inference information */
+static
+INFERINFO intToInferInfo(
+   int              i                   /**< integer to convert */
+   )
+{
+   /* this dirty trick is necessary, because a direct cast (INFERINFO)i is not possible */
+   assert(sizeof(INFERINFO) == sizeof(int));
+
+   return *(INFERINFO*)(&i);
+}
+
+/** converts an inference information into an int */
+static
+int inferInfoToInt(
+   INFERINFO        inferinfo           /**< inference information to convert */
+   )
+{
+   /* this dirty trick is necessary, because a direct cast (int)inferinfo is not possible */
+   assert(sizeof(INFERINFO) == sizeof(int));
+
+   return *(int*)(&inferinfo);
+}
+
+/** constructs an inference information out of a propagation rule and a position number */
+static
+INFERINFO getInferInfo(
+   PROPRULE         proprule,           /**< propagation rule that deduced the value */
+   int              pos                 /**< variable position, the propagation rule was applied at */
+   )
+{
+   INFERINFO inferinfo;
+
+   inferinfo.proprule = proprule;
+   inferinfo.pos = pos;
+
+   return inferinfo;
+}
+
+/** constructs an inference information out of a propagation rule and a position number, returns info as int */
+static
+int getInferInt(
+   PROPRULE         proprule,           /**< propagation rule that deduced the value */
+   int              pos                 /**< variable position, the propagation rule was applied at */
+   )
+{
+   return inferInfoToInt(getInferInfo(proprule, pos));
+}
 
 
 
@@ -560,6 +628,12 @@ RETCODE consdataCreate(
    (*consdata)->minactivityposinf = -1;
    (*consdata)->maxactivityneginf = -1;
    (*consdata)->maxactivityposinf = -1;
+   (*consdata)->glbminactivity = SCIP_INVALID;
+   (*consdata)->glbmaxactivity = SCIP_INVALID;
+   (*consdata)->glbminactivityneginf = -1;
+   (*consdata)->glbminactivityposinf = -1;
+   (*consdata)->glbmaxactivityneginf = -1;
+   (*consdata)->glbmaxactivityposinf = -1;
    (*consdata)->varssize = nvars;
    (*consdata)->nvars = nvars;
    (*consdata)->validmaxabsval = FALSE;
@@ -815,6 +889,144 @@ void consdataUpdateChgUb(
    }
 }
 
+/** updates minimum and maximum global activity for a change in global lower bound */
+static
+void consdataUpdateChgGlbLb(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSDATA*        consdata,           /**< linear constraint data */
+   VAR*             var,                /**< variable that has been changed */
+   Real             oldlb,              /**< old lower bound of variable */
+   Real             newlb,              /**< new lower bound of variable */
+   Real             val                 /**< coefficient of constraint entry */
+   )
+{
+   assert(consdata != NULL);
+
+   if( consdata->validactivities )
+   {
+      assert(consdata->glbminactivity < SCIP_INVALID);
+      assert(consdata->glbmaxactivity < SCIP_INVALID);
+      assert(consdata->glbminactivityneginf >= 0);
+      assert(consdata->glbminactivityposinf >= 0);
+      assert(consdata->glbmaxactivityneginf >= 0);
+      assert(consdata->glbmaxactivityposinf >= 0);
+
+      if( val > 0.0 )
+      {
+         if( SCIPisInfinity(scip, oldlb) )
+         {
+            assert(consdata->glbminactivityposinf >= 1);
+            consdata->glbminactivityposinf--;
+         }
+         else if( SCIPisInfinity(scip, -oldlb) )
+         {
+            assert(consdata->glbminactivityneginf >= 1);
+            consdata->glbminactivityneginf--;
+         }
+         else
+            consdata->glbminactivity -= val * oldlb;
+
+         if( SCIPisInfinity(scip, newlb) )
+            consdata->glbminactivityposinf++;
+         else if( SCIPisInfinity(scip, -newlb) )
+            consdata->glbminactivityneginf++;
+         else
+            consdata->glbminactivity += val * newlb;
+      }
+      else
+      {
+         if( SCIPisInfinity(scip, oldlb) )
+         {
+            assert(consdata->glbmaxactivityneginf >= 1);
+            consdata->glbmaxactivityneginf--;
+         }
+         else if( SCIPisInfinity(scip, -oldlb) )
+         {
+            assert(consdata->glbmaxactivityposinf >= 1);
+            consdata->glbmaxactivityposinf--;
+         }
+         else
+            consdata->glbmaxactivity -= val * oldlb;
+
+         if( SCIPisInfinity(scip, newlb) )
+            consdata->glbmaxactivityneginf++;
+         else if( SCIPisInfinity(scip, -newlb) )
+            consdata->glbmaxactivityposinf++;
+         else
+            consdata->glbmaxactivity += val * newlb;
+      }
+   }
+}
+
+/** updates minimum and maximum global activity for a change in global upper bound */
+static
+void consdataUpdateChgGlbUb(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSDATA*        consdata,           /**< linear constraint data */
+   VAR*             var,                /**< variable that has been changed */
+   Real             oldub,              /**< old upper bound of variable */
+   Real             newub,              /**< new upper bound of variable */
+   Real             val                 /**< coefficient of constraint entry */
+   )
+{
+   assert(consdata != NULL);
+
+   if( consdata->validactivities )
+   {
+      assert(consdata->glbminactivity < SCIP_INVALID);
+      assert(consdata->glbmaxactivity < SCIP_INVALID);
+      assert(consdata->glbminactivityneginf >= 0);
+      assert(consdata->glbminactivityposinf >= 0);
+      assert(consdata->glbmaxactivityneginf >= 0);
+      assert(consdata->glbmaxactivityposinf >= 0);
+
+      if( val > 0.0 )
+      {
+         if( SCIPisInfinity(scip, oldub) )
+         {
+            assert(consdata->glbmaxactivityposinf >= 1);
+            consdata->glbmaxactivityposinf--;
+         }
+         else if( SCIPisInfinity(scip, -oldub) )
+         {
+            assert(consdata->glbmaxactivityneginf >= 1);
+            consdata->glbmaxactivityneginf--;
+         }
+         else
+            consdata->glbmaxactivity -= val * oldub;
+
+         if( SCIPisInfinity(scip, newub) )
+            consdata->glbmaxactivityposinf++;
+         else if( SCIPisInfinity(scip, -newub) )
+            consdata->glbmaxactivityneginf++;
+         else
+            consdata->glbmaxactivity += val * newub;
+      }
+      else
+      {
+         if( SCIPisInfinity(scip, oldub) )
+         {
+            assert(consdata->glbminactivityneginf >= 1);
+            consdata->glbminactivityneginf--;
+         }
+         else if( SCIPisInfinity(scip, -oldub) )
+         {
+            assert(consdata->glbminactivityposinf >= 1);
+            consdata->glbminactivityposinf--;
+         }
+         else
+            consdata->glbminactivity -= val * oldub;
+
+         if( SCIPisInfinity(scip, newub) )
+            consdata->glbminactivityneginf++;
+         else if( SCIPisInfinity(scip, -newub) )
+            consdata->glbminactivityposinf++;
+         else
+            consdata->glbminactivity += val * newub;
+      }
+   }
+}
+
 /** updates minimum and maximum activity and maximum absolute value for coefficient addition */
 static
 void consdataUpdateAddCoef(
@@ -843,9 +1055,13 @@ void consdataUpdateAddCoef(
       assert(consdata->pseudoactivity < SCIP_INVALID);
       assert(consdata->minactivity < SCIP_INVALID);
       assert(consdata->maxactivity < SCIP_INVALID);
+      assert(consdata->glbminactivity < SCIP_INVALID);
+      assert(consdata->glbmaxactivity < SCIP_INVALID);
 
       consdataUpdateChgLb(scip, consdata, var, 0.0, SCIPvarGetLbLocal(var), val);
       consdataUpdateChgUb(scip, consdata, var, 0.0, SCIPvarGetUbLocal(var), val);
+      consdataUpdateChgGlbLb(scip, consdata, var, 0.0, SCIPvarGetLbGlobal(var), val);
+      consdataUpdateChgGlbUb(scip, consdata, var, 0.0, SCIPvarGetUbGlobal(var), val);
    }
 }
 
@@ -876,9 +1092,13 @@ void consdataUpdateDelCoef(
       assert(consdata->pseudoactivity < SCIP_INVALID);
       assert(consdata->minactivity < SCIP_INVALID);
       assert(consdata->maxactivity < SCIP_INVALID);
+      assert(consdata->glbminactivity < SCIP_INVALID);
+      assert(consdata->glbmaxactivity < SCIP_INVALID);
 
       consdataUpdateChgLb(scip, consdata, var, SCIPvarGetLbLocal(var), 0.0, val);
       consdataUpdateChgUb(scip, consdata, var, SCIPvarGetUbLocal(var), 0.0, val);
+      consdataUpdateChgGlbLb(scip, consdata, var, SCIPvarGetLbGlobal(var), 0.0, val);
+      consdataUpdateChgGlbUb(scip, consdata, var, SCIPvarGetUbGlobal(var), 0.0, val);
    }
 }
 
@@ -935,7 +1155,7 @@ Real consdataGetMaxAbsval(
    return consdata->maxabsval;
 }
 
-/** calculates pseudo activity, and minimum and maximum activity for constraint;
+/** calculates pseudo activity, and minimum and maximum local and global activity for constraint;
  *  additionally recalculates maximum absolute value of coefficients
  */
 static
@@ -951,6 +1171,8 @@ void consdataCalcActivities(
    assert(consdata->pseudoactivity >= SCIP_INVALID);
    assert(consdata->minactivity >= SCIP_INVALID);
    assert(consdata->maxactivity >= SCIP_INVALID);
+   assert(consdata->glbminactivity >= SCIP_INVALID);
+   assert(consdata->glbmaxactivity >= SCIP_INVALID);
    
    consdata->validmaxabsval = TRUE;
    consdata->validactivities = TRUE;
@@ -962,6 +1184,12 @@ void consdataCalcActivities(
    consdata->minactivityposinf = 0;
    consdata->maxactivityneginf = 0;
    consdata->maxactivityposinf = 0;
+   consdata->glbminactivity = 0.0;
+   consdata->glbmaxactivity = 0.0;
+   consdata->glbminactivityneginf = 0;
+   consdata->glbminactivityposinf = 0;
+   consdata->glbmaxactivityneginf = 0;
+   consdata->glbmaxactivityposinf = 0;
 
    for( i = 0; i < consdata->nvars; ++i )
       consdataUpdateAddCoef(scip, consdata, consdata->vars[i], consdata->vals[i]);
@@ -981,6 +1209,8 @@ Real consdataGetPseudoActivity(
    assert(consdata->pseudoactivity < SCIP_INVALID);
    assert(consdata->minactivity < SCIP_INVALID);
    assert(consdata->maxactivity < SCIP_INVALID);
+   assert(consdata->glbminactivity < SCIP_INVALID);
+   assert(consdata->glbmaxactivity < SCIP_INVALID);
 
    debugMessage("pseudo activity of linear constraint: %g\n", consdata->pseudoactivity);
 
@@ -1021,6 +1251,10 @@ void consdataGetActivityBounds(
    assert(consdata->pseudoactivity < SCIP_INVALID);
    assert(consdata->minactivity < SCIP_INVALID);
    assert(consdata->maxactivity < SCIP_INVALID);
+   assert(consdata->minactivityneginf >= 0);
+   assert(consdata->minactivityposinf >= 0);
+   assert(consdata->maxactivityneginf >= 0);
+   assert(consdata->maxactivityposinf >= 0);
 
    if( consdata->minactivityposinf > 0 )
       *minactivity = SCIPinfinity(scip);
@@ -1196,6 +1430,201 @@ void consdataGetActivityResiduals(
    }
 }
 
+/** gets global activity bounds for constraint */
+static
+void consdataGetGlbActivityBounds(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSDATA*        consdata,           /**< linear constraint */
+   Real*            glbminactivity,     /**< pointer to store the minimal activity */
+   Real*            glbmaxactivity      /**< pointer to store the maximal activity */
+   )
+{
+   assert(consdata != NULL);
+   assert(glbminactivity != NULL);
+   assert(glbmaxactivity != NULL);
+
+   if( !consdata->validactivities )
+      consdataCalcActivities(scip, consdata);
+   assert(consdata->glbminactivity < SCIP_INVALID);
+   assert(consdata->glbmaxactivity < SCIP_INVALID);
+   assert(consdata->glbminactivityneginf >= 0);
+   assert(consdata->glbminactivityposinf >= 0);
+   assert(consdata->glbmaxactivityneginf >= 0);
+   assert(consdata->glbmaxactivityposinf >= 0);
+
+   if( consdata->glbminactivityposinf > 0 )
+      *glbminactivity = SCIPinfinity(scip);
+   else if( consdata->glbminactivityneginf > 0 )
+      *glbminactivity = -SCIPinfinity(scip);
+   else
+      *glbminactivity = consdata->glbminactivity;
+
+   if( consdata->glbmaxactivityneginf > 0 )
+      *glbmaxactivity = -SCIPinfinity(scip);
+   else if( consdata->glbmaxactivityposinf > 0 )
+      *glbmaxactivity = SCIPinfinity(scip);
+   else
+      *glbmaxactivity = consdata->glbmaxactivity;
+}
+
+/** gets global activity bounds for constraint after setting variable to zero */
+static
+void consdataGetGlbActivityResiduals(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSDATA*        consdata,           /**< linear constraint */
+   VAR*             var,                /**< variable to calculate activity residual for */
+   Real             val,                /**< coefficient value of variable in linear constraint */
+   Real*            minresactivity,     /**< pointer to store the minimal residual activity */
+   Real*            maxresactivity      /**< pointer to store the maximal residual activity */
+   )
+{
+   Real lb;
+   Real ub;
+   
+   assert(consdata != NULL);
+   assert(var != NULL);
+   assert(minresactivity != NULL);
+   assert(maxresactivity != NULL);
+
+   /* get activity bounds of linear constraint */
+   if( !consdata->validactivities )
+      consdataCalcActivities(scip, consdata);
+   assert(consdata->glbminactivity < SCIP_INVALID);
+   assert(consdata->glbmaxactivity < SCIP_INVALID);
+   assert(consdata->glbminactivityneginf >= 0);
+   assert(consdata->glbminactivityposinf >= 0);
+   assert(consdata->glbmaxactivityneginf >= 0);
+   assert(consdata->glbmaxactivityposinf >= 0);
+
+   lb = SCIPvarGetLbGlobal(var);
+   ub = SCIPvarGetUbGlobal(var);
+
+   if( val > 0.0 )
+   {
+      if( SCIPisInfinity(scip, lb) )
+      {
+         assert(consdata->glbminactivityposinf >= 1);
+         if( consdata->glbminactivityposinf >= 2 )
+            *minresactivity = SCIPinfinity(scip);
+         else if( consdata->glbminactivityneginf >= 1 )
+            *minresactivity = -SCIPinfinity(scip);
+         else
+            *minresactivity = consdata->glbminactivity;
+      }
+      else if( SCIPisInfinity(scip, -lb) )
+      {
+         assert(consdata->glbminactivityneginf >= 1);
+         if( consdata->glbminactivityposinf >= 1 )
+            *minresactivity = SCIPinfinity(scip);
+         else if( consdata->glbminactivityneginf >= 2 )
+            *minresactivity = -SCIPinfinity(scip);
+         else
+            *minresactivity = consdata->glbminactivity;
+      }
+      else
+      {
+         if( consdata->glbminactivityposinf >= 1 )
+            *minresactivity = SCIPinfinity(scip);
+         if( consdata->glbminactivityneginf >= 1 )
+            *minresactivity = -SCIPinfinity(scip);
+         else
+            *minresactivity = consdata->glbminactivity - val * lb;
+      }
+
+      if( SCIPisInfinity(scip, -ub) )
+      {
+         assert(consdata->glbmaxactivityneginf >= 1);
+         if( consdata->glbmaxactivityneginf >= 2 )
+            *maxresactivity = -SCIPinfinity(scip);
+         else if( consdata->glbmaxactivityposinf >= 1 )
+            *maxresactivity = SCIPinfinity(scip);
+         else
+            *maxresactivity = consdata->glbmaxactivity;
+      }
+      else if( SCIPisInfinity(scip, ub) )
+      {
+         assert(consdata->glbmaxactivityposinf >= 1);
+         if( consdata->glbmaxactivityneginf >= 1 )
+            *maxresactivity = -SCIPinfinity(scip);
+         else if( consdata->glbmaxactivityposinf >= 2 )
+            *maxresactivity = SCIPinfinity(scip);
+         else
+            *maxresactivity = consdata->glbmaxactivity;
+      }
+      else
+      {
+         if( consdata->glbmaxactivityneginf >= 1 )
+            *maxresactivity = -SCIPinfinity(scip);
+         else if( consdata->glbmaxactivityposinf >= 1 )
+            *maxresactivity = SCIPinfinity(scip);
+         else
+            *maxresactivity = consdata->glbmaxactivity - val * ub;
+      }
+   }
+   else
+   {
+      if( SCIPisInfinity(scip, -ub) )
+      {
+         assert(consdata->glbminactivityposinf >= 1);
+         if( consdata->glbminactivityposinf >= 2 )
+            *minresactivity = SCIPinfinity(scip);
+         else if( consdata->glbminactivityneginf >= 1 )
+            *minresactivity = -SCIPinfinity(scip);
+         else
+            *minresactivity = consdata->glbminactivity;
+      }
+      else if( SCIPisInfinity(scip, ub) )
+      {
+         assert(consdata->glbminactivityneginf >= 1);
+         if( consdata->glbminactivityposinf >= 1 )
+            *minresactivity = SCIPinfinity(scip);
+         else if( consdata->glbminactivityneginf >= 2 )
+            *minresactivity = -SCIPinfinity(scip);
+         else
+            *minresactivity = consdata->glbminactivity;
+      }
+      else
+      {
+         if( consdata->glbminactivityposinf >= 1 )
+            *minresactivity = SCIPinfinity(scip);
+         else if( consdata->glbminactivityneginf >= 1 )
+            *minresactivity = -SCIPinfinity(scip);
+         else
+            *minresactivity = consdata->glbminactivity - val * ub;
+      }
+
+      if( SCIPisInfinity(scip, lb) )
+      {
+         assert(consdata->glbmaxactivityneginf >= 1);
+         if( consdata->glbmaxactivityneginf >= 2 )
+            *maxresactivity = -SCIPinfinity(scip);
+         else if( consdata->glbmaxactivityposinf >= 1 )
+            *maxresactivity = SCIPinfinity(scip);
+         else
+            *maxresactivity = consdata->glbmaxactivity;
+      }
+      else if( SCIPisInfinity(scip, -lb) )
+      {
+         assert(consdata->glbmaxactivityposinf >= 1);
+         if( consdata->glbmaxactivityneginf >= 1 )
+            *maxresactivity = -SCIPinfinity(scip);
+         else if( consdata->glbmaxactivityposinf >= 2 )
+            *maxresactivity = SCIPinfinity(scip);
+         else
+            *maxresactivity = consdata->glbmaxactivity;
+      }
+      else
+      {
+         if( consdata->glbmaxactivityneginf >= 1 )
+            *maxresactivity = -SCIPinfinity(scip);
+         else if( consdata->glbmaxactivityposinf >= 1 )
+            *maxresactivity = SCIPinfinity(scip);
+         else
+            *maxresactivity = consdata->glbmaxactivity - val * lb;
+      }
+   }
+}
+
 /** invalidates pseudo activity and activity bounds, such that they are recalculated in next get */
 static
 void consdataInvalidateActivities(
@@ -1212,6 +1641,12 @@ void consdataInvalidateActivities(
    consdata->minactivityposinf = -1;
    consdata->maxactivityneginf = -1;
    consdata->maxactivityposinf = -1;
+   consdata->glbminactivity = SCIP_INVALID;
+   consdata->glbmaxactivity = SCIP_INVALID;
+   consdata->glbminactivityneginf = -1;
+   consdata->glbminactivityposinf = -1;
+   consdata->glbmaxactivityneginf = -1;
+   consdata->glbmaxactivityposinf = -1;
 }
 
 /** calculates the activity of the linear constraint for given solution */
@@ -2215,6 +2650,7 @@ RETCODE addConflictBounds(
    CONS*            cons,               /**< constraint that inferred the bound change */
    VAR*             infervar,           /**< variable that was deduced, or NULL */
    BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
+   int              inferpos,           /**< position of the inferred variable in the vars array */
    Bool             reasonisrhs         /**< is the right hand side responsible for the bound change? */
    )
 {
@@ -2231,20 +2667,78 @@ RETCODE addConflictBounds(
    nvars = consdata->nvars;
    assert(vars != NULL);
    assert(vals != NULL);
-
-   /**@todo add only necessary conflict reason bounds in linear constraint handler resolving method:
-    *       - sort the constraint's variables by priority (binaries preceed non-binaries, larger differences
-    *         in residual activity for global and local bound preceed smaller ones)
-    *       - calculate residual activity for global bounds
-    *       - update residual activity for using local bounds one by one, until the residual activity
-    *         is small/large enough to infer the bound change
-    */
+   assert(-1 <= inferpos && inferpos < nvars);
+   assert((infervar == NULL) == (inferpos == -1));
+   assert(inferpos == -1 || vars[inferpos] == infervar);
 
    /* for each variable, add the bound to the conflict queue, that is responsible for the minimal or maximal
     * residual value, depending on whether the left or right hand side is responsible for the bound change:
     *  - if the right hand side is the reason, the minimal residual activity is responsible
     *  - if the left hand side is the reason, the maximal residual activity is responsible
     */
+
+   /* if the variable is integral we only need to add reason bounds until the propagation could be applied */
+   if( infervar == NULL || SCIPvarIsIntegral(infervar) )
+   {
+      Real minresactivity;
+      Real maxresactivity;
+      
+      /* calculate the minimal and maximal global activity of all other variables involved in the constraint */
+      if( infervar != NULL )
+         consdataGetGlbActivityResiduals(scip, consdata, infervar, vals[inferpos], &minresactivity, &maxresactivity);
+      else
+         consdataGetGlbActivityBounds(scip, consdata, &minresactivity, &maxresactivity);
+
+      /* we can only do something clever, if the residual activity is finite */
+      if( (reasonisrhs && !SCIPisInfinity(scip, -minresactivity))
+         || (!reasonisrhs && !SCIPisInfinity(scip, maxresactivity)) )
+      {
+         Real rescap;
+         
+         /* calculate the residual capacity that would be left, if the variable would be set to one more / one less
+          * than its inferred bound
+          */
+         rescap = (reasonisrhs ? consdata->rhs - minresactivity : consdata->lhs - maxresactivity);
+         if( infervar != NULL )
+         {
+            if( reasonisrhs == (vals[inferpos] > 0.0) )
+               rescap -= vals[inferpos] * (SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) + 1.0);
+            else
+               rescap -= vals[inferpos] * (SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) - 1.0);
+         }
+
+         /* now add bounds as reasons until the residual capacity is exceeded */
+         for( i = 0; i < nvars; ++i )
+         {
+            /* zero coefficients and the infered variable can be ignored */
+            if( vars[i] == infervar || SCIPisZero(scip, vals[i]) )
+               continue;
+
+            /* check if the residual capacity is exceeded */
+            if( (reasonisrhs && SCIPisFeasNegative(scip, rescap))
+               || (!reasonisrhs && SCIPisFeasPositive(scip, rescap)) )
+               break;
+
+            /* update the residual capacity due to the local bound of this variable */
+            if( reasonisrhs == (vals[i] > 0.0) )
+            {
+               /* rhs is reason and coeff is positive, or lhs is reason and coeff is negative -> lower bound */
+               CHECK_OKAY( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
+               rescap -= vals[i] * (SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) - SCIPvarGetLbGlobal(vars[i]));
+            }
+            else
+            {
+               /* lhs is reason and coeff is positive, or rhs is reason and coeff is negative -> upper bound */
+               CHECK_OKAY( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
+               rescap -= vals[i] * (SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) - SCIPvarGetUbGlobal(vars[i]));
+            }
+         }
+
+         return SCIP_OKAY;
+      }
+   }
+
+   /* for a bound change on a continuous variable, all locally changed bounds are responsible */
    for( i = 0; i < nvars; ++i )
    {
       /* zero coefficients and the infered variable can be ignored */
@@ -2275,7 +2769,7 @@ RETCODE resolvePropagation(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint that inferred the bound change */
    VAR*             infervar,           /**< variable that was deduced */
-   PROPRULE         proprule,           /**< propagation rule that deduced the bound change */
+   INFERINFO        inferinfo,          /**< inference information */
    BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
@@ -2286,7 +2780,6 @@ RETCODE resolvePropagation(
    Real* vals;
    int nvars;
    int inferpos;
-   Bool reasonisrhs;
 
    assert(result != NULL);
 
@@ -2298,38 +2791,45 @@ RETCODE resolvePropagation(
    assert(vars != NULL);
    assert(vals != NULL);
 
-   switch( proprule )
+   /* get the position of the inferred variable in the vars array */
+   inferpos = inferinfo.pos;
+   if( inferpos >= nvars || vars[inferpos] != infervar )
    {
-   case PROPRULE_1:
-      /* the bound of the variable was tightened, because the minimal or maximal residual activity of the linear
-       * constraint (only taking the other variables into account) didn't leave enough space for a larger
-       * domain
-       */
-
       /* find inference variable in constraint */
       /**@todo use a binary search here; the variables can be sorted by variable index */
       for( inferpos = 0; inferpos < nvars && vars[inferpos] != infervar; ++inferpos )
       {}
-      assert(inferpos < nvars);
-      assert(vars[inferpos] == infervar);
-      assert(!SCIPisZero(scip, vals[inferpos]));
+   }
+   assert(inferpos < nvars);
+   assert(vars[inferpos] == infervar);
+   assert(!SCIPisZero(scip, vals[inferpos]));
 
-      /* if the total maximal activity would get larger, if the bound change would be undone, the reason for the
-       * bound change must be the right hand side; otherwise, the reason must be the left hand side;
-       * this means, the right hand side is responsible for the bound change, if the variable's coefficient is
-       * positive and the upper bound was changed, or if the variable's coefficient is negative and the lower
-       * bound was changed
+   switch( inferinfo.proprule )
+   {
+   case PROPRULE_1_RHS:
+      /* the bound of the variable was tightened, because the minimal or maximal residual activity of the linear
+       * constraint (only taking the other variables into account) didn't leave enough space for a larger
+       * domain in order to not exceed the right hand side of the inequality
        */
-      reasonisrhs = ((vals[inferpos] > 0.0) == (boundtype == SCIP_BOUNDTYPE_UPPER));
+      assert((vals[inferpos] > 0.0) == (boundtype == SCIP_BOUNDTYPE_UPPER));
+      CHECK_OKAY( addConflictBounds(scip, cons, infervar, bdchgidx, inferpos, TRUE) );
+      *result = SCIP_SUCCESS;
+      break;
 
-      CHECK_OKAY( addConflictBounds(scip, cons, infervar, bdchgidx, reasonisrhs) );
-
+   case PROPRULE_1_LHS:
+      /* the bound of the variable was tightened, because the minimal or maximal residual activity of the linear
+       * constraint (only taking the other variables into account) didn't leave enough space for a larger
+       * domain in order to not fall below the left hand side of the inequality
+       */
+      assert((vals[inferpos] > 0.0) == (boundtype == SCIP_BOUNDTYPE_LOWER));
+      CHECK_OKAY( addConflictBounds(scip, cons, infervar, bdchgidx, inferpos, FALSE) );
       *result = SCIP_SUCCESS;
       break;
 
    case PROPRULE_INVALID:
    default:
-      errorMessage("invalid inference information %d in linear constraint <%s>\n", proprule, SCIPconsGetName(cons));
+      errorMessage("invalid inference information %d in linear constraint <%s>\n", 
+         inferinfo.proprule, SCIPconsGetName(cons));
       return SCIP_INVALIDDATA;
    }
 
@@ -2352,7 +2852,7 @@ RETCODE analyzeConflict(
    CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
 
    /* add the conflicting bound for each variable of infeasible constraint to conflict candidate queue */
-   CHECK_OKAY( addConflictBounds(scip, cons, NULL, NULL, reasonisrhs) );
+   CHECK_OKAY( addConflictBounds(scip, cons, NULL, NULL, -1, reasonisrhs) );
    
    /* analyze the conflict */
    CHECK_OKAY( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -2366,13 +2866,14 @@ static
 RETCODE tightenVarBounds(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< linear constraint */
-   VAR*             var,                /**< variable to tighten bounds for */
-   Real             val,                /**< coefficient value of variable in linear constraint */
+   int              pos,                /**< position of the variable in the vars array */
    Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
    int*             nchgbds             /**< pointer to count the total number of tightened bounds */
    )
 {
    CONSDATA* consdata;
+   VAR* var;
+   Real val;
    Real lb;
    Real ub;
    Real minresactivity;
@@ -2382,8 +2883,6 @@ RETCODE tightenVarBounds(
    Bool infeasible;
    Bool tightened;
 
-   assert(var != NULL);
-   assert(!SCIPisZero(scip, val));
    assert(cutoff != NULL);
    assert(nchgbds != NULL);
 
@@ -2393,12 +2892,17 @@ RETCODE tightenVarBounds(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(0 <= pos && pos < consdata->nvars);
 
    *cutoff = FALSE;
 
+   var = consdata->vars[pos];
+   val = consdata->vals[pos];
    lhs = consdata->lhs;
    rhs = consdata->rhs;
    consdataGetActivityResiduals(scip, consdata, var, val, &minresactivity, &maxresactivity);
+   assert(var != NULL);
+   assert(!SCIPisZero(scip, val));
    assert(!SCIPisInfinity(scip, lhs));
    assert(!SCIPisInfinity(scip, -rhs));
    assert(!SCIPisInfinity(scip, minresactivity));
@@ -2422,7 +2926,8 @@ RETCODE tightenVarBounds(
             /* tighten upper bound */
             debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newub=%.9f\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newub);
-            CHECK_OKAY( SCIPinferVarUbCons(scip, var, newub, cons, (int)PROPRULE_1, &infeasible, &tightened) );
+            CHECK_OKAY( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(PROPRULE_1_RHS, pos),
+                  &infeasible, &tightened) );
             if( infeasible )
             {
                debugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.9f,%.9f]\n",
@@ -2455,7 +2960,8 @@ RETCODE tightenVarBounds(
             /* tighten lower bound */
             debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newlb=%.9f\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newlb);
-            CHECK_OKAY( SCIPinferVarLbCons(scip, var, newlb, cons, (int)PROPRULE_1, &infeasible, &tightened) );
+            CHECK_OKAY( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(PROPRULE_1_LHS, pos),
+                  &infeasible, &tightened) );
             if( infeasible )
             {
                debugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.9f,%.9f]\n", 
@@ -2492,7 +2998,8 @@ RETCODE tightenVarBounds(
             /* tighten lower bound */
             debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newlb=%.9f\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newlb);
-            CHECK_OKAY( SCIPinferVarLbCons(scip, var, newlb, cons, (int)PROPRULE_1, &infeasible, &tightened) );
+            CHECK_OKAY( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(PROPRULE_1_RHS, pos),
+                  &infeasible, &tightened) );
             if( infeasible )
             {
                debugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.9f,%.9f]\n",
@@ -2525,7 +3032,8 @@ RETCODE tightenVarBounds(
             /* tighten upper bound */
             debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g], newub=%.9f\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newub);
-            CHECK_OKAY( SCIPinferVarUbCons(scip, var, newub, cons, (int)PROPRULE_1, &infeasible, &tightened) );
+            CHECK_OKAY( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(PROPRULE_1_LHS, pos),
+                  &infeasible, &tightened) );
             if( infeasible )
             {
                debugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.9f,%.9f]\n",
@@ -2563,8 +3071,6 @@ RETCODE tightenBounds(
    )
 {
    CONSDATA* consdata;
-   VAR** vars;
-   Real* vals;
    int nvars;
    int nrounds;
    int lastchange;
@@ -2582,10 +3088,6 @@ RETCODE tightenBounds(
    assert(consdata != NULL);
 
    nvars = consdata->nvars;
-   vars = consdata->vars;
-   vals = consdata->vals;
-   assert(vars != NULL);
-   assert(vals != NULL);
 
    /* as long as the bounds might be tightened again, try to tighten them; abort after a maximal number of rounds */
    lastchange = -1;
@@ -2602,7 +3104,7 @@ RETCODE tightenBounds(
          int oldnchgbds;
 
          oldnchgbds = *nchgbds;
-         CHECK_OKAY( tightenVarBounds(scip, cons, vars[v], vals[v], cutoff, nchgbds) );
+         CHECK_OKAY( tightenVarBounds(scip, cons, v, cutoff, nchgbds) );
          if( *nchgbds > oldnchgbds )
             lastchange = v;
       }
@@ -3756,6 +4258,7 @@ int getVarWeight(
    default:
       errorMessage("invalid variable type\n");
       SCIPABORT();
+      return 0;
    }
 }
 
@@ -5161,7 +5664,7 @@ DECL_CONSPRESOL(consPresolLinear)
 static
 DECL_CONSRESPROP(consRespropLinear)
 {  /*lint --e{715}*/
-   CHECK_OKAY( resolvePropagation(scip, cons, infervar, (PROPRULE)inferinfo, boundtype, bdchgidx, result) );
+   CHECK_OKAY( resolvePropagation(scip, cons, infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, result) );
 
    return SCIP_OKAY;
 }

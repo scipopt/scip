@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.123 2005/07/15 17:20:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.124 2005/07/20 16:35:13 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -39,6 +39,14 @@
 #ifndef NDEBUG
 #include "scip/struct_cons.h"
 #endif
+
+
+#define AGERESETAVG_INIT         100.0  /**< initial value of the exponentially decaying weighted sum for ages */
+#define AGERESETAVG_DECAY        0.0001 /**< weight of a new addend in the exponentially decaing sum */
+#define AGERESETAVG_AGELIMIT     2.0    /**< in dynamic setting, a constraint is deleted if its age exceeds the
+                                         *   average reset age by this factor */
+#define AGERESETAVG_OBSOLETEAGE  1.5    /**< in dynamic setting, a constraint is marked obsolete if its age exceeds the
+                                         *   average reset age by this factor */
 
 
 
@@ -261,6 +269,30 @@ void checkConssArrays(
 #define checkConssArrays(conshdlr) /**/
 #endif
 
+/** returns the exponentially decaying weighted age average for age resets */
+static
+Real conshdlrGetAgeresetavg(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return MAX(conshdlr->ageresetavg, 10.0);
+}
+
+/** updates the exponentially decaying weighted age average for age resets after a constraint age was reset */
+static
+void conshdlrUpdateAgeresetavg(
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   Real             age                 /**< age of the constraint that is reset to zero */
+   )
+{
+   assert(conshdlr != NULL);
+
+   conshdlr->ageresetavg *= (1.0-AGERESETAVG_DECAY);
+   conshdlr->ageresetavg += AGERESETAVG_DECAY * age;
+}
+
 /** returns whether the constraint's age exceeds the age limit */
 static
 Bool consExceedsAgelimit(
@@ -271,7 +303,9 @@ Bool consExceedsAgelimit(
    assert(cons != NULL);
    assert(set != NULL);
 
-   return (set->cons_agelimit >= 0 && cons->dynamic && cons->age > set->cons_agelimit);
+   return (cons->dynamic
+      && ((set->cons_agelimit > 0 && cons->age > set->cons_agelimit)
+         || (set->cons_agelimit == 0 && cons->age > AGERESETAVG_AGELIMIT * conshdlrGetAgeresetavg(cons->conshdlr))));
 }
 
 /** returns whether the constraint's age exceeds the obsolete age limit */
@@ -284,7 +318,9 @@ Bool consExceedsObsoleteage(
    assert(cons != NULL);
    assert(set != NULL);
 
-   return (set->cons_obsoleteage >= 0 && cons->dynamic && cons->age > set->cons_obsoleteage);
+   return (cons->dynamic
+      && ((set->cons_obsoleteage > 0 && cons->age > set->cons_obsoleteage)
+         || (set->cons_obsoleteage == 0 && cons->age > AGERESETAVG_OBSOLETEAGE * conshdlrGetAgeresetavg(cons->conshdlr))));
 }
 
 /** marks constraint to be obsolete; it will be moved to the last part of the constraint arrays, such that
@@ -1702,6 +1738,7 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->nupgdconss = 0;
    (*conshdlr)->nchgcoefs = 0;
    (*conshdlr)->nchgsides = 0;
+   (*conshdlr)->ageresetavg = AGERESETAVG_INIT;
    (*conshdlr)->needscons = needscons;
    (*conshdlr)->sepawasdelayed = FALSE;
    (*conshdlr)->propwasdelayed = FALSE;
@@ -1845,6 +1882,7 @@ RETCODE SCIPconshdlrInit(
    conshdlr->nupgdconss = 0;
    conshdlr->nchgcoefs = 0;
    conshdlr->nchgsides = 0;
+   conshdlr->ageresetavg = AGERESETAVG_INIT;
 
    /* call initialization method of constraint handler */
    if( conshdlr->consinit != NULL )
@@ -4515,6 +4553,7 @@ RETCODE SCIPconsResetAge(
 
    debugMessage("resetting age %g of constraint <%s> of handler <%s>\n", cons->age, cons->name, cons->conshdlr->name);
 
+   conshdlrUpdateAgeresetavg(cons->conshdlr, cons->age);
    cons->age = 0.0;
 
    if( cons->obsolete )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.97 2005/07/15 17:20:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.98 2005/07/20 16:35:13 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -677,6 +677,24 @@ RETCODE conflictInsertClause(
    return SCIP_OKAY;
 }
 
+/** calculates the maximal size of conflict clauses to be used */
+static
+int conflictCalcMaxsize(
+   SET*             set,                /**< global SCIP settings */
+   PROB*            prob                /**< problem data */
+   )
+{
+   int maxsize;
+
+   assert(set != NULL);
+   assert(prob != NULL);
+
+   maxsize = (int)(set->conf_maxvarsfac * prob->nbinvars);
+   maxsize = MAX(maxsize, set->conf_minmaxvars);
+
+   return maxsize;
+}
+
 #if 0 /*??????????????????????????*/
 /** adds the collected conflict clauses to the corresponding nodes; the best set->conf_maxclauses clauses are added
  *  to the node of their validdepth; the remaining clauses are added to the node of their repropdepth in order to just
@@ -711,8 +729,7 @@ RETCODE SCIPconflictFlushClauses(
 
    /* calculate the maximal number of conflict clauses to accept, and the maximal size of each accepted conflict clause */
    maxclauses = (set->conf_maxclauses == -1 ? INT_MAX : set->conf_maxclauses);
-   maxsize = (int)(set->conf_maxvarsfac * prob->nbinvars);
-   maxsize = MAX(maxsize, set->conf_minmaxvars);
+   maxsize = conflictCalcMaxsize(set, prob);
 
    currentdepth = SCIPtreeGetCurrentDepth(tree);
    assert(currentdepth == tree->pathlen-1);
@@ -731,7 +748,6 @@ RETCODE SCIPconflictFlushClauses(
    {
       CLAUSE* clause;
       int insertdepth;
-      Bool temporary;
 
       clause = conflict->clauses[i];
       assert(clause != NULL);
@@ -742,7 +758,10 @@ RETCODE SCIPconflictFlushClauses(
 
       /* ignore clauses that are only valid at a node that was already cut off */
       if( clause->validdepth >= cutoffdepth )
+      {
+         debugMessage("ignoring clause with validdepth %d >= cutoffdepth %d\n", clause->validdepth, cutoffdepth);
          continue;
+      }
 
       /* if no conflict variables exist, the node and its sub tree in the conflict clause's valid depth can be 
        * cut off completely
@@ -761,15 +780,9 @@ RETCODE SCIPconflictFlushClauses(
        * (i.e. insert it at the node of its repropdepth)
        */
       if( clause->nvars > maxsize )
-      {
          insertdepth = clause->repropdepth;
-         temporary = TRUE;
-      }
       else
-      {
          insertdepth = clause->insertdepth;
-         temporary = FALSE;
-      }
 
       if( insertdepth < cutoffdepth && (insertdepth < currentdepth || clause->conflictdepth == INT_MAX) )
       {
@@ -792,7 +805,7 @@ RETCODE SCIPconflictFlushClauses(
             if( result == SCIP_CONSADDED )
             {
                success = TRUE;
-               if( clause->validdepth > 0 )
+               if( insertdepth > 0 )
                {
                   conflict->nappliedlocclauses++;
                   conflict->nappliedlocliterals += clause->nvars;
@@ -852,6 +865,7 @@ RETCODE conflictAddClauseCons(
    PROB*            prob,               /**< problem data */
    TREE*            tree,               /**< branch and bound tree */
    CLAUSE*          clause,             /**< clause to add to the tree */
+   int              insertdepth,        /**< depth level at which the clause should be added */
    Bool*            success             /**< pointer to store whether the addition was successful */
    )
 {
@@ -861,6 +875,7 @@ RETCODE conflictAddClauseCons(
    assert(tree != NULL);
    assert(tree->path != NULL);
    assert(clause != NULL);
+   assert(clause->validdepth <= insertdepth);
    assert(success != NULL);
 
    /* sort conflict handlers by priority */
@@ -872,12 +887,12 @@ RETCODE conflictAddClauseCons(
    {
       RESULT result;
 
-      CHECK_OKAY( SCIPconflicthdlrExec(set->conflicthdlrs[h], set, tree->path[clause->insertdepth],
+      CHECK_OKAY( SCIPconflicthdlrExec(set->conflicthdlrs[h], set, tree->path[insertdepth],
             tree->path[clause->validdepth], clause->vars, clause->nvars, *success, &result) );
       if( result == SCIP_CONSADDED )
       {
          *success = TRUE;
-         if( clause->validdepth > 0 )
+         if( insertdepth > 0 )
          {
             conflict->nappliedlocclauses++;
             conflict->nappliedlocliterals += clause->nvars;
@@ -928,20 +943,9 @@ RETCODE SCIPconflictFlushClauses(
    if( conflict->nclauses == 0 )
       return SCIP_OKAY;
 
-#if 0
-   { /*????????????????????? remove this! */
-      Bool global = FALSE;
-      for( i = 0; i < conflict->nclauses && !global; ++i )
-         global = (conflict->clauses[i]->validdepth == 0);
-      if( !global )
-         abort();
-   }
-#endif
-
    /* calculate the maximal number of conflict clauses to accept, and the maximal size of each accepted conflict clause */
    maxclauses = (set->conf_maxclauses == -1 ? INT_MAX : set->conf_maxclauses);
-   maxsize = (int)(set->conf_maxvarsfac * prob->nbinvars);
-   maxsize = MAX(maxsize, set->conf_minmaxvars);
+   maxsize = conflictCalcMaxsize(set, prob);
 
    currentdepth = SCIPtreeGetCurrentDepth(tree);
    assert(currentdepth == tree->pathlen-1);
@@ -964,20 +968,33 @@ RETCODE SCIPconflictFlushClauses(
       clause = conflict->clauses[i];
       assert(clause != NULL);
       assert(0 <= clause->validdepth && clause->validdepth <= clause->insertdepth && clause->insertdepth <= currentdepth);
+      assert(clause->insertdepth <= currentdepth);
       assert(clause->insertdepth <= clause->repropdepth);
       assert(clause->repropdepth <= currentdepth || clause->repropdepth == INT_MAX);
       assert(clause->conflictdepth <= currentdepth || clause->conflictdepth == INT_MAX); /* INT_MAX for dive/strong */
 
       /* ignore clauses that are only valid at a node that was already cut off */
-      if( clause->validdepth >= cutoffdepth )
+      if( clause->insertdepth >= cutoffdepth )
+      {
+         debugMessage(" -> ignoring clause with insertdepth %d >= cutoffdepth %d\n", clause->validdepth, cutoffdepth);
          continue;
+      }
+
+      /* ignore clauses that are only valid in the current node (which is cut off); if the conflict analysis was applied
+       * in strong branching, probing, or diving, the current node is not cut off -> the conflict clause is useful
+       */
+      if( clause->insertdepth >= currentdepth && clause->conflictdepth != INT_MAX )
+      {
+         debugMessage(" -> ignoring clause with insertdepth %d >= currentdepth %d\n", clause->validdepth, currentdepth);
+         continue;
+      }
 
       /* if no conflict variables exist, the node and its sub tree in the conflict clause's valid depth can be 
        * cut off completely
        */
       if( clause->nvars == 0 )
       {
-         debugMessage("empty conflict clause in depth %d cuts off sub tree at depth %d\n", 
+         debugMessage(" -> empty conflict clause in depth %d cuts off sub tree at depth %d\n", 
             currentdepth, clause->validdepth);
       
          SCIPnodeCutoff(tree->path[clause->validdepth], set, stat, tree);
@@ -988,26 +1005,24 @@ RETCODE SCIPconflictFlushClauses(
       /* if the clause is too long, use the clause only if it decreases the repropagation depth */
       if( clause->nvars > maxsize )
       {
+         debugMessage(" -> clause is too long: %d > %d literals\n", clause->nvars, maxsize);
          if( clause->repropdepth < repropdepth )
          {
             repropdepth = clause->repropdepth;
             repropclause = clause;
          }
       }
-      else if( clause->insertdepth < cutoffdepth
-         && (clause->insertdepth < currentdepth || clause->conflictdepth == INT_MAX) )
+      else
       {
          Bool success;
 
-         assert(clause->insertdepth <= currentdepth);
-
          /* call conflict handlers to create a conflict constraint */
-         CHECK_OKAY( conflictAddClauseCons(conflict, set, stat, prob, tree, clause, &success) );
+         CHECK_OKAY( conflictAddClauseCons(conflict, set, stat, prob, tree, clause, clause->insertdepth, &success) );
 
          if( success )
          {
-            debugMessage(" -> conflict clause added (cdpt:%d, fdpt:%d, insert:%d, valid:%d, conf:%d, reprop:%d, len:%d):", 
-               SCIPtreeGetCurrentDepth(tree), SCIPtreeGetFocusDepth(tree),
+            debugMessage(" -> conflict clause %d/%d added (cdpt:%d, fdpt:%d, insert:%d, valid:%d, conf:%d, reprop:%d, len:%d):\n", 
+               nclausesused+1, maxclauses, SCIPtreeGetCurrentDepth(tree), SCIPtreeGetFocusDepth(tree),
                clause->insertdepth, clause->validdepth, clause->conflictdepth, clause->repropdepth, clause->nvars);
             debug(clausePrint(clause));
 
@@ -1032,11 +1047,11 @@ RETCODE SCIPconflictFlushClauses(
       {
          Bool success;
 
-         CHECK_OKAY( conflictAddClauseCons(conflict, set, stat, prob, tree, repropclause, &success) );
+         CHECK_OKAY( conflictAddClauseCons(conflict, set, stat, prob, tree, repropclause, repropdepth, &success) );
 #ifdef DEBUG
          if( success )
          {
-            debugMessage(" -> additional reprop conflict clause added (cdpt:%d, fdpt:%d, insert:%d, valid:%d, conf:%d, reprop:%d, len:%d):", 
+            debugMessage(" -> additional reprop conflict clause added (cdpt:%d, fdpt:%d, insert:%d, valid:%d, conf:%d, reprop:%d, len:%d):\n", 
                SCIPtreeGetCurrentDepth(tree), SCIPtreeGetFocusDepth(tree),
                repropclause->insertdepth, repropclause->validdepth, repropclause->conflictdepth, 
                repropclause->repropdepth, repropclause->nvars);
@@ -1175,22 +1190,11 @@ RETCODE conflictAddConflictVar(
    Bool             temporary           /**< should the variable be added only temporary to the conflict set? */
    )
 {
-   int fixdepth;
-
    assert(conflict != NULL);
    assert(var != NULL);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
    assert(SCIPsetIsEQ(set, SCIPvarGetLbLP(var), SCIPvarGetUbLP(var)));
    assert(SCIPvarGetLbLP(var) > 0.5 || SCIPvarGetUbLP(var) < 0.5);
-
-   /* get the depth level, at which the variable was fixed */
-   fixdepth = SCIPvarGetLastBdchgDepth(var);
-   assert(fixdepth != -1); /* variables fixed in preprocessing shouldn't occur here */
-   if( fixdepth == -2 )
-   {
-      /* the variable is not fixed at the focus node: it was fixed due to diving, probing, or strong branching */
-      fixdepth = INT_MAX;
-   }
 
    /* choose variable or its negation, such that the literal is currently fixed to the desired value */
    if( (SCIPvarGetLbLP(var) > 0.5) != literalvalue )
@@ -1202,7 +1206,7 @@ RETCODE conflictAddConflictVar(
    assert((SCIPvarGetLbLP(var) > 0.5) == literalvalue);
 
    debugMessage("putting variable <%s> fixed to %d at depth %d to conflict set (temporary: %d)\n",
-      SCIPvarGetName(var), (SCIPvarGetLbLP(var) > 0.5), fixdepth, temporary);
+      SCIPvarGetName(var), (SCIPvarGetLbLP(var) > 0.5), SCIPvarGetLastBdchgDepth(var), temporary);
 
    if( var->conflictsetcount == conflict->count )
    {
@@ -1376,6 +1380,8 @@ RETCODE SCIPconflictInit(
 
    /* increase the conflict set counter, such that variables of new conflict set are labeled with this new counter */
    conflict->count++;
+   if( conflict->count == 0 ) /* make sure, 0 is not a valid conflict counter (may happen due to integer overflow) */
+      conflict->count = 1;
 
    return SCIP_OKAY;
 }
@@ -1418,7 +1424,7 @@ RETCODE SCIPconflictAddBound(
 
    assert(conflict != NULL);
    assert(var != NULL);
-
+   
    /* get active problem variable */
    scalar = 1.0;
    constant = 0.0;
@@ -1525,6 +1531,137 @@ BDCHGINFO* conflictFirstCand(
    return bdchginfo;
 }
 
+/** identifies the depth, at which the conflict clause should be added:
+ *  - at first, the insert depth is increased until the number of remaining unfixed literals in the clause
+ *    does not exceed the parameter conflict/minmaxvars anymore
+ *  - if the branching rule operates on variables only, and if all branching variables up to a certain
+ *    depth level are member of the conflict, the conflict clause can only be violated in the subtree
+ *    of the node at that depth, because in all other nodes, at least one of these branching variables
+ *    takes a different value, such that the conflict clause is feasible
+ *  - if there is at least one branching variable in a node, we assume, that this branching was performed
+ *    on variables, and that the siblings of this node are disjunct w.r.t. the branching variables' fixings
+ *  - the variables in the conflict set are labeled with the current conflict set counter
+ *  - we have to add the conflict clause at least in the valid depth of the initial conflict set,
+ *    so we start searching at the first branching after this depth level, i.e. validdepth+1
+ */
+static
+int conflictCalcInsertDepth(
+   CONFLICT*        conflict,           /**< conflict analysis data */
+   SET*             set,                /**< global SCIP settings */
+   TREE*            tree,               /**< branch and bound tree */
+   int              validdepth          /**< minimal depth level at which the initial conflict set is valid */
+   )
+{
+   int currentdepth;
+   int insertdepth;
+
+   assert(conflict != NULL);
+   assert(tree != NULL);
+
+   currentdepth = SCIPtreeGetCurrentDepth(tree);
+   assert(currentdepth == tree->pathlen-1);
+
+   /* the clause must not be inserted prior to its valid depth */
+   insertdepth = validdepth;
+
+   /* increase insert depth until the number of remaining unfixed literals in the clause does not exceed the
+    * parameter conflict/minmaxvars anymore
+    */
+   if( set->conf_maxunfixed >= 0 )
+   {
+      int nunfixedlits;
+
+      nunfixedlits = conflict->nconflictvars + conflict->ntmpconflictvars;
+      if( nunfixedlits > set->conf_maxunfixed )
+      {
+         int* nlits;
+         int i;
+         
+         CHECK_OKAY( SCIPsetAllocBufferArray(set, &nlits, currentdepth+2) );
+         clearMemoryArray(nlits, currentdepth+2);
+         
+         for( i = 0; i < conflict->nconflictvars + conflict->ntmpconflictvars; ++i )
+         {
+            int fixdepth;
+            
+            /* get the depth level, at which the variable was fixed */
+            fixdepth = SCIPvarGetLastBdchgDepth(conflict->conflictvars[i]);
+            assert(fixdepth != -1); /* variables fixed in preprocessing shouldn't occur here */
+            if( fixdepth == -2 )
+            {
+               /* the variable is not fixed at the focus node: it was fixed due to diving, probing, or strong branching */
+               fixdepth = currentdepth+1;
+            }
+            nlits[fixdepth]++;
+         }
+         for( i = 0; i <= currentdepth && nunfixedlits > set->conf_maxunfixed; ++i )
+            nunfixedlits -= nlits[i];
+         insertdepth = MAX(insertdepth, i-1);
+
+         SCIPsetFreeBufferArray(set, &nlits);
+      }
+   }
+
+   /* skip additional depth levels where branching on the conflict variables was applied */
+   for( insertdepth++; insertdepth <= currentdepth; ++insertdepth )
+   {
+      NODE* node;
+      VAR* var;
+      BOUNDCHG* boundchgs;
+      BOUNDCHGTYPE boundchgtype;
+      int nboundchgs;
+      int nbranchingvars;
+      int b;
+
+      node = tree->path[insertdepth];
+      assert(node != NULL);
+
+      /* if node has no domain changes, the branching was not performed on variables */
+      if( node->domchg == NULL )
+         break;
+
+      /* scan the bound changes of the current depth level: branchings are always first entries */
+      boundchgs = node->domchg->domchgbound.boundchgs;
+      nboundchgs = node->domchg->domchgbound.nboundchgs;
+      nbranchingvars = 0;
+      for( b = 0; b < nboundchgs; ++b )
+      {
+         var = boundchgs[b].var;
+         boundchgtype = (BOUNDCHGTYPE)boundchgs[b].boundchgtype;
+
+         debugMessage(" -> depth %d, bound change %d: <%s> %s %g (branching: %d, conflict set: %d)\n", 
+            insertdepth, b, SCIPvarGetName(var), (BOUNDTYPE)boundchgs[b].boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            boundchgs[b].newbound, (boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING),
+            (var->conflictsetcount == conflict->count));
+
+         if( boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING )
+            break;
+         if( var->conflictsetcount != conflict->count )
+         {
+            /* the branching variable is not member of the conflict set: abort at this depth level */
+            nbranchingvars = 0;
+            break;
+         }
+         nbranchingvars++;
+      }
+
+      /* break, if a branching variable not in the conflict set was found, or no branching variables exist,
+       * which probably means, that this branching was not operating on variables
+       */
+      if( nbranchingvars == 0 )
+         break;
+   }
+
+   /* now, insertdepth is the depth level of the first node, that has non-variable branching or a branching variable
+    * not in the conflict set; this means, the siblings of the node may benefit from the conflict clause,
+    * and the clause should be added to the node's parent, i.e. at depth level insertdepth-1
+    */
+   insertdepth--;
+   assert(validdepth <= insertdepth && insertdepth <= currentdepth);
+
+   return insertdepth;
+}
+
 /** calls the conflict handlers in order to create a conflict clause */
 static
 RETCODE conflictAddClause(
@@ -1590,80 +1727,8 @@ RETCODE conflictAddClause(
    }
 #endif
 
-#if 0 /*???????????????????? is this really true? */
-   /* even if all branching variables up to a certain depth d are member of the conflict, we don't want to delete
-    * those variables from the conflict clause and attach the conflict clause locally to the node in depth d,
-    * because those branching decisions may be changed into inferences due to repropagation of nodes higher in the
-    * tree
-    */
-   insertdepth = validdepth+1;
-#else
-   /* identify the depth, at which the conflict clause should be added:
-    * - if the branching rule operates on variables only, and if all branching variables up to a certain
-    *   depth level are member of the conflict, the conflict clause can only be violated in the subtree
-    *   of the node at that depth, because in all other nodes, at least one of these branching variables
-    *   takes a different value, such that the conflict clause is feasible
-    * - if there is at least one branching variable in a node, we assume, that this branching was performed
-    *   on variables, and that the siblings of this node are disjunct w.r.t. the branching variables' fixings
-    * - the variables in the conflict set are labeled with the current conflict set counter
-    * - we have to add the conflict clause at least in the valid depth of the initial conflict set,
-    *   so we start searching at the first branching after this depth level, i.e. validdepth+1
-    */
-   for( insertdepth = validdepth+1; insertdepth <= currentdepth; ++insertdepth )
-   {
-      NODE* node;
-      VAR* var;
-      BOUNDCHG* boundchgs;
-      BOUNDCHGTYPE boundchgtype;
-      int nboundchgs;
-      int nbranchingvars;
-      int b;
-
-      node = tree->path[insertdepth];
-      assert(node != NULL);
-
-      /* if node has no domain changes, the branching was not performed on variables */
-      if( node->domchg == NULL )
-         break;
-
-      /* scan the bound changes of the current depth level: branchings are always first entries */
-      boundchgs = node->domchg->domchgbound.boundchgs;
-      nboundchgs = node->domchg->domchgbound.nboundchgs;
-      nbranchingvars = 0;
-      for( b = 0; b < nboundchgs; ++b )
-      {
-         var = boundchgs[b].var;
-         boundchgtype = (BOUNDCHGTYPE)boundchgs[b].boundchgtype;
-
-         debugMessage(" -> depth %d, bound change %d: <%s> %s %g (branching: %d, conflict set: %d)\n", 
-            insertdepth, b, SCIPvarGetName(var), (BOUNDTYPE)boundchgs[b].boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-            boundchgs[b].newbound, (boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING),
-            (var->conflictsetcount == conflict->count));
-
-         if( boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING )
-            break;
-         if( var->conflictsetcount != conflict->count )
-         {
-            /* the branching variable is not member of the conflict set: abort at this depth level */
-            nbranchingvars = 0;
-            break;
-         }
-         nbranchingvars++;
-      }
-
-      /* break, if a branching variable not in the conflict set was found, or no branching variables exist,
-       * which probably means, that this branching was not operating on variables
-       */
-      if( nbranchingvars == 0 )
-         break;
-   }
-#endif
-
-   /* now, insertdepth is the depth level of the first node, that has non-variable branching or a branching variable
-    * not in the conflict set; this means, the siblings of the node may benefit from the conflict clause,
-    * and the clause should be added to the node's parent, i.e. at depth level insertdepth-1
-    */
-   insertdepth--;
+   /* calculate the depth, at which the clause should be inserted */
+   insertdepth = conflictCalcInsertDepth(conflict, set, tree, validdepth);
    assert(validdepth <= insertdepth && insertdepth <= currentdepth);
    debugMessage(" -> conflict with %d literals found at depth %d is active in depth %d and valid in depth %d\n", 
       conflict->nconflictvars + conflict->ntmpconflictvars, currentdepth, insertdepth, validdepth);
@@ -2306,6 +2371,11 @@ RETCODE SCIPconflictAnalyze(
 
    /* check, if there are any conflict handlers to use a conflict set */
    if( set->nconflicthdlrs == 0 )
+      return SCIP_OKAY;
+
+   /* check, if the conflict clause will get too large with high probability */
+   if( conflict->nconflictvars + SCIPpqueueNElems(conflict->binbdchgqueue)
+      + SCIPpqueueNElems(conflict->nonbinbdchgqueue) >= 2*conflictCalcMaxsize(set, prob) )
       return SCIP_OKAY;
 
    debugMessage("analyzing conflict after infeasible propagation in depth %d\n", SCIPtreeGetCurrentDepth(tree));
@@ -3442,6 +3512,7 @@ RETCODE conflictAnalyzeRemainingBdchgs(
    int nvars;
    int v;
    int nbdchgs;
+   int maxsize;
 
    assert(prob != NULL);
    assert(lbchginfoposs != NULL);
@@ -3460,13 +3531,15 @@ RETCODE conflictAnalyzeRemainingBdchgs(
    nvars = prob->nvars;
    assert(nvars == 0 || vars != NULL);
 
+   maxsize = 2*conflictCalcMaxsize(set, prob);
+
    /* initialize conflict data */
    CHECK_OKAY( SCIPconflictInit(conflict) );
    
    /* add remaining bound changes to conflict queue */
    debugMessage("initial conflict set after undoing bound changes:\n");
    nbdchgs = 0;
-   for( v = 0; v < nvars; ++v )
+   for( v = 0; v < nvars && nbdchgs < maxsize; ++v )
    {
       var = vars[v];
       assert(var != NULL);

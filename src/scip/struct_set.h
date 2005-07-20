@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.53 2005/07/15 17:20:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.54 2005/07/20 16:35:16 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -115,6 +115,8 @@ struct Set
    /* conflict analysis settings */
    Real             conf_maxvarsfac;    /**< maximal fraction of binary variables involved in a conflict clause */
    int              conf_minmaxvars;    /**< minimal absolute maximum of variables involved in a conflict clause */
+   int              conf_maxunfixed;    /**< maximal number of unfixed variables at insertion depth of conflict clause
+                                         *   (-1: no limit) */
    int              conf_maxlploops;    /**< maximal number of LP resolving loops during conflict analysis */
    int              conf_fuiplevels;    /**< number of depth levels up to which first UIP's are used in conflict
                                          *   analysis (-1: use All-FirstUIP rule) */
@@ -134,8 +136,10 @@ struct Set
    Bool             conf_removeable;    /**< should the conflict's relaxations be subject to LP aging and cleanup? */
 
    /* constraint settings */
-   int              cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted, or -1 */
-   int              cons_obsoleteage;   /**< age of a constraint after which it is marked obsolete (not useful anymore) */
+   int              cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted
+                                         *   (0: dynamic, -1: disable aging) */
+   int              cons_obsoleteage;   /**< age of a constraint after which it is marked obsolete
+                                         *   (0: dynamic, -1: disable obsoletion) */
 
    /* display settings */
    VERBLEVEL        disp_verblevel;     /**< verbosity level of output */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.51 2005/07/15 17:20:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.52 2005/07/20 16:35:15 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2
@@ -37,6 +37,8 @@
 #include "spxsolver.h"
 #include "slufactor.h"
 #include "spxsteeppr.h"
+#include "spxparmultpr.h"
+#include "spxdevexpr.h"
 #include "spxfastrt.h"
 
 /* reset the DEBUG define to its original SCIP value */
@@ -60,7 +62,9 @@ using namespace soplex;
 class SPxSCIP : public SPxSolver
 {
    SLUFactor        m_slu;              /**< sparse LU factorization */
-   SPxSteepPR       m_price;            /**< steepest edge pricer */
+   SPxSteepPR       m_price_steep;      /**< steepest edge pricer */
+   SPxParMultPR     m_price_parmult;    /**< partial multiple pricer */
+   SPxDevexPR       m_price_devex;      /**< devex pricer */
    SPxFastRT        m_ratio;            /**< Harris fast ratio tester */
    char*            m_probname;         /**< problem name */
    bool             m_fromscratch;      /**< use old basis indicator */
@@ -79,7 +83,7 @@ public:
    {
       setSolver(&m_slu);
       setTester(&m_ratio);
-      setPricer(&m_price);
+      setPricer(&m_price_steep);
       /* no starter, no simplifier, no scaler */
 
       m_slu.setUtype(SLUFactor::ETA);
@@ -92,6 +96,26 @@ public:
    {
       if( m_probname != NULL )
          spx_free(m_probname);  /*lint !e1551*/
+   }
+
+   void setAutoPricer()
+   {
+      setPricer(&m_price_steep);
+   }
+
+   void setSteepPricer()
+   {
+      setPricer(&m_price_steep);
+   }
+
+   void setParmultPricer()
+   {
+      setPricer(&m_price_parmult);
+   }
+
+   void setDevexPricer()
+   {
+      setPricer(&m_price_devex);
    }
 
    bool getFromScratch() const
@@ -220,6 +244,7 @@ struct LPi
    int*             rstat;              /**< array for storing row basis status */
    int              cstatsize;          /**< size of cstat array */
    int              rstatsize;          /**< size of rstat array */
+   PRICING          pricing;            /**< current pricing strategy */
 };
 
 /** LPi state stores basis information */
@@ -460,6 +485,7 @@ RETCODE SCIPlpiCreate(
    (*lpi)->rstat = NULL;
    (*lpi)->cstatsize = 0;
    (*lpi)->rstatsize = 0;
+   (*lpi)->pricing = SCIP_PRICING_AUTO;
 
    /* set objective sense */
    CHECK_OKAY( SCIPlpiChgObjsen(*lpi, objsen) );
@@ -2310,6 +2336,9 @@ RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_LPITLIM:
       *ival = lpi->spx->terminationIter();
       break;
+   case SCIP_LPPAR_PRICING:
+      *ival = (int)lpi->pricing;
+      break;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }
@@ -2345,6 +2374,29 @@ RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_LPITLIM:
       lpi->spx->setTerminationIter(ival);
       break;
+   case SCIP_LPPAR_PRICING:
+      lpi->pricing = (PRICING)ival;
+      switch( lpi->pricing )
+      {
+      case SCIP_PRICING_AUTO:
+      case SCIP_PRICING_FULL:
+         lpi->spx->setAutoPricer();
+         break;
+      case SCIP_PRICING_PARTIAL:
+         lpi->spx->setParmultPricer();
+         break;
+      case SCIP_PRICING_STEEP:
+      case SCIP_PRICING_STEEPQSTART:
+         lpi->spx->setSteepPricer();
+	 break;
+      case SCIP_PRICING_DEVEX:
+         lpi->spx->setDevexPricer();
+	 break;
+      default:
+         return SCIP_LPERROR;
+      }
+      break;
+
    default:
       return SCIP_PARAMETERUNKNOWN;
    }

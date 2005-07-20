@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.151 2005/07/15 17:20:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.152 2005/07/20 16:35:15 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -67,6 +67,8 @@
 
 #define SCIP_DEFAULT_CONF_MAXVARSFAC       0.02 /**< maximal fraction of binary variables involved in a conflict clause */
 #define SCIP_DEFAULT_CONF_MINMAXVARS         30 /**< minimal absolute maximum of variables involved in a conflict clause */
+#define SCIP_DEFAULT_CONF_MAXUNFIXED         -1 /**< maximal number of unfixed variables at insertion depth of conflict
+                                                 *   clause (-1: no limit) */
 #define SCIP_DEFAULT_CONF_MAXLPLOOPS        100 /**< maximal number of LP resolving loops during conflict analysis */
 #define SCIP_DEFAULT_CONF_FUIPLEVELS         -1 /**< number of depth levels up to which first UIP's are used in conflict
                                                  *   analysis (-1: use All-FirstUIP rule) */
@@ -89,9 +91,9 @@
 /* Constraints */
 
 #define SCIP_DEFAULT_CONS_AGELIMIT          200 /**< maximum age an unnecessary constraint can reach before it is deleted
-                                                 *   (-1: constraints are never deleted) */
+                                                 *   (0: dynamic adjustment, -1: constraints are never deleted) */
 #define SCIP_DEFAULT_CONS_OBSOLETEAGE       100 /**< age of a constraint after which it is marked obsolete
-                                                 *   (-1: constraints are never marked obsolete) */
+                                                 *   (0: dynamic adjustment, -1: constraints are never marked obsolete) */
 
 
 /* Display */
@@ -123,8 +125,9 @@
                                                  *   barrier with 'c'rossover) */
 #define SCIP_DEFAULT_LP_RESOLVEALGORITHM    's' /**< LP algorithm for resolving LP relaxations if a starting basis exists
                                                  *   ('s'implex, 'b'arrier, barrier with 'c'rossover) */
-#define SCIP_DEFAULT_LP_PRICING             's' /**< LP pricing strategy ('a'uto, 'f'ull pricing, 's'teepest edge pricing,
-                                                 *   'q'uickstart steepest edge pricing, 'd'evex pricing) */
+#define SCIP_DEFAULT_LP_PRICING             's' /**< LP pricing strategy ('a'uto, 'f'ull pricing, 'p'artial,
+                                                 *   's'teepest edge pricing, 'q'uickstart steepest edge pricing,
+                                                 *   'd'evex pricing) */
 #define SCIP_DEFAULT_LP_COLAGELIMIT          10 /**< maximum age a dynamic column can reach before it is deleted from LP
                                                  *   (-1: don't delete columns due to aging) */
 #define SCIP_DEFAULT_LP_ROWAGELIMIT          10 /**< maximum age a dynamic row can reach before it is deleted from LP
@@ -420,6 +423,11 @@ RETCODE SCIPsetCreate(
          &(*set)->conf_minmaxvars, SCIP_DEFAULT_CONF_MINMAXVARS, 0, INT_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+         "conflict/maxunfixed",
+         "maximal number of unfixed variables at insertion depth of conflict clause (-1: no limit)",
+         &(*set)->conf_maxunfixed, SCIP_DEFAULT_CONF_MAXUNFIXED, -1, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
          "conflict/maxlploops",
          "maximal number of LP resolving loops during conflict analysis",
          &(*set)->conf_maxlploops, SCIP_DEFAULT_CONF_MAXLPLOOPS, 0, INT_MAX,
@@ -468,12 +476,12 @@ RETCODE SCIPsetCreate(
    /* constraint parameters */
    CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
          "constraints/agelimit",
-         "maximum age an unnecessary constraint can reach before it is deleted, or -1 to keep all constraints",
+         "maximum age an unnecessary constraint can reach before it is deleted (0: dynamic, -1: keep all constraints)",
          &(*set)->cons_agelimit, SCIP_DEFAULT_CONS_AGELIMIT, -1, INT_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
          "constraints/obsoleteage",
-         "age of a constraint after which it is marked obsolete, or -1 to not mark constraints obsolete",
+         "age of a constraint after which it is marked obsolete (0: dynamic, -1 do not mark constraints obsolete)",
          &(*set)->cons_obsoleteage, SCIP_DEFAULT_CONS_OBSOLETEAGE, -1, INT_MAX,
          NULL, NULL) );
 
@@ -566,8 +574,8 @@ RETCODE SCIPsetCreate(
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddCharParam(*set, blkmem,
          "lp/pricing",
-         "LP pricing strategy ('a'uto, 'f'ull pricing, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)",
-         &(*set)->lp_pricing, SCIP_DEFAULT_LP_PRICING, "afsqd",
+         "LP pricing strategy ('a'uto, 'f'ull pricing, 'p'artial, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)",
+         &(*set)->lp_pricing, SCIP_DEFAULT_LP_PRICING, "afpsqd",
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
          "lp/colagelimit",
