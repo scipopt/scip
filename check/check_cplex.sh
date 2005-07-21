@@ -15,14 +15,15 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.sh,v 1.12 2005/07/01 14:59:55 bzfpfend Exp $
+# $Id: check_cplex.sh,v 1.13 2005/07/21 09:12:11 bzfpfend Exp $
 TSTNAME=$1
 CPLEXBIN=$2
-BINNAME=$CPLEXBIN.$3
-TIMELIMIT=$4
-NODELIMIT=$5
-MEMLIMIT=$6
-FEASTOL=$7
+SETTINGS=$3
+BINNAME=$CPLEXBIN.$4
+TIMELIMIT=$5
+NODELIMIT=$6
+MEMLIMIT=$7
+FEASTOL=$8
 
 OUTFILE=results/check.$TSTNAME.$BINNAME.out
 ERRFILE=results/check.$TSTNAME.$BINNAME.err
@@ -41,7 +42,12 @@ do
     then
 	echo @01 $i ===========
 	echo @01 $i ===========                 >> $ERRFILE
-	echo read $i                             > $TMPFILE
+	if [ $SETTINGS != "" ]
+	then
+	    cp $SETTINGS $TMPFILE
+	else
+	    echo ""                              > $TMPFILE
+	fi
 	if [ $FEASTOL != "default" ]
 	then
 	    echo set simplex tolerances feas $FEASTOL    >> $TMPFILE
@@ -55,6 +61,7 @@ do
 	echo set mip tolerances mipgap 0.0      >> $TMPFILE
 	echo set mip limits nodes $NODELIMIT    >> $TMPFILE
 	echo set mip limits treememory $MEMLIMIT >> $TMPFILE
+	echo read $i                            >> $TMPFILE
 	echo optimize                           >> $TMPFILE
 	echo quit                               >> $TMPFILE
 	echo -----------------------------

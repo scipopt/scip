@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.116 2005/07/20 16:35:12 bzfpfend Exp $
+# $Id: Makefile,v 1.117 2005/07/21 09:12:11 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -345,7 +345,7 @@ test:
 
 testcplex:		
 		cd check; \
-		/bin/sh ./check_cplex.sh $(TEST) $(CPLEX) $(OSTYPE).$(ARCH).$(MACHINENAME) $(TIME) $(NODES) $(MEM) $(FEASTOL);
+		/bin/sh ./check_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) $(OSTYPE).$(ARCH).$(MACHINENAME) $(TIME) $(NODES) $(MEM) $(FEASTOL);
 
 $(OBJDIR):	
 		@-mkdir -p $(OBJDIR)
