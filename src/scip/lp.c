@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.201 2005/08/03 15:30:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.202 2005/08/03 16:19:08 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -8474,7 +8474,7 @@ RETCODE SCIPlpSetCutoffbound(
    /* if the objective function was changed in diving, the cutoff bound has no meaning (it will be set correctly
     * in SCIPendDive())
     */
-   if( !SCIPlpDivingObjChanged(lp) )
+   if( SCIPlpDivingObjChanged(lp) )
    {
       assert(SCIPsetIsInfinity(set, lp->cutoffbound));
       return SCIP_OKAY;
