@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.200 2005/07/20 16:35:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.201 2005/08/03 15:30:01 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -7655,12 +7655,12 @@ void sumStrongCGRow(
             if( SCIPsetIsInfinity(set, row->rhs) || (!SCIPsetIsInfinity(set, -row->lhs) && weight < 0.0) )
             {
                slacksign[r] = -1;
-               (*strongcgrhs) += weight * (row->lhs - row->constant);
+               (*strongcgrhs) += weight * SCIPsetFeasCeil(set, row->lhs - row->constant); /* row is integral: round left hand side up */
             }
             else
             {
                slacksign[r] = +1;
-               (*strongcgrhs) += weight * (row->rhs - row->constant);
+               (*strongcgrhs) += weight * SCIPsetFeasFloor(set, row->rhs - row->constant); /* row is integral: round right hand side down */
             }
          }
          else
@@ -7959,8 +7959,8 @@ static
 void roundStrongCGRow(
    SET*             set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
-   Real*            strongcgcoef,            /**< array to store strong CG coefficients: must be of size nvars */
-   Real*            strongcgrhs,             /**< pointer to store the right hand side of the strong CG row */
+   Real*            strongcgcoef,       /**< array to store strong CG coefficients: must be of size nvars */
+   Real*            strongcgrhs,        /**< pointer to store the right hand side of the strong CG row */
    int*             varsign,            /**< stores the sign of the transformed variable in summation */
    int*             boundtype,          /**< stores the bound used for transformed variable (vlb/vub_idx or -1 for lb/ub)*/
    Real             f0,                 /**< fracional value of rhs */
@@ -8079,7 +8079,7 @@ void roundStrongCGRow(
  *    integers:   a起r = a~_r = down(a'_r)                  , if f_r <= f0
  *                a起r = a~_r = down(a'_r) + p_r/(k + 1)    , if f_r >  f0
  *    continuous: a起r = a~_r = 0                           , if a'_r >= 0
- *                no strong CG cut found                   , if a'_r <  0
+ *                no strong CG cut found                    , if a'_r <  0
  *
  *  Substitute a起r * s_r by adding a起r times the slack's definition to the cut.
  */
@@ -8140,9 +8140,7 @@ void substituteStrongCGRow(
       ar = slacksign[r] * scale * weights[r];
 
       /* calculate slack variable's coefficient a起r in the cut */
-      if( row->integral
-         && ((slacksign[r] == +1 && SCIPsetIsFeasIntegral(set, row->rhs - row->constant))
-            || (slacksign[r] == -1 && SCIPsetIsFeasIntegral(set, row->lhs - row->constant))) )
+      if( row->integral )
       {
          /* slack variable is always integral: */
          downar = SCIPsetFloor(set, ar);
@@ -8161,7 +8159,7 @@ void substituteStrongCGRow(
       else
       {
          /* slack variable is continuous: */
-         assert( ar >= 0.0 );
+         assert(ar >= 0.0);
          continue; /* slack can be ignored, because its coefficient is reduced to 0.0 */
       }
 
@@ -8188,20 +8186,37 @@ void substituteStrongCGRow(
       }
 
       /* update the activity: we have to add  mul * a*x^  to the cut's activity (row activity = a*x^ + c) */
-      (*cutactivity) += mul * (SCIProwGetLPActivity(row, stat, lp) - row->constant);
+      *cutactivity += mul * (SCIProwGetLPActivity(row, stat, lp) - row->constant);
 
       /* move slack's constant to the right hand side */
       if( slacksign[r] == +1 )
       {
+ 	 Real rhs;
+
          /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a起r * (rhs - c) to the right hand side */
          assert(!SCIPsetIsInfinity(set, row->rhs));
-         (*strongcgrhs) -= cutar * (row->rhs - row->constant);
+	 rhs = row->rhs - row->constant;
+	 if( row->integral )
+	 {
+	    /* the right hand side was implicitly rounded down in row aggregation */
+	    rhs = SCIPsetFeasFloor(set, rhs);
+	 }
+         *strongcgrhs -= cutar * rhs;
+	 
       }
       else
       {
+ 	 Real lhs;
+
          /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a起r * (c - lhs) to the right hand side */
          assert(!SCIPsetIsInfinity(set, -row->lhs));
-         (*strongcgrhs) -= cutar * (row->constant - row->lhs);
+	 lhs = row->lhs - row->constant;
+         if( row->integral )
+	 {
+	    /* the left hand side was implicitly rounded up in row aggregation */
+	    lhs = SCIPsetFeasCeil(set, lhs);
+	 }
+	 *strongcgrhs += cutar * lhs;
       }
    }
 
@@ -8452,9 +8467,19 @@ RETCODE SCIPlpSetCutoffbound(
    )
 {
    assert(lp != NULL);
+   assert(!lp->divingobjchg);
 
    debugMessage("setting LP upper objective limit from %g to %g\n", lp->cutoffbound, cutoffbound);
    
+   /* if the objective function was changed in diving, the cutoff bound has no meaning (it will be set correctly
+    * in SCIPendDive())
+    */
+   if( !SCIPlpDivingObjChanged(lp) )
+   {
+      assert(SCIPsetIsInfinity(set, lp->cutoffbound));
+      return SCIP_OKAY;
+   }
+
    /* if the cutoff bound is increased, and the LP was proved to exceed the old cutoff, it is no longer solved;
     * if the cutoff bound is decreased below the current optimal value, the LP now exceeds the objective limit
     */
@@ -9540,7 +9565,7 @@ RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_INFEASIBLE:
-         if( !SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve )
+	 if( !SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve )
          {
             CHECK_OKAY( SCIPlpGetDualfarkas(lp, set, stat) );
          }

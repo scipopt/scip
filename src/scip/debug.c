@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.6 2005/07/20 16:35:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.7 2005/08/03 15:30:00 bzfpfend Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -217,128 +217,6 @@ RETCODE getSolutionValue(
    return SCIP_OKAY;
 }
 
-/** checks whether given row is valid for the debugging solution */
-RETCODE SCIPdebugCheckRow(
-   SET*             set,                /**< global SCIP settings */
-   ROW*             row                 /**< row to check for validity */
-   )
-{
-   COL** cols;
-   Real* vals;
-   Real lhs;
-   Real rhs;
-   int nnonz;
-   int i;
-   Real minactivity;
-   Real maxactivity;
-   Real solval;
-
-   cols = SCIProwGetCols(row);
-   vals = SCIProwGetVals(row);
-   nnonz = SCIProwGetNNonz(row);
-   lhs = SCIProwGetLhs(row);
-   rhs = SCIProwGetRhs(row);
-
-   /* calculate row's activity on debugging solution */
-   minactivity = SCIProwGetConstant(row);
-   maxactivity = minactivity;
-   for( i = 0; i < nnonz; ++i )
-   {
-      VAR* var;
-
-      /* get solution value of variable in debugging solution */
-      var = SCIPcolGetVar(cols[i]);
-      CHECK_OKAY( getSolutionValue(var, &solval) );
-      if( solval != SCIP_INVALID )
-      {
-         minactivity += vals[i] * solval;
-         maxactivity += vals[i] * solval;
-      }
-      else if( vals[i] > 0.0 )
-      {
-         minactivity += vals[i] * SCIPvarGetLbGlobal(var);
-         maxactivity += vals[i] * SCIPvarGetUbGlobal(var);
-      }
-      else if( vals[i] < 0.0 )
-      {
-         minactivity += vals[i] * SCIPvarGetUbGlobal(var);
-         maxactivity += vals[i] * SCIPvarGetLbGlobal(var);
-      }
-   }
-   debugMessage("debugging solution on row <%s>: %g <= [%g,%g] <= %g\n", 
-      SCIProwGetName(row), lhs, minactivity, maxactivity, rhs);
-
-   /* check row for violation */
-   if( SCIPsetIsFeasLT(set, maxactivity, lhs) || SCIPsetIsFeasGT(set, minactivity, rhs) )
-   {
-      printf("***** debug: row <%s> violates debugging solution (lhs=%g, rhs=%g, activity=[%g,%g])\n",
-         SCIProwGetName(row), lhs, rhs, minactivity, maxactivity);
-      SCIProwPrint(row, NULL);
-
-      /* output row with solution values */
-      printf("\n\n");
-      printf("***** debug: violated row <%s>:\n", SCIProwGetName(row));
-      printf(" %g <= %g", lhs, SCIProwGetConstant(row));
-      for( i = 0; i < nnonz; ++i )
-      {
-         /* get solution value of variable in debugging solution */
-         CHECK_OKAY( getSolutionValue(SCIPcolGetVar(cols[i]), &solval) );
-         printf(" %+g<%s>[%g]", vals[i], SCIPvarGetName(SCIPcolGetVar(cols[i])), solval);
-      }
-      printf(" <= %g\n", rhs);
-
-      SCIPABORT();
-   }
-
-   return SCIP_OKAY;
-}
-
-/** checks whether given global lower bound is valid for the debugging solution */
-RETCODE SCIPdebugCheckLbGlobal(
-   SET*             set,                /**< global SCIP settings */
-   VAR*             var,                /**< problem variable */
-   Real             lb                  /**< lower bound */
-   )
-{
-   Real varsol;
-
-   /* get solution value of variable */
-   CHECK_OKAY( getSolutionValue(var, &varsol) );
-   debugMessage("debugging solution on lower bound of <%s>[%g] >= %g\n", SCIPvarGetName(var), varsol, lb);
-
-   /* check validity of debugging solution */
-   if( varsol != SCIP_INVALID && SCIPsetIsLT(set, varsol, lb) )
-   {
-      errorMessage("invalid global lower bound: <%s>[%g] >= %g\n", SCIPvarGetName(var), varsol, lb);
-      SCIPABORT();
-   }
-
-   return SCIP_OKAY;
-}
-
-/** checks whether given global upper bound is valid for the debugging solution */
-RETCODE SCIPdebugCheckUbGlobal(
-   SET*             set,                /**< global SCIP settings */
-   VAR*             var,                /**< problem variable */
-   Real             ub                  /**< upper bound */
-   )
-{
-   Real varsol;
-
-   /* get solution value of variable */
-   CHECK_OKAY( getSolutionValue(var, &varsol) );
-   debugMessage("debugging solution on upper bound of <%s>[%g] <= %g\n", SCIPvarGetName(var), varsol, ub);
-
-   /* check validity of debugging solution */
-   if( varsol != SCIP_INVALID && SCIPsetIsGT(set, varsol, ub) )
-   {
-      errorMessage("invalid global upper bound: <%s>[%g] <= %g\n", SCIPvarGetName(var), varsol, ub);
-      SCIPABORT();
-   }
-
-   return SCIP_OKAY;
-}
-
 static HASHMAP* solinnode = NULL;       /**< maps nodes to bools, storing whether the solution is valid for the node */
 static Bool falseptr = FALSE;
 static Bool trueptr = TRUE;
@@ -417,6 +295,138 @@ RETCODE isSolutionInNode(
    /* remember the status of the current node */
    CHECK_OKAY( SCIPhashmapSetImage(solinnode, (void*)node, *solcontained ? (void*)(&trueptr) : (void*)(&falseptr)) );
    
+   return SCIP_OKAY;
+}
+
+/** checks whether given row is valid for the debugging solution */
+RETCODE SCIPdebugCheckRow(
+   SET*             set,                /**< global SCIP settings */
+   ROW*             row                 /**< row to check for validity */
+   )
+{
+   COL** cols;
+   Real* vals;
+   Real lhs;
+   Real rhs;
+   int nnonz;
+   int i;
+   Real minactivity;
+   Real maxactivity;
+   Real solval;
+
+   /* if the row is only locally valid, check whether the debugging solution is contained in the local subproblem */
+   if( SCIProwIsLocal(row) )
+   {
+      Bool solcontained;
+
+      CHECK_OKAY( isSolutionInNode(SCIPblkmem(set->scip), set, SCIPgetCurrentNode(set->scip), &solcontained) );
+      if( !solcontained )
+         return SCIP_OKAY;
+   }
+
+   cols = SCIProwGetCols(row);
+   vals = SCIProwGetVals(row);
+   nnonz = SCIProwGetNNonz(row);
+   lhs = SCIProwGetLhs(row);
+   rhs = SCIProwGetRhs(row);
+
+   /* calculate row's activity on debugging solution */
+   minactivity = SCIProwGetConstant(row);
+   maxactivity = minactivity;
+   for( i = 0; i < nnonz; ++i )
+   {
+      VAR* var;
+
+      /* get solution value of variable in debugging solution */
+      var = SCIPcolGetVar(cols[i]);
+      CHECK_OKAY( getSolutionValue(var, &solval) );
+      if( solval != SCIP_INVALID )
+      {
+         minactivity += vals[i] * solval;
+         maxactivity += vals[i] * solval;
+      }
+      else if( vals[i] > 0.0 )
+      {
+         minactivity += vals[i] * SCIPvarGetLbGlobal(var);
+         maxactivity += vals[i] * SCIPvarGetUbGlobal(var);
+      }
+      else if( vals[i] < 0.0 )
+      {
+         minactivity += vals[i] * SCIPvarGetUbGlobal(var);
+         maxactivity += vals[i] * SCIPvarGetLbGlobal(var);
+      }
+   }
+   debugMessage("debugging solution on row <%s>: %g <= [%g,%g] <= %g\n", 
+      SCIProwGetName(row), lhs, minactivity, maxactivity, rhs);
+
+   /* check row for violation */
+   if( SCIPsetIsFeasLT(set, maxactivity, lhs) || SCIPsetIsFeasGT(set, minactivity, rhs) )
+   {
+      printf("***** debug: row <%s> violates debugging solution (lhs=%g, rhs=%g, activity=[%g,%g], local=%d)\n",
+         SCIProwGetName(row), lhs, rhs, minactivity, maxactivity, SCIProwIsLocal(row));
+      SCIProwPrint(row, NULL);
+
+      /* output row with solution values */
+      printf("\n\n");
+      printf("***** debug: violated row <%s>:\n", SCIProwGetName(row));
+      printf(" %g <= %g", lhs, SCIProwGetConstant(row));
+      for( i = 0; i < nnonz; ++i )
+      {
+         /* get solution value of variable in debugging solution */
+         CHECK_OKAY( getSolutionValue(SCIPcolGetVar(cols[i]), &solval) );
+         printf(" %+g<%s>[%g]", vals[i], SCIPvarGetName(SCIPcolGetVar(cols[i])), solval);
+      }
+      printf(" <= %g\n", rhs);
+
+      SCIPABORT();
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks whether given global lower bound is valid for the debugging solution */
+RETCODE SCIPdebugCheckLbGlobal(
+   SET*             set,                /**< global SCIP settings */
+   VAR*             var,                /**< problem variable */
+   Real             lb                  /**< lower bound */
+   )
+{
+   Real varsol;
+
+   /* get solution value of variable */
+   CHECK_OKAY( getSolutionValue(var, &varsol) );
+   debugMessage("debugging solution on lower bound of <%s>[%g] >= %g\n", SCIPvarGetName(var), varsol, lb);
+
+   /* check validity of debugging solution */
+   if( varsol != SCIP_INVALID && SCIPsetIsLT(set, varsol, lb) )
+   {
+      errorMessage("invalid global lower bound: <%s>[%g] >= %g\n", SCIPvarGetName(var), varsol, lb);
+      SCIPABORT();
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks whether given global upper bound is valid for the debugging solution */
+RETCODE SCIPdebugCheckUbGlobal(
+   SET*             set,                /**< global SCIP settings */
+   VAR*             var,                /**< problem variable */
+   Real             ub                  /**< upper bound */
+   )
+{
+   Real varsol;
+
+   /* get solution value of variable */
+   CHECK_OKAY( getSolutionValue(var, &varsol) );
+   debugMessage("debugging solution on upper bound of <%s>[%g] <= %g\n", SCIPvarGetName(var), varsol, ub);
+
+   /* check validity of debugging solution */
+   if( varsol != SCIP_INVALID && SCIPsetIsGT(set, varsol, ub) )
+   {
+      errorMessage("invalid global upper bound: <%s>[%g] <= %g\n", SCIPvarGetName(var), varsol, ub);
+      SCIPABORT();
+   }
+
    return SCIP_OKAY;
 }
 
@@ -603,6 +613,8 @@ RETCODE SCIPdebugCheckConflict(
    }
    printf("\n");
    SCIPABORT();
+
+   return SCIP_OKAY;
 }
 
 

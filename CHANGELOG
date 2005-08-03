@@ -114,6 +114,8 @@ fixed bugs:
 - fixed bug with redundant self implications that wrongly lead to the detection of infeasibility
 - fixed bug that primal or dual rays might not be available because the wrong solver was used
 - included message.o in LPI library, s.t. one can link this library indepentent of SCIP
+- fixed bug that if diving heuristic that changes the objective values finds a solution, the cutoff is reinstalled in
+  the LP solver (although the objective value has no meaning due to the objective function modification)
 
 
 SCIP version 0.79

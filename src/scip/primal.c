@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.67 2005/06/21 16:55:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.68 2005/08/03 15:30:01 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -170,7 +170,7 @@ RETCODE primalSetCutoffbound(
    
    /* set cut off value in LP solver */
    CHECK_OKAY( SCIPlpSetCutoffbound(lp, set, primal->cutoffbound) );
-   
+
    /* cut off leaves of the tree */
    CHECK_OKAY( SCIPtreeCutoff(tree, blkmem, set, stat, lp, primal->cutoffbound) );
 

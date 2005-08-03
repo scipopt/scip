@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.25 2005/07/20 16:35:12 bzfpfend Exp $
+# $Id: check.awk,v 1.26 2005/08/03 15:29:59 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -156,7 +156,7 @@ BEGIN {
 }
 /^Separators         :/ { inconflict = 0; }
 /^Constraint Timings :/ { inconstime = 1; }
-/^  logicor          :/ { if( inconstime == 1 ) { overheadtime += $3; } }
+#/^  logicor          :/ { if( inconstime == 1 ) { overheadtime += $3; } }
 /^Propagators        :/ { inconstime = 0; }
 /^  switching time   :/ { overheadtime += $4; }
 #

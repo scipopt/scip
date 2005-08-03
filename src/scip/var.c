@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.171 2005/07/20 16:35:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.172 2005/08/03 15:30:01 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -4719,9 +4719,6 @@ RETCODE SCIPvarChgObjDive(
 
    if( SCIPsetIsZero(set, newobj) )
       newobj = 0.0;
-
-   /* mark the LP's objective function invalid */
-   SCIPlpMarkDivingObjChanged(lp);
 
    /* change objective value of attached variables */
    switch( SCIPvarGetStatus(var) )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.98 2005/07/20 16:35:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.99 2005/08/03 15:30:00 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -2160,9 +2160,13 @@ RETCODE conflictAnalyze(
    assert(currentdepth == tree->pathlen-1);
    assert(focusdepth <= currentdepth);
 
-   resolvedepth = ((set->conf_fuiplevels >= 0 && set->conf_fuiplevels < currentdepth)
-      ? currentdepth - set->conf_fuiplevels : 0);
-   assert(0 <= resolvedepth && resolvedepth <= currentdepth);
+   resolvedepth = ((set->conf_fuiplevels >= 0 && set->conf_fuiplevels <= currentdepth)
+      ? currentdepth - set->conf_fuiplevels + 1 : 0);
+   assert(0 <= resolvedepth && resolvedepth <= currentdepth + 1);
+
+   /* if we must resolve at least one bound change, find the first UIP at least in the last depth level */
+   if( mustresolve )
+      resolvedepth = MIN(resolvedepth, currentdepth);
 
    debugMessage("analyzing conflict with %d+%d conflict candidates and starting conflict set of size %d in depth %d (resolvedepth=%d)\n",
       SCIPpqueueNElems(conflict->binbdchgqueue), SCIPpqueueNElems(conflict->nonbinbdchgqueue),
@@ -2303,7 +2307,7 @@ RETCODE conflictAnalyze(
          }
       }
 
-      /* get next conflicting bound from the conflict candidate queue (this need not to be nextbdchginfo, because
+      /* get next conflicting bound from the conflict candidate queue (this needs not to be nextbdchginfo, because
        * due to resolving the bound changes, a non-binary variable could be added to the queue which must be
        * resolved before nextbdchginfo
        */
@@ -3225,6 +3229,9 @@ RETCODE undoBdchgsDualfarkas(
             bdchginds, bdchgoldlbs, bdchgoldubs, bdchgnewlbs, bdchgnewubs, bdchgssize, nbdchgs, resolve) );
 
       *valid = TRUE;
+
+      /* resolving does not make sense: the old dual ray is still valid -> resolving will not change the solution */
+      *resolve = FALSE;
    }
 
  TERMINATE:
@@ -3629,7 +3636,6 @@ RETCODE conflictAnalyzeLP(
    int* lbchginfoposs;
    int* ubchginfoposs;
    Real objval;
-   Real lpiinfinity;
    int nvars;
    int v;
    int currentdepth;
@@ -3663,31 +3669,30 @@ RETCODE conflictAnalyzeLP(
    /* get LP solver interface */
    lpi = SCIPlpGetLPI(lp);
    assert(SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) || SCIPlpiIsOptimal(lpi));
+   assert(SCIPlpiIsPrimalInfeasible(lpi) || !SCIPlpDivingObjChanged(lp));
 
-   /* get infinity value of LP solver */
-   lpiinfinity = SCIPlpiInfinity(lpi);
-
-   if( set->conf_maxlploops == 0 && SCIPlpiIsObjlimExc(lpi) )
+   if( SCIPlpiIsObjlimExc(lpi) )
    {
+      assert(!SCIPlpDivingObjChanged(lp));
+
       /* make sure, a dual feasible solution exists, that exceeds the objective limit;
-       * CPLEX does not apply the final pivot to reach the dual solution exceeding the objective limit.
-       * Therefore, we have to apply the final pivot manually.
+       * With FASTMIP setting, CPLEX does not apply the final pivot to reach the dual solution exceeding the objective
+       * limit. Therefore, we have turn off FASTMIP and resolve the problem.
        */
       CHECK_OKAY( SCIPlpiGetObjval(lpi, &objval) );
       if( objval < lp->lpiuobjlim )
       {
          RETCODE retcode;
-         Real oldobjlim;
-         int olditlim;
+         int oldfastmip;
          int iter;
 
-         /* get current values for objective limit and iteration limit */
-         CHECK_OKAY( SCIPlpiGetRealpar(lpi, SCIP_LPPAR_UOBJLIM, &oldobjlim) );
-         CHECK_OKAY( SCIPlpiGetIntpar(lpi, SCIP_LPPAR_LPITLIM, &olditlim) );
+         /* get current value for FASTMIP */
+         CHECK_OKAY( SCIPlpiGetIntpar(lpi, SCIP_LPPAR_FASTMIP, &oldfastmip) );
+         if( !oldfastmip )
+            return SCIP_OKAY;
 
-         /* temporarily remove objective limit in LP solver, and allow one simplex iteration */
-         CHECK_OKAY( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, lpiinfinity) );
-         CHECK_OKAY( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, 1) );
+         /* temporarily disable FASTMIP in LP solver */
+         CHECK_OKAY( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_FASTMIP, FALSE) );
 
          /* start LP timer */
          SCIPclockStart(stat->conflictlptime, set);
@@ -3709,16 +3714,14 @@ RETCODE conflictAnalyzeLP(
             (*iterations) += iter;
             stat->nconflictlps++;
             stat->nconflictlpiterations += iter;
-            debugMessage(" -> resolved objlim exceeding LP in %d iterations (total: %lld) (infeasible:%d, optimal:%d, itlim:%d)\n",
-               iter, stat->nconflictlpiterations, SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsOptimal(lpi),
-               SCIPlpiIsIterlimExc(lpi));
-            assert(!SCIPlpiIsObjlimExc(lpi));
-            valid = (SCIPlpiIsIterlimExc(lpi) || SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsOptimal(lpi));
+            debugMessage(" -> resolved objlim exceeding LP in %d iterations (total: %lld) (infeasible:%d, objlim: %d, optimal:%d)\n",
+               iter, stat->nconflictlpiterations, SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsObjlimExc(lpi), 
+               SCIPlpiIsOptimal(lpi));
+            valid = (SCIPlpiIsObjlimExc(lpi) || SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsOptimal(lpi));
          }
 
-         /* reinstall objective limit and iteration limit in LP solver */
-         CHECK_OKAY( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, oldobjlim) );
-         CHECK_OKAY( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, olditlim) );
+         /* reinstall FASTMIP in LP solver */
+         CHECK_OKAY( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_FASTMIP, oldfastmip) );
 
          /* abort, if the LP produced an error */
          if( !valid )
@@ -3726,22 +3729,34 @@ RETCODE conflictAnalyzeLP(
       }
    }
 
-   if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
+   if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsObjlimExc(lpi) )
    {
+      assert(!SCIPlpDivingObjChanged(lp));
+
       CHECK_OKAY( SCIPlpiGetObjval(lpi, &objval) );
       if( objval < lp->lpiuobjlim )
       {
-         debugMessage(" -> LP does not exceed the cutoff bound: obj=%g, cutoff=%g\n",
-            objval, lp->lpiuobjlim);
+         debugMessage(" -> LP does not exceed the cutoff bound: obj=%g, cutoff=%g\n", objval, lp->lpiuobjlim);
          return SCIP_OKAY;
+      }
+      else
+      {
+         debugMessage(" -> LP exceeds the cutoff bound: obj=%g, cutoff=%g\n", objval, lp->lpiuobjlim);
       }
    }
 
    currentdepth = SCIPtreeGetCurrentDepth(tree);
 
-   debugMessage("analyzing conflict on infeasible LP (infeasible: %d, objlimexc: %d, optimal:%d, itlim:%d) in depth %d\n",
-      SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsObjlimExc(lpi), SCIPlpiIsOptimal(lpi), SCIPlpiIsIterlimExc(lpi),
-      currentdepth);
+   debugMessage("analyzing conflict on infeasible LP (infeasible: %d, objlimexc: %d, optimal:%d) in depth %d\n",
+      SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsObjlimExc(lpi), SCIPlpiIsOptimal(lpi), currentdepth);
+#ifdef DEBUG
+   {
+      Real uobjlim;
+
+      CHECK_OKAY( SCIPlpiGetRealpar(lpi, SCIP_LPPAR_UOBJLIM, &uobjlim) );
+      debugMessage(" -> objective limit in LP solver: %g (in LP: %g)\n", uobjlim, lp->lpiuobjlim);
+   }
+#endif
 
    /* get active problem variables */
    vars = prob->vars;
@@ -3899,16 +3914,16 @@ RETCODE conflictAnalyzeLP(
       }
       else
       {
-         assert(SCIPlpiIsOptimal(lpi) || SCIPlpiIsObjlimExc(lpi) || SCIPlpiIsIterlimExc(lpi));
+         assert(SCIPlpiIsOptimal(lpi) || SCIPlpiIsObjlimExc(lpi));
          CHECK_OKAY( undoBdchgsDualsol(set, prob, lp, currentdepth, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
                &bdchginds, &bdchgoldlbs, &bdchgoldubs, &bdchgnewlbs, &bdchgnewubs, &bdchgssize, &nbdchgs,
                &valid, &resolve) );
       }
 
-      /* check we want to solve the LP and if all columns are present in the LP */
+      /* check if we want to solve the LP and if all columns are present in the LP */
       solvelp = (set->conf_maxlploops > 0 && SCIPprobAllColsInLP(prob, set, lp));
 
-      if( solvelp )
+      if( valid && resolve && solvelp )
       {
          ROW** rows;
          int* sidechginds;
@@ -3916,11 +3931,20 @@ RETCODE conflictAnalyzeLP(
          Real* sidechgoldrhss;
          Real* sidechgnewlhss;
          Real* sidechgnewrhss;
+         Real lpiinfinity;
          int sidechgssize;
          int nsidechgs;
          int nrows;
          int nloops;
+         int oldfastmip;
          int r;
+
+         /* get infinity value of LP solver */
+         lpiinfinity = SCIPlpiInfinity(lpi);
+         
+         /* disable FASTMIP setting */
+         CHECK_OKAY( SCIPlpiGetIntpar(lpi, SCIP_LPPAR_FASTMIP, &oldfastmip) );
+         CHECK_OKAY( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_FASTMIP, FALSE) );
 
          /* temporarily remove objective limit in LP solver */
          CHECK_OKAY( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, lpiinfinity) );
@@ -3963,8 +3987,8 @@ RETCODE conflictAnalyzeLP(
          }
 
          /* undo as many additional bound changes as possible by resolving the LP */
-         valid = TRUE;
-         resolve = TRUE;
+         assert(valid);
+         assert(resolve);
          nloops = 0;
          while( valid && resolve && nloops < set->conf_maxlploops )
          {
@@ -4012,10 +4036,10 @@ RETCODE conflictAnalyzeLP(
                iter, stat->nconflictlpiterations, SCIPlpiIsPrimalInfeasible(lpi));
 
             /* evaluate result */
-            if( SCIPlpiIsOptimal(lpi) )
+            if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsObjlimExc(lpi) )
             {
                CHECK_OKAY( SCIPlpiGetObjval(lpi, &objval) );
-               valid = (objval >= lp->lpiuobjlim);
+               valid = (objval >= lp->lpiuobjlim && !SCIPlpDivingObjChanged(lp));
             }
             else
                valid = SCIPlpiIsPrimalInfeasible(lpi);
@@ -4032,7 +4056,7 @@ RETCODE conflictAnalyzeLP(
                }
                else
                {
-                  assert(SCIPlpiIsOptimal(lpi));
+                  assert(SCIPlpiIsOptimal(lpi) || SCIPlpiIsObjlimExc(lpi));
                   CHECK_OKAY( undoBdchgsDualsol(set, prob, lp, currentdepth, curvarlbs, curvarubs, 
                         lbchginfoposs, ubchginfoposs,
                         &bdchginds, &bdchgoldlbs, &bdchgoldubs, &bdchgnewlbs, &bdchgnewubs, &bdchgssize, &nbdchgs,
@@ -4062,6 +4086,9 @@ RETCODE conflictAnalyzeLP(
          
          /* reset objective limit in LP solver */
          CHECK_OKAY( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, lp->lpiuobjlim) );
+
+         /* reinstall FASTMIP in LP solver */
+         CHECK_OKAY( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_FASTMIP, oldfastmip) );
 
          /* free temporary memory */
          SCIPsetFreeBufferArray(set, &sidechgnewrhss);
@@ -4140,6 +4167,9 @@ RETCODE SCIPconflictAnalyzeLP(
    if( set->nactivepricers > 0 )
       return SCIP_OKAY;
 
+   debugMessage("analyzing conflict on infeasible LP in depth %d (solstat: %d, objchanged: %d)\n",
+      SCIPtreeGetCurrentDepth(tree), SCIPlpGetSolstat(lp), SCIPlpDivingObjChanged(lp));
+   
    /* start timing */
    SCIPclockStart(conflict->lpanalyzetime, set);
    conflict->nlpcalls++;
@@ -4560,13 +4590,12 @@ RETCODE SCIPconflictAnalyzePseudo(
    if( set->nconflicthdlrs == 0 )
       return SCIP_OKAY;
 
-   /* start timing */
-   SCIPclockStart(conflict->pseudoanalyzetime, set);
-
-   conflict->npseudocalls++;
-
    debugMessage("analyzing pseudo solution (obj: %g) that exceeds objective limit (%g)\n",
       SCIPlpGetPseudoObjval(lp, set), lp->cutoffbound);
+
+   /* start timing */
+   SCIPclockStart(conflict->pseudoanalyzetime, set);
+   conflict->npseudocalls++;
 
    vars = prob->vars;
    nvars = prob->nvars;

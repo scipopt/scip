@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.298 2005/07/20 16:35:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.299 2005/08/03 15:30:01 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8935,12 +8935,13 @@ RETCODE SCIPendDive(
       return SCIP_INVALIDCALL;
    }
 
-   /* reset the probably changed LP's cutoff bound */
-   CHECK_OKAY( SCIPlpSetCutoffbound(scip->lp, scip->set, scip->primal->cutoffbound) );
-
    /* unmark the diving flag in the LP and reset all variables' objective and bound values */
    CHECK_OKAY( SCIPlpEndDive(scip->lp, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
          scip->transprob->vars, scip->transprob->nvars) );
+
+   /* reset the probably changed LP's cutoff bound */
+   CHECK_OKAY( SCIPlpSetCutoffbound(scip->lp, scip->set, scip->primal->cutoffbound) );
+   assert(scip->lp->cutoffbound == scip->primal->cutoffbound);
 
    /* if a new best solution was created, the cutoff of the tree was delayed due to diving;
     * the cutoff has to be done now.
@@ -8969,12 +8970,16 @@ RETCODE SCIPchgVarObjDive(
       return SCIP_INVALIDCALL;
    }
 
-   CHECK_OKAY( SCIPvarChgObjDive(var, scip->set, scip->lp, newobj) );
-
    /* invalidate the LP's cutoff bound, since this has nothing to do with the current objective value anymore;
     * the cutoff bound is reset in SCIPendDive()
     */
    CHECK_OKAY( SCIPlpSetCutoffbound(scip->lp, scip->set, SCIPsetInfinity(scip->set)) );
+
+   /* mark the LP's objective function invalid */
+   SCIPlpMarkDivingObjChanged(scip->lp);
+
+   /* change the objective value of the variable in the diving LP */
+   CHECK_OKAY( SCIPvarChgObjDive(var, scip->set, scip->lp, newobj) );
 
    return SCIP_OKAY;
 }
