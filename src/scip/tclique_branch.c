@@ -25,7 +25,7 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.c,v 1.9 2005/07/15 17:20:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_branch.c,v 1.10 2005/08/04 10:35:45 bzfpfend Exp $"
 
 /**@file   tclique_branch.c
  * @brief  branch and bound part of algorithm for maximum cliques
@@ -470,7 +470,6 @@ void newSolution(
    int insertpos;
    Bool acceptsol;
 
-   assert(cliquetable != NULL);
    assert(curcliquenodes != NULL);
    assert(maxcliquenodes != NULL);
    assert(nmaxcliquenodes != NULL);
@@ -485,6 +484,8 @@ void newSolution(
 
    if( usrcallback != NULL )
    {
+      assert(cliquetable != NULL);
+
       /* check whether the clique is already stored in the table */
       if( cliquetable->ncliques > 0 )
       {
@@ -501,6 +502,8 @@ void newSolution(
 
       if( usrcallback != NULL )
       {
+         assert(cliquetable != NULL);
+
          /* call user callback method */
          usrcallback(usrdata, curcliquenodes, ncurcliquenodes, curcliqueweight, maxcliqueweight, &acceptsol, stopsolving);
 
@@ -986,7 +989,10 @@ void tcliqueMaxClique(
    nnodes = tcliqueGetNNodes(tcliquedata);
 
    /* set up data structures */
-   createCliquetable(&cliquetable, CLIQUETABLE_INITSIZE);
+   if( usrcallback != NULL )
+      createCliquetable(&cliquetable, CLIQUETABLE_INITSIZE);
+   else
+      cliquetable = NULL;
    ALLOC_ABORT( allocMemoryArray(&K, nnodes) );
    ALLOC_ABORT( allocMemoryArray(&V, nnodes) );
    ALLOC_ABORT( allocMemoryArray(&Vzero, nnodes) );
@@ -1042,5 +1048,6 @@ void tcliqueMaxClique(
    freeMemoryArray(&Vzero);
    freeMemoryArray(&V);
    freeMemoryArray(&K);
-   freeCliquetable(&cliquetable);
+   if( usrcallback != NULL )
+      freeCliquetable(&cliquetable);
 }

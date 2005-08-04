@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.96 2005/07/15 17:20:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.97 2005/08/04 10:35:45 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -1104,7 +1104,7 @@ RETCODE propagateCons(
                {
                   debugMessage(" -> fixing variable <%s> to 0\n", SCIPvarGetName(consdata->vars[i]));
                   CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-                  CHECK_OKAY( SCIPinferBinvarCons(scip, consdata->vars[i], FALSE, cons, 0, &infeasible, &tightened) );
+                  CHECK_OKAY( SCIPinferBinvarCons(scip, consdata->vars[i], FALSE, cons, i, &infeasible, &tightened) );
                   assert(!infeasible);
                   assert(tightened);
                   (*nfixedvars)++;
@@ -1941,23 +1941,44 @@ static
 DECL_CONSRESPROP(consRespropKnapsack)
 {  /*lint --e{715}*/
    CONSDATA* consdata;
+   Longint capsum;
    int i;
 
    assert(result != NULL);
+   assert(inferinfo >= 0);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
  
    assert(SCIPvarGetUbLocal(infervar) < 0.5);
 
-   /**@todo better conflict resolving method: add variables only up to the point, that their weight plus the weight
-    *       of the conflict variable exceeds the capacity
+   /* locate the inference variable and calculate the capacity that has to be used up to conclude infervar == 0;
+    * inferinfo stores the position of the inference variable (but maybe the variables were resorted)
     */
-   for( i = 0; i < consdata->nvars; i++ )
+   if( inferinfo < consdata->nvars && consdata->vars[inferinfo] == infervar )
+      capsum = consdata->weights[inferinfo];
+   else
    {
-      if( SCIPvarGetLbAtIndex(consdata->vars[i], bdchgidx, FALSE) > 0.5 )
+      for( i = 0; i < consdata->nvars && consdata->vars[i] != infervar; ++i )
+      {}
+      assert(i < consdata->nvars);
+      capsum = consdata->weights[i];
+   }
+
+   /* add fixed-to-one variables up to the point, that their weight plus the weight of the conflict variable exceeds
+    * the capacity
+    */
+   if( capsum <= consdata->capacity )
+   {
+      for( i = 0; i < consdata->nvars; i++ )
       {
-         CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
+         if( SCIPvarGetLbAtIndex(consdata->vars[i], bdchgidx, FALSE) > 0.5 )
+         {
+            CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
+            capsum += consdata->weights[i];
+            if( capsum > consdata->capacity )
+               break;
+         }
       }
    }
    *result = SCIP_SUCCESS;
