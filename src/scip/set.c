@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.152 2005/07/20 16:35:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.153 2005/08/04 14:16:47 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -30,6 +30,7 @@
 #include "scip/def.h"
 #include "scip/set.h"
 #include "scip/stat.h"
+#include "scip/clock.h"
 #include "scip/misc.h"
 #include "scip/event.h"
 #include "scip/lp.h"
