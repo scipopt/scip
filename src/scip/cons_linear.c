@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.172 2005/08/03 15:30:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.173 2005/08/04 10:38:56 bzfwolte Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3472,7 +3472,7 @@ RETCODE separateRelaxedKnapsack(
 #endif
          
          /* separate lifted cut from relaxed knapsack constraint */
-         CHECK_OKAY( SCIPseparateKnapsackCardinality(scip, cons, nconsvars, consvars, consvals, capacity, ncuts) );
+         CHECK_OKAY( SCIPseparateKnapsackCover(scip, cons, consvars, nconsvars, consvals, capacity, -1, ncuts) );
       }
    }
    

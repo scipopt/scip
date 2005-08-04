@@ -77,6 +77,7 @@ features:
 - added zlib support
 - replaced all abort() calls by SCIPABORT(); this is defined in def.h to be assert(FALSE)
 - modified the Makefile to accept an additional parameter VERBOSE={true,false}
+- improved knapsack cover separation
 
 fixed bugs:
 - LP primal feasibility for bounds is now defined as absolute measure (was relative to the bound before);

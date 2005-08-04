@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.h,v 1.24 2005/07/15 17:20:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.h,v 1.25 2005/08/04 10:38:56 bzfwolte Exp $"
 
 /**@file   cons_knapsack.h
  * @brief  constraint handler for knapsack constraints
@@ -98,31 +98,37 @@ RETCODE SCIPsolveKnapsack(
    Real*            solval              /**< pointer to store optimal solution value, or NULL */
    );
 
-/** lifts given cardinality inequality sum(x_i) <= c */
-extern
-RETCODE SCIPliftKnapsackCardinality(
+/** lifts given cardinality inequality sum(j in C1) x_j <= |C1| to a valid inequality of the full dimensional knapsack 
+ *  polytop by using uplifting for all variables not in the cover and downlifting for all variables in the cover that 
+ *  are fixed to one (C2)
+ */
+RETCODE SCIPliftKnapsackCover(
    SCIP*            scip,               /**< SCIP data structure */
-   int*             liftcoefs,          /**< to store lifting coefficient of non-set elements */
-   Real*            solvals,            /**< LP solution values of variables */
-   Longint*         weights,            /**< item weights */
+   VAR**            vars,               /**< variables in knapsack constraint */
+   int              nvars,              /**< number of variables in knapsack constraint */
+   Longint*         weights,            /**< weights of variables in knapsack constraint */
    Longint          capacity,           /**< capacity of knapsack */
-   int*             setvars,            /**< set elements */
-   int*             nonsetvars,         /**< non-set elements */
-   int              nsetvars,           /**< number of set elements */
-   int              nnonsetvars,        /**< number of non-set elements */
-   int              maxcardinality,     /**< maximal cardinality of selected subset in given set */ 
-   Real*            liftlpval           /**< pointer to store LP solution value of lifted elements */  
+   Real*            solvals,            /**< LP values of all problem variables */
+   int*             covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr LP val then weight) */
+   int*             noncovervars,       /**< noncover variables (sorted by non-incr LP val then weight) */
+   int              ncovervars,         /**< number of cover variables */
+   int              ncovervarsc1,       /**< number of cover variables in C1 (at the end of covervars) */
+   int              ncovervarsc2,       /**< number of cover variables in C2 (at the beginning of covervars) */
+   int              nnoncovervars,      /**< number of noncover variables */
+   int*             liftcoefs,          /**< pointer to store lifting coefficient of variables in knapsack constraint */
+   int*             liftrhs,            /**< pointer to store right hand side of the lifted cover inequality */
+   Real*            liftlpval           /**< pointer to store LP solution value of lifted variables */  
    );
 
-/** separates lifted cardinality inequalities for given knapsack problem */
-extern
-RETCODE SCIPseparateKnapsackCardinality(
+/** separates lifted cover inequalities for given knapsack problem */
+RETCODE SCIPseparateKnapsackCover(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint that originates the knapsack problem */
-   int              nvars,              /**< number of variables in the knapsack constraint */
-   VAR**            vars,               /**< item variables of the knapsack constraint */
-   Longint*         weights,            /**< item weights */
+   VAR**            vars,               /**< variables in knapsack constraint */
+   int              nvars,              /**< number of variables in knapsack constraint */
+   Longint*         weights,            /**< weights of variables in knapsack constraint */
    Longint          capacity,           /**< capacity of knapsack */
+   int              maxnumcardlift,     /**< maximal number of cardinality inequ. lifted per sepa round (-1: unlimited) */
    int*             ncuts               /**< pointer to add up the number of found cuts */
    );
 
