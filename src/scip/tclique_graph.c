@@ -25,14 +25,14 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.c,v 1.7 2005/07/15 17:20:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_graph.c,v 1.8 2005/08/05 16:04:32 bzfpfend Exp $"
 
 /**@file   tclique_graph.c
  * @brief  tclique data part of algorithm for maximum cliques
+ * @author Tobias Achterberg
  * @author Ralf Borndoerfer
  * @author Zoltan Kormos
  * @author Kati Wolter
- * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -40,12 +40,9 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "scip/def.h"
-#include "scip/message.h"
 #include "scip/memory.h"
-#include "scip/tclique_graph.h" 
-
-
+#include "scip/def.h"
+#include "scip/tclique_graph.h"
 
 #define ALLOC_FALSE(x)  do                                              \
    {                                                                    \
@@ -57,6 +54,11 @@
    }                                                                    \
    while( FALSE )
 
+
+typedef struct _HEAD_ADJ{
+	int first;
+	int last;
+} HEAD_ADJ;
 
 struct _TCLIQUEDATA
 {
@@ -459,7 +461,7 @@ Bool tcliqueLoadFile(
    {
       if( (file = fopen("default.dat", "r")) == NULL )
       {
-        infoMessage("\nCan't open file: %s", filename);
+         infoMessage("\nCan't open file: %s", filename);
          return FALSE;
       }
    }
@@ -535,19 +537,19 @@ Bool tcliqueSaveFile(
    }
  
    /* write name of problem, number of nodes and number of edges in graph */
-   SCIPmessageFPrintInfo(file, "%s\n", probname);
-   SCIPmessageFPrintInfo(file, "%d\n", tcliquedata->nnodes);
-   SCIPmessageFPrintInfo(file, "%d\n", tcliquedata->nedges);
+   fprintf(file, "%s\n", probname);
+   fprintf(file, "%d\n", tcliquedata->nnodes);
+   fprintf(file, "%d\n", tcliquedata->nedges);
    
    /* write weights of all nodes (scaled!) */
    for( i = 0; i < tcliquedata->nnodes; i++ )
-      SCIPmessageFPrintInfo(file, "%f\n", (double)tcliquedata->weights[i]/scaleval);
+      fprintf(file, "%f\n", (double)tcliquedata->weights[i]/scaleval);
 
    /* write edges */
    for( i = 0; i < tcliquedata->nnodes; i++ )
    {
       for( j = tcliquedata->adjedges[i].first; j < tcliquedata->adjedges[i].last; j++ )
-         SCIPmessageFPrintInfo(file, "%d %d\n", i, tcliquedata->adjnodes[j]);
+         fprintf(file, "%d %d\n", i, tcliquedata->adjnodes[j]);
    }
 
    /* close file */
@@ -608,17 +610,6 @@ int* tcliqueGetAdjnodes(
    return tcliquedata->adjnodes;
 }
 
-/** gets pointer to first and one after last adjacent edge of nodes in graph */
-HEAD_ADJ* tcliqueGetAdjedges(
-   TCLIQUEDATA*     tcliquedata         /**< pointer to tclique data structure */
-   )
-{
-   assert(tcliquedata != NULL);
-   assert(tcliquedata->ncachededges == 0);
-   
-   return tcliquedata->adjedges;
-}
-
 /** gets pointer to first adjacent edge of given node in graph */
 int* tcliqueGetFirstAdjedge(
    TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
@@ -632,7 +623,7 @@ int* tcliqueGetFirstAdjedge(
    assert(tcliquedata->ncachededges == 0);
    assert(0 <= node && node < tcliquedata->nnodes);
 
-   adjedges = tcliqueGetAdjedges(tcliquedata);
+   adjedges = tcliquedata->adjedges;
    assert(adjedges != NULL);
    assert(adjedges[node].first >= 0);
    assert(adjedges[node].first <= tcliqueGetNEdges(tcliquedata));
@@ -657,7 +648,7 @@ int* tcliqueGetLastAdjedge(
    assert(tcliquedata->ncachededges == 0);
    assert(0 <= node && node < tcliquedata->nnodes);
 
-   adjedges = tcliqueGetAdjedges(tcliquedata);
+   adjedges = tcliquedata->adjedges;
    degrees = tcliqueGetDegrees(tcliquedata);
    assert(adjedges != NULL);
    assert(degrees[node] == 0 || adjedges[node].last-1 >= 0);
@@ -749,6 +740,7 @@ int tcliqueSelectAdjnodes(
    for( i = 0; i < nnodes; i++ )
    {
       assert(0 <= nodes[i] && nodes[i] < tcliquedata->nnodes);
+      assert(i == 0 || nodes[i-1] < nodes[i]);
       for( ; currentadjedge <= lastadjedge; currentadjedge++ )
       {
          if( *currentadjedge >= nodes[i] )

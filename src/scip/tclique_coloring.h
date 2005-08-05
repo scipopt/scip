@@ -25,10 +25,11 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_coloring.h,v 1.7 2005/07/15 17:20:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_coloring.h,v 1.8 2005/08/05 16:04:32 bzfpfend Exp $"
 
 /**@file   tclique_coloring.h
  * @brief  coloring part of algorithm for maximum cliques
+ * @author Tobias Achterberg
  * @author Ralf Borndoerfer
  * @author Zoltan Kormos
  * @author Kati Wolter
@@ -40,6 +41,7 @@
 #define __SCIP_TCLIQUE_COLORING_H__
 
 #include "scip/memory.h"
+#include "scip/def.h"
 #include "scip/tclique_graph.h"
 
 
@@ -68,6 +70,7 @@ extern
 WEIGHT tcliqueColoring( 
    TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
    CHKMEM*          mem,                /**< block memory */
+   int*             buffer,             /**< buffer of size nnodes */
    int*             V,                  /**< non-zero weighted nodes for branching */
    int              nV,                 /**< number of non-zero weighted nodes for branching */
    NBC*             gsd,                /**< neighbour color information of all nodes */

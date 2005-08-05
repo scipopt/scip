@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.99 2005/08/04 14:16:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.100 2005/08/05 16:04:31 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -1488,7 +1488,7 @@ RETCODE liftKnapsackCover(
    assert(ncovervarsc2 >= 0);
    assert(ncovervarsc1 + ncovervarsc2 == ncovervars);
    assert(nnoncovervars >= 0);
-   assert(ncovervars + nnoncovervars == nvars);
+   assert(ncovervars + nnoncovervars <= nvars); /* some noncovervars might have been removed already */
    assert(liftcoefs != NULL);
    assert(liftrhs != NULL);
    assert(liftlpval != NULL);

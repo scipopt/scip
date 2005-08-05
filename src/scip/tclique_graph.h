@@ -25,10 +25,11 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.h,v 1.7 2005/07/15 17:20:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_graph.h,v 1.8 2005/08/05 16:04:32 bzfpfend Exp $"
 
 /**@file   tclique_graph.h
- * @brief  tclique data part of algorithm for maximum cliques
+ * @brief  graph interface used in the tclique methods
+ * @author Tobias Achterberg
  * @author Ralf Borndoerfer
  * @author Zoltan Kormos
  * @author Kati Wolter
@@ -39,18 +40,8 @@
 #ifndef __SCIP_TCLIQUE_GRAPH_H__
 #define __SCIP_TCLIQUE_GRAPH_H__
 
+#include "scip/def.h"
 
-/*
- * Boolean values
- */
-
-#ifndef Bool
-#define Bool unsigned int               /**< type used for boolean values */
-#endif
-#ifndef TRUE
-#define TRUE  1                         /**< boolean value TRUE */
-#define FALSE 0                         /**< boolean value FALSE */
-#endif
 
 
 /*
@@ -59,18 +50,52 @@
 
 typedef int  WEIGHT;
 
-typedef struct _HEAD_ADJ{
-	int first;
-	int last;
-} HEAD_ADJ;
-
 typedef struct _TCLIQUEDATA TCLIQUEDATA;
 
 
 
 
 /*
- * Interface Methods
+ * Interface Methods used by the TClique algorithm
+ */
+
+/** gets number of nodes in the graph */
+extern
+int tcliqueGetNNodes(
+   TCLIQUEDATA*     tcliquedata         /**< pointer to tclique data structure */
+   );
+
+/** gets weight of nodes in the graph */
+extern
+WEIGHT* tcliqueGetWeights(
+   TCLIQUEDATA*     tcliquedata         /**< pointer to tclique data structure */
+   );
+
+/** returns, whether the edge (node1, node2) is in the graph */
+extern
+int tcliqueIsEdge(
+   TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
+   int              node1,              /**< start node of edge */
+   int              node2               /**< end node of edge */
+   );
+
+/* selects all nodes from a given set of nodes which are adjacent to a given node
+ * and returns the number of selected nodes
+ */
+extern
+int tcliqueSelectAdjnodes( 
+   TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
+   int              node,               /**< given node */
+   int*             nodes,              /**< given set of nodes (ordered by node index) */ 
+   int              nnodes,             /**< number of nodes in given set nodes */ 
+   int*             adjnodes            /**< pointer to store adjacent nodes of node, contained in nodes */ 
+   );
+
+
+
+
+/*
+ * External Interface Methods to access the graph (this can be changed without affecting the TClique algorithm)
  */
 
 /** creates tclique data structure */
@@ -137,21 +162,9 @@ Bool tcliqueSaveFile(
    const char*      probname            /**< name of the problem */
    );
 
-/** gets number of nodes in the graph */
-extern
-int tcliqueGetNNodes(
-   TCLIQUEDATA*     tcliquedata         /**< pointer to tclique data structure */
-   );
-
 /** gets number of edges in the graph */
 extern
 int tcliqueGetNEdges(
-   TCLIQUEDATA*     tcliquedata         /**< pointer to tclique data structure */
-   );
-
-/** gets weight of nodes in the graph */
-extern
-WEIGHT* tcliqueGetWeights(
    TCLIQUEDATA*     tcliquedata         /**< pointer to tclique data structure */
    );
 
@@ -167,12 +180,6 @@ int* tcliqueGetAdjnodes(
    TCLIQUEDATA*     tcliquedata         /**< pointer to tclique data structure */
    );
 
-/** gets pointer to first and one after last adjacent edge of nodes in graph */
-extern
-HEAD_ADJ* tcliqueGetAdjedges(
-   TCLIQUEDATA*     tcliquedata         /**< pointer to tclique data structure */
-   );
-
 /** gets pointer to first adjacent edge of given node in graph */
 extern
 int* tcliqueGetFirstAdjedge(
@@ -185,26 +192,6 @@ extern
 int* tcliqueGetLastAdjedge(
    TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
    int              node                /**< given node */
-   );
-
-/** returns, whether the edge (node1, node2) is in the graph */
-extern
-int tcliqueIsEdge(
-   TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
-   int              node1,              /**< start node of edge */
-   int              node2               /**< end node of edge */
-   );
-
-/* selects all nodes from a given set of nodes which are adjacent to a given node
- * and returns the number of selected nodes
- */
-extern
-int tcliqueSelectAdjnodes( 
-   TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
-   int              node,               /**< given node */
-   int*             nodes,              /**< given set of nodes (ordered by node index) */ 
-   int              nnodes,             /**< number of nodes in given set nodes */ 
-   int*             adjnodes            /**< pointer to store adjacent nodes of node, contained in nodes */ 
    );
 
 /* prints tclique data structure */

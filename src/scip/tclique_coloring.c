@@ -25,10 +25,11 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_coloring.c,v 1.8 2005/07/15 17:20:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_coloring.c,v 1.9 2005/08/05 16:04:32 bzfpfend Exp $"
 
 /**@file   tclique_coloring.c
  * @brief  coloring part of algorithm for maximum cliques
+ * @author Tobias Achterberg
  * @author Ralf Borndoerfer
  * @author Zoltan Kormos
  * @author Kati Wolter
@@ -40,9 +41,8 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "scip/def.h"
 #include "scip/memory.h"
-#include "scip/message.h"
+#include "scip/def.h"
 #include "scip/tclique_graph.h"
 #include "scip/tclique_coloring.h"
 
@@ -229,6 +229,7 @@ void updateNeighbor(
 WEIGHT tcliqueColoring( 
    TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
    CHKMEM*          mem,                /**< block memory */
+   int*             buffer,             /**< buffer of size nnodes */
    int*             V,                  /**< non-zero weighted nodes for branching */
    int              nV,                 /**< number of non-zero weighted nodes for branching */
    NBC*             gsd,                /**< neighbor color information of all nodes */
@@ -257,9 +258,11 @@ WEIGHT tcliqueColoring(
    int* currentclique;
    int ncurrentclique;
    int weightcurrentclique;
-   int* currentadjedge;
-   int* lastadjedge;
+   int* Vadj;
+   int nVadj;
+   int adjidx;
 
+   assert(buffer != NULL);
    assert(V != NULL);
    assert(nV > 0);
    assert(clique != NULL);
@@ -302,41 +305,33 @@ WEIGHT tcliqueColoring(
    debugMessage("-> updated neighbors:\n");
 
    /* set neighbor color of the adjacent nodes of node */
-   currentadjedge = tcliqueGetFirstAdjedge(tcliquedata, node);
-   lastadjedge = tcliqueGetLastAdjedge(tcliquedata, node);
-   for( i = 0; i < nV; i++ )
+   Vadj = buffer;
+   nVadj = tcliqueSelectAdjnodes(tcliquedata, node, V, nV, Vadj);
+   for( i = 0, adjidx = 0; i < nV && adjidx < nVadj; ++i )
    {
-      assert(i == 0 || V[i] > V[i-1]);
-
-      /* check if V[i] is contained in adjacency list of node started at position of V[i-1] 
-       * (list is ordered by adjacent nodes)
-       */
-      for( ; currentadjedge <= lastadjedge; currentadjedge++ ) 
+      assert(V[i] <= Vadj[adjidx]); /* Vadj is a subset of V */
+      if( V[i] == Vadj[adjidx] )
       {
-         if( *currentadjedge >= V[i] )
-         {
-            if( *currentadjedge == V[i] )
-            {
-               assert(tcliqueIsEdge(tcliquedata, V[i], node));
-               debugMessage("     nodeVindex=%d, node=%d, weight=%d, satdegold=%d  ->  ", 
-                  i, V[i], weights[V[i]], gsd[i].satdeg); 
+         assert(tcliqueIsEdge(tcliquedata, V[i], node));
+         debugMessage("     nodeVindex=%d, node=%d, weight=%d, satdegold=%d  ->  ", 
+            i, V[i], weights[V[i]], gsd[i].satdeg); 
                
-               /* sets satdeg for adjacent node */
-               gsd[i].satdeg = range;
+         /* sets satdeg for adjacent node */
+         gsd[i].satdeg = range;
                
-               /* creates new color interval [1,range] */
-               ALLOC_ABORT( allocChunkMemory(mem, &colorinterval) );
-               colorinterval->next = NULL;
-               colorinterval->itv.inf = 1;
-               colorinterval->itv.sup = range;
+         /* creates new color interval [1,range] */
+         ALLOC_ABORT( allocChunkMemory(mem, &colorinterval) );
+         colorinterval->next = NULL;
+         colorinterval->itv.inf = 1;
+         colorinterval->itv.sup = range;
                
-               /* colorinterval is the first added element of the list of neighborcolors of the adjacent node  */ 
-               gsd[i].lcitv = colorinterval;
+         /* colorinterval is the first added element of the list of neighborcolors of the adjacent node  */ 
+         gsd[i].lcitv = colorinterval;
 
-               debugPrintf("satdegnew=%d, nbc=[%d,%d]\n", gsd[i].satdeg, gsd[i].lcitv->itv.inf, gsd[i].lcitv->itv.sup);
-            }
-            break;
-         }
+         /* go to the next node in Vadj */
+         adjidx++;
+
+         debugPrintf("satdegnew=%d, nbc=[%d,%d]\n", gsd[i].satdeg, gsd[i].lcitv->itv.inf, gsd[i].lcitv->itv.sup);
       }
    }
 
@@ -504,32 +499,25 @@ WEIGHT tcliqueColoring(
       debugMessage("-> updated neighbors:\n"); 
 
       /* update saturation degree and neighbor colorintervals of all neighbors of node */
-      currentadjedge = tcliqueGetFirstAdjedge(tcliquedata, node);
-      lastadjedge = tcliqueGetLastAdjedge(tcliquedata, node);
-      for( j = 0; j < nV; j++)
+      Vadj = buffer;
+      nVadj = tcliqueSelectAdjnodes(tcliquedata, node, V, nV, Vadj);
+      for( j = 0, adjidx = 0; j < nV && adjidx < nVadj; ++j )
       {
-         /* update only uncolored neighbors */
-         if( iscolored[j] )
-            continue;
-      
-         /* check if V[i] is contained in adjacency list of node started at position of V[i-1] 
-          * (list is ordered by adjacent nodes)
-          */
-         for( ; currentadjedge <= lastadjedge; currentadjedge++ ) 
+         assert(V[j] <= Vadj[adjidx]); /* Vadj is a subset of V */
+         if( V[j] == Vadj[adjidx] )
          {
-            if( *currentadjedge >= V[j] )
-            {
-               if( *currentadjedge == V[j] )
-               {
-                  assert(tcliqueIsEdge(tcliquedata, V[j], node));
+            assert(tcliqueIsEdge(tcliquedata, V[j], node));
                   
-                  debugMessage("     nodeVindex=%d, node=%d, weight=%d, satdegold=%d  ->  ", 
-                     j, V[j], weights[V[j]], gsd[j].satdeg); 
-                  updateNeighbor(mem, &gsd[j], nwcitv.next);
-                  debugPrintf("satdegnew=%d, nbc=[%d,%d]\n", gsd[j].satdeg, gsd[j].lcitv->itv.inf, gsd[j].lcitv->itv.sup);
-               }
-               break;
+            if( !iscolored[j] )
+            {
+               debugMessage("     nodeVindex=%d, node=%d, weight=%d, satdegold=%d  ->  ", 
+                  j, V[j], weights[V[j]], gsd[j].satdeg); 
+               updateNeighbor(mem, &gsd[j], nwcitv.next);
+               debugPrintf("satdegnew=%d, nbc=[%d,%d]\n", gsd[j].satdeg, gsd[j].lcitv->itv.inf, gsd[j].lcitv->itv.sup);
             }
+
+            /* go to the next node in Vadj */
+            adjidx++;
          }
       }
 

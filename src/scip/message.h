@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.h,v 1.21 2005/07/15 17:20:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: message.h,v 1.22 2005/08/05 16:04:31 bzfpfend Exp $"
 
 /**@file   message.h
  * @brief  message output methods
@@ -46,6 +46,10 @@
 #define warningMessage                  SCIPmessagePrintWarningHeader(__FILE__, __LINE__); \
                                         SCIPmessagePrintWarning
 #define infoMessage                     SCIPmessagePrintInfo
+
+#define printErrorHeader                SCIPmessagePrintErrorHeader
+#define printError                      SCIPmessagePrintError
+#define printInfo                       SCIPmessagePrintInfo
 
 #ifdef DEBUG
 #define debug(x)                        x

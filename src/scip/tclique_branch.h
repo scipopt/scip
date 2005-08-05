@@ -25,10 +25,11 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.h,v 1.7 2005/07/15 17:20:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_branch.h,v 1.8 2005/08/05 16:04:32 bzfpfend Exp $"
 
 /**@file   tclique_branch.h
  * @brief  branch and bound part of algorithm for maximum cliques
+ * @author Tobias Achterberg
  * @author Ralf Borndoerfer
  * @author Zoltan Kormos
  * @author Kati Wolter
