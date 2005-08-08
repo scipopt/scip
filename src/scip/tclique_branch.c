@@ -25,7 +25,7 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.c,v 1.11 2005/08/05 16:04:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_branch.c,v 1.12 2005/08/08 08:54:41 bzfpfend Exp $"
 
 /**@file   tclique_branch.c
  * @brief  branch and bound part of algorithm for maximum cliques
@@ -417,10 +417,11 @@ void extendCliqueZeroWeight(
    /* put zero-weighted candidates into the clique, and remove non-adjacent nodes from the candidate set */
    while( nzeroextensions > 0 )
    {
-      /* put last candidate into the clique */
-      curcliquenodes[*ncurcliquenodes] = zeroextensions[nzeroextensions-1];
+      /* put first candidate into the clique */
+      curcliquenodes[*ncurcliquenodes] = zeroextensions[0];
       (*ncurcliquenodes)++;
       nzeroextensions--;
+      zeroextensions++;
 
       /* remove candidates that are not adjacent to the inserted zero-weighted node */
       nzeroextensions = tcliqueSelectAdjnodes(tcliquedata, curcliquenodes[(*ncurcliquenodes)-1],

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.202 2005/08/03 16:19:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.203 2005/08/08 08:54:41 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -8467,7 +8467,6 @@ RETCODE SCIPlpSetCutoffbound(
    )
 {
    assert(lp != NULL);
-   assert(!lp->divingobjchg);
 
    debugMessage("setting LP upper objective limit from %g to %g\n", lp->cutoffbound, cutoffbound);
    
