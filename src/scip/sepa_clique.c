@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.10 2005/08/08 11:16:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.11 2005/08/08 13:20:35 bzfpfend Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -176,7 +176,7 @@ RETCODE loadTcliquegraph(
       ximplids = SCIPvarGetImplIds(x, !xneg);
       
       /* ignore implicants with yindex <= xindex */
-      for( i = 0; i < xnbinimpls && SCIPvarGetIndex(ximplvars[i]) <= xindex; ++i )
+      for( i = 0; i < xnbinimpls-1 && SCIPvarGetIndex(ximplvars[i]) <= xindex; ++i )
       {}
 
       /* loop over all y > x */

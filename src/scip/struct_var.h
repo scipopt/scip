@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.33 2005/07/15 17:20:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.34 2005/08/08 13:20:36 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -31,6 +31,7 @@
 #include "scip/type_history.h"
 #include "scip/type_event.h"
 #include "scip/type_var.h"
+#include "scip/type_implics.h"
 #include "scip/type_cons.h"
 #include "scip/type_prop.h"
 
@@ -155,34 +156,6 @@ struct Dom
    Real             lb;                 /**< lower bounds of variables */
    Real             ub;                 /**< upper bounds of variables */
    HOLELIST*        holelist;           /**< list of holes */
-};
-
-/** variable bounds of a variable x in the form x <= b*z + d  or  x >= b*z + d */
-struct VBounds
-{
-   VAR**            vars;               /**< variables z    in variable bounds x <= b*z + d  or  x >= b*z + d */
-   Real*            coefs;              /**< coefficients b in variable bounds x <= b*z + d  or  x >= b*z + d */
-   Real*            constants;          /**< constants d    in variable bounds x <= b*z + d  or  x >= b*z + d */
-   int              len;                /**< number of existing variable bounds (used slots in arrays) */
-   int              size;               /**< size of vars, coefs, and constants arrays */
-};
-
-/** implications for binary variable x in the form 
- *    x  <= 0  ==>  y <= b or y >= b (stored in arrays[0]) 
- *    x  >= 1  ==>  y <= b or y >= b (stored in arrays[1]) 
- *  implications with    binary variable y are stored at the beginning of arrays (sorted by pointer of y)
- *  implications with nonbinary variable y are stored at the end       of arrays (sorted by pointer of y)
- */
-struct Implics
-{
-   VAR**            implvars[2];        /**< variables y  in implications y <= b or y >= b */
-   BOUNDTYPE*       impltypes[2];       /**< types        of implications y <= b (SCIP_BOUNDTYPE_UPPER)
-                                         *                             or y >= b (SCIP_BOUNDTYPE_LOWER) */
-   Real*            implbounds[2];      /**< bounds b     in implications y <= b or y >= b */
-   int*             implids[2];         /**< unique ids of implications */
-   int              implsize[2];        /**< size of implvars, implbounds and implvals arrays  for x <= 0 and x >= 1*/
-   int              nimpls[2];          /**< number of all implications                        for x <= 0 and x >= 1 */
-   int              nbinimpls[2];       /**< number of     implications with binary variable y for x <= 0 and x >= 1 */
 };
 
 /** original variable information */

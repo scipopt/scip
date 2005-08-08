@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.46 2005/07/15 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.47 2005/08/08 13:20:35 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -35,6 +35,7 @@
 
 #ifdef NDEBUG
 #include "scip/struct_var.h"
+#include "scip/implics.h"
 #include "scip/history.h"
 #endif
 
@@ -585,20 +586,20 @@ int* SCIPvarGetImplIds(
 #define SCIPvarGetBranchFactor(var)     (var)->branchfactor
 #define SCIPvarGetBranchPriority(var)   (var)->branchpriority
 #define SCIPvarGetBranchDirection(var)  (var)->branchdirection
-#define SCIPvarGetNVlbs(var)            ((var)->vlbs != NULL ? (var)->vlbs->len : 0)
-#define SCIPvarGetVlbVars(var)          ((var)->vlbs != NULL ? (var)->vlbs->vars : NULL)
-#define SCIPvarGetVlbCoefs(var)         ((var)->vlbs != NULL ? (var)->vlbs->coefs : NULL)
-#define SCIPvarGetVlbConstants(var)     ((var)->vlbs != NULL ? (var)->vlbs->constants : NULL)
-#define SCIPvarGetNVubs(var)            ((var)->vubs != NULL ? (var)->vubs->len : 0)
-#define SCIPvarGetVubVars(var)          ((var)->vubs != NULL ? (var)->vubs->vars : NULL)
-#define SCIPvarGetVubCoefs(var)         ((var)->vubs != NULL ? (var)->vubs->coefs : NULL)
-#define SCIPvarGetVubConstants(var)     ((var)->vubs != NULL ? (var)->vubs->constants : NULL)
-#define SCIPvarGetNImpls(var, fix)      ((var)->implics != NULL ? (var)->implics->nimpls[fix] : 0)
-#define SCIPvarGetNBinImpls(var, fix)   ((var)->implics != NULL ? (var)->implics->nbinimpls[fix] : 0)
-#define SCIPvarGetImplVars(var, fix)    ((var)->implics != NULL ? (var)->implics->implvars[fix] : NULL)
-#define SCIPvarGetImplTypes(var, fix)   ((var)->implics != NULL ? (var)->implics->impltypes[fix] : NULL)
-#define SCIPvarGetImplBounds(var, fix)  ((var)->implics != NULL ? (var)->implics->implbounds[fix] : NULL)
-#define SCIPvarGetImplIds(var, fix)     ((var)->implics != NULL ? (var)->implics->implids[fix] : NULL)
+#define SCIPvarGetNVlbs(var)            ((var)->vlbs != NULL ? SCIPvboundsGetNVbds((var)->vlbs) : 0)
+#define SCIPvarGetVlbVars(var)          ((var)->vlbs != NULL ? SCIPvboundsGetVars((var)->vlbs) : NULL)
+#define SCIPvarGetVlbCoefs(var)         ((var)->vlbs != NULL ? SCIPvboundsGetCoefs((var)->vlbs) : NULL)
+#define SCIPvarGetVlbConstants(var)     ((var)->vlbs != NULL ? SCIPvboundsGetConstants((var)->vlbs) : NULL)
+#define SCIPvarGetNVubs(var)            ((var)->vubs != NULL ? SCIPvboundsGetNVbds((var)->vubs) : 0)
+#define SCIPvarGetVubVars(var)          ((var)->vubs != NULL ? SCIPvboundsGetVars((var)->vubs) : NULL)
+#define SCIPvarGetVubCoefs(var)         ((var)->vubs != NULL ? SCIPvboundsGetCoefs((var)->vubs) : NULL)
+#define SCIPvarGetVubConstants(var)     ((var)->vubs != NULL ? SCIPvboundsGetConstants((var)->vubs) : NULL)
+#define SCIPvarGetNImpls(var, fix)      ((var)->implics != NULL ? SCIPimplicsGetNImpls((var)->implics, fix) : 0)
+#define SCIPvarGetNBinImpls(var, fix)   ((var)->implics != NULL ? SCIPimplicsGetNBinImpls((var)->implics, fix) : 0)
+#define SCIPvarGetImplVars(var, fix)    ((var)->implics != NULL ? SCIPimplicsGetVars((var)->implics, fix) : NULL)
+#define SCIPvarGetImplTypes(var, fix)   ((var)->implics != NULL ? SCIPimplicsGetTypes((var)->implics, fix) : NULL)
+#define SCIPvarGetImplBounds(var, fix)  ((var)->implics != NULL ? SCIPimplicsGetBounds((var)->implics, fix) : NULL)
+#define SCIPvarGetImplIds(var, fix)     ((var)->implics != NULL ? SCIPimplicsGetIds((var)->implics, fix) : NULL)
 #endif
 
 /** gets best local bound of variable with respect to the objective function */
