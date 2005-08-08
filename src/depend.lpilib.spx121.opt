@@ -1,4 +1,4 @@
-$(OBJDIR)/scip/lpi_spx121.o: src/scip/lpi_spx121.cpp lib/spx121inc/soplex.h \
+$(LIBOBJDIR)/scip/lpi_spx121.o: src/scip/lpi_spx121.cpp lib/spx121inc/soplex.h \
   lib/spx121inc/spxdefines.h lib/spx121inc/timer.h lib/spx121inc/spxlp.h \
   lib/spx121inc/datakey.h lib/spx121inc/spxid.h lib/spx121inc/dvector.h \
   lib/spx121inc/vector.h lib/spx121inc/svector.h lib/spx121inc/svset.h \
@@ -14,8 +14,15 @@ $(OBJDIR)/scip/lpi_spx121.o: src/scip/lpi_spx121.cpp lib/spx121inc/soplex.h \
   lib/spx121inc/clufactor.h lib/spx121inc/spxsteeppr.h \
   lib/spx121inc/spxpricer.h lib/spx121inc/spxfastrt.h \
   lib/spx121inc/spxratiotester.h src/scip/lpi.h src/scip/def.h \
-  src/scip/type_retcode.h src/scip/memory.h src/scip/type_lpi.h \
-  src/scip/bitencode.h src/scip/message.h
-$(OBJDIR)/scip/bitencode.o: src/scip/bitencode.c src/scip/def.h src/scip/type_retcode.h \
-  src/scip/bitencode.h
-$(OBJDIR)/scip/memory.o: src/scip/memory.c src/scip/memory.h
+  src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
+  src/scip/struct_message.h src/scip/pub_message.h src/scip/memory.h \
+  src/scip/type_lpi.h src/scip/bitencode.h
+$(LIBOBJDIR)/scip/bitencode.o: src/scip/bitencode.c src/scip/def.h src/scip/type_retcode.h \
+  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
+  src/scip/pub_message.h src/scip/bitencode.h
+$(LIBOBJDIR)/scip/memory.o: src/scip/memory.c src/scip/def.h src/scip/type_retcode.h \
+  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
+  src/scip/pub_message.h src/scip/memory.h
+$(LIBOBJDIR)/scip/message.o: src/scip/message.c src/scip/def.h src/scip/type_retcode.h \
+  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
+  src/scip/pub_message.h src/scip/memory.h

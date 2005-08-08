@@ -1,4 +1,4 @@
-$(OBJDIR)/scip/lpi_clp.o: src/scip/lpi_clp.cpp lib/clpinc/ClpSimplex.hpp \
+$(LIBOBJDIR)/scip/lpi_clp.o: src/scip/lpi_clp.cpp lib/clpinc/ClpSimplex.hpp \
   lib/clpinc/ClpModel.hpp lib/clpinc/ClpMatrixBase.hpp \
   lib/clpinc/CoinPragma.hpp lib/clpinc/CoinPackedMatrix.hpp \
   lib/clpinc/CoinError.hpp lib/clpinc/CoinPackedVectorBase.hpp \
@@ -12,8 +12,15 @@ $(OBJDIR)/scip/lpi_clp.o: src/scip/lpi_clp.cpp lib/clpinc/ClpSimplex.hpp \
   lib/clpinc/CoinSort.hpp lib/clpinc/CoinDistance.hpp \
   lib/clpinc/ClpFactorization.hpp lib/clpinc/CoinFactorization.hpp \
   lib/clpinc/ClpSimplexDual.hpp src/scip/lpi.h src/scip/def.h \
-  src/scip/type_retcode.h src/scip/memory.h src/scip/type_lpi.h \
-  src/scip/bitencode.h src/scip/message.h
-$(OBJDIR)/scip/bitencode.o: src/scip/bitencode.c src/scip/def.h src/scip/type_retcode.h \
-  src/scip/bitencode.h
-$(OBJDIR)/scip/memory.o: src/scip/memory.c src/scip/memory.h
+  src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
+  src/scip/struct_message.h src/scip/pub_message.h src/scip/memory.h \
+  src/scip/type_lpi.h src/scip/bitencode.h
+$(LIBOBJDIR)/scip/bitencode.o: src/scip/bitencode.c src/scip/def.h src/scip/type_retcode.h \
+  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
+  src/scip/pub_message.h src/scip/bitencode.h
+$(LIBOBJDIR)/scip/memory.o: src/scip/memory.c src/scip/def.h src/scip/type_retcode.h \
+  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
+  src/scip/pub_message.h src/scip/memory.h
+$(LIBOBJDIR)/scip/message.o: src/scip/message.c src/scip/def.h src/scip/type_retcode.h \
+  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
+  src/scip/pub_message.h src/scip/memory.h
