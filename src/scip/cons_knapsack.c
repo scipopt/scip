@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.100 2005/08/05 16:04:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.101 2005/08/08 11:16:35 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -1772,7 +1772,7 @@ RETCODE SCIPseparateKnapsackCover(
             noncovervars[i + 1] = noncovervars[i];
          noncovervars[i + 1] = covervars[j];
          nnoncovervars++;
-         assert(nnoncovervars + ncovervars == nvars);
+         assert(nnoncovervars + ncovervars <= nvars); /* some variables might have been removed from noncovervars */
 
          /* remove variables from noncovervars, that would fit into the knapsack together with all covervars;
           * the corresponding lifting coefficients would be zero

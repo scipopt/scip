@@ -1,31 +1,18 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*                  This file is part of the program and library             */
-/*         SCIP --- Solving Constraint Integer Programs                      */
-/*                                                                           */
-/*    Copyright (C) 2002-2005 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2005 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
-/*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
-/*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
-/*                                                                           */
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/*                                                                           */
 /*                        This file is part of the program                   */
 /*                    TCLIQUE --- Algorithm for Maximum Cliques              */
 /*                                                                           */
 /*    Copyright (C) 1996-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
+/*  TCLIQUE is distributed under the terms of the ZIB Academic License.      */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_coloring.h,v 1.8 2005/08/05 16:04:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_coloring.h,v 1.9 2005/08/08 11:16:35 bzfpfend Exp $"
 
 /**@file   tclique_coloring.h
  * @brief  coloring part of algorithm for maximum cliques
@@ -37,12 +24,12 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_TCLIQUE_COLORING_H__
-#define __SCIP_TCLIQUE_COLORING_H__
+#ifndef __TCLIQUE_COLORING_H__
+#define __TCLIQUE_COLORING_H__
 
-#include "scip/memory.h"
 #include "scip/def.h"
-#include "scip/tclique_graph.h"
+#include "scip/memory.h"
+#include "scip/tclique.h"
 
 
 typedef struct _ITV{
@@ -68,7 +55,10 @@ typedef struct _NBC{
  */
 extern
 WEIGHT tcliqueColoring( 
-   TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
+   TCLIQUE_GETNNODES((*getnnodes)),     /**< user function to get the number of nodes */
+   TCLIQUE_GETWEIGHTS((*getweights)),   /**< user function to get the node weights */
+   TCLIQUE_SELECTADJNODES((*selectadjnodes)), /**< user function to select adjacent edges */
+   TCLIQUEGRAPH*    tcliquegraph,       /**< pointer to graph data structure */
    CHKMEM*          mem,                /**< block memory */
    int*             buffer,             /**< buffer of size nnodes */
    int*             V,                  /**< non-zero weighted nodes for branching */

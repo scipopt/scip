@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.9 2005/07/15 17:20:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.10 2005/08/08 11:16:35 bzfpfend Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -27,8 +27,7 @@
 #include <assert.h>
 
 #include "scip/sepa_clique.h"
-#include "scip/tclique_graph.h"
-#include "scip/tclique_branch.h"
+#include "scip/tclique.h"
 
 
 #define SEPA_NAME              "clique"
@@ -50,7 +49,7 @@
 /** separator data */
 struct SepaData
 {
-   TCLIQUEDATA*     tcliquedata;        /**< tclique data structure */
+   TCLIQUEGRAPH*    tcliquegraph;       /**< tclique graph data structure */
    SCIP*            scip;               /**< SCIP data structure */
    int              ncuts;              /**< number of cuts found */
    VAR**            vars;               /**< binary variables (contained in a 3-clique in implgraph) */    
@@ -58,7 +57,8 @@ struct SepaData
    Real*            varsolvals;         /**< LP solution of binary variables (contained in a 3-clique in implgraph) */
    Real             scaleval;           /**< factor for scaling weights */
    int              maxtreenodes;       /**< maximal number of nodes in branch and bound tree (-1: no limit) */
-   Bool             tcliqueloaded;      /**< TRUE if tcliquedata is allready loaded (tcliquedata can be NULL), FALSE otherwise */ 
+   Bool             tcliqueloaded;      /**< TRUE if tcliquegraph is allready loaded (tcliquegraph can be NULL),
+                                         *   FALSE otherwise */ 
 };
 
 
@@ -113,7 +113,7 @@ void getVarIndex(
  * only variables that are contained in a 3-clique are added as nodes to the clique graph
  */
 static 
-RETCODE loadTcliquedata(
+RETCODE loadTcliquegraph(
    SCIP*            scip,               /**< SCIP data structure */
    SEPADATA*        sepadata            /**< separator data */
    )
@@ -126,7 +126,7 @@ RETCODE loadTcliquedata(
    int xi;
 
    assert(sepadata != NULL);
-   assert(sepadata->tcliquedata == NULL);
+   assert(sepadata->tcliquegraph == NULL);
    assert(sepadata->vars == NULL);
    assert(sepadata->nvars == 0);
 
@@ -266,26 +266,26 @@ RETCODE loadTcliquedata(
                zi = getVarTcliqueIndex(zprobindex, zneg);
 
                /* create the tclique data structure, if not yet existing */
-               if( sepadata->tcliquedata == NULL )
+               if( sepadata->tcliquegraph == NULL )
                {
                   assert(sepadata->vars == NULL);
                   assert(sepadata->nvars == 0);
 
-                  if( !tcliqueCreate(&sepadata->tcliquedata) )
+                  if( !tcliqueCreate(&sepadata->tcliquegraph) )
                   {
                      debugMessage("failed to create tclique data structure\n");
                      return SCIP_NOMEMORY;
                   }
                   CHECK_OKAY( SCIPallocMemoryArray(scip, &sepadata->vars, 2*nbinvars) );
                }
-               assert(sepadata->tcliquedata != NULL);
+               assert(sepadata->tcliquegraph != NULL);
                assert(sepadata->vars != NULL);
 
                /* add nodes xi, yi, and zi to clique graph (if not yet existing) */
                if( cliquegraphidx[xi] == -1 )
                {
                   assert(sepadata->nvars < 2*nbinvars);
-                  if( !tcliqueAddNode(sepadata->tcliquedata, sepadata->nvars, 0) )
+                  if( !tcliqueAddNode(sepadata->tcliquegraph, sepadata->nvars, 0) )
                   {
                      debugMessage("failed to add node %d to clique graph\n", sepadata->nvars);
                      return SCIP_NOMEMORY;
@@ -302,7 +302,7 @@ RETCODE loadTcliquedata(
                if( cliquegraphidx[yi] == -1 )
                {
                   assert(sepadata->nvars < 2*nbinvars);
-                  if( !tcliqueAddNode(sepadata->tcliquedata, sepadata->nvars, 0) )
+                  if( !tcliqueAddNode(sepadata->tcliquegraph, sepadata->nvars, 0) )
                   {
                      debugMessage("failed to add node %d to clique graph\n", sepadata->nvars);
                      return SCIP_NOMEMORY;
@@ -319,7 +319,7 @@ RETCODE loadTcliquedata(
                if( cliquegraphidx[zi] == -1 )
                {
                   assert(sepadata->nvars < 2*nbinvars);
-                  if( !tcliqueAddNode(sepadata->tcliquedata, sepadata->nvars, 0) )
+                  if( !tcliqueAddNode(sepadata->tcliquegraph, sepadata->nvars, 0) )
                   {
                      debugMessage("failed to add node %d to clique graph\n", sepadata->nvars);
                      return SCIP_NOMEMORY;
@@ -337,7 +337,7 @@ RETCODE loadTcliquedata(
                /* add edges (xi,yi), (xi,zi), and (yi,zi) to clique graph (multiple edges are deleted afterwards) */
                if( !implused[xyid] )
                {
-                  if( !tcliqueAddEdge(sepadata->tcliquedata, cliquegraphidx[xi], cliquegraphidx[yi]) )
+                  if( !tcliqueAddEdge(sepadata->tcliquegraph, cliquegraphidx[xi], cliquegraphidx[yi]) )
                   {
                      debugMessage("failed to add edge (%d,%d) to clique graph\n",
                         cliquegraphidx[xi], cliquegraphidx[yi]);
@@ -347,7 +347,7 @@ RETCODE loadTcliquedata(
                }
                if( !implused[xzid] )
                {
-                  if( !tcliqueAddEdge(sepadata->tcliquedata, cliquegraphidx[xi], cliquegraphidx[zi]) )
+                  if( !tcliqueAddEdge(sepadata->tcliquegraph, cliquegraphidx[xi], cliquegraphidx[zi]) )
                   {
                      debugMessage("failed to add edge (%d,%d) to clique graph\n",
                         cliquegraphidx[xi], cliquegraphidx[zi]);
@@ -357,7 +357,7 @@ RETCODE loadTcliquedata(
                }
                if( !implused[yzid] )
                {
-                  if( !tcliqueAddEdge(sepadata->tcliquedata, cliquegraphidx[yi], cliquegraphidx[zi]) )
+                  if( !tcliqueAddEdge(sepadata->tcliquegraph, cliquegraphidx[yi], cliquegraphidx[zi]) )
                   {
                      debugMessage("failed to add edge (%d,%d) to clique graph\n",
                         cliquegraphidx[yi], cliquegraphidx[zi]);
@@ -374,7 +374,7 @@ RETCODE loadTcliquedata(
       }
    }
    assert((sepadata->nvars == 0) == (sepadata->vars == NULL));
-   assert((sepadata->nvars == 0) == (sepadata->tcliquedata == NULL));
+   assert((sepadata->nvars == 0) == (sepadata->tcliquegraph == NULL));
 
    /* reduce the size of the vars array */
    if( 0 < sepadata->nvars && sepadata->nvars < 2*nbinvars )
@@ -387,19 +387,19 @@ RETCODE loadTcliquedata(
    SCIPfreeBufferArray(scip, &cliquegraphidx);
 
    /* flush the changes to the clique graph */
-   if( sepadata->tcliquedata != NULL )
+   if( sepadata->tcliquegraph != NULL )
    {
       debugMessage(" -> flushing clique graph\n");
-      if( !tcliqueFlush(sepadata->tcliquedata) )
+      if( !tcliqueFlush(sepadata->tcliquegraph) )
          return SCIP_NOMEMORY;
       
       debugMessage(" -> clique graph constructed (%d nodes, %d edges)\n", 
-         tcliqueGetNNodes(sepadata->tcliquedata), tcliqueGetNEdges(sepadata->tcliquedata));
+         tcliqueGetNNodes(sepadata->tcliquegraph), tcliqueGetNEdges(sepadata->tcliquegraph));
 
 #if 0
-      debugPrintf("---v---- tcliquedata ----v---\n");
-      debug(tcliquePrintData(sepadata->tcliquedata));
-      debugPrintf("---^---- tcliquedata ----^---\n");
+      debugPrintf("---v---- tcliquegraph ----v---\n");
+      debug(tcliquePrintData(sepadata->tcliquegraph));
+      debugPrintf("---^---- tcliquegraph ----^---\n");
 #endif
    }
 
@@ -408,7 +408,7 @@ RETCODE loadTcliquedata(
 
 /* updates tclique data structure (changes weight of all nodes) */
 static 
-void updateTcliquedata(
+void updateTcliquegraph(
    SCIP*            scip,               /**< SCIP data structure */
    SEPADATA*        sepadata            /**< separator data */
    )
@@ -416,8 +416,8 @@ void updateTcliquedata(
    int i;
 
    assert(sepadata != NULL);
-   assert(sepadata->tcliquedata != NULL);
-   assert(tcliqueGetNNodes(sepadata->tcliquedata) == sepadata->nvars);
+   assert(sepadata->tcliquegraph != NULL);
+   assert(tcliqueGetNNodes(sepadata->tcliquegraph) == sepadata->nvars);
 
    /* updates weight of all nodes in tclique data structure */
    for( i = 0; i < sepadata->nvars; i++ )
@@ -426,7 +426,7 @@ void updateTcliquedata(
 
       weight = (int)SCIPfeasFloor(scip, sepadata->varsolvals[i] * sepadata->scaleval);
       weight = MAX(weight, 0);
-      tcliqueChangeWeight(sepadata->tcliquedata, i, weight);
+      tcliqueChangeWeight(sepadata->tcliquegraph, i, weight);
    }
 }
 
@@ -434,7 +434,7 @@ void updateTcliquedata(
  *  and decides whether to stop generating cliques with the algorithm for maximum weight clique
  */
 static
-TCLIQUE_USRCALLBACK(tcliqueNewClique)
+TCLIQUE_NEWSOL(tcliqueNewClique)
 {
    SEPADATA* sepadata;
    VAR** vars;
@@ -447,7 +447,7 @@ TCLIQUE_USRCALLBACK(tcliqueNewClique)
    assert(acceptsol != NULL);
    assert(stopsolving != NULL);
 
-   sepadata = (SEPADATA*)usrdata;
+   sepadata = (SEPADATA*)tcliquedata;
 
    assert(sepadata != NULL);
    assert(sepadata->scip != NULL);
@@ -557,14 +557,14 @@ DECL_SEPAEXITSOL(sepaExitsolClique)
    
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
-   assert((sepadata->tcliquedata == NULL && sepadata->nvars == 0 && sepadata->vars == NULL) || 
-      (sepadata->tcliquedata != NULL && sepadata->nvars > 0 && sepadata->vars != NULL) );
+   assert((sepadata->tcliquegraph == NULL && sepadata->nvars == 0 && sepadata->vars == NULL) || 
+      (sepadata->tcliquegraph != NULL && sepadata->nvars > 0 && sepadata->vars != NULL) );
 
    /* free tclique data */
-   if( sepadata->tcliquedata != NULL )
+   if( sepadata->tcliquegraph != NULL )
    {
       SCIPfreeMemoryArray(scip, &(sepadata->vars));
-      tcliqueFree(&(sepadata->tcliquedata));
+      tcliqueFree(&(sepadata->tcliquegraph));
       sepadata->nvars = 0;
    }
    sepadata->tcliqueloaded = FALSE;
@@ -588,14 +588,14 @@ DECL_SEPAEXEC(sepaExecClique)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
    
-   assert((sepadata->tcliquedata == NULL && sepadata->nvars == 0 && sepadata->vars == NULL)
-      || (sepadata->tcliquedata != NULL && sepadata->nvars > 0 && sepadata->vars != NULL));
+   assert((sepadata->tcliquegraph == NULL && sepadata->nvars == 0 && sepadata->vars == NULL)
+      || (sepadata->tcliquegraph != NULL && sepadata->nvars > 0 && sepadata->vars != NULL));
 
    *result = SCIP_DIDNOTRUN;
    sepadata->ncuts = 0;
 
    /* if we already detected that no implications between binary variables exist, nothing has to be done */
-   if( sepadata->tcliquedata == NULL && sepadata->tcliqueloaded )
+   if( sepadata->tcliquegraph == NULL && sepadata->tcliqueloaded )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
@@ -603,10 +603,10 @@ DECL_SEPAEXEC(sepaExecClique)
    /* load tclique data structure */
    if( !sepadata->tcliqueloaded )
    {
-      assert(sepadata->tcliquedata == NULL);
+      assert(sepadata->tcliquegraph == NULL);
 
-      CHECK_OKAY( loadTcliquedata(scip, sepadata) );
-      assert((sepadata->tcliquedata == NULL) == (sepadata->vars == NULL));
+      CHECK_OKAY( loadTcliquegraph(scip, sepadata) );
+      assert((sepadata->tcliquegraph == NULL) == (sepadata->vars == NULL));
       sepadata->tcliqueloaded = TRUE;
    
       if( sepadata->vars == NULL )
@@ -620,18 +620,18 @@ DECL_SEPAEXEC(sepaExecClique)
    }
    
    /* updates LP-solution in sepadata and weights in tclique data structure */
-   assert(sepadata->tcliquedata != NULL);
+   assert(sepadata->tcliquegraph != NULL);
    CHECK_OKAY( SCIPallocBufferArray(scip, &sepadata->varsolvals, sepadata->nvars) );
    CHECK_OKAY( SCIPgetVarSols(scip, sepadata->nvars, sepadata->vars, sepadata->varsolvals) );
-   updateTcliquedata(scip, sepadata);
+   updateTcliquegraph(scip, sepadata);
 
    /* get maximal number of tree nodes */
    maxtreenodes = (sepadata->maxtreenodes == -1 ? INT_MAX : sepadata->maxtreenodes);
 
    /* finds maximum weight clique in tclique */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &cliquenodes, tcliqueGetNNodes(sepadata->tcliquedata)) );
-   tcliqueMaxClique(sepadata->tcliquedata, tcliqueNewClique, (void*)sepadata, cliquenodes, &ncliquenodes, &cliqueweight, 
-      (int)sepadata->scaleval-1, (int)sepadata->scaleval+1, maxtreenodes);
+   CHECK_OKAY( SCIPallocBufferArray(scip, &cliquenodes, tcliqueGetNNodes(sepadata->tcliquegraph)) );
+   tcliqueMaxClique(NULL, NULL, NULL, NULL, sepadata->tcliquegraph, tcliqueNewClique, (TCLIQUEDATA*)sepadata,
+      cliquenodes, &ncliquenodes, &cliqueweight, (int)sepadata->scaleval-1, (int)sepadata->scaleval+1, maxtreenodes);
 
    /* frees data structures */
    SCIPfreeBufferArray(scip, &cliquenodes);
@@ -659,7 +659,7 @@ RETCODE SCIPincludeSepaClique(
 
    /* create clique separator data */
    CHECK_OKAY( SCIPallocMemory(scip, &sepadata) );
-   sepadata->tcliquedata = NULL;
+   sepadata->tcliquegraph = NULL;
    sepadata->scip = scip;
    sepadata->ncuts = 0;
    sepadata->vars = NULL;  

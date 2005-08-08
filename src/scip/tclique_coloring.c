@@ -1,31 +1,18 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*                  This file is part of the program and library             */
-/*         SCIP --- Solving Constraint Integer Programs                      */
-/*                                                                           */
-/*    Copyright (C) 2002-2005 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2005 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
-/*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
-/*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
-/*                                                                           */
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/*                                                                           */
 /*                        This file is part of the program                   */
 /*                    TCLIQUE --- Algorithm for Maximum Cliques              */
 /*                                                                           */
 /*    Copyright (C) 1996-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
+/*  TCLIQUE is distributed under the terms of the ZIB Academic License.      */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_coloring.c,v 1.9 2005/08/05 16:04:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_coloring.c,v 1.10 2005/08/08 11:16:35 bzfpfend Exp $"
 
 /**@file   tclique_coloring.c
  * @brief  coloring part of algorithm for maximum cliques
@@ -41,9 +28,10 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "scip/memory.h"
 #include "scip/def.h"
-#include "scip/tclique_graph.h"
+#include "scip/memory.h"
+#include "scip/tclique.h"
+#include "scip/tclique_def.h"
 #include "scip/tclique_coloring.h"
 
 
@@ -58,7 +46,7 @@ int getMaxSatdegIndex(
    int              nV,                 /**< number of non-zero weighted nodes for branching */
    NBC*             gsd,                /**< neighbor color information of all nodes */
    Bool*            iscolored,          /**< coloring status of all nodes */
-   WEIGHT*          weights             /**< weight of nodes in grpah */
+   const WEIGHT*    weights             /**< weight of nodes in grpah */
    )
 {   
    WEIGHT maxweight;
@@ -100,20 +88,24 @@ int getMaxSatdegIndex(
 /** gets index of the node in a given set of nodes with maximum weight */
 static
 int getMaxWeightIndex( 
-   TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
+   TCLIQUE_GETNNODES((*getnnodes)),     /**< user function to get the number of nodes */
+   TCLIQUE_GETWEIGHTS((*getweights)),   /**< user function to get the node weights */
+   TCLIQUEGRAPH*    tcliquegraph,       /**< pointer to graph data structure */
    int*             V,                  /**< non-zero weighted nodes for branching */
    int              nV                  /**< number of non-zero weighted nodes for branching */
    )
 {
-   WEIGHT* weights;
+   const WEIGHT* weights;
    WEIGHT maxweight;
    int maxweightindex;
    int i;
    
-   assert(tcliquedata != NULL);
+   assert(getnnodes != NULL);
+   assert(getweights != NULL);
+   assert(tcliquegraph != NULL);
    assert(nV > 0);
 
-   weights = tcliqueGetWeights(tcliquedata);
+   weights = getweights(tcliquegraph);
 
    maxweightindex = -1;
    maxweight = 0;
@@ -121,7 +113,7 @@ int getMaxWeightIndex(
    /* try to improve maxweight */
    for( i = 0 ; i < nV; i++ )
    {
-      assert(0 <= V[i] && V[i] < tcliqueGetNNodes(tcliquedata));
+      assert(0 <= V[i] && V[i] < getnnodes(tcliquegraph));
       assert(weights[V[i]] > 0);
       if( weights[V[i]] > maxweight)
       {
@@ -227,7 +219,10 @@ void updateNeighbor(
  *  finds a clique in the graph induced by V, an upper bound and an apriori bound for further branching steps
  */
 WEIGHT tcliqueColoring( 
-   TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
+   TCLIQUE_GETNNODES((*getnnodes)),     /**< user function to get the number of nodes */
+   TCLIQUE_GETWEIGHTS((*getweights)),   /**< user function to get the node weights */
+   TCLIQUE_SELECTADJNODES((*selectadjnodes)), /**< user function to select adjacent edges */
+   TCLIQUEGRAPH*    tcliquegraph,       /**< pointer to graph data structure */
    CHKMEM*          mem,                /**< block memory */
    int*             buffer,             /**< buffer of size nnodes */
    int*             V,                  /**< non-zero weighted nodes for branching */
@@ -240,7 +235,7 @@ WEIGHT tcliqueColoring(
    WEIGHT*          weightclique        /**< pointer to store the weight of the clique */
    )
 {
-   WEIGHT* weights;
+   const WEIGHT* weights;
    WEIGHT maxsatdegree; 
    WEIGHT range;
    Bool growclique; 
@@ -262,6 +257,9 @@ WEIGHT tcliqueColoring(
    int nVadj;
    int adjidx;
 
+   assert(getnnodes != NULL);
+   assert(getweights != NULL);
+   assert(selectadjnodes != NULL);
    assert(buffer != NULL);
    assert(V != NULL);
    assert(nV > 0);
@@ -271,7 +269,8 @@ WEIGHT tcliqueColoring(
    assert(gsd != NULL);
    assert(iscolored != NULL);
 
-   weights = tcliqueGetWeights(tcliquedata);
+   weights = getweights(tcliquegraph);
+   assert(weights != NULL);
 
    /* initialize maximum weight clique found so far */
    growclique = TRUE;
@@ -279,9 +278,9 @@ WEIGHT tcliqueColoring(
    *weightclique = 0;
 
    /* get node of V with maximum weight */
-   nodeVindex = getMaxWeightIndex(tcliquedata, V, nV);
+   nodeVindex = getMaxWeightIndex(getnnodes, getweights, tcliquegraph, V, nV);
    node = V[nodeVindex];
-   assert(0 <= node && node < tcliqueGetNNodes(tcliquedata));
+   assert(0 <= node && node < getnnodes(tcliquegraph));
    range = weights[node];
    assert(range > 0);
 
@@ -306,13 +305,12 @@ WEIGHT tcliqueColoring(
 
    /* set neighbor color of the adjacent nodes of node */
    Vadj = buffer;
-   nVadj = tcliqueSelectAdjnodes(tcliquedata, node, V, nV, Vadj);
+   nVadj = selectadjnodes(tcliquegraph, node, V, nV, Vadj);
    for( i = 0, adjidx = 0; i < nV && adjidx < nVadj; ++i )
    {
       assert(V[i] <= Vadj[adjidx]); /* Vadj is a subset of V */
       if( V[i] == Vadj[adjidx] )
       {
-         assert(tcliqueIsEdge(tcliquedata, V[i], node));
          debugMessage("     nodeVindex=%d, node=%d, weight=%d, satdegold=%d  ->  ", 
             i, V[i], weights[V[i]], gsd[i].satdeg); 
                
@@ -357,7 +355,7 @@ WEIGHT tcliqueColoring(
          break;
 
       node = V[nodeVindex];
-      assert(0 <= node && node < tcliqueGetNNodes(tcliquedata));
+      assert(0 <= node && node < getnnodes(tcliquegraph));
       range = weights[node];
       assert(range > 0);
       iscolored[nodeVindex] = TRUE;	
@@ -500,14 +498,12 @@ WEIGHT tcliqueColoring(
 
       /* update saturation degree and neighbor colorintervals of all neighbors of node */
       Vadj = buffer;
-      nVadj = tcliqueSelectAdjnodes(tcliquedata, node, V, nV, Vadj);
+      nVadj = selectadjnodes(tcliquegraph, node, V, nV, Vadj);
       for( j = 0, adjidx = 0; j < nV && adjidx < nVadj; ++j )
       {
          assert(V[j] <= Vadj[adjidx]); /* Vadj is a subset of V */
          if( V[j] == Vadj[adjidx] )
          {
-            assert(tcliqueIsEdge(tcliquedata, V[j], node));
-                  
             if( !iscolored[j] )
             {
                debugMessage("     nodeVindex=%d, node=%d, weight=%d, satdegold=%d  ->  ", 

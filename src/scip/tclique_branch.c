@@ -1,31 +1,18 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*                  This file is part of the program and library             */
-/*         SCIP --- Solving Constraint Integer Programs                      */
-/*                                                                           */
-/*    Copyright (C) 2002-2005 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2005 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
-/*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
-/*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
-/*                                                                           */
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/*                                                                           */
 /*                        This file is part of the program                   */
 /*                    TCLIQUE --- Algorithm for Maximum Cliques              */
 /*                                                                           */
 /*    Copyright (C) 1996-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
+/*  TCLIQUE is distributed under the terms of the ZIB Academic License.      */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.c,v 1.12 2005/08/08 08:54:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_branch.c,v 1.13 2005/08/08 11:16:35 bzfpfend Exp $"
 
 /**@file   tclique_branch.c
  * @brief  branch and bound part of algorithm for maximum cliques
@@ -41,10 +28,10 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "scip/memory.h"
 #include "scip/def.h"
-#include "scip/tclique_graph.h"
-#include "scip/tclique_branch.h"
+#include "scip/memory.h"
+#include "scip/tclique.h"
+#include "scip/tclique_def.h"
 #include "scip/tclique_coloring.h"
 
 
@@ -377,7 +364,8 @@ void insertClique(
 /** extends given clique by additional zero-weight nodes of the given node set */
 static
 void extendCliqueZeroWeight(
-   TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
+   TCLIQUE_SELECTADJNODES((*selectadjnodes)), /**< user function to select adjacent edges */
+   TCLIQUEGRAPH*    tcliquegraph,       /**< pointer to graph data structure */
    int*             buffer,             /**< buffer of size nnodes */
    int*             Vzero,              /**< zero weighted nodes */
    int              nVzero,             /**< number of non-zero weighted nodes */
@@ -385,22 +373,17 @@ void extendCliqueZeroWeight(
    int*             ncurcliquenodes     /**< pointer to store number of nodes in the clique */
    )
 {
-   WEIGHT* weights;
-   int nnodes;
    int i;
    int* zeroextensions;
    int nzeroextensions;
 
+   assert(selectadjnodes != NULL);
    assert(buffer != NULL);
    assert(Vzero != NULL);
    assert(curcliquenodes != NULL);
    assert(ncurcliquenodes != NULL);
 
    debugMessage("extending temporary clique (size %d) with zero-weighted nodes (nVzero=%d)\n", *ncurcliquenodes, nVzero);
-
-   nnodes = tcliqueGetNNodes(tcliquedata);
-   weights = tcliqueGetWeights(tcliquedata);
-   assert(weights != NULL);
 
    /* initialize the zero-weighted candidates for clique extension */
    zeroextensions = buffer;
@@ -410,8 +393,7 @@ void extendCliqueZeroWeight(
    /* for each node in the clique, remove non-adjacent nodes from the zero extension candidates */
    for( i = 0; i < *ncurcliquenodes && nzeroextensions > 0; ++i )
    {
-      nzeroextensions = tcliqueSelectAdjnodes(tcliquedata, curcliquenodes[i],
-         zeroextensions, nzeroextensions, zeroextensions);
+      nzeroextensions = selectadjnodes(tcliquegraph, curcliquenodes[i], zeroextensions, nzeroextensions, zeroextensions);
    }
 
    /* put zero-weighted candidates into the clique, and remove non-adjacent nodes from the candidate set */
@@ -424,7 +406,7 @@ void extendCliqueZeroWeight(
       zeroextensions++;
 
       /* remove candidates that are not adjacent to the inserted zero-weighted node */
-      nzeroextensions = tcliqueSelectAdjnodes(tcliquedata, curcliquenodes[(*ncurcliquenodes)-1],
+      nzeroextensions = selectadjnodes(tcliquegraph, curcliquenodes[(*ncurcliquenodes)-1],
          zeroextensions, nzeroextensions, zeroextensions);
    }
 }
@@ -435,7 +417,10 @@ void extendCliqueZeroWeight(
  */
 static
 void newSolution(
-   TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
+   TCLIQUE_SELECTADJNODES((*selectadjnodes)), /**< user function to select adjacent edges */
+   TCLIQUEGRAPH*    tcliquegraph,       /**< pointer to graph data structure */
+   TCLIQUE_NEWSOL   ((*newsol)),        /**< user function to call on every new solution */
+   TCLIQUEDATA*     tcliquedata,        /**< user data to pass to user callback function */
    CLIQUEHASH*      cliquehash,         /**< clique hash table */
    int*             buffer,             /**< buffer of size nnodes */
    int*             Vzero,              /**< zero weighted nodes */
@@ -446,8 +431,6 @@ void newSolution(
    int*             maxcliquenodes,     /**< pointer to store nodes of the maximum weight clique */
    int*             nmaxcliquenodes,    /**< pointer to store number of nodes in the maximum weight clique */
    WEIGHT*          maxcliqueweight,    /**< pointer to store weight of the maximum weight clique */
-   TCLIQUE_USRCALLBACK ((*usrcallback)),/**< user function to call on every new solution */
-   void*            usrdata,            /**< user data to pass to user callback function */
    Bool*            stopsolving         /**< pointer to store whether the solving should be stopped */
    )
 {
@@ -467,7 +450,7 @@ void newSolution(
    clique = NULL;
    insertpos = 0;
 
-   if( usrcallback != NULL )
+   if( newsol != NULL )
    {
       assert(cliquehash != NULL);
 
@@ -483,14 +466,14 @@ void newSolution(
    if( acceptsol )
    {
       /* extend the clique with the zero-weighted nodes */
-      extendCliqueZeroWeight(tcliquedata, buffer, Vzero, nVzero, curcliquenodes, &ncurcliquenodes);
+      extendCliqueZeroWeight(selectadjnodes, tcliquegraph, buffer, Vzero, nVzero, curcliquenodes, &ncurcliquenodes);
 
-      if( usrcallback != NULL )
+      if( newsol != NULL )
       {
          assert(cliquehash != NULL);
 
          /* call user callback method */
-         usrcallback(usrdata, curcliquenodes, ncurcliquenodes, curcliqueweight, maxcliqueweight, &acceptsol, stopsolving);
+         newsol(tcliquedata, curcliquenodes, ncurcliquenodes, curcliqueweight, maxcliqueweight, &acceptsol, stopsolving);
 
          /* if clique was accepted, clear the clique hash table; otherwise, insert it into the clique hash table, such that
           * the same or a weaker clique is not presented to the user again
@@ -541,7 +524,9 @@ void newSolution(
 /** tries to find a clique, if V has only one or two nodes */
 static
 void reduced( 
-   TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
+   TCLIQUE_GETWEIGHTS((*getweights)),   /**< user function to get the node weights */
+   TCLIQUE_ISEDGE   ((*isedge)),        /**< user function to check for existence of an edge */
+   TCLIQUEGRAPH*    tcliquegraph,       /**< pointer to graph data structure */
    int*             V,                  /**< non-zero weighted nodes for branching */
    int              nV,                 /**< number of non-zero weighted nodes for branching */
    WEIGHT*          apbound,            /**< apriori bound of nodes for branching */ 
@@ -550,9 +535,11 @@ void reduced(
    WEIGHT*          tmpcliqueweight     /**< pointer to store weight of the temporary clique */
    )
 {
-   WEIGHT* weights;
-  
-   assert(tcliquedata != NULL);
+   const WEIGHT* weights;
+
+   assert(getweights != NULL);
+   assert(isedge != NULL);
+   assert(tcliquegraph != NULL);
    assert(V != NULL);
    assert(0 <= nV && nV <= 2);
    assert(apbound != NULL);
@@ -560,7 +547,7 @@ void reduced(
    assert(ntmpcliquenodes != NULL);
    assert(tmpcliqueweight != NULL);
 
-   weights = tcliqueGetWeights(tcliquedata);
+   weights = getweights(tcliquegraph);
    assert(nV == 0 || weights[V[0]] > 0);
    assert(nV <= 1 || weights[V[1]] > 0);
 
@@ -570,9 +557,9 @@ void reduced(
       apbound[1] = weights[V[1]];
 
    /* check if nodes are adjacent */ 
-   if( nV >= 2 && tcliqueIsEdge(tcliquedata, V[0], V[1]) )
+   if( nV >= 2 && isedge(tcliquegraph, V[0], V[1]) )
    {
-      assert(tcliqueIsEdge(tcliquedata, V[1], V[0]));
+      assert(isedge(tcliquegraph, V[1], V[0]));
 
       /* put nodes into clique */
       tmpcliquenodes[0] = V[0];
@@ -605,7 +592,11 @@ void reduced(
 /** calculates upper bound on remaining subgraph, and heuristically generates a clique */
 static
 WEIGHT boundSubgraph(
-   TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
+   TCLIQUE_GETNNODES((*getnnodes)),     /**< user function to get the number of nodes */
+   TCLIQUE_GETWEIGHTS((*getweights)),   /**< user function to get the node weights */
+   TCLIQUE_ISEDGE   ((*isedge)),        /**< user function to check for existence of an edge */
+   TCLIQUE_SELECTADJNODES((*selectadjnodes)), /**< user function to select adjacent edges */
+   TCLIQUEGRAPH*    tcliquegraph,       /**< pointer to graph data structure */
    CHKMEM*          mem,                /**< block memory */
    int*             buffer,             /**< buffer of size nnodes */
    int*             V,                  /**< non-zero weighted nodes for branching */
@@ -624,13 +615,14 @@ WEIGHT boundSubgraph(
    if( nV <= 2 )
    {
       /* get 1- or 2-clique and bounds without coloring */
-      reduced(tcliquedata, V, nV, apbound, tmpcliquenodes, ntmpcliquenodes, tmpcliqueweight);
+      reduced(getweights, isedge, tcliquegraph, V, nV, apbound, tmpcliquenodes, ntmpcliquenodes, tmpcliqueweight);
       return *tmpcliqueweight;
    }
    else
    {
       /* color the graph induces by nodes of V to get an upper bound for the remaining subgraph */
-      return tcliqueColoring(tcliquedata, mem, buffer, V, nV, gsd, iscolored, apbound, 
+      return tcliqueColoring(getnnodes, getweights, selectadjnodes, tcliquegraph, 
+         mem, buffer, V, nV, gsd, iscolored, apbound, 
          tmpcliquenodes, ntmpcliquenodes, tmpcliqueweight);
    }
 }
@@ -672,8 +664,8 @@ static
 int getMaxApBoundIndexNotMaxWeight( 
    int*             V,                  /**< non-zero weighted nodes for branching */
    int              nV,                 /**< number of non-zero weighted nodes for branching */
-   WEIGHT*          apbound,            /**< apriori bound of nodes of V */ 
-   WEIGHT*          weights,            /**< weights of nodes */
+   const WEIGHT*    apbound,            /**< apriori bound of nodes of V */ 
+   const WEIGHT*    weights,            /**< weights of nodes */
    WEIGHT           maxweight           /**< maximal weight of node to be candidate for selection */
    )
 {
@@ -706,9 +698,13 @@ int getMaxApBoundIndexNotMaxWeight(
  */
 static
 Bool branch( 
-   TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
-   TCLIQUE_USRCALLBACK ((*usrcallback)),/**< user function to call on every new solution */
-   void*            usrdata,            /**< user data to pass to user callback function */
+   TCLIQUE_GETNNODES((*getnnodes)),     /**< user function to get the number of nodes */
+   TCLIQUE_GETWEIGHTS((*getweights)),   /**< user function to get the node weights */
+   TCLIQUE_ISEDGE   ((*isedge)),        /**< user function to check for existence of an edge */
+   TCLIQUE_SELECTADJNODES((*selectadjnodes)), /**< user function to select adjacent edges */
+   TCLIQUEGRAPH*    tcliquegraph,       /**< pointer to graph data structure */
+   TCLIQUE_NEWSOL   ((*newsol)),        /**< user function to call on every new solution */
+   TCLIQUEDATA*     tcliquedata,        /**< user data to pass to user callback function */
    CHKMEM*          mem,                /**< block memory */
    CLIQUEHASH*      cliquehash,         /**< clique hash table */
    int*             buffer,             /**< buffer of size nnodes */
@@ -736,15 +732,17 @@ Bool branch(
 {
    Bool stopsolving;
    Bool isleaf;
+   const WEIGHT* weights;
    WEIGHT* apbound;
-   WEIGHT* weights;
    WEIGHT subgraphweight;
    WEIGHT weightKold;
    WEIGHT tmpcliqueweight;
    int ntmpcliquenodes;
    int i;
-   
-   assert(tcliquedata != NULL);
+
+   assert(getnnodes != NULL);
+   assert(getweights != NULL);
+   assert(selectadjnodes != NULL);
    assert(mem != NULL);
    assert(V != NULL);
    assert(gsd != NULL);
@@ -777,7 +775,7 @@ Bool branch(
    if( *ntreenodes > maxntreenodes )
       return TRUE;
 
-   weights = tcliqueGetWeights(tcliquedata);
+   weights = getweights(tcliquegraph);
    stopsolving = FALSE;
    isleaf = TRUE;
 
@@ -786,14 +784,15 @@ Bool branch(
    clearMemoryArray(apbound, nV);
 
    /* use coloring relaxation to generate an upper bound for the current subtree and a heuristic solution */
-   subgraphweight = boundSubgraph(tcliquedata, mem, buffer, V, nV, gsd, iscolored, apbound,
+   subgraphweight = boundSubgraph(getnnodes, getweights, isedge, selectadjnodes, tcliquegraph,
+      mem, buffer, V, nV, gsd, iscolored, apbound,
       tmpcliquenodes, &ntmpcliquenodes, &tmpcliqueweight);
 
 #ifndef NDEBUG
    /* check correctness of V and apbound arrays */
    for( i = 0; i < nV; ++i )
    {
-      assert(0 <= V[i] && V[i] < tcliqueGetNNodes(tcliquedata));
+      assert(0 <= V[i] && V[i] < getnnodes(tcliquegraph));
       assert(i == 0 || V[i-1] < V[i]);
       assert(apbound[i] >= 0);
       assert((apbound[i] == 0) == (weights[V[i]] == 0));
@@ -891,10 +890,11 @@ Bool branch(
          /* set the nodes for the next level of b&b tree 
           *   Vcurrent = nodes of V, that are adjacent to branchingnode
           */
-         nVcurrent = tcliqueSelectAdjnodes(tcliquedata, branchingnode, V, nValive, Vcurrent);
+         nVcurrent = selectadjnodes(tcliquegraph, branchingnode, V, nValive, Vcurrent);
       
          /* process the selected subtree */
-         stopsolving = branch(tcliquedata, usrcallback, usrdata, mem, cliquehash, buffer,
+         stopsolving = branch(getnnodes, getweights, isedge, selectadjnodes, tcliquegraph, newsol, tcliquedata,
+            mem, cliquehash, buffer,
             level, Vcurrent, nVcurrent, Vzero, nVzero, gsd, iscolored, K, weightK,
             maxcliquenodes, nmaxcliquenodes, maxcliqueweight, 
             curcliquenodes, ncurcliquenodes, curcliqueweight, tmpcliquenodes,
@@ -916,9 +916,9 @@ Bool branch(
       if( *curcliqueweight > *maxcliqueweight )
       {
          debugMessage("found clique of weight %d at node %d in level %d\n", *curcliqueweight, *ntreenodes, level);
-         newSolution(tcliquedata, cliquehash, buffer, Vzero, nVzero,
+         newSolution(selectadjnodes, tcliquegraph, newsol, tcliquedata, cliquehash, buffer, Vzero, nVzero,
             curcliquenodes, *ncurcliquenodes, *curcliqueweight, 
-            maxcliquenodes, nmaxcliquenodes, maxcliqueweight, usrcallback, usrdata, &stopsolving);
+            maxcliquenodes, nmaxcliquenodes, maxcliqueweight, &stopsolving);
       }
 
       /* discard the current clique */
@@ -934,9 +934,13 @@ Bool branch(
 
 /** finds maximum weight clique */
 void tcliqueMaxClique(
-   TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
-   TCLIQUE_USRCALLBACK ((*usrcallback)),/**< user function to call on every new solution */
-   void*            usrdata,            /**< user data to pass to user callback function */
+   TCLIQUE_GETNNODES((*getnnodes)),     /**< user function to get the number of nodes */
+   TCLIQUE_GETWEIGHTS((*getweights)),   /**< user function to get the node weights */
+   TCLIQUE_ISEDGE   ((*isedge)),        /**< user function to check for existence of an edge */
+   TCLIQUE_SELECTADJNODES((*selectadjnodes)), /**< user function to select adjacent edges */
+   TCLIQUEGRAPH*    tcliquegraph,       /**< pointer to graph data structure that is passed to graph callbacks */
+   TCLIQUE_NEWSOL   ((*newsol)),        /**< user function to call on every new solution */
+   TCLIQUEDATA*     tcliquedata,        /**< user data to pass to new solution callback function */
    int*             maxcliquenodes,     /**< pointer to store nodes of the maximum weight clique */
    int*             nmaxcliquenodes,    /**< pointer to store number of nodes in the maximum weight clique */
    WEIGHT*          maxcliqueweight,    /**< pointer to store weight of the maximum weight clique */
@@ -947,7 +951,7 @@ void tcliqueMaxClique(
    )
 {
    CLIQUEHASH* cliquehash;
-   WEIGHT* weights;
+   const WEIGHT* weights;
    int* buffer;
    int* K;	
    int* V;
@@ -965,18 +969,28 @@ void tcliqueMaxClique(
    int* tmpcliquenodes;
    int ntreenodes;
 
-   assert(tcliquedata != NULL);
    assert(maxcliquenodes != NULL);
    assert(nmaxcliquenodes != NULL);
    assert(maxcliqueweight != NULL);
    assert(maxntreenodes >= 0);
 
-   debugMessage("calculating maximal weighted clique in graph (%d nodes)\n", tcliqueGetNNodes(tcliquedata));
+   /* use default graph callbacks, if NULL pointers are given */
+   if( getnnodes == NULL )
+      getnnodes = &tcliqueGetNNodes;
+   if( getweights == NULL )
+      getweights = &tcliqueGetWeights;
+   if( isedge == NULL )
+      isedge = &tcliqueIsEdge;
+   if( selectadjnodes == NULL )
+      selectadjnodes = &tcliqueSelectAdjnodes;
 
-   nnodes = tcliqueGetNNodes(tcliquedata);
+   /* get number of nodes */
+   nnodes = getnnodes(tcliquegraph);
+
+   debugMessage("calculating maximal weighted clique in graph (%d nodes)\n", nnodes);
 
    /* set up data structures */
-   if( usrcallback != NULL )
+   if( newsol != NULL )
       createCliquehash(&cliquehash, CLIQUEHASH_INITSIZE);
    else
       cliquehash = NULL;
@@ -997,7 +1011,7 @@ void tcliqueMaxClique(
    ntreenodes = 0;
 
    /* set up V and Vzero */
-   weights = tcliqueGetWeights(tcliquedata);
+   weights = getweights(tcliquegraph);
    assert(weights != NULL);
    nV = 0;
    nVzero = 0;
@@ -1019,7 +1033,7 @@ void tcliqueMaxClique(
    mem = createChunkMemory(sizeof(LIST_ITV), CHUNK_SIZE, -1); 
 
    /* branch to find maximum weight clique */
-   (void)branch(tcliquedata, usrcallback, usrdata, mem, cliquehash, buffer,
+   (void)branch(getnnodes, getweights, isedge, selectadjnodes, tcliquegraph, newsol, tcliquedata, mem, cliquehash, buffer,
       0, V, nV, Vzero, nVzero, gsd, iscolored, K, 0, 
       maxcliquenodes, nmaxcliquenodes, maxcliqueweight, 
       curcliquenodes, &ncurcliquenodes, &curcliqueweight, tmpcliquenodes,
@@ -1037,6 +1051,6 @@ void tcliqueMaxClique(
    freeMemoryArray(&V);
    freeMemoryArray(&K);
    freeMemoryArray(&buffer);
-   if( usrcallback != NULL )
+   if( newsol != NULL )
       freeCliquehash(&cliquehash);
 }
