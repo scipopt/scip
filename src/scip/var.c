@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.173 2005/08/08 13:20:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.174 2005/08/09 16:27:07 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1635,6 +1635,7 @@ RETCODE varCreate(
    (*var)->vlbs = NULL;
    (*var)->vubs = NULL;
    (*var)->implics = NULL;
+   (*var)->cliquelist = NULL;
    (*var)->eventfilter = NULL;
    (*var)->lbchginfos = NULL;
    (*var)->ubchginfos = NULL;
@@ -1951,6 +1952,9 @@ RETCODE varFree(
 
    /* free implications data structures */
    SCIPimplicsFree(&(*var)->implics, blkmem);
+
+   /* free clique list data structures */
+   SCIPcliquelistFree(&(*var)->cliquelist, blkmem);
 
    /* free bound change information arrays */
    freeBlockMemoryArrayNull(blkmem, &(*var)->lbchginfos, (*var)->lbchginfossize);
@@ -2633,7 +2637,7 @@ RETCODE SCIPvarFix(
       obj = var->obj;
       CHECK_OKAY( SCIPvarChgObj(var, blkmem, set, primal, lp, eventqueue, 0.0) );
 
-      /* change variable's bounds to fixed value */
+      /* change variable's bounds to fixed value (thereby removing redundant implications and variable bounds) */
       holelistFree(&var->glbdom.holelist, blkmem);
       holelistFree(&var->locdom.holelist, blkmem);
       CHECK_OKAY( SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, fixedval) );
@@ -2648,6 +2652,14 @@ RETCODE SCIPvarFix(
       /* delete variable bounds information */
       SCIPvboundsFree(&var->vlbs, blkmem);
       SCIPvboundsFree(&var->vubs, blkmem);
+
+      /* remove the variable from all cliques */
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      {
+         SCIPcliquelistRemoveFromCliques(var->cliquelist, var);
+         SCIPcliquelistFree(&var->cliquelist, blkmem);
+      }
+      assert(var->cliquelist == NULL);
 
       /* clear the history of the variable */
       SCIPhistoryReset(var->history);
@@ -3063,6 +3075,31 @@ RETCODE SCIPvarAggregate(
    }
    SCIPimplicsFree(&var->implics, blkmem);
 
+   /* move the cliques to the aggregation variable:
+    *  - remove the variable from all cliques it is contained in
+    *  - add all cliques again to the variable, thus adding it to the aggregated variable
+    *  - free the cliquelist data structures
+    */
+   if( var->cliquelist != NULL && SCIPvarGetType(aggvar) == SCIP_VARTYPE_BINARY )
+   {
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+
+      SCIPcliquelistRemoveFromCliques(var->cliquelist, var);
+      for( i = 0; i < 2; ++i )
+      {
+         CLIQUE** cliques;
+         int ncliques;
+
+         ncliques = SCIPcliquelistGetNCliques(var->cliquelist, (Bool)i);
+         cliques = SCIPcliquelistGetCliques(var->cliquelist, (Bool)i);
+         for( j = 0; j < ncliques; ++j )
+         {
+            CHECK_OKAY( SCIPvarAddClique(var, blkmem, set, (Bool)i, cliques[j]) );
+         }
+      }
+   }
+   SCIPcliquelistFree(&var->cliquelist, blkmem);
+
    /* add the history entries to the aggregation variable and clear the history of the aggregated variable */
    SCIPhistoryUnite(aggvar->history, var->history, scalar < 0.0);
    SCIPhistoryUnite(aggvar->historycrun, var->historycrun, scalar < 0.0);
@@ -3192,6 +3229,14 @@ RETCODE SCIPvarMultiaggregate(
       assert(var->vlbs == NULL);
       assert(var->vubs == NULL);
       assert(var->implics == NULL);
+
+      /* the variable also has to be removed from all cliques */
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      {
+         SCIPcliquelistRemoveFromCliques(var->cliquelist, var);
+         SCIPcliquelistFree(&var->cliquelist, blkmem);
+      }
+      assert(var->cliquelist == NULL);
 
       /* set the aggregated variable's objective value to 0.0 */
       obj = var->obj;
@@ -6007,6 +6052,38 @@ RETCODE SCIPvarUseActiveImplics(
    return SCIP_OKAY;
 }
 
+/** adds the variable to the given clique and updates the list of cliques the binary variable is member of */
+RETCODE SCIPvarAddClique(
+   VAR*             var,                /**< problem variable  */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   Bool             value,              /**< value of the variable in the clique */
+   CLIQUE*          clique              /**< clique the variable should be added to */
+   )
+{
+   assert(var != NULL);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY); 
+
+   /* get corresponding active problem variable */
+   CHECK_OKAY( SCIPvarGetProbvarBinary(&var, &value) );
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+
+   /* only column and loose variables may be member of a clique */
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
+   {
+      /* add variable to clique */
+      CHECK_OKAY( SCIPcliqueAddVar(clique, blkmem, set, var, value) );
+
+      /* add clique to variable's clique list */
+      CHECK_OKAY( SCIPcliquelistAdd(&var->cliquelist, blkmem, set, value, clique) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** actually changes the branch factor of the variable and of all parent variables */
 static
 void varProcessChgBranchFactor(
@@ -8635,6 +8712,12 @@ DECL_HASHGETKEY(SCIPhashGetKeyVar)
  * However, we want to have them in the library anyways, so we have to undef the defines.
  */
 
+#undef SCIPboundchgGetNewbound
+#undef SCIPboundchgGetVar
+#undef SCIPboundchgGetBoundchgtype
+#undef SCIPboundchgGetBoundtype
+#undef SCIPdomchgGetNBoundchgs
+#undef SCIPdomchgGetBoundchg
 #undef SCIPvarGetName
 #undef SCIPvarGetData
 #undef SCIPvarGetStatus
@@ -8686,6 +8769,8 @@ DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetImplTypes
 #undef SCIPvarGetImplBounds
 #undef SCIPvarGetImplIds
+#undef SCIPvarGetNCliques
+#undef SCIPvarGetCliques
 #undef SCIPvarCatchEvent
 #undef SCIPvarDropEvent
 #undef SCIPbdchgidxIsEarlierNonNull
@@ -8704,6 +8789,66 @@ DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPbdchginfoGetInferInfo
 #undef SCIPbdchginfoGetInferBoundtype
 #undef SCIPbdchginfoHasInferenceReason
+
+/** returns the new value of the bound in the bound change data */
+Real SCIPboundchgGetNewbound(
+   BOUNDCHG*        boundchg            /**< bound change data */
+   )
+{
+   assert(boundchg != NULL);
+
+   return boundchg->newbound;
+}
+
+/** returns the variable of the bound change in the bound change data */
+VAR* SCIPboundchgGetVar(
+   BOUNDCHG*        boundchg            /**< bound change data */
+   )
+{
+   assert(boundchg != NULL);
+
+   return boundchg->var;
+}
+
+/** returns the bound change type of the bound change in the bound change data */
+BOUNDCHGTYPE SCIPboundchgGetBoundchgtype(
+   BOUNDCHG*        boundchg            /**< bound change data */
+   )
+{
+   assert(boundchg != NULL);
+
+   return (BOUNDCHGTYPE)(boundchg->boundchgtype);
+}
+
+/** returns the bound type of the bound change in the bound change data */
+BOUNDTYPE SCIPboundchgGetBoundtype(
+   BOUNDCHG*        boundchg            /**< bound change data */
+   )
+{
+   assert(boundchg != NULL);
+
+   return (BOUNDTYPE)(boundchg->boundtype);
+}
+
+/** returns the number of bound changes in the domain change data */
+int SCIPdomchgGetNBoundchgs(
+   DOMCHG*          domchg              /**< domain change data */
+   )
+{
+   return domchg != NULL ? domchg->domchgbound.nboundchgs : 0;
+}
+
+/** returns a particular bound change in the domain change data */
+BOUNDCHG* SCIPdomchgGetBoundchg(
+   DOMCHG*          domchg,             /**< domain change data */
+   int              pos                 /**< position of the bound change in the domain change data */
+   )
+{
+   assert(domchg != NULL);
+   assert(0 <= pos && pos < domchg->domchgbound.nboundchgs);
+
+   return &domchg->domchgbound.boundchgs[pos];
+}
 
 /** get name of variable */
 const char* SCIPvarGetName(
@@ -9280,6 +9425,28 @@ int* SCIPvarGetImplIds(
    assert(var != NULL);
 
    return var->implics != NULL ? SCIPimplicsGetIds(var->implics, varfixing) : NULL;
+}
+
+/** gets number of cliques, the variable is contained in */
+int SCIPvarGetNCliques(
+   VAR*             var,                /**< problem variable */
+   Bool             varfixing           /**< FALSE for cliques containing x == 0, TRUE for x == 1 */
+   )
+{
+   assert(var != NULL);
+
+   return var->cliquelist != NULL ? SCIPcliquelistGetNCliques(var->cliquelist, varfixing) : 0;
+}
+
+/** gets array of cliques, the variable is contained in */
+CLIQUE** SCIPvarGetCliques(
+   VAR*             var,                /**< problem variable */
+   Bool             varfixing           /**< FALSE for cliques containing x == 0, TRUE for x == 1 */
+   )
+{
+   assert(var != NULL);
+
+   return var->cliquelist != NULL ? SCIPcliquelistGetCliques(var->cliquelist, varfixing) : NULL;
 }
 
 /** includes event handler with given data in variable's event filter */

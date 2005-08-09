@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.299 2005/08/03 15:30:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.300 2005/08/09 16:27:06 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -45,6 +45,7 @@
 #include "scip/event.h"
 #include "scip/lp.h"
 #include "scip/var.h"
+#include "scip/implics.h"
 #include "scip/prob.h"
 #include "scip/sol.h"
 #include "scip/primal.h"
@@ -3631,6 +3632,7 @@ RETCODE transformProb(
    CHECK_OKAY( SCIPprimalCreate(&scip->primal) );
    CHECK_OKAY( SCIPtreeCreate(&scip->tree, scip->set, SCIPsetGetNodesel(scip->set, scip->stat)) );
    CHECK_OKAY( SCIPconflictCreate(&scip->conflict, scip->set) );
+   CHECK_OKAY( SCIPcliquetableCreate(&scip->cliquetable) );
 
    /* copy problem in solve memory */
    CHECK_OKAY( SCIPprobTransform(scip->origprob, scip->mem->solvemem, scip->set, scip->stat, scip->lp, 
@@ -4283,6 +4285,7 @@ RETCODE freeTransform(
 
    /* free transformed problem data structures */
    CHECK_OKAY( SCIPprobFree(&scip->transprob, scip->mem->solvemem, scip->set, scip->stat, scip->lp) );
+   CHECK_OKAY( SCIPcliquetableFree(&scip->cliquetable, scip->mem->solvemem) );
    CHECK_OKAY( SCIPconflictFree(&scip->conflict) );
    CHECK_OKAY( SCIPtreeFree(&scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
    CHECK_OKAY( SCIPprimalFree(&scip->primal, scip->mem->solvemem) );
@@ -6252,6 +6255,20 @@ RETCODE SCIPaddVarImplication(
 
    CHECK_OKAY( SCIPvarAddImplic(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->branchcand, 
          scip->eventqueue, varfixing, implvar, impltype, implbound, infeasible, nbdchgs) );
+
+   return SCIP_OKAY;
+}
+
+/** adds a clique information to SCIP, stating that at most one of the given binary variables can be set to 1 */
+RETCODE SCIPaddClique(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   int              nvars               /**< number of variables in the clique */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddVarClique", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+    
+   CHECK_OKAY( SCIPcliquetableAdd(scip->cliquetable, scip->mem->solvemem, scip->set, vars, nvars) );
 
    return SCIP_OKAY;
 }
@@ -9357,6 +9374,32 @@ RETCODE SCIPpropagateProbing(
 
    CHECK_OKAY( SCIPpropagateDomains(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
          scip->conflict, 0, maxproprounds, cutoff) );
+
+   return SCIP_OKAY;
+}
+
+/** applies domain propagation on the probing sub problem, that was changed after SCIPstartProbing() was called;
+ *  only propagations of the binary variables fixed at the current probing node that are triggered by the implication
+ *  graph and the clique table are applied;
+ *  the propagated domains of the variables can be accessed with the usual bound accessing calls SCIPvarGetLbLocal()
+ *  and SCIPvarGetUbLocal(); the propagation is only valid locally, i.e. the local bounds as well as the changed
+ *  bounds due to SCIPchgVarLbProbing(), SCIPchgVarUbProbing(), and SCIPfixVarProbing() are used for propagation
+ */
+RETCODE SCIPpropagateProbingImplications(
+   SCIP*            scip,               /**< SCIP data structure */
+   Bool*            cutoff              /**< pointer to store whether the probing node can be cut off */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPpropagateProbingImplications", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   
+   if( !SCIPtreeProbing(scip->tree) )
+   {
+      errorMessage("not in probing mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   CHECK_OKAY( SCIPnodePropagateImplics(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
+         scip->tree, scip->lp, scip->branchcand, scip->eventqueue, cutoff) );
 
    return SCIP_OKAY;
 }

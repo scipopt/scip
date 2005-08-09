@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.1 2005/08/08 13:20:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.2 2005/08/09 16:27:06 bzfpfend Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -386,7 +386,7 @@ void checkImplics(
       nimpls = implics->nimpls[varfixing];
       nbinimpls = implics->nbinimpls[varfixing];
 
-      assert(0 <= nbinimpls && nbinimpls <= nimpls && nimpls <= implics->arraysize[varfixing]);
+      assert(0 <= nbinimpls && nbinimpls <= nimpls && nimpls <= implics->size[varfixing]);
       assert(nimpls == 0 || vars != NULL);
       assert(nimpls == 0 || types != NULL);
       assert(nimpls == 0 || bounds != NULL);
@@ -446,7 +446,7 @@ RETCODE implicsCreate(
    (*implics)->types[0] = NULL;
    (*implics)->bounds[0] = NULL;
    (*implics)->ids[0] = NULL;
-   (*implics)->arraysize[0] = 0;
+   (*implics)->size[0] = 0;
    (*implics)->nimpls[0] = 0;
    (*implics)->nbinimpls[0] = 0;
 
@@ -454,7 +454,7 @@ RETCODE implicsCreate(
    (*implics)->types[1] = NULL;
    (*implics)->bounds[1] = NULL;
    (*implics)->ids[1] = NULL;
-   (*implics)->arraysize[1] = 0;
+   (*implics)->size[1] = 0;
    (*implics)->nimpls[1] = 0;
    (*implics)->nbinimpls[1] = 0;
 
@@ -471,14 +471,14 @@ void SCIPimplicsFree(
 
    if( *implics != NULL )
    {
-      freeBlockMemoryArrayNull(blkmem, &(*implics)->vars[0], (*implics)->arraysize[0]);
-      freeBlockMemoryArrayNull(blkmem, &(*implics)->types[0], (*implics)->arraysize[0]);
-      freeBlockMemoryArrayNull(blkmem, &(*implics)->bounds[0], (*implics)->arraysize[0]);
-      freeBlockMemoryArrayNull(blkmem, &(*implics)->ids[0], (*implics)->arraysize[0]);
-      freeBlockMemoryArrayNull(blkmem, &(*implics)->vars[1], (*implics)->arraysize[1]);
-      freeBlockMemoryArrayNull(blkmem, &(*implics)->types[1], (*implics)->arraysize[1]);
-      freeBlockMemoryArrayNull(blkmem, &(*implics)->bounds[1], (*implics)->arraysize[1]);
-      freeBlockMemoryArrayNull(blkmem, &(*implics)->ids[1], (*implics)->arraysize[1]);
+      freeBlockMemoryArrayNull(blkmem, &(*implics)->vars[0], (*implics)->size[0]);
+      freeBlockMemoryArrayNull(blkmem, &(*implics)->types[0], (*implics)->size[0]);
+      freeBlockMemoryArrayNull(blkmem, &(*implics)->bounds[0], (*implics)->size[0]);
+      freeBlockMemoryArrayNull(blkmem, &(*implics)->ids[0], (*implics)->size[0]);
+      freeBlockMemoryArrayNull(blkmem, &(*implics)->vars[1], (*implics)->size[1]);
+      freeBlockMemoryArrayNull(blkmem, &(*implics)->types[1], (*implics)->size[1]);
+      freeBlockMemoryArrayNull(blkmem, &(*implics)->bounds[1], (*implics)->size[1]);
+      freeBlockMemoryArrayNull(blkmem, &(*implics)->ids[1], (*implics)->size[1]);
       freeBlockMemory(blkmem, implics);
    }
 }
@@ -501,24 +501,24 @@ RETCODE implicsEnsureSize(
       CHECK_OKAY( implicsCreate(implics, blkmem) );
    }
    assert(*implics != NULL);
-   assert((*implics)->nimpls[varfixing] <= (*implics)->arraysize[varfixing]);
+   assert((*implics)->nimpls[varfixing] <= (*implics)->size[varfixing]);
 
-   if( num > (*implics)->arraysize[varfixing] )
+   if( num > (*implics)->size[varfixing] )
    {
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*implics)->vars[varfixing], (*implics)->arraysize[varfixing],
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*implics)->vars[varfixing], (*implics)->size[varfixing],
             newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*implics)->types[varfixing], (*implics)->arraysize[varfixing], 
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*implics)->types[varfixing], (*implics)->size[varfixing], 
             newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*implics)->bounds[varfixing], (*implics)->arraysize[varfixing],
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*implics)->bounds[varfixing], (*implics)->size[varfixing],
             newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*implics)->ids[varfixing], (*implics)->arraysize[varfixing],
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*implics)->ids[varfixing], (*implics)->size[varfixing],
             newsize) );
-      (*implics)->arraysize[varfixing] = newsize;
+      (*implics)->size[varfixing] = newsize;
    }
-   assert(num <= (*implics)->arraysize[varfixing]);
+   assert(num <= (*implics)->size[varfixing]);
 
    return SCIP_OKAY;
 }
@@ -893,6 +893,400 @@ RETCODE SCIPimplicsDel(
 
 
 /*
+ * methods for cliques
+ */
+
+/** creates a clique data structure */
+static
+RETCODE cliqueCreate(
+   CLIQUE**         clique,             /**< pointer to store clique data structure */
+   BLKMEM*          blkmem,             /**< block memory */
+   int              size                /**< initial size of clique */
+   )
+{
+   assert(clique != NULL);
+
+   ALLOC_OKAY( allocBlockMemory(blkmem, clique) );
+   if( size > 0 )
+   {
+      ALLOC_OKAY( allocBlockMemoryArray(blkmem, &(*clique)->vars, size) );
+      ALLOC_OKAY( allocBlockMemoryArray(blkmem, &(*clique)->values, size) );
+   }
+   else
+   {
+      (*clique)->vars = NULL;
+      (*clique)->values = NULL;
+   }
+   (*clique)->nvars = 0;
+   (*clique)->size = size;
+   (*clique)->tablepos = -1;
+
+   return SCIP_OKAY;
+}
+
+/** frees a clique data structure */
+static
+void cliqueFree(
+   CLIQUE**         clique,             /**< pointer to store clique data structure */
+   BLKMEM*          blkmem              /**< block memory */
+   )
+{
+   assert(clique != NULL);
+
+   if( *clique != NULL )
+   {
+      freeBlockMemoryArrayNull(blkmem, &(*clique)->vars, (*clique)->size);
+      freeBlockMemoryArrayNull(blkmem, &(*clique)->values, (*clique)->size);
+      freeBlockMemory(blkmem, clique);
+   }
+}
+
+/** ensures, that clique arrays can store at least num entries */
+static
+RETCODE cliqueEnsureSize(
+   CLIQUE*          clique,             /**< clique data structure */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   int              num                 /**< minimum number of entries to store */
+   )
+{
+   assert(clique != NULL);
+   
+   if( num > clique->size )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &clique->vars, clique->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &clique->values, clique->size, newsize) );
+      clique->size = newsize;
+   }
+   assert(num <= clique->size);
+
+   return SCIP_OKAY;
+}
+
+/** adds a single variable to the given clique */
+RETCODE SCIPcliqueAddVar(
+   CLIQUE*          clique,             /**< clique data structure */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   VAR*             var,                /**< variable to add to the clique */
+   Bool             value               /**< value of the variable in the clique */
+   )
+{
+   int probindex;
+   int i;
+
+   assert(clique != NULL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+
+   /* allocate memory */
+   CHECK_OKAY( cliqueEnsureSize(clique, blkmem, set, clique->nvars+1) );
+
+   /* store variable in clique, sorted by probindex */
+   probindex = SCIPvarGetProbindex(var);
+   assert(probindex >= 0);
+   for( i = clique->nvars; i > 0 && SCIPvarGetProbindex(clique->vars[i-1]) > probindex; --i )
+   {
+      clique->vars[i] = clique->vars[i-1];
+      clique->values[i] = clique->values[i-1];
+   }
+   clique->vars[i] = var;
+   clique->values[i] = value;
+   clique->nvars++;
+
+   return SCIP_OKAY;
+}
+
+/** creates a clique list data structure */
+static
+RETCODE cliquelistCreate(
+   CLIQUELIST**     cliquelist,         /**< pointer to store clique list data structure */
+   BLKMEM*          blkmem              /**< block memory */
+   )
+{
+   assert(cliquelist != NULL);
+
+   ALLOC_OKAY( allocBlockMemory(blkmem, cliquelist) );
+   (*cliquelist)->cliques[0] = NULL;
+   (*cliquelist)->cliques[1] = NULL;
+   (*cliquelist)->ncliques[0] = 0;
+   (*cliquelist)->ncliques[1] = 0;
+   (*cliquelist)->size[0] = 0;
+   (*cliquelist)->size[1] = 0;
+
+   return SCIP_OKAY;
+}
+
+/** frees a clique list data structure */
+void SCIPcliquelistFree(
+   CLIQUELIST**     cliquelist,         /**< pointer to the clique list data structure */
+   BLKMEM*          blkmem              /**< block memory */
+   )
+{
+   assert(cliquelist != NULL);
+
+   if( *cliquelist != NULL )
+   {
+      freeBlockMemoryArrayNull(blkmem, &(*cliquelist)->cliques[0], (*cliquelist)->size[0]);
+      freeBlockMemoryArrayNull(blkmem, &(*cliquelist)->cliques[1], (*cliquelist)->size[1]);
+      freeBlockMemory(blkmem, cliquelist);
+   }
+}
+
+/** ensures, that clique list arrays can store at least num entries */
+static
+RETCODE cliquelistEnsureSize(
+   CLIQUELIST**     cliquelist,         /**< pointer to the clique list data structure */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   Bool             value,              /**< value of the variable for which the clique list should be extended */
+   int              num                 /**< minimum number of entries to store */
+   )
+{
+   assert(cliquelist != NULL);
+
+   if( *cliquelist == NULL )
+   {
+      CHECK_OKAY( cliquelistCreate(cliquelist, blkmem) );
+   }
+   assert(*cliquelist != NULL);
+
+   if( num > (*cliquelist)->size[value] )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*cliquelist)->cliques[value], (*cliquelist)->size[value],
+            newsize) );
+      (*cliquelist)->size[value] = newsize;
+   }
+   assert(num <= (*cliquelist)->size[value]);
+
+   return SCIP_OKAY;
+}
+
+/** adds a clique to the clique list */
+RETCODE SCIPcliquelistAdd(
+   CLIQUELIST**     cliquelist,         /**< pointer to the clique list data structure */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   Bool             value,              /**< value of the variable for which the clique list should be extended */
+   CLIQUE*          clique              /**< clique that should be added to the clique list */
+   )
+{
+   int tablepos;
+   int i;
+
+   assert(cliquelist != NULL);
+
+   /* allocate memory */
+   CHECK_OKAY( cliquelistEnsureSize(cliquelist, blkmem, set, value, SCIPcliquelistGetNCliques(*cliquelist, value)+1) );
+   assert(*cliquelist != NULL);
+   assert((*cliquelist)->cliques[value] != NULL);
+
+   /* insert clique into list, sorted by pointer */
+   tablepos = clique->tablepos;
+   assert(tablepos >= 0);
+   for( i = (*cliquelist)->ncliques[value]; i > 0 && (*cliquelist)->cliques[value][i-1]->tablepos > tablepos; --i )
+      (*cliquelist)->cliques[value][i] = (*cliquelist)->cliques[value][i-1];
+   (*cliquelist)->cliques[value][i] = clique;
+   (*cliquelist)->ncliques[value]++;
+
+   return SCIP_OKAY;
+}
+
+/** removes all listed entries from the cliques */
+void SCIPcliquelistRemoveFromCliques(
+   CLIQUELIST*      cliquelist,         /**< clique list data structure */
+   VAR*             var                 /**< active problem variable the clique list belongs to */
+   )
+{
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+
+   if( cliquelist != NULL )
+   {
+      int probindex;
+      int value;
+
+      probindex = SCIPvarGetProbindex(var);
+      assert(probindex >= 0);
+
+      for( value = 0; value < 2; ++value )
+      {
+         int i;
+
+         assert(SCIPvarGetCliques(var, (Bool)value) == cliquelist->cliques[value]);
+         assert(SCIPvarGetNCliques(var, (Bool)value) == cliquelist->ncliques[value]);
+         for( i = 0; i < cliquelist->ncliques[value]; ++i )
+         {
+            CLIQUE* clique;
+            int left;
+            int right;
+
+            clique = cliquelist->cliques[value][i];
+            assert(clique != NULL);
+
+            /* binary search the position of the variable in the clique */
+            left = 0;
+            right = clique->nvars-1;
+            while( left < right )
+            {
+               int middle;
+               int idx;
+
+               middle = (left+right)/2;
+               idx = SCIPvarGetProbindex(clique->vars[middle]);
+               assert(idx >= 0);
+               if( probindex < idx )
+                  right = middle-1;
+               else if( probindex > idx )
+                  left = middle+1;
+               else
+                  break;
+            }
+            assert(var == clique->vars[left]);
+            
+            /* remove the entry from the clique (the variable might be contained in the clique with both values;
+             * however, it does not matter which entry is deleted here, because we delete both entries anyways)
+             */
+            for( ; left < clique->nvars-1; ++left )
+            {
+               clique->vars[left] = clique->vars[left+1];
+               clique->values[left] = clique->values[left+1];
+            }
+            clique->nvars--;
+         }
+      }
+   }
+}
+
+/** returns the number of cliques stored in the clique list */
+int SCIPcliquelistGetNCliques(
+   CLIQUELIST*      cliquelist,         /**< clique list data structure */
+   Bool             value               /**< value of the variable for which the cliques should be returned */
+   )
+{
+   return cliquelist != NULL ? cliquelist->ncliques[value] : 0;
+}
+
+/** returns the cliques stored in the clique list, or NULL if the clique list is empty */
+CLIQUE** SCIPcliquelistGetCliques(
+   CLIQUELIST*      cliquelist,         /**< clique list data structure */
+   Bool             value               /**< value of the variable for which the cliques should be returned */
+   )
+{
+   return cliquelist != NULL ? cliquelist->cliques[value] : NULL;
+}
+
+/** creates a clique table data structure */
+RETCODE SCIPcliquetableCreate(
+   CLIQUETABLE**    cliquetable         /**< pointer to store clique table data structure */
+   )
+{
+   assert(cliquetable != NULL);
+
+   ALLOC_OKAY( allocMemory(cliquetable) );
+   (*cliquetable)->cliques = NULL;
+   (*cliquetable)->ncliques = 0;
+   (*cliquetable)->size = 0;
+
+   return SCIP_OKAY;
+}
+
+/** frees a clique table data structure */
+RETCODE SCIPcliquetableFree(
+   CLIQUETABLE**    cliquetable,        /**< pointer to store clique table data structure */
+   BLKMEM*          blkmem              /**< block memory */
+   )
+{
+   int i;
+
+   assert(cliquetable != NULL);
+   assert(*cliquetable != NULL);
+
+   /* free all cliques */
+   for( i = 0; i < (*cliquetable)->ncliques; ++i )
+   {
+      cliqueFree(&(*cliquetable)->cliques[i], blkmem);
+   }
+
+   /* free clique table data */
+   freeMemoryArrayNull(&(*cliquetable)->cliques);
+   freeMemory(cliquetable);
+
+   return SCIP_OKAY;
+}
+
+/** ensures, that clique table arrays can store at least num entries */
+static
+RETCODE cliquetableEnsureSize(
+   CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SET*             set,                /**< global SCIP settings */
+   int              num                 /**< minimum number of entries to store */
+   )
+{
+   assert(cliquetable != NULL);
+
+   if( num > cliquetable->size )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      ALLOC_OKAY( reallocMemoryArray(&cliquetable->cliques, newsize) );
+      cliquetable->size = newsize;
+   }
+   assert(num <= cliquetable->size);
+
+   return SCIP_OKAY;
+}
+
+/** adds a clique to the clique table */
+RETCODE SCIPcliquetableAdd(
+   CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   int              nvars               /**< number of variables in the clique */
+   )
+{
+   CLIQUE* clique;
+   int i;
+
+   assert(cliquetable != NULL);
+   assert(vars != NULL);
+
+   debugMessage("adding clique %d with %d vars to clique table:", cliquetable->ncliques, nvars);
+
+   /* create the clique data structure */
+   CHECK_OKAY( cliqueCreate(&clique, blkmem, nvars) );
+
+   /* add clique to clique table */
+   CHECK_OKAY( cliquetableEnsureSize(cliquetable, set, cliquetable->ncliques+1) );
+   cliquetable->cliques[cliquetable->ncliques] = clique;
+   clique->tablepos = cliquetable->ncliques;
+   cliquetable->ncliques++;
+
+   /* add the corresponding active problem variables to the clique */
+   for( i = 0; i < nvars; ++i )
+   {
+      /* put the clique into the sorted clique table of the variable */
+      CHECK_OKAY( SCIPvarAddClique(vars[i], blkmem, set, TRUE, clique) );
+      debugPrintf(" <%s>", SCIPvarGetName(vars[i]));
+   }
+   debugPrintf("\n");
+
+   return SCIP_OKAY;
+}
+
+
+
+
+/*
  * simple functions implemented as defines
  */
 
@@ -912,6 +1306,9 @@ RETCODE SCIPimplicsDel(
 #undef SCIPimplicsGetTypes
 #undef SCIPimplicsGetBounds
 #undef SCIPimplicsGetIds
+#undef SCIPcliqueGetNVars
+#undef SCIPcliqueGetVars
+#undef SCIPcliqueGetValues
 
 /** gets number of variable bounds contained in given variable bounds data structure */
 int SCIPvboundsGetNVbds(
@@ -1017,4 +1414,36 @@ int* SCIPimplicsGetIds(
    assert(implics != NULL);
 
    return implics->ids[varfixing];
+}
+
+/** gets number of variables in the cliques */
+int SCIPcliqueGetNVars(
+   CLIQUE*          clique              /**< clique data structure */
+   )
+{
+   assert(clique != NULL);
+
+   return clique->nvars;
+}
+
+/** gets array of active problem variables in the cliques */
+VAR** SCIPcliqueGetVars(
+   CLIQUE*          clique              /**< clique data structure */
+   )
+{
+   assert(clique != NULL);
+
+   return clique->vars;
+}
+
+/** gets array of values of active problem variables in the cliques, i.e. whether the variable is fixed to FALSE or
+ *  to TRUE in the clique
+ */
+Bool* SCIPcliqueGetValues(
+   CLIQUE*          clique              /**< clique data structure */
+   )
+{
+   assert(clique != NULL);
+
+   return clique->values;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.86 2005/07/15 17:20:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.87 2005/08/09 16:27:05 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -83,6 +83,7 @@ struct ConsData
    int              nfixedzeros;        /**< current number of variables fixed to zero in the constraint */
    int              nfixedones;         /**< current number of variables fixed to one in the constraint */
    unsigned int     setppctype:2;       /**< type of constraint: set partitioning, packing or covering */
+   unsigned int     cliqueadded:1;      /**< was the set partitioning / packing constraint already added as clique? */
 };
 
 
@@ -379,6 +380,7 @@ RETCODE consdataCreate(
    (*consdata)->nfixedzeros = 0;
    (*consdata)->nfixedones = 0;
    (*consdata)->setppctype = setppctype; /*lint !e641*/
+   (*consdata)->cliqueadded = FALSE;
 
    return SCIP_OKAY;
 }   
@@ -2212,6 +2214,14 @@ DECL_CONSPRESOL(consPresolSetppc)
             *result = SCIP_SUCCESS;
             continue;
          }
+      }
+
+      /* add a set partitioning / packing constraint as clique */
+      if( !consdata->cliqueadded && consdata->nvars >= 3
+         && (consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || consdata->setppctype == SCIP_SETPPCTYPE_PACKING) )
+      {
+         CHECK_OKAY( SCIPaddClique(scip, consdata->vars, consdata->nvars) );
+         consdata->cliqueadded = TRUE;
       }
    }
    

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.48 2005/07/15 17:20:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.49 2005/08/09 16:27:06 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -1095,6 +1095,7 @@ RETCODE SCIPeventfilterProcess(
    )
 {
    EVENTTYPE eventtype;
+   EVENTTYPE* eventtypes;
    Bool processed;
    int len;
    int i;
@@ -1120,10 +1121,11 @@ RETCODE SCIPeventfilterProcess(
    /* process the event by calling the event handlers */
    processed = FALSE;
    len = eventfilter->len;
+   eventtypes = eventfilter->eventtypes;
    for( i = 0; i < len; ++i )
    {
       /* check, if event is applicable for the filter element */
-      if( (eventtype & eventfilter->eventtypes[i]) != 0 )
+      if( (eventtype & eventtypes[i]) != 0 )
       {
          /* call event handler */
          CHECK_OKAY( SCIPeventhdlrExec(eventfilter->eventhdlrs[i], set, event, eventfilter->eventdatas[i]) );

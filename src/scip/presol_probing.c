@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.18 2005/07/15 17:20:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.19 2005/08/09 16:27:06 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -117,14 +117,18 @@ RETCODE applyProbing(
    int              nvars,              /**< number of problem variables */
    int              probingpos,         /**< variable number to apply probing on */
    Bool             probingdir,         /**< value to fix probing variable to */
-   Real*            lbs,                /**< array to store propagated lower bounds */
-   Real*            ubs,                /**< array to store propagated upper bounds */
+   Real*            impllbs,            /**< array to store lower bounds after applying implications and cliques */
+   Real*            implubs,            /**< array to store upper bounds after applying implications and cliques */
+   Real*            proplbs,            /**< array to store lower bounds after full propagation */
+   Real*            propubs,            /**< array to store upper bounds after full propagation */
    Bool*            cutoff              /**< pointer to store whether the probing direction is infeasible */
    )
 {
    assert(presoldata != NULL);
-   assert(lbs != NULL);
-   assert(ubs != NULL);
+   assert(impllbs != NULL);
+   assert(implubs != NULL);
+   assert(proplbs != NULL);
+   assert(propubs != NULL);
    assert(cutoff != NULL);
    assert(0 <= probingpos && probingpos < nvars);
    assert(SCIPvarGetType(vars[probingpos]) == SCIP_VARTYPE_BINARY);
@@ -146,9 +150,25 @@ RETCODE applyProbing(
       CHECK_OKAY( SCIPchgVarLbProbing(scip, vars[probingpos], 1.0) );
    }
 
+   /* apply propagation of implication graph and clique table */
+   CHECK_OKAY( SCIPpropagateProbingImplications(scip, cutoff) );
+   if( !(*cutoff) )
+   {
+      int i;
+
+      for( i = 0; i < nvars; ++i )
+      {
+         impllbs[i] = SCIPvarGetLbLocal(vars[i]);
+         implubs[i] = SCIPvarGetUbLocal(vars[i]);
+      }
+   }
+
    /* apply propagation */
-   CHECK_OKAY( SCIPpropagateProbing(scip, presoldata->proprounds, cutoff) );
-   
+   if( !(*cutoff) )
+   {
+      CHECK_OKAY( SCIPpropagateProbing(scip, presoldata->proprounds, cutoff) );
+   }
+
    /* evaluate propagation */
    if( !(*cutoff) )
    {
@@ -156,19 +176,21 @@ RETCODE applyProbing(
 
       for( i = 0; i < nvars; ++i )
       {
-         lbs[i] = SCIPvarGetLbLocal(vars[i]);
-         ubs[i] = SCIPvarGetUbLocal(vars[i]);
+         proplbs[i] = SCIPvarGetLbLocal(vars[i]);
+         propubs[i] = SCIPvarGetUbLocal(vars[i]);
+#if 0
 #ifdef DEBUG
-         if( SCIPisGT(scip, lbs[i], SCIPvarGetLbGlobal(vars[i])) )
+         if( SCIPisGT(scip, proplbs[i], SCIPvarGetLbGlobal(vars[i])) )
          {
             debugMessage(" -> <%s>[%g,%g] >= %g\n", SCIPvarGetName(vars[i]), 
                SCIPvarGetLbGlobal(vars[i]), SCIPvarGetUbGlobal(vars[i]), lbs[i]);
          }
-         if( SCIPisLT(scip, ubs[i], SCIPvarGetUbGlobal(vars[i])) )
+         if( SCIPisLT(scip, propubs[i], SCIPvarGetUbGlobal(vars[i])) )
          {
             debugMessage(" -> <%s>[%g,%g] <= %g\n", SCIPvarGetName(vars[i]), 
                SCIPvarGetLbGlobal(vars[i]), SCIPvarGetUbGlobal(vars[i]), ubs[i]);
          }
+#endif
 #endif
       }
    }
@@ -289,10 +311,14 @@ DECL_PRESOLEXEC(presolExecProbing)
 {  /*lint --e{715}*/
    PRESOLDATA* presoldata;
    VAR** vars;
-   Real* zerolbs;
-   Real* zeroubs;
-   Real* onelbs;
-   Real* oneubs;
+   Real* zeroimpllbs;
+   Real* zeroimplubs;
+   Real* zeroproplbs;
+   Real* zeropropubs;
+   Real* oneimpllbs;
+   Real* oneimplubs;
+   Real* oneproplbs;
+   Real* onepropubs;
    int nvars;
    int nbinvars;
    int maxfixings;
@@ -380,10 +406,14 @@ DECL_PRESOLEXEC(presolExecProbing)
    oldnchgbds = *nchgbds;
 
    /* get temporary memory for storing probing results */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &zerolbs, nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &zeroubs, nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &onelbs, nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &oneubs, nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &zeroimpllbs, nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &zeroimplubs, nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &zeroproplbs, nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &zeropropubs, nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &oneimpllbs, nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &oneimplubs, nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &oneproplbs, nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &onepropubs, nvars) );
 
    /* for each binary variable, probe fixing the variable to zero and one */
    cutoff = FALSE;
@@ -412,7 +442,8 @@ DECL_PRESOLEXEC(presolExecProbing)
       nuseless++;
 
       /* apply probing for fixing the variable to zero */
-      CHECK_OKAY( applyProbing(scip, presoldata, vars, nvars, i, FALSE, zerolbs, zeroubs, &localcutoff) );
+      CHECK_OKAY( applyProbing(scip, presoldata, vars, nvars, i, FALSE, zeroimpllbs, zeroimplubs, zeroproplbs, zeropropubs,
+            &localcutoff) );
       if( localcutoff )
       {
          Bool fixed;
@@ -429,7 +460,8 @@ DECL_PRESOLEXEC(presolExecProbing)
       }
 
       /* apply probing for fixing the variable to one */
-      CHECK_OKAY( applyProbing(scip, presoldata, vars, nvars, i, TRUE, onelbs, oneubs, &localcutoff) );
+      CHECK_OKAY( applyProbing(scip, presoldata, vars, nvars, i, TRUE, oneimpllbs, oneimplubs, oneproplbs, onepropubs,
+            &localcutoff) );
       if( localcutoff )
       {
          Bool fixed;
@@ -456,8 +488,8 @@ DECL_PRESOLEXEC(presolExecProbing)
             continue;
 
          /* new bounds of the variable is the union of the propagated bounds of the zero and one case */
-         newlb = MIN(zerolbs[j], onelbs[j]);
-         newub = MAX(zeroubs[j], oneubs[j]);
+         newlb = MIN(zeroproplbs[j], oneproplbs[j]);
+         newub = MAX(zeropropubs[j], onepropubs[j]);
 
          /* check for fixed variables */
          if( SCIPisFeasEQ(scip, newlb, newub) )
@@ -488,7 +520,7 @@ DECL_PRESOLEXEC(presolExecProbing)
             assert(SCIPvarGetType(vars[j]) == SCIP_VARTYPE_BINARY);
 
             /* check for aggregations and implications on binary variables */
-            if( zeroubs[j] < 0.5 && onelbs[j] > 0.5 )
+            if( zeropropubs[j] < 0.5 && oneproplbs[j] > 0.5 )
             {
                /* variable j is always deduced to the same value as probing variable i:
                 * both variables can be aggregated with x_i - x_j == 0
@@ -504,7 +536,7 @@ DECL_PRESOLEXEC(presolExecProbing)
                   nuseless = 0;
                }
             }
-            else if( zerolbs[j] > 0.5 && oneubs[j] < 0.5 )
+            else if( zeroproplbs[j] > 0.5 && onepropubs[j] < 0.5 )
             {
                /* variable j is always deduced to the opposite value of probing variable i:
                 * both variables can be aggregated with x_i + x_j == 1
@@ -520,7 +552,7 @@ DECL_PRESOLEXEC(presolExecProbing)
                   nuseless = 0;
                }
             }
-            else if( zeroubs[j] < 0.5 )
+            else if( zeropropubs[j] < 0.5 && zeroimplubs[j] > 0.5 ) /* ignore already existing implications */
             {
                /* insert implication: x_i == 0  =>  x_j == 0 */
                debugMessage("found implication <%s> == 0  =>  <%s> == 0\n", 
@@ -531,7 +563,7 @@ DECL_PRESOLEXEC(presolExecProbing)
                (*nchgbds) += nboundchanges;
                presoldata->nbdchgs += nboundchanges;
             }
-            else if( zerolbs[j] > 0.5 )
+            else if( zeroproplbs[j] > 0.5 && zeroimpllbs[j] < 0.5 ) /* ignore already existing implications */
             {
                /* insert implication: x_i == 0  =>  x_j == 1 */
                debugMessage("found implication <%s> == 0  =>  <%s> == 1\n", 
@@ -542,7 +574,7 @@ DECL_PRESOLEXEC(presolExecProbing)
                (*nchgbds) += nboundchanges;
                presoldata->nbdchgs += nboundchanges;
             }
-            else if( oneubs[j] < 0.5 )
+            else if( onepropubs[j] < 0.5 && oneimplubs[j] > 0.5 ) /* ignore already existing implications */
             {
                /* insert implication: x_i == 1  =>  x_j == 0 */
                debugMessage("found implication <%s> == 1  =>  <%s> == 0\n", 
@@ -553,7 +585,7 @@ DECL_PRESOLEXEC(presolExecProbing)
                (*nchgbds) += nboundchanges;
                presoldata->nbdchgs += nboundchanges;
             }
-            else if( onelbs[j] > 0.5 )
+            else if( oneproplbs[j] > 0.5 && oneimpllbs[j] < 0.5 ) /* ignore already existing implications */
             {
                /* insert implication: x_i == 1  =>  x_j == 1 */
                debugMessage("found implication <%s> == 1  =>  <%s> == 1\n", 
@@ -607,45 +639,45 @@ DECL_PRESOLEXEC(presolExecProbing)
             }
 
             /* check for implications (only store implications with bounds tightened at least by 0.5) */
-            if( zeroubs[j] < newub - 0.5 && !cutoff )
+            if( zeropropubs[j] < newub - 0.5 && zeropropubs[j] < zeroimplubs[j] && !cutoff )
             {
-               /* insert implication: x_i == 0  =>  x_j <= zeroubs[j] */
+               /* insert implication: x_i == 0  =>  x_j <= zeropropubs[j] */
                debugMessage("found implication <%s> == 0  =>  <%s>[%g,%g] <= %g\n", 
-                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, zeroubs[j]);
-               CHECK_OKAY( SCIPaddVarImplication(scip, vars[i], FALSE, vars[j], SCIP_BOUNDTYPE_UPPER, zeroubs[j],
+                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, zeropropubs[j]);
+               CHECK_OKAY( SCIPaddVarImplication(scip, vars[i], FALSE, vars[j], SCIP_BOUNDTYPE_UPPER, zeropropubs[j],
                      &cutoff, &nboundchanges) );
                presoldata->nimplications++;
                (*nchgbds) += nboundchanges;
                presoldata->nbdchgs += nboundchanges;
             }
-            if( zerolbs[j] > newlb + 0.5 && !cutoff )
+            if( zeroproplbs[j] > newlb + 0.5 && zeroproplbs[j] > zeroimpllbs[j] && !cutoff )
             {
-               /* insert implication: x_i == 0  =>  x_j >= zerolbs[j] */
+               /* insert implication: x_i == 0  =>  x_j >= zeroproplbs[j] */
                debugMessage("found implication <%s> == 0  =>  <%s>[%g,%g] >= %g\n", 
-                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, zerolbs[j]);
-               CHECK_OKAY( SCIPaddVarImplication(scip, vars[i], FALSE, vars[j], SCIP_BOUNDTYPE_LOWER, zerolbs[j],
+                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, zeroproplbs[j]);
+               CHECK_OKAY( SCIPaddVarImplication(scip, vars[i], FALSE, vars[j], SCIP_BOUNDTYPE_LOWER, zeroproplbs[j],
                      &cutoff, &nboundchanges) );
                presoldata->nimplications++;
                (*nchgbds) += nboundchanges;
                presoldata->nbdchgs += nboundchanges;
             }
-            if( oneubs[j] < newub - 0.5 && !cutoff )
+            if( onepropubs[j] < newub - 0.5 && onepropubs[j] < oneimplubs[j] && !cutoff )
             {
-               /* insert implication: x_i == 1  =>  x_j <= oneubs[j] */
+               /* insert implication: x_i == 1  =>  x_j <= onepropubs[j] */
                debugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] <= %g\n", 
-                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, oneubs[j]);
-               CHECK_OKAY( SCIPaddVarImplication(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_UPPER, oneubs[j],
+                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, onepropubs[j]);
+               CHECK_OKAY( SCIPaddVarImplication(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_UPPER, onepropubs[j],
                      &cutoff, &nboundchanges) );
                presoldata->nimplications++;
                (*nchgbds) += nboundchanges;
                presoldata->nbdchgs += nboundchanges;
             }
-            if( onelbs[j] > newlb + 0.5 && !cutoff )
+            if( oneproplbs[j] > newlb + 0.5 && oneproplbs[j] > oneimpllbs[j] && !cutoff )
             {
-               /* insert implication: x_i == 1  =>  x_j >= onelbs[j] */
+               /* insert implication: x_i == 1  =>  x_j >= oneproplbs[j] */
                debugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] >= %g\n", 
-                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, onelbs[j]);
-               CHECK_OKAY( SCIPaddVarImplication(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_LOWER, onelbs[j],
+                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, oneproplbs[j]);
+               CHECK_OKAY( SCIPaddVarImplication(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_LOWER, oneproplbs[j],
                      &cutoff, &nboundchanges) );
                presoldata->nimplications++;
                (*nchgbds) += nboundchanges;
@@ -657,10 +689,14 @@ DECL_PRESOLEXEC(presolExecProbing)
    presoldata->startidx = i;
 
    /* free temporary memory */
-   SCIPfreeBufferArray(scip, &oneubs);
-   SCIPfreeBufferArray(scip, &onelbs);
-   SCIPfreeBufferArray(scip, &zeroubs);
-   SCIPfreeBufferArray(scip, &zerolbs);
+   SCIPfreeBufferArray(scip, &onepropubs);
+   SCIPfreeBufferArray(scip, &oneproplbs);
+   SCIPfreeBufferArray(scip, &oneimplubs);
+   SCIPfreeBufferArray(scip, &oneimpllbs);
+   SCIPfreeBufferArray(scip, &zeropropubs);
+   SCIPfreeBufferArray(scip, &zeroproplbs);
+   SCIPfreeBufferArray(scip, &zeroimplubs);
+   SCIPfreeBufferArray(scip, &zeroimpllbs);
 
    /* adjust result code */
    if( cutoff )

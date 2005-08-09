@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.231 2005/07/15 17:20:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.232 2005/08/09 16:27:07 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2174,6 +2174,14 @@ RETCODE SCIPaddVarImplication(
    int*             nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    );
 
+/** adds a clique information to SCIP, stating that at most one of the given binary variables can be set to 1 */
+extern
+RETCODE SCIPaddClique(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   int              nvars               /**< number of variables in the clique */
+   );
+
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score
  *  values of the variables; higher factor leads to a higher probability that this variable is chosen for branching
  */
@@ -3565,6 +3573,19 @@ extern
 RETCODE SCIPpropagateProbing(
    SCIP*            scip,               /**< SCIP data structure */
    int              maxproprounds,      /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
+   Bool*            cutoff              /**< pointer to store whether the probing node can be cut off */
+   );
+
+/** applies domain propagation on the probing sub problem, that was changed after SCIPstartProbing() was called;
+ *  only propagations of the binary variables fixed at the current probing node that are triggered by the implication
+ *  graph and the clique table are applied;
+ *  the propagated domains of the variables can be accessed with the usual bound accessing calls SCIPvarGetLbLocal()
+ *  and SCIPvarGetUbLocal(); the propagation is only valid locally, i.e. the local bounds as well as the changed
+ *  bounds due to SCIPchgVarLbProbing(), SCIPchgVarUbProbing(), and SCIPfixVarProbing() are used for propagation
+ */
+extern
+RETCODE SCIPpropagateProbingImplications(
+   SCIP*            scip,               /**< SCIP data structure */
    Bool*            cutoff              /**< pointer to store whether the probing node can be cut off */
    );
 

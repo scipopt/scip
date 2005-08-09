@@ -19,7 +19,7 @@ $(BINOBJDIR)/cmain.o: src/cmain.c src/scip/scip.h src/scip/def.h \
   src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
   src/scip/pub_prop.h src/scip/pub_sol.h src/scip/struct_sol.h \
   src/scip/pub_tree.h src/scip/struct_tree.h src/scip/pub_var.h \
-  src/scip/type_history.h src/scip/struct_var.h src/scip/type_implics.h \
+  src/scip/type_history.h src/scip/type_implics.h src/scip/struct_var.h \
   src/scip/implics.h src/scip/struct_implics.h src/scip/history.h \
   src/scip/struct_history.h src/scip/struct_scip.h \
   src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \

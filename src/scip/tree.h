@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.79 2005/07/15 17:20:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.80 2005/08/09 16:27:07 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -218,6 +218,20 @@ void SCIPnodeUpdateLowerbound(
    NODE*            node,               /**< node to update lower bound for */
    STAT*            stat,               /**< problem statistics */
    Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
+   );
+
+/** propagates implications of binary fixings at the given node triggered by the implication graph and the clique table */
+extern
+RETCODE SCIPnodePropagateImplics(
+   NODE*            node,               /**< node to propagate implications on */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    );
 
 

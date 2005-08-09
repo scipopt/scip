@@ -34,6 +34,10 @@ conflict/maxvarsfac = 0.02
 # [type: int, range: [0,2147483647], default: 30]
 conflict/minmaxvars = 30
 
+# maximal number of unfixed variables at insertion depth of conflict clause (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+conflict/maxunfixed = -1
+
 # maximal number of LP resolving loops during conflict analysis
 # [type: int, range: [0,2147483647], default: 100]
 conflict/maxlploops = 100
@@ -70,16 +74,16 @@ conflict/dynamic = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 conflict/removeable = TRUE
 
-# maximum age an unnecessary constraint can reach before it is deleted, or -1 to keep all constraints
+# maximum age an unnecessary constraint can reach before it is deleted (0: dynamic, -1: keep all constraints)
 # [type: int, range: [-1,2147483647], default: 200]
 constraints/agelimit = 200
 
-# age of a constraint after which it is marked obsolete, or -1 to not mark constraints obsolete
+# age of a constraint after which it is marked obsolete (0: dynamic, -1 do not mark constraints obsolete)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/obsoleteage = 100
 
 # verbosity level of output
-# [type: int, range: [0,4], default: 2]
+# [type: int, range: [0,5], default: 3]
 display/verblevel = 4
 
 # maximal number of characters in a node information line
@@ -142,8 +146,8 @@ lp/initalgorithm = s
 # [type: char, range: {sbc}, default: s]
 lp/resolvealgorithm = s
 
-# LP pricing strategy ('a'uto, 'f'ull pricing, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)
-# [type: char, range: {afsqd}, default: s]
+# LP pricing strategy ('a'uto, 'f'ull pricing, 'p'artial, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)
+# [type: char, range: {afpsqd}, default: s]
 lp/pricing = s
 
 # maximum age a dynamic column can reach before it is deleted from the LP (-1: don't delete columns due to aging)
@@ -570,6 +574,10 @@ constraints/knapsack/maxsepacuts = 50
 # [type: int, range: [0,2147483647], default: 200]
 constraints/knapsack/maxsepacutsroot = 200
 
+# maximal number of cardinality inequalities lifted per separation round (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/knapsack/maxnumcardlift = -1
+
 # priority of conflict handler <logicor>
 # [type: int, range: [-2147483648,2147483647], default: 800000]
 conflict/logicor/priority = 800000
@@ -881,6 +889,10 @@ branching/inference/maxbounddist = 1
 # factor to weigh average number of cutoffs in branching score
 # [type: real, range: [0,1.79769313486232e+308], default: 1]
 branching/inference/cutoffweight = 1
+
+# should branching on LP solution be restricted to the fractional variables?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+branching/inference/fractionals = TRUE
 
 # priority of branching rule <mostinf>
 # [type: int, range: [-2147483648,2147483647], default: 100]

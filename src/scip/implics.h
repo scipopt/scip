@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.h,v 1.1 2005/08/08 13:20:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.h,v 1.2 2005/08/09 16:27:06 bzfpfend Exp $"
 
 /**@file   implics.h
  * @brief  methods for implications, variable bounds, and clique tables
@@ -225,6 +225,122 @@ int* SCIPimplicsGetIds(
 #define SCIPimplicsGetTypes(implics, varfixing)        ((implics)->types[varfixing])
 #define SCIPimplicsGetBounds(implics, varfixing)       ((implics)->bounds[varfixing])
 #define SCIPimplicsGetIds(implics, varfixing)          ((implics)->ids[varfixing])
+
+#endif
+
+
+
+
+/*
+ * methods for cliques
+ */
+
+/** adds a single variable to the given clique */
+extern
+RETCODE SCIPcliqueAddVar(
+   CLIQUE*          clique,             /**< clique data structure */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   VAR*             var,                /**< variable to add to the clique */
+   Bool             value               /**< value of the variable in the clique */
+   );
+
+/** frees a clique list data structure */
+extern
+void SCIPcliquelistFree(
+   CLIQUELIST**     cliquelist,         /**< pointer to the clique list data structure */
+   BLKMEM*          blkmem              /**< block memory */
+   );
+
+/** adds a clique to the clique list */
+extern
+RETCODE SCIPcliquelistAdd(
+   CLIQUELIST**     cliquelist,         /**< pointer to the clique list data structure */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   Bool             value,              /**< value of the variable for which the clique list should be extended */
+   CLIQUE*          clique              /**< clique that should be added to the clique list */
+   );
+
+/** removes all listed entries from the cliques */
+extern
+void SCIPcliquelistRemoveFromCliques(
+   CLIQUELIST*      cliquelist,         /**< clique list data structure */
+   VAR*             var                 /**< active problem variable the clique list belongs to */
+   );
+
+/** returns the number of cliques stored in the clique list */
+extern
+int SCIPcliquelistGetNCliques(
+   CLIQUELIST*      cliquelist,         /**< clique list data structure */
+   Bool             value               /**< value of the variable for which the cliques should be returned */
+   );
+
+/** returns the cliques stored in the clique list, or NULL if the clique list is empty */
+extern
+CLIQUE** SCIPcliquelistGetCliques(
+   CLIQUELIST*      cliquelist,         /**< clique list data structure */
+   Bool             value               /**< value of the variable for which the cliques should be returned */
+   );
+
+/** creates a clique table data structure */
+extern
+RETCODE SCIPcliquetableCreate(
+   CLIQUETABLE**    cliquetable         /**< pointer to store clique table data structure */
+   );
+
+/** frees a clique table data structure */
+extern
+RETCODE SCIPcliquetableFree(
+   CLIQUETABLE**    cliquetable,        /**< pointer to store clique table data structure */
+   BLKMEM*          blkmem              /**< block memory */
+   );
+
+/** adds a clique to the clique table */
+extern
+RETCODE SCIPcliquetableAdd(
+   CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   int              nvars               /**< number of variables in the clique */
+   );
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
+/** gets number of variables in the cliques */
+extern
+int SCIPcliqueGetNVars(
+   CLIQUE*          clique              /**< clique data structure */
+   );
+
+/** gets array of active problem variables in the cliques */
+extern
+VAR** SCIPcliqueGetVars(
+   CLIQUE*          clique              /**< clique data structure */
+   );
+
+/** gets array of values of active problem variables in the cliques, i.e. whether the variable is fixed to FALSE or
+ *  to TRUE in the clique
+ */
+extern
+Bool* SCIPcliqueGetValues(
+   CLIQUE*          clique              /**< clique data structure */
+   );
+
+#else
+
+/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPcliqueGetNVars(clique)      ((clique)->nvars)
+#define SCIPcliqueGetVars(clique)       ((clique)->vars)
+#define SCIPcliqueGetValues(clique)     ((clique)->values)
 
 #endif
 

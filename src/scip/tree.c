@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.152 2005/07/20 16:35:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.153 2005/08/09 16:27:07 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -34,6 +34,7 @@
 #include "scip/event.h"
 #include "scip/lp.h"
 #include "scip/var.h"
+#include "scip/implics.h"
 #include "scip/primal.h"
 #include "scip/tree.h"
 #include "scip/solve.h"
@@ -1474,6 +1475,153 @@ void SCIPnodeUpdateLowerbound(
       if( node->depth == 0 )
          stat->rootlowerbound = newbound;
    }
+}
+
+/** propagates implications of binary fixings at the given node triggered by the implication graph and the clique table */
+RETCODE SCIPnodePropagateImplics(
+   NODE*            node,               /**< node to propagate implications on */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+   )
+{
+   int nboundchgs;
+   int i;
+
+   assert(node != NULL);
+   assert(SCIPnodeIsActive(node));
+   assert(SCIPnodeGetType(node) == SCIP_NODETYPE_FOCUSNODE
+      || SCIPnodeGetType(node) == SCIP_NODETYPE_REFOCUSNODE
+      || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
+   assert(cutoff != NULL);
+
+   debugMessage("implication graph propagation of node %p in depth %d\n", node, SCIPnodeGetDepth(node));
+
+   *cutoff = FALSE;
+
+   /* propagate all fixings of binary performed at this node */
+   nboundchgs = SCIPdomchgGetNBoundchgs(node->domchg);
+   for( i = 0; i < nboundchgs && !(*cutoff); ++i )
+   {
+      BOUNDCHG* boundchg;
+      VAR* var;
+
+      boundchg = SCIPdomchgGetBoundchg(node->domchg, i);
+      var = SCIPboundchgGetVar(boundchg);
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      {
+         Bool varfixing;
+         int nimpls;
+         VAR** implvars;
+         BOUNDTYPE* impltypes;
+         Real* implbounds;
+         CLIQUE** cliques;
+         int ncliques;
+         int j;
+
+         varfixing = (SCIPboundchgGetBoundtype(boundchg) == SCIP_BOUNDTYPE_LOWER);
+         nimpls = SCIPvarGetNImpls(var, varfixing);
+         implvars = SCIPvarGetImplVars(var, varfixing);
+         impltypes = SCIPvarGetImplTypes(var, varfixing);
+         implbounds = SCIPvarGetImplBounds(var, varfixing);
+   
+         /* apply implications */
+         for( j = 0; j < nimpls; ++j )
+         {
+            Real lb;
+            Real ub;
+                  
+            /* check for infeasibility */
+            lb = SCIPvarGetLbLocal(implvars[j]);
+            ub = SCIPvarGetUbLocal(implvars[j]);
+            if( impltypes[j] == SCIP_BOUNDTYPE_LOWER )
+            {
+               if( SCIPsetIsFeasGT(set, implbounds[j], ub) )
+               {
+                  *cutoff = TRUE;
+                  return SCIP_OKAY;
+               }
+               if( SCIPsetIsFeasLE(set, implbounds[j], lb) )
+                  continue;
+            }
+            else
+            {
+               if( SCIPsetIsFeasLT(set, implbounds[j], lb) )
+               {
+                  *cutoff = TRUE;
+                  return SCIP_OKAY;
+               }
+               if( SCIPsetIsFeasGE(set, implbounds[j], ub) )
+                  continue;
+            }
+
+            /* apply the implication */
+            CHECK_OKAY( SCIPnodeAddBoundinfer(node, blkmem, set, stat, tree, lp, branchcand, eventqueue,
+                  implvars[j], implbounds[j], impltypes[j], NULL, NULL, 0, FALSE) );
+         }
+
+         /* apply cliques */
+         ncliques = SCIPvarGetNCliques(var, varfixing);
+         cliques = SCIPvarGetCliques(var, varfixing);
+         for( j = 0; j < ncliques; ++j )
+         {
+            VAR** vars;
+            Bool* values;
+            int nvars;
+            int k;
+
+            nvars = SCIPcliqueGetNVars(cliques[j]);
+            vars = SCIPcliqueGetVars(cliques[j]);
+            values = SCIPcliqueGetValues(cliques[j]);
+            for( k = 0; k < nvars; ++k )
+            {
+               Real lb;
+               Real ub;
+                  
+               assert(SCIPvarGetType(vars[k]) == SCIP_VARTYPE_BINARY);
+
+               if( vars[k] == var && values[k] == varfixing )
+                  continue;
+
+               /* check for infeasibility */
+               lb = SCIPvarGetLbLocal(vars[k]);
+               ub = SCIPvarGetUbLocal(vars[k]);
+               if( values[k] == FALSE )
+               {
+                  if( ub < 0.5 )
+                  {
+                     *cutoff = TRUE;
+                     return SCIP_OKAY;
+                  }
+                  if( lb > 0.5 )
+                     continue;
+               }
+               else
+               {
+                  if( lb > 0.5 )
+                  {
+                     *cutoff = TRUE;
+                     return SCIP_OKAY;
+                  }
+                  if( ub < 0.5 )
+                     continue;
+               }
+
+               /* apply the clique implication */
+               CHECK_OKAY( SCIPnodeAddBoundinfer(node, blkmem, set, stat, tree, lp, branchcand, eventqueue,
+                     vars[k], (Real)(!values[k]), values[k] ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
+                     NULL, NULL, 0, FALSE) );
+            }
+         }
+      }
+   }
+
+   return SCIP_OKAY;
 }
 
 

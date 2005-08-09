@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_scip.h,v 1.16 2005/07/15 17:20:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_scip.h,v 1.17 2005/08/09 16:27:07 bzfpfend Exp $"
 
 /**@file   struct_scip.h
  * @brief  SCIP main data structure
@@ -35,6 +35,7 @@
 #include "scip/type_mem.h"
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
+#include "scip/type_implics.h"
 #include "scip/type_prob.h"
 #include "scip/type_primal.h"
 #include "scip/type_tree.h"
@@ -68,6 +69,7 @@ struct Scip
    PRIMAL*          primal;             /**< primal data and solution storage */
    TREE*            tree;               /**< branch and bound tree */
    CONFLICT*        conflict;           /**< conflict analysis data */
+   CLIQUETABLE*     cliquetable;        /**< collection of cliques */
    PROB*            transprob;          /**< transformed problem after presolve */
 
    /* SOLVING */

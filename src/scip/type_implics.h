@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_implics.h,v 1.1 2005/08/08 13:20:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_implics.h,v 1.2 2005/08/09 16:27:07 bzfpfend Exp $"
 
 /**@file   type_implics.h
  * @brief  type definitions for implications, variable bounds, and clique tables
@@ -29,6 +29,10 @@
 
 typedef struct VBounds VBOUNDS;         /**< variable bounds of a variable x in the form x <= c*y or x >= c*y */
 typedef struct Implics IMPLICS;         /**< implications in the form x <= 0 or x >= 1 ==> y <= b or y >= b for x binary, NULL if x nonbinary */
+typedef struct Clique CLIQUE;           /**< single clique, stating that at most one of the binary variables can be fixed
+                                         *   to the corresponding value */
+typedef struct CliqueTable CLIQUETABLE; /**< collection of cliques */
+typedef struct CliqueList CLIQUELIST;   /**< list of cliques for a single variable */
 
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.173 2005/08/04 10:38:56 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.174 2005/08/09 16:27:05 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -5419,6 +5419,7 @@ DECL_CONSPRESOL(consPresolLinear)
    Real minactivity;
    Real maxactivity;
    Bool cutoff;
+   Bool upgradedall;
    int oldnfixedvars;
    int oldnaggrvars;
    int oldnchgbds;
@@ -5438,6 +5439,7 @@ DECL_CONSPRESOL(consPresolLinear)
 
    /* remember old preprocessing counters */
    cutoff = FALSE;
+   upgradedall = TRUE;
    oldnfixedvars = *nfixedvars;
    oldnaggrvars = *naggrvars;
    oldnchgbds = *nchgbds;
@@ -5601,10 +5603,15 @@ DECL_CONSPRESOL(consPresolLinear)
     * only upgrade constraints, if no reductions were found in this round (otherwise, the linear constraint handler
     * may find additional reductions before giving control away to other (less intelligent?) constraint handlers)
     */
+   upgradedall = (firstupgradetry == INT_MAX);
    if( !cutoff
+#if 0 /*???????????????????*/
       && *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars && *nchgbds == oldnchgbds && *ndelconss == oldndelconss
-      && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides )
+      && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides
+#endif
+       )
    {
+      upgradedall = TRUE;
       for( c = firstupgradetry; c < nconss; ++c )
       {
          cons = conss[c];
@@ -5612,8 +5619,13 @@ DECL_CONSPRESOL(consPresolLinear)
          assert(consdata != NULL);
 
          /* only upgrade completely presolved constraints, that changed since the last upgrading call */
-         if( consdata->upgradetried || !consdata->presolved )
+         if( consdata->upgradetried )
             continue;
+         if( !consdata->presolved )
+         {
+            upgradedall = FALSE;
+            continue;
+         }
 
          consdata->upgradetried = TRUE;
          if( SCIPconsIsActive(cons) )
@@ -5650,6 +5662,8 @@ DECL_CONSPRESOL(consPresolLinear)
    /* return the correct result code */
    if( cutoff )
       *result = SCIP_CUTOFF;
+   else if( !upgradedall )
+      *result = SCIP_DELAYED;
    else if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars || *nchgbds > oldnchgbds || *ndelconss > oldndelconss
       || *nupgdconss > oldnupgdconss || *nchgcoefs > oldnchgcoefs || *nchgsides > oldnchgsides )
       *result = SCIP_SUCCESS;

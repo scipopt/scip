@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.47 2005/08/08 13:20:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.48 2005/08/09 16:27:06 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -31,6 +31,7 @@
 #include "scip/type_retcode.h"
 #include "scip/type_history.h"
 #include "scip/type_var.h"
+#include "scip/type_implics.h"
 #include "scip/type_cons.h"
 
 #ifdef NDEBUG
@@ -537,6 +538,20 @@ int* SCIPvarGetImplIds(
    Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
    );
 
+/** gets number of cliques, the variable is contained in */
+extern
+int SCIPvarGetNCliques(
+   VAR*             var,                /**< problem variable */
+   Bool             varfixing           /**< FALSE for cliques containing x == 0, TRUE for x == 1 */
+   );
+
+/** gets array of cliques, the variable is contained in */
+extern
+CLIQUE** SCIPvarGetCliques(
+   VAR*             var,                /**< problem variable */
+   Bool             varfixing           /**< FALSE for cliques containing x == 0, TRUE for x == 1 */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -600,6 +615,8 @@ int* SCIPvarGetImplIds(
 #define SCIPvarGetImplTypes(var, fix)   ((var)->implics != NULL ? SCIPimplicsGetTypes((var)->implics, fix) : NULL)
 #define SCIPvarGetImplBounds(var, fix)  ((var)->implics != NULL ? SCIPimplicsGetBounds((var)->implics, fix) : NULL)
 #define SCIPvarGetImplIds(var, fix)     ((var)->implics != NULL ? SCIPimplicsGetIds((var)->implics, fix) : NULL)
+#define SCIPvarGetNCliques(var, fix)    ((var)->cliquelist != NULL ? SCIPcliquelistGetNCliques((var)->cliquelist, fix) : 0)
+#define SCIPvarGetCliques(var, fix)     ((var)->cliquelist != NULL ? SCIPcliquelistGetCliques((var)->cliquelist, fix) : NULL)
 #endif
 
 /** gets best local bound of variable with respect to the objective function */

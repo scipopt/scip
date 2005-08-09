@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.96 2005/07/15 17:20:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.97 2005/08/09 16:27:08 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -154,6 +154,64 @@ RETCODE SCIPdomchgAddHolechg(
    HOLELIST*        newlist,            /**< new value of list pointer */
    HOLELIST*        oldlist             /**< old value of list pointer */
    );
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
+/** returns the new value of the bound in the bound change data */
+extern
+Real SCIPboundchgGetNewbound(
+   BOUNDCHG*        boundchg            /**< bound change data */
+   );
+
+/** returns the variable of the bound change in the bound change data */
+extern
+VAR* SCIPboundchgGetVar(
+   BOUNDCHG*        boundchg            /**< bound change data */
+   );
+
+/** returns the bound change type of the bound change in the bound change data */
+extern
+BOUNDCHGTYPE SCIPboundchgGetBoundchgtype(
+   BOUNDCHG*        boundchg            /**< bound change data */
+   );
+
+/** returns the bound type of the bound change in the bound change data */
+extern
+BOUNDTYPE SCIPboundchgGetBoundtype(
+   BOUNDCHG*        boundchg            /**< bound change data */
+   );
+
+/** returns the number of bound changes in the domain change data */
+extern
+int SCIPdomchgGetNBoundchgs(
+   DOMCHG*          domchg              /**< domain change data */
+   );
+
+/** returns a particular bound change in the domain change data */
+extern
+BOUNDCHG* SCIPdomchgGetBoundchg(
+   DOMCHG*          domchg,             /**< domain change data */
+   int              pos                 /**< position of the bound change in the domain change data */
+   );
+
+#else
+
+/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPboundchgGetNewbound(boundchg)      ((boundchg)->newbound)
+#define SCIPboundchgGetVar(boundchg)           ((boundchg)->var)
+#define SCIPboundchgGetBoundchgtype(boundchg)  ((BOUNDCHGTYPE)((boundchg)->boundchgtype))
+#define SCIPboundchgGetBoundtype(boundchg)     ((BOUNDTYPE)((boundchg)->boundtype))
+#define SCIPdomchgGetNBoundchgs(domchg)        ((domchg) != NULL ? (domchg)->domchgbound.nboundchgs : 0)
+#define SCIPdomchgGetBoundchg(domchg, pos)     (&(domchg)->domchgbound.boundchgs[pos])
+
+#endif
 
 
 
@@ -686,6 +744,16 @@ RETCODE SCIPvarUseActiveImplics(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
+   );
+
+/** adds the variable to the given clique and updates the list of cliques the binary variable is member of */
+extern
+RETCODE SCIPvarAddClique(
+   VAR*             var,                /**< problem variable  */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   Bool             value,              /**< value of the variable in the clique */
+   CLIQUE*          clique              /**< clique the variable should be added to */
    );
 
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score

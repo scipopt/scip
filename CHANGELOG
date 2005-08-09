@@ -29,6 +29,7 @@ interface:
 - replaced method SCIPmessage() by SCIPverbMessage() with additional parameter "file"
 - new methods SCIPerrorMessage(), SCIPwarningMessage(), SCIPdialogMessage(), and SCIPinfoMessage()
 - new methods SCIPsetMessagehdlr(), SCIPsetDefaultMessagehdlr(), and SCIPgetMessagehdlr()
+- new method SCIPpropagateProbingImplications()
 
 plugins:
 - added command "write solution" to default dialog
@@ -48,6 +49,7 @@ plugins:
 - new method SCIPgetDualfarkasVarbound() of varbound constraint handler
 - new Message Handler plugin
 - added commands "write problem" and "write transproblem" to default dialog
+- modified probing presolver to not add implications that are already included in the implication graph and clique table
 
 parameters:
 - replaced parameter presolving/restartbdchgs with parameters presolving/maxrestarts and presolving/restartfac

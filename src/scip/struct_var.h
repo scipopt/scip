@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.34 2005/08/08 13:20:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.35 2005/08/09 16:27:07 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -216,6 +216,7 @@ struct Var
    VBOUNDS*         vlbs;               /**< variable lower bounds x >= b*y + d */
    VBOUNDS*         vubs;               /**< variable upper bounds x <= b*y + d */
    IMPLICS*         implics;            /**< implications y >=/<= b following from x <= 0 and x >= 1 (x binary), or NULL if x is not binary */
+   CLIQUELIST*      cliquelist;         /**< list of cliques the variable and its negation is member of */
    EVENTFILTER*     eventfilter;        /**< event filter for events concerning this variable; not for ORIGINAL vars */
    BDCHGINFO*       lbchginfos;         /**< bound change informations for lower bound changes from root to current node */
    BDCHGINFO*       ubchginfos;         /**< bound change informations for upper bound changes from root to current node */
