@@ -75,12 +75,12 @@ conflict/dynamic = TRUE
 conflict/removeable = TRUE
 
 # maximum age an unnecessary constraint can reach before it is deleted (0: dynamic, -1: keep all constraints)
-# [type: int, range: [-1,2147483647], default: 200]
-constraints/agelimit = 200
+# [type: int, range: [-1,2147483647], default: 0]
+constraints/agelimit = 0
 
 # age of a constraint after which it is marked obsolete (0: dynamic, -1 do not mark constraints obsolete)
-# [type: int, range: [-1,2147483647], default: 100]
-constraints/obsoleteage = 100
+# [type: int, range: [-1,2147483647], default: 0]
+constraints/obsoleteage = 0
 
 # verbosity level of output
 # [type: int, range: [0,5], default: 3]
@@ -1263,8 +1263,8 @@ heuristics/objpscostdiving/maxlpiterquot = 0.01
 heuristics/objpscostdiving/maxlpiterofs = 1000
 
 # total number of feasible solutions found up to which heuristic is called (-1: no limit)
-# [type: int, range: [-1,2147483647], default: 5]
-heuristics/objpscostdiving/maxsols = 5
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/objpscostdiving/maxsols = -1
 
 # maximal diving depth: number of binary/integer variables times depthfac
 # [type: real, range: [0,1.79769313486232e+308], default: 0.5]
@@ -1399,8 +1399,8 @@ heuristics/rootsoldiving/maxlpiterquot = 0.01
 heuristics/rootsoldiving/maxlpiterofs = 1000
 
 # total number of feasible solutions found up to which heuristic is called (-1: no limit)
-# [type: int, range: [-1,2147483647], default: 5]
-heuristics/rootsoldiving/maxsols = 5
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/rootsoldiving/maxsols = -1
 
 # maximal diving depth: number of binary/integer variables times depthfac
 # [type: real, range: [0,1.79769313486232e+308], default: 0.5]

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.23 2005/06/29 11:08:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.24 2005/08/09 16:37:50 bzfpfend Exp $"
 
 /**@file   heur_rootsoldiving.c
  * @brief  LP diving heuristic that changes variable's objective values using root LP solution as guide
@@ -50,7 +50,7 @@
 #define DEFAULT_MAXRELDEPTH         1.0 /**< maximal relative depth to start diving */
 #define DEFAULT_MAXLPITERQUOT      0.01 /**< maximal fraction of diving LP iterations compared to node LP iterations */
 #define DEFAULT_MAXLPITEROFS       1000 /**< additional number of allowed LP iterations */
-#define DEFAULT_MAXSOLS               5 /**< total number of feasible solutions found up to which heuristic is called
+#define DEFAULT_MAXSOLS              -1 /**< total number of feasible solutions found up to which heuristic is called
                                          *   (-1: no limit) */
 #define DEFAULT_DEPTHFAC            0.5 /**< maximal diving depth: number of binary/integer variables times depthfac */
 #define DEFAULT_DEPTHFACNOSOL       2.0 /**< maximal diving depth factor if no feasible solution was found yet */

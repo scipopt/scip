@@ -60,6 +60,8 @@ parameters:
 - additional setting SCIP_VERBLEVEL_DIALOG in display/verblevel parameter
 - additional LP pricing setting "partial"
 - parameters constraints/agelimit and constraints/obsoleteage now iterprete the value 0 as a dynamic setting
+- changed default values of constraints/agelimit and constraints/obsoleteage to 0
+- changed default values of heuristics/objpscostdiving/maxsols and heuristics/rootsoldiving/maxsols to -1
 
 features:
 - reactivated multiaggregation in cons_linear.c on binary variables again (possible due to bug fix below)
