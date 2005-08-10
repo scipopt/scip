@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.101 2005/08/08 11:16:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.102 2005/08/10 18:03:39 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -999,6 +999,41 @@ void sortSetvars(
    }
 }
 
+/** enlarges minweight table to at least the given length */
+static
+RETCODE enlargeMinweighttableSize(
+   SCIP*            scip,               /**< SCIP data structure */
+   Longint**        fullminweightptr,   /**< pointer to fullminweight table */
+   int*             fulltablelen,       /**< pointer to store number of entries in fullminweight table (incl. z=0) */
+   int*             fulltablesize,      /**< pointer to current size of fullminweight table */
+   int              newlen              /**< new length of fullminweight table */
+   )
+{
+   int j;
+
+   assert(fullminweightptr != NULL);
+   assert(*fullminweightptr != NULL);
+
+   printf("enlarge minweighttable from %d to %d\n", *fulltablelen, newlen); /*???????????????*/
+   if( newlen > *fulltablesize )
+   {
+      int newsize;
+
+      /* reallocate table memory */
+      newsize = MAX(newlen, 2*(*fulltablesize));
+      printf(" -> realloc from %d to %d\n", *fulltablesize, newsize); /*???????????????*/
+      CHECK_OKAY( SCIPreallocBufferArray(scip, fullminweightptr, newsize) );
+      *fulltablesize = newsize;
+   }
+
+   /* initialize new elements */
+   for( j = *fulltablelen; j < newlen; ++j )
+      (*fullminweightptr)[j] = LONGINT_MAX;
+   *fulltablelen = newlen;
+
+   return SCIP_OKAY;
+}
+
 /** lifts up given inequality sum(j in C1) x_j <= liftrhs which is valid for the knapsack polytop { x binary | 
  *  x is solution of knapsack constraint, x_j = 1 for all j in C2, x_j = 0 for all j in noncovervars } to a valid 
  *  inequality for the knapsack polytop { x binary | x is solution of knapsack constraint, x_j = 1 for all j in C2,
@@ -1022,12 +1057,13 @@ RETCODE liftupKnapsackCover(
    int*             liftrhs,            /**< right hand side of lifted inequality */
    Real*            liftlpval,          /**< LP solution value of lifted variables (without C1) */  
    int*             lastlifted,         /**< pointer to store index of noncover var lifted last (-1 if no var lifted) */
-   int              maxfulltablesize,   /**< maximal number of entries in fullminweight table (incl. z=0) */
    Longint*         initminweight,      /**< initial minweight table (aggregation of sorted weights) */
-   Longint*         fullminweight,      /**< pointer to store fullminweight table */
-   int*             fulltablesize       /**< pointer to store number of entries in fullminweight table (incl. z=0) */
+   Longint**        fullminweightptr,   /**< pointer to fullminweight table */
+   int*             fulltablelen,       /**< pointer to store number of entries in fullminweight table (incl. z=0) */
+   int*             fulltablesize       /**< pointer to current size of fullminweight table */
    )
 {
+   Longint* fullminweight;
    Longint weight;
    Longint rescapacity;
    int liftvar;
@@ -1051,20 +1087,24 @@ RETCODE liftupKnapsackCover(
    assert(liftrhs != NULL);
    assert(liftlpval != NULL);
    assert(lastlifted != NULL);
-   assert(maxfulltablesize >= 0);
    assert(initminweight != NULL);
-   assert(fullminweight != NULL);
+   assert(fullminweightptr != NULL);
+   assert(fulltablelen != NULL);
    assert(fulltablesize != NULL);
+   assert(ncovervarsc1 < *fulltablesize);
+   assert(initminweight[0] == 0);
+   assert(*liftrhs <= ncovervarsc1);
+
+   fullminweight = *fullminweightptr;
+   assert(fullminweight != NULL);
 
    /* initialize the minweight table
     *  fullminweight[z] := minimal sum of weights s.t. activity of cut inequality equals z
     */
-   assert(ncovervarsc1 < maxfulltablesize);
-   assert(initminweight[0] == 0);
    copyMemoryArray(fullminweight, initminweight, ncovervarsc1+1);
-   for( z = ncovervarsc1 + 1; z < maxfulltablesize; z++ )
-      fullminweight[z] = LONGINT_MAX;
-   *fulltablesize = ncovervarsc1 + 1;
+   *fulltablelen = ncovervarsc1 + 1;
+   assert(*liftrhs < *fulltablelen);
+   assert(0 <= *fulltablelen && *fulltablelen <= *fulltablesize);
 
    /* calculate lifting coefficients for noncover variables with LP value > 0:
     *  for each noncovervar x_i with LP-value > 0 (in non-increasing order of LP-value and weight): 
@@ -1090,8 +1130,8 @@ RETCODE liftupKnapsackCover(
             SCIPvarGetName(vars[noncovervars[z]]));
       printf("\n\n");
       printf("i=%d: noncovervar x_%d:\n\n", i, noncovervars[i]);
-      printf("fullminweighttable(liftrhs=%d, fulltablesize=%d)=[ ", *liftrhs, *fulltablesize);
-      for( z = 0; z < *fulltablesize; z++ )
+      printf("fullminweighttable(liftrhs=%d, fulltablelen=%d)=[ ", *liftrhs, *fulltablelen);
+      for( z = 0; z < *fulltablelen; z++ )
          printf("%lld ", fullminweight[z]);
       printf("]\n");
 #endif
@@ -1103,6 +1143,7 @@ RETCODE liftupKnapsackCover(
       /* binary search in sorted fullminweight array for the largest entry that is not greater than 
        * capacity - fixedoneweight - weight_i 
        */
+      assert(*liftrhs < *fulltablelen);
       rescapacity = capacity - fixedoneweight - weight;
       if( rescapacity < 0 )
       {
@@ -1126,13 +1167,16 @@ RETCODE liftupKnapsackCover(
          while( left < right - 1)
          {
             middle = (left + right) / 2;
+            assert(0 <= middle && middle < *fulltablelen);
             if( fullminweight[middle] <= rescapacity ) 
                left = middle;
             else
                right = middle;
          }
          assert(left == right - 1);
-         assert(fullminweight[left] <= rescapacity && fullminweight[left+1] > rescapacity);
+         assert(0 <= left && left < *fulltablelen);
+         assert(fullminweight[left] <= rescapacity);
+         assert(left == (*fulltablelen)-1 || fullminweight[left+1] > rescapacity);
             
          /* now z_max = left: calculate lifting coefficient beta_i */
          liftcoefs[liftvar] = (*liftrhs) - left;
@@ -1149,10 +1193,14 @@ RETCODE liftupKnapsackCover(
        * otherwise, we only have to keep track of the elements up to z = liftrhs
        */
       if( ncovervarsc2 > 0 )
-         (*fulltablesize) += liftcoefs[liftvar];
+      {
+         CHECK_OKAY( enlargeMinweighttableSize(scip, fullminweightptr, fulltablelen, fulltablesize,
+               *fulltablelen + liftcoefs[liftvar]) );
+         fullminweight = *fullminweightptr;
+      }
 
       /* update fullminweight table: calculates minimal sum of weights s.t. activity of curr lifted inequality equals z */
-      for( z = (*fulltablesize) - 1; z >= liftcoefs[liftvar]; z-- )
+      for( z = (*fulltablelen) - 1; z >= liftcoefs[liftvar]; z-- )
       {
          Longint min;
          min = MIN(fullminweight[z], fullminweight[z - liftcoefs[liftvar]] + weights[liftvar]);
@@ -1173,7 +1221,7 @@ RETCODE liftupKnapsackCover(
  *  constraint, x_j = 0 for all j in noncovervars with LP value 0}
  */
 static
-void liftdownKnapsackCover(
+RETCODE liftdownKnapsackCover(
    SCIP*            scip,               /**< SCIP data structure */
    VAR**            vars,               /**< variables in knapsack constraint */
    Longint*         weights,            /**< weights of variables in knapsack constraint */
@@ -1189,10 +1237,12 @@ void liftdownKnapsackCover(
    int*             liftcoefs,          /**< lifting coefficients of var in knapsack constraint in lifted inequality */
    int*             liftrhs,            /**< right hand side of lifted inequality */
    Real*            liftlpval,          /**< LP solution value of lifted variables (without C1) */  
-   Longint*         fullminweight,      /**< fullminweight table */
-   int              fulltablesize       /**< number of entries in fullminweight table (incl. z=0) */
+   Longint**        fullminweightptr,   /**< pointer to fullminweight table */
+   int*             fulltablelen,       /**< pointer to store number of entries in fullminweight table (incl. z=0) */
+   int*             fulltablesize       /**< pointer to current size of fullminweight table */
    )
 {
+   Longint* fullminweight;
    Longint rescapacity;
    int liftvar;
    int left;
@@ -1217,8 +1267,12 @@ void liftdownKnapsackCover(
    assert(liftcoefs != NULL);
    assert(liftrhs != NULL);
    assert(liftlpval != NULL);
+   assert(fullminweightptr != NULL);
+   assert(fulltablelen != NULL);
+   assert(0 <= *fulltablelen && *fulltablelen <= *fulltablesize);
+
+   fullminweight = *fullminweightptr;
    assert(fullminweight != NULL);
-   assert(fulltablesize >= 0);
 
    /* calculates lifting coefficients for cover variables in C2:
     *  for each covervar x_i in C2 (in non-increasing order of LP-value and weight): 
@@ -1246,8 +1300,8 @@ void liftdownKnapsackCover(
       printf("\n\n");
       printf("i=%d: covervar x_%d, weight_%d=%lld:\n같같같같같같같같같같같같같같같같같같같같�\n", i, covervars[i], 
          covervars[i], weights[covervars[i]]);
-      printf("fullminweighttable (fulltablesize=%d)=[ ", fulltablesize);
-      for( z = 0; z < fulltablesize; z++ )
+      printf("fullminweighttable (fulltablelen=%d)=[ ", *fulltablelen);
+      for( z = 0; z < *fulltablelen; z++ )
          printf("%lld ", fullminweight[z]);
       printf("]\n\n");
 #endif
@@ -1260,22 +1314,25 @@ void liftdownKnapsackCover(
       fixedoneweight -= weights[liftvar];
     
       /* binary search in sorted fullminweight array for the largest entry that is not greater then 
-       * capacity - fixedoneweight */
+       * capacity - fixedoneweight
+       */
       rescapacity = capacity - fixedoneweight;
       assert(rescapacity >= 0);
       left = 0;
-      right = fulltablesize;
+      right = *fulltablelen;
       while( left < right - 1)
       {
          middle = (left + right) / 2;
+         assert(0 <= middle && middle < *fulltablelen);
          if( fullminweight[middle] <= rescapacity ) 
             left = middle;
          else
             right = middle;
       }
       assert(left == right - 1);
+      assert(0 <= left && left < *fulltablelen);
       assert(fullminweight[left] <= rescapacity);
-      assert(left == fulltablesize - 1 || fullminweight[left+1] > rescapacity);
+      assert(left == *fulltablelen - 1 || fullminweight[left+1] > rescapacity);
 
       /* now z_max = left: calculates lifting coefficient beta_i */
       assert(left >= (*liftrhs));
@@ -1295,15 +1352,20 @@ void liftdownKnapsackCover(
       /* updates fullminweight table: calculates minimal sum of weights s.t. activity of curr lifted inequality equals z */
       if( liftcoefs[liftvar] == 0 )
          continue;
-      for( z = fulltablesize - 1 + liftcoefs[liftvar]; z >= liftcoefs[liftvar]; z-- )
+
+      CHECK_OKAY( enlargeMinweighttableSize(scip, fullminweightptr, fulltablelen, fulltablesize,
+            *fulltablelen + liftcoefs[liftvar]) );
+      fullminweight = *fullminweightptr;
+      for( z = *fulltablelen - 1; z >= liftcoefs[liftvar]; z-- )
       {
          Longint min;
          min = MIN(fullminweight[z], fullminweight[z - liftcoefs[liftvar]] + weights[liftvar]);
          assert(min > 0);
          fullminweight[z] = min;
       }
-      fulltablesize += liftcoefs[liftvar];
    }
+
+   return SCIP_OKAY;
 }
 
 /** lifts up given inequality sum(j in C1 & noncovervars with LP value > 0 & C2) beta_j * x_j <= liftrhs which is valid 
@@ -1419,7 +1481,8 @@ void liftupZerosKnapsackCover(
                right = middle;
          }
          assert(left == right - 1);
-         assert(fullminweight[left] <= rescapacity && fullminweight[left+1] > rescapacity);
+         assert(fullminweight[left] <= rescapacity);
+         assert(left == *liftrhs || fullminweight[left+1] > rescapacity);
             
          /* now z_max = left: calculates lifting coefficient beta_i */
          liftcoefs[liftvar] = (*liftrhs) - left;
@@ -1469,10 +1532,9 @@ RETCODE liftKnapsackCover(
 {
    Longint fixedoneweight;
    Longint* fullminweight;
-   int maxfulltablesize;
    int fulltablesize;
+   int fulltablelen;
    int lastlifted;
-   int tmp;
    int i;
 
    assert(scip != NULL);
@@ -1496,18 +1558,9 @@ RETCODE liftKnapsackCover(
    /* sets rights hand side of cut for cardinality inequality sum(j in C1) x_j <= |C1| */
    *liftrhs = ncovervarsc1; 
 
-   /* calculates maximum size of fullminweight table (= 1 + maximum sum of all liftcoefs) 
-    *  maximal liftcoef of covervars in C1 = 1
-    *  maximal liftcoef of noncovervars    = current liftrhs + 1 
-    *                                      = *liftrhs + 1 
-    *  maximal liftcoef of covervars in C2 = current sum of liftcoefs - current liftrhs 
-    *                                      = maximal sum of liftcoefs of covervars in C1 and noncovervars - *liftrhs
-    */
-   tmp = ncovervarsc1 + nnoncovervars * ( (*liftrhs) + 1 );
-   maxfulltablesize = 1 + tmp + ( ncovervarsc2 * ( tmp - (*liftrhs) ) ); 
-
    /* allocates temporary memory */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &fullminweight, maxfulltablesize) );
+   fulltablesize = ncovervarsc1+1;
+   CHECK_OKAY( SCIPallocBufferArray(scip, &fullminweight, fulltablesize) );
 
    /* initializes data structures */
    *liftlpval = 0.0;
@@ -1526,13 +1579,14 @@ RETCODE liftKnapsackCover(
       fixedoneweight += weights[covervars[i]];
    CHECK_OKAY( liftupKnapsackCover(scip, vars, weights, capacity, solvals, covervars, noncovervars, ncovervars, 
          ncovervarsc1, ncovervarsc2, nnoncovervars, fixedoneweight, liftcoefs, liftrhs, liftlpval, &lastlifted, 
-         maxfulltablesize, initminweight, fullminweight, &fulltablesize) );
-   assert(fulltablesize <= maxfulltablesize);
+         initminweight, &fullminweight, &fulltablelen, &fulltablesize) );
+   assert(fulltablelen <= fulltablesize);
    assert(lastlifted < nnoncovervars);
 
    /* lifts down all cover variables from C2 */
-   liftdownKnapsackCover(scip, vars, weights, capacity, solvals, covervars, noncovervars, ncovervars, ncovervarsc1, 
-      ncovervarsc2, nnoncovervars, fixedoneweight, liftcoefs, liftrhs, liftlpval, fullminweight, fulltablesize);
+   CHECK_OKAY( liftdownKnapsackCover(scip, vars, weights, capacity, solvals, covervars, noncovervars, ncovervars,
+         ncovervarsc1, ncovervarsc2, nnoncovervars, fixedoneweight, liftcoefs, liftrhs, liftlpval,
+         &fullminweight, &fulltablelen, &fulltablesize) );
 
    /* lifts up all remaining noncover variables (noncover variables with LP value 0) */
    liftupZerosKnapsackCover(scip, vars, weights, capacity, solvals, covervars, noncovervars, ncovervars, ncovervarsc1, 
