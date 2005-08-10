@@ -82,6 +82,7 @@ features:
 - replaced all abort() calls by SCIPABORT(); this is defined in def.h to be assert(FALSE)
 - modified the Makefile to accept an additional parameter VERBOSE={true,false}
 - improved knapsack cover separation
+- changed linear constraint presolving s.t. redundant sides are not removed if constraint is an equality
 
 fixed bugs:
 - LP primal feasibility for bounds is now defined as absolute measure (was relative to the bound before);

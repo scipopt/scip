@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.87 2005/08/09 16:27:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.88 2005/08/10 17:07:46 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -2078,7 +2078,7 @@ DECL_CONSPRESOL(consPresolSetppc)
             
             if( consdata->setppctype == SCIP_SETPPCTYPE_PACKING ) /*lint !e641*/
             {
-               debugMessage("set packing constraint <%s> is redundant\n", SCIPconsGetName(cons));
+               debugMessage("set packing constraint <%s> is redundant: all variables fixed to zero\n", SCIPconsGetName(cons));
                CHECK_OKAY( SCIPdelCons(scip, cons) );
                (*ndelconss)++;
                *result = SCIP_SUCCESS;
@@ -2102,7 +2102,7 @@ DECL_CONSPRESOL(consPresolSetppc)
          
             if( consdata->setppctype == SCIP_SETPPCTYPE_PACKING ) /*lint !e641*/
             {
-               debugMessage("set packing constraint <%s> is redundant\n", SCIPconsGetName(cons));
+               debugMessage("set packing constraint <%s> is redundant: all but one variable fixed to zero\n", SCIPconsGetName(cons));
                CHECK_OKAY( SCIPdelCons(scip, cons) );
                (*ndelconss)++;
                *result = SCIP_SUCCESS;
@@ -2216,12 +2216,36 @@ DECL_CONSPRESOL(consPresolSetppc)
          }
       }
 
-      /* add a set partitioning / packing constraint as clique */
-      if( !consdata->cliqueadded && consdata->nvars >= 3
-         && (consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || consdata->setppctype == SCIP_SETPPCTYPE_PACKING) )
+      /* add clique and implication information */
+      if( !consdata->cliqueadded && consdata->nvars >= 2 )
       {
-         CHECK_OKAY( SCIPaddClique(scip, consdata->vars, consdata->nvars) );
-         consdata->cliqueadded = TRUE;
+         /* add a set partitioning / packing constraint as clique */
+         if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
+         {
+            Bool infeasible;
+            
+            CHECK_OKAY( SCIPaddClique(scip, consdata->vars, consdata->nvars, &infeasible, nchgbds) );
+            consdata->cliqueadded = TRUE;
+            if( infeasible )
+            {
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
+         }
+         else if( consdata->nvars == 2 && !SCIPconsIsModifiable(cons) )
+         {
+            Bool infeasible;
+
+            /* a two-variable set covering constraint x + y >= 1 yields the implication x == 0 -> y == 1 */
+            CHECK_OKAY( SCIPaddVarImplication(scip, consdata->vars[0], FALSE, consdata->vars[1],
+                  SCIP_BOUNDTYPE_LOWER, 1.0, &infeasible, nchgbds) );
+            consdata->cliqueadded = TRUE;
+            if( infeasible )
+            {
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
+         }
       }
    }
    
@@ -2617,7 +2641,7 @@ DECL_EVENTEXEC(eventExecSetppc)
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
 
-   debugMessage("Exec method of bound change event handler for set partitioning / packing / covering constraints\n");
+   /*debugMessage("Exec method of bound change event handler for set partitioning / packing / covering constraints\n");*/
 
    consdata = (CONSDATA*)eventdata;
    assert(consdata != NULL);
@@ -2644,8 +2668,8 @@ DECL_EVENTEXEC(eventExecSetppc)
    assert(0 <= consdata->nfixedzeros && consdata->nfixedzeros <= consdata->nvars);
    assert(0 <= consdata->nfixedones && consdata->nfixedones <= consdata->nvars);
 
-   debugMessage(" -> constraint has %d zero-fixed and %d one-fixed of %d variables\n", 
-      consdata->nfixedzeros, consdata->nfixedones, consdata->nvars);
+   /*debugMessage(" -> constraint has %d zero-fixed and %d one-fixed of %d variables\n", 
+     consdata->nfixedzeros, consdata->nfixedones, consdata->nvars);*/
 
    return SCIP_OKAY;
 }

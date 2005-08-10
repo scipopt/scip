@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.2 2005/08/09 16:27:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.3 2005/08/10 17:07:46 bzfpfend Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -901,7 +901,8 @@ static
 RETCODE cliqueCreate(
    CLIQUE**         clique,             /**< pointer to store clique data structure */
    BLKMEM*          blkmem,             /**< block memory */
-   int              size                /**< initial size of clique */
+   int              size,               /**< initial size of clique */
+   int              id                  /**< unique identifier of the clique */
    )
 {
    assert(clique != NULL);
@@ -919,7 +920,7 @@ RETCODE cliqueCreate(
    }
    (*clique)->nvars = 0;
    (*clique)->size = size;
-   (*clique)->tablepos = -1;
+   (*clique)->id = id;
 
    return SCIP_OKAY;
 }
@@ -972,35 +973,214 @@ RETCODE SCIPcliqueAddVar(
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    VAR*             var,                /**< variable to add to the clique */
-   Bool             value               /**< value of the variable in the clique */
+   Bool             value,              /**< value of the variable in the clique */
+   Bool*            doubleentry,        /**< pointer to store whether the variable and value occurs twice in the clique */
+   Bool*            oppositeentry       /**< pointer to store whether the variable with opposite value is in the clique */
    )
 {
-   int probindex;
+   int varidx;
    int i;
 
    assert(clique != NULL);
-   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
-      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
-      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
-      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(doubleentry != NULL);
+   assert(oppositeentry != NULL);
+
+   debugMessage("adding variable <%s> == %d to clique %d\n", SCIPvarGetName(var), value, clique->id);
+
+   *doubleentry = FALSE;
+   *oppositeentry = FALSE;
 
    /* allocate memory */
    CHECK_OKAY( cliqueEnsureSize(clique, blkmem, set, clique->nvars+1) );
 
-   /* store variable in clique, sorted by probindex */
-   probindex = SCIPvarGetProbindex(var);
-   assert(probindex >= 0);
-   for( i = clique->nvars; i > 0 && SCIPvarGetProbindex(clique->vars[i-1]) > probindex; --i )
+   /* store variable in clique, sorted by index and values */
+   varidx = SCIPvarGetIndex(var);
+   assert(varidx >= 0);
+   for( i = clique->nvars; i > 0 && SCIPvarGetIndex(clique->vars[i-1]) > varidx; --i )
    {
       clique->vars[i] = clique->vars[i-1];
       clique->values[i] = clique->values[i-1];
    }
    clique->vars[i] = var;
+   for( ; i > 0 && clique->vars[i-1] == var && clique->values[i-1] > value; --i )
+      clique->values[i] = clique->values[i-1];
    clique->values[i] = value;
    clique->nvars++;
 
+   /* check whether the variable is contained twice in the clique */
+   for( i--; i >= 0 && clique->vars[i] == var; --i )
+   {
+      *doubleentry = *doubleentry || (clique->values[i] == value);
+      *oppositeentry = *oppositeentry || (clique->values[i] != value);
+   }
+
    return SCIP_OKAY;
 }
+
+/** gets the position of the given variable in the clique; returns -1 if variable is not member of clique */
+static
+int cliqueSearchVar(
+   CLIQUE*          clique,             /**< clique data structure */
+   VAR*             var,                /**< variable to search for */
+   Bool             value               /**< value of the variable in the clique */
+   )
+{
+   int varidx;
+   int left;
+   int right;
+
+   assert(clique != NULL);
+
+   varidx = SCIPvarGetIndex(var);
+   left = -1;
+   right = clique->nvars;
+   while( left < right-1 )
+   {
+      int middle;
+      int idx;
+
+      middle = (left+right)/2;
+      idx = SCIPvarGetIndex(clique->vars[middle]);
+      assert(idx >= 0);
+      if( varidx < idx )
+         right = middle;
+      else if( varidx > idx )
+         left = middle;
+      else
+      {
+         assert(var == clique->vars[middle]);
+
+         /* now watch out for the correct value */
+         if( clique->values[middle] < value )
+         {
+            int i;
+            for( i = middle+1; i < clique->nvars && clique->vars[i] == var; ++i )
+            {
+               if( clique->values[i] == value )
+                  return i;
+            }
+            return -1;
+         }
+         if( clique->values[middle] > value )
+         {
+            int i;
+            for( i = middle-1; i >= 0 && clique->vars[i] == var; --i )
+            {
+               if( clique->values[i] == value )
+                  return i;
+            }
+         }
+         return middle;
+      }
+   }
+
+   return -1;
+}
+
+/** removes a single variable from the given clique */
+RETCODE SCIPcliqueDelVar(
+   CLIQUE*          clique,             /**< clique data structure */
+   VAR*             var,                /**< variable to remove from the clique */
+   Bool             value               /**< value of the variable in the clique */
+   )
+{
+   int pos;
+
+   assert(clique != NULL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+
+   debugMessage("deleting variable <%s> == %d from clique %d\n", SCIPvarGetName(var), value, clique->id);
+
+   /* find variable in clique */
+   pos = cliqueSearchVar(clique, var, value);
+   assert(0 <= pos && pos < clique->nvars);
+   assert(clique->vars[pos] == var);
+   assert(clique->values[pos] == value);
+
+   /* remove entry from clique */
+   for( ; pos < clique->nvars-1; ++pos )
+   {
+      clique->vars[pos] = clique->vars[pos+1];
+      clique->values[pos] = clique->values[pos+1];
+   }
+   clique->nvars--;
+
+   return SCIP_OKAY;
+}
+
+/** gets the position of the given clique in the cliques array; returns -1 if clique is not member of cliques array */
+static
+int cliquesSearchClique(
+   CLIQUE**         cliques,            /**< array of cliques */
+   int              ncliques,           /**< number of cliques in the cliques array */
+   CLIQUE*          clique              /**< clique to search for */
+   )
+{
+   int cliqueid;
+   int left;
+   int right;
+
+   assert(cliques != NULL || ncliques == 0);
+   assert(clique != NULL);
+
+   cliqueid = clique->id;
+   assert(cliqueid >= 0);
+   left = -1;
+   right = ncliques;
+   while( left < right-1 )
+   {
+      int middle;
+      int id;
+
+      middle = (left+right)/2;
+      id = cliques[middle]->id;
+      assert(id >= 0);
+      if( cliqueid < id )
+         right = middle;
+      else if( cliqueid > id )
+         left = middle;
+      else
+      {
+         assert(clique == cliques[middle]);
+         return middle;
+      }
+   }
+
+   return -1;
+}
+
+#ifndef NDEBUG
+/** checks whether clique appears in all clique lists of the involved variables */
+static
+void cliqueCheck(
+   CLIQUE*          clique              /**< clique data structure */
+   )
+{
+   int i;
+
+   assert(clique != NULL);
+
+   for( i = 0; i < clique->nvars; ++i )
+   {
+      CLIQUE** cliques;
+      int ncliques;
+      int pos;
+
+      assert(i == 0 || SCIPvarGetIndex(clique->vars[i-1]) <= SCIPvarGetIndex(clique->vars[i]));
+      assert(i == 0 || clique->vars[i-1] != clique->vars[i] || clique->values[i-1] <= clique->values[i]);
+      ncliques = SCIPvarGetNCliques(clique->vars[i], clique->values[i]);
+      cliques = SCIPvarGetCliques(clique->vars[i], clique->values[i]);
+      pos = cliquesSearchClique(cliques, ncliques, clique);
+      assert(0 <= pos && pos < ncliques);
+      assert(cliques[pos] == clique);
+   }
+}
+#else
+#define cliqueCheck(clique) /**/
+#endif
 
 /** creates a clique list data structure */
 static
@@ -1079,7 +1259,7 @@ RETCODE SCIPcliquelistAdd(
    CLIQUE*          clique              /**< clique that should be added to the clique list */
    )
 {
-   int tablepos;
+   int id;
    int i;
 
    assert(cliquelist != NULL);
@@ -1089,13 +1269,48 @@ RETCODE SCIPcliquelistAdd(
    assert(*cliquelist != NULL);
    assert((*cliquelist)->cliques[value] != NULL);
 
-   /* insert clique into list, sorted by pointer */
-   tablepos = clique->tablepos;
-   assert(tablepos >= 0);
-   for( i = (*cliquelist)->ncliques[value]; i > 0 && (*cliquelist)->cliques[value][i-1]->tablepos > tablepos; --i )
+   debugMessage("adding clique %d to cliquelist %p value %d (length: %d)\n", 
+      clique->id, *cliquelist, value, (*cliquelist)->ncliques[value]);
+   
+   /* insert clique into list, sorted by clique id */
+   id = clique->id;
+   assert(id >= 0);
+   for( i = (*cliquelist)->ncliques[value]; i > 0 && (*cliquelist)->cliques[value][i-1]->id > id; --i )
       (*cliquelist)->cliques[value][i] = (*cliquelist)->cliques[value][i-1];
    (*cliquelist)->cliques[value][i] = clique;
    (*cliquelist)->ncliques[value]++;
+
+   return SCIP_OKAY;
+}
+
+/** removes a clique from the clique list */
+RETCODE SCIPcliquelistDel(
+   CLIQUELIST**     cliquelist,         /**< pointer to the clique list data structure */
+   BLKMEM*          blkmem,             /**< block memory */
+   Bool             value,              /**< value of the variable for which the clique list should be reduced */
+   CLIQUE*          clique              /**< clique that should be deleted from the clique list */
+   )
+{
+   int pos;
+
+   assert(cliquelist != NULL);
+   assert(*cliquelist != NULL);
+
+   debugMessage("deleting clique %d from cliquelist %p value %d (length: %d)\n", 
+      clique->id, *cliquelist, value, (*cliquelist)->ncliques[value]);
+   
+   pos = cliquesSearchClique((*cliquelist)->cliques[value], (*cliquelist)->ncliques[value], clique);
+   assert(0 <= pos && pos < (*cliquelist)->ncliques[value]);
+   assert((*cliquelist)->cliques[value][pos] == clique);
+
+   /* remove clique from list */
+   for( ; pos < (*cliquelist)->ncliques[value] - 1; ++pos )
+      (*cliquelist)->cliques[value][pos] = (*cliquelist)->cliques[value][pos+1];
+   (*cliquelist)->ncliques[value]--;
+
+   /* free cliquelist if it is empty */
+   if( (*cliquelist)->ncliques[0] == 0 && (*cliquelist)->ncliques[1] == 0 )
+      SCIPcliquelistFree(cliquelist, blkmem);
 
    return SCIP_OKAY;
 }
@@ -1110,11 +1325,10 @@ void SCIPcliquelistRemoveFromCliques(
 
    if( cliquelist != NULL )
    {
-      int probindex;
       int value;
 
-      probindex = SCIPvarGetProbindex(var);
-      assert(probindex >= 0);
+      debugMessage("removing variable <%s> from cliques (%d with value 0, %d with value 1)\n",
+         SCIPvarGetName(var), cliquelist->ncliques[0], cliquelist->ncliques[1]);
 
       for( value = 0; value < 2; ++value )
       {
@@ -1125,62 +1339,32 @@ void SCIPcliquelistRemoveFromCliques(
          for( i = 0; i < cliquelist->ncliques[value]; ++i )
          {
             CLIQUE* clique;
-            int left;
-            int right;
+            int pos;
 
             clique = cliquelist->cliques[value][i];
             assert(clique != NULL);
 
-            /* binary search the position of the variable in the clique */
-            left = 0;
-            right = clique->nvars-1;
-            while( left < right )
-            {
-               int middle;
-               int idx;
+            debugMessage(" -> removing variable <%s> == %d from clique %d (size %d)\n",
+               SCIPvarGetName(var), value, clique->id, clique->nvars);
 
-               middle = (left+right)/2;
-               idx = SCIPvarGetProbindex(clique->vars[middle]);
-               assert(idx >= 0);
-               if( probindex < idx )
-                  right = middle-1;
-               else if( probindex > idx )
-                  left = middle+1;
-               else
-                  break;
-            }
-            assert(var == clique->vars[left]);
-            
-            /* remove the entry from the clique (the variable might be contained in the clique with both values;
-             * however, it does not matter which entry is deleted here, because we delete both entries anyways)
-             */
-            for( ; left < clique->nvars-1; ++left )
+            /* binary search the position of the variable in the clique */
+            pos = cliqueSearchVar(clique, var, (Bool)value);
+            assert(0 <= pos && pos < clique->nvars);
+            assert(clique->vars[pos] == var);
+            assert(clique->values[pos] == (Bool)value);
+
+            /* remove the entry from the clique */
+            for( ; pos < clique->nvars-1; ++pos )
             {
-               clique->vars[left] = clique->vars[left+1];
-               clique->values[left] = clique->values[left+1];
+               clique->vars[pos] = clique->vars[pos+1];
+               clique->values[pos] = clique->values[pos+1];
             }
             clique->nvars--;
+
+            cliqueCheck(clique);
          }
       }
    }
-}
-
-/** returns the number of cliques stored in the clique list */
-int SCIPcliquelistGetNCliques(
-   CLIQUELIST*      cliquelist,         /**< clique list data structure */
-   Bool             value               /**< value of the variable for which the cliques should be returned */
-   )
-{
-   return cliquelist != NULL ? cliquelist->ncliques[value] : 0;
-}
-
-/** returns the cliques stored in the clique list, or NULL if the clique list is empty */
-CLIQUE** SCIPcliquelistGetCliques(
-   CLIQUELIST*      cliquelist,         /**< clique list data structure */
-   Bool             value               /**< value of the variable for which the cliques should be returned */
-   )
-{
-   return cliquelist != NULL ? cliquelist->cliques[value] : NULL;
 }
 
 /** creates a clique table data structure */
@@ -1194,6 +1378,7 @@ RETCODE SCIPcliquetableCreate(
    (*cliquetable)->cliques = NULL;
    (*cliquetable)->ncliques = 0;
    (*cliquetable)->size = 0;
+   (*cliquetable)->ncreatedcliques = 0;
 
    return SCIP_OKAY;
 }
@@ -1245,13 +1430,19 @@ RETCODE cliquetableEnsureSize(
    return SCIP_OKAY;
 }
 
-/** adds a clique to the clique table */
+/** adds a clique to the clique table; performs implications if the clique contains the same variable twice */
 RETCODE SCIPcliquetableAdd(
    CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
-   int              nvars               /**< number of variables in the clique */
+   int              nvars,              /**< number of variables in the clique */
+   Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*             nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
    )
 {
    CLIQUE* clique;
@@ -1260,30 +1451,74 @@ RETCODE SCIPcliquetableAdd(
    assert(cliquetable != NULL);
    assert(vars != NULL);
 
-   debugMessage("adding clique %d with %d vars to clique table:", cliquetable->ncliques, nvars);
+   debugMessage("adding clique %d with %d vars to clique table\n", cliquetable->ncliques, nvars);
 
    /* create the clique data structure */
-   CHECK_OKAY( cliqueCreate(&clique, blkmem, nvars) );
+   CHECK_OKAY( cliqueCreate(&clique, blkmem, nvars, cliquetable->ncreatedcliques) );
+   cliquetable->ncreatedcliques++;
 
    /* add clique to clique table */
    CHECK_OKAY( cliquetableEnsureSize(cliquetable, set, cliquetable->ncliques+1) );
    cliquetable->cliques[cliquetable->ncliques] = clique;
-   clique->tablepos = cliquetable->ncliques;
    cliquetable->ncliques++;
 
    /* add the corresponding active problem variables to the clique */
    for( i = 0; i < nvars; ++i )
    {
       /* put the clique into the sorted clique table of the variable */
-      CHECK_OKAY( SCIPvarAddClique(vars[i], blkmem, set, TRUE, clique) );
-      debugPrintf(" <%s>", SCIPvarGetName(vars[i]));
+      CHECK_OKAY( SCIPvarAddClique(vars[i], blkmem, set, stat, lp, branchcand, eventqueue, TRUE, clique,
+            infeasible, nbdchgs) );
    }
-   debugPrintf("\n");
+
+   cliqueCheck(clique);
 
    return SCIP_OKAY;
 }
 
+/** removes all empty and single variable cliques from the clique table */
+RETCODE SCIPcliquetableCleanup(
+   CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   BLKMEM*          blkmem              /**< block memory */
+   )
+{
+   int i;
 
+   assert(cliquetable != NULL);
+
+   i = 0;
+   while( i < cliquetable->ncliques )
+   {
+      CLIQUE* clique;
+
+      clique = cliquetable->cliques[i];
+      if( clique->nvars == 2 )
+      {
+         /* if the clique consists of a variable and its negation, it is redundant */
+         if( clique->vars[0] == clique->vars[1] && clique->values[0] != clique->values[1] )
+         {
+            CHECK_OKAY( SCIPvarDelClique(clique->vars[0], blkmem, clique->values[0], clique) );
+            assert(clique->nvars == 1);
+         }
+      }
+      if( clique->nvars == 1 )
+      {
+         /* a clique with only one variable is redundant */
+         CHECK_OKAY( SCIPvarDelClique(clique->vars[0], blkmem, clique->values[0], clique) );
+         assert(clique->nvars == 0);
+      }
+      if( clique->nvars == 0 )
+      {
+         /* remove empty cliques from clique table */
+         cliqueFree(&cliquetable->cliques[i], blkmem);
+         cliquetable->cliques[i] = cliquetable->cliques[cliquetable->ncliques-1];
+         cliquetable->ncliques--;
+      }
+      else
+         i++;
+   }
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -1309,6 +1544,12 @@ RETCODE SCIPcliquetableAdd(
 #undef SCIPcliqueGetNVars
 #undef SCIPcliqueGetVars
 #undef SCIPcliqueGetValues
+#undef SCIPcliqueGetId
+#undef SCIPcliquelistGetNCliques
+#undef SCIPcliquelistGetCliques
+#undef SCIPcliquetableGetNCliques
+#undef SCIPcliquelistCheck
+#undef SCIPcliquetableGetNCliques
 
 /** gets number of variable bounds contained in given variable bounds data structure */
 int SCIPvboundsGetNVbds(
@@ -1446,4 +1687,74 @@ Bool* SCIPcliqueGetValues(
    assert(clique != NULL);
 
    return clique->values;
+}
+
+/** gets unique identifier of the clique */
+int SCIPcliqueGetId(
+   CLIQUE*          clique              /**< clique data structure */
+   )
+{
+   assert(clique != NULL);
+
+   return clique->id;
+}
+   
+/** returns the number of cliques stored in the clique list */
+int SCIPcliquelistGetNCliques(
+   CLIQUELIST*      cliquelist,         /**< clique list data structure */
+   Bool             value               /**< value of the variable for which the cliques should be returned */
+   )
+{
+   return cliquelist != NULL ? cliquelist->ncliques[value] : 0;
+}
+
+/** returns the cliques stored in the clique list, or NULL if the clique list is empty */
+CLIQUE** SCIPcliquelistGetCliques(
+   CLIQUELIST*      cliquelist,         /**< clique list data structure */
+   Bool             value               /**< value of the variable for which the cliques should be returned */
+   )
+{
+   return cliquelist != NULL ? cliquelist->cliques[value] : NULL;
+}
+
+/** checks whether variable is contained in all cliques of the cliquelist */
+void SCIPcliquelistCheck(
+   CLIQUELIST*      cliquelist,         /**< clique list data structure */
+   VAR*             var                 /**< variable, the clique list belongs to */
+   )
+{
+   int value;
+
+   assert(cliquelist != NULL);
+   assert(SCIPvarGetNCliques(var, FALSE) == cliquelist->ncliques[0]);
+   assert(SCIPvarGetCliques(var, FALSE) == cliquelist->cliques[0]);
+   assert(SCIPvarGetNCliques(var, TRUE) == cliquelist->ncliques[1]);
+   assert(SCIPvarGetCliques(var, TRUE) == cliquelist->cliques[1]);
+
+   for( value = 0; value < 2; ++value )
+   {
+      int i;
+      
+      for( i = 0; i < cliquelist->ncliques[value]; ++i )
+      {
+         CLIQUE* clique;
+         int pos;
+
+         clique = cliquelist->cliques[value][i];
+         pos = cliqueSearchVar(clique, var, (Bool)value);
+         assert(0 <= pos && pos < clique->nvars);
+         assert(clique->vars[pos] == var);
+         assert(clique->values[pos] == (Bool)value);
+      }
+   }
+}
+
+/** gets the number of cliques stored in the clique table */
+int SCIPcliquetableGetNCliques(
+   CLIQUETABLE*     cliquetable         /**< clique table data structure */
+   )
+{
+   assert(cliquetable != NULL);
+
+   return cliquetable->ncliques;
 }

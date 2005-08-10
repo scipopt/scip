@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.h,v 1.2 2005/08/09 16:27:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.h,v 1.3 2005/08/10 17:07:46 bzfpfend Exp $"
 
 /**@file   implics.h
  * @brief  methods for implications, variable bounds, and clique tables
@@ -32,9 +32,11 @@
 #include "scip/type_retcode.h"
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
+#include "scip/type_event.h"
 #include "scip/type_lp.h"
 #include "scip/type_var.h"
 #include "scip/type_implics.h"
+#include "scip/type_branch.h"
 
 #ifdef NDEBUG
 #include "scip/struct_implics.h"
@@ -242,6 +244,16 @@ RETCODE SCIPcliqueAddVar(
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    VAR*             var,                /**< variable to add to the clique */
+   Bool             value,              /**< value of the variable in the clique */
+   Bool*            doubleentry,        /**< pointer to store whether the variable and value occurs twice in the clique */
+   Bool*            oppositeentry       /**< pointer to store whether the variable with opposite value is in the clique */
+   );
+
+/** removes a single variable from the given clique */
+extern
+RETCODE SCIPcliqueDelVar(
+   CLIQUE*          clique,             /**< clique data structure */
+   VAR*             var,                /**< variable to remove from the clique */
    Bool             value               /**< value of the variable in the clique */
    );
 
@@ -262,25 +274,20 @@ RETCODE SCIPcliquelistAdd(
    CLIQUE*          clique              /**< clique that should be added to the clique list */
    );
 
+/** removes a clique from the clique list */
+extern
+RETCODE SCIPcliquelistDel(
+   CLIQUELIST**     cliquelist,         /**< pointer to the clique list data structure */
+   BLKMEM*          blkmem,             /**< block memory */
+   Bool             value,              /**< value of the variable for which the clique list should be reduced */
+   CLIQUE*          clique              /**< clique that should be deleted from the clique list */
+   );
+
 /** removes all listed entries from the cliques */
 extern
 void SCIPcliquelistRemoveFromCliques(
    CLIQUELIST*      cliquelist,         /**< clique list data structure */
    VAR*             var                 /**< active problem variable the clique list belongs to */
-   );
-
-/** returns the number of cliques stored in the clique list */
-extern
-int SCIPcliquelistGetNCliques(
-   CLIQUELIST*      cliquelist,         /**< clique list data structure */
-   Bool             value               /**< value of the variable for which the cliques should be returned */
-   );
-
-/** returns the cliques stored in the clique list, or NULL if the clique list is empty */
-extern
-CLIQUE** SCIPcliquelistGetCliques(
-   CLIQUELIST*      cliquelist,         /**< clique list data structure */
-   Bool             value               /**< value of the variable for which the cliques should be returned */
    );
 
 /** creates a clique table data structure */
@@ -296,14 +303,27 @@ RETCODE SCIPcliquetableFree(
    BLKMEM*          blkmem              /**< block memory */
    );
 
-/** adds a clique to the clique table */
+/** adds a clique to the clique table; performs implications if the clique contains the same variable twice */
 extern
 RETCODE SCIPcliquetableAdd(
    CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
-   int              nvars               /**< number of variables in the clique */
+   int              nvars,              /**< number of variables in the clique */
+   Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*             nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
+   );
+
+/** removes all empty cliques from the clique table */
+extern
+RETCODE SCIPcliquetableCleanup(
+   CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   BLKMEM*          blkmem              /**< block memory */
    );
 
 #ifndef NDEBUG
@@ -332,15 +352,53 @@ Bool* SCIPcliqueGetValues(
    CLIQUE*          clique              /**< clique data structure */
    );
 
+/** gets unique identifier of the clique */
+extern
+int SCIPcliqueGetId(
+   CLIQUE*          clique              /**< clique data structure */
+   );
+
+/** returns the number of cliques stored in the clique list */
+extern
+int SCIPcliquelistGetNCliques(
+   CLIQUELIST*      cliquelist,         /**< clique list data structure */
+   Bool             value               /**< value of the variable for which the cliques should be returned */
+   );
+
+/** returns the cliques stored in the clique list, or NULL if the clique list is empty */
+extern
+CLIQUE** SCIPcliquelistGetCliques(
+   CLIQUELIST*      cliquelist,         /**< clique list data structure */
+   Bool             value               /**< value of the variable for which the cliques should be returned */
+   );
+
+/** checks whether variable is contained in all cliques of the cliquelist */
+extern
+void SCIPcliquelistCheck(
+   CLIQUELIST*      cliquelist,         /**< clique list data structure */
+   VAR*             var                 /**< variable, the clique list belongs to */
+   );
+
+/** gets the number of cliques stored in the clique table */
+extern
+int SCIPcliquetableGetNCliques(
+   CLIQUETABLE*     cliquetable         /**< clique table data structure */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 
-#define SCIPcliqueGetNVars(clique)      ((clique)->nvars)
-#define SCIPcliqueGetVars(clique)       ((clique)->vars)
-#define SCIPcliqueGetValues(clique)     ((clique)->values)
+#define SCIPcliqueGetNVars(clique)                   ((clique)->nvars)
+#define SCIPcliqueGetVars(clique)                    ((clique)->vars)
+#define SCIPcliqueGetValues(clique)                  ((clique)->values)
+#define SCIPcliqueGetId(clique)                      ((clique)->id)
+#define SCIPcliquelistGetNCliques(cliquelist, value) ((cliquelist) != NULL ? (cliquelist)->ncliques[value] : 0)
+#define SCIPcliquelistGetCliques(cliquelist, value)  ((cliquelist) != NULL ? (cliquelist)->cliques[value] : NULL)
+#define SCIPcliquelistCheck(cliquelist, var)         /**/
+#define SCIPcliquetableGetNCliques(cliquetable)      ((cliquetable)->ncliques)
 
 #endif
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_implics.h,v 1.2 2005/08/09 16:27:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_implics.h,v 1.3 2005/08/10 17:07:47 bzfpfend Exp $"
 
 /**@file   struct_implics.h
  * @brief  datastructures for implications, variable bounds, and clique tables
@@ -68,15 +68,7 @@ struct Clique
    Bool*            values;             /**< values of the variables in the clique */
    int              nvars;              /**< number of variables in the clique */
    int              size;               /**< size of vars and values arrays */
-   int              tablepos;           /**< position of clique in global clique table */
-};
-
-/** collection of cliques */
-struct CliqueTable
-{
-   CLIQUE**         cliques;            /**< cliques stored in the table */
-   int              ncliques;           /**< number of cliques stored in the table */
-   int              size;               /**< size of cliques array */
+   int              id;                 /**< unique identifier of clique */
 };
 
 /** list of cliques for a single variable */
@@ -85,6 +77,15 @@ struct CliqueList
    CLIQUE**         cliques[2];         /**< cliques the variable fixed to FALSE/TRUE is member of */
    int              ncliques[2];        /**< number of cliques the variable fixed to FALSE/TRUE is member of */
    int              size[2];            /**< size of cliques arrays */
+};
+
+/** collection of cliques */
+struct CliqueTable
+{
+   CLIQUE**         cliques;            /**< cliques stored in the table */
+   int              ncliques;           /**< number of cliques stored in the table */
+   int              size;               /**< size of cliques array */
+   int              ncreatedcliques;    /**< number of ever created cliques */
 };
 
 

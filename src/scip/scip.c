@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.300 2005/08/09 16:27:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.301 2005/08/10 17:07:46 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3872,7 +3872,7 @@ RETCODE presolveRound(
             scip->branchcand) );
 
       /* if we work off the delayed presolvers, we stop immediately if a reduction was found */
-      if( onlydelayed && result == SCIP_SUCCESS )
+      if( onlydelayed && (result == SCIP_SUCCESS || result == SCIP_DELAYED) )
       {
          *delayed = TRUE;
          return SCIP_OKAY;
@@ -3910,7 +3910,7 @@ RETCODE presolveRound(
             scip->branchcand) );
 
       /* if we work off the delayed presolvers, we stop immediately if a reduction was found */
-      if( onlydelayed && result == SCIP_SUCCESS )
+      if( onlydelayed && (result == SCIP_SUCCESS || result == SCIP_DELAYED) )
       {
          *delayed = TRUE;
          return SCIP_OKAY;
@@ -3949,7 +3949,7 @@ RETCODE presolveRound(
             scip->branchcand) );
 
       /* if we work off the delayed presolvers, we stop immediately if a reduction was found */
-      if( onlydelayed && result == SCIP_SUCCESS )
+      if( onlydelayed && (result == SCIP_SUCCESS || result == SCIP_DELAYED) )
       {
          *delayed = TRUE;
          return SCIP_OKAY;
@@ -4092,9 +4092,6 @@ RETCODE presolve(
       stopped = SCIPsolveIsStopped(scip->set, scip->stat);
    }
    
-   /* stop presolving time */
-   SCIPclockStop(scip->stat->presolvingtime, scip->set);
-
    /* deinitialize presolving */
    if( finished )
    {
@@ -4117,6 +4114,12 @@ RETCODE presolve(
       }
    }
 
+   /* remove empty cliques from clique table */
+   CHECK_OKAY( SCIPcliquetableCleanup(scip->cliquetable, scip->mem->solvemem) );
+
+   /* stop presolving time */
+   SCIPclockStop(scip->stat->presolvingtime, scip->set);
+
    /* print presolving statistics */
    SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
       "presolving (%d rounds):\n", scip->stat->npresolrounds);
@@ -4124,6 +4127,8 @@ RETCODE presolve(
       " %d deleted vars, %d deleted constraints, %d tightened bounds, %d added holes, %d changed sides, %d changed coefficients\n",
       scip->stat->npresolfixedvars + scip->stat->npresolaggrvars, scip->stat->npresoldelconss, scip->stat->npresolchgbds, 
       scip->stat->npresoladdholes, scip->stat->npresolchgsides, scip->stat->npresolchgcoefs);
+   SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+      " %d implications, %d cliques\n", scip->stat->nimplications, SCIPcliquetableGetNCliques(scip->cliquetable));
 
    return SCIP_OKAY;
 }
@@ -6259,16 +6264,33 @@ RETCODE SCIPaddVarImplication(
    return SCIP_OKAY;
 }
 
-/** adds a clique information to SCIP, stating that at most one of the given binary variables can be set to 1 */
+/** adds a clique information to SCIP, stating that at most one of the given binary variables can be set to 1;
+ *  if a variable appears twice in the same clique, the corresponding implications are performed
+ */
 RETCODE SCIPaddClique(
    SCIP*            scip,               /**< SCIP data structure */
    VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
-   int              nvars               /**< number of variables in the clique */
+   int              nvars,              /**< number of variables in the clique */
+   Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*             nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddVarClique", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-    
-   CHECK_OKAY( SCIPcliquetableAdd(scip->cliquetable, scip->mem->solvemem, scip->set, vars, nvars) );
+
+   if( nvars == 2 )
+   {
+      assert(vars != NULL);
+
+      /* add the implications instead of the clique */
+      CHECK_OKAY( SCIPvarAddImplic(vars[0], scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->branchcand, 
+            scip->eventqueue, TRUE, vars[1], SCIP_BOUNDTYPE_UPPER, 0.0, infeasible, nbdchgs) );
+   }
+   else if( nvars >= 3 )
+   {
+      /* add the clique to the clique table */
+      CHECK_OKAY( SCIPcliquetableAdd(scip->cliquetable, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, vars, nvars, infeasible, nbdchgs) );
+   }
 
    return SCIP_OKAY;
 }

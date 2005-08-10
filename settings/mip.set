@@ -80,7 +80,7 @@ constraints/agelimit = 0
 
 # age of a constraint after which it is marked obsolete (0: dynamic, -1 do not mark constraints obsolete)
 # [type: int, range: [-1,2147483647], default: 0]
-constraints/obsoleteage = -1
+constraints/obsoleteage = 0
 
 # verbosity level of output
 # [type: int, range: [0,5], default: 3]

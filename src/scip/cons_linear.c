@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.174 2005/08/09 16:27:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.175 2005/08/10 17:07:46 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4602,11 +4602,11 @@ RETCODE preprocessConstraintPairs(
       consdata1 = SCIPconsGetData(cons1);
       assert(consdata1 != NULL);
 
+#if 0
       debugMessage("preprocess linear constraint pair <%s>[chgd:%d, upgd:%d] and <%s>[chgd:%d, upgd:%d]\n",
          SCIPconsGetName(cons0), cons0changed, consdata0->upgraded,
          SCIPconsGetName(cons1), consdata1->changed, consdata1->upgraded);
-      debug(SCIPprintCons(scip, cons0, NULL));
-      debug(SCIPprintCons(scip, cons1, NULL));
+#endif
 
       /* if both constraints didn't change since last pair processing, we can ignore the pair */
       if( !cons0changed && !consdata1->changed )
@@ -4760,8 +4760,10 @@ RETCODE preprocessConstraintPairs(
          }
       }
 
-      /* check for domination */
-      if( cons1dominateslhs )
+      /* check for domination: remove dominated sides, but don't touch equalities as long as they are not totally
+       * redundant
+       */
+      if( cons1dominateslhs && (!cons0isequality || cons1dominatesrhs || SCIPisInfinity(scip, consdata0->rhs) ) )
       {
          assert(!SCIPisInfinity(scip, -consdata0->lhs));
 
@@ -4783,7 +4785,7 @@ RETCODE preprocessConstraintPairs(
          if( !consdata0->upgraded )
             (*nchgsides)++;
       }
-      else if( cons0dominateslhs )
+      else if( cons0dominateslhs && (!cons1isequality || cons0dominatesrhs || SCIPisInfinity(scip, consdata1->rhs)) )
       {
          assert(!SCIPisInfinity(scip, -consdata1->lhs));
 
@@ -4805,7 +4807,7 @@ RETCODE preprocessConstraintPairs(
          if( !consdata1->upgraded )
             (*nchgsides)++;
       }
-      if( cons1dominatesrhs )
+      if( cons1dominatesrhs && (!cons0isequality || cons1dominateslhs || SCIPisInfinity(scip, -consdata0->rhs)) )
       {
          assert(!SCIPisInfinity(scip, consdata0->rhs));
 
@@ -4827,7 +4829,7 @@ RETCODE preprocessConstraintPairs(
          if( !consdata0->upgraded )
             (*nchgsides)++;
       }
-      else if( cons0dominatesrhs )
+      else if( cons0dominatesrhs && (!cons1isequality || cons0dominateslhs || SCIPisInfinity(scip, -consdata1->rhs)) )
       {
          assert(!SCIPisInfinity(scip, consdata1->rhs));
 
@@ -5419,7 +5421,7 @@ DECL_CONSPRESOL(consPresolLinear)
    Real minactivity;
    Real maxactivity;
    Bool cutoff;
-   Bool upgradedall;
+   Bool delay;
    int oldnfixedvars;
    int oldnaggrvars;
    int oldnchgbds;
@@ -5439,7 +5441,7 @@ DECL_CONSPRESOL(consPresolLinear)
 
    /* remember old preprocessing counters */
    cutoff = FALSE;
-   upgradedall = TRUE;
+   delay = FALSE;
    oldnfixedvars = *nfixedvars;
    oldnaggrvars = *naggrvars;
    oldnchgbds = *nchgbds;
@@ -5580,7 +5582,7 @@ DECL_CONSPRESOL(consPresolLinear)
 
    /* process pairs of constraints: check them for redundancy and try to aggregate them;
     * only apply this expensive procedure, if the single constraint preprocessing did not find any reductions
-    * (otherwise, we will be called another time anyways)
+    * (otherwise, we delay the presolving to be called again next time)
     */
    if( !cutoff
       && *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars && *nchgbds == oldnchgbds && *ndelconss == oldndelconss
@@ -5598,20 +5600,18 @@ DECL_CONSPRESOL(consPresolLinear)
          }
       }
    }
+   else
+      delay = TRUE;
 
    /* try to upgrade constraints into a more specific constraint type;
     * only upgrade constraints, if no reductions were found in this round (otherwise, the linear constraint handler
     * may find additional reductions before giving control away to other (less intelligent?) constraint handlers)
     */
-   upgradedall = (firstupgradetry == INT_MAX);
    if( !cutoff
-#if 0 /*???????????????????*/
       && *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars && *nchgbds == oldnchgbds && *ndelconss == oldndelconss
       && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides
-#endif
        )
    {
-      upgradedall = TRUE;
       for( c = firstupgradetry; c < nconss; ++c )
       {
          cons = conss[c];
@@ -5623,7 +5623,7 @@ DECL_CONSPRESOL(consPresolLinear)
             continue;
          if( !consdata->presolved )
          {
-            upgradedall = FALSE;
+            delay = TRUE;
             continue;
          }
 
@@ -5658,11 +5658,13 @@ DECL_CONSPRESOL(consPresolLinear)
          }
       }
    }
+   else
+      delay = TRUE;
 
    /* return the correct result code */
    if( cutoff )
       *result = SCIP_CUTOFF;
-   else if( !upgradedall )
+   else if( delay )
       *result = SCIP_DELAYED;
    else if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars || *nchgbds > oldnchgbds || *ndelconss > oldndelconss
       || *nupgdconss > oldnupgdconss || *nchgcoefs > oldnchgcoefs || *nchgsides > oldnchgsides )
@@ -6453,6 +6455,7 @@ RETCODE SCIPupgradeConsLinear(
 #ifdef DEBUG
    if( *upgdcons != NULL )
    {
+      CHECK_OKAY( SCIPprintCons(scip, cons, NULL) );
       conshdlr = SCIPconsGetHdlr(*upgdcons);
       debugMessage(" -> upgraded to constraint type <%s>\n", SCIPconshdlrGetName(conshdlr));
       CHECK_OKAY( SCIPprintCons(scip, *upgdcons, NULL) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.174 2005/08/09 16:27:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.175 2005/08/10 17:07:47 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -3080,25 +3080,28 @@ RETCODE SCIPvarAggregate(
     *  - add all cliques again to the variable, thus adding it to the aggregated variable
     *  - free the cliquelist data structures
     */
-   if( var->cliquelist != NULL && SCIPvarGetType(aggvar) == SCIP_VARTYPE_BINARY )
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
    {
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-
       SCIPcliquelistRemoveFromCliques(var->cliquelist, var);
-      for( i = 0; i < 2; ++i )
+      if( var->cliquelist != NULL && SCIPvarGetType(aggvar) == SCIP_VARTYPE_BINARY )
       {
-         CLIQUE** cliques;
-         int ncliques;
-
-         ncliques = SCIPcliquelistGetNCliques(var->cliquelist, (Bool)i);
-         cliques = SCIPcliquelistGetCliques(var->cliquelist, (Bool)i);
-         for( j = 0; j < ncliques; ++j )
+         for( i = 0; i < 2; ++i )
          {
-            CHECK_OKAY( SCIPvarAddClique(var, blkmem, set, (Bool)i, cliques[j]) );
+            CLIQUE** cliques;
+            int ncliques;
+            
+            ncliques = SCIPcliquelistGetNCliques(var->cliquelist, (Bool)i);
+            cliques = SCIPcliquelistGetCliques(var->cliquelist, (Bool)i);
+            for( j = 0; j < ncliques && !(*infeasible); ++j )
+            {
+               CHECK_OKAY( SCIPvarAddClique(var, blkmem, set, stat, lp, branchcand, eventqueue,
+                     (Bool)i, cliques[j], infeasible, NULL) );
+            }
          }
       }
+      SCIPcliquelistFree(&var->cliquelist, blkmem);
    }
-   SCIPcliquelistFree(&var->cliquelist, blkmem);
+   assert(var->cliquelist == NULL);
 
    /* add the history entries to the aggregation variable and clear the history of the aggregated variable */
    SCIPhistoryUnite(aggvar->history, var->history, scalar < 0.0);
@@ -6052,13 +6055,139 @@ RETCODE SCIPvarUseActiveImplics(
    return SCIP_OKAY;
 }
 
-/** adds the variable to the given clique and updates the list of cliques the binary variable is member of */
+/** fixes the bounds of a binary variable to the given value, counting bound changes and detecting infeasibility */
+static
+RETCODE varFixBinary(
+   VAR*             var,                /**< problem variable  */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   Bool             value,              /**< value to fix variable to */
+   Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*             nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
+   )
+{
+   assert(var != NULL);
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
+
+   if( value == FALSE )
+   {
+      if( var->glbdom.lb > 0.5 )
+         *infeasible = TRUE;
+      else if( var->glbdom.ub > 0.5 )
+      {
+         CHECK_OKAY( SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, 0.0) );
+         if( nbdchgs != NULL )
+            (*nbdchgs)++;
+      }
+   }
+   else
+   {
+      if( var->glbdom.ub < 0.5 )
+         *infeasible = TRUE;
+      else if( var->glbdom.lb < 0.5 )
+      {
+         CHECK_OKAY( SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, 1.0) );
+         if( nbdchgs != NULL )
+            (*nbdchgs)++;
+      }
+   }
+   
+   return SCIP_OKAY;
+}
+
+/** adds the variable to the given clique and updates the list of cliques the binary variable is member of;
+ *  if the variable now appears twice in the clique with the same value, it is fixed to the opposite value;
+ *  if the variable now appears twice in the clique with opposite values, all other variables are fixed to
+ *  the opposite of the value they take in the clique
+ */
 RETCODE SCIPvarAddClique(
    VAR*             var,                /**< problem variable  */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    Bool             value,              /**< value of the variable in the clique */
-   CLIQUE*          clique              /**< clique the variable should be added to */
+   CLIQUE*          clique,             /**< clique the variable should be added to */
+   Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*             nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
+   )
+{
+   assert(var != NULL);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY); 
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
+
+   /* get corresponding active problem variable */
+   CHECK_OKAY( SCIPvarGetProbvarBinary(&var, &value) );
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+
+   /* only column and loose variables may be member of a clique */
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
+   {
+      Bool doubleentry;
+      Bool oppositeentry;
+
+      /* add variable to clique */
+      CHECK_OKAY( SCIPcliqueAddVar(clique, blkmem, set, var, value, &doubleentry, &oppositeentry) );
+
+      /* add clique to variable's clique list */
+      CHECK_OKAY( SCIPcliquelistAdd(&var->cliquelist, blkmem, set, value, clique) );
+
+      /* check consistency of cliquelist */
+      SCIPcliquelistCheck(var->cliquelist, var);
+
+      /* if the variable now appears twice with the same value in the clique, it can be fixed to the opposite value */
+      if( doubleentry )
+      {
+         CHECK_OKAY( varFixBinary(var, blkmem, set, stat, lp, branchcand, eventqueue, !value, infeasible, nbdchgs) );
+      }
+
+      /* if the variable appears with both values in the clique, all other variables of the clique can be fixed
+       * to the opposite of the value they take in the clique
+       */
+      if( oppositeentry )
+      {
+         VAR** vars;
+         Bool* values;
+         int nvars;
+         int i;
+
+         nvars = SCIPcliqueGetNVars(clique);
+         vars = SCIPcliqueGetVars(clique);
+         values = SCIPcliqueGetValues(clique);
+         for( i = 0; i < nvars && !(*infeasible); ++i )
+         {
+            if( vars[i] == var )
+               continue;
+
+            CHECK_OKAY( varFixBinary(vars[i], blkmem, set, stat, lp, branchcand, eventqueue, !values[i], 
+                  infeasible, nbdchgs) );
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** deletes the variable from the given clique and updates the list of cliques the binary variable is member of */
+RETCODE SCIPvarDelClique(
+   VAR*             var,                /**< problem variable  */
+   BLKMEM*          blkmem,             /**< block memory */
+   Bool             value,              /**< value of the variable in the clique */
+   CLIQUE*          clique              /**< clique the variable should be removed from */
    )
 {
    assert(var != NULL);
@@ -6070,15 +6199,19 @@ RETCODE SCIPvarAddClique(
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
 
    /* only column and loose variables may be member of a clique */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
    {
-      /* add variable to clique */
-      CHECK_OKAY( SCIPcliqueAddVar(clique, blkmem, set, var, value) );
+      /* delete clique from variable's clique list */
+      CHECK_OKAY( SCIPcliquelistDel(&var->cliquelist, blkmem, value, clique) );
 
-      /* add clique to variable's clique list */
-      CHECK_OKAY( SCIPcliquelistAdd(&var->cliquelist, blkmem, set, value, clique) );
+      /* delete variable from clique */
+      CHECK_OKAY( SCIPcliqueDelVar(clique, var, value) );
+
+      /* check consistency of cliquelist */
+      SCIPcliquelistCheck(var->cliquelist, var);
    }
 
    return SCIP_OKAY;

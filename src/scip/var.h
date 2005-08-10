@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.97 2005/08/09 16:27:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.98 2005/08/10 17:07:47 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -746,14 +746,33 @@ RETCODE SCIPvarUseActiveImplics(
    Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    );
 
-/** adds the variable to the given clique and updates the list of cliques the binary variable is member of */
+/** adds the variable to the given clique and updates the list of cliques the binary variable is member of;
+ *  if the variable now appears twice in the clique with the same value, it is fixed to the opposite value;
+ *  if the variable now appears twice in the clique with opposite values, all other variables are fixed to
+ *  the opposite of the value they take in the clique
+ */
 extern
 RETCODE SCIPvarAddClique(
    VAR*             var,                /**< problem variable  */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    Bool             value,              /**< value of the variable in the clique */
-   CLIQUE*          clique              /**< clique the variable should be added to */
+   CLIQUE*          clique,             /**< clique the variable should be added to */
+   Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*             nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
+   );
+
+/** deletes the variable from the given clique and updates the list of cliques the binary variable is member of */
+extern
+RETCODE SCIPvarDelClique(
+   VAR*             var,                /**< problem variable  */
+   BLKMEM*          blkmem,             /**< block memory */
+   Bool             value,              /**< value of the variable in the clique */
+   CLIQUE*          clique              /**< clique the variable should be removed from */
    );
 
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score

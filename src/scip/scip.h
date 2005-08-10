@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.232 2005/08/09 16:27:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.233 2005/08/10 17:07:47 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2174,12 +2174,16 @@ RETCODE SCIPaddVarImplication(
    int*             nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    );
 
-/** adds a clique information to SCIP, stating that at most one of the given binary variables can be set to 1 */
+/** adds a clique information to SCIP, stating that at most one of the given binary variables can be set to 1;
+ *  if a variable appears twice in the same clique, the corresponding implications are performed
+ */
 extern
 RETCODE SCIPaddClique(
    SCIP*            scip,               /**< SCIP data structure */
    VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
-   int              nvars               /**< number of variables in the clique */
+   int              nvars,              /**< number of variables in the clique */
+   Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*             nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
    );
 
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score
