@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.49 2005/08/09 16:27:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.50 2005/08/11 09:59:27 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -1132,7 +1132,7 @@ RETCODE SCIPeventfilterProcess(
          processed = TRUE;
       }
    }
-      
+
    /* update eventfilter mask, if event was not processed by any event handler */
    if( !processed )
    {

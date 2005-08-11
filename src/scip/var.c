@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.175 2005/08/10 17:07:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.176 2005/08/11 09:59:28 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1226,6 +1226,7 @@ RETCODE SCIPdomchgAddBoundchg(
    /* capture branching and inference data associated with the bound changes */
    CHECK_OKAY( boundchgCaptureData(boundchg) );
 
+#if 0
 #ifndef NDEBUG
    {
       int i;
@@ -1233,6 +1234,7 @@ RETCODE SCIPdomchgAddBoundchg(
          assert(SCIPvarGetType((*domchg)->domchgbound.boundchgs[i].var) == SCIP_VARTYPE_CONTINUOUS
             || SCIPsetIsFeasIntegral(set, (*domchg)->domchgbound.boundchgs[i].newbound));
    }
+#endif
 #endif
 
    return SCIP_OKAY;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.42 2005/07/15 17:20:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.43 2005/08/11 09:59:28 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -3525,9 +3525,17 @@ Real SCIPselectSimpleValue(
       Bool success;
       
       /* try to find a "simple" rational number inside the interval */
+      debugMessage("simple rational in [%.9f,%.9f]:", lb, ub);
       success = SCIPfindSimpleRational(lb, ub, maxdnom, &nominator, &denominator);
       if( success )
+      {
          val = (Real)nominator/(Real)denominator;
+         debugPrintf(" %lld/%lld == %.9f\n", nominator, denominator, val);
+      }
+      else
+      {
+         debugPrintf(" failed\n");
+      }
    }
    
    return val;

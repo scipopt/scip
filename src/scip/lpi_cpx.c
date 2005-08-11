@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.97 2005/07/20 16:35:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.98 2005/08/11 09:59:28 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -2137,6 +2137,8 @@ RETCODE SCIPlpiStrongbranch(
       int objsen;
       int olditlim;
       int it;
+
+      debugMessage(" -> strong branching on integral variable\n");
 
       if( iter != NULL )
          *iter = 0;
