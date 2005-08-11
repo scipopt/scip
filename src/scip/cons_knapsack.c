@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.102 2005/08/10 18:03:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.103 2005/08/11 07:53:59 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -1014,14 +1014,12 @@ RETCODE enlargeMinweighttableSize(
    assert(fullminweightptr != NULL);
    assert(*fullminweightptr != NULL);
 
-   printf("enlarge minweighttable from %d to %d\n", *fulltablelen, newlen); /*???????????????*/
    if( newlen > *fulltablesize )
    {
       int newsize;
 
       /* reallocate table memory */
       newsize = MAX(newlen, 2*(*fulltablesize));
-      printf(" -> realloc from %d to %d\n", *fulltablesize, newsize); /*???????????????*/
       CHECK_OKAY( SCIPreallocBufferArray(scip, fullminweightptr, newsize) );
       *fulltablesize = newsize;
    }
