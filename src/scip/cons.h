@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.93 2005/07/15 17:20:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.94 2005/08/11 11:21:02 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -496,7 +496,7 @@ RETCODE SCIPconsDisablePropagation(
  *   - in constraint enforcing, if constraint was feasible, and
  *   - in constraint propagation, if no domain reduction was deduced;
  *  if it's age exceeds the constraint age limit, makes constraint obsolete or marks constraint to be made obsolete
- *  in next update,
+ *  in next update
  */
 extern
 RETCODE SCIPconsAddAge(
@@ -514,7 +514,7 @@ RETCODE SCIPconsAddAge(
  *   - in constraint enforcing, if constraint was feasible, and
  *   - in constraint propagation, if no domain reduction was deduced;
  *  if it's age exceeds the constraint age limit, makes constraint obsolete or marks constraint to be made obsolete
- *  in next update,
+ *  in next update
  */
 extern
 RETCODE SCIPconsIncAge(

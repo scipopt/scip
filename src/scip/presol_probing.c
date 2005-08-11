@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.19 2005/08/09 16:27:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.20 2005/08/11 11:21:03 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -426,9 +426,9 @@ DECL_PRESOLEXEC(presolExecProbing)
       int j;
 
       /* display probing status */
-      if( (i+1) % 1000 == 0 )
+      if( (i+1) % 100 == 0 )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
             "   (%.1fs) probing: %d/%d (%.1f%%) - %d fixings, %d aggregations, %d implications, %d bound changes\n", 
             SCIPgetSolvingTime(scip), i+1, nbinvars, 100.0*(Real)(i+1)/(Real)nbinvars,
             presoldata->nfixings, presoldata->naggregations, presoldata->nimplications, presoldata->nbdchgs);
