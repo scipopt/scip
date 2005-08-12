@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.13 2005/08/12 12:36:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.14 2005/08/12 13:12:58 bzfpfend Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -535,7 +535,9 @@ RETCODE tcliquegraphAddImplicsCliqueVars(
                /* check, whether the implicant is z == 0 or z == 1 (z conflicts with x == xvalue) */
                zvalue = (int)(ximpltypes[zk] == SCIP_BOUNDTYPE_UPPER);
 
-               /* check whether y and z have a common clique */
+               /* check whether y and z have a common clique stored in the clique table
+                * (the ones in the implication graph have already been processed by tcliquegraphAddImplicsVars())
+                */
                if( SCIPvarsHaveCommonClique(y, yvalue, z, zvalue, FALSE) )
                {
                   /* add nodes x == xvalue to clique graph */
@@ -543,8 +545,12 @@ RETCODE tcliquegraphAddImplicsCliqueVars(
                   assert(cliquegraphidx[yvalue][yi] >= 0);
                   assert(cliquegraphidx[zvalue][zi] >= 0);
                   CHECK_OKAY( tcliquegraphAddNode(scip, tcliquegraph, x, (Bool)xvalue, &cliquegraphidx[xvalue][xi]) );
+                  assert(cliquegraphidx[xvalue][xi] >= 0);
+                  break;
                }
             }
+            if( cliquegraphidx[xvalue][xi] >= 0 )
+               break;
          }
       }
    }

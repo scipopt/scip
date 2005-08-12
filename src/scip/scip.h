@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.234 2005/08/12 11:06:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.235 2005/08/12 13:12:58 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2185,6 +2185,21 @@ RETCODE SCIPaddClique(
    int              nvars,              /**< number of variables in the clique */
    Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
    int*             nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
+   );
+
+/** calculates a partition of the given set of binary variables into cliques;
+ *  afterwards the output array contains one value for each variable, such that two variables got the same value iff they
+ *  were assigned to the same clique;
+ *  the first variable is always assigned to clique 0, and a variable can only be assigned to clique i if at least one
+ *  of the preceeding variables was assigned to clique i-1;
+ *  from each clique at most one variable can be set to TRUE in a feasible solution
+ */
+extern
+RETCODE SCIPcalcCliquePartition(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   int              nvars,              /**< number of variables in the clique */
+   int*             cliquepartition     /**< array of length nvars to store the clique partition */
    );
 
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score

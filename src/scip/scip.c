@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.302 2005/08/12 11:06:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.303 2005/08/12 13:12:58 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6300,6 +6300,105 @@ RETCODE SCIPaddClique(
       CHECK_OKAY( SCIPcliquetableAdd(scip->cliquetable, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, vars, nvars, infeasible, nbdchgs) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** calculates a partition of the given set of binary variables into cliques;
+ *  afterwards the output array contains one value for each variable, such that two variables got the same value iff they
+ *  were assigned to the same clique;
+ *  the first variable is always assigned to clique 0, and a variable can only be assigned to clique i if at least one
+ *  of the preceeding variables was assigned to clique i-1;
+ *  from each clique at most one variable can be set to TRUE in a feasible solution
+ */
+RETCODE SCIPcalcCliquePartition(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   int              nvars,              /**< number of variables in the clique */
+   int*             cliquepartition     /**< array of length nvars to store the clique partition */
+   )
+{
+   VAR** cliquevars;
+   Bool* cliquevalues;
+   int ncliquevars;
+   int ncliques;
+   int i;
+
+   assert(nvars == 0 || vars != NULL);
+   assert(nvars == 0 || cliquepartition != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPcalcCliquePartition", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* allocate temporary memory for storing the variables of the current clique */
+   CHECK_OKAY( SCIPsetAllocBufferArray(scip->set, &cliquevars, nvars) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(scip->set, &cliquevalues, nvars) );
+   ncliquevars = 0;
+
+   /* initialize the cliquepartition array */
+   for( i = 0; i < nvars; ++i )
+      cliquepartition[i] = -1;
+
+   /* calculate the clique partition */
+   ncliques = 0;
+   for( i = 0; i < nvars; ++i )
+   {
+      if( cliquepartition[i] == -1 )
+      {
+         VAR* ivar;
+         Bool ivalue;
+         int j;
+         
+         /* get the corresponding active problem variable */
+         ivar = vars[i];
+         ivalue = TRUE;
+         CHECK_OKAY( SCIPvarGetProbvarBinary(&ivar, &ivalue) );
+         
+         /* variable starts a new clique */
+         cliquepartition[i] = ncliques;
+         cliquevars[0] = ivar;
+         cliquevalues[0] = ivalue;
+         ncliquevars = 1;
+
+         /* greedily fill up the clique */
+         for( j = i+1; j < nvars; ++j )
+         {
+            if( cliquepartition[j] == -1 )
+            {
+               VAR* jvar;
+               Bool jvalue;
+               int k;
+
+               /* get the corresponding active problem variable */
+               jvar = vars[j];
+               jvalue = TRUE;
+               CHECK_OKAY( SCIPvarGetProbvarBinary(&jvar, &jvalue) );
+         
+               /* check if the variable has an edge in the implication graph to all other variables in this clique */
+               for( k = 0; k < ncliquevars; ++k )
+               {
+                  if( !SCIPvarsHaveCommonClique(jvar, jvalue, cliquevars[k], cliquevalues[k], TRUE) )
+                     break;
+               }
+               if( k == ncliquevars )
+               {
+                  /* put the variable into the same clique */
+                  cliquepartition[j] = ncliques;
+                  cliquevars[ncliquevars] = jvar;
+                  cliquevalues[ncliquevars] = jvalue;
+                  ncliquevars++;
+               }
+            }
+         }
+         
+         /* this clique is finished */
+         ncliques++;
+      }
+      assert(0 <= cliquepartition[i] && cliquepartition[i] <= i);
+   }
+
+   /* free temporary memory */
+   SCIPsetFreeBufferArray(scip->set, &cliquevalues);
+   SCIPsetFreeBufferArray(scip->set, &cliquevars);
 
    return SCIP_OKAY;
 }
