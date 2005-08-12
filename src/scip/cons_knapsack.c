@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.104 2005/08/12 11:06:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.105 2005/08/12 11:38:02 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -146,7 +146,7 @@ RETCODE eventdataFree(
    return SCIP_OKAY;
 }
 
-/** sorts items in knapsack with nondecreasing weights */
+/** sorts items in knapsack with nonincreasing weights */
 static 
 void sortItems(
    CONSDATA*        consdata            /**< constraint data */
@@ -168,7 +168,7 @@ void sortItems(
          weight = consdata->weights[i];
          eventdata = consdata->eventdatas[i];
         
-         for( j = i; j > 0 && weight < consdata->weights[j-1]; j--)
+         for( j = i; j > 0 && weight > consdata->weights[j-1]; j--)
          {
             consdata->weights[j] = consdata->weights[j-1];
             consdata->vars[j] = consdata->vars[j-1];
@@ -2041,12 +2041,12 @@ RETCODE propagateCons(
          return SCIP_OKAY;
       }
 
-      /* make sure, the items are sorted by non-decreasing weight */
+      /* make sure, the items are sorted by non-increasing weight */
       sortItems(consdata);
 
       /* fix all variables to zero, that don't fit into the knapsack anymore */
       zerosweightsum = 0;
-      for( i = consdata->nvars - 1; i >= 0; i-- )
+      for( i = 0; i < consdata->nvars; ++i )
       {
          if( consdata->weights[i] > consdata->capacity - consdata->onesweightsum )
          {
@@ -2389,8 +2389,8 @@ void normalizeWeights(
    /* sort items, because we can stop earlier if the smaller weights are evaluated first */
    sortItems(consdata);
 
-   gcd = (Longint)consdata->weights[0];
-   for( i = 1; i < consdata->nvars && gcd >= 2; ++i )
+   gcd = (Longint)consdata->weights[consdata->nvars-1];
+   for( i = consdata->nvars-2; i >= 0 && gcd >= 2; --i )
    {
       assert(SCIPvarGetLbLocal(consdata->vars[i]) < 0.5);
       assert(SCIPvarGetUbLocal(consdata->vars[i]) > 0.5); /* all fixed variables should have been removed */
@@ -2413,7 +2413,7 @@ void normalizeWeights(
 /** tightens item weights and capacity in presolving:
  *  - given a knapsack  w*x + wi*xi <= capacity
  *  - let weightsum := sum{w} + wi
- *  (1) if  weightsum - wi < capacity:  (this can only apply for the heaviest item)
+ *  (1) if  weightsum - wi < capacity:
  *      - not using item i would make the knapsack constraint redundant
  *      - wi and capacity can be changed to have the same redundancy effect and the same results for
  *        fixing xi to zero or one, but with a reduced wi and tightened capacity to tighten the LP relaxation
@@ -2448,37 +2448,63 @@ void tightenWeights(
    assert(consdata->weightsum > consdata->capacity); /* otherwise, the constraint is redundant */
    assert(consdata->nvars > 0);
 
-   /* sort items, s.t. the heaviest one is in the last position */
-   sortItems(consdata);
-
-   /* apply rule (1) */
-   weight = consdata->weights[consdata->nvars-1];
-   if( consdata->weightsum - weight < consdata->capacity )
+   do
    {
-      newweight = consdata->weightsum - consdata->capacity;
-      consdataChgWeight(consdata, consdata->nvars-1, newweight);
-      consdata->capacity -= (weight - newweight);
-      (*nchgcoefs)++;
-      (*nchgsides)++;
-      debugMessage("knapsack constraint <%s>: changed weight of <%s> from %lld to %lld, capacity from %lld to %lld\n",
-         SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[consdata->nvars-1]),
-         weight, newweight, consdata->capacity + (weight-newweight), consdata->capacity);
+      /* sort items, s.t. the heaviest one is in the first position */
+      sortItems(consdata);
+      
+      /* apply rule (1) */
+      weight = consdata->weights[0];
+      if( consdata->weightsum - weight < consdata->capacity )
+      {
+         newweight = consdata->weightsum - consdata->capacity;
+         consdataChgWeight(consdata, 0, newweight);
+         consdata->capacity -= (weight - newweight);
+         (*nchgcoefs)++;
+         (*nchgsides)++;
+         assert(!consdata->sorted);
+         debugMessage("knapsack constraint <%s>: changed weight of <%s> from %lld to %lld, capacity from %lld to %lld\n",
+            SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[consdata->nvars-1]),
+            weight, newweight, consdata->capacity + (weight-newweight), consdata->capacity);
+      }
    }
+   while( !consdata->sorted );
 
-   /* apply rule (2) */
-   minweight = consdata->weights[0];
-   for( i = consdata->nvars-1; i >= 0; --i )
+   /* apply rule (2) (all but smallest weight) */
+   minweight = consdata->weights[consdata->nvars-1];
+   for( i = 0; i < consdata->nvars-1; ++i )
    {
       weight = consdata->weights[i];
-      if( minweight + weight > consdata->capacity && weight < consdata->capacity )
+      if( minweight + weight > consdata->capacity )
       {
-         debugMessage("knapsack constraint <%s>: changing weight of <%s> from %lld to %lld\n",
-            SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[i]), weight, consdata->capacity);
-         consdataChgWeight(consdata, i, consdata->capacity);
-         (*nchgcoefs)++;
+         if( weight < consdata->capacity )
+         {
+            debugMessage("knapsack constraint <%s>: changing weight of <%s> from %lld to %lld\n",
+               SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[i]), weight, consdata->capacity);
+            consdataChgWeight(consdata, i, consdata->capacity); /* this does not destroy the weight order! */
+            assert(i == 0 || consdata->weights[i-1] >= consdata->weights[i]);
+            consdata->sorted = TRUE;
+            (*nchgcoefs)++;
+         }
       }
       else
          break;
+   }
+
+   /* apply rule (2) (smallest weight) */
+   if( consdata->nvars >= 2 )
+   {
+      minweight = consdata->weights[consdata->nvars-2];
+      weight = consdata->weights[consdata->nvars-1];
+      if( minweight + weight > consdata->capacity && weight < consdata->capacity )
+      {
+         debugMessage("knapsack constraint <%s>: changing weight of <%s> from %lld to %lld\n",
+            SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[consdata->nvars-1]), weight, consdata->capacity);
+         consdataChgWeight(consdata, consdata->nvars-1, consdata->capacity); /* this does not destroy the weight order! */
+         assert(minweight >= consdata->weights[consdata->nvars-1]);
+         consdata->sorted = TRUE;
+         (*nchgcoefs)++;
+      }
    }
 }
 

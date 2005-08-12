@@ -122,6 +122,7 @@ fixed bugs:
 - included message.o in LPI library, s.t. one can link this library indepentent of SCIP
 - fixed bug that if diving heuristic that changes the objective values finds a solution, the cutoff is reinstalled in
   the LP solver (although the objective value has no meaning due to the objective function modification)
+- fixed bug in knapsack constraint presolving with tightening coefficients and capacity
 
 
 SCIP version 0.79
