@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_implics.h,v 1.2 2005/08/09 16:27:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_implics.h,v 1.3 2005/08/12 11:06:22 bzfpfend Exp $"
 
 /**@file   type_implics.h
- * @brief  type definitions for implications, variable bounds, and clique tables
+ * @brief  type definitions for implications, variable bounds, and cliques
  * @author Tobias Achterberg
  */
 

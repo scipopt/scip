@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.h,v 1.3 2005/08/10 17:07:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.h,v 1.4 2005/08/12 11:06:21 bzfpfend Exp $"
 
 /**@file   implics.h
- * @brief  methods for implications, variable bounds, and clique tables
+ * @brief  methods for implications, variable bounds, and cliques
  * @author Tobias Achterberg
  */
 
@@ -37,6 +37,7 @@
 #include "scip/type_var.h"
 #include "scip/type_implics.h"
 #include "scip/type_branch.h"
+#include "scip/pub_implics.h"
 
 #ifdef NDEBUG
 #include "scip/struct_implics.h"
@@ -319,11 +320,19 @@ RETCODE SCIPcliquetableAdd(
    int*             nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
    );
 
-/** removes all empty cliques from the clique table */
+/** removes all empty and single variable cliques from the clique table, and converts all two variable cliques
+ *  into implications
+ */
 extern
 RETCODE SCIPcliquetableCleanup(
    CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   BLKMEM*          blkmem              /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    );
 
 #ifndef NDEBUG
@@ -331,32 +340,6 @@ RETCODE SCIPcliquetableCleanup(
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
-
-/** gets number of variables in the cliques */
-extern
-int SCIPcliqueGetNVars(
-   CLIQUE*          clique              /**< clique data structure */
-   );
-
-/** gets array of active problem variables in the cliques */
-extern
-VAR** SCIPcliqueGetVars(
-   CLIQUE*          clique              /**< clique data structure */
-   );
-
-/** gets array of values of active problem variables in the cliques, i.e. whether the variable is fixed to FALSE or
- *  to TRUE in the clique
- */
-extern
-Bool* SCIPcliqueGetValues(
-   CLIQUE*          clique              /**< clique data structure */
-   );
-
-/** gets unique identifier of the clique */
-extern
-int SCIPcliqueGetId(
-   CLIQUE*          clique              /**< clique data structure */
-   );
 
 /** returns the number of cliques stored in the clique list */
 extern
@@ -391,10 +374,6 @@ int SCIPcliquetableGetNCliques(
  * speed up the algorithms.
  */
 
-#define SCIPcliqueGetNVars(clique)                   ((clique)->nvars)
-#define SCIPcliqueGetVars(clique)                    ((clique)->vars)
-#define SCIPcliqueGetValues(clique)                  ((clique)->values)
-#define SCIPcliqueGetId(clique)                      ((clique)->id)
 #define SCIPcliquelistGetNCliques(cliquelist, value) ((cliquelist) != NULL ? (cliquelist)->ncliques[value] : 0)
 #define SCIPcliquelistGetCliques(cliquelist, value)  ((cliquelist) != NULL ? (cliquelist)->cliques[value] : NULL)
 #define SCIPcliquelistCheck(cliquelist, var)         /**/

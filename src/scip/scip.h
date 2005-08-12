@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.233 2005/08/10 17:07:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.234 2005/08/12 11:06:21 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -71,6 +71,7 @@
 #include "scip/pub_event.h"
 #include "scip/pub_fileio.h"
 #include "scip/pub_heur.h"
+#include "scip/pub_implics.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"

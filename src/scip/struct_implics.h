@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_implics.h,v 1.3 2005/08/10 17:07:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_implics.h,v 1.4 2005/08/12 11:06:21 bzfpfend Exp $"
 
 /**@file   struct_implics.h
- * @brief  datastructures for implications, variable bounds, and clique tables
+ * @brief  datastructures for implications, variable bounds, and cliques
  * @author Tobias Achterberg
  */
 

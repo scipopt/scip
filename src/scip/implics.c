@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.3 2005/08/10 17:07:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.4 2005/08/12 11:06:20 bzfpfend Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -1475,30 +1475,42 @@ RETCODE SCIPcliquetableAdd(
    return SCIP_OKAY;
 }
 
-/** removes all empty and single variable cliques from the clique table */
+/** removes all empty and single variable cliques from the clique table, and converts all two variable cliques
+ *  into implications
+ */
 RETCODE SCIPcliquetableCleanup(
    CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   BLKMEM*          blkmem              /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    )
 {
    int i;
 
    assert(cliquetable != NULL);
+   assert(infeasible != NULL);
 
+   *infeasible = FALSE;
    i = 0;
-   while( i < cliquetable->ncliques )
+   while( i < cliquetable->ncliques && !(*infeasible) )
    {
       CLIQUE* clique;
 
       clique = cliquetable->cliques[i];
       if( clique->nvars == 2 )
       {
-         /* if the clique consists of a variable and its negation, it is redundant */
-         if( clique->vars[0] == clique->vars[1] && clique->values[0] != clique->values[1] )
-         {
-            CHECK_OKAY( SCIPvarDelClique(clique->vars[0], blkmem, clique->values[0], clique) );
-            assert(clique->nvars == 1);
-         }
+         /* add the 2-clique as implication */
+         CHECK_OKAY( SCIPvarAddImplic(clique->vars[0], blkmem, set, stat, lp, branchcand, eventqueue, clique->values[0],
+               clique->vars[1], clique->values[1] ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
+               (Real)(!clique->values[1]), infeasible, NULL) );
+
+         /* delete the clique: remove one variable - the rest is done below */
+         CHECK_OKAY( SCIPvarDelClique(clique->vars[0], blkmem, clique->values[0], clique) );
+         assert(clique->nvars == 1);
       }
       if( clique->nvars == 1 )
       {

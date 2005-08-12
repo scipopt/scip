@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.301 2005/08/10 17:07:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.302 2005/08/12 11:06:21 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4112,11 +4112,20 @@ RETCODE presolve(
          SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "presolve deinitialization detected unboundness\n");
       }
+
+      /* remove empty and single variable cliques from the clique table, and convert all two variable cliques
+       * into implications
+       */
+      CHECK_OKAY( SCIPcliquetableCleanup(scip->cliquetable, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, &infeas) );
+      if( infeas )
+      {
+         *infeasible = TRUE;
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "presolve deinitialization detected infeasibility\n");
+      }
    }
-
-   /* remove empty cliques from clique table */
-   CHECK_OKAY( SCIPcliquetableCleanup(scip->cliquetable, scip->mem->solvemem) );
-
+   
    /* stop presolving time */
    SCIPclockStop(scip->stat->presolvingtime, scip->set);
 

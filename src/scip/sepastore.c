@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.39 2005/06/29 16:22:59 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.40 2005/08/12 11:06:21 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -321,6 +321,7 @@ RETCODE sepastoreAddCut(
 
    /* calculate minimal cut orthogonality */
    mincutorthogonality = (root ? set->sepa_minorthoroot : set->sepa_minortho);
+   mincutorthogonality = MAX(mincutorthogonality, set->num_epsilon);
 
    /* get enough memory to store the cut */
    CHECK_OKAY( sepastoreEnsureCutsMem(sepastore, set, sepastore->ncuts+1) );
@@ -334,7 +335,7 @@ RETCODE sepastoreAddCut(
    for( c = 0; c < sepastore->ncuts && cutscore <= sepastore->scores[c]; ++c )
    {
       /* update the minimal orthogonality of the cut and it's score */
-      if( set->sepa_orthofac > 0.0 && !forcecut )
+      if( !forcecut )
       {
          Real thisortho;
          
@@ -374,6 +375,7 @@ RETCODE sepastoreAddCut(
       Real currentobjparallelism;
       Real currentorthogonality;
       Real currentscore;
+      Real thisortho;
 
       /* slot i is empty; slot i-1 has to fall down to a slot in {i,...,ncuts} */
       currentcut = sepastore->cuts[i-1];
@@ -384,20 +386,15 @@ RETCODE sepastoreAddCut(
       assert(!SCIPsetIsInfinity(set, currentscore));
 
       /* update orthogonality and score of cut at slot i-1 due to new cut */
-      if( set->sepa_orthofac > 0.0 )
+      thisortho = SCIProwGetOrthogonality(currentcut, cut);
+      if( thisortho < currentorthogonality )
       {
-         Real thisortho;
-               
-         thisortho = SCIProwGetOrthogonality(currentcut, cut);
-         if( thisortho < currentorthogonality )
-         {
-            currentorthogonality = thisortho;
-            if( currentorthogonality < mincutorthogonality )
-               currentscore = -SCIPsetInfinity(set);
-            else
-               currentscore = currentefficacy + set->sepa_objparalfac * currentobjparallelism
-                  + set->sepa_orthofac * currentorthogonality;
-         }
+         currentorthogonality = thisortho;
+         if( currentorthogonality < mincutorthogonality )
+            currentscore = -SCIPsetInfinity(set);
+         else
+            currentscore = currentefficacy + set->sepa_objparalfac * currentobjparallelism
+               + set->sepa_orthofac * currentorthogonality;
       }
 
       /* insert the current cut in the list of inferior cuts */
@@ -410,16 +407,17 @@ RETCODE sepastoreAddCut(
          sepastore->scores[j] = sepastore->scores[j+1];
 
          /* update orthogonality and score of cut at slot i-1 */
-         if( set->sepa_orthofac > 0.0 && !SCIPsetIsInfinity(set, -currentscore) )
+         if( !SCIPsetIsInfinity(set, -currentscore) )
          {
-            Real thisortho;
-                  
             thisortho = SCIProwGetOrthogonality(currentcut, sepastore->cuts[j]);
             if( thisortho < currentorthogonality )
             {
                currentorthogonality = thisortho;
-               currentscore = currentefficacy + set->sepa_objparalfac * currentobjparallelism
-                  + set->sepa_orthofac * currentorthogonality;
+               if( currentorthogonality < mincutorthogonality )
+                  currentscore = -SCIPsetInfinity(set);
+               else
+                  currentscore = currentefficacy + set->sepa_objparalfac * currentobjparallelism
+                     + set->sepa_orthofac * currentorthogonality;
             }
          }
       }

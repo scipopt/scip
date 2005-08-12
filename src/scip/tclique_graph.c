@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.c,v 1.9 2005/08/08 11:16:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_graph.c,v 1.10 2005/08/12 11:06:22 bzfpfend Exp $"
 
 /**@file   tclique_graph.c
  * @brief  graph data part of algorithm for maximum cliques
@@ -34,8 +34,8 @@
 
 
 typedef struct _HEAD_ADJ{
-	int first;
-	int last;
+   int              first;
+   int              last;
 } HEAD_ADJ;
 
 struct TcliqueGraph
@@ -101,7 +101,7 @@ TCLIQUE_ISEDGE(tcliqueIsEdge)
    lastadjedge = tcliqueGetLastAdjedge(tcliquegraph, node1);
    
    if( *lastadjedge < node2 )
-      return 0;
+      return FALSE;
 
    /* checks if node2 is contained in adjacency list of node1 
     * (list is ordered by adjacent nodes) */
@@ -110,14 +110,14 @@ TCLIQUE_ISEDGE(tcliqueIsEdge)
       if( *currentadjedge >= node2 )
       {
          if( *currentadjedge == node2 )
-            return 1;
+            return TRUE;
          else 
             break;
       }
       currentadjedge++;
    }
 
-   return 0;
+   return FALSE;
 }
 
 /* selects all nodes from a given set of nodes which are adjacent to a given node
