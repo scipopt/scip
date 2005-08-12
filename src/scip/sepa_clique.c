@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.12 2005/08/12 11:06:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.13 2005/08/12 12:36:22 bzfpfend Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -253,51 +253,6 @@ RETCODE tcliquegraphAddNode(
    (*tcliquegraph)->cliqueidsidxs[(*tcliquegraph)->nnodes] = ncliqueids;
 
    return SCIP_OKAY;
-}
-
-/** returns whether the given variable/value pairs appear in a common clique */
-static
-Bool varsHaveCommonClique(
-   VAR*             var1,               /**< first variable */
-   Bool             value1,             /**< value of first variable */
-   VAR*             var2,               /**< second variable */
-   Bool             value2              /**< value of second variable */
-   )
-{
-   CLIQUE** cliques1;
-   CLIQUE** cliques2;
-   int ncliques1;
-   int ncliques2;
-   int i1;
-   int i2;
-
-   ncliques1 = SCIPvarGetNCliques(var1, value1);
-   cliques1 = SCIPvarGetCliques(var1, value1);
-   ncliques2 = SCIPvarGetNCliques(var2, value2);
-   cliques2 = SCIPvarGetCliques(var2, value2);
-   i1 = 0;
-   i2 = 0;
-   while( i1 < ncliques1 && i2 < ncliques2 )
-   {
-      int cliqueid;
-
-      cliqueid = SCIPcliqueGetId(cliques2[i2]);
-      while( i1 < ncliques1 && SCIPcliqueGetId(cliques1[i1]) < cliqueid )
-         i1++;
-      if( i1 == ncliques1 )
-         break;
-
-      cliqueid = SCIPcliqueGetId(cliques1[i1]);
-      while( i2 < ncliques2 && SCIPcliqueGetId(cliques2[i2]) < cliqueid )
-         i2++;
-      if( i2 == ncliques2 )
-         break;
-
-      if( SCIPcliqueGetId(cliques2[i2]) == cliqueid )
-         return TRUE;
-   }
-
-   return FALSE;
 }
 
 /** adds all variable/value pairs to the tclique graph that are contained in an existing 3-clique */
@@ -581,7 +536,7 @@ RETCODE tcliquegraphAddImplicsCliqueVars(
                zvalue = (int)(ximpltypes[zk] == SCIP_BOUNDTYPE_UPPER);
 
                /* check whether y and z have a common clique */
-               if( varsHaveCommonClique(y, yvalue, z, zvalue) )
+               if( SCIPvarsHaveCommonClique(y, yvalue, z, zvalue, FALSE) )
                {
                   /* add nodes x == xvalue to clique graph */
                   assert(cliquegraphidx[xvalue][xi] == -1);

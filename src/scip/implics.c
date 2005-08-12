@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.4 2005/08/12 11:06:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.5 2005/08/12 12:36:22 bzfpfend Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -523,31 +523,30 @@ RETCODE implicsEnsureSize(
    return SCIP_OKAY;
 }
 
-/** searches if variable y is already contained in implications for x == 0 or x == 1
+/** returns whether variable y is already contained in implications for x == 0 or x == 1 with the given impltype
  *  y can be contained in structure with y >= b (y_lower) and y <= b (y_upper) 
  */
 static
-RETCODE implicsSearchVar(
+Bool implicsSearchVar(
    IMPLICS*         implics,            /**< implications data structure */
+   Bool             varfixing,          /**< FALSE if y is searched in implications for x == 0, TRUE for x == 1 */
    VAR*             implvar,            /**< variable y to search for */
    BOUNDTYPE        impltype,           /**< type of implication y <=/>= b to search for */
-   Bool             varfixing,          /**< FALSE if y is searched in implications for x == 0, TRUE for x == 1 */
    int*             poslower,           /**< pointer to store position of y_lower (inf if not found) */
    int*             posupper,           /**< pointer to store position of y_upper (inf if not found) */
-   int*             posadd,             /**< pointer to store correct position (with respect to impltype) to add y */
-   Bool*            found               /**< pointer to store whether an implication on the same bound exists */
+   int*             posadd              /**< pointer to store correct position (with respect to impltype) to add y */
    )
 {
    int implvaridx;
    int left;
    int right;
    int middle;
+   Bool found;
 
    assert(implics != NULL);
    assert(poslower != NULL);
    assert(posupper != NULL);
    assert(posadd != NULL);
-   assert(found != NULL);
 
    /* set left and right pointer */
    if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
@@ -558,8 +557,7 @@ RETCODE implicsSearchVar(
          *posadd = 0;
          *poslower = INT_MAX;
          *posupper = INT_MAX;
-         *found = FALSE;
-          return SCIP_OKAY;
+          return FALSE;
       }      
       left = 0;
       right = implics->nbinimpls[varfixing] - 1;
@@ -572,8 +570,7 @@ RETCODE implicsSearchVar(
          *posadd = implics->nbinimpls[varfixing];
          *poslower = INT_MAX;
          *posupper = INT_MAX;
-         *found = FALSE;
-         return SCIP_OKAY;
+         return FALSE;
       }
       left = implics->nbinimpls[varfixing];
       right = implics->nimpls[varfixing] - 1;
@@ -601,6 +598,7 @@ RETCODE implicsSearchVar(
    while( left <= right );
    assert(left <= right+1);
 
+   found = FALSE;
    if( left > right )
    {
       /* y was not found */
@@ -609,11 +607,11 @@ RETCODE implicsSearchVar(
       *poslower = INT_MAX;
       *posupper = INT_MAX;
       *posadd = left;
-      *found = FALSE;
+      found = FALSE;
    }
    else
    {
-      /* y was found */
+      /* y was found, but do we have the correct impltype? */
       assert(implvar == implics->vars[varfixing][middle]);
 
       /* set poslower and posupper */
@@ -648,12 +646,12 @@ RETCODE implicsSearchVar(
          if( *poslower < INT_MAX )
          {
             *posadd = *poslower;
-            *found = TRUE;
+            found = TRUE;
          }
          else
          {
             *posadd = *posupper;
-            *found = FALSE;
+            found = FALSE;
          }
       }     
       else
@@ -661,18 +659,18 @@ RETCODE implicsSearchVar(
          if( *posupper < INT_MAX )
          {
             *posadd = *posupper;
-            *found = TRUE;
+            found = TRUE;
          }
          else
          {
             *posadd = (*poslower)+1;
-            *found = FALSE;
+            found = FALSE;
          }
       }
       assert(*posadd < INT_MAX);
    }
 
-   return SCIP_OKAY;
+   return found;
 }
 
 /** adds an implication x == 0/1 -> y <= b or y >= b to the implications data structure;
@@ -712,7 +710,7 @@ RETCODE SCIPimplicsAdd(
    /* check if variable is already contained in implications data structure */
    if( *implics != NULL )
    {
-      CHECK_OKAY( implicsSearchVar(*implics, implvar, impltype, varfixing, &poslower, &posupper, &posadd, &found) );
+      found = implicsSearchVar(*implics, varfixing, implvar, impltype, &poslower, &posupper, &posadd);
       assert(poslower >= 0);
       assert(posupper >= 0);
       assert(posadd >= 0 && posadd <= (*implics)->nimpls[varfixing]);
@@ -857,7 +855,7 @@ RETCODE SCIPimplicsDel(
    assert(implvar != NULL);
 
    /* searches for y in implications of x */
-   CHECK_OKAY( implicsSearchVar(*implics, implvar, impltype, varfixing, &poslower, &posupper, &posadd, &found) );
+   found = implicsSearchVar(*implics, varfixing, implvar, impltype, &poslower, &posupper, &posadd);
    if( !found )
       return SCIP_OKAY;
 
@@ -887,6 +885,21 @@ RETCODE SCIPimplicsDel(
       SCIPimplicsFree(implics, blkmem);
 
    return SCIP_OKAY;
+}
+
+/** returns whether an implication y <= b or y >= b is contained in implications for x == 0 or x == 1 */
+Bool SCIPimplicsContainsImpl(
+   IMPLICS*         implics,            /**< implications data structure */
+   Bool             varfixing,          /**< FALSE if y should be searched in implications for x == 0, TRUE for x == 1 */
+   VAR*             implvar,            /**< variable y to search for */
+   BOUNDTYPE        impltype            /**< type of implication y <=/>= b to search for */
+   )
+{
+   int poslower;
+   int posupper;
+   int posadd;
+
+   return implicsSearchVar(implics, varfixing, implvar, impltype, &poslower, &posupper, &posadd);
 }
 
 
@@ -1313,6 +1326,55 @@ RETCODE SCIPcliquelistDel(
       SCIPcliquelistFree(cliquelist, blkmem);
 
    return SCIP_OKAY;
+}
+
+/** returns whether the given clique lists have a non-empty intersection, i.e. whether there is a clique that appears
+ *  in both lists
+ */
+Bool SCIPcliquelistsHaveCommonClique(
+   CLIQUELIST*      cliquelist1,        /**< first clique list data structure */
+   Bool             value1,             /**< value of first variable */
+   CLIQUELIST*      cliquelist2,        /**< second clique list data structure */
+   Bool             value2              /**< value of second variable */
+   )
+{
+   CLIQUE** cliques1;
+   CLIQUE** cliques2;
+   int ncliques1;
+   int ncliques2;
+   int i1;
+   int i2;
+
+   if( cliquelist1 == NULL || cliquelist2 == NULL )
+      return FALSE;
+
+   ncliques1 = cliquelist1->ncliques[value1];
+   cliques1 = cliquelist1->cliques[value1];
+   ncliques2 = cliquelist2->ncliques[value2];
+   cliques2 = cliquelist2->cliques[value2];
+   i1 = 0;
+   i2 = 0;
+   while( i1 < ncliques1 && i2 < ncliques2 )
+   {
+      int cliqueid;
+
+      cliqueid = SCIPcliqueGetId(cliques2[i2]);
+      while( i1 < ncliques1 && SCIPcliqueGetId(cliques1[i1]) < cliqueid )
+         i1++;
+      if( i1 == ncliques1 )
+         break;
+
+      cliqueid = SCIPcliqueGetId(cliques1[i1]);
+      while( i2 < ncliques2 && SCIPcliqueGetId(cliques2[i2]) < cliqueid )
+         i2++;
+      if( i2 == ncliques2 )
+         break;
+
+      if( SCIPcliqueGetId(cliques2[i2]) == cliqueid )
+         return TRUE;
+   }
+
+   return FALSE;
 }
 
 /** removes all listed entries from the cliques */

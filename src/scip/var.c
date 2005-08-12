@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.176 2005/08/11 09:59:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.177 2005/08/12 12:36:22 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -6057,10 +6057,30 @@ RETCODE SCIPvarUseActiveImplics(
    return SCIP_OKAY;
 }
 
+/** returns whether there is an implication x == varfixing -> y <= b or y >= b in the implication graph;
+ *  implications that are represented as cliques in the clique table are not regarded (use SCIPvarsHaveCommonClique());
+ *  both variables must be active, variable x must be binary
+ */
+Bool SCIPvarHasImplic(
+   VAR*             var,                /**< problem variable x */
+   Bool             varfixing,          /**< FALSE if y should be searched in implications for x == 0, TRUE for x == 1 */
+   VAR*             implvar,            /**< variable y to search for */
+   BOUNDTYPE        impltype            /**< type of implication y <=/>= b to search for */
+   )
+{
+   assert(var != NULL);
+   assert(implvar != NULL);
+   assert(SCIPvarIsActive(var));
+   assert(SCIPvarIsActive(implvar));
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+
+   return var->implics != NULL && SCIPimplicsContainsImpl(var->implics, varfixing, implvar, impltype);
+}
+
 /** fixes the bounds of a binary variable to the given value, counting bound changes and detecting infeasibility */
 static
 RETCODE varFixBinary(
-   VAR*             var,                /**< problem variable  */
+   VAR*             var,                /**< problem variable */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
@@ -6217,6 +6237,30 @@ RETCODE SCIPvarDelClique(
    }
 
    return SCIP_OKAY;
+}
+
+/** returns whether there is a clique that contains both given variable/value pairs;
+ *  the variables must be active binary variables;
+ *  if regardimplics is FALSE, only the cliques in the clique table are looked at;
+ *  if regardimplics is TRUE, both the cliques and the implications of the implication graph are regarded
+ */
+Bool SCIPvarsHaveCommonClique(
+   VAR*             var1,               /**< first variable */
+   Bool             value1,             /**< value of first variable */
+   VAR*             var2,               /**< second variable */
+   Bool             value2,             /**< value of second variable */
+   Bool             regardimplics       /**< should the implication graph also be searched for a clique? */
+   )
+{
+   assert(var1 != NULL);
+   assert(var2 != NULL);
+   assert(SCIPvarIsActive(var1));
+   assert(SCIPvarIsActive(var2));
+   assert(SCIPvarGetType(var1) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarGetType(var2) == SCIP_VARTYPE_BINARY);
+
+   return (SCIPcliquelistsHaveCommonClique(var1->cliquelist, value1, var2->cliquelist, value2)
+      || (regardimplics && SCIPvarHasImplic(var1, value1, var2, value2 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER)));
 }
 
 /** actually changes the branch factor of the variable and of all parent variables */

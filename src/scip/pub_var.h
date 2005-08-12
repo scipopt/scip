@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.48 2005/08/09 16:27:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.49 2005/08/12 12:36:22 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -193,6 +193,32 @@ extern
 Real SCIPvarGetAvgBranchdepthCurrentRun(
    VAR*             var,                /**< problem variable */
    BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/** returns whether there is an implication x == varfixing -> y <= b or y >= b in the implication graph;
+ *  implications that are represented as cliques in the clique table are not regarded (use SCIPvarsHaveCommonClique());
+ *  both variables must be active, variable x must be binary
+ */
+extern
+Bool SCIPvarHasImplic(
+   VAR*             var,                /**< problem variable x */
+   Bool             varfixing,          /**< FALSE if y should be searched in implications for x == 0, TRUE for x == 1 */
+   VAR*             implvar,            /**< variable y to search for */
+   BOUNDTYPE        impltype            /**< type of implication y <=/>= b to search for */
+   );
+
+/** returns whether there is a clique that contains both given variable/value pairs;
+ *  the variables must be active binary variables;
+ *  if regardimplics is FALSE, only the cliques in the clique table are looked at;
+ *  if regardimplics is TRUE, both the cliques and the implications of the implication graph are regarded
+ */
+extern
+Bool SCIPvarsHaveCommonClique(
+   VAR*             var1,               /**< first variable */
+   Bool             value1,             /**< value of first variable */
+   VAR*             var2,               /**< second variable */
+   Bool             value2,             /**< value of second variable */
+   Bool             regardimplics       /**< should the implication graph also be searched for a clique? */
    );
 
 

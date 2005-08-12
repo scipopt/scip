@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.h,v 1.4 2005/08/12 11:06:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.h,v 1.5 2005/08/12 12:36:22 bzfpfend Exp $"
 
 /**@file   implics.h
  * @brief  methods for implications, variable bounds, and cliques
@@ -167,6 +167,15 @@ RETCODE SCIPimplicsDel(
    BOUNDTYPE        impltype            /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
    );
 
+/** returns whether an implication y <= b or y >= b is contained in implications for x == 0 or x == 1 */
+extern
+Bool SCIPimplicsContainsImpl(
+   IMPLICS*         implics,            /**< implications data structure */
+   Bool             varfixing,          /**< FALSE if y should be searched in implications for x == 0, TRUE for x == 1 */
+   VAR*             implvar,            /**< variable y to search for */
+   BOUNDTYPE        impltype            /**< type of implication y <=/>= b to search for */
+   );
+
 
 #ifndef NDEBUG
 
@@ -282,6 +291,17 @@ RETCODE SCIPcliquelistDel(
    BLKMEM*          blkmem,             /**< block memory */
    Bool             value,              /**< value of the variable for which the clique list should be reduced */
    CLIQUE*          clique              /**< clique that should be deleted from the clique list */
+   );
+
+/** returns whether the given clique lists have a non-empty intersection, i.e. whether there is a clique that appears
+ *  in both lists
+ */
+extern
+Bool SCIPcliquelistsHaveCommonClique(
+   CLIQUELIST*      cliquelist1,        /**< first clique list data structure */
+   Bool             value1,             /**< value of first variable */
+   CLIQUELIST*      cliquelist2,        /**< second clique list data structure */
+   Bool             value2              /**< value of second variable */
    );
 
 /** removes all listed entries from the cliques */
