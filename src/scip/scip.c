@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.303 2005/08/12 13:12:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.304 2005/08/17 14:25:30 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3710,6 +3710,7 @@ RETCODE initPresolve(
 
    /* inform plugins that the presolving is abound to begin */
    CHECK_OKAY( SCIPsetInitprePlugins(scip->set, scip->mem->solvemem, scip->stat, unbounded, infeasible) );
+   assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
 
    /* delete the variables from the problems that were marked to be deleted */
    CHECK_OKAY( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, scip->branchcand) );
@@ -3737,6 +3738,7 @@ RETCODE exitPresolve(
 
    /* inform plugins that the presolving is finished, and perform final modifications */
    CHECK_OKAY( SCIPsetExitprePlugins(scip->set, scip->mem->solvemem, scip->stat, unbounded, infeasible) );
+   assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
 
    /* delete the variables from the problems that were marked to be deleted */
    CHECK_OKAY( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, scip->branchcand) );
@@ -3744,8 +3746,8 @@ RETCODE exitPresolve(
    /* replace variables in variable bounds with active problem variables, and 
     * check, whether the objective value is always integral
     */
-   CHECK_OKAY( SCIPprobExitPresolve(scip->transprob, scip->mem->solvemem, scip->set, scip->stat, scip->lp, 
-         scip->branchcand, scip->eventqueue, infeasible) );
+   CHECK_OKAY( SCIPprobExitPresolve(scip->transprob, scip->set, scip->stat) );
+   assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
  
    /* free temporary presolving root node */
    CHECK_OKAY( SCIPtreeFreePresolvingRoot(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
@@ -3853,6 +3855,7 @@ RETCODE presolveRound(
             &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
             &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
             &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, &scip->stat->npresolchgsides, &result) );
+      assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -3890,6 +3893,7 @@ RETCODE presolveRound(
             &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
             &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
             &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, &scip->stat->npresolchgsides, &result) );
+      assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -3930,6 +3934,7 @@ RETCODE presolveRound(
             &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
             &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
             &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, &scip->stat->npresolchgsides, &result) );
+      assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -4125,6 +4130,7 @@ RETCODE presolve(
             "presolve deinitialization detected infeasibility\n");
       }
    }
+   assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
    
    /* stop presolving time */
    SCIPclockStop(scip->stat->presolvingtime, scip->set);
@@ -6213,8 +6219,8 @@ RETCODE SCIPaddVarVlb(
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddVarVlb", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPvarAddVlb(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->branchcand, scip->eventqueue,
-         vlbvar, vlbcoef, vlbconstant, infeasible, nbdchgs) );
+   CHECK_OKAY( SCIPvarAddVlb(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->cliquetable, 
+         scip->branchcand, scip->eventqueue, vlbvar, vlbcoef, vlbconstant, TRUE, infeasible, nbdchgs) );
 
    return SCIP_OKAY;
 }
@@ -6235,8 +6241,8 @@ RETCODE SCIPaddVarVub(
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddVarVub", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPvarAddVub(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->branchcand, scip->eventqueue,
-         vubvar, vubcoef, vubconstant, infeasible, nbdchgs) );
+   CHECK_OKAY( SCIPvarAddVub(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->cliquetable,
+         scip->branchcand, scip->eventqueue, vubvar, vubcoef, vubconstant, TRUE, infeasible, nbdchgs) );
 
    return SCIP_OKAY;
 }
@@ -6267,8 +6273,8 @@ RETCODE SCIPaddVarImplication(
       return SCIP_INVALIDDATA;
    }
 
-   CHECK_OKAY( SCIPvarAddImplic(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->branchcand, 
-         scip->eventqueue, varfixing, implvar, impltype, implbound, infeasible, nbdchgs) );
+   CHECK_OKAY( SCIPvarAddImplic(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->cliquetable,
+         scip->branchcand, scip->eventqueue, varfixing, implvar, impltype, implbound, TRUE, infeasible, nbdchgs) );
 
    return SCIP_OKAY;
 }
@@ -6281,24 +6287,28 @@ RETCODE SCIPaddClique(
    VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
    int              nvars,              /**< number of variables in the clique */
    Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
-   int*             nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
+   int*             nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddVarClique", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   *infeasible = FALSE;
+   if( nbdchgs != NULL )
+      *nbdchgs = 0;
 
    if( nvars == 2 )
    {
       assert(vars != NULL);
 
       /* add the implications instead of the clique */
-      CHECK_OKAY( SCIPvarAddImplic(vars[0], scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->branchcand, 
-            scip->eventqueue, TRUE, vars[1], SCIP_BOUNDTYPE_UPPER, 0.0, infeasible, nbdchgs) );
+      CHECK_OKAY( SCIPvarAddImplic(vars[0], scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->cliquetable,
+            scip->branchcand, scip->eventqueue, TRUE, vars[1], SCIP_BOUNDTYPE_UPPER, 0.0, TRUE, infeasible, nbdchgs) );
    }
    else if( nvars >= 3 )
    {
       /* add the clique to the clique table */
       CHECK_OKAY( SCIPcliquetableAdd(scip->cliquetable, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
-            scip->branchcand, scip->eventqueue, vars, nvars, infeasible, nbdchgs) );
+            scip->branchcand, scip->eventqueue, vars, NULL, nvars, infeasible, nbdchgs) );
    }
 
    return SCIP_OKAY;
@@ -6717,7 +6727,7 @@ RETCODE aggregateActiveIntVars(
       /* aggregate x = - b/a*y + c/a */
       /*lint --e{653}*/
       CHECK_OKAY( SCIPvarAggregate(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-            scip->primal, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, 
+            scip->primal, scip->tree, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, 
             vary, (Real)(-b/a), (Real)(c/a), infeasible, aggregated) );
       assert(*aggregated);
       return SCIP_OKAY;
@@ -6727,7 +6737,7 @@ RETCODE aggregateActiveIntVars(
       /* aggregate y = - a/b*x + c/b */
       /*lint --e{653}*/
       CHECK_OKAY( SCIPvarAggregate(vary, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-            scip->primal, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, 
+            scip->primal, scip->tree, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, 
             varx, (Real)(-a/b), (Real)(c/b), infeasible, aggregated) );
       assert(*aggregated);
       return SCIP_OKAY;
@@ -6784,13 +6794,13 @@ RETCODE aggregateActiveIntVars(
    CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, 
          scip->branchcand, scip->eventfilter, scip->eventqueue, aggvar) );
    CHECK_OKAY( SCIPvarAggregate(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-         scip->primal, scip->tree, scip->lp, scip->branchcand, scip->eventqueue,
+         scip->primal, scip->tree, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue,
          aggvar, (Real)(-b), (Real)xsol, infeasible, aggregated) );
    assert(*aggregated);
    if( !(*infeasible) )
    {
       CHECK_OKAY( SCIPvarAggregate(vary, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-            scip->primal, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, 
+            scip->primal, scip->tree, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, 
             aggvar, (Real)a, (Real)ysol, infeasible, aggregated) );
       assert(*aggregated);
    }
@@ -6908,8 +6918,8 @@ RETCODE aggregateActiveVars(
 
       /* aggregate the variable */
       CHECK_OKAY( SCIPvarAggregate(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, 
-            scip->primal, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, vary, scalar, constant,
-            infeasible, aggregated) );
+            scip->primal, scip->tree, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue,
+            vary, scalar, constant, infeasible, aggregated) );
       assert(*aggregated);
    }
    else if( SCIPvarGetType(varx) == SCIP_VARTYPE_INTEGER && SCIPvarGetType(vary) == SCIP_VARTYPE_INTEGER )
@@ -7078,8 +7088,8 @@ RETCODE SCIPmultiaggregateVar(
    assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
 
    CHECK_OKAY( SCIPvarMultiaggregate(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, 
-         scip->tree, scip->lp, scip->branchcand, scip->eventqueue, naggvars, aggvars, scalars, constant, 
-         infeasible, aggregated) );
+         scip->tree, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, 
+         naggvars, aggvars, scalars, constant, infeasible, aggregated) );
 
    return SCIP_OKAY;
 }

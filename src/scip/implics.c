@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.6 2005/08/17 13:51:01 bzfberth Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.7 2005/08/17 14:25:29 bzfpfend Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -31,6 +31,7 @@
 #include "scip/message.h"
 #include "scip/set.h"
 #include "scip/stat.h"
+#include "scip/misc.h"
 #include "scip/var.h"
 #include "scip/implics.h"
 
@@ -180,7 +181,8 @@ RETCODE SCIPvboundsAdd(
    BOUNDTYPE        vboundtype,         /**< type of variable bound (LOWER or UPPER) */
    VAR*             var,                /**< variable z    in x <= b*z + d  or  x >= b*z + d */
    Real             coef,               /**< coefficient b in x <= b*z + d  or  x >= b*z + d */
-   Real             constant            /**< constant d    in x <= b*z + d  or  x >= b*z + d */
+   Real             constant,           /**< constant d    in x <= b*z + d  or  x >= b*z + d */
+   Bool*            added               /**< pointer to store whether the variable bound was added */
    )
 {
    int insertpos;
@@ -190,6 +192,9 @@ RETCODE SCIPvboundsAdd(
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
+   assert(added != NULL);
+
+   *added = FALSE;
 
    /* identify insertion position of variable */
    CHECK_OKAY( vboundsSearchPos(*vbounds, var, &insertpos, &found) );
@@ -206,6 +211,7 @@ RETCODE SCIPvboundsAdd(
          {
             (*vbounds)->coefs[insertpos] = coef;
             (*vbounds)->constants[insertpos] = constant;
+            *added = TRUE;
          }
       }
       else
@@ -214,6 +220,7 @@ RETCODE SCIPvboundsAdd(
          {
             (*vbounds)->coefs[insertpos] = coef;
             (*vbounds)->constants[insertpos] = constant;
+            *added = TRUE;
          }
       }
    }
@@ -238,6 +245,7 @@ RETCODE SCIPvboundsAdd(
       (*vbounds)->coefs[insertpos] = coef;
       (*vbounds)->constants[insertpos] = constant;
       (*vbounds)->len++;
+      *added = TRUE;
    }
 
    return SCIP_OKAY;
@@ -379,7 +387,7 @@ void checkImplics(
       int nimpls;
       int nbinimpls;
       int i;
-      
+
       vars = implics->vars[varfixing];
       types = implics->types[varfixing];
       bounds = implics->bounds[varfixing];
@@ -395,7 +403,7 @@ void checkImplics(
       {
          int cmp;
 
-         assert(SCIPvarGetType(implics->vars[varfixing][i]) == SCIP_VARTYPE_BINARY);
+         assert(SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY);
          assert((types[i] == SCIP_BOUNDTYPE_LOWER) == (bounds[i] > 0.5));
          assert(SCIPsetIsFeasEQ(set, bounds[i], 0.0) || SCIPsetIsFeasEQ(set, bounds[i], 1.0));
 
@@ -412,7 +420,7 @@ void checkImplics(
       {
          int cmp;
          
-         assert(SCIPvarGetType(implics->vars[varfixing][i]) != SCIP_VARTYPE_BINARY);
+         assert(SCIPvarGetType(vars[i]) != SCIP_VARTYPE_BINARY);
 
          if( i == 0 )
             continue;
@@ -685,7 +693,8 @@ RETCODE SCIPimplicsAdd(
    VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
    BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
    Real             implbound,          /**< bound b    in implication y <= b or y >= b */
-   Bool*            conflict            /**< pointer to store whether implication causes a conflict for variable x */
+   Bool*            conflict,           /**< pointer to store whether implication causes a conflict for variable x */
+   Bool*            added               /**< pointer to store whether the implication was added */
    )
 {
    int poslower;
@@ -702,10 +711,15 @@ RETCODE SCIPimplicsAdd(
    assert((impltype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasGT(set, implbound, SCIPvarGetLbGlobal(implvar)))
       || (impltype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasLT(set, implbound, SCIPvarGetUbGlobal(implvar))));
    assert(conflict != NULL);
+   assert(added != NULL);
+
+   debugMessage("adding implication to implics %p [%d]: <%s> %s %g\n",
+      *implics, varfixing, SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", implbound);
 
    checkImplics(*implics, set);
 
    *conflict = FALSE;
+   *added = FALSE;
 
    /* check if variable is already contained in implications data structure */
    if( *implics != NULL )
@@ -714,9 +728,14 @@ RETCODE SCIPimplicsAdd(
       assert(poslower >= 0);
       assert(posupper >= 0);
       assert(posadd >= 0 && posadd <= (*implics)->nimpls[varfixing]);
+      assert(poslower == INT_MAX || poslower < (*implics)->nimpls[varfixing]);
+      assert(poslower == INT_MAX || (*implics)->types[varfixing][poslower] == SCIP_BOUNDTYPE_LOWER);
+      assert(posupper == INT_MAX || posupper < (*implics)->nimpls[varfixing]);
+      assert(posupper == INT_MAX || (*implics)->types[varfixing][posupper] == SCIP_BOUNDTYPE_UPPER);
    }
    else
    {
+      found = FALSE;
       poslower = INT_MAX;
       posupper = INT_MAX;
       posadd = 0;
@@ -724,16 +743,26 @@ RETCODE SCIPimplicsAdd(
 
    if( impltype == SCIP_BOUNDTYPE_LOWER )
    {
+      assert(found == (poslower < INT_MAX));
+
       /* check if y >= b is redundant */
       if( poslower < INT_MAX && SCIPsetIsFeasLE(set, implbound, (*implics)->bounds[varfixing][poslower]) )
+      {
+         debugMessage(" -> implication is redundant to <%s> >= %g\n", 
+            SCIPvarGetName(implvar), (*implics)->bounds[varfixing][poslower]);
          return SCIP_OKAY;
+      }
 
       /* check if y >= b causes conflict for x (i.e. y <= a (with a < b) is also valid) */
       if( posupper < INT_MAX && SCIPsetIsFeasGT(set, implbound, (*implics)->bounds[varfixing][posupper]) )
       {      
+         debugMessage(" -> implication is conflicting to <%s> <= %g\n", 
+            SCIPvarGetName(implvar), (*implics)->bounds[varfixing][posupper]);
          *conflict = TRUE;
          return SCIP_OKAY;
       }
+
+      *added = TRUE;
 
       /* check if entry of the same type already exists */
       if( posadd == poslower )
@@ -742,51 +771,61 @@ RETCODE SCIPimplicsAdd(
          assert((*implics)->vars[varfixing][poslower] == implvar);
          assert(SCIPsetIsFeasGT(set, implbound, (*implics)->bounds[varfixing][poslower]));
          (*implics)->bounds[varfixing][poslower] = implbound;
-
-         return SCIP_OKAY;
       }
-      
-      /* add y >= b by creating a new entry on posadd */
-      assert(poslower == INT_MAX);
-
-      CHECK_OKAY( implicsEnsureSize(implics, blkmem, set, varfixing,
-            *implics != NULL ? (*implics)->nimpls[varfixing]+1 : 1) );
-      assert(*implics != NULL);
-      
-      for( k = (*implics)->nimpls[varfixing]; k > posadd; k-- )
+      else
       {
-         assert(compVars((void*)(*implics)->vars[varfixing][k-1], (void*)implvar) >= 0);
-         (*implics)->vars[varfixing][k] = (*implics)->vars[varfixing][k-1];
-         (*implics)->types[varfixing][k] = (*implics)->types[varfixing][k-1];
-         (*implics)->bounds[varfixing][k] = (*implics)->bounds[varfixing][k-1];
-         (*implics)->ids[varfixing][k] = (*implics)->ids[varfixing][k-1];
-      }
-      assert(posadd == k);
-      (*implics)->vars[varfixing][posadd] = implvar;
-      (*implics)->types[varfixing][posadd] = impltype;
-      (*implics)->bounds[varfixing][posadd] = implbound;
-      (*implics)->ids[varfixing][posadd] = stat->nimplications;
-      if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
-         (*implics)->nbinimpls[varfixing]++;
-      (*implics)->nimpls[varfixing]++;
+         /* add y >= b by creating a new entry on posadd */
+         assert(poslower == INT_MAX);
+
+         CHECK_OKAY( implicsEnsureSize(implics, blkmem, set, varfixing,
+               *implics != NULL ? (*implics)->nimpls[varfixing]+1 : 1) );
+         assert(*implics != NULL);
+      
+         for( k = (*implics)->nimpls[varfixing]; k > posadd; k-- )
+         {
+            assert(compVars((void*)(*implics)->vars[varfixing][k-1], (void*)implvar) >= 0);
+            (*implics)->vars[varfixing][k] = (*implics)->vars[varfixing][k-1];
+            (*implics)->types[varfixing][k] = (*implics)->types[varfixing][k-1];
+            (*implics)->bounds[varfixing][k] = (*implics)->bounds[varfixing][k-1];
+            (*implics)->ids[varfixing][k] = (*implics)->ids[varfixing][k-1];
+         }
+         assert(posadd == k);
+         (*implics)->vars[varfixing][posadd] = implvar;
+         (*implics)->types[varfixing][posadd] = impltype;
+         (*implics)->bounds[varfixing][posadd] = implbound;
+         (*implics)->ids[varfixing][posadd] = stat->nimplications;
+         if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
+            (*implics)->nbinimpls[varfixing]++;
+         (*implics)->nimpls[varfixing]++;
 #ifndef NDEBUG
-      for( k = posadd-1; k >= 0; k-- )
-         assert(compVars((void*)(*implics)->vars[varfixing][k], (void*)implvar) <= 0);
+         for( k = posadd-1; k >= 0; k-- )
+            assert(compVars((void*)(*implics)->vars[varfixing][k], (void*)implvar) <= 0);
 #endif
-      stat->nimplications++;
+         stat->nimplications++;
+      }
    }
    else
    {
+      assert(found == (posupper < INT_MAX));
+
       /* check if y <= b is redundant */
       if( posupper < INT_MAX && SCIPsetIsFeasGE(set, implbound, (*implics)->bounds[varfixing][posupper]) )
+      {
+         debugMessage(" -> implication is redundant to <%s> <= %g\n", 
+            SCIPvarGetName(implvar), (*implics)->bounds[varfixing][posupper]);
          return SCIP_OKAY;
+      }
 
       /* check if y <= b causes conflict for x (i.e. y >= a (with a > b) is also valid) */
       if( poslower < INT_MAX && SCIPsetIsFeasLT(set, implbound, (*implics)->bounds[varfixing][poslower]) )
       {      
+         debugMessage(" -> implication is conflicting to <%s> >= %g\n", 
+            SCIPvarGetName(implvar), (*implics)->bounds[varfixing][poslower]);
          *conflict = TRUE;
          return SCIP_OKAY;
       }
+
+      *added = TRUE;
 
       /* check if entry of the same type already exists */
       if( posadd == posupper )
@@ -795,38 +834,38 @@ RETCODE SCIPimplicsAdd(
          assert((*implics)->vars[varfixing][posupper] == implvar);
          assert(SCIPsetIsFeasLT(set, implbound,(*implics)->bounds[varfixing][posupper]));
          (*implics)->bounds[varfixing][posupper] = implbound;
-
-         return SCIP_OKAY;
       }
-      
-      /* add y <= b by creating a new entry on posadd */
-      assert(posupper == INT_MAX);
-
-      CHECK_OKAY( implicsEnsureSize(implics, blkmem, set, varfixing,
-            *implics != NULL ? (*implics)->nimpls[varfixing]+1 : 1) );
-      assert(*implics != NULL);
-      
-      for( k = (*implics)->nimpls[varfixing]; k > posadd; k-- )
+      else
       {
-         assert(compVars((void*)(*implics)->vars[varfixing][k-1], (void*)implvar) >= 0);
-         (*implics)->vars[varfixing][k] = (*implics)->vars[varfixing][k-1];
-         (*implics)->types[varfixing][k] = (*implics)->types[varfixing][k-1];
-         (*implics)->bounds[varfixing][k] = (*implics)->bounds[varfixing][k-1];
-         (*implics)->ids[varfixing][k] = (*implics)->ids[varfixing][k-1];
-      }
-      assert(posadd == k);
-      (*implics)->vars[varfixing][posadd] = implvar;
-      (*implics)->types[varfixing][posadd] = impltype;
-      (*implics)->bounds[varfixing][posadd] = implbound;
-      (*implics)->ids[varfixing][posadd] = stat->nimplications;
-      if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
-         (*implics)->nbinimpls[varfixing]++;
-      (*implics)->nimpls[varfixing]++;
+         /* add y <= b by creating a new entry on posadd */
+         assert(posupper == INT_MAX);
+
+         CHECK_OKAY( implicsEnsureSize(implics, blkmem, set, varfixing,
+               *implics != NULL ? (*implics)->nimpls[varfixing]+1 : 1) );
+         assert(*implics != NULL);
+      
+         for( k = (*implics)->nimpls[varfixing]; k > posadd; k-- )
+         {
+            assert(compVars((void*)(*implics)->vars[varfixing][k-1], (void*)implvar) >= 0);
+            (*implics)->vars[varfixing][k] = (*implics)->vars[varfixing][k-1];
+            (*implics)->types[varfixing][k] = (*implics)->types[varfixing][k-1];
+            (*implics)->bounds[varfixing][k] = (*implics)->bounds[varfixing][k-1];
+            (*implics)->ids[varfixing][k] = (*implics)->ids[varfixing][k-1];
+         }
+         assert(posadd == k);
+         (*implics)->vars[varfixing][posadd] = implvar;
+         (*implics)->types[varfixing][posadd] = impltype;
+         (*implics)->bounds[varfixing][posadd] = implbound;
+         (*implics)->ids[varfixing][posadd] = stat->nimplications;
+         if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
+            (*implics)->nbinimpls[varfixing]++;
+         (*implics)->nimpls[varfixing]++;
 #ifndef NDEBUG
-      for( k = posadd-1; k >= 0; k-- )
-         assert(compVars((void*)(*implics)->vars[varfixing][k], (void*)implvar) <= 0);
+         for( k = posadd-1; k >= 0; k-- )
+            assert(compVars((void*)(*implics)->vars[varfixing][k], (void*)implvar) <= 0);
 #endif
-      stat->nimplications++;
+         stat->nimplications++;
+      }
    }
     
    checkImplics(*implics, set);
@@ -854,10 +893,18 @@ RETCODE SCIPimplicsDel(
    assert(*implics != NULL);
    assert(implvar != NULL);
 
+   debugMessage("deleting implication from implics %p [%d]: <%s> %s x\n",
+      *implics, varfixing, SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=");
+
+   checkImplics(*implics, set);
+
    /* searches for y in implications of x */
    found = implicsSearchVar(*implics, varfixing, implvar, impltype, &poslower, &posupper, &posadd);
    if( !found )
+   {
+      debugMessage(" -> implication was not found\n");
       return SCIP_OKAY;
+   }
 
    assert((impltype == SCIP_BOUNDTYPE_LOWER && poslower < INT_MAX && posadd == poslower) 
       || (impltype == SCIP_BOUNDTYPE_UPPER && posupper < INT_MAX && posadd == posupper));
@@ -883,6 +930,8 @@ RETCODE SCIPimplicsDel(
    /* free implics data structure, if it is empty */
    if( (*implics)->nimpls[0] == 0 && (*implics)->nimpls[1] == 0 )
       SCIPimplicsFree(implics, blkmem);
+
+   checkImplics(*implics, set);
 
    return SCIP_OKAY;
 }
@@ -980,61 +1029,10 @@ RETCODE cliqueEnsureSize(
    return SCIP_OKAY;
 }
 
-/** adds a single variable to the given clique */
-RETCODE SCIPcliqueAddVar(
-   CLIQUE*          clique,             /**< clique data structure */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   VAR*             var,                /**< variable to add to the clique */
-   Bool             value,              /**< value of the variable in the clique */
-   Bool*            doubleentry,        /**< pointer to store whether the variable and value occurs twice in the clique */
-   Bool*            oppositeentry       /**< pointer to store whether the variable with opposite value is in the clique */
-   )
-{
-   int varidx;
-   int i;
-
-   assert(clique != NULL);
-   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-   assert(doubleentry != NULL);
-   assert(oppositeentry != NULL);
-
-   debugMessage("adding variable <%s> == %d to clique %d\n", SCIPvarGetName(var), value, clique->id);
-
-   *doubleentry = FALSE;
-   *oppositeentry = FALSE;
-
-   /* allocate memory */
-   CHECK_OKAY( cliqueEnsureSize(clique, blkmem, set, clique->nvars+1) );
-
-   /* store variable in clique, sorted by index and values */
-   varidx = SCIPvarGetIndex(var);
-   assert(varidx >= 0);
-   for( i = clique->nvars; i > 0 && SCIPvarGetIndex(clique->vars[i-1]) > varidx; --i )
-   {
-      clique->vars[i] = clique->vars[i-1];
-      clique->values[i] = clique->values[i-1];
-   }
-   clique->vars[i] = var;
-   for( ; i > 0 && clique->vars[i-1] == var && clique->values[i-1] > value; --i )
-      clique->values[i] = clique->values[i-1];
-   clique->values[i] = value;
-   clique->nvars++;
-
-   /* check whether the variable is contained twice in the clique */
-   for( i--; i >= 0 && clique->vars[i] == var; --i )
-   {
-      *doubleentry = *doubleentry || (clique->values[i] == value);
-      *oppositeentry = *oppositeentry || (clique->values[i] != value);
-   }
-
-   return SCIP_OKAY;
-}
-
-/** gets the position of the given variable in the clique; returns -1 if variable is not member of clique */
-static
-int cliqueSearchVar(
+/** returns the position of the given variable/value pair in the clique; returns -1 if variable/value pair is not member
+ *  of the clique
+ */
+int SCIPcliqueSearchVar(
    CLIQUE*          clique,             /**< clique data structure */
    VAR*             var,                /**< variable to search for */
    Bool             value               /**< value of the variable in the clique */
@@ -1092,6 +1090,68 @@ int cliqueSearchVar(
    return -1;
 }
 
+/** returns whether the given variable/value pair is member of the given clique */
+Bool SCIPcliqueHasVar(
+   CLIQUE*          clique,             /**< clique data structure */
+   VAR*             var,                /**< variable to remove from the clique */
+   Bool             value               /**< value of the variable in the clique */
+   )
+{
+   return (SCIPcliqueSearchVar(clique, var, value) >= 0);
+}
+
+/** adds a single variable to the given clique */
+RETCODE SCIPcliqueAddVar(
+   CLIQUE*          clique,             /**< clique data structure */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   VAR*             var,                /**< variable to add to the clique */
+   Bool             value,              /**< value of the variable in the clique */
+   Bool*            doubleentry,        /**< pointer to store whether the variable and value occurs twice in the clique */
+   Bool*            oppositeentry       /**< pointer to store whether the variable with opposite value is in the clique */
+   )
+{
+   int varidx;
+   int i;
+
+   assert(clique != NULL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(doubleentry != NULL);
+   assert(oppositeentry != NULL);
+
+   debugMessage("adding variable <%s> == %d to clique %d\n", SCIPvarGetName(var), value, clique->id);
+
+   *doubleentry = FALSE;
+   *oppositeentry = FALSE;
+
+   /* allocate memory */
+   CHECK_OKAY( cliqueEnsureSize(clique, blkmem, set, clique->nvars+1) );
+
+   /* store variable in clique, sorted by index and values */
+   varidx = SCIPvarGetIndex(var);
+   assert(varidx >= 0);
+   for( i = clique->nvars; i > 0 && SCIPvarGetIndex(clique->vars[i-1]) > varidx; --i )
+   {
+      clique->vars[i] = clique->vars[i-1];
+      clique->values[i] = clique->values[i-1];
+   }
+   clique->vars[i] = var;
+   for( ; i > 0 && clique->vars[i-1] == var && clique->values[i-1] > value; --i )
+      clique->values[i] = clique->values[i-1];
+   clique->values[i] = value;
+   clique->nvars++;
+
+   /* check whether the variable is contained twice in the clique */
+   for( i--; i >= 0 && clique->vars[i] == var; --i )
+   {
+      *doubleentry = *doubleentry || (clique->values[i] == value);
+      *oppositeentry = *oppositeentry || (clique->values[i] != value);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** removes a single variable from the given clique */
 RETCODE SCIPcliqueDelVar(
    CLIQUE*          clique,             /**< clique data structure */
@@ -1108,7 +1168,7 @@ RETCODE SCIPcliqueDelVar(
    debugMessage("deleting variable <%s> == %d from clique %d\n", SCIPvarGetName(var), value, clique->id);
 
    /* find variable in clique */
-   pos = cliqueSearchVar(clique, var, value);
+   pos = SCIPcliqueSearchVar(clique, var, value);
    assert(0 <= pos && pos < clique->nvars);
    assert(clique->vars[pos] == var);
    assert(clique->values[pos] == value);
@@ -1234,7 +1294,7 @@ void SCIPcliquelistFree(
 /** ensures, that clique list arrays can store at least num entries */
 static
 RETCODE cliquelistEnsureSize(
-   CLIQUELIST**     cliquelist,         /**< pointer to the clique list data structure */
+   CLIQUELIST*      cliquelist,         /**< clique list data structure */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    Bool             value,              /**< value of the variable for which the clique list should be extended */
@@ -1243,22 +1303,15 @@ RETCODE cliquelistEnsureSize(
 {
    assert(cliquelist != NULL);
 
-   if( *cliquelist == NULL )
-   {
-      CHECK_OKAY( cliquelistCreate(cliquelist, blkmem) );
-   }
-   assert(*cliquelist != NULL);
-
-   if( num > (*cliquelist)->size[value] )
+   if( num > cliquelist->size[value] )
    {
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*cliquelist)->cliques[value], (*cliquelist)->size[value],
-            newsize) );
-      (*cliquelist)->size[value] = newsize;
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &cliquelist->cliques[value], cliquelist->size[value], newsize) );
+      cliquelist->size[value] = newsize;
    }
-   assert(num <= (*cliquelist)->size[value]);
+   assert(num <= cliquelist->size[value]);
 
    return SCIP_OKAY;
 }
@@ -1278,8 +1331,12 @@ RETCODE SCIPcliquelistAdd(
    assert(cliquelist != NULL);
 
    /* allocate memory */
-   CHECK_OKAY( cliquelistEnsureSize(cliquelist, blkmem, set, value, SCIPcliquelistGetNCliques(*cliquelist, value)+1) );
+   if( *cliquelist == NULL )
+   {
+      CHECK_OKAY( cliquelistCreate(cliquelist, blkmem) );
+   }
    assert(*cliquelist != NULL);
+   CHECK_OKAY( cliquelistEnsureSize(*cliquelist, blkmem, set, value, (*cliquelist)->ncliques[value]+1) );
    assert((*cliquelist)->cliques[value] != NULL);
 
    debugMessage("adding clique %d to cliquelist %p value %d (length: %d)\n", 
@@ -1410,7 +1467,7 @@ void SCIPcliquelistRemoveFromCliques(
                SCIPvarGetName(var), value, clique->id, clique->nvars);
 
             /* binary search the position of the variable in the clique */
-            pos = cliqueSearchVar(clique, var, (Bool)value);
+            pos = SCIPcliqueSearchVar(clique, var, (Bool)value);
             assert(0 <= pos && pos < clique->nvars);
             assert(clique->vars[pos] == var);
             assert(clique->values[pos] == (Bool)value);
@@ -1492,7 +1549,9 @@ RETCODE cliquetableEnsureSize(
    return SCIP_OKAY;
 }
 
-/** adds a clique to the clique table; performs implications if the clique contains the same variable twice */
+/** adds a clique to the clique table, using the given values for the given variables;
+ *  performs implications if the clique contains the same variable twice
+ */
 RETCODE SCIPcliquetableAdd(
    CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BLKMEM*          blkmem,             /**< block memory */
@@ -1501,7 +1560,8 @@ RETCODE SCIPcliquetableAdd(
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   VAR**            vars,               /**< binary variables in the clique: at most one can be set to the given value */
+   Bool*            values,             /**< values of the variables in the clique; NULL to use TRUE for all vars */
    int              nvars,              /**< number of variables in the clique */
    Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
    int*             nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
@@ -1528,8 +1588,8 @@ RETCODE SCIPcliquetableAdd(
    for( i = 0; i < nvars; ++i )
    {
       /* put the clique into the sorted clique table of the variable */
-      CHECK_OKAY( SCIPvarAddClique(vars[i], blkmem, set, stat, lp, branchcand, eventqueue, TRUE, clique,
-            infeasible, nbdchgs) );
+      CHECK_OKAY( SCIPvarAddClique(vars[i], blkmem, set, stat, lp, branchcand, eventqueue,
+            values != NULL ? values[i] : TRUE, clique, infeasible, nbdchgs) );
    }
 
    cliqueCheck(clique);
@@ -1537,8 +1597,60 @@ RETCODE SCIPcliquetableAdd(
    return SCIP_OKAY;
 }
 
+/** gets the key of the given element */
+static
+DECL_HASHGETKEY(hashgetkeyClique)
+{
+   return elem;
+}
+
+/** returns TRUE iff both keys are equal */
+static
+DECL_HASHKEYEQ(hashkeyeqClique)
+{
+   CLIQUE* clique1;
+   CLIQUE* clique2;
+   int i;
+
+   clique1 = (CLIQUE*)key1;
+   clique2 = (CLIQUE*)key2;
+   assert(clique1 != NULL);
+   assert(clique2 != NULL);
+
+   if( clique1->nvars != clique2->nvars )
+      return FALSE;
+
+   /* the variables are sorted: we can simply check the equality of each pair of variable/values */
+   for( i = 0; i < clique1->nvars; ++i )
+   {
+      if( clique1->vars[i] != clique2->vars[i] || clique1->values[i] != clique2->values[i] )
+         return FALSE;
+   }
+
+   return TRUE;
+}
+
+/** returns the hash value of the key */
+static
+DECL_HASHKEYVAL(hashkeyvalClique)
+{
+   CLIQUE* clique;
+   unsigned int hashval;
+   int i;
+
+   clique = (CLIQUE*)key;
+   hashval = 0;
+   for( i = 0; i < clique->nvars; ++i )
+   {
+      hashval *= 31;
+      hashval += (((unsigned int)clique->vars[i]) >> 1) + (unsigned int)clique->values[i];
+   }
+
+   return hashval;
+}
+
 /** removes all empty and single variable cliques from the clique table, and converts all two variable cliques
- *  into implications
+ *  into implications; removes double entries from the clique table
  */
 RETCODE SCIPcliquetableCleanup(
    CLIQUETABLE*     cliquetable,        /**< clique table data structure */
@@ -1551,12 +1663,18 @@ RETCODE SCIPcliquetableCleanup(
    Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    )
 {
+   HASHTABLE* hashtable;
    int i;
 
    assert(cliquetable != NULL);
    assert(infeasible != NULL);
 
    *infeasible = FALSE;
+
+   /* create hash table to test for multiple cliques */
+   CHECK_OKAY( SCIPhashtableCreate(&hashtable, blkmem, SCIP_HASHSIZE_CLIQUES, 
+         hashgetkeyClique, hashkeyeqClique, hashkeyvalClique) );
+
    i = 0;
    while( i < cliquetable->ncliques && !(*infeasible) )
    {
@@ -1565,32 +1683,38 @@ RETCODE SCIPcliquetableCleanup(
       clique = cliquetable->cliques[i];
       if( clique->nvars == 2 )
       {
-         /* add the 2-clique as implication */
-         CHECK_OKAY( SCIPvarAddImplic(clique->vars[0], blkmem, set, stat, lp, branchcand, eventqueue, clique->values[0],
-               clique->vars[1], clique->values[1] ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
-               (Real)(!clique->values[1]), infeasible, NULL) );
+         /* add the 2-clique as implication (don't use transitive closure; otherwise new cliques can be generated) */
+         CHECK_OKAY( SCIPvarAddImplic(clique->vars[0], blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
+               clique->values[0], clique->vars[1], clique->values[1] ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
+               (Real)(!clique->values[1]), FALSE, infeasible, NULL) );
+      }
+      
+      /* check if the clique is already contained in the clique table, or if it is redundant (too small) */
+      if( clique->nvars <= 2 || SCIPhashtableExists(hashtable, (void*)clique) )
+      {
+         int j;
 
-         /* delete the clique: remove one variable - the rest is done below */
-         CHECK_OKAY( SCIPvarDelClique(clique->vars[0], blkmem, clique->values[0], clique) );
-         assert(clique->nvars == 1);
-      }
-      if( clique->nvars == 1 )
-      {
-         /* a clique with only one variable is redundant */
-         CHECK_OKAY( SCIPvarDelClique(clique->vars[0], blkmem, clique->values[0], clique) );
-         assert(clique->nvars == 0);
-      }
-      if( clique->nvars == 0 )
-      {
-         /* remove empty cliques from clique table */
+         /* delete the clique from the variables' clique lists */
+         for( j = 0; j < clique->nvars; ++j )
+         {
+            CHECK_OKAY( SCIPvarDelCliqueFromList(clique->vars[j], blkmem, clique->values[j], clique) );
+         }
+
+         /* free clique and remove it from clique table */
          cliqueFree(&cliquetable->cliques[i], blkmem);
          cliquetable->cliques[i] = cliquetable->cliques[cliquetable->ncliques-1];
          cliquetable->ncliques--;
       }
       else
+      {
+         CHECK_OKAY( SCIPhashtableInsert(hashtable, (void*)clique) );
          i++;
+      }
    }
 
+   /* free hash table */
+   SCIPhashtableFree(&hashtable);
+   
    return SCIP_OKAY;
 }
 
@@ -1630,9 +1754,7 @@ int SCIPvboundsGetNVbds(
    VBOUNDS*         vbounds             /**< variable bounds data structure */
    )
 {
-   assert(vbounds != NULL);
-
-   return vbounds->len;
+   return vbounds != NULL ? vbounds->len : 0;
 }
 
 /** gets array of variables contained in given variable bounds data structure */
@@ -1640,9 +1762,7 @@ VAR** SCIPvboundsGetVars(
    VBOUNDS*         vbounds             /**< variable bounds data structure */
    )
 {
-   assert(vbounds != NULL);
-
-   return vbounds->vars;
+   return vbounds != NULL ? vbounds->vars : NULL;
 }
 
 /** gets array of coefficients contained in given variable bounds data structure */
@@ -1650,9 +1770,7 @@ Real* SCIPvboundsGetCoefs(
    VBOUNDS*         vbounds             /**< variable bounds data structure */
    )
 {
-   assert(vbounds != NULL);
-
-   return vbounds->coefs;
+   return vbounds != NULL ? vbounds->coefs : NULL;
 }
 
 /** gets array of constants contained in given variable bounds data structure */
@@ -1660,9 +1778,7 @@ Real* SCIPvboundsGetConstants(
    VBOUNDS*         vbounds             /**< variable bounds data structure */
    )
 {
-   assert(vbounds != NULL);
-
-   return vbounds->constants;
+   return vbounds != NULL ? vbounds->constants : NULL;
 }
 
 /** gets number of implications for a given binary variable fixing */
@@ -1671,9 +1787,7 @@ int SCIPimplicsGetNImpls(
    Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
    )
 {
-   assert(implics != NULL);
-
-   return implics->nimpls[varfixing];
+   return implics != NULL ? implics->nimpls[varfixing] : 0;
 }
 
 /** gets number of implications on binary variables for a given binary variable fixing */
@@ -1682,9 +1796,7 @@ int SCIPimplicsGetNBinImpls(
    Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
    )
 {
-   assert(implics != NULL);
-
-   return implics->nbinimpls[varfixing];
+   return implics != NULL ? implics->nbinimpls[varfixing] : 0;
 }
 
 /** gets array with implied variables for a given binary variable fixing */
@@ -1693,9 +1805,7 @@ VAR** SCIPimplicsGetVars(
    Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
    )
 {
-   assert(implics != NULL);
-
-   return implics->vars[varfixing];
+   return implics != NULL ? implics->vars[varfixing] : NULL;
 }
 
 /** gets array with implication types for a given binary variable fixing */
@@ -1704,9 +1814,7 @@ BOUNDTYPE* SCIPimplicsGetTypes(
    Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
    )
 {
-   assert(implics != NULL);
-
-   return implics->types[varfixing];
+   return implics != NULL ? implics->types[varfixing] : NULL;
 }
 
 /** gets array with implication bounds for a given binary variable fixing */
@@ -1715,9 +1823,7 @@ Real* SCIPimplicsGetBounds(
    Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
    )
 {
-   assert(implics != NULL);
-
-   return implics->bounds[varfixing];
+   return implics != NULL ? implics->bounds[varfixing] : NULL;
 }
 
 /** gets array with unique implication identifiers for a given binary variable fixing */
@@ -1726,9 +1832,7 @@ int* SCIPimplicsGetIds(
    Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
    )
 {
-   assert(implics != NULL);
-
-   return implics->ids[varfixing];
+   return implics != NULL ? implics->ids[varfixing] : NULL;
 }
 
 /** gets number of variables in the cliques */
@@ -1819,7 +1923,7 @@ void SCIPcliquelistCheck(
 
          clique = cliques[i];
          assert(clique != NULL);
-         pos = cliqueSearchVar(clique, var, (Bool)value);
+         pos = SCIPcliqueSearchVar(clique, var, (Bool)value);
          assert(0 <= pos && pos < clique->nvars);
          assert(clique->vars[pos] == var);
          assert(clique->values[pos] == (Bool)value);

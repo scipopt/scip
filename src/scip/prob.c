@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.76 2005/07/15 17:20:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.77 2005/08/17 14:25:30 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -1069,42 +1069,15 @@ void SCIPprobStoreRootSol(
 /** informs problem, that the presolving process was finished, and updates all internal data structures */
 RETCODE SCIPprobExitPresolve(
    PROB*            prob,               /**< problem data */
-   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< current LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   EVENTQUEUE*      eventqueue,         /**< event queue */
-   Bool*            infeasible          /**< pointer to store TRUE, if an infeasibility was detected */
+   STAT*            stat                /**< problem statistics */
    )
 {
-   int v;
-   Bool infeas;
-
-   assert(prob != NULL);
-   assert(infeasible != NULL);
-
    /* check, wheter objective value is always integral */
    SCIPprobCheckObjIntegral(prob, set);
 
    /* reset implication counter */
    SCIPstatResetImplications(stat);
-
-   infeas = FALSE;
-
-   /* use active variables in implication graph */
-   for( v = 0; v < prob->nbinvars && !infeas; v++ )
-   {
-      CHECK_OKAY( SCIPvarUseActiveImplics(prob->vars[v], blkmem, set, stat, lp, branchcand, eventqueue, &infeas) );
-   }
-
-   /* replace variables in variable bounds with active problem variables */
-   for( v = 0; v < prob->nvars && !infeas; ++v )
-   {
-      CHECK_OKAY( SCIPvarUseActiveVbds(prob->vars[v], blkmem, set, stat, lp, branchcand, eventqueue, &infeas) );
-   }
-
-   *infeasible = *infeasible || infeas;
 
    return SCIP_OKAY;
 }

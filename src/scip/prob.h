@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.47 2005/07/15 17:20:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.48 2005/08/17 14:25:30 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -35,6 +35,7 @@
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
 #include "scip/type_var.h"
+#include "scip/type_implics.h"
 #include "scip/type_prob.h"
 #include "scip/type_tree.h"
 #include "scip/type_branch.h"
@@ -244,13 +245,8 @@ void SCIPprobStoreRootSol(
 extern
 RETCODE SCIPprobExitPresolve(
    PROB*            prob,               /**< problem data */
-   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< current LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   EVENTQUEUE*      eventqueue,         /**< event queue */
-   Bool*            infeasible          /**< pointer to store TRUE, if an infeasibility was detected */
+   STAT*            stat                /**< problem statistics */
    );
 
 /** initializes problem for branch and bound process */

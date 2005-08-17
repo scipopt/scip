@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.88 2005/08/10 17:07:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.89 2005/08/17 14:25:29 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -2223,8 +2223,10 @@ DECL_CONSPRESOL(consPresolSetppc)
          if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
          {
             Bool infeasible;
-            
-            CHECK_OKAY( SCIPaddClique(scip, consdata->vars, consdata->nvars, &infeasible, nchgbds) );
+            int ncliquebdchgs;
+
+            CHECK_OKAY( SCIPaddClique(scip, consdata->vars, consdata->nvars, &infeasible, &ncliquebdchgs) );
+            *nchgbds += ncliquebdchgs;
             consdata->cliqueadded = TRUE;
             if( infeasible )
             {

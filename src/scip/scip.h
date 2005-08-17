@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.235 2005/08/12 13:12:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.236 2005/08/17 14:25:31 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2184,7 +2184,7 @@ RETCODE SCIPaddClique(
    VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
    int              nvars,              /**< number of variables in the clique */
    Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
-   int*             nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
+   int*             nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    );
 
 /** calculates a partition of the given set of binary variables into cliques;

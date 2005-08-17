@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.50 2005/08/11 09:59:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.51 2005/08/17 14:25:29 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -328,7 +328,7 @@ RETCODE SCIPeventCreateLocksChanged(
    /* create event data */
    ALLOC_OKAY( allocBlockMemory(blkmem, event) );
    (*event)->eventtype = SCIP_EVENTTYPE_LOCKSCHANGED;
-   (*event)->data.eventvarfixed.var = var;
+   (*event)->data.eventlockschg.var = var;
 
    return SCIP_OKAY;
 }
@@ -404,6 +404,25 @@ RETCODE SCIPeventCreateUbChanged(
    (*event)->data.eventbdchg.var = var;
    (*event)->data.eventbdchg.oldbound = oldbound;
    (*event)->data.eventbdchg.newbound = newbound;
+
+   return SCIP_OKAY;
+}
+
+/** creates an event for an addition to the variable's implications list, clique or variable bounds information */
+RETCODE SCIPeventCreateImplAdded(
+   EVENT**          event,              /**< pointer to store the event */
+   BLKMEM*          blkmem,             /**< block memory */
+   VAR*             var                 /**< variable that was fixed */
+   )
+{
+   assert(event != NULL);
+   assert(blkmem != NULL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+
+   /* create event data */
+   ALLOC_OKAY( allocBlockMemory(blkmem, event) );
+   (*event)->eventtype = SCIP_EVENTTYPE_IMPLADDED;
+   (*event)->data.eventimpladd.var = var;
 
    return SCIP_OKAY;
 }
@@ -501,6 +520,10 @@ VAR* SCIPeventGetVar(
       errorMessage("HOLEREMOVED event not implemented yet\n");
       SCIPABORT();
       return NULL;
+
+   case SCIP_EVENTTYPE_IMPLADDED:
+      assert(event->data.eventimpladd.var != NULL);
+      return event->data.eventimpladd.var;
 
    default:
       errorMessage("event does not belong to a variable\n");
@@ -782,6 +805,14 @@ RETCODE SCIPeventProcess(
    case SCIP_EVENTTYPE_HOLEREMOVED:
       errorMessage("HOLEREMOVED event not implemented yet\n");
       SCIPABORT();
+
+   case SCIP_EVENTTYPE_IMPLADDED:
+      var = event->data.eventimpladd.var;
+      assert(var != NULL);
+
+      /* process variable's event filter */
+      CHECK_OKAY( SCIPeventfilterProcess(var->eventfilter, set, event) );
+      break;
 
    default:
       errorMessage("unknown event type <%d>\n", event->eventtype);
@@ -1274,6 +1305,7 @@ RETCODE SCIPeventqueueAdd(
       case SCIP_EVENTTYPE_VARDELETED:
       case SCIP_EVENTTYPE_VARFIXED:
       case SCIP_EVENTTYPE_LOCKSCHANGED:
+      case SCIP_EVENTTYPE_IMPLADDED:
       case SCIP_EVENTTYPE_PRESOLVEROUND:
       case SCIP_EVENTTYPE_NODEFOCUSED:
       case SCIP_EVENTTYPE_NODEFEASIBLE:

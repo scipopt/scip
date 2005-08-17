@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.h,v 1.5 2005/08/12 12:36:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.h,v 1.6 2005/08/17 14:25:30 bzfpfend Exp $"
 
 /**@file   implics.h
  * @brief  methods for implications, variable bounds, and cliques
@@ -64,7 +64,8 @@ RETCODE SCIPvboundsAdd(
    BOUNDTYPE        vboundtype,         /**< type of variable bound (LOWER or UPPER) */
    VAR*             var,                /**< variable z    in x <= b*z + d  or  x >= b*z + d */
    Real             coef,               /**< coefficient b in x <= b*z + d  or  x >= b*z + d */
-   Real             constant            /**< constant d    in x <= b*z + d  or  x >= b*z + d */
+   Real             constant,           /**< constant d    in x <= b*z + d  or  x >= b*z + d */
+   Bool*            added               /**< pointer to store whether the variable bound was added */
    );
 
 /** removes from variable x a variable bound x >=/<= b*z + d with binary or integer z */
@@ -119,10 +120,10 @@ Real* SCIPvboundsGetConstants(
  * speed up the algorithms.
  */
 
-#define SCIPvboundsGetNVbds(vbounds)     ((vbounds)->len)
-#define SCIPvboundsGetVars(vbounds)      ((vbounds)->vars)
-#define SCIPvboundsGetCoefs(vbounds)     ((vbounds)->coefs)
-#define SCIPvboundsGetConstants(vbounds) ((vbounds)->constants)
+#define SCIPvboundsGetNVbds(vbounds)     ((vbounds) != NULL ? (vbounds)->len : 0)
+#define SCIPvboundsGetVars(vbounds)      ((vbounds) != NULL ? (vbounds)->vars : NULL)
+#define SCIPvboundsGetCoefs(vbounds)     ((vbounds) != NULL ? (vbounds)->coefs : NULL)
+#define SCIPvboundsGetConstants(vbounds) ((vbounds) != NULL ? (vbounds)->constants : NULL)
 
 #endif
 
@@ -153,7 +154,8 @@ RETCODE SCIPimplicsAdd(
    VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
    BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
    Real             implbound,          /**< bound b    in implication y <= b or y >= b */
-   Bool*            conflict            /**< pointer to store whether implication causes a conflict for variable x */
+   Bool*            conflict,           /**< pointer to store whether implication causes a conflict for variable x */
+   Bool*            added               /**< pointer to store whether the implication was added */
    );
 
 /** removes the implication  x <= 0 or x >= 1  ==>  y <= b  or  y >= b  from the implications data structure */
@@ -231,12 +233,12 @@ int* SCIPimplicsGetIds(
  * speed up the algorithms.
  */
 
-#define SCIPimplicsGetNImpls(implics, varfixing)       ((implics)->nimpls[varfixing])
-#define SCIPimplicsGetNBinImpls(implics, varfixing)    ((implics)->nbinimpls[varfixing])
-#define SCIPimplicsGetVars(implics, varfixing)         ((implics)->vars[varfixing])
-#define SCIPimplicsGetTypes(implics, varfixing)        ((implics)->types[varfixing])
-#define SCIPimplicsGetBounds(implics, varfixing)       ((implics)->bounds[varfixing])
-#define SCIPimplicsGetIds(implics, varfixing)          ((implics)->ids[varfixing])
+#define SCIPimplicsGetNImpls(implics, varfixing)       ((implics) != NULL ? (implics)->nimpls[varfixing] : 0)
+#define SCIPimplicsGetNBinImpls(implics, varfixing)    ((implics) != NULL ? (implics)->nbinimpls[varfixing] : 0)
+#define SCIPimplicsGetVars(implics, varfixing)         ((implics) != NULL ? (implics)->vars[varfixing] : NULL)
+#define SCIPimplicsGetTypes(implics, varfixing)        ((implics) != NULL ? (implics)->types[varfixing] : NULL)
+#define SCIPimplicsGetBounds(implics, varfixing)       ((implics) != NULL ? (implics)->bounds[varfixing] : NULL)
+#define SCIPimplicsGetIds(implics, varfixing)          ((implics) != NULL ? (implics)->ids[varfixing] : NULL)
 
 #endif
 
@@ -324,7 +326,9 @@ RETCODE SCIPcliquetableFree(
    BLKMEM*          blkmem              /**< block memory */
    );
 
-/** adds a clique to the clique table; performs implications if the clique contains the same variable twice */
+/** adds a clique to the clique table, using the given values for the given variables;
+ *  performs implications if the clique contains the same variable twice
+ */
 extern
 RETCODE SCIPcliquetableAdd(
    CLIQUETABLE*     cliquetable,        /**< clique table data structure */
@@ -334,14 +338,15 @@ RETCODE SCIPcliquetableAdd(
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   VAR**            vars,               /**< binary variables in the clique: at most one can be set to the given value */
+   Bool*            values,             /**< values of the variables in the clique; NULL to use TRUE for all vars */
    int              nvars,              /**< number of variables in the clique */
    Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
    int*             nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
    );
 
 /** removes all empty and single variable cliques from the clique table, and converts all two variable cliques
- *  into implications
+ *  into implications; removes double entries from the clique table
  */
 extern
 RETCODE SCIPcliquetableCleanup(

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.177 2005/08/12 12:36:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.178 2005/08/17 14:25:31 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1324,26 +1324,33 @@ Real adjustedUb(
       return ub;
 }
 
-/* removes variable from all other variables' implications and variable bounds arrays */
+/* removes (redundant) implications and variable bounds of variable from all other variables' implications and variable
+ * bounds arrays, and optionally removes them also from the variable itself
+ */
 static
 RETCODE varRemoveImplicsVbs(
    VAR*             var,                /**< problem variable */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
-   Bool             onlyredundant       /**< should only the redundant variable bounds be removed? */
+   Bool             onlyredundant,      /**< should only the redundant implications and variable bounds be removed? */
+   Bool             removefromvar       /**< should the implications and variable bounds be removed from the var itself? */
    )
 {
-   int i;
+   Real lb;
+   Real ub;
 
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarIsActive(var));
 
-   debugMessage("removing %s implications and vbounds of <%s>[%g,%g]\n",
-      onlyredundant ? "redundant" : "all", SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+   lb = SCIPvarGetLbGlobal(var);
+   ub = SCIPvarGetUbGlobal(var);
 
-   /* remove implications of variable */
-   if( var->implics != NULL )
+   debugMessage("removing %s implications and vbounds of <%s>[%g,%g]\n",
+      onlyredundant ? "redundant" : "all", SCIPvarGetName(var), lb, ub);
+
+   /* remove implications of (fixed) binary variable */
+   if( var->implics != NULL && (!onlyredundant || lb > 0.5 || ub < 0.5) )
    {
       Bool varfixing;
 
@@ -1356,6 +1363,7 @@ RETCODE varRemoveImplicsVbs(
          int nbinimpls;
          VAR** implvars;
          BOUNDTYPE* impltypes;
+         int i;
 
          nimpls = SCIPimplicsGetNImpls(var->implics, varfixing);
          nbinimpls = SCIPimplicsGetNBinImpls(var->implics, varfixing);
@@ -1432,19 +1440,22 @@ RETCODE varRemoveImplicsVbs(
       }
       while( varfixing == TRUE );
 
-      /* free the implications data structures */
-      SCIPimplicsFree(&var->implics, blkmem);
+      if( removefromvar )
+      {
+         /* free the implications data structures */
+         SCIPimplicsFree(&var->implics, blkmem);
+      }
    }
 
    /* remove the (redundant) variable lower bounds */
    if( var->vlbs != NULL )
    {
-      Real lb;
       VAR** vars;
       Real* coefs;
       Real* constants;
       int nvbds;
       int newnvbds;
+      int i;
 
       assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
 
@@ -1452,7 +1463,6 @@ RETCODE varRemoveImplicsVbs(
       vars = SCIPvboundsGetVars(var->vlbs);
       coefs = SCIPvboundsGetCoefs(var->vlbs);
       constants = SCIPvboundsGetConstants(var->vlbs);
-      lb = SCIPvarGetLbGlobal(var);
 
       /* remove for all variable bounds x >= b*z+d the following implication from z's implications 
        *   z == 1  ==>  x >= b + d           , if b > 0
@@ -1476,13 +1486,16 @@ RETCODE varRemoveImplicsVbs(
             if( SCIPsetIsFeasGT(set, vbound, lb) )
             {
                /* the variable bound is not redundant: keep it */
-               if( newnvbds < i )
+               if( removefromvar )
                {
-                  vars[newnvbds] = vars[i];
-                  coefs[newnvbds] = coefs[i];
-                  constants[newnvbds] = constants[i];
+                  if( newnvbds < i )
+                  {
+                     vars[newnvbds] = vars[i];
+                     coefs[newnvbds] = coefs[i];
+                     constants[newnvbds] = constants[i];
+                  }
+                  newnvbds++;
                }
-               newnvbds++;
                continue;
             }
          }
@@ -1496,19 +1509,22 @@ RETCODE varRemoveImplicsVbs(
          }
       }
 
-      /* update the number of variable bounds */
-      SCIPvboundsShrink(&var->vlbs, blkmem, newnvbds);
+      if( removefromvar )
+      {
+         /* update the number of variable bounds */
+         SCIPvboundsShrink(&var->vlbs, blkmem, newnvbds);
+      }
    }
 
    /* remove the (redundant) variable upper bounds */
    if( var->vubs != NULL )
    {
-      Real ub;
       VAR** vars;
       Real* coefs;
       Real* constants;
       int nvbds;
       int newnvbds;
+      int i;
 
       assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
 
@@ -1516,7 +1532,6 @@ RETCODE varRemoveImplicsVbs(
       vars = SCIPvboundsGetVars(var->vubs);
       coefs = SCIPvboundsGetCoefs(var->vubs);
       constants = SCIPvboundsGetConstants(var->vubs);
-      ub = SCIPvarGetUbGlobal(var);
 
       /* remove for all variable bounds x <= b*z+d the following implication from z's implications 
        *   z == 0  ==>  x <= d               , if b > 0
@@ -1540,13 +1555,16 @@ RETCODE varRemoveImplicsVbs(
             if( SCIPsetIsFeasLT(set, vbound, ub) )
             {
                /* the variable bound is not redundant: keep it */
-               if( newnvbds < i )
+               if( removefromvar )
                {
-                  vars[newnvbds] = vars[i];
-                  coefs[newnvbds] = coefs[i];
-                  constants[newnvbds] = constants[i];
+                  if( newnvbds < i )
+                  {
+                     vars[newnvbds] = vars[i];
+                     coefs[newnvbds] = coefs[i];
+                     constants[newnvbds] = constants[i];
+                  }
+                  newnvbds++;
                }
-               newnvbds++;
                continue;
             }
          }
@@ -1560,8 +1578,11 @@ RETCODE varRemoveImplicsVbs(
          }
       }
 
-      /* update the number of variable bounds */
-      SCIPvboundsShrink(&var->vubs, blkmem, newnvbds);
+      if( removefromvar )
+      {
+         /* update the number of variable bounds */
+         SCIPvboundsShrink(&var->vubs, blkmem, newnvbds);
+      }
    }
 
    return SCIP_OKAY;
@@ -2651,9 +2672,11 @@ RETCODE SCIPvarFix(
       var->locdom.lb = fixedval;
       var->locdom.ub = fixedval;
 
-      /* delete variable bounds information */
-      SCIPvboundsFree(&var->vlbs, blkmem);
-      SCIPvboundsFree(&var->vubs, blkmem);
+      /* delete implications and variable bounds information */
+      CHECK_OKAY( varRemoveImplicsVbs(var, blkmem, set, FALSE, TRUE) );
+      assert(var->vlbs == NULL);
+      assert(var->vubs == NULL);
+      assert(var->implics == NULL);
 
       /* remove the variable from all cliques */
       if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
@@ -2911,6 +2934,7 @@ RETCODE SCIPvarAggregate(
    PRIMAL*          primal,             /**< primal data */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
+   CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             aggvar,             /**< loose variable y in aggregation x = a*y + c */
@@ -2982,6 +3006,11 @@ RETCODE SCIPvarAggregate(
    if( *infeasible )
       return SCIP_OKAY;
 
+   /* delete implications and variable bounds of the aggregated variable from other variables, but keep them in the
+    * aggregated variable
+    */
+   CHECK_OKAY( varRemoveImplicsVbs(var, blkmem, set, FALSE, FALSE) );
+
    /* set the aggregated variable's objective value to 0.0 */
    obj = var->obj;
    CHECK_OKAY( SCIPvarChgObj(var, blkmem, set, primal, lp, eventqueue, 0.0) );
@@ -3019,7 +3048,7 @@ RETCODE SCIPvarAggregate(
    CHECK_OKAY( SCIPvarAddLocks(var, blkmem, set, eventqueue, nlocksdown, nlocksup) );
 
    /* move the variable bounds to the aggregation variable:
-    *  - add all variable bounds again to the variable, thus adding it to the aggregated variable
+    *  - add all variable bounds again to the variable, thus adding it to the aggregation variable
     *  - free the variable bounds data structures
     */
    if( var->vlbs != NULL )
@@ -3030,8 +3059,8 @@ RETCODE SCIPvarAggregate(
       constants = SCIPvboundsGetConstants(var->vlbs);
       for( i = 0; i < nvbds && !(*infeasible); ++i )
       {
-         CHECK_OKAY( SCIPvarAddVlb(var, blkmem, set, stat, lp, branchcand, eventqueue,
-               vars[i], coefs[i], constants[i], infeasible, NULL) );
+         CHECK_OKAY( SCIPvarAddVlb(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+               vars[i], coefs[i], constants[i], TRUE, infeasible, NULL) );
       }
    }
    if( var->vubs != NULL )
@@ -3042,15 +3071,15 @@ RETCODE SCIPvarAggregate(
       constants = SCIPvboundsGetConstants(var->vubs);
       for( i = 0; i < nvbds && !(*infeasible); ++i )
       {
-         CHECK_OKAY( SCIPvarAddVub(var, blkmem, set, stat, lp, branchcand, eventqueue,
-               vars[i], coefs[i], constants[i], infeasible, NULL) );
+         CHECK_OKAY( SCIPvarAddVub(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+               vars[i], coefs[i], constants[i], TRUE, infeasible, NULL) );
       }
    }
    SCIPvboundsFree(&var->vlbs, blkmem);
    SCIPvboundsFree(&var->vubs, blkmem);
 
    /* move the implications to the aggregation variable:
-    *  - add all implications again to the variable, thus adding it to the aggregated variable
+    *  - add all implications again to the variable, thus adding it to the aggregation variable
     *  - free the implications data structures
     */
    if( var->implics != NULL && SCIPvarGetType(aggvar) == SCIP_VARTYPE_BINARY )
@@ -3063,15 +3092,15 @@ RETCODE SCIPvarAggregate(
          Real* implbounds;
          int nimpls;
 
-         nimpls = SCIPimplicsGetNImpls(var->implics, i);
-         implvars = SCIPimplicsGetVars(var->implics, i);
-         impltypes = SCIPimplicsGetTypes(var->implics, i);
-         implbounds = SCIPimplicsGetBounds(var->implics, i);
+         nimpls = SCIPimplicsGetNImpls(var->implics, (Bool)i);
+         implvars = SCIPimplicsGetVars(var->implics, (Bool)i);
+         impltypes = SCIPimplicsGetTypes(var->implics, (Bool)i);
+         implbounds = SCIPimplicsGetBounds(var->implics, (Bool)i);
 
          for( j = 0; j < nimpls && !(*infeasible); ++j )
          {
-            CHECK_OKAY( SCIPvarAddImplic(var, blkmem, set, stat, lp, branchcand, eventqueue,
-                  (Bool)i, implvars[j], impltypes[j], implbounds[j], infeasible, NULL) );
+            CHECK_OKAY( SCIPvarAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+                  (Bool)i, implvars[j], impltypes[j], implbounds[j], TRUE, infeasible, NULL) );
          }
       }
    }
@@ -3171,6 +3200,7 @@ RETCODE SCIPvarMultiaggregate(
    PRIMAL*          primal,             /**< primal data */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
+   CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    int              naggvars,           /**< number n of variables in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
@@ -3203,7 +3233,7 @@ RETCODE SCIPvarMultiaggregate(
       return SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, constant, 
          infeasible, aggregated);
    else if( naggvars == 1)
-      return SCIPvarAggregate(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 
+      return SCIPvarAggregate(var, blkmem, set, stat, prob, primal, tree, lp, cliquetable, branchcand, eventqueue, 
          aggvars[0], scalars[0], constant, infeasible, aggregated);
 
    debugMessage("multi-aggregate variable <%s> == ...%d vars... %+g\n", var->name, naggvars, constant);
@@ -3220,7 +3250,7 @@ RETCODE SCIPvarMultiaggregate(
          return SCIP_INVALIDDATA;
       }
       CHECK_OKAY( SCIPvarMultiaggregate(var->data.original.transvar, blkmem, set, stat, prob, primal, tree, lp,
-            branchcand, eventqueue, naggvars, aggvars, scalars, constant, infeasible, aggregated) );
+            cliquetable, branchcand, eventqueue, naggvars, aggvars, scalars, constant, infeasible, aggregated) );
       break;
 
    case SCIP_VARSTATUS_LOOSE:
@@ -3230,7 +3260,7 @@ RETCODE SCIPvarMultiaggregate(
        * variable bound variable of another variable), we have to remove it from the other variables implications or
        * variable bounds
        */
-      CHECK_OKAY( varRemoveImplicsVbs(var, blkmem, set, FALSE) );
+      CHECK_OKAY( varRemoveImplicsVbs(var, blkmem, set, FALSE, TRUE) );
       assert(var->vlbs == NULL);
       assert(var->vubs == NULL);
       assert(var->implics == NULL);
@@ -3341,7 +3371,7 @@ RETCODE SCIPvarMultiaggregate(
          
       /* perform the multi aggregation on the negation variable */
       CHECK_OKAY( SCIPvarMultiaggregate(var->negatedvar, blkmem, set, stat, prob, primal, tree, lp,
-            branchcand, eventqueue, naggvars, aggvars, scalars, var->data.negate.constant - constant, 
+            cliquetable, branchcand, eventqueue, naggvars, aggvars, scalars, var->data.negate.constant - constant, 
             infeasible, aggregated) );
 
       /* switch the signs of the aggregation scalars again, to reset them to their original values */
@@ -3900,10 +3930,10 @@ RETCODE varProcessChgLbGlobal(
    assert(var->glbdom.lb <= var->locdom.lb);
    assert(var->locdom.ub <= var->glbdom.ub);
 
-   /* remove redundant implications and variable bounds in other variables */
+   /* remove redundant implications and variable bounds */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
    {
-      CHECK_OKAY( varRemoveImplicsVbs(var, blkmem, set, TRUE) );
+      CHECK_OKAY( varRemoveImplicsVbs(var, blkmem, set, TRUE, TRUE) );
    }
 
    /* process parent variables */
@@ -3996,10 +4026,10 @@ RETCODE varProcessChgUbGlobal(
    assert(var->glbdom.lb <= var->locdom.lb);
    assert(var->locdom.ub <= var->glbdom.ub);
 
-   /* remove redundant implications and variable bounds in other variables */
+   /* remove redundant implications and variable bounds */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
    {
-      CHECK_OKAY( varRemoveImplicsVbs(var, blkmem, set, TRUE) );
+      CHECK_OKAY( varRemoveImplicsVbs(var, blkmem, set, TRUE, TRUE) );
    }
 
    /* process parent variables */
@@ -5077,18 +5107,41 @@ RETCODE SCIPvarResetBounds(
    return SCIP_OKAY;
 }
 
+/** issues a IMPLADDED event on the given variable */
+static
+RETCODE varEventImplAdded(
+   VAR*             var,                /**< problem variable to change */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   EVENTQUEUE*      eventqueue          /**< event queue */
+   )
+{
+   EVENT* event;
+
+   assert(var != NULL);
+
+   /* issue LOCKSCHANGED event on variable */
+   CHECK_OKAY( SCIPeventCreateImplAdded(&event, blkmem, var) );
+   CHECK_OKAY( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, &event) );
+
+   return SCIP_OKAY;
+}
+
 /** actually performs the addition of a variable bound to the variable's vbound arrays */
 static
 RETCODE varAddVbound(
    VAR*             var,                /**< problem variable x in x <= b*z + d  or  x >= b*z + d */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    BOUNDTYPE        vbtype,             /**< type of variable bound (LOWER or UPPER) */
    VAR*             vbvar,              /**< variable z    in x <= b*z + d  or  x >= b*z + d */
    Real             vbcoef,             /**< coefficient b in x <= b*z + d  or  x >= b*z + d */
    Real             vbconstant          /**< constant d    in x <= b*z + d  or  x >= b*z + d */
    )
 {
+   Bool added;
+
    debugMessage("adding variable bound: <%s> %s %g<%s> %+g\n", 
       SCIPvarGetName(var), vbtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", vbcoef, SCIPvarGetName(vbvar), vbconstant);
 
@@ -5098,11 +5151,17 @@ RETCODE varAddVbound(
    /* perform the addition */
    if( vbtype == SCIP_BOUNDTYPE_LOWER )
    {
-      CHECK_OKAY( SCIPvboundsAdd(&var->vlbs, blkmem, set, vbtype, vbvar, vbcoef, vbconstant) );
+      CHECK_OKAY( SCIPvboundsAdd(&var->vlbs, blkmem, set, vbtype, vbvar, vbcoef, vbconstant, &added) );
    }
    else
    {
-      CHECK_OKAY( SCIPvboundsAdd(&var->vubs, blkmem, set, vbtype, vbvar, vbcoef, vbconstant) );
+      CHECK_OKAY( SCIPvboundsAdd(&var->vubs, blkmem, set, vbtype, vbvar, vbcoef, vbconstant, &added) );
+   }
+
+   if( added )
+   {
+      /* issue IMPLADDED event */
+      CHECK_OKAY( varEventImplAdded(var, blkmem, set, eventqueue) );
    }
 
    return SCIP_OKAY;
@@ -5209,6 +5268,7 @@ RETCODE varAddImplic(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
+   CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Bool             varfixing,          /**< FALSE if y should be added in implications for x == 0, TRUE for x == 1 */
@@ -5221,10 +5281,12 @@ RETCODE varAddImplic(
 {
    Bool redundant;
    Bool conflict;
+   Bool added;
 
    assert(SCIPvarIsActive(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsActive(implvar));
    assert(infeasible != NULL);
 
    /* check implication on debugging solution */
@@ -5263,18 +5325,24 @@ RETCODE varAddImplic(
    assert((impltype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, implbound, SCIPvarGetLbGlobal(implvar)))
       || (impltype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, implbound, SCIPvarGetUbGlobal(implvar))));
 
-   if( !conflict && SCIPvarIsActive(implvar) )
+   if( !conflict )
    {
       /* add implication x == 0/1 -> y <= b / y >= b to the implications list of x */
       debugMessage("adding implication: <%s> == %d  ==>  <%s> %s %g\n", 
          SCIPvarGetName(var), varfixing,
          SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_UPPER ? "<=" : ">=", implbound);
-      CHECK_OKAY( SCIPimplicsAdd(&var->implics, blkmem, set, stat, varfixing, implvar, impltype, implbound, &conflict) );
+      CHECK_OKAY( SCIPimplicsAdd(&var->implics, blkmem, set, stat, varfixing, implvar, impltype, implbound,
+            &conflict, &added) );
    }
+   else
+      added = FALSE;
+   assert(!conflict || !added);
 
    /* on conflict, fix the variable to the opposite value */
    if( conflict )
    {
+      debugMessage(" -> implication yields a conflict: fix <%s> == %d\n", SCIPvarGetName(var), !varfixing);
+
       if( varfixing )
       {
          CHECK_OKAY( SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, 0.0) );
@@ -5289,8 +5357,8 @@ RETCODE varAddImplic(
       return SCIP_OKAY;
    }
 
-   /* only add implications on active variables */
-   if( !SCIPvarIsActive(implvar) )
+   /* if the implication was redundant, the inverse is also redundant */
+   if( !added )
       return SCIP_OKAY;
 
    /* check, whether implied variable is binary */
@@ -5307,12 +5375,24 @@ RETCODE varAddImplic(
        */
       debugMessage("adding inverse implication: <%s> == %d  ==>  <%s> == %d\n",
          SCIPvarGetName(implvar), (impltype == SCIP_BOUNDTYPE_UPPER), SCIPvarGetName(var), !varfixing);
-      CHECK_OKAY( SCIPimplicsAdd(&implvar->implics, blkmem, set, stat, (impltype == SCIP_BOUNDTYPE_UPPER), 
-            var, varfixing ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER, varfixing ? 0.0 : 1.0, &conflict) );
+      CHECK_OKAY( SCIPimplicsAdd(&implvar->implics, blkmem, set, stat, 
+            (impltype == SCIP_BOUNDTYPE_UPPER), var, varfixing ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER, 
+            varfixing ? 0.0 : 1.0, &conflict, &added) );
+      assert(added == !conflict); /* if there is no conflict, the implication must not be redundant */
 
       /* on conflict, fix the variable to the opposite value */
       if( conflict )
       {
+         debugMessage(" -> implication yields a conflict: fix <%s> == %d\n", 
+            SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER);
+
+         /* remove the original implication (which is now redundant due to the fixing of the implvar) */
+         debugMessage(" -> deleting implication: <%s> == %d  ==>  <%s> %s %g\n", 
+            SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            implbound);
+         CHECK_OKAY( SCIPimplicsDel(&var->implics, blkmem, set, varfixing, implvar, impltype) );
+
+         /* fix implvar */
          if( impltype == SCIP_BOUNDTYPE_UPPER )
          {
             CHECK_OKAY( SCIPvarChgUbGlobal(implvar, blkmem, set, stat, lp, branchcand, eventqueue, 0.0) );
@@ -5340,15 +5420,224 @@ RETCODE varAddImplic(
       ub = SCIPvarGetUbGlobal(implvar);
       if( impltype == SCIP_BOUNDTYPE_UPPER )
       {
-         CHECK_OKAY( varAddVbound(implvar, blkmem, set, SCIP_BOUNDTYPE_UPPER, var,
+         CHECK_OKAY( varAddVbound(implvar, blkmem, set, eventqueue, SCIP_BOUNDTYPE_UPPER, var,
                varfixing ? implbound - ub : ub - implbound, varfixing ? ub : implbound) );
       }
       else
       {
-         CHECK_OKAY( varAddVbound(implvar, blkmem, set, SCIP_BOUNDTYPE_LOWER, var,
+         CHECK_OKAY( varAddVbound(implvar, blkmem, set, eventqueue, SCIP_BOUNDTYPE_LOWER, var,
                varfixing ? implbound - lb : lb - implbound, varfixing ? lb : implbound) );
       }
    }
+
+   return SCIP_OKAY;
+}
+
+/** adds given implication to the variable's implication list, and adds all implications directly implied by this
+ *  implication to the variable's implication list;
+ *  if the implication is conflicting, the variable is fixed to the opposite value;
+ *  if the variable is already fixed to the given value, the implication is performed immediately;
+ *  if the implication is redundant with respect to the variables' global bounds, it is ignored
+ */
+static
+RETCODE varAddTransitiveImplic(
+   VAR*             var,                /**< problem variable */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   Bool             varfixing,          /**< FALSE if y should be added in implications for x == 0, TRUE for x == 1 */
+   VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
+   BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
+   Real             implbound,          /**< bound b    in implication y <= b or y >= b */
+   Bool             transitive,         /**< should transitive closure of implication also be added? */
+   Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*             nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
+   )
+{
+   assert(var != NULL);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsActive(var));
+   assert(implvar != NULL);
+   assert(SCIPvarIsActive(implvar));
+   assert(infeasible != NULL);
+
+   /* add implication x == varfixing -> y <= b / y >= b to the implications list of x */
+   CHECK_OKAY( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
+         varfixing, implvar, impltype, implbound, infeasible, nbdchgs) );
+   if( *infeasible || var == implvar || !transitive )
+      return SCIP_OKAY;
+
+   /* add transitive closure */
+   if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
+   {
+      VAR** implvars;
+      BOUNDTYPE* impltypes;
+      Real* implbounds;
+      int nimpls;
+      CLIQUE** cliques;
+      int ncliques;
+      Bool implvarfixing;
+      int i;
+
+      implvarfixing = (impltype == SCIP_BOUNDTYPE_LOWER);
+
+      /* binary variable: implications of implvar */
+      nimpls = SCIPimplicsGetNImpls(implvar->implics, implvarfixing);
+      implvars = SCIPimplicsGetVars(implvar->implics, implvarfixing);
+      impltypes = SCIPimplicsGetTypes(implvar->implics, implvarfixing);
+      implbounds = SCIPimplicsGetBounds(implvar->implics, implvarfixing);
+      for( i = 0; i < nimpls && !(*infeasible); ++i )
+      {
+         assert(implvars[i] != implvar);
+
+         /* we have x == varfixing -> y == implvarfixing -> z <= b / z >= b:
+          * add implication x == varfixing -> z <= b / z >= b to the implications list of x 
+          */
+         if( SCIPvarIsActive(implvars[i]) )
+         {
+            CHECK_OKAY( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
+                  varfixing, implvars[i], impltypes[i], implbounds[i], infeasible, nbdchgs) );
+            assert(SCIPimplicsGetNImpls(implvar->implics, implvarfixing) == nimpls);
+         }
+      }
+
+      /* binary variable: cliques of implvar */
+      ncliques = SCIPcliquelistGetNCliques(implvar->cliquelist, implvarfixing);
+      cliques = SCIPcliquelistGetCliques(implvar->cliquelist, implvarfixing);
+      for( i = 0; i < ncliques && !(*infeasible); ++i )
+      {
+         VAR** cliquevars;
+         Bool* cliquevalues;
+         VAR** newcliquevars;
+         Bool* newcliquevalues;
+         int ncliquevars;
+         int implvarpos;
+
+         /* we have x == varfixing -> y == implvarfixing -> z[j] == !cliquevalues[j] for all j in clique:
+          * add copy of clique with y == implvarfixing replaced by x == varfixing
+          */
+         ncliquevars = SCIPcliqueGetNVars(cliques[i]);
+         cliquevars = SCIPcliqueGetVars(cliques[i]);
+         cliquevalues = SCIPcliqueGetValues(cliques[i]);
+         implvarpos = SCIPcliqueSearchVar(cliques[i], implvar, implvarfixing);
+         assert(0 <= implvarpos && implvarpos < ncliquevars);
+         assert(cliquevars[implvarpos] == implvar);
+         assert(cliquevalues[implvarpos] == implvarfixing);
+
+         /* allocate temporary memory for copy of clique */
+         CHECK_OKAY( SCIPsetDuplicateBufferArray(set, &newcliquevars, cliquevars, ncliquevars) );
+         CHECK_OKAY( SCIPsetDuplicateBufferArray(set, &newcliquevalues, cliquevalues, ncliquevars) );
+
+         /* replace y == implvarfixing with x == varfixing */
+         newcliquevars[implvarpos] = var;
+         newcliquevalues[implvarpos] = varfixing;
+
+         /* add clique */
+         CHECK_OKAY( SCIPcliquetableAdd(cliquetable, blkmem, set, stat, lp, branchcand, eventqueue,
+               newcliquevars, newcliquevalues, ncliquevars, infeasible, NULL) );
+
+         /* free temporary memory */
+         SCIPsetFreeBufferArray(set, &newcliquevalues);
+         SCIPsetFreeBufferArray(set, &newcliquevars);
+      }
+   }
+   else
+   {
+      /* non-binary variable: variable lower bounds of implvar */
+      if( impltype == SCIP_BOUNDTYPE_UPPER && implvar->vlbs != NULL )
+      {
+         VAR** vlbvars;
+         Real* vlbcoefs;
+         Real* vlbconstants;
+         int nvlbvars;
+         int i;
+
+         nvlbvars = SCIPvboundsGetNVbds(implvar->vlbs);
+         vlbvars = SCIPvboundsGetVars(implvar->vlbs);
+         vlbcoefs = SCIPvboundsGetCoefs(implvar->vlbs);
+         vlbconstants = SCIPvboundsGetConstants(implvar->vlbs);
+         for( i = 0; i < nvlbvars && !(*infeasible); ++i )
+         {
+            assert(vlbvars[i] != implvar);
+            assert(!SCIPsetIsZero(set, vlbcoefs[i]));
+
+            /* we have x == varfixing -> y <= b and y >= c*z + d:
+             *   c > 0: add implication x == varfixing -> z <= (b-d)/c to the implications list of x
+             *   c < 0: add implication x == varfixing -> z >= (b-d)/c to the implications list of x
+             */
+            if( SCIPvarIsActive(vlbvars[i]) )
+            {
+               Real vbimplbound;
+
+               vbimplbound = (implbound - vlbconstants[i])/vlbcoefs[i];
+               if( vlbcoefs[i] >= 0.0 )
+               {
+                  vbimplbound = adjustedUb(set, SCIPvarGetType(vlbvars[i]), vbimplbound);
+                  CHECK_OKAY( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
+                        varfixing, vlbvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, infeasible, nbdchgs) );
+               }
+               else
+               {
+                  vbimplbound = adjustedLb(set, SCIPvarGetType(vlbvars[i]), vbimplbound);
+                  CHECK_OKAY( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
+                        varfixing, vlbvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, infeasible, nbdchgs) );
+               }
+               assert(SCIPvboundsGetNVbds(implvar->vlbs) == nvlbvars);
+            }
+         }
+      }
+
+      /* non-binary variable: variable upper bounds of implvar */
+      if( impltype == SCIP_BOUNDTYPE_LOWER && implvar->vubs != NULL )
+      {
+         VAR** vubvars;
+         Real* vubcoefs;
+         Real* vubconstants;
+         int nvubvars;
+         int i;
+
+         nvubvars = SCIPvboundsGetNVbds(implvar->vubs);
+         vubvars = SCIPvboundsGetVars(implvar->vubs);
+         vubcoefs = SCIPvboundsGetCoefs(implvar->vubs);
+         vubconstants = SCIPvboundsGetConstants(implvar->vubs);
+         for( i = 0; i < nvubvars && !(*infeasible); ++i )
+         {
+            assert(vubvars[i] != implvar);
+            assert(!SCIPsetIsZero(set, vubcoefs[i]));
+
+            /* we have x == varfixing -> y >= b and y <= c*z + d:
+             *   c > 0: add implication x == varfixing -> z >= (b-d)/c to the implications list of x
+             *   c < 0: add implication x == varfixing -> z <= (b-d)/c to the implications list of x
+             */
+            if( SCIPvarIsActive(vubvars[i]) )
+            {
+               Real vbimplbound;
+
+               vbimplbound = (implbound - vubconstants[i])/vubcoefs[i];
+               if( vubcoefs[i] >= 0.0 )
+               {
+                  vbimplbound = adjustedLb(set, SCIPvarGetType(vubvars[i]), vbimplbound);
+                  CHECK_OKAY( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
+                        varfixing, vubvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, infeasible, nbdchgs) );
+               }
+               else
+               {
+                  vbimplbound = adjustedUb(set, SCIPvarGetType(vubvars[i]), vbimplbound);
+                  CHECK_OKAY( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
+                        varfixing, vubvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, infeasible, nbdchgs) );
+               }
+               assert(SCIPvboundsGetNVbds(implvar->vubs) == nvubvars);
+            }
+         }
+      }
+   }
+
+   /* issue IMPLADDED event */
+   CHECK_OKAY( varEventImplAdded(var, blkmem, set, eventqueue) );
 
    return SCIP_OKAY;
 }
@@ -5363,11 +5652,13 @@ RETCODE SCIPvarAddVlb(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
+   CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             vlbvar,             /**< variable z    in x >= b*z + d */
    Real             vlbcoef,            /**< coefficient b in x >= b*z + d */
    Real             vlbconstant,        /**< constant d    in x >= b*z + d */
+   Bool             transitive,         /**< should transitive closure of implication also be added? */
    Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
    int*             nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    )
@@ -5387,8 +5678,8 @@ RETCODE SCIPvarAddVlb(
    {
    case SCIP_VARSTATUS_ORIGINAL:
       assert(var->data.original.transvar != NULL);
-      CHECK_OKAY( SCIPvarAddVlb(var->data.original.transvar, blkmem, set, stat, lp, branchcand, eventqueue,
-            vlbvar, vlbcoef, vlbconstant, infeasible, nbdchgs) );
+      CHECK_OKAY( SCIPvarAddVlb(var->data.original.transvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+            vlbvar, vlbcoef, vlbconstant, transitive, infeasible, nbdchgs) );
       break;
          
    case SCIP_VARSTATUS_COLUMN:
@@ -5524,12 +5815,13 @@ RETCODE SCIPvarAddVlb(
                 *   b > 0, x >= b*z + d  <->  z == 1 -> x >= b+d
                 *   b < 0, x >= b*z + d  <->  z == 0 -> x >= d
                 */
-               CHECK_OKAY( varAddImplic(vlbvar, blkmem, set, stat, lp, branchcand, eventqueue,
-                     (vlbcoef >= 0.0), var, SCIP_BOUNDTYPE_LOWER, maxvlb, infeasible, nbdchgs) );
+               CHECK_OKAY( varAddTransitiveImplic(vlbvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+                     (vlbcoef >= 0.0), var, SCIP_BOUNDTYPE_LOWER, maxvlb, transitive, infeasible, nbdchgs) );
             }
             else
             {
-               CHECK_OKAY( varAddVbound(var, blkmem, set, SCIP_BOUNDTYPE_LOWER, vlbvar, vlbcoef, vlbconstant) );
+               CHECK_OKAY( varAddVbound(var, blkmem, set, eventqueue, 
+                     SCIP_BOUNDTYPE_LOWER, vlbvar, vlbcoef, vlbconstant) );
             }
          }
       }
@@ -5543,16 +5835,16 @@ RETCODE SCIPvarAddVlb(
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
          /* a > 0 -> add variable lower bound */
-         CHECK_OKAY( SCIPvarAddVlb(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue,
+         CHECK_OKAY( SCIPvarAddVlb(var->data.aggregate.var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
                vlbvar, vlbcoef/var->data.aggregate.scalar,
-               (vlbconstant - var->data.aggregate.constant)/var->data.aggregate.scalar, infeasible, nbdchgs) );
+               (vlbconstant - var->data.aggregate.constant)/var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
          /* a < 0 -> add variable upper bound */
-         CHECK_OKAY( SCIPvarAddVub(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue,
+         CHECK_OKAY( SCIPvarAddVub(var->data.aggregate.var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
                vlbvar, vlbcoef/var->data.aggregate.scalar,
-               (vlbconstant - var->data.aggregate.constant)/var->data.aggregate.scalar, infeasible, nbdchgs) );
+               (vlbconstant - var->data.aggregate.constant)/var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
       }
       else
       {
@@ -5570,8 +5862,8 @@ RETCODE SCIPvarAddVlb(
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      CHECK_OKAY( SCIPvarAddVub(var->negatedvar, blkmem, set, stat, lp, branchcand, eventqueue,
-            vlbvar, -vlbcoef, var->data.negate.constant - vlbconstant, infeasible, nbdchgs) );
+      CHECK_OKAY( SCIPvarAddVub(var->negatedvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+            vlbvar, -vlbcoef, var->data.negate.constant - vlbconstant, transitive, infeasible, nbdchgs) );
       break;
       
    default:
@@ -5592,11 +5884,13 @@ RETCODE SCIPvarAddVub(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
+   CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             vubvar,             /**< variable z    in x <= b*z + d */
    Real             vubcoef,            /**< coefficient b in x <= b*z + d */
    Real             vubconstant,        /**< constant d    in x <= b*z + d */
+   Bool             transitive,         /**< should transitive closure of implication also be added? */
    Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
    int*             nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    )
@@ -5616,8 +5910,8 @@ RETCODE SCIPvarAddVub(
    {
    case SCIP_VARSTATUS_ORIGINAL:
       assert(var->data.original.transvar != NULL);
-      CHECK_OKAY( SCIPvarAddVub(var->data.original.transvar, blkmem, set, stat, lp, branchcand, eventqueue,
-            vubvar, vubcoef, vubconstant, infeasible, nbdchgs) );
+      CHECK_OKAY( SCIPvarAddVub(var->data.original.transvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+            vubvar, vubcoef, vubconstant, transitive, infeasible, nbdchgs) );
       break;
          
    case SCIP_VARSTATUS_COLUMN:
@@ -5747,12 +6041,13 @@ RETCODE SCIPvarAddVub(
                 *   b > 0, x <= b*z + d  <->  z == 0 -> x <= d
                 *   b < 0, x <= b*z + d  <->  z == 1 -> x <= b+d
                 */
-               CHECK_OKAY( varAddImplic(vubvar, blkmem, set, stat, lp, branchcand, eventqueue,
-                     (vubcoef < 0.0), var, SCIP_BOUNDTYPE_UPPER, minvub, infeasible, nbdchgs) );
+               CHECK_OKAY( varAddTransitiveImplic(vubvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+                     (vubcoef < 0.0), var, SCIP_BOUNDTYPE_UPPER, minvub, transitive, infeasible, nbdchgs) );
             }
             else
             {
-               CHECK_OKAY( varAddVbound(var, blkmem, set, SCIP_BOUNDTYPE_UPPER, vubvar, vubcoef, vubconstant) );
+               CHECK_OKAY( varAddVbound(var, blkmem, set, eventqueue, 
+                     SCIP_BOUNDTYPE_UPPER, vubvar, vubcoef, vubconstant) );
             }
          }
       }
@@ -5766,16 +6061,16 @@ RETCODE SCIPvarAddVub(
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
          /* a > 0 -> add variable upper bound */
-         CHECK_OKAY( SCIPvarAddVub(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue,
+         CHECK_OKAY( SCIPvarAddVub(var->data.aggregate.var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
                vubvar, vubcoef/var->data.aggregate.scalar,
-               (vubconstant - var->data.aggregate.constant)/var->data.aggregate.scalar, infeasible, nbdchgs) );
+               (vubconstant - var->data.aggregate.constant)/var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
          /* a < 0 -> add variable lower bound */
-         CHECK_OKAY( SCIPvarAddVlb(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue,
+         CHECK_OKAY( SCIPvarAddVlb(var->data.aggregate.var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
                vubvar, vubcoef/var->data.aggregate.scalar,
-               (vubconstant - var->data.aggregate.constant)/var->data.aggregate.scalar, infeasible, nbdchgs) );
+               (vubconstant - var->data.aggregate.constant)/var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
       }
       else
       {
@@ -5793,82 +6088,14 @@ RETCODE SCIPvarAddVub(
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      CHECK_OKAY( SCIPvarAddVlb(var->negatedvar, blkmem, set, stat, lp, branchcand, eventqueue,
-            vubvar, -vubcoef, var->data.negate.constant - vubconstant, infeasible, nbdchgs) );
+      CHECK_OKAY( SCIPvarAddVlb(var->negatedvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+            vubvar, -vubcoef, var->data.negate.constant - vubconstant, transitive, infeasible, nbdchgs) );
       break;
       
    default:
       errorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
-
-   return SCIP_OKAY;
-}
-
-/** replaces bounding variables in variable bounds of variable by their active problem variable counterparts */
-RETCODE SCIPvarUseActiveVbds(
-   VAR*             var,                /**< problem variable */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< current LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   EVENTQUEUE*      eventqueue,         /**< event queue */
-   Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
-   )
-{
-   VBOUNDS* oldvlbs;
-   VBOUNDS* oldvubs;
-   VAR** vars;
-   Real* coefs;
-   Real* constants;
-   int nvbds;
-   int i;
-
-   assert(var != NULL);
-   assert(infeasible != NULL);
-
-   *infeasible = FALSE;
-
-   /* remember variable bounds data, and remove them from the variable */
-   oldvlbs = var->vlbs;
-   oldvubs = var->vubs;
-   var->vlbs = NULL;
-   var->vubs = NULL;
-
-   /* reinsert all variable bounds */
-   if( oldvlbs != NULL )
-   {
-      debugMessage("using active variable lower bounds for variable <%s>\n", SCIPvarGetName(var));
-
-      nvbds = SCIPvboundsGetNVbds(oldvlbs);
-      vars = SCIPvboundsGetVars(oldvlbs);
-      coefs = SCIPvboundsGetCoefs(oldvlbs);
-      constants = SCIPvboundsGetConstants(oldvlbs);
-      for( i = 0; i < nvbds && !(*infeasible); ++i )
-      {
-         CHECK_OKAY( SCIPvarAddVlb(var, blkmem, set, stat, lp, branchcand, eventqueue,
-               vars[i], coefs[i], constants[i], infeasible, NULL) );
-      }
-   }
-   if( oldvubs != NULL )
-   {
-      debugMessage("using active variable upper bounds for variable <%s>\n", SCIPvarGetName(var));
-
-      nvbds = SCIPvboundsGetNVbds(oldvubs);
-      vars = SCIPvboundsGetVars(oldvubs);
-      coefs = SCIPvboundsGetCoefs(oldvubs);
-      constants = SCIPvboundsGetConstants(oldvubs);
-      for( i = 0; i < nvbds && !(*infeasible); ++i )
-      {
-         CHECK_OKAY( SCIPvarAddVub(var, blkmem, set, stat, lp, branchcand, eventqueue,
-               vars[i], coefs[i], constants[i], infeasible, NULL) );
-      }
-   }
-
-   /* free the old variable bound data structures */
-   SCIPvboundsFree(&oldvlbs, blkmem);
-   SCIPvboundsFree(&oldvubs, blkmem);
 
    return SCIP_OKAY;
 }
@@ -5885,12 +6112,14 @@ RETCODE SCIPvarAddImplic(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
+   CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Bool             varfixing,          /**< FALSE if y should be added in implications for x == 0, TRUE for x == 1 */
    VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
    BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
    Real             implbound,          /**< bound b    in implication y <= b or y >= b */
+   Bool             transitive,         /**< should transitive closure of implication also be added? */
    Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
    int*             nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    )
@@ -5907,8 +6136,8 @@ RETCODE SCIPvarAddImplic(
    {
    case SCIP_VARSTATUS_ORIGINAL:
       assert(var->data.original.transvar != NULL);
-      CHECK_OKAY( SCIPvarAddImplic(var->data.original.transvar, blkmem, set, stat, lp, branchcand, eventqueue,
-            varfixing, implvar, impltype, implbound, infeasible, nbdchgs) );
+      CHECK_OKAY( SCIPvarAddImplic(var->data.original.transvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+            varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
       break;
          
    case SCIP_VARSTATUS_COLUMN:
@@ -5930,8 +6159,8 @@ RETCODE SCIPvarAddImplic(
          CHECK_OKAY( SCIPvarGetProbvarBound(&implvar, &implbound, &impltype) );
          SCIPvarAdjustBd(implvar, set, impltype, &implbound);
          
-         CHECK_OKAY( varAddImplic(var, blkmem, set, stat, lp, branchcand, eventqueue,
-               varfixing, implvar, impltype, implbound, infeasible, nbdchgs) );
+         CHECK_OKAY( varAddTransitiveImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+               varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
       }
       break;
       
@@ -5962,13 +6191,13 @@ RETCODE SCIPvarAddImplic(
        
          if( var->data.aggregate.scalar > 0 )
          {
-            CHECK_OKAY( SCIPvarAddImplic(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue,
-                  varfixing, implvar, impltype, implbound, infeasible, nbdchgs) );
+            CHECK_OKAY( SCIPvarAddImplic(var->data.aggregate.var, blkmem, set, stat, lp, cliquetable, branchcand, 
+                  eventqueue, varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
          }
          else
          {
-            CHECK_OKAY( SCIPvarAddImplic(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue,
-                  !varfixing, implvar, impltype, implbound, infeasible, nbdchgs) );
+            CHECK_OKAY( SCIPvarAddImplic(var->data.aggregate.var, blkmem, set, stat, lp, cliquetable, branchcand, 
+                  eventqueue, !varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
          }
       }
       break;
@@ -5988,71 +6217,14 @@ RETCODE SCIPvarAddImplic(
       assert(var->negatedvar->negatedvar == var);
       assert(SCIPvarGetType(var->negatedvar) == SCIP_VARTYPE_BINARY);
 
-      CHECK_OKAY( SCIPvarAddImplic(var->negatedvar, blkmem, set, stat, lp, branchcand, eventqueue, 
-            !varfixing, implvar, impltype, implbound, infeasible, nbdchgs) );
+      CHECK_OKAY( SCIPvarAddImplic(var->negatedvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
+            !varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
       break;
       
    default:
       errorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
-
-   return SCIP_OKAY;
-}
-
-/** replaces variables in implications of binary variable by their active problem variable counterparts */
-RETCODE SCIPvarUseActiveImplics(
-   VAR*             var,                /**< problem variable */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< current LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   EVENTQUEUE*      eventqueue,         /**< event queue */
-   Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
-   )
-{
-   IMPLICS* oldimplics;
-   int j;
-   Bool varfixing;
-
-   assert(var != NULL);
-   assert(infeasible != NULL);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-
-   *infeasible = FALSE;
-
-   if( var->implics == NULL )
-      return SCIP_OKAY;
-
-   debugMessage("using active implications for variable <%s>\n", SCIPvarGetName(var));
-
-   oldimplics = var->implics;
-   var->implics = NULL;
-
-   varfixing = FALSE;
-   do
-   {
-      int nimpls;
-      VAR** implvars;
-      BOUNDTYPE* impltypes;
-      Real* implbounds;
-
-      nimpls = SCIPimplicsGetNImpls(oldimplics, varfixing);
-      implvars = SCIPimplicsGetVars(oldimplics, varfixing);
-      impltypes = SCIPimplicsGetTypes(oldimplics, varfixing);
-      implbounds = SCIPimplicsGetBounds(oldimplics, varfixing);
-
-      for( j = 0; j < nimpls && !(*infeasible); ++j )
-      {
-         CHECK_OKAY( SCIPvarAddImplic(var, blkmem, set, stat, lp, branchcand, eventqueue,
-               varfixing, implvars[j], impltypes[j], implbounds[j], infeasible, NULL) );
-      }
-      varfixing = !varfixing;
-   }
-   while( varfixing );
-
-   SCIPimplicsFree(&oldimplics, blkmem);
 
    return SCIP_OKAY;
 }
@@ -6171,6 +6343,9 @@ RETCODE SCIPvarAddClique(
       /* check consistency of cliquelist */
       SCIPcliquelistCheck(var->cliquelist, var);
 
+      /* issue IMPLADDED event */
+      CHECK_OKAY( varEventImplAdded(var, blkmem, set, eventqueue) );
+
       /* if the variable now appears twice with the same value in the clique, it can be fixed to the opposite value */
       if( doubleentry )
       {
@@ -6200,6 +6375,26 @@ RETCODE SCIPvarAddClique(
          }
       }
    }
+
+   return SCIP_OKAY;
+}
+
+/** deletes the variable from the list of cliques the binary variable is member of, but does not change the clique
+ *  itself
+ */
+RETCODE SCIPvarDelCliqueFromList(
+   VAR*             var,                /**< problem variable  */
+   BLKMEM*          blkmem,             /**< block memory */
+   Bool             value,              /**< value of the variable in the clique */
+   CLIQUE*          clique              /**< clique that should be removed from the variable's clique list */
+   )
+{
+   assert(var != NULL);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY); 
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+
+   /* delete clique from variable's clique list */
+   CHECK_OKAY( SCIPcliquelistDel(&var->cliquelist, blkmem, value, clique) );
 
    return SCIP_OKAY;
 }
@@ -9447,7 +9642,7 @@ int SCIPvarGetNVlbs(
 {
    assert(var != NULL);
 
-   return var->vlbs != NULL ? SCIPvboundsGetNVbds(var->vlbs) : 0;
+   return SCIPvboundsGetNVbds(var->vlbs);
 }
 
 /** gets array with bounding variables z_i in variable lower bounds x >= b_i*z_i + d_i of given variable x;
@@ -9459,7 +9654,7 @@ VAR** SCIPvarGetVlbVars(
 {
    assert(var != NULL);
 
-   return var->vlbs != NULL ? SCIPvboundsGetVars(var->vlbs) : NULL;
+   return SCIPvboundsGetVars(var->vlbs);
 }
 
 /** gets array with bounding coefficients b_i in variable lower bounds x >= b_i*z_i + d_i of given variable x */
@@ -9469,7 +9664,7 @@ Real* SCIPvarGetVlbCoefs(
 {
    assert(var != NULL);
 
-   return var->vlbs != NULL ? SCIPvboundsGetCoefs(var->vlbs) : NULL;
+   return SCIPvboundsGetCoefs(var->vlbs);
 }
 
 /** gets array with bounding constants d_i in variable lower bounds x >= b_i*z_i + d_i of given variable x */
@@ -9479,7 +9674,7 @@ Real* SCIPvarGetVlbConstants(
 {
    assert(var != NULL);
 
-   return var->vlbs != NULL ? SCIPvboundsGetConstants(var->vlbs) : NULL;
+   return SCIPvboundsGetConstants(var->vlbs);
 }
 
 /** gets number of variable upper bounds x <= b_i*z_i + d_i of given variable x */
@@ -9489,7 +9684,7 @@ int SCIPvarGetNVubs(
 {
    assert(var != NULL);
 
-   return var->vubs != NULL ? SCIPvboundsGetNVbds(var->vubs) : 0;
+   return SCIPvboundsGetNVbds(var->vubs);
 }
 
 /** gets array with bounding variables z_i in variable upper bounds x <= b_i*z_i + d_i of given variable x;
@@ -9501,7 +9696,7 @@ VAR** SCIPvarGetVubVars(
 {
    assert(var != NULL);
 
-   return var->vubs != NULL ? SCIPvboundsGetVars(var->vubs) : NULL;
+   return SCIPvboundsGetVars(var->vubs);
 }
 
 /** gets array with bounding coefficients b_i in variable upper bounds x <= b_i*z_i + d_i of given variable x */
@@ -9511,7 +9706,7 @@ Real* SCIPvarGetVubCoefs(
 {
    assert(var != NULL);
 
-   return var->vubs != NULL ? SCIPvboundsGetCoefs(var->vubs) : NULL;
+   return SCIPvboundsGetCoefs(var->vubs);
 }
 
 /** gets array with bounding constants d_i in variable upper bounds x <= b_i*z_i + d_i of given variable x */
@@ -9521,111 +9716,119 @@ Real* SCIPvarGetVubConstants(
 {
    assert(var != NULL);
 
-   return var->vubs != NULL ? SCIPvboundsGetConstants(var->vubs) : NULL;
+   return SCIPvboundsGetConstants(var->vubs);
 }
 
-/** gets number of implications  y <= b or y >= b for x == 0 or x == 1 of given variable x, 
+/** gets number of implications  y <= b or y >= b for x == 0 or x == 1 of given active problem variable x, 
  *  there are no implications for nonbinary variable x
  */
 int SCIPvarGetNImpls(
-   VAR*             var,                /**< problem variable */
+   VAR*             var,                /**< active problem variable */
    Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
    )
 {
    assert(var != NULL);
+   assert(SCIPvarIsActive(var));
 
-   return var->implics != NULL ? SCIPimplicsGetNImpls(var->implics, varfixing) : 0;
+   return SCIPimplicsGetNImpls(var->implics, varfixing);
 }
 
-/** gets number of implications  y <= 0 or y >= 1 for x == 0 or x == 1 of given variable x with binary y, 
+/** gets number of implications  y <= 0 or y >= 1 for x == 0 or x == 1 of given active problem variable x with binary y, 
  *  there are no implications for nonbinary variable x
  */
 int SCIPvarGetNBinImpls(
-   VAR*             var,                /**< problem variable */
+   VAR*             var,                /**< active problem variable */
    Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
    )
 {
    assert(var != NULL);
+   assert(SCIPvarIsActive(var));
 
-   return var->implics != NULL ? SCIPimplicsGetNBinImpls(var->implics, varfixing) : 0;
+   return SCIPimplicsGetNBinImpls(var->implics, varfixing);
 }
 
-/** gets array with implication variables y of implications  y <= b or y >= b for x == 0 or x == 1 of given variable x,  
- *  there are no implications for nonbinary variable x;
+/** gets array with implication variables y of implications  y <= b or y >= b for x == 0 or x == 1 of given active
+ *  problem variable x, there are no implications for nonbinary variable x;
  *  the implications are sorted such that implications with binary implied variables precede the ones with non-binary
  *  implied variables, and as a second criteria, the implied variables are sorted by increasing variable index
  *  (see SCIPvarGetIndex())
  */
 VAR** SCIPvarGetImplVars(
-   VAR*             var,                /**< problem variable */
+   VAR*             var,                /**< active problem variable */
    Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
    )
 {
    assert(var != NULL);
+   assert(SCIPvarIsActive(var));
 
-   return var->implics != NULL ? SCIPimplicsGetVars(var->implics, varfixing) : NULL;
+   return SCIPimplicsGetVars(var->implics, varfixing);
 }
 
-/** gets array with implication types of implications  y <= b or y >= b for x == 0 or x == 1 of given variable x
- *  (SCIP_BOUNDTYPE_UPPER if y <= b, SCIP_BOUNDTYPE_LOWER if y >= b), 
+/** gets array with implication types of implications  y <= b or y >= b for x == 0 or x == 1 of given active problem
+ *  variable x (SCIP_BOUNDTYPE_UPPER if y <= b, SCIP_BOUNDTYPE_LOWER if y >= b), 
  *  there are no implications for nonbinary variable x
  */
 BOUNDTYPE* SCIPvarGetImplTypes(
-   VAR*             var,                /**< problem variable */
+   VAR*             var,                /**< active problem variable */
    Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
    )
 {
    assert(var != NULL);
+   assert(SCIPvarIsActive(var));
 
-   return var->implics != NULL ? SCIPimplicsGetTypes(var->implics, varfixing) : NULL;
+   return SCIPimplicsGetTypes(var->implics, varfixing);
 }
 
-/** gets array with implication bounds b of implications  y <= b or y >= b for x == 0 or x == 1 of given variable x,  
- *  there are no implications for nonbinary variable x
+/** gets array with implication bounds b of implications  y <= b or y >= b for x == 0 or x == 1 of given active problem
+ *  variable x, there are no implications for nonbinary variable x
  */
 Real* SCIPvarGetImplBounds(
-   VAR*             var,                /**< problem variable */
+   VAR*             var,                /**< active problem variable */
    Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
    )
 {
    assert(var != NULL);
+   assert(SCIPvarIsActive(var));
 
-   return var->implics != NULL ? SCIPimplicsGetBounds(var->implics, varfixing) : NULL;
+   return SCIPimplicsGetBounds(var->implics, varfixing);
 }
 
-/** gets array with unique ids of implications  y <= b or y >= b for x == 0 or x == 1 of given variable x,  
+/** gets array with unique ids of implications  y <= b or y >= b for x == 0 or x == 1 of given active problem variable x,  
  *  there are no implications for nonbinary variable x
  */
 int* SCIPvarGetImplIds(
-   VAR*             var,                /**< problem variable */
+   VAR*             var,                /**< active problem variable */
    Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
    )
 {
    assert(var != NULL);
+   assert(SCIPvarIsActive(var));
 
-   return var->implics != NULL ? SCIPimplicsGetIds(var->implics, varfixing) : NULL;
+   return SCIPimplicsGetIds(var->implics, varfixing);
 }
 
-/** gets number of cliques, the variable is contained in */
+/** gets number of cliques, the active variable is contained in */
 int SCIPvarGetNCliques(
-   VAR*             var,                /**< problem variable */
+   VAR*             var,                /**< active problem variable */
    Bool             varfixing           /**< FALSE for cliques containing x == 0, TRUE for x == 1 */
    )
 {
    assert(var != NULL);
+   assert(SCIPvarIsActive(var));
 
-   return var->cliquelist != NULL ? SCIPcliquelistGetNCliques(var->cliquelist, varfixing) : 0;
+   return SCIPcliquelistGetNCliques(var->cliquelist, varfixing);
 }
 
-/** gets array of cliques, the variable is contained in */
+/** gets array of cliques, the active variable is contained in */
 CLIQUE** SCIPvarGetCliques(
-   VAR*             var,                /**< problem variable */
+   VAR*             var,                /**< active problem variable */
    Bool             varfixing           /**< FALSE for cliques containing x == 0, TRUE for x == 1 */
    )
 {
    assert(var != NULL);
+   assert(SCIPvarIsActive(var));
 
-   return var->cliquelist != NULL ? SCIPcliquelistGetCliques(var->cliquelist, varfixing) : NULL;
+   return SCIPcliquelistGetCliques(var->cliquelist, varfixing);
 }
 
 /** includes event handler with given data in variable's event filter */

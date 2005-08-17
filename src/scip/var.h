@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.98 2005/08/10 17:07:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.99 2005/08/17 14:25:31 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -358,6 +358,7 @@ RETCODE SCIPvarAggregate(
    PRIMAL*          primal,             /**< primal data */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
+   CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             aggvar,             /**< loose variable y in aggregation x = a*y + c */
@@ -378,6 +379,7 @@ RETCODE SCIPvarMultiaggregate(
    PRIMAL*          primal,             /**< primal data */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
+   CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    int              naggvars,           /**< number n of variables in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
@@ -668,11 +670,13 @@ RETCODE SCIPvarAddVlb(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
+   CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             vlbvar,             /**< variable z    in x >= b*z + d */
    Real             vlbcoef,            /**< coefficient b in x >= b*z + d */
    Real             vlbconstant,        /**< constant d    in x >= b*z + d */
+   Bool             transitive,         /**< should transitive closure of implication also be added? */
    Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
    int*             nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    );
@@ -688,26 +692,15 @@ RETCODE SCIPvarAddVub(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
+   CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             vubvar,             /**< variable z    in x <= b*z + d */
    Real             vubcoef,            /**< coefficient b in x <= b*z + d */
    Real             vubconstant,        /**< constant d    in x <= b*z + d */
+   Bool             transitive,         /**< should transitive closure of implication also be added? */
    Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
    int*             nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
-   );
-
-/** replaces bounding variables in variable bounds of variable by their active problem variable counterparts */
-extern
-RETCODE SCIPvarUseActiveVbds(
-   VAR*             var,                /**< problem variable */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< current LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   EVENTQUEUE*      eventqueue,         /**< event queue */
-   Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    );
 
 /** informs binary variable x about a globally valid implication:  x == 0 or x == 1  ==>  y <= b  or  y >= b;
@@ -723,27 +716,16 @@ RETCODE SCIPvarAddImplic(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
+   CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Bool             varfixing,          /**< FALSE if y should be added in implications for x == 0, TRUE for x == 1 */
    VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
    BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
    Real             implbound,          /**< bound b    in implication y <= b or y >= b */
+   Bool             transitive,         /**< should transitive closure of implication also be added? */
    Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
    int*             nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
-   );
-
-/** replaces variables in implications of binary variable by their active problem variable counterparts */
-extern
-RETCODE SCIPvarUseActiveImplics(
-   VAR*             var,                /**< problem variable */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< current LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   EVENTQUEUE*      eventqueue,         /**< event queue */
-   Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    );
 
 /** adds the variable to the given clique and updates the list of cliques the binary variable is member of;
@@ -773,6 +755,17 @@ RETCODE SCIPvarDelClique(
    BLKMEM*          blkmem,             /**< block memory */
    Bool             value,              /**< value of the variable in the clique */
    CLIQUE*          clique              /**< clique the variable should be removed from */
+   );
+
+/** deletes the variable from the list of cliques the binary variable is member of, but does not change the clique
+ *  itself
+ */
+extern
+RETCODE SCIPvarDelCliqueFromList(
+   VAR*             var,                /**< problem variable  */
+   BLKMEM*          blkmem,             /**< block memory */
+   Bool             value,              /**< value of the variable in the clique */
+   CLIQUE*          clique              /**< clique that should be removed from the variable's clique list */
    );
 
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score

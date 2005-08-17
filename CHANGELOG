@@ -33,6 +33,7 @@ interface:
 - new methods SCIPvarGetNCliques(), SCIPvarGetCliques(), SCIPvarsHaveCommonClique(), SCIPvarHasImplic()
 - new methods SCIPcliqueGetNVars(), SCIPcliqueGetVars(), SCIPcliqueGetValues(), SCIPcliqueGetId()
 - new methods SCIPaddClique(), SCIPcalcCliquePartition()
+- new event SCIP_EVENTTYPE_IMPLADDED
 
 plugins:
 - added command "write solution" to default dialog
@@ -65,6 +66,7 @@ parameters:
 - parameters constraints/agelimit and constraints/obsoleteage now iterprete the value 0 as a dynamic setting
 - changed default values of constraints/agelimit and constraints/obsoleteage to 0
 - changed default values of heuristics/objpscostdiving/maxsols and heuristics/rootsoldiving/maxsols to -1
+- new parameter constraints/knapsack/disaggregation
 
 features:
 - reactivated multiaggregation in cons_linear.c on binary variables again (possible due to bug fix below)
@@ -86,6 +88,7 @@ features:
 - modified the Makefile to accept an additional parameter VERBOSE={true,false}
 - improved knapsack cover separation
 - changed linear constraint presolving s.t. redundant sides are not removed if constraint is an equality
+- incorporated clique and implication information in knapsack constraint presolving
 
 fixed bugs:
 - LP primal feasibility for bounds is now defined as absolute measure (was relative to the bound before);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_implics.h,v 1.1 2005/08/12 11:06:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_implics.h,v 1.2 2005/08/17 14:25:30 bzfpfend Exp $"
 
 /**@file   implics.h
  * @brief  public methods for implications, variable bounds, and cliques
@@ -41,6 +41,24 @@
 /*
  * methods for cliques
  */
+
+/** returns the position of the given variable/value pair in the clique; returns -1 if variable/value pair is not member
+ *  of the clique
+ */
+extern
+int SCIPcliqueSearchVar(
+   CLIQUE*          clique,             /**< clique data structure */
+   VAR*             var,                /**< variable to search for */
+   Bool             value               /**< value of the variable in the clique */
+   );
+
+/** returns whether the given variable/value pair is member of the given clique */
+extern
+Bool SCIPcliqueHasVar(
+   CLIQUE*          clique,             /**< clique data structure */
+   VAR*             var,                /**< variable to remove from the clique */
+   Bool             value               /**< value of the variable in the clique */
+   );
 
 #ifndef NDEBUG
 

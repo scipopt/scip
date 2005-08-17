@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.h,v 1.37 2005/07/15 17:20:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.h,v 1.38 2005/08/17 14:25:29 bzfpfend Exp $"
 
 /**@file   event.h
  * @brief  internal methods for managing events
@@ -174,6 +174,14 @@ RETCODE SCIPeventCreateUbChanged(
    VAR*             var,                /**< variable whose bound changed */
    Real             oldbound,           /**< old bound before bound changed */
    Real             newbound            /**< new bound after bound changed */
+   );
+
+/** creates an event for an addition to the variable's implications list, clique or variable bounds information */
+extern
+RETCODE SCIPeventCreateImplAdded(
+   EVENT**          event,              /**< pointer to store the event */
+   BLKMEM*          blkmem,             /**< block memory */
+   VAR*             var                 /**< variable that was fixed */
    );
 
 /** frees an event */
