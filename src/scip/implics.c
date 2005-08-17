@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.5 2005/08/12 12:36:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.6 2005/08/17 13:51:01 bzfberth Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -1799,22 +1799,26 @@ void SCIPcliquelistCheck(
 {
    int value;
 
-   assert(cliquelist != NULL);
-   assert(SCIPvarGetNCliques(var, FALSE) == cliquelist->ncliques[0]);
-   assert(SCIPvarGetCliques(var, FALSE) == cliquelist->cliques[0]);
-   assert(SCIPvarGetNCliques(var, TRUE) == cliquelist->ncliques[1]);
-   assert(SCIPvarGetCliques(var, TRUE) == cliquelist->cliques[1]);
+   assert(SCIPvarGetNCliques(var, FALSE) == SCIPcliquelistGetNCliques(cliquelist, FALSE));
+   assert(SCIPvarGetCliques(var, FALSE) == SCIPcliquelistGetCliques(cliquelist, FALSE));
+   assert(SCIPvarGetNCliques(var, TRUE) == SCIPcliquelistGetNCliques(cliquelist, TRUE));
+   assert(SCIPvarGetCliques(var, TRUE) == SCIPcliquelistGetCliques(cliquelist, TRUE));
 
    for( value = 0; value < 2; ++value )
    {
+      CLIQUE** cliques;
+      int ncliques;
       int i;
       
-      for( i = 0; i < cliquelist->ncliques[value]; ++i )
+      ncliques = SCIPcliquelistGetNCliques(cliquelist, (Bool)value);
+      cliques = SCIPcliquelistGetCliques(cliquelist, (Bool)value);
+      for( i = 0; i < ncliques; ++i )
       {
          CLIQUE* clique;
          int pos;
 
-         clique = cliquelist->cliques[value][i];
+         clique = cliques[i];
+         assert(clique != NULL);
          pos = cliqueSearchVar(clique, var, (Bool)value);
          assert(0 <= pos && pos < clique->nvars);
          assert(clique->vars[pos] == var);

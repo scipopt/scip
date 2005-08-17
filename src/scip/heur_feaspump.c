@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.32 2005/06/23 18:33:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.33 2005/08/17 13:51:01 bzfberth Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -455,6 +455,9 @@ DECL_HEUREXEC(heurExecFeaspump)
       {
          var = vars[i];
          solval = SCIPvarGetLPSol(var);
+         /**@todo the scaling factor (nbinvars + nintvars) should be replaced by the number of bins/ints that are on
+          *       one of the bounds
+          */
          orgobjcoeff = SCIPvarGetObj(var) * SQRT((Real)(nbinvars + nintvars)) / objnorm;
 
          /* handle all integer variables*/

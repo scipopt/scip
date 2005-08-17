@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.153 2005/08/09 16:27:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.154 2005/08/17 13:51:02 bzfberth Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -607,7 +607,8 @@ RETCODE nodeReleaseParent(
       {
       case SCIP_NODETYPE_FOCUSNODE:
          assert(parent->active);
-         assert(SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
+         assert(SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE
+            || SCIPnodeGetType(node) == SCIP_NODETYPE_LEAF);
          if( SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD )
             treeRemoveChild(tree, node);
          freeParent = FALSE; /* don't kill the focus node at this point */
@@ -1297,7 +1298,7 @@ RETCODE SCIPnodeAddBoundinfer(
       /* adjust the new lower bound */
       SCIPvarAdjustLb(var, set, &newbound);
       assert(SCIPsetIsGT(set, newbound, oldlb));
-      assert(SCIPsetIsLE(set, newbound, oldub));
+      assert(SCIPsetIsFeasLE(set, newbound, oldub));
       oldbound = oldlb;
       newbound = MIN(newbound, oldub);
    }
@@ -1308,7 +1309,7 @@ RETCODE SCIPnodeAddBoundinfer(
       /* adjust the new upper bound */
       SCIPvarAdjustUb(var, set, &newbound);
       assert(SCIPsetIsLT(set, newbound, oldub));
-      assert(SCIPsetIsGE(set, newbound, oldlb));
+      assert(SCIPsetIsFeasGE(set, newbound, oldlb));
       oldbound = oldub;
       newbound = MAX(newbound, oldlb);
    }
@@ -2369,6 +2370,7 @@ RETCODE nodeToLeaf(
 
 #ifndef NDEBUG
    /* check, if the LP fork is the first node with LP information on the path back to the root */
+   if( cutoffbound != REAL_MIN ) /* if the node was cut off in SCIPnodeFocus(), the lpfork is invalid */
    {
       NODE* pathnode;
       pathnode = (*node)->parent;
