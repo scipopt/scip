@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.175 2005/08/10 17:07:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.176 2005/08/19 10:45:05 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4004,8 +4004,8 @@ RETCODE convertLongEquality(
       var = vars[v];
       val = vals[v];
 
-      assert(SCIPvarGetNLocksDown(var) >= 1); /* because variable is locked in this equality */
-      assert(SCIPvarGetNLocksUp(var) >= 1);
+      assert(!SCIPconsIsChecked(cons) || SCIPvarGetNLocksDown(var) >= 1); /* because variable is locked in this equality */
+      assert(!SCIPconsIsChecked(cons) || SCIPvarGetNLocksUp(var) >= 1);
 
       slacktype = SCIPvarGetType(var);
       integral = integral && (slacktype != SCIP_VARTYPE_CONTINUOUS) && SCIPisIntegral(scip, val);
@@ -4015,14 +4015,14 @@ RETCODE convertLongEquality(
          continue;
 
       /* check, if variable is used in other constraints than this one */
-      if( SCIPvarGetNLocksDown(var) > 1 || SCIPvarGetNLocksUp(var) > 1 )
+      if( SCIPvarGetNLocksDown(var) > 1 || SCIPvarGetNLocksUp(var) > 1
+         || (!SCIPconsIsChecked(cons) && (SCIPvarGetNLocksDown(var) > 0 || SCIPvarGetNLocksUp(var) > 0)) )
          continue;
 
       /* check, if variable can be used as a slack variable */
       if( slacktype == SCIP_VARTYPE_CONTINUOUS
          || slacktype == SCIP_VARTYPE_IMPLINT
-         || (integral && SCIPisEQ(scip, REALABS(val), 1.0))
-          )
+         || (integral && SCIPisEQ(scip, REALABS(val), 1.0)) )
       {
          slackdomrng = SCIPvarGetUbGlobal(var) - SCIPvarGetLbGlobal(var);
          if( bestslackpos == -1
