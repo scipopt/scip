@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.56 2005/07/15 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.57 2005/08/22 18:35:46 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  mps file reader
@@ -57,28 +57,28 @@ struct MpsInput
 {
    MPSSECTION      section;
    SCIPFILE*       fp;
-   int             lineno;
-   OBJSENSE        objsense;
-   Bool            haserror;
-   char            buf[MPS_MAX_LINELEN];
-   const char*     f0;
-   const char*     f1;
-   const char*     f2;
-   const char*     f3;
-   const char*     f4;
-   const char*     f5;
-   char            probname[MPS_MAX_LINELEN];
-   char            objname [MPS_MAX_LINELEN];
-   Bool            isinteger;
-   Bool            isnewformat;
+   int                  lineno;
+   SCIP_OBJSENSE        objsense;
+   SCIP_Bool            haserror;
+   char                 buf[MPS_MAX_LINELEN];
+   const char*          f0;
+   const char*          f1;
+   const char*          f2;
+   const char*          f3;
+   const char*          f4;
+   const char*          f5;
+   char                 probname[MPS_MAX_LINELEN];
+   char                 objname [MPS_MAX_LINELEN];
+   SCIP_Bool            isinteger;
+   SCIP_Bool            isnewformat;
 };
 typedef struct MpsInput MPSINPUT;
 
 
 
 static
-RETCODE mpsinputCreate(
-   SCIP*            scip,
+SCIP_RETCODE mpsinputCreate(
+   SCIP*                 scip,
    MPSINPUT**       mpsi,
    SCIPFILE*        fp
    )
@@ -86,7 +86,7 @@ RETCODE mpsinputCreate(
    assert(mpsi != NULL);
    assert(fp != NULL);
 
-   CHECK_OKAY( SCIPallocMemory(scip, mpsi) );
+   SCIP_CALL( SCIPallocMemory(scip, mpsi) );
 
    (*mpsi)->section     = MPS_NAME;
    (*mpsi)->fp          = fp;
@@ -110,7 +110,7 @@ RETCODE mpsinputCreate(
 
 static
 void mpsinputFree(
-   SCIP*            scip,
+   SCIP*                 scip,
    MPSINPUT**       mpsi
    )
 {
@@ -222,7 +222,7 @@ const char* mpsinputObjname(
 }
 
 static
-OBJSENSE mpsinputObjsense(
+SCIP_OBJSENSE mpsinputObjsense(
    const MPSINPUT*  mpsi
    )
 {
@@ -232,7 +232,7 @@ OBJSENSE mpsinputObjsense(
 }
 
 static
-Bool mpsinputHasError(
+SCIP_Bool mpsinputHasError(
    const MPSINPUT*  mpsi
    )
 {
@@ -242,7 +242,7 @@ Bool mpsinputHasError(
 }
 
 static
-Bool mpsinputIsInteger(
+SCIP_Bool mpsinputIsInteger(
    const MPSINPUT*  mpsi
    )
 {
@@ -265,7 +265,7 @@ void mpsinputSetSection(
 static
 void mpsinputSetProbname(
    MPSINPUT*        mpsi,
-   const char*      probname
+   const char*           probname
    )
 {
    assert(mpsi     != NULL);
@@ -278,7 +278,7 @@ void mpsinputSetProbname(
 static
 void mpsinputSetObjname(
    MPSINPUT*        mpsi, 
-   const char*      objname
+   const char*           objname
    )
 {
    assert(mpsi != NULL);
@@ -291,7 +291,7 @@ void mpsinputSetObjname(
 static
 void mpsinputSetObjsense(
    MPSINPUT*        mpsi,
-   OBJSENSE         sense
+   SCIP_OBJSENSE         sense
    )
 {
    assert(mpsi != NULL);
@@ -313,12 +313,12 @@ void mpsinputSyntaxerror(
 
 static
 void mpsinputEntryIgnored(
-   SCIP*            scip,               /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    MPSINPUT*        mpsi, 
-   const char*      what, 
-   const char*      what_name, 
-   const char*      entity, 
-   const char*      entity_name
+   const char*           what, 
+   const char*           what_name, 
+   const char*           entity, 
+   const char*           entity_name
    )
 {
    assert(mpsi        != NULL);
@@ -335,8 +335,8 @@ void mpsinputEntryIgnored(
  */
 static
 void clearFrom(
-   char*            buf,
-   unsigned int     pos
+   char*                 buf,
+   unsigned int          pos
    )
 {
    unsigned int i;
@@ -350,9 +350,9 @@ void clearFrom(
  */
 static
 void patchField(
-   char*            buf,
-   int              beg,
-   int              end
+   char*                 buf,
+   int                   beg,
+   int                   end
    )
 {
    int i;
@@ -371,15 +371,15 @@ void patchField(
 /* read a mps format data line and parse the fields.
  */
 static
-Bool mpsinputReadLine(
+SCIP_Bool mpsinputReadLine(
    MPSINPUT*        mpsi
    )
 {
    unsigned int len;
    unsigned int i;
-   int   space;
+   int        space;
    char* s;
-   Bool  is_marker;
+   SCIP_Bool  is_marker;
 
    do
    {
@@ -447,14 +447,14 @@ Bool mpsinputReadLine(
              * But are there also the non space where they
              * should be ?
              */
-            Bool number = isdigit(mpsi->buf[24]) || isdigit(mpsi->buf[25]) 
+            SCIP_Bool number = isdigit(mpsi->buf[24]) || isdigit(mpsi->buf[25]) 
                || isdigit(mpsi->buf[26]) || isdigit(mpsi->buf[27]) 
                || isdigit(mpsi->buf[28]) || isdigit(mpsi->buf[29]) 
                || isdigit(mpsi->buf[30]) || isdigit(mpsi->buf[31]) 
                || isdigit(mpsi->buf[32]) || isdigit(mpsi->buf[33]) 
                || isdigit(mpsi->buf[34]) || isdigit(mpsi->buf[35]); 
             
-            /* len < 13 is handle ROW lines with embedded spaces
+            /* len < 13 is handle SCIP_ROW lines with embedded spaces
              * in the names correctly
              */
             if (number || len < 13)
@@ -547,8 +547,8 @@ Bool mpsinputReadLine(
 static
 void mpsinputInsertName(
    MPSINPUT*        mpsi,
-   const char*      name,
-   Bool             second
+   const char*           name,
+   SCIP_Bool             second
    )
 {
    assert(mpsi != NULL);
@@ -570,7 +570,7 @@ void mpsinputInsertName(
 /* Process NAME section.
  */
 static
-RETCODE readName(
+SCIP_RETCODE readName(
    MPSINPUT*        mpsi
    )
 {
@@ -611,10 +611,10 @@ RETCODE readName(
    return SCIP_OKAY;
 }
 
-/* Process OBJSEN section. This Section is an ILOG extension.
+/* Process SCIP_OBJSEN section. This Section is an ILOG extension.
  */
 static
-RETCODE readObjsen(
+SCIP_RETCODE readObjsen(
    MPSINPUT*        mpsi
    )
 {
@@ -660,7 +660,7 @@ RETCODE readObjsen(
 /* Process OBJNAME section. This Section is an ILOG extension.
  */
 static
-RETCODE readObjname(
+SCIP_RETCODE readObjname(
    MPSINPUT*        mpsi
    )
 {
@@ -695,9 +695,9 @@ RETCODE readObjname(
 /* Process ROWS section. 
  */
 static 
-RETCODE readRows(
+SCIP_RETCODE readRows(
    MPSINPUT*        mpsi,
-   SCIP*            scip                /**< SCIP data structure */   
+   SCIP*                 scip                /**< SCIP data structure */   
    )
 {
    while(mpsinputReadLine(mpsi))
@@ -720,37 +720,37 @@ RETCODE readRows(
       }
       else
       {
-         CONS* cons;
-         Bool dynamicrows;
-         Bool dynamicconss;
+         SCIP_CONS* cons;
+         SCIP_Bool dynamicrows;
+         SCIP_Bool dynamicconss;
 
          cons = SCIPfindCons(scip, mpsinputField2(mpsi));
          if( cons != NULL )
             break;
 
-         CHECK_OKAY( SCIPgetBoolParam(scip, "reading/mpsreader/dynamicconss", &dynamicconss) );
-         CHECK_OKAY( SCIPgetBoolParam(scip, "reading/mpsreader/dynamicrows", &dynamicrows) );
+         SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamicconss", &dynamicconss) );
+         SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamicrows", &dynamicrows) );
 
          switch(*mpsinputField1(mpsi))
          {
          case 'G' :
-            CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 0.0, SCIPinfinity(scip), 
+            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 0.0, SCIPinfinity(scip), 
                   !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
             break;
          case 'E' :
-            CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 0.0, 0.0, 
+            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 0.0, 0.0, 
                   !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
             break;
          case 'L' :
-            CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, -SCIPinfinity(scip), 0.0,
+            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, -SCIPinfinity(scip), 0.0,
                   !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
             break;
          default :
             mpsinputSyntaxerror(mpsi);
             return SCIP_OKAY;
          }
-         CHECK_OKAY( SCIPaddCons(scip, cons) );
-         CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
    }
    mpsinputSyntaxerror(mpsi);
@@ -761,15 +761,15 @@ RETCODE readRows(
 /* Process COLUMNS section.
  */
 static
-RETCODE readCols(
+SCIP_RETCODE readCols(
    MPSINPUT*        mpsi,
-   SCIP*            scip                /**< SCIP data structure */   
+   SCIP*                 scip                /**< SCIP data structure */   
    ) 
 {
-   char     colname[MPS_MAX_LINELEN] = { '\0' };
-   CONS*    cons;
-   VAR*     var;
-   Real     val;
+   char          colname[MPS_MAX_LINELEN] = { '\0' };
+   SCIP_CONS*    cons;
+   SCIP_VAR*     var;
+   SCIP_Real     val;
 
    var = NULL;
    while(mpsinputReadLine(mpsi))
@@ -782,8 +782,8 @@ RETCODE readCols(
          /* add the last variable to the problem */
          if( var != NULL )
          {
-            CHECK_OKAY( SCIPaddVar(scip, var) );
-            CHECK_OKAY( SCIPreleaseVar(scip, &var) );
+            SCIP_CALL( SCIPaddVar(scip, var) );
+            SCIP_CALL( SCIPreleaseVar(scip, &var) );
          }
          assert(var == NULL);
 
@@ -796,30 +796,30 @@ RETCODE readCols(
       /* new column? */
       if (strcmp(colname, mpsinputField1(mpsi)))
       {
-         Bool dynamiccols;
+         SCIP_Bool dynamiccols;
 
          /* add the last variable to the problem */
          if( var != NULL )
          {
-            CHECK_OKAY( SCIPaddVar(scip, var) );
-            CHECK_OKAY( SCIPreleaseVar(scip, &var) );
+            SCIP_CALL( SCIPaddVar(scip, var) );
+            SCIP_CALL( SCIPreleaseVar(scip, &var) );
          }
          assert(var == NULL);
 
          strcpy(colname, mpsinputField1(mpsi));
 
-         CHECK_OKAY( SCIPgetBoolParam(scip, "reading/mpsreader/dynamiccols", &dynamiccols) );
+         SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamiccols", &dynamiccols) );
 
          if( mpsinputIsInteger(mpsi) )
          {
             /* for integer variables, default bounds are 0 <= x <= 1, and default cost is 0 */
-            CHECK_OKAY( SCIPcreateVar(scip, &var, colname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, !dynamiccols, dynamiccols,
+            SCIP_CALL( SCIPcreateVar(scip, &var, colname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, !dynamiccols, dynamiccols,
                   NULL, NULL, NULL, NULL) );
          }
          else
          {
             /* for continuous variables, default bounds are 0 <= x, and default cost is 0 */
-            CHECK_OKAY( SCIPcreateVar(scip, &var, colname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
+            SCIP_CALL( SCIPcreateVar(scip, &var, colname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
                   !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL) );
          }
       }
@@ -829,7 +829,7 @@ RETCODE readCols(
 
       if (!strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)))
       {
-         CHECK_OKAY( SCIPchgVarObj(scip, var, val) );
+         SCIP_CALL( SCIPchgVarObj(scip, var, val) );
       }
       else 
       {
@@ -838,7 +838,7 @@ RETCODE readCols(
             mpsinputEntryIgnored(scip, mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField2(mpsi));
          else if( !SCIPisZero(scip, val) )
          {
-            CHECK_OKAY( SCIPaddCoefLinear(scip, cons, var, val) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, cons, var, val) );
          }
       }
       if (mpsinputField5(mpsi) != NULL)
@@ -849,7 +849,7 @@ RETCODE readCols(
 
          if (!strcmp(mpsinputField4(mpsi), mpsinputObjname(mpsi)))
          {
-            CHECK_OKAY( SCIPchgVarObj(scip, var, val) );
+            SCIP_CALL( SCIPchgVarObj(scip, var, val) );
          }
          else 
          {
@@ -858,7 +858,7 @@ RETCODE readCols(
                mpsinputEntryIgnored(scip, mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField4(mpsi));
             else if( !SCIPisZero(scip, val) )
             {
-               CHECK_OKAY( SCIPaddCoefLinear(scip, cons, var, val) );
+               SCIP_CALL( SCIPaddCoefLinear(scip, cons, var, val) );
             }
          }
       }
@@ -871,16 +871,16 @@ RETCODE readCols(
 /* Process RHS section. 
  */
 static
-RETCODE readRhs(
+SCIP_RETCODE readRhs(
    MPSINPUT*        mpsi,
-   SCIP*            scip                /**< SCIP data structure */   
+   SCIP*                 scip                /**< SCIP data structure */   
    )
 {
-   char   rhsname[MPS_MAX_LINELEN] = { '\0' };
-   CONS*  cons;
-   Real   lhs;
-   Real   rhs;
-   Real   val;
+   char        rhsname[MPS_MAX_LINELEN] = { '\0' };
+   SCIP_CONS*  cons;
+   SCIP_Real   lhs;
+   SCIP_Real   rhs;
+   SCIP_Real   val;
 
    while(mpsinputReadLine(mpsi))
    {
@@ -924,21 +924,21 @@ RETCODE readRhs(
             {
                /* lhs = -infinity -> lower or equal */
                assert(SCIPisZero(scip, rhs));
-               CHECK_OKAY( SCIPchgRhsLinear(scip, cons, val) );
+               SCIP_CALL( SCIPchgRhsLinear(scip, cons, val) );
             }
             else if( SCIPisInfinity(scip, rhs) )
             {
                /* rhs = +infinity -> greater or equal */
                assert(SCIPisZero(scip, lhs));
-               CHECK_OKAY( SCIPchgLhsLinear(scip, cons, val) );
+               SCIP_CALL( SCIPchgLhsLinear(scip, cons, val) );
             }
             else
             {
                /* lhs > -infinity, rhs < infinity -> equality */
                assert(SCIPisZero(scip, lhs));
                assert(SCIPisZero(scip, rhs));
-               CHECK_OKAY( SCIPchgLhsLinear(scip, cons, val) );
-               CHECK_OKAY( SCIPchgRhsLinear(scip, cons, val) );
+               SCIP_CALL( SCIPchgLhsLinear(scip, cons, val) );
+               SCIP_CALL( SCIPchgRhsLinear(scip, cons, val) );
             }
          }
          if (mpsinputField5(mpsi) != NULL)
@@ -957,21 +957,21 @@ RETCODE readRhs(
                {
                   /* lhs = -infinity -> lower or equal */
                   assert(SCIPisZero(scip, rhs));
-                  CHECK_OKAY( SCIPchgRhsLinear(scip, cons, val) );
+                  SCIP_CALL( SCIPchgRhsLinear(scip, cons, val) );
                }
                else if( SCIPisInfinity(scip, rhs) )
                {
                   /* rhs = +infinity -> greater or equal */
                   assert(SCIPisZero(scip, lhs));
-                  CHECK_OKAY( SCIPchgLhsLinear(scip, cons, val) );
+                  SCIP_CALL( SCIPchgLhsLinear(scip, cons, val) );
                }
                else
                {
                   /* lhs > -infinity, rhs < infinity -> equality */
                   assert(SCIPisZero(scip, lhs));
                   assert(SCIPisZero(scip, rhs));
-                  CHECK_OKAY( SCIPchgLhsLinear(scip, cons, val) );
-                  CHECK_OKAY( SCIPchgRhsLinear(scip, cons, val) );
+                  SCIP_CALL( SCIPchgLhsLinear(scip, cons, val) );
+                  SCIP_CALL( SCIPchgRhsLinear(scip, cons, val) );
                }
             }
          }
@@ -985,16 +985,16 @@ RETCODE readRhs(
 /*Process RANGES section
  */
 static
-RETCODE readRanges(
+SCIP_RETCODE readRanges(
    MPSINPUT*        mpsi,
-   SCIP*            scip                /**< SCIP data structure */   
+   SCIP*                 scip                /**< SCIP data structure */   
    )
 {
-   char   rngname[MPS_MAX_LINELEN] = { '\0' };
-   CONS*  cons;
-   Real   lhs;
-   Real   rhs;
-   Real   val;
+   char        rngname[MPS_MAX_LINELEN] = { '\0' };
+   SCIP_CONS*  cons;
+   SCIP_Real   lhs;
+   SCIP_Real   rhs;
+   SCIP_Real   val;
 
    while(mpsinputReadLine(mpsi))
    {
@@ -1021,7 +1021,7 @@ RETCODE readRanges(
          strcpy(rngname, mpsinputField1(mpsi));
 
       /* The rules are:
-       * Row Sign   LHS             RHS
+       * SCIP_Row Sign   LHS             RHS
        * ----------------------------------------
        *  G   +/-   rhs             rhs + |range|
        *  L   +/-   rhs - |range|   rhs
@@ -1044,12 +1044,12 @@ RETCODE readRanges(
             if( SCIPisInfinity(scip, -lhs) )
             {
                /* lhs = -infinity -> lower or equal */
-               CHECK_OKAY( SCIPchgLhsLinear(scip, cons, rhs - REALABS(val)) );
+               SCIP_CALL( SCIPchgLhsLinear(scip, cons, rhs - REALABS(val)) );
             }
             else if( SCIPisInfinity(scip, rhs) )
             {
                /* rhs = +infinity -> greater or equal */
-               CHECK_OKAY( SCIPchgRhsLinear(scip, cons, lhs + REALABS(val)) );
+               SCIP_CALL( SCIPchgRhsLinear(scip, cons, lhs + REALABS(val)) );
             }
             else
             {
@@ -1057,11 +1057,11 @@ RETCODE readRanges(
                assert(SCIPisEQ(scip, lhs, rhs));
                if( val >= 0.0 )
                {
-                  CHECK_OKAY( SCIPchgRhsLinear(scip, cons, rhs + val) );
+                  SCIP_CALL( SCIPchgRhsLinear(scip, cons, rhs + val) );
                }
                else
                {
-                  CHECK_OKAY( SCIPchgLhsLinear(scip, cons, lhs + val) );
+                  SCIP_CALL( SCIPchgLhsLinear(scip, cons, lhs + val) );
                }
             }
          }
@@ -1080,12 +1080,12 @@ RETCODE readRanges(
                if( SCIPisInfinity(scip, -lhs) )
                {
                   /* lhs = -infinity -> lower or equal */
-                  CHECK_OKAY( SCIPchgLhsLinear(scip, cons, rhs - REALABS(val)) );
+                  SCIP_CALL( SCIPchgLhsLinear(scip, cons, rhs - REALABS(val)) );
                }
                else if( SCIPisInfinity(scip, rhs) )
                {
                   /* rhs = +infinity -> greater or equal */
-                  CHECK_OKAY( SCIPchgRhsLinear(scip, cons, lhs + REALABS(val)) );
+                  SCIP_CALL( SCIPchgRhsLinear(scip, cons, lhs + REALABS(val)) );
                }
                else
                {
@@ -1093,11 +1093,11 @@ RETCODE readRanges(
                   assert(SCIPisEQ(scip, lhs, rhs));
                   if( val >= 0.0 )
                   {
-                     CHECK_OKAY( SCIPchgRhsLinear(scip, cons, rhs + val) );
+                     SCIP_CALL( SCIPchgRhsLinear(scip, cons, rhs + val) );
                   }
                   else
                   {
-                     CHECK_OKAY( SCIPchgLhsLinear(scip, cons, lhs + val) );
+                     SCIP_CALL( SCIPchgLhsLinear(scip, cons, lhs + val) );
                   }
                }
             }
@@ -1112,14 +1112,14 @@ RETCODE readRanges(
 /* Process BOUNDS section. 
  */
 static
-RETCODE readBounds(
+SCIP_RETCODE readBounds(
    MPSINPUT*        mpsi,
-   SCIP*            scip                /**< SCIP data structure */   
+   SCIP*                 scip                /**< SCIP data structure */   
    )
 {
-   char   bndname[MPS_MAX_LINELEN] = { '\0' };
-   VAR*   var;
-   Real   val;
+   char        bndname[MPS_MAX_LINELEN] = { '\0' };
+   SCIP_VAR*   var;
+   SCIP_Real   val;
 
    while(mpsinputReadLine(mpsi))
    {
@@ -1179,8 +1179,8 @@ RETCODE readBounds(
                {
                   assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
                   assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
-                  CHECK_OKAY( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
-                  CHECK_OKAY( SCIPchgVarUb(scip, var, SCIPinfinity(scip)) );
+                  SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
+                  SCIP_CALL( SCIPchgVarUb(scip, var, SCIPinfinity(scip)) );
                }
             }
 
@@ -1189,39 +1189,39 @@ RETCODE readBounds(
             case 'L':
                if( mpsinputField1(mpsi)[1] == 'I' ) /* ILOG extension (Integer Bound) */
                {
-                  CHECK_OKAY( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
+                  SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
                }
-               CHECK_OKAY( SCIPchgVarLb(scip, var, val) );
+               SCIP_CALL( SCIPchgVarLb(scip, var, val) );
                break;
             case 'U':
                if( mpsinputField1(mpsi)[1] == 'I' ) /* ILOG extension (Integer Bound) */
                {
-                  CHECK_OKAY( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
+                  SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
                }
-               CHECK_OKAY( SCIPchgVarUb(scip, var, val) );
+               SCIP_CALL( SCIPchgVarUb(scip, var, val) );
                break;
             case 'F':
                if (mpsinputField1(mpsi)[1] == 'X')
                {
-                  CHECK_OKAY( SCIPchgVarLb(scip, var, val) );
-                  CHECK_OKAY( SCIPchgVarUb(scip, var, val) );
+                  SCIP_CALL( SCIPchgVarLb(scip, var, val) );
+                  SCIP_CALL( SCIPchgVarUb(scip, var, val) );
                }
                else
                {
-                  CHECK_OKAY( SCIPchgVarLb(scip, var, -SCIPinfinity(scip)) );
-                  CHECK_OKAY( SCIPchgVarUb(scip, var, +SCIPinfinity(scip)) );
+                  SCIP_CALL( SCIPchgVarLb(scip, var, -SCIPinfinity(scip)) );
+                  SCIP_CALL( SCIPchgVarUb(scip, var, +SCIPinfinity(scip)) );
                }
                break;
             case 'M':
-               CHECK_OKAY( SCIPchgVarLb(scip, var, -SCIPinfinity(scip)) );
+               SCIP_CALL( SCIPchgVarLb(scip, var, -SCIPinfinity(scip)) );
                break;
             case 'P':
-               CHECK_OKAY( SCIPchgVarUb(scip, var, +SCIPinfinity(scip)) );
+               SCIP_CALL( SCIPchgVarUb(scip, var, +SCIPinfinity(scip)) );
                break;
             case 'B' : /* Ilog extension (Binary) */
-               CHECK_OKAY( SCIPchgVarLb(scip, var, 0.0) );
-               CHECK_OKAY( SCIPchgVarUb(scip, var, 1.0) );
-               CHECK_OKAY( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY) );
+               SCIP_CALL( SCIPchgVarLb(scip, var, 0.0) );
+               SCIP_CALL( SCIPchgVarUb(scip, var, 1.0) );
+               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY) );
                break;
             default:
                mpsinputSyntaxerror(mpsi);
@@ -1235,7 +1235,7 @@ RETCODE readBounds(
    return SCIP_OKAY;
 }
 
-/* Read LP in "MPS File Format".
+/* Read SCIP_LP in "MPS File Format".
  * 
  *  The specification is taken from the
  *
@@ -1252,58 +1252,58 @@ RETCODE readBounds(
  *  If this happens it may complain and read nothing or read "something".
  */  
 static
-RETCODE readMps(
-   SCIP*            scip,               /**< SCIP data structure */   
-   const char*      filename            /**< name of the input file */
+SCIP_RETCODE readMps(
+   SCIP*                 scip,               /**< SCIP data structure */   
+   const char*           filename            /**< name of the input file */
    )
 {
    SCIPFILE* fp;
    MPSINPUT* mpsi;
-   Bool      error;
+   SCIP_Bool      error;
 
    assert(scip != NULL);
    assert(filename != NULL);
 
    if (NULL == (fp = SCIPfopen(filename, "r")))
    {
-      errorMessage("cannot open file <%s> for reading\n", filename);
+      SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
       perror(filename);
       return SCIP_NOFILE;
    }   
 
-   CHECK_OKAY( mpsinputCreate(scip, &mpsi, fp) );
+   SCIP_CALL( mpsinputCreate(scip, &mpsi, fp) );
 
-   CHECK_OKAY( readName(mpsi) );
+   SCIP_CALL( readName(mpsi) );
 
-   CHECK_OKAY( SCIPcreateProb(scip, mpsi->probname, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateProb(scip, mpsi->probname, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    if (mpsinputSection(mpsi) == MPS_OBJSEN)
    {
-      CHECK_OKAY( readObjsen(mpsi) );
+      SCIP_CALL( readObjsen(mpsi) );
    }
    if (mpsinputSection(mpsi) == MPS_OBJNAME)
    {
-      CHECK_OKAY( readObjname(mpsi) );
+      SCIP_CALL( readObjname(mpsi) );
    }
    if (mpsinputSection(mpsi) == MPS_ROWS)
    {
-      CHECK_OKAY( readRows(mpsi, scip) );
+      SCIP_CALL( readRows(mpsi, scip) );
    }
    if (mpsinputSection(mpsi) == MPS_COLUMNS)
    {
-      CHECK_OKAY( readCols(mpsi, scip) );
+      SCIP_CALL( readCols(mpsi, scip) );
    }
    if (mpsinputSection(mpsi) == MPS_RHS)
    {
-      CHECK_OKAY( readRhs(mpsi, scip) );
+      SCIP_CALL( readRhs(mpsi, scip) );
    }
    if (mpsinputSection(mpsi) == MPS_RANGES)
    {
-      CHECK_OKAY( readRanges(mpsi, scip) );
+      SCIP_CALL( readRanges(mpsi, scip) );
    }
    if (mpsinputSection(mpsi) == MPS_BOUNDS)
    {
-      CHECK_OKAY( readBounds(mpsi, scip) );
+      SCIP_CALL( readBounds(mpsi, scip) );
    }
    if (mpsinputSection(mpsi) != MPS_ENDATA)
       mpsinputSyntaxerror(mpsi);
@@ -1314,7 +1314,7 @@ RETCODE readMps(
 
    if( !error )
    {
-      CHECK_OKAY( SCIPsetObjsense(scip, mpsinputObjsense(mpsi)) );
+      SCIP_CALL( SCIPsetObjsense(scip, mpsinputObjsense(mpsi)) );
 
       /*printf("Objective sense: %s\n", (mpsinputObjsense(mpsi) == SCIP_OBJSENSE_MINIMIZE) ? "Minimize" : "Maximize");*/
    }
@@ -1339,14 +1339,14 @@ RETCODE readMps(
 
 /** problem reading method of reader */
 static
-DECL_READERREAD(readerReadMps)
+SCIP_DECL_READERREAD(readerReadMps)
 {  /*lint --e{715}*/
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
 
-   CHECK_OKAY( readMps(scip, filename) );
+   SCIP_CALL( readMps(scip, filename) );
 
    *result = SCIP_SUCCESS;
 
@@ -1361,27 +1361,27 @@ DECL_READERREAD(readerReadMps)
  */
 
 /** includes the mps file reader in SCIP */
-RETCODE SCIPincludeReaderMps(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeReaderMps(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   READERDATA* readerdata;
+   SCIP_READERDATA* readerdata;
 
    /* create mps reader data */
    readerdata = NULL;
 
    /* include mps reader */
-   CHECK_OKAY( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
+   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
          readerFreeMps, readerReadMps, readerdata) );
 
    /* add mps reader parameters */
-   CHECK_OKAY( SCIPaddBoolParam(scip,
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/mpsreader/dynamicconss", "should model constraints be subject to aging?",
          NULL, TRUE, NULL, NULL) );
-   CHECK_OKAY( SCIPaddBoolParam(scip,
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/mpsreader/dynamiccols", "should columns be added and removed dynamically to the LP?",
          NULL, FALSE, NULL, NULL) );
-   CHECK_OKAY( SCIPaddBoolParam(scip,
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/mpsreader/dynamicrows", "should rows be added and removed dynamically to the LP?",
          NULL, FALSE, NULL, NULL) );
    

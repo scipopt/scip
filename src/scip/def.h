@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.81 2005/08/17 17:45:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.82 2005/08/22 18:35:36 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -42,7 +42,8 @@
  * Boolean values
  */
 
-#define Bool unsigned int               /**< type used for boolean values */
+#undef SCIP_Bool
+#define SCIP_Bool unsigned int                    /**< type used for boolean values */
 #ifndef TRUE
 #define TRUE  1                         /**< boolean value TRUE */
 #define FALSE 0                         /**< boolean value FALSE */
@@ -58,20 +59,20 @@
 #define LLONG_MIN	(-LLONG_MAX - 1LL)
 #endif
 
-#define Longint long long                    /**< type used for long integer values */
-#define LONGINT_MAX          LLONG_MAX
-#define LONGINT_MIN          LLONG_MIN
-#define LONGINT_FORMAT          "%lld"
+#define SCIP_Longint long long                         /**< type used for long integer values */
+#define SCIP_LONGINT_MAX          LLONG_MAX
+#define SCIP_LONGINT_MIN          LLONG_MIN
+#define SCIP_LONGINT_FORMAT          "%lld"
 
 
 /*
  * Floating point values
  */
 
-#define Real double                          /**< type used for floating point values */
-#define REAL_MAX         (Real)DBL_MAX
-#define REAL_MIN        -(Real)DBL_MAX
-#define REAL_FORMAT              "%lf"
+#define SCIP_Real double                               /**< type used for floating point values */
+#define SCIP_REAL_MAX         (SCIP_Real)DBL_MAX
+#define SCIP_REAL_MIN        -(SCIP_Real)DBL_MAX
+#define SCIP_REAL_FORMAT              "%lf"
 
 #define SCIP_DEFAULT_INFINITY         1e+20  /**< default value considered to be infinity */
 #define SCIP_DEFAULT_EPSILON          1e-09  /**< default upper bound for floating points to be considered zero */
@@ -135,7 +136,7 @@
  * Strings
  */
 
-#define MAXSTRLEN                 1024  /**< maximum string length in SCIP */
+#define SCIP_MAXSTRLEN                 1024  /**< maximum string length in SCIP */
 
 
 /*
@@ -146,9 +147,9 @@
 #define SCIP_HASHSIZE_CUTPOOLS   131101 /**< size of hash table in cut pools */
 #define SCIP_HASHSIZE_CLIQUES    131101 /**< size of hash table in clique tables */
 #define SCIP_HASHSIZE_PARAMS       4099 /**< size of hash table in parameter name tables */
-#define SCIP_HASHSIZE_VBC        131101 /**< size of hash map for node -> nodenum mapping used for VBC output */
+#define SCIP_HASHSIZE_VBC        131101 /**< size of hash map for node -> nodenum mapping used for SCIP_VBC output */
 
-/*#define NOBLOCKMEM*/
+/*#define BMS_NOBLOCKMEM*/
 
 
 
@@ -170,56 +171,56 @@
 
 #define SCIPABORT() assert(FALSE)
 
-#define CHECK_ABORT_QUIET(x) do { if( (x) != SCIP_OKAY ) SCIPABORT(); } while( FALSE )
-#define CHECK_OKAY_QUIET(x)  do { RETCODE _restat_; if( (_restat_ = (x)) != SCIP_OKAY ) return _restat_; } while( FALSE )
-#define ALLOC_ABORT_QUIET(x) do { if( NULL == (x) ) SCIPABORT(); } while( FALSE )
-#define ALLOC_OKAY_QUIET(x)  do { if( NULL == (x) ) return SCIP_NOMEMORY; } while( FALSE )
+#define SCIP_CALL_ABORT_QUIET(x) do { if( (x) != SCIP_OKAY ) SCIPABORT(); } while( FALSE )
+#define SCIP_CALL_QUIET(x)  do { SCIP_RETCODE _restat_; if( (_restat_ = (x)) != SCIP_OKAY ) return _restat_; } while( FALSE )
+#define SCIP_ALLOC_ABORT_QUIET(x) do { if( NULL == (x) ) SCIPABORT(); } while( FALSE )
+#define SCIP_ALLOC_QUIET(x)  do { if( NULL == (x) ) return SCIP_NOMEMORY; } while( FALSE )
 
-#define CHECK_ABORT(x) do                                                                                     \
+#define SCIP_CALL_ABORT(x) do                                                                                     \
                        {                                                                                      \
-                          RETCODE _restat_;                                                                   \
+                          SCIP_RETCODE _restat_;                                                                   \
                           if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
                           {                                                                                   \
-                             errorMessage("Error <%d> in function call\n", _restat_);                         \
+                             SCIPerrorMessage("Error <%d> in function call\n", _restat_);                         \
                              SCIPABORT();                                                                     \
                           }                                                                                   \
                        }                                                                                      \
                        while( FALSE )
 
-#define ALLOC_ABORT(x) do                                                                                     \
+#define SCIP_ALLOC_ABORT(x) do                                                                                     \
                        {                                                                                      \
                           if( NULL == (x) )                                                                   \
                           {                                                                                   \
-                             errorMessage("No memory in function call\n", __FILE__, __LINE__);                \
+                             SCIPerrorMessage("No memory in function call\n", __FILE__, __LINE__);                \
                              SCIPABORT();                                                                     \
                           }                                                                                   \
                        }                                                                                      \
                        while( FALSE )
 
 #ifndef NDEBUG
-#define CHECK_OKAY(x)  do                                                                                     \
+#define SCIP_CALL(x)  do                                                                                     \
                        {                                                                                      \
-                          RETCODE _restat_;                                                                   \
+                          SCIP_RETCODE _restat_;                                                                   \
                           if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
                           {                                                                                   \
-                             errorMessage("Error <%d> in function call\n", _restat_);                         \
+                             SCIPerrorMessage("Error <%d> in function call\n", _restat_);                         \
                              return _restat_;                                                                 \
                            }                                                                                  \
                        }                                                                                      \
                        while( FALSE )
 
-#define ALLOC_OKAY(x)  do                                                                                     \
+#define SCIP_ALLOC(x)  do                                                                                     \
                        {                                                                                      \
                           if( NULL == (x) )                                                                   \
                           {                                                                                   \
-                             errorMessage("No memory in function call\n");                                    \
+                             SCIPerrorMessage("No memory in function call\n");                                    \
                              return SCIP_NOMEMORY;                                                            \
                           }                                                                                   \
                        }                                                                                      \
                        while( FALSE )
 #else
-#define CHECK_OKAY(x)  CHECK_OKAY_QUIET(x)
-#define ALLOC_OKAY(x)  ALLOC_OKAY_QUIET(x)
+#define SCIP_CALL(x)  SCIP_CALL_QUIET(x)
+#define SCIP_ALLOC(x)  SCIP_ALLOC_QUIET(x)
 #endif
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.h,v 1.41 2005/07/15 17:20:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.h,v 1.42 2005/08/22 18:35:41 bzfpfend Exp $"
 
 /**@file   nodesel.h
  * @brief  internal methods for node selectors and node priority queues
@@ -44,125 +44,125 @@
 
 /** creates node priority queue */
 extern
-RETCODE SCIPnodepqCreate(
-   NODEPQ**         nodepq,             /**< pointer to a node priority queue */
-   SET*             set,                /**< global SCIP settings */
-   NODESEL*         nodesel             /**< node selector to use for sorting the nodes in the queue */
+SCIP_RETCODE SCIPnodepqCreate(
+   SCIP_NODEPQ**         nodepq,             /**< pointer to a node priority queue */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODESEL*         nodesel             /**< node selector to use for sorting the nodes in the queue */
    );
 
 /** frees node priority queue, but not the data nodes themselves */
 extern
 void SCIPnodepqDestroy(
-   NODEPQ**         nodepq              /**< pointer to a node priority queue */
+   SCIP_NODEPQ**         nodepq              /**< pointer to a node priority queue */
    );
 
 /** frees node priority queue and all nodes in the queue */
 extern
-RETCODE SCIPnodepqFree(
-   NODEPQ**         nodepq,             /**< pointer to a node priority queue */
-   BLKMEM*          blkmem,             /**< block memory buffers */
-   SET*             set,                /**< global SCIP settings */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp                  /**< current LP data */
+SCIP_RETCODE SCIPnodepqFree(
+   SCIP_NODEPQ**         nodepq,             /**< pointer to a node priority queue */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp                  /**< current SCIP_LP data */
    );
 
 /** deletes all nodes in the node priority queue */
 extern
-RETCODE SCIPnodepqClear(
-   NODEPQ*          nodepq,             /**< node priority queue */
-   BLKMEM*          blkmem,             /**< block memory buffers */
-   SET*             set,                /**< global SCIP settings */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp                  /**< current LP data */
+SCIP_RETCODE SCIPnodepqClear(
+   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp                  /**< current SCIP_LP data */
    );
 
 /** returns the node selector associated with the given node priority queue */
 extern
-NODESEL* SCIPnodepqGetNodesel(
-   NODEPQ*          nodepq              /**< node priority queue */
+SCIP_NODESEL* SCIPnodepqGetNodesel(
+   SCIP_NODEPQ*          nodepq              /**< node priority queue */
    );
 
 /** sets the node selector used for sorting the nodes in the queue, and resorts the queue if necessary */
 extern
-RETCODE SCIPnodepqSetNodesel(
-   NODEPQ**         nodepq,             /**< pointer to a node priority queue */
-   SET*             set,                /**< global SCIP settings */
-   NODESEL*         nodesel             /**< node selector to use for sorting the nodes in the queue */
+SCIP_RETCODE SCIPnodepqSetNodesel(
+   SCIP_NODEPQ**         nodepq,             /**< pointer to a node priority queue */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODESEL*         nodesel             /**< node selector to use for sorting the nodes in the queue */
    );
 
 /** compares two nodes; returns -1/0/+1 if node1 better/equal/worse than node2 */
 extern
 int SCIPnodepqCompare(
-   NODEPQ*          nodepq,             /**< node priority queue */
-   SET*             set,                /**< global SCIP settings */
-   NODE*            node1,              /**< first node to compare */
-   NODE*            node2               /**< second node to compare */
+   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE*            node1,              /**< first node to compare */
+   SCIP_NODE*            node2               /**< second node to compare */
    );
 
 /** inserts node into node priority queue */
 extern
-RETCODE SCIPnodepqInsert(
-   NODEPQ*          nodepq,             /**< node priority queue */
-   SET*             set,                /**< global SCIP settings */
-   NODE*            node                /**< node to be inserted */
+SCIP_RETCODE SCIPnodepqInsert(
+   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE*            node                /**< node to be inserted */
    );
 
 /** removes node from the node priority queue */
 extern
-RETCODE SCIPnodepqRemove(
-   NODEPQ*          nodepq,             /**< node priority queue */
-   SET*             set,                /**< global SCIP settings */
-   NODE*            node                /**< node to remove */
+SCIP_RETCODE SCIPnodepqRemove(
+   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE*            node                /**< node to remove */
    );
 
 /** returns the best node of the queue without removing it */
 extern
-NODE* SCIPnodepqFirst(
-   const NODEPQ*    nodepq              /**< node priority queue */
+SCIP_NODE* SCIPnodepqFirst(
+   const SCIP_NODEPQ*    nodepq              /**< node priority queue */
    );
 
 /** returns the nodes array of the queue */
 extern
-NODE** SCIPnodepqNodes(
-   const NODEPQ*    nodepq              /**< node priority queue */
+SCIP_NODE** SCIPnodepqNodes(
+   const SCIP_NODEPQ*    nodepq              /**< node priority queue */
    );
 
 /** returns the number of nodes stored in the node priority queue */
 extern
 int SCIPnodepqLen(
-   const NODEPQ*    nodepq              /**< node priority queue */
+   const SCIP_NODEPQ*    nodepq              /**< node priority queue */
    );
 
 /** gets the minimal lower bound of all nodes in the queue */
 extern
-Real SCIPnodepqGetLowerbound(
-   NODEPQ*          nodepq,             /**< node priority queue */
-   SET*             set                 /**< global SCIP settings */
+SCIP_Real SCIPnodepqGetLowerbound(
+   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** gets the node with minimal lower bound of all nodes in the queue */
 extern
-NODE* SCIPnodepqGetLowerboundNode(
-   NODEPQ*          nodepq,             /**< node priority queue */
-   SET*             set                 /**< global SCIP settings */
+SCIP_NODE* SCIPnodepqGetLowerboundNode(
+   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** gets the sum of lower bounds of all nodes in the queue */
 extern
-Real SCIPnodepqGetLowerboundSum(
-   NODEPQ*          nodepq              /**< node priority queue */
+SCIP_Real SCIPnodepqGetLowerboundSum(
+   SCIP_NODEPQ*          nodepq              /**< node priority queue */
    );
 
 /** free all nodes from the queue that are cut off by the given upper bound */
 extern
-RETCODE SCIPnodepqBound(
-   NODEPQ*          nodepq,             /**< node priority queue */
-   BLKMEM*          blkmem,             /**< block memory buffer */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< current LP data */
-   Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
+SCIP_RETCODE SCIPnodepqBound(
+   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffer */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    );
 
 
@@ -174,91 +174,91 @@ RETCODE SCIPnodepqBound(
 
 /** creates a node selector */
 extern
-RETCODE SCIPnodeselCreate(
-   NODESEL**        nodesel,            /**< pointer to store node selector */
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory for parameter settings */
-   const char*      name,               /**< name of node selector */
-   const char*      desc,               /**< description of node selector */
-   int              stdpriority,        /**< priority of the node selector in standard mode */
-   int              memsavepriority,    /**< priority of the node selector in memory saving mode */
-   Bool             lowestboundfirst,   /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
-   DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
-   DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
-   DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */
-   DECL_NODESELINITSOL((*nodeselinitsol)),/**< solving process initialization method of node selector */
-   DECL_NODESELEXITSOL((*nodeselexitsol)),/**< solving process deinitialization method of node selector */
-   DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
-   DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
-   NODESELDATA*     nodeseldata         /**< node selector data */
+SCIP_RETCODE SCIPnodeselCreate(
+   SCIP_NODESEL**        nodesel,            /**< pointer to store node selector */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of node selector */
+   const char*           desc,               /**< description of node selector */
+   int                   stdpriority,        /**< priority of the node selector in standard mode */
+   int                   memsavepriority,    /**< priority of the node selector in memory saving mode */
+   SCIP_Bool             lowestboundfirst,   /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
+   SCIP_DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
+   SCIP_DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
+   SCIP_DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */
+   SCIP_DECL_NODESELINITSOL((*nodeselinitsol)),/**< solving process initialization method of node selector */
+   SCIP_DECL_NODESELEXITSOL((*nodeselexitsol)),/**< solving process deinitialization method of node selector */
+   SCIP_DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
+   SCIP_DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
+   SCIP_NODESELDATA*     nodeseldata         /**< node selector data */
    );
 
 /** frees memory of node selector */
 extern
-RETCODE SCIPnodeselFree(
-   NODESEL**        nodesel,            /**< pointer to node selector data structure */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPnodeselFree(
+   SCIP_NODESEL**        nodesel,            /**< pointer to node selector data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** initializes node selector */
 extern
-RETCODE SCIPnodeselInit(
-   NODESEL*         nodesel,            /**< node selector */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPnodeselInit(
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** deinitializes node selector */
 extern
-RETCODE SCIPnodeselExit(
-   NODESEL*         nodesel,            /**< node selector */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPnodeselExit(
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs node selector that the branch and bound process is being started */
 extern
-RETCODE SCIPnodeselInitsol(
-   NODESEL*         nodesel,            /**< node selector */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPnodeselInitsol(
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs node selector that the branch and bound process data is being freed */
 extern
-RETCODE SCIPnodeselExitsol(
-   NODESEL*         nodesel,            /**< node selector */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPnodeselExitsol(
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** select next node to be processed */
 extern
-RETCODE SCIPnodeselSelect(
-   NODESEL*         nodesel,            /**< node selector */
-   SET*             set,                /**< global SCIP settings */
-   NODE**           selnode             /**< pointer to store node to be processed next */
+SCIP_RETCODE SCIPnodeselSelect(
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE**           selnode             /**< pointer to store node to be processed next */
    );
 
 /** compares two nodes; returns -1/0/+1 if node1 better/equal/worse than node2 */
 extern
 int SCIPnodeselCompare(
-   NODESEL*         nodesel,            /**< node selector */
-   SET*             set,                /**< global SCIP settings */
-   NODE*            node1,              /**< first node to compare */
-   NODE*            node2               /**< second node to compare */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE*            node1,              /**< first node to compare */
+   SCIP_NODE*            node2               /**< second node to compare */
    );
 
 /** sets priority of node selector in standard mode */
 extern
 void SCIPnodeselSetStdPriority(
-   NODESEL*         nodesel,            /**< node selector */
-   SET*             set,                /**< global SCIP settings */
-   int              priority            /**< new priority of the node selector */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   priority            /**< new priority of the node selector */
    );
 
 /** sets priority of node selector in memory saving mode */
 extern
 void SCIPnodeselSetMemsavePriority(
-   NODESEL*         nodesel,            /**< node selector */
-   SET*             set,                /**< global SCIP settings */
-   int              priority            /**< new priority of the node selector */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   priority            /**< new priority of the node selector */
    );
 
 

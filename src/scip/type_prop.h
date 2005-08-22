@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_prop.h,v 1.8 2005/07/15 17:20:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_prop.h,v 1.9 2005/08/22 18:35:54 bzfpfend Exp $"
 
 /**@file   type_prop.h
  * @brief  type definitions for propagators
@@ -27,8 +27,8 @@
 #define __SCIP_TYPE_PROP_H__
 
 
-typedef struct Prop PROP;               /**< propagator */
-typedef struct PropData PROPDATA;       /**< locally defined propagator data */
+typedef struct SCIP_Prop SCIP_PROP;               /**< propagator */
+typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagator data */
 
 
 /** destructor of propagator to free user data (called when SCIP is exiting)
@@ -37,7 +37,7 @@ typedef struct PropData PROPDATA;       /**< locally defined propagator data */
  *  - scip            : SCIP main data structure
  *  - prop            : the propagator itself
  */
-#define DECL_PROPFREE(x) RETCODE x (SCIP* scip, PROP* prop)
+#define SCIP_DECL_PROPFREE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop)
 
 /** initialization method of propagator (called after problem was transformed)
  *
@@ -45,7 +45,7 @@ typedef struct PropData PROPDATA;       /**< locally defined propagator data */
  *  - scip            : SCIP main data structure
  *  - prop            : the propagator itself
  */
-#define DECL_PROPINIT(x) RETCODE x (SCIP* scip, PROP* prop)
+#define SCIP_DECL_PROPINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop)
 
 /** deinitialization method of propagator (called before transformed problem is freed)
  *
@@ -53,7 +53,7 @@ typedef struct PropData PROPDATA;       /**< locally defined propagator data */
  *  - scip            : SCIP main data structure
  *  - prop            : the propagator itself
  */
-#define DECL_PROPEXIT(x) RETCODE x (SCIP* scip, PROP* prop)
+#define SCIP_DECL_PROPEXIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop)
 
 /** solving process initialization method of propagator (called when branch and bound process is about to begin)
  *
@@ -64,7 +64,7 @@ typedef struct PropData PROPDATA;       /**< locally defined propagator data */
  *  - scip            : SCIP main data structure
  *  - prop            : the propagator itself
  */
-#define DECL_PROPINITSOL(x) RETCODE x (SCIP* scip, PROP* prop)
+#define SCIP_DECL_PROPINITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop)
 
 /** solving process deinitialization method of propagator (called before branch and bound process data is freed)
  *
@@ -75,7 +75,7 @@ typedef struct PropData PROPDATA;       /**< locally defined propagator data */
  *  - scip            : SCIP main data structure
  *  - prop            : the propagator itself
  */
-#define DECL_PROPEXITSOL(x) RETCODE x (SCIP* scip, PROP* prop)
+#define SCIP_DECL_PROPEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop)
 
 /** execution method of propagator
  *
@@ -93,7 +93,7 @@ typedef struct PropData PROPDATA;       /**< locally defined propagator data */
  *  - SCIP_DIDNOTRUN  : the propagator was skipped
  *  - SCIP_DELAYED    : the propagator was skipped, but should be called again
  */
-#define DECL_PROPEXEC(x) RETCODE x (SCIP* scip, PROP* prop, RESULT* result)
+#define SCIP_DECL_PROPEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, SCIP_RESULT* result)
 
 
 /** propagation conflict resolving method of propagator
@@ -126,8 +126,8 @@ typedef struct PropData PROPDATA;       /**< locally defined propagator data */
  *  - SCIP_SUCCESS    : the conflicting bound change has been successfully resolved by adding all reason bounds
  *  - SCIP_DIDNOTFIND : the conflicting bound change could not be resolved and has to be put into the conflict set
  */
-#define DECL_PROPRESPROP(x) RETCODE x (SCIP* scip, PROP* prop, VAR* infervar, int inferinfo, \
-      BOUNDTYPE boundtype, BDCHGIDX* bdchgidx, RESULT* result)
+#define SCIP_DECL_PROPRESPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, SCIP_VAR* infervar, int inferinfo, \
+      SCIP_BOUNDTYPE boundtype, SCIP_BDCHGIDX* bdchgidx, SCIP_RESULT* result)
 
 
 #include "scip/def.h"

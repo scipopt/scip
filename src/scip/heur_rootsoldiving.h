@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rootsoldiving.h,v 1.6 2005/07/15 17:20:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rootsoldiving.h,v 1.7 2005/08/22 18:35:39 bzfpfend Exp $"
 
 /**@file   heur_rootsoldiving.h
- * @brief  LP diving heuristic that changes variable's objective values using root LP solution as guide
+ * @brief  SCIP_LP diving heuristic that changes variable's objective values using root SCIP_LP solution as guide
  * @author Kati Wolter
  */
 
@@ -32,8 +32,8 @@
 
 /** creates the rootsoldiving heuristic and includes it in SCIP */
 extern
-RETCODE SCIPincludeHeurRootsoldiving(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeHeurRootsoldiving(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

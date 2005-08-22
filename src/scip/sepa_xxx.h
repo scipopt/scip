@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_xxx.h,v 1.7 2005/07/15 17:20:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_xxx.h,v 1.8 2005/08/22 18:35:48 bzfpfend Exp $"
 
 /**@file   sepa_xxx.h
  * @brief  xxx separator
@@ -32,8 +32,8 @@
 
 /** creates the xxx separator and includes it in SCIP */
 extern
-RETCODE SCIPincludeSepaXxx(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeSepaXxx(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

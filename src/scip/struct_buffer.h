@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_buffer.h,v 1.7 2005/07/15 17:20:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_buffer.h,v 1.8 2005/08/22 18:35:49 bzfpfend Exp $"
 
 /**@file   struct_buffer.h
  * @brief  datastructures for memory buffers for temporary objects
@@ -34,13 +34,13 @@
 
 
 /** memory buffer storage for temporary objects */
-struct Buffer
+struct SCIP_Buffer
 {
-   void**           data;               /**< allocated memory chunks for arbitrary data */
-   int*             size;               /**< sizes of buffers in bytes */
-   Bool*            used;               /**< TRUE iff corresponding buffer is in use */
-   int              ndata;              /**< number of memory chunks */
-   int              firstfree;          /**< first unused memory chunk */
+   void**                data;               /**< allocated memory chunks for arbitrary data */
+   int*                  size;               /**< sizes of buffers in bytes */
+   SCIP_Bool*            used;               /**< TRUE iff corresponding buffer is in use */
+   int                   ndata;              /**< number of memory chunks */
+   int                   firstfree;          /**< first unused memory chunk */
 };
 
 

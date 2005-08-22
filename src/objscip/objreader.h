@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.h,v 1.11 2005/07/15 17:20:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objreader.h,v 1.12 2005/08/22 18:35:31 bzfpfend Exp $"
 
 /**@file   objreader.h
  * @brief  C++ wrapper for file readers
@@ -51,9 +51,9 @@ public:
 
    /** default constructor */
    ObjReader(
-      const char*   name,               /**< name of file reader */
-      const char*   desc,               /**< description of file reader */
-      const char*   extension           /**< file extension that reader processes */
+      const char*        name,               /**< name of file reader */
+      const char*        desc,               /**< description of file reader */
+      const char*        extension           /**< file extension that reader processes */
       )
       : scip_name_(name),
         scip_desc_(desc),
@@ -67,9 +67,9 @@ public:
    }
 
    /** destructor of file reader to free user data (called when SCIP is exiting) */
-   virtual RETCODE scip_free(
-      SCIP*         scip,               /**< SCIP data structure */
-      READER*       reader              /**< the file reader itself */
+   virtual SCIP_RETCODE scip_free(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_READER*       reader              /**< the file reader itself */
       )
    {
       return SCIP_OKAY;
@@ -81,13 +81,13 @@ public:
     *  - SCIP_SUCCESS    : the reader read the file correctly and created an appropritate problem
     *  - SCIP_DIDNOTRUN  : the reader is not responsible for given input file
     *
-    *  If the reader detected an error in the input file, it should return with RETCODE SCIP_READERR or SCIP_NOFILE.
+    *  If the reader detected an error in the input file, it should return with SCIP_RETCODE SCIP_READERR or SCIP_NOFILE.
     */
-   virtual RETCODE scip_read(
-      SCIP*         scip,               /**< SCIP data structure */
-      READER*       reader,             /**< the file reader itself */
-      const char*   filename,           /**< full path and name of file to read, or NULL if stdin should be used */
-      RESULT*       result              /**< pointer to store the result of the file reading call */
+   virtual SCIP_RETCODE scip_read(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_READER*       reader,             /**< the file reader itself */
+      const char*        filename,           /**< full path and name of file to read, or NULL if stdin should be used */
+      SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
       ) = 0;
 };
 
@@ -100,40 +100,40 @@ public:
  *  The method should be called in one of the following ways:
  *
  *   1. The user is resposible of deleting the object:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MyReader* myreader = new MyReader(...);
- *       CHECK_OKAY( SCIPincludeObjReader(scip, &myreader, FALSE) );
+ *       SCIP_CALL( SCIPincludeObjReader(scip, &myreader, FALSE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );
+ *       SCIP_CALL( SCIPfree(&scip) );
  *       delete myreader;    // delete reader AFTER SCIPfree() !
  *
  *   2. The object pointer is passed to SCIP and deleted by SCIP in the SCIPfree() call:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
- *       CHECK_OKAY( SCIPincludeObjReader(scip, new MyReader(...), TRUE) );
+ *       SCIP_CALL( SCIPincludeObjReader(scip, new MyReader(...), TRUE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );  // destructor of MyReader is called here
+ *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyReader is called here
  */
 extern
-RETCODE SCIPincludeObjReader(
-   SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjReader* objreader,          /**< file reader object */
-   Bool             deleteobject        /**< should the reader object be deleted when reader is freed? */
+SCIP_RETCODE SCIPincludeObjReader(
+   SCIP*                 scip,               /**< SCIP data structure */
+   scip::ObjReader*      objreader,          /**< file reader object */
+   SCIP_Bool             deleteobject        /**< should the reader object be deleted when reader is freed? */
    );
 
 /** returns the reader object of the given name, or NULL if not existing */
 extern
 scip::ObjReader* SCIPfindObjReader(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< name of file reader */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of file reader */
    );
 
 /** returns the reader object for the given file reader */
 extern
 scip::ObjReader* SCIPgetObjReader(
-   SCIP*            scip,               /**< SCIP data structure */
-   READER*          reader              /**< file reader */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader              /**< file reader */
    );
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_disp.h,v 1.9 2005/07/15 17:20:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_disp.h,v 1.10 2005/08/22 18:35:53 bzfpfend Exp $"
 
 /**@file   type_disp.h
  * @brief  type definitions for displaying runtime statistics
@@ -27,16 +27,16 @@
 #define __SCIP_TYPE_DISP_H__
 
 /** display activation status of display column */
-enum DispStatus
+enum SCIP_DispStatus
 {
    SCIP_DISPSTATUS_OFF  = 0,            /**< display column is not displayed */
    SCIP_DISPSTATUS_AUTO = 1,            /**< display column is switched on and off automatically */
    SCIP_DISPSTATUS_ON   = 2             /**< display column is displayed */
 };
-typedef enum DispStatus DISPSTATUS;
+typedef enum SCIP_DispStatus SCIP_DISPSTATUS;
 
-typedef struct Disp DISP;               /**< display column data structure */
-typedef struct DispData DISPDATA;       /**< display column specific data */
+typedef struct SCIP_Disp SCIP_DISP;               /**< display column data structure */
+typedef struct SCIP_DispData SCIP_DISPDATA;       /**< display column specific data */
 
 
 /** destructor of display column to free user data (called when SCIP is exiting)
@@ -45,7 +45,7 @@ typedef struct DispData DISPDATA;       /**< display column specific data */
  *  - scip            : SCIP main data structure
  *  - disp            : the display column itself
  */
-#define DECL_DISPFREE(x) RETCODE x (SCIP* scip, DISP* disp)
+#define SCIP_DECL_DISPFREE(x) SCIP_RETCODE x (SCIP* scip, SCIP_DISP* disp)
 
 /** initialization method of display column (called after problem was transformed)
  *
@@ -53,7 +53,7 @@ typedef struct DispData DISPDATA;       /**< display column specific data */
  *  - scip            : SCIP main data structure
  *  - disp            : the display column itself
  */
-#define DECL_DISPINIT(x) RETCODE x (SCIP* scip, DISP* disp)
+#define SCIP_DECL_DISPINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_DISP* disp)
 
 /** deinitialization method of display column (called before transformed problem is freed)
  *
@@ -61,7 +61,7 @@ typedef struct DispData DISPDATA;       /**< display column specific data */
  *  - scip            : SCIP main data structure
  *  - disp            : the display column itself
  */
-#define DECL_DISPEXIT(x) RETCODE x (SCIP* scip, DISP* disp)
+#define SCIP_DECL_DISPEXIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_DISP* disp)
 
 /** solving process initialization method of display column (called when branch and bound process is about to begin)
  *
@@ -72,7 +72,7 @@ typedef struct DispData DISPDATA;       /**< display column specific data */
  *  - scip            : SCIP main data structure
  *  - disp            : the display column itself
  */
-#define DECL_DISPINITSOL(x) RETCODE x (SCIP* scip, DISP* disp)
+#define SCIP_DECL_DISPINITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_DISP* disp)
 
 /** solving process deinitialization method of display column (called before branch and bound process data is freed)
  *
@@ -83,7 +83,7 @@ typedef struct DispData DISPDATA;       /**< display column specific data */
  *  - scip            : SCIP main data structure
  *  - disp            : the display column itself
  */
-#define DECL_DISPEXITSOL(x) RETCODE x (SCIP* scip, DISP* disp)
+#define SCIP_DECL_DISPEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_DISP* disp)
 
 /** output method of display column to output file stream 'file'
  *
@@ -92,7 +92,7 @@ typedef struct DispData DISPDATA;       /**< display column specific data */
  *  - disp            : the display column itself
  *  - file            : file stream for output
  */
-#define DECL_DISPOUTPUT(x) RETCODE x (SCIP* scip, DISP* disp, FILE* file)
+#define SCIP_DECL_DISPOUTPUT(x) SCIP_RETCODE x (SCIP* scip, SCIP_DISP* disp, FILE* file)
 
 
 #include <stdio.h>

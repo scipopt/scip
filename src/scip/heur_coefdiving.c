@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.36 2005/06/29 11:08:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.37 2005/08/22 18:35:37 bzfpfend Exp $"
 
 /**@file   heur_coefdiving.c
- * @brief  LP diving heuristic that chooses fixings w.r.t. the matrix coefficients
+ * @brief  SCIP_LP diving heuristic that chooses fixings w.r.t. the matrix coefficients
  * @author Tobias Achterberg
  */
 
@@ -48,34 +48,34 @@
 
 #define DEFAULT_MINRELDEPTH         0.0 /**< minimal relative depth to start diving */
 #define DEFAULT_MAXRELDEPTH         1.0 /**< maximal relative depth to start diving */
-#define DEFAULT_MAXLPITERQUOT      0.05 /**< maximal fraction of diving LP iterations compared to node LP iterations */
-#define DEFAULT_MAXLPITEROFS       1000 /**< additional number of allowed LP iterations */
+#define DEFAULT_MAXLPITERQUOT      0.05 /**< maximal fraction of diving SCIP_LP iterations compared to node SCIP_LP iterations */
+#define DEFAULT_MAXLPITEROFS       1000 /**< additional number of allowed SCIP_LP iterations */
 #define DEFAULT_MAXDIVEUBQUOT       0.8 /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
-                                         *   where diving is performed (0.0: no limit) */
+                                              *   where diving is performed (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOT      0.0 /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
-                                         *   where diving is performed (0.0: no limit) */
+                                              *   where diving is performed (0.0: no limit) */
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
 
-#define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
+#define MINLPITER                 10000 /**< minimal number of SCIP_LP iterations allowed in each SCIP_LP solving call */
 
 
 
 /* locally defined heuristic data */
-struct HeurData
+struct SCIP_HeurData
 {
-   SOL*             sol;                /**< working solution */
-   Real             minreldepth;        /**< minimal relative depth to start diving */
-   Real             maxreldepth;        /**< maximal relative depth to start diving */
-   Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to node LP iterations */
-   int              maxlpiterofs;       /**< additional number of allowed LP iterations */
-   Real             maxdiveubquot;      /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
-                                         *   where diving is performed (0.0: no limit) */
-   Real             maxdiveavgquot;     /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
-                                         *   where diving is performed (0.0: no limit) */
-   Real             maxdiveubquotnosol; /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
-   Real             maxdiveavgquotnosol;/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
-   Longint          nlpiterations;      /**< LP iterations used in this heuristic */
+   SCIP_SOL*             sol;                /**< working solution */
+   SCIP_Real             minreldepth;        /**< minimal relative depth to start diving */
+   SCIP_Real             maxreldepth;        /**< maximal relative depth to start diving */
+   SCIP_Real             maxlpiterquot;      /**< maximal fraction of diving SCIP_LP iterations compared to node SCIP_LP iterations */
+   int                   maxlpiterofs;       /**< additional number of allowed SCIP_LP iterations */
+   SCIP_Real             maxdiveubquot;      /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
+                                              *   where diving is performed (0.0: no limit) */
+   SCIP_Real             maxdiveavgquot;     /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
+                                              *   where diving is performed (0.0: no limit) */
+   SCIP_Real             maxdiveubquotnosol; /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
+   SCIP_Real             maxdiveavgquotnosol;/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
+   SCIP_Longint          nlpiterations;      /**< SCIP_LP iterations used in this heuristic */
 };
 
 
@@ -95,9 +95,9 @@ struct HeurData
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
-DECL_HEURFREE(heurFreeCoefdiving) /*lint --e{715}*/
+SCIP_DECL_HEURFREE(heurFreeCoefdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
-   HEURDATA* heurdata;
+   SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -115,9 +115,9 @@ DECL_HEURFREE(heurFreeCoefdiving) /*lint --e{715}*/
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
-DECL_HEURINIT(heurInitCoefdiving) /*lint --e{715}*/
+SCIP_DECL_HEURINIT(heurInitCoefdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
-   HEURDATA* heurdata;
+   SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -127,7 +127,7 @@ DECL_HEURINIT(heurInitCoefdiving) /*lint --e{715}*/
    assert(heurdata != NULL);
 
    /* create working solution */
-   CHECK_OKAY( SCIPcreateSol(scip, &heurdata->sol, heur) );
+   SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
    /* initialize data */
    heurdata->nlpiterations = 0;
@@ -138,9 +138,9 @@ DECL_HEURINIT(heurInitCoefdiving) /*lint --e{715}*/
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
-DECL_HEUREXIT(heurExitCoefdiving) /*lint --e{715}*/
+SCIP_DECL_HEUREXIT(heurExitCoefdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
-   HEURDATA* heurdata;
+   SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -150,7 +150,7 @@ DECL_HEUREXIT(heurExitCoefdiving) /*lint --e{715}*/
    assert(heurdata != NULL);
 
    /* free working solution */
-   CHECK_OKAY( SCIPfreeSol(scip, &heurdata->sol) );
+   SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 
    return SCIP_OKAY;
 }
@@ -166,33 +166,33 @@ DECL_HEUREXIT(heurExitCoefdiving) /*lint --e{715}*/
 
 /** execution method of primal heuristic */
 static
-DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
+SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
-   HEURDATA* heurdata;
-   LPSOLSTAT lpsolstat;
-   VAR* var;
-   VAR** lpcands;
-   Real* lpcandssol;
-   Real* lpcandsfrac;
-   Real searchubbound;
-   Real searchavgbound;
-   Real searchbound;
-   Real objval;
-   Real oldobjval;
-   Real frac;
-   Real bestfrac;
-   Bool bestcandmayrounddown;
-   Bool bestcandmayroundup;
-   Bool bestcandroundup;
-   Bool mayrounddown;
-   Bool mayroundup;
-   Bool roundup;
-   Bool lperror;
-   Bool cutoff;
-   Longint ncalls;
-   Longint nsolsfound;
-   Longint nlpiterations;
-   Longint maxnlpiterations;
+   SCIP_HEURDATA* heurdata;
+   SCIP_LPSOLSTAT lpsolstat;
+   SCIP_VAR* var;
+   SCIP_VAR** lpcands;
+   SCIP_Real* lpcandssol;
+   SCIP_Real* lpcandsfrac;
+   SCIP_Real searchubbound;
+   SCIP_Real searchavgbound;
+   SCIP_Real searchbound;
+   SCIP_Real objval;
+   SCIP_Real oldobjval;
+   SCIP_Real frac;
+   SCIP_Real bestfrac;
+   SCIP_Bool bestcandmayrounddown;
+   SCIP_Bool bestcandmayroundup;
+   SCIP_Bool bestcandroundup;
+   SCIP_Bool mayrounddown;
+   SCIP_Bool mayroundup;
+   SCIP_Bool roundup;
+   SCIP_Bool lperror;
+   SCIP_Bool cutoff;
+   SCIP_Longint ncalls;
+   SCIP_Longint nsolsfound;
+   SCIP_Longint nlpiterations;
+   SCIP_Longint maxnlpiterations;
    int nlpcands;
    int startnlpcands;
    int depth;
@@ -214,11 +214,11 @@ DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
 
    *result = SCIP_DELAYED;
 
-   /* only call heuristic, if an optimal LP solution is at hand */
+   /* only call heuristic, if an optimal SCIP_LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
-   /* only call heuristic, if the LP solution is basic (which allows fast resolve in diving) */
+   /* only call heuristic, if the SCIP_LP solution is basic (which allows fast resolve in diving) */
    if( !SCIPisLPSolBasic(scip) )
       return SCIP_OKAY;
 
@@ -239,18 +239,18 @@ DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
    if( depth < heurdata->minreldepth*maxdepth || depth > heurdata->maxreldepth*maxdepth )
       return SCIP_OKAY;
 
-   /* calculate the maximal number of LP iterations until heuristic is aborted */
+   /* calculate the maximal number of SCIP_LP iterations until heuristic is aborted */
    nlpiterations = SCIPgetNNodeLPIterations(scip);
    ncalls = SCIPheurGetNCalls(heur);
    nsolsfound = SCIPheurGetNSolsFound(heur);
-   maxnlpiterations = (Longint)((1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations);
+   maxnlpiterations = (SCIP_Longint)((1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations);
    maxnlpiterations += heurdata->maxlpiterofs;
 
-   /* don't try to dive, if we took too many LP iterations during diving */
+   /* don't try to dive, if we took too many SCIP_LP iterations during diving */
    if( heurdata->nlpiterations >= maxnlpiterations )
       return SCIP_OKAY;
 
-   /* allow at least a certain number of LP iterations in this dive */
+   /* allow at least a certain number of SCIP_LP iterations in this dive */
    maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + MINLPITER);
 
    /* calculate the objective search bound */
@@ -291,14 +291,14 @@ DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
    *result = SCIP_DIDNOTFIND;
 
    /* start diving */
-   CHECK_OKAY( SCIPstartProbing(scip) );
+   SCIP_CALL( SCIPstartProbing(scip) );
 
-   /* get LP objective value, and fractional variables, that should be integral */
+   /* get SCIP_LP objective value, and fractional variables, that should be integral */
    lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    objval = SCIPgetLPObjval(scip);
-   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
 
-   debugMessage("(node %lld) executing coefdiving heuristic: depth=%d, %d fractionals, dualbound=%g, avgbound=%g, cutoffbound=%g, searchbound=%g\n", 
+   SCIPdebugMessage("(node %lld) executing coefdiving heuristic: depth=%d, %d fractionals, dualbound=%g, avgbound=%g, cutoffbound=%g, searchbound=%g\n", 
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), SCIPgetAvgDualbound(scip),
       SCIPretransformObj(scip, SCIPgetCutoffbound(scip)), SCIPretransformObj(scip, searchbound));
 
@@ -319,13 +319,13 @@ DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
          || nlpcands <= startnlpcands - divedepth/2
          || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations && objval < searchbound)) )
    {
-      CHECK_OKAY( SCIPnewProbingNode(scip) );
+      SCIP_CALL( SCIPnewProbingNode(scip) );
       divedepth++;
 
       /* choose variable fixing:
-       * - prefer variables that may not be rounded without destroying LP feasibility:
+       * - prefer variables that may not be rounded without destroying SCIP_LP feasibility:
        *   - of these variables, round variable with least number of locks in corresponding direction
-       * - if all remaining fractional variables may be rounded without destroying LP feasibility:
+       * - if all remaining fractional variables may be rounded without destroying SCIP_LP feasibility:
        *   - round variable with least number of locks in opposite of its feasible rounding direction
        */
       bestcand = -1;
@@ -425,23 +425,23 @@ DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
       /* if all candidates are roundable, try to round the solution */
       if( bestcandmayrounddown || bestcandmayroundup )
       {
-         Bool success;
+         SCIP_Bool success;
          
-         /* create solution from diving LP and try to round it */
-         CHECK_OKAY( SCIPlinkLPSol(scip, heurdata->sol) );
-         CHECK_OKAY( SCIProundSol(scip, heurdata->sol, &success) );
+         /* create solution from diving SCIP_LP and try to round it */
+         SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
+         SCIP_CALL( SCIProundSol(scip, heurdata->sol, &success) );
 
          if( success )
          {
-            debugMessage("coefdiving found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
+            SCIPdebugMessage("coefdiving found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
          
             /* try to add solution to SCIP */
-            CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
+            SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
             
             /* check, if solution was feasible and good enough */
             if( success )
             {
-               debugMessage(" -> solution was feasible and good enough\n");
+               SCIPdebugMessage(" -> solution was feasible and good enough\n");
                *result = SCIP_FOUNDSOL;
             }
          }
@@ -452,7 +452,7 @@ DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
       /* if the variable is already fixed, abort diving due to numerical troubles */
       if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
       {
-         debugMessage("numerical troubles: selected variable <%s> already fixed to [%g,%g] (solval: %.9f)\n",
+         SCIPdebugMessage("numerical troubles: selected variable <%s> already fixed to [%g,%g] (solval: %.9f)\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), lpcandssol[bestcand]);
          break;
       }
@@ -461,39 +461,39 @@ DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
       if( bestcandroundup )
       {
          /* round variable up */
-         debugMessage("  dive %d/%d, LP iter %lld/%lld: var <%s>, round=%d/%d, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+         SCIPdebugMessage("  dive %d/%d, SCIP_LP iter %lld/%lld: var <%s>, round=%d/%d, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
             divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
             SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
             lpcandssol[bestcand], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
             SCIPfeasCeil(scip, lpcandssol[bestcand]), SCIPvarGetUbLocal(var));
-         CHECK_OKAY( SCIPchgVarLbProbing(scip, var, SCIPfeasCeil(scip, lpcandssol[bestcand])) );
+         SCIP_CALL( SCIPchgVarLbProbing(scip, var, SCIPfeasCeil(scip, lpcandssol[bestcand])) );
       }
       else
       {
          /* round variable down */
-         debugMessage("  dive %d/%d, LP iter %lld/%lld: var <%s>, round=%d/%d, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+         SCIPdebugMessage("  dive %d/%d, SCIP_LP iter %lld/%lld: var <%s>, round=%d/%d, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
             divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
             SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
             lpcandssol[bestcand], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
             SCIPvarGetLbLocal(var), SCIPfeasFloor(scip, lpcandssol[bestcand]));
-         CHECK_OKAY( SCIPchgVarUbProbing(scip, lpcands[bestcand], SCIPfeasFloor(scip, lpcandssol[bestcand])) );
+         SCIP_CALL( SCIPchgVarUbProbing(scip, lpcands[bestcand], SCIPfeasFloor(scip, lpcandssol[bestcand])) );
       }
 
       /* apply domain propagation */
-      CHECK_OKAY( SCIPpropagateProbing(scip, 0, &cutoff) );
+      SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff) );
       if( cutoff )
          break;
 
-      /* resolve the diving LP */
+      /* resolve the diving SCIP_LP */
       nlpiterations = SCIPgetNLPIterations(scip);
-      CHECK_OKAY( SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
+      SCIP_CALL( SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
       if( lperror )
          break;
 
       /* update iteration count */
       heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
 
-      /* get LP solution status, objective value, and fractional variables, that should be integral */
+      /* get SCIP_LP solution status, objective value, and fractional variables, that should be integral */
       lpsolstat = SCIPgetLPSolstat(scip);
       if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
       {
@@ -506,46 +506,46 @@ DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
          {
             if( bestcandroundup )
             {
-               CHECK_OKAY( SCIPupdateVarPseudocost(scip, lpcands[bestcand], 1.0-lpcandsfrac[bestcand], 
+               SCIP_CALL( SCIPupdateVarPseudocost(scip, lpcands[bestcand], 1.0-lpcandsfrac[bestcand], 
                      objval - oldobjval, 1.0) );
             }
             else
             {
-               CHECK_OKAY( SCIPupdateVarPseudocost(scip, lpcands[bestcand], 0.0-lpcandsfrac[bestcand], 
+               SCIP_CALL( SCIPupdateVarPseudocost(scip, lpcands[bestcand], 0.0-lpcandsfrac[bestcand], 
                      objval - oldobjval, 1.0) );
             }
          }
 
          /* get new fractional variables */
-         CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
+         SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
       }
-      debugMessage("   -> lpsolstat=%d, objval=%g/%g, nfrac=%d\n", lpsolstat, objval, searchbound, nlpcands);
+      SCIPdebugMessage("   -> lpsolstat=%d, objval=%g/%g, nfrac=%d\n", lpsolstat, objval, searchbound, nlpcands);
    }
 
    /* check if a solution has been found */
    if( nlpcands == 0 && !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
    {
-      Bool success;
+      SCIP_Bool success;
 
-      /* create solution from diving LP */
-      CHECK_OKAY( SCIPlinkLPSol(scip, heurdata->sol) );
-      debugMessage("coefdiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
+      /* create solution from diving SCIP_LP */
+      SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
+      SCIPdebugMessage("coefdiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
       /* try to add solution to SCIP */
-      CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
 
       /* check, if solution was feasible and good enough */
       if( success )
       {
-         debugMessage(" -> solution was feasible and good enough\n");
+         SCIPdebugMessage(" -> solution was feasible and good enough\n");
          *result = SCIP_FOUNDSOL;
       }
    }
 
    /* end diving */
-   CHECK_OKAY( SCIPendProbing(scip) );
+   SCIP_CALL( SCIPendProbing(scip) );
 
-   debugMessage("(node %lld) finished coefdiving heuristic: %d fractionals, dive %d/%d, LP iter %lld/%lld, objval=%g/%g, lpsolstat=%d, cutoff=%d\n", 
+   SCIPdebugMessage("(node %lld) finished coefdiving heuristic: %d fractionals, dive %d/%d, SCIP_LP iter %lld/%lld, objval=%g/%g, lpsolstat=%d, cutoff=%d\n", 
       SCIPgetNNodes(scip), nlpcands, divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
       SCIPretransformObj(scip, objval), SCIPretransformObj(scip, searchbound), lpsolstat, cutoff);
 
@@ -560,55 +560,55 @@ DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
  */
 
 /** creates the coefdiving heuristic and includes it in SCIP */
-RETCODE SCIPincludeHeurCoefdiving(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeHeurCoefdiving(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   HEURDATA* heurdata;
+   SCIP_HEURDATA* heurdata;
 
    /* create heuristic data */
-   CHECK_OKAY( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
    /* include heuristic */
-   CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING, HEUR_AFTERNODE,
          heurFreeCoefdiving, heurInitCoefdiving, heurExitCoefdiving, 
          heurInitsolCoefdiving, heurExitsolCoefdiving, heurExecCoefdiving,
          heurdata) );
 
    /* coefdiving heuristic parameters */
-   CHECK_OKAY( SCIPaddRealParam(scip,
+   SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/coefdiving/minreldepth", 
          "minimal relative depth to start diving",
          &heurdata->minreldepth, DEFAULT_MINRELDEPTH, 0.0, 1.0, NULL, NULL) );
-   CHECK_OKAY( SCIPaddRealParam(scip,
+   SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/coefdiving/maxreldepth", 
          "maximal relative depth to start diving",
          &heurdata->maxreldepth, DEFAULT_MAXRELDEPTH, 0.0, 1.0, NULL, NULL) );
-   CHECK_OKAY( SCIPaddRealParam(scip,
+   SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/coefdiving/maxlpiterquot", 
-         "maximal fraction of diving LP iterations compared to node LP iterations",
-         &heurdata->maxlpiterquot, DEFAULT_MAXLPITERQUOT, 0.0, REAL_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddIntParam(scip,
+         "maximal fraction of diving SCIP_LP iterations compared to node SCIP_LP iterations",
+         &heurdata->maxlpiterquot, DEFAULT_MAXLPITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/coefdiving/maxlpiterofs", 
-         "additional number of allowed LP iterations",
+         "additional number of allowed SCIP_LP iterations",
          &heurdata->maxlpiterofs, DEFAULT_MAXLPITEROFS, 0, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddRealParam(scip,
+   SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/coefdiving/maxdiveubquot",
          "maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed (0.0: no limit)",
          &heurdata->maxdiveubquot, DEFAULT_MAXDIVEUBQUOT, 0.0, 1.0, NULL, NULL) );
-   CHECK_OKAY( SCIPaddRealParam(scip,
+   SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/coefdiving/maxdiveavgquot", 
          "maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)",
-         &heurdata->maxdiveavgquot, DEFAULT_MAXDIVEAVGQUOT, 0.0, REAL_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddRealParam(scip,
+         &heurdata->maxdiveavgquot, DEFAULT_MAXDIVEAVGQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/coefdiving/maxdiveubquotnosol", 
          "maximal UBQUOT when no solution was found yet (0.0: no limit)",
          &heurdata->maxdiveubquotnosol, DEFAULT_MAXDIVEUBQUOTNOSOL, 0.0, 1.0, NULL, NULL) );
-   CHECK_OKAY( SCIPaddRealParam(scip,
+   SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/coefdiving/maxdiveavgquotnosol", 
          "maximal AVGQUOT when no solution was found yet (0.0: no limit)",
-         &heurdata->maxdiveavgquotnosol, DEFAULT_MAXDIVEAVGQUOTNOSOL, 0.0, REAL_MAX, NULL, NULL) );
+         &heurdata->maxdiveavgquotnosol, DEFAULT_MAXDIVEAVGQUOTNOSOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    
    return SCIP_OKAY;
 }

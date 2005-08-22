@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_xxx.h,v 1.6 2005/07/15 17:20:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_xxx.h,v 1.7 2005/08/22 18:35:44 bzfpfend Exp $"
 
 /**@file   prop_xxx.h
  * @brief  xxx propagator
@@ -32,8 +32,8 @@
 
 /** creates the xxx propagator and includes it in SCIP */
 extern
-RETCODE SCIPincludePropXxx(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludePropXxx(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

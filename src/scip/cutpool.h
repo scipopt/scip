@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.h,v 1.21 2005/07/15 17:20:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.h,v 1.22 2005/08/22 18:35:36 bzfpfend Exp $"
 
 /**@file   cutpool.h
  * @brief  internal methods for storing cuts in a cut pool
@@ -42,70 +42,70 @@
 
 /** creates cut pool */
 extern
-RETCODE SCIPcutpoolCreate(
-   CUTPOOL**        cutpool,            /**< pointer to store cut pool */
-   BLKMEM*          blkmem,             /**< block memory */
-   int              agelimit            /**< maximum age a cut can reach before it is deleted from the pool */
+SCIP_RETCODE SCIPcutpoolCreate(
+   SCIP_CUTPOOL**        cutpool,            /**< pointer to store cut pool */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   int                   agelimit            /**< maximum age a cut can reach before it is deleted from the pool */
    );
 
 /** frees cut pool */
 extern
-RETCODE SCIPcutpoolFree(
-   CUTPOOL**        cutpool,            /**< pointer to store cut pool */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   LP*              lp                  /**< current LP data */
+SCIP_RETCODE SCIPcutpoolFree(
+   SCIP_CUTPOOL**        cutpool,            /**< pointer to store cut pool */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp                  /**< current SCIP_LP data */
    );
 
 /** removes all rows from the cut pool */
 extern
-RETCODE SCIPcutpoolClear(
-   CUTPOOL*         cutpool,            /**< cut pool */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   LP*              lp                  /**< current LP data */
+SCIP_RETCODE SCIPcutpoolClear(
+   SCIP_CUTPOOL*         cutpool,            /**< cut pool */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp                  /**< current SCIP_LP data */
    );
 
 /** if not already existing, adds row to cut pool and captures it */
 extern
-RETCODE SCIPcutpoolAddRow(
-   CUTPOOL*         cutpool,            /**< cut pool */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   ROW*             row                 /**< cutting plane to add */
+SCIP_RETCODE SCIPcutpoolAddRow(
+   SCIP_CUTPOOL*         cutpool,            /**< cut pool */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             row                 /**< cutting plane to add */
    );
 
 /** adds row to cut pool and captures it; doesn't check for multiple cuts */
 extern
-RETCODE SCIPcutpoolAddNewRow(
-   CUTPOOL*         cutpool,            /**< cut pool */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   ROW*             row                 /**< cutting plane to add */
+SCIP_RETCODE SCIPcutpoolAddNewRow(
+   SCIP_CUTPOOL*         cutpool,            /**< cut pool */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             row                 /**< cutting plane to add */
    );
 
-/** removes the LP row from the cut pool */
+/** removes the SCIP_LP row from the cut pool */
 extern
-RETCODE SCIPcutpoolDelRow(
-   CUTPOOL*         cutpool,            /**< cut pool */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   LP*              lp,                 /**< current LP data */
-   ROW*             row                 /**< row to remove */
+SCIP_RETCODE SCIPcutpoolDelRow(
+   SCIP_CUTPOOL*         cutpool,            /**< cut pool */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_ROW*             row                 /**< row to remove */
    );
 
 /** separates cuts of the cut pool */
 extern
-RETCODE SCIPcutpoolSeparate(
-   CUTPOOL*         cutpool,            /**< cut pool */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   LP*              lp,                 /**< current LP data */
-   SEPASTORE*       sepastore,          /**< separation storage */
-   Bool             root,               /**< are we at the root node? */
-   RESULT*          result              /**< pointer to store the result of the separation call */
+SCIP_RETCODE SCIPcutpoolSeparate(
+   SCIP_CUTPOOL*         cutpool,            /**< cut pool */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_Bool             root,               /**< are we at the root node? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    );
 
 

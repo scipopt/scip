@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_disp.h,v 1.8 2005/07/15 17:20:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_disp.h,v 1.9 2005/08/22 18:35:50 bzfpfend Exp $"
 
 /**@file   struct_disp.h
  * @brief  datastructures for displaying runtime statistics
@@ -33,25 +33,25 @@
 
 
 /** display column */
-struct Disp
+struct SCIP_Disp
 {
-   char*            name;               /**< name of display column */
-   char*            desc;               /**< description of display column */
-   char*            header;             /**< head line of display column */
-   DECL_DISPFREE    ((*dispfree));      /**< destructor of display column */
-   DECL_DISPINIT    ((*dispinit));      /**< initialize display column */
-   DECL_DISPEXIT    ((*dispexit));      /**< deinitialize display column */
-   DECL_DISPINITSOL ((*dispinitsol));   /**< solving process initialization method of display column */
-   DECL_DISPEXITSOL ((*dispexitsol));   /**< solving process deinitialization method of display column */
-   DECL_DISPOUTPUT  ((*dispoutput));    /**< output method */
-   DISPDATA*        dispdata;           /**< display column data */
-   int              width;              /**< width of display column (no. of chars used) */
-   int              priority;           /**< priority of display column */
-   int              position;           /**< relative position of display column */
-   DISPSTATUS       dispstatus;         /**< display activation status of display column */
-   Bool             stripline;          /**< should the column be separated with a line from its right neighbour? */
-   Bool             initialized;        /**< is display column initialized? */
-   Bool             active;             /**< should column be displayed to the screen? */
+   char*                 name;               /**< name of display column */
+   char*                 desc;               /**< description of display column */
+   char*                 header;             /**< head line of display column */
+   SCIP_DECL_DISPFREE    ((*dispfree));      /**< destructor of display column */
+   SCIP_DECL_DISPINIT    ((*dispinit));      /**< initialize display column */
+   SCIP_DECL_DISPEXIT    ((*dispexit));      /**< deinitialize display column */
+   SCIP_DECL_DISPINITSOL ((*dispinitsol));   /**< solving process initialization method of display column */
+   SCIP_DECL_DISPEXITSOL ((*dispexitsol));   /**< solving process deinitialization method of display column */
+   SCIP_DECL_DISPOUTPUT  ((*dispoutput));    /**< output method */
+   SCIP_DISPDATA*        dispdata;           /**< display column data */
+   int                   width;              /**< width of display column (no. of chars used) */
+   int                   priority;           /**< priority of display column */
+   int                   position;           /**< relative position of display column */
+   SCIP_DISPSTATUS       dispstatus;         /**< display activation status of display column */
+   SCIP_Bool             stripline;          /**< should the column be separated with a line from its right neighbour? */
+   SCIP_Bool             initialized;        /**< is display column initialized? */
+   SCIP_Bool             active;             /**< should column be displayed to the screen? */
 };
 
 

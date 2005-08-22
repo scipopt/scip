@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_conflict.h,v 1.8 2005/07/15 17:20:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_conflict.h,v 1.9 2005/08/22 18:35:44 bzfpfend Exp $"
 
 /**@file   pub_conflict.h
  * @brief  public methods for conflict analysis handlers
@@ -36,43 +36,43 @@
 
 /** compares two conflict handlers w. r. to their priority */
 extern
-DECL_SORTPTRCOMP(SCIPconflicthdlrComp);
+SCIP_DECL_SORTPTRCOMP(SCIPconflicthdlrComp);
 
 /** gets user data of conflict handler */
 extern
-CONFLICTHDLRDATA* SCIPconflicthdlrGetData(
-   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+SCIP_CONFLICTHDLRDATA* SCIPconflicthdlrGetData(
+   SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
 /** sets user data of conflict handler; user has to free old data in advance! */
 extern
 void SCIPconflicthdlrSetData(
-   CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
-   CONFLICTHDLRDATA* conflicthdlrdata   /**< new conflict handler user data */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_CONFLICTHDLRDATA* conflicthdlrdata   /**< new conflict handler user data */
    );
 
 /** gets name of conflict handler */
 extern
 const char* SCIPconflicthdlrGetName(
-   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+   SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
 /** gets description of conflict handler */
 extern
 const char* SCIPconflicthdlrGetDesc(
-   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+   SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
 /** gets priority of conflict handler */
 extern
 int SCIPconflicthdlrGetPriority(
-   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+   SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
 /** is conflict handler initialized? */
 extern
-Bool SCIPconflicthdlrIsInitialized(
-   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+SCIP_Bool SCIPconflicthdlrIsInitialized(
+   SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
 

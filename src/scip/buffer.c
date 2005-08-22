@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: buffer.c,v 1.22 2005/05/31 17:20:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: buffer.c,v 1.23 2005/08/22 18:35:33 bzfpfend Exp $"
 
 /**@file   buffer.c
  * @brief  methods for memory buffers for temporary objects
@@ -36,13 +36,13 @@
 
 
 /** creates memory buffer storage */
-RETCODE SCIPbufferCreate(
-   BUFFER**         buffer              /**< pointer to memory buffer storage */
+SCIP_RETCODE SCIPbufferCreate(
+   SCIP_BUFFER**         buffer              /**< pointer to memory buffer storage */
    )
 {
    assert(buffer != NULL);
 
-   ALLOC_OKAY( allocMemory(buffer) );
+   SCIP_ALLOC( BMSallocMemory(buffer) );
    (*buffer)->data = NULL;
    (*buffer)->size = NULL;
    (*buffer)->used = NULL;
@@ -54,7 +54,7 @@ RETCODE SCIPbufferCreate(
 
 /** frees memory buffer */
 void SCIPbufferFree(
-   BUFFER**         buffer              /**< pointer to memory buffer storage */
+   SCIP_BUFFER**         buffer              /**< pointer to memory buffer storage */
    )
 {
    int i;
@@ -64,20 +64,20 @@ void SCIPbufferFree(
    for( i = 0; i < (*buffer)->ndata; ++i )
    {
       assert(!(*buffer)->used[i]);
-      freeMemoryArrayNull(&(*buffer)->data[i]);
+      BMSfreeMemoryArrayNull(&(*buffer)->data[i]);
    }
-   freeMemoryArrayNull(&(*buffer)->data);
-   freeMemoryArrayNull(&(*buffer)->size);
-   freeMemoryArrayNull(&(*buffer)->used);
-   freeMemory(buffer);
+   BMSfreeMemoryArrayNull(&(*buffer)->data);
+   BMSfreeMemoryArrayNull(&(*buffer)->size);
+   BMSfreeMemoryArrayNull(&(*buffer)->used);
+   BMSfreeMemory(buffer);
 }
 
 /** allocates the next unused buffer */
-RETCODE SCIPbufferAllocMem(
-   BUFFER*          buffer,             /**< memory buffer storage */
-   SET*             set,                /**< global SCIP settings */
-   void**           ptr,                /**< pointer to store the allocated memory buffer */
-   int              size                /**< minimal required size of the buffer */
+SCIP_RETCODE SCIPbufferAllocMem(
+   SCIP_BUFFER*          buffer,             /**< memory buffer storage */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   void**                ptr,                /**< pointer to store the allocated memory buffer */
+   int                   size                /**< minimal required size of the buffer */
    )
 {
    int bufnum;
@@ -99,9 +99,9 @@ RETCODE SCIPbufferAllocMem(
 
       /* create additional buffers */
       newsize = SCIPsetCalcMemGrowSize(set, buffer->firstfree+1);
-      ALLOC_OKAY( reallocMemoryArray(&buffer->data, newsize) );
-      ALLOC_OKAY( reallocMemoryArray(&buffer->size, newsize) );
-      ALLOC_OKAY( reallocMemoryArray(&buffer->used, newsize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&buffer->data, newsize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&buffer->size, newsize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&buffer->used, newsize) );
       for( i = buffer->ndata; i < newsize; ++i )
       {
          buffer->data[i] = NULL;
@@ -121,7 +121,7 @@ RETCODE SCIPbufferAllocMem(
 
       /* enlarge buffer */
       newsize = SCIPsetCalcMemGrowSize(set, size);
-      ALLOC_OKAY( reallocMemorySize(&buffer->data[bufnum], newsize) );
+      SCIP_ALLOC( BMSreallocMemorySize(&buffer->data[bufnum], newsize) );
       buffer->size[bufnum] = newsize;
    }
    assert(buffer->size[bufnum] >= size);
@@ -130,38 +130,38 @@ RETCODE SCIPbufferAllocMem(
    buffer->used[bufnum] = TRUE;
    buffer->firstfree++;
 
-   debugMessage("allocated buffer %d/%d at %p of size %d (required size: %d) for pointer %p\n", 
+   SCIPdebugMessage("allocated buffer %d/%d at %p of size %d (required size: %d) for pointer %p\n", 
       bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, ptr);
 
    return SCIP_OKAY;
 }
 
 /** allocates the next unused buffer and copies the given memory into the buffer */
-RETCODE SCIPbufferDuplicateMem(
-   BUFFER*          buffer,             /**< memory buffer storage */
-   SET*             set,                /**< global SCIP settings */
-   void**           ptr,                /**< pointer to store the allocated memory buffer */
-   void*            source,             /**< memory block to copy into the buffer */
-   int              size                /**< minimal required size of the buffer */
+SCIP_RETCODE SCIPbufferDuplicateMem(
+   SCIP_BUFFER*          buffer,             /**< memory buffer storage */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   void**                ptr,                /**< pointer to store the allocated memory buffer */
+   void*                 source,             /**< memory block to copy into the buffer */
+   int                   size                /**< minimal required size of the buffer */
    )
 {
    assert(source != NULL);
 
    /* allocate a buffer of the given size */
-   CHECK_OKAY( SCIPbufferAllocMem(buffer, set, ptr, size) );
+   SCIP_CALL( SCIPbufferAllocMem(buffer, set, ptr, size) );
 
    /* copy the source memory into the buffer */
-   copyMemorySize(*ptr, source, size);
+   BMScopyMemorySize(*ptr, source, size);
 
    return SCIP_OKAY;
 }
 
 /** reallocates the buffer to at least the given size */
-RETCODE SCIPbufferReallocMem(
-   BUFFER*          buffer,             /**< memory buffer storage */
-   SET*             set,                /**< global SCIP settings */
-   void**           ptr,                /**< pointer to the allocated memory buffer */
-   int              size                /**< minimal required size of the buffer */
+SCIP_RETCODE SCIPbufferReallocMem(
+   SCIP_BUFFER*          buffer,             /**< memory buffer storage */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   void**                ptr,                /**< pointer to the allocated memory buffer */
+   int                   size                /**< minimal required size of the buffer */
    )
 {
    int bufnum;
@@ -196,14 +196,14 @@ RETCODE SCIPbufferReallocMem(
 
       /* enlarge buffer */
       newsize = SCIPsetCalcMemGrowSize(set, size);
-      ALLOC_OKAY( reallocMemorySize(&buffer->data[bufnum], newsize) );
+      SCIP_ALLOC( BMSreallocMemorySize(&buffer->data[bufnum], newsize) );
       buffer->size[bufnum] = newsize;
       *ptr = buffer->data[bufnum];
    }
    assert(buffer->size[bufnum] >= size);
    assert(*ptr == buffer->data[bufnum]);
 
-   debugMessage("reallocated buffer %d/%d at %p to size %d (required size: %d) for pointer %p\n", 
+   SCIPdebugMessage("reallocated buffer %d/%d at %p to size %d (required size: %d) for pointer %p\n", 
       bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, ptr);
 
    return SCIP_OKAY;
@@ -211,9 +211,9 @@ RETCODE SCIPbufferReallocMem(
 
 /** frees a buffer */
 void SCIPbufferFreeMem(
-   BUFFER*          buffer,             /**< memory buffer storage */
-   void**           ptr,                /**< pointer to the allocated memory buffer */
-   int              dummysize           /**< used to get a safer define for SCIPsetFreeBufferSize/Array */
+   SCIP_BUFFER*          buffer,             /**< memory buffer storage */
+   void**                ptr,                /**< pointer to the allocated memory buffer */
+   int                   dummysize           /**< used to get a safer define for SCIPsetFreeBufferSize/Array */
    )
 {  /*lint --e{715}*/
    int bufnum;
@@ -240,13 +240,13 @@ void SCIPbufferFreeMem(
    while( buffer->firstfree > 0 && !buffer->used[buffer->firstfree-1] )
       buffer->firstfree--;
 
-   debugMessage("freed buffer %d/%d at %p of size %d for pointer %p, first free is %d\n", 
+   SCIPdebugMessage("freed buffer %d/%d at %p of size %d for pointer %p, first free is %d\n", 
       bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], ptr, buffer->firstfree);
 }
 
 /** gets number of used buffers */
 int SCIPbufferGetNUsed(
-   BUFFER*          buffer              /**< memory buffer storage */
+   SCIP_BUFFER*          buffer              /**< memory buffer storage */
    )
 {
    assert(buffer != NULL);

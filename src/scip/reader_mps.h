@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.h,v 1.11 2005/07/15 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.h,v 1.12 2005/08/22 18:35:46 bzfpfend Exp $"
 
 /**@file   reader_mps.h
  * @brief  mps file reader
@@ -33,8 +33,8 @@
 
 /** includes the mps file reader into SCIP */
 extern
-RETCODE SCIPincludeReaderMps(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeReaderMps(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

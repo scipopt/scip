@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.c,v 1.17 2005/07/15 17:20:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: message.c,v 1.18 2005/08/22 18:35:41 bzfpfend Exp $"
 
 /**@file   message.c
  * @brief  message output methods
@@ -34,7 +34,7 @@
 
 /** error message print method of default message handler */
 static
-DECL_MESSAGEERROR(messageErrorDefault)
+SCIP_DECL_MESSAGEERROR(messageErrorDefault)
 {
    fputs(msg, file);
    fflush(file);
@@ -42,7 +42,7 @@ DECL_MESSAGEERROR(messageErrorDefault)
 
 /** warning message print method of default message handler */
 static
-DECL_MESSAGEWARNING(messageWarningDefault)
+SCIP_DECL_MESSAGEWARNING(messageWarningDefault)
 {
    fputs(msg, file);
    fflush(file);
@@ -50,7 +50,7 @@ DECL_MESSAGEWARNING(messageWarningDefault)
 
 /** dialog message print method of default message handler */
 static
-DECL_MESSAGEDIALOG(messageDialogDefault)
+SCIP_DECL_MESSAGEDIALOG(messageDialogDefault)
 {
    fputs(msg, file);
    fflush(file);
@@ -58,41 +58,41 @@ DECL_MESSAGEDIALOG(messageDialogDefault)
 
 /** info message print method of default message handler */
 static
-DECL_MESSAGEINFO(messageInfoDefault)
+SCIP_DECL_MESSAGEINFO(messageInfoDefault)
 {
    fputs(msg, file);
 }
 
 /** default message handler that prints messages to stdout or stderr */
 static
-MESSAGEHDLR messagehdlrDefault = {messageErrorDefault, messageWarningDefault, messageDialogDefault, messageInfoDefault,
+SCIP_MESSAGEHDLR messagehdlrDefault = {messageErrorDefault, messageWarningDefault, messageDialogDefault, messageInfoDefault,
                                   NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0};
 
 /** static variable that contains the currently installed message handler;
  *  if the handler is set to NULL, messages are suppressed
  */
-static MESSAGEHDLR* curmessagehdlr = &messagehdlrDefault;
+static SCIP_MESSAGEHDLR* curmessagehdlr = &messagehdlrDefault;
 
 /** stores the given message in the buffer and returns the part of the buffer and message that should be printed now */
 static
 void bufferMessage(
-   char*            buffer,             /**< message buffer */
-   int*             bufferlen,          /**< pointer to the currently used entries in the message buffer */
-   const char*      msg,                /**< message to store in the buffer; NULL to flush the buffer */
-   char*            outmsg              /**< array to store message that should be printed immediately */
+   char*                 buffer,             /**< message buffer */
+   int*                  bufferlen,          /**< pointer to the currently used entries in the message buffer */
+   const char*           msg,                /**< message to store in the buffer; NULL to flush the buffer */
+   char*                 outmsg              /**< array to store message that should be printed immediately */
    )
 {
    assert(outmsg != NULL);
-   assert(strlen(msg) < MAXSTRLEN);
+   assert(strlen(msg) < SCIP_MAXSTRLEN);
 
    *outmsg = '\0';
 
    /* should the buffer be flushed? */
    if( msg == NULL )
    {
-      strncpy(outmsg, buffer, MAXSTRLEN);
+      strncpy(outmsg, buffer, SCIP_MAXSTRLEN);
       (*bufferlen) = 0;
-      assert(strlen(outmsg) < MAXSTRLEN);
+      assert(strlen(outmsg) < SCIP_MAXSTRLEN);
       return;
    }
 
@@ -100,8 +100,8 @@ void bufferMessage(
    if( buffer == NULL )
    {
       /* no buffer exists -> just copy the message to the output */
-      strncpy(outmsg, msg, MAXSTRLEN);
-      assert(strlen(outmsg) < MAXSTRLEN);
+      strncpy(outmsg, msg, SCIP_MAXSTRLEN);
+      assert(strlen(outmsg) < SCIP_MAXSTRLEN);
    }
    else
    {
@@ -111,7 +111,7 @@ void bufferMessage(
       {
          char c;
 
-         assert(*bufferlen < MAXSTRLEN-1);
+         assert(*bufferlen < SCIP_MAXSTRLEN-1);
          c = *msg;
          msg++;
          buffer[*bufferlen] = c;
@@ -120,14 +120,14 @@ void bufferMessage(
          /* if the buffer is full or we reached a newline, move the buffer to the output message and store the
           * remaining message in the buffer
           */
-         if( *bufferlen >= MAXSTRLEN-1 || c == '\n' )
+         if( *bufferlen >= SCIP_MAXSTRLEN-1 || c == '\n' )
          {
             buffer[*bufferlen] = '\0';
-            strncpy(outmsg, buffer, MAXSTRLEN);
-            strncpy(buffer, msg, MAXSTRLEN);
+            strncpy(outmsg, buffer, SCIP_MAXSTRLEN);
+            strncpy(buffer, msg, SCIP_MAXSTRLEN);
             *bufferlen = strlen(msg);
-            assert(*bufferlen < MAXSTRLEN-1);
-            assert(strlen(outmsg) < MAXSTRLEN);
+            assert(*bufferlen < SCIP_MAXSTRLEN-1);
+            assert(strlen(outmsg) < SCIP_MAXSTRLEN);
             break;
          }
       }
@@ -137,12 +137,12 @@ void bufferMessage(
 /** prints error message with the current message handler, or buffers the message if no newline exists */
 static
 void messagePrintError(
-   const char*      msg                 /**< message to print; NULL to flush the output buffer */
+   const char*           msg                 /**< message to print; NULL to flush the output buffer */
    )
 {
    if( curmessagehdlr != NULL && curmessagehdlr->messageerror != NULL )
    {
-      char outmsg[MAXSTRLEN];
+      char outmsg[SCIP_MAXSTRLEN];
 
       bufferMessage(curmessagehdlr->errorbuffer, &curmessagehdlr->errorbufferlen, msg, outmsg);
       if( *outmsg != '\0' )
@@ -153,12 +153,12 @@ void messagePrintError(
 /** prints warning message with the current message handler, or buffers the message if no newline exists */
 static
 void messagePrintWarning(
-   const char*      msg                 /**< message to print; NULL to flush the output buffer */
+   const char*           msg                 /**< message to print; NULL to flush the output buffer */
    )
 {
    if( curmessagehdlr != NULL && curmessagehdlr->messagewarning != NULL )
    {
-      char outmsg[MAXSTRLEN];
+      char outmsg[SCIP_MAXSTRLEN];
 
       bufferMessage(curmessagehdlr->warningbuffer, &curmessagehdlr->warningbufferlen, msg, outmsg);
       if( *outmsg != '\0' )
@@ -169,15 +169,15 @@ void messagePrintWarning(
 /** prints dialog message with the current message handler, or buffers the message if no newline exists */
 static
 void messagePrintDialog(
-   FILE*            file,               /**< file stream to print into, or NULL for stdout */
-   const char*      msg                 /**< message to print; NULL to flush the output buffer */
+   FILE*                 file,               /**< file stream to print into, or NULL for stdout */
+   const char*           msg                 /**< message to print; NULL to flush the output buffer */
    )
 {
    if( curmessagehdlr != NULL && curmessagehdlr->messagedialog != NULL )
    {
       if( file == NULL || file == stdout )
       {
-         char outmsg[MAXSTRLEN];
+         char outmsg[SCIP_MAXSTRLEN];
          
          bufferMessage(curmessagehdlr->dialogbuffer, &curmessagehdlr->dialogbufferlen, msg, outmsg);
          if( *outmsg != '\0' )
@@ -195,15 +195,15 @@ void messagePrintDialog(
 /** prints info message with the current message handler, or buffers the message if no newline exists */
 static
 void messagePrintInfo(
-   FILE*            file,               /**< file stream to print into, or NULL for stdout */
-   const char*      msg                 /**< message to print; NULL to flush the output buffer */
+   FILE*                 file,               /**< file stream to print into, or NULL for stdout */
+   const char*           msg                 /**< message to print; NULL to flush the output buffer */
    )
 {
    if( curmessagehdlr != NULL && curmessagehdlr->messageinfo != NULL )
    {
       if( file == NULL || file == stdout )
       {
-         char outmsg[MAXSTRLEN];
+         char outmsg[SCIP_MAXSTRLEN];
          
          bufferMessage(curmessagehdlr->infobuffer, &curmessagehdlr->infobufferlen, msg, outmsg);
          if( *outmsg != '\0' )
@@ -219,17 +219,17 @@ void messagePrintInfo(
 }
 
 /** creates a message handler */
-RETCODE SCIPmessagehdlrCreate(
-   MESSAGEHDLR**    messagehdlr,        /**< pointer to store the message handler */
-   Bool             bufferedoutput,     /**< should the output be buffered up to the next newline? */
-   DECL_MESSAGEERROR((*messageerror)),  /**< error message print method of message handler */
-   DECL_MESSAGEWARNING((*messagewarning)),/**< warning message print method of message handler */
-   DECL_MESSAGEDIALOG((*messagedialog)),/**< dialog message print method of message handler */
-   DECL_MESSAGEINFO ((*messageinfo)),   /**< info message print method of message handler */
-   MESSAGEHDLRDATA* messagehdlrdata     /**< message handler data */
+SCIP_RETCODE SCIPmessagehdlrCreate(
+   SCIP_MESSAGEHDLR**    messagehdlr,        /**< pointer to store the message handler */
+   SCIP_Bool             bufferedoutput,     /**< should the output be buffered up to the next newline? */
+   SCIP_DECL_MESSAGEERROR((*messageerror)),  /**< error message print method of message handler */
+   SCIP_DECL_MESSAGEWARNING((*messagewarning)),/**< warning message print method of message handler */
+   SCIP_DECL_MESSAGEDIALOG((*messagedialog)),/**< dialog message print method of message handler */
+   SCIP_DECL_MESSAGEINFO ((*messageinfo)),   /**< info message print method of message handler */
+   SCIP_MESSAGEHDLRDATA* messagehdlrdata     /**< message handler data */
    )
 {
-   ALLOC_OKAY( allocMemory(messagehdlr) );
+   SCIP_ALLOC( BMSallocMemory(messagehdlr) );
    (*messagehdlr)->messageerror = messageerror;
    (*messagehdlr)->messagewarning = messagewarning;
    (*messagehdlr)->messagedialog = messagedialog;
@@ -247,10 +247,10 @@ RETCODE SCIPmessagehdlrCreate(
    /* allocate buffer for buffered output */
    if( bufferedoutput )
    {
-      ALLOC_OKAY( allocMemoryArray(&(*messagehdlr)->errorbuffer, MAXSTRLEN) );
-      ALLOC_OKAY( allocMemoryArray(&(*messagehdlr)->warningbuffer, MAXSTRLEN) );
-      ALLOC_OKAY( allocMemoryArray(&(*messagehdlr)->dialogbuffer, MAXSTRLEN) );
-      ALLOC_OKAY( allocMemoryArray(&(*messagehdlr)->infobuffer, MAXSTRLEN) );
+      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->errorbuffer, SCIP_MAXSTRLEN) );
+      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->warningbuffer, SCIP_MAXSTRLEN) );
+      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->dialogbuffer, SCIP_MAXSTRLEN) );
+      SCIP_ALLOC( BMSallocMemoryArray(&(*messagehdlr)->infobuffer, SCIP_MAXSTRLEN) );
       (*messagehdlr)->errorbuffer[0] = '\0';
       (*messagehdlr)->warningbuffer[0] = '\0';
       (*messagehdlr)->dialogbuffer[0] = '\0';
@@ -262,7 +262,7 @@ RETCODE SCIPmessagehdlrCreate(
 
 /** frees message handler */
 void SCIPmessagehdlrFree(
-   MESSAGEHDLR**    messagehdlr         /**< pointer to the message handler */
+   SCIP_MESSAGEHDLR**    messagehdlr         /**< pointer to the message handler */
    )
 {
    assert(messagehdlr != NULL);
@@ -275,18 +275,18 @@ void SCIPmessagehdlrFree(
       messagePrintDialog(NULL, NULL);
       messagePrintInfo(NULL, NULL);
 
-      freeMemoryArrayNull(&(*messagehdlr)->errorbuffer);
-      freeMemoryArrayNull(&(*messagehdlr)->warningbuffer);
-      freeMemoryArrayNull(&(*messagehdlr)->dialogbuffer);
-      freeMemoryArrayNull(&(*messagehdlr)->infobuffer);
-      freeMemory(messagehdlr);
+      BMSfreeMemoryArrayNull(&(*messagehdlr)->errorbuffer);
+      BMSfreeMemoryArrayNull(&(*messagehdlr)->warningbuffer);
+      BMSfreeMemoryArrayNull(&(*messagehdlr)->dialogbuffer);
+      BMSfreeMemoryArrayNull(&(*messagehdlr)->infobuffer);
+      BMSfreeMemory(messagehdlr);
    }
 }
 
 /** sets the user data of the message handler */
-RETCODE SCIPmessagehdlrSetData(
-   MESSAGEHDLR*     messagehdlr,        /**< message handler; must not be NULL */
-   MESSAGEHDLRDATA* messagehdlrdata     /**< new message handler data to attach to the handler */
+SCIP_RETCODE SCIPmessagehdlrSetData(
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler; must not be NULL */
+   SCIP_MESSAGEHDLRDATA* messagehdlrdata     /**< new message handler data to attach to the handler */
    )
 {
    if( messagehdlr == NULL )
@@ -298,8 +298,8 @@ RETCODE SCIPmessagehdlrSetData(
 }
 
 /** returns the user data of the message handler */
-MESSAGEHDLRDATA* SCIPmessagehdlrGetData(
-   MESSAGEHDLR*     messagehdlr         /**< message handler */
+SCIP_MESSAGEHDLRDATA* SCIPmessagehdlrGetData(
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
    if( messagehdlr != NULL )
@@ -310,7 +310,7 @@ MESSAGEHDLRDATA* SCIPmessagehdlrGetData(
 
 /** installs the given message handler */
 void SCIPmessageSetHandler(
-   MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
    )
 {
    curmessagehdlr = messagehdlr;
@@ -325,7 +325,7 @@ void SCIPmessageSetDefaultHandler(
 }
 
 /** returns the currently installed message handler, or NULL if messages are currently suppressed */
-MESSAGEHDLR* SCIPmessageGetHandler(
+SCIP_MESSAGEHDLR* SCIPmessageGetHandler(
    void
    )
 {
@@ -334,62 +334,62 @@ MESSAGEHDLR* SCIPmessageGetHandler(
 
 /** prints the header with source file location for an error message */
 void SCIPmessagePrintErrorHeader(
-   const char*      sourcefile,         /**< name of the source file that called the function */
-   int              sourceline          /**< line in the source file where the function was called */
+   const char*           sourcefile,         /**< name of the source file that called the function */
+   int                   sourceline          /**< line in the source file where the function was called */
    )
 {
-   char msg[MAXSTRLEN];
+   char msg[SCIP_MAXSTRLEN];
 
-   snprintf(msg, MAXSTRLEN, "[%s:%d] ERROR: ", sourcefile, sourceline);
+   snprintf(msg, SCIP_MAXSTRLEN, "[%s:%d] ERROR: ", sourcefile, sourceline);
    messagePrintError(msg);
 }
 
 /** prints an error message, acting like the printf() command */
 void SCIPmessagePrintError(
-   const char*      formatstr,          /**< format string like in printf() function */
-   ...                                  /**< format arguments line in printf() function */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
    )
 {
-   char msg[MAXSTRLEN];
+   char msg[SCIP_MAXSTRLEN];
    va_list ap;
 
    va_start(ap, formatstr); /*lint !e826*/
-   vsnprintf(msg, MAXSTRLEN, formatstr, ap);
+   vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
    messagePrintError(msg);
    va_end(ap);
 }
 
 /** prints the header with source file location for an error message */
 void SCIPmessagePrintWarningHeader(
-   const char*      sourcefile,         /**< name of the source file that called the function */
-   int              sourceline          /**< line in the source file where the function was called */
+   const char*           sourcefile,         /**< name of the source file that called the function */
+   int                   sourceline          /**< line in the source file where the function was called */
    )
 {
-   char msg[MAXSTRLEN];
+   char msg[SCIP_MAXSTRLEN];
 
-   snprintf(msg, MAXSTRLEN, "[%s:%d] Warning: ", sourcefile, sourceline);
+   snprintf(msg, SCIP_MAXSTRLEN, "[%s:%d] Warning: ", sourcefile, sourceline);
    messagePrintWarning(msg);
 }
 
 /** prints a warning message, acting like the printf() command */
 void SCIPmessagePrintWarning(
-   const char*      formatstr,          /**< format string like in printf() function */
-   ...                                  /**< format arguments line in printf() function */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
    )
 {
-   char msg[MAXSTRLEN];
+   char msg[SCIP_MAXSTRLEN];
    va_list ap;
 
    va_start(ap, formatstr); /*lint !e826*/
-   vsnprintf(msg, MAXSTRLEN, formatstr, ap);
+   vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
    messagePrintWarning(msg);
    va_end(ap);
 }
 
 /** prints a dialog message that requests user interaction, acting like the printf() command */
 void SCIPmessagePrintDialog(
-   const char*      formatstr,          /**< format string like in printf() function */
-   ...                                  /**< format arguments line in printf() function */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
    )
 {
    va_list ap;
@@ -401,8 +401,8 @@ void SCIPmessagePrintDialog(
 
 /** prints a dialog message that requests user interaction, acting like the vprintf() command */
 void SCIPmessageVPrintDialog(
-   const char*      formatstr,          /**< format string like in printf() function */
-   va_list          ap                  /**< variable argument list */
+   const char*           formatstr,          /**< format string like in printf() function */
+   va_list               ap                  /**< variable argument list */
    )
 {
    SCIPmessageVFPrintDialog(NULL, formatstr, ap);
@@ -410,9 +410,9 @@ void SCIPmessageVPrintDialog(
 
 /** prints a dialog message that requests user interaction into a file, acting like the fprintf() command */
 void SCIPmessageFPrintDialog(
-   FILE*            file,               /**< file stream to print into, or NULL for stdout */
-   const char*      formatstr,          /**< format string like in printf() function */
-   ...                                  /**< format arguments line in printf() function */
+   FILE*                 file,               /**< file stream to print into, or NULL for stdout */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
    )
 {
    va_list ap;
@@ -424,21 +424,21 @@ void SCIPmessageFPrintDialog(
 
 /** prints a dialog message that requests user interaction into a file, acting like the vfprintf() command */
 void SCIPmessageVFPrintDialog(
-   FILE*            file,               /**< file stream to print into, or NULL for stdout */
-   const char*      formatstr,          /**< format string like in printf() function */
-   va_list          ap                  /**< variable argument list */
+   FILE*                 file,               /**< file stream to print into, or NULL for stdout */
+   const char*           formatstr,          /**< format string like in printf() function */
+   va_list               ap                  /**< variable argument list */
    )
 {
-   char msg[MAXSTRLEN];
+   char msg[SCIP_MAXSTRLEN];
 
-   vsnprintf(msg, MAXSTRLEN, formatstr, ap);
+   vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
    messagePrintDialog(file, msg);
 }
 
 /** prints a message, acting like the printf() command */
 void SCIPmessagePrintInfo(
-   const char*      formatstr,          /**< format string like in printf() function */
-   ...                                  /**< format arguments line in printf() function */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
    )
 {
    va_list ap;
@@ -450,8 +450,8 @@ void SCIPmessagePrintInfo(
 
 /** prints a message, acting like the vprintf() command */
 void SCIPmessageVPrintInfo(
-   const char*      formatstr,          /**< format string like in printf() function */
-   va_list          ap                  /**< variable argument list */
+   const char*           formatstr,          /**< format string like in printf() function */
+   va_list               ap                  /**< variable argument list */
    )
 {
    SCIPmessageVFPrintInfo(NULL, formatstr, ap);
@@ -459,9 +459,9 @@ void SCIPmessageVPrintInfo(
 
 /** prints a message into a file, acting like the fprintf() command */
 void SCIPmessageFPrintInfo(
-   FILE*            file,               /**< file stream to print into, or NULL for stdout */
-   const char*      formatstr,          /**< format string like in printf() function */
-   ...                                  /**< format arguments line in printf() function */
+   FILE*                 file,               /**< file stream to print into, or NULL for stdout */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
    )
 {
    va_list ap;
@@ -473,23 +473,23 @@ void SCIPmessageFPrintInfo(
 
 /** prints a message into a file, acting like the vfprintf() command */
 void SCIPmessageVFPrintInfo(
-   FILE*            file,               /**< file stream to print into, or NULL for stdout */
-   const char*      formatstr,          /**< format string like in printf() function */
-   va_list          ap                  /**< variable argument list */
+   FILE*                 file,               /**< file stream to print into, or NULL for stdout */
+   const char*           formatstr,          /**< format string like in printf() function */
+   va_list               ap                  /**< variable argument list */
    )
 {
-   char msg[MAXSTRLEN];
+   char msg[SCIP_MAXSTRLEN];
    
-   vsnprintf(msg, MAXSTRLEN, formatstr, ap);
+   vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
    messagePrintInfo(file, msg);
 }
 
 /** prints a message depending on the verbosity level, acting like the printf() command */
 void SCIPmessagePrintVerbInfo(
-   VERBLEVEL        verblevel,          /**< current verbosity level */
-   VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
-   const char*      formatstr,          /**< format string like in printf() function */
-   ...                                  /**< format arguments line in printf() function */
+   SCIP_VERBLEVEL        verblevel,          /**< current verbosity level */
+   SCIP_VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
    )
 {
    va_list ap;
@@ -501,10 +501,10 @@ void SCIPmessagePrintVerbInfo(
 
 /** prints a message depending on the verbosity level, acting like the vprintf() command */
 void SCIPmessageVPrintVerbInfo(
-   VERBLEVEL        verblevel,          /**< current verbosity level */
-   VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
-   const char*      formatstr,          /**< format string like in printf() function */
-   va_list          ap                  /**< variable argument list */
+   SCIP_VERBLEVEL        verblevel,          /**< current verbosity level */
+   SCIP_VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
+   const char*           formatstr,          /**< format string like in printf() function */
+   va_list               ap                  /**< variable argument list */
    )
 {
    SCIPmessageVFPrintVerbInfo(verblevel, msgverblevel, NULL, formatstr, ap);
@@ -512,11 +512,11 @@ void SCIPmessageVPrintVerbInfo(
 
 /** prints a message into a file depending on the verbosity level, acting like the fprintf() command */
 void SCIPmessageFPrintVerbInfo(
-   VERBLEVEL        verblevel,          /**< current verbosity level */
-   VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
-   FILE*            file,               /**< file stream to print into, or NULL for stdout */
-   const char*      formatstr,          /**< format string like in printf() function */
-   ...                                  /**< format arguments line in printf() function */
+   SCIP_VERBLEVEL        verblevel,          /**< current verbosity level */
+   SCIP_VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
+   FILE*                 file,               /**< file stream to print into, or NULL for stdout */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
    )
 {
    va_list ap;
@@ -528,11 +528,11 @@ void SCIPmessageFPrintVerbInfo(
 
 /** prints a message into a file depending on the verbosity level, acting like the vfprintf() command */
 void SCIPmessageVFPrintVerbInfo(
-   VERBLEVEL        verblevel,          /**< current verbosity level */
-   VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
-   FILE*            file,               /**< file stream to print into, or NULL for stdout */
-   const char*      formatstr,          /**< format string like in printf() function */
-   va_list          ap                  /**< variable argument list */
+   SCIP_VERBLEVEL        verblevel,          /**< current verbosity level */
+   SCIP_VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
+   FILE*                 file,               /**< file stream to print into, or NULL for stdout */
+   const char*           formatstr,          /**< format string like in printf() function */
+   va_list               ap                  /**< variable argument list */
    )
 {
    assert(msgverblevel > SCIP_VERBLEVEL_NONE);
@@ -541,9 +541,9 @@ void SCIPmessageVFPrintVerbInfo(
 
    if( msgverblevel <= verblevel )
    {
-      char msg[MAXSTRLEN];
+      char msg[SCIP_MAXSTRLEN];
 
-      vsnprintf(msg, MAXSTRLEN, formatstr, ap);
+      vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
       messagePrintInfo(file, msg);
    }
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.h,v 1.17 2005/07/15 17:20:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.h,v 1.18 2005/08/22 18:35:42 bzfpfend Exp $"
 
 /**@file   paramset.h
  * @brief  internal methods for handling parameter settings
@@ -37,230 +37,230 @@
 
 /** creates parameter set */
 extern
-RETCODE SCIPparamsetCreate(
-   PARAMSET**       paramset,           /**< pointer to store the parameter set */
-   BLKMEM*          blkmem              /**< block memory */
+SCIP_RETCODE SCIPparamsetCreate(
+   SCIP_PARAMSET**       paramset,           /**< pointer to store the parameter set */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** frees parameter set */
 extern
 void SCIPparamsetFree(
-   PARAMSET**       paramset,           /**< pointer to the parameter set */
-   BLKMEM*          blkmem              /**< block memory */
+   SCIP_PARAMSET**       paramset,           /**< pointer to the parameter set */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** creates a bool parameter, sets it to its default value, and adds it to the parameter set */
 extern
-RETCODE SCIPparamsetAddBool(
-   PARAMSET*        paramset,           /**< parameter set */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
-   Bool             defaultvalue,       /**< default value of the parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE SCIPparamsetAddBool(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   SCIP_Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             defaultvalue,       /**< default value of the parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
 /** creates a int parameter, sets it to its default value, and adds it to the parameter set */
 extern
-RETCODE SCIPparamsetAddInt(
-   PARAMSET*        paramset,           /**< parameter set */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   int*             valueptr,           /**< pointer to store the current parameter value, or NULL */
-   int              defaultvalue,       /**< default value of the parameter */
-   int              minvalue,           /**< minimum value for parameter */
-   int              maxvalue,           /**< maximum value for parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE SCIPparamsetAddInt(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   int*                  valueptr,           /**< pointer to store the current parameter value, or NULL */
+   int                   defaultvalue,       /**< default value of the parameter */
+   int                   minvalue,           /**< minimum value for parameter */
+   int                   maxvalue,           /**< maximum value for parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
-/** creates a Longint parameter, sets it to its default value, and adds it to the parameter set */
+/** creates a SCIP_Longint parameter, sets it to its default value, and adds it to the parameter set */
 extern
-RETCODE SCIPparamsetAddLongint(
-   PARAMSET*        paramset,           /**< parameter set */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
-   Longint          defaultvalue,       /**< default value of the parameter */
-   Longint          minvalue,           /**< minimum value for parameter */
-   Longint          maxvalue,           /**< maximum value for parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE SCIPparamsetAddLongint(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   SCIP_Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Longint          defaultvalue,       /**< default value of the parameter */
+   SCIP_Longint          minvalue,           /**< minimum value for parameter */
+   SCIP_Longint          maxvalue,           /**< maximum value for parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
-/** creates a Real parameter, sets it to its default value, and adds it to the parameter set */
+/** creates a SCIP_Real parameter, sets it to its default value, and adds it to the parameter set */
 extern
-RETCODE SCIPparamsetAddReal(
-   PARAMSET*        paramset,           /**< parameter set */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
-   Real             defaultvalue,       /**< default value of the parameter */
-   Real             minvalue,           /**< minimum value for parameter */
-   Real             maxvalue,           /**< maximum value for parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE SCIPparamsetAddReal(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   SCIP_Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Real             defaultvalue,       /**< default value of the parameter */
+   SCIP_Real             minvalue,           /**< minimum value for parameter */
+   SCIP_Real             maxvalue,           /**< maximum value for parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
 /** creates a char parameter, sets it to its default value, and adds it to the parameter set */
 extern
-RETCODE SCIPparamsetAddChar(
-   PARAMSET*        paramset,           /**< parameter set */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   char*            valueptr,           /**< pointer to store the current parameter value, or NULL */
-   char             defaultvalue,       /**< default value of the parameter */
-   const char*      allowedvalues,      /**< array with possible parameter values, or NULL if not restricted */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE SCIPparamsetAddChar(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   char*                 valueptr,           /**< pointer to store the current parameter value, or NULL */
+   char                  defaultvalue,       /**< default value of the parameter */
+   const char*           allowedvalues,      /**< array with possible parameter values, or NULL if not restricted */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
 /** creates a string parameter, sets it to its default value, and adds it to the parameter set */
 extern
-RETCODE SCIPparamsetAddString(
-   PARAMSET*        paramset,           /**< parameter set */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   char**           valueptr,           /**< pointer to store the current parameter value, or NULL */
-   const char*      defaultvalue,       /**< default value of the parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE SCIPparamsetAddString(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   char**                valueptr,           /**< pointer to store the current parameter value, or NULL */
+   const char*           defaultvalue,       /**< default value of the parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
-/** gets the value of an existing Bool parameter */
+/** gets the value of an existing SCIP_Bool parameter */
 extern
-RETCODE SCIPparamsetGetBool(
-   PARAMSET*        paramset,           /**< parameter set */
-   const char*      name,               /**< name of the parameter */
-   Bool*            value               /**< pointer to store the parameter */
+SCIP_RETCODE SCIPparamsetGetBool(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool*            value               /**< pointer to store the parameter */
    );
 
 /** gets the value of an existing int parameter */
 extern
-RETCODE SCIPparamsetGetInt(
-   PARAMSET*        paramset,           /**< parameter set */
-   const char*      name,               /**< name of the parameter */
-   int*             value               /**< pointer to store the parameter */
+SCIP_RETCODE SCIPparamsetGetInt(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   int*                  value               /**< pointer to store the parameter */
    );
 
-/** gets the value of an existing Longint parameter */
+/** gets the value of an existing SCIP_Longint parameter */
 extern
-RETCODE SCIPparamsetGetLongint(
-   PARAMSET*        paramset,           /**< parameter set */
-   const char*      name,               /**< name of the parameter */
-   Longint*         value               /**< pointer to store the parameter */
+SCIP_RETCODE SCIPparamsetGetLongint(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Longint*         value               /**< pointer to store the parameter */
    );
 
-/** gets the value of an existing Real parameter */
+/** gets the value of an existing SCIP_Real parameter */
 extern
-RETCODE SCIPparamsetGetReal(
-   PARAMSET*        paramset,           /**< parameter set */
-   const char*      name,               /**< name of the parameter */
-   Real*            value               /**< pointer to store the parameter */
+SCIP_RETCODE SCIPparamsetGetReal(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Real*            value               /**< pointer to store the parameter */
    );
 
 /** gets the value of an existing char parameter */
 extern
-RETCODE SCIPparamsetGetChar(
-   PARAMSET*        paramset,           /**< parameter set */
-   const char*      name,               /**< name of the parameter */
-   char*            value               /**< pointer to store the parameter */
+SCIP_RETCODE SCIPparamsetGetChar(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   char*                 value               /**< pointer to store the parameter */
    );
 
 /** gets the value of an existing string parameter */
 extern
-RETCODE SCIPparamsetGetString(
-   PARAMSET*        paramset,           /**< parameter set */
-   const char*      name,               /**< name of the parameter */
-   char**           value               /**< pointer to store the parameter */
+SCIP_RETCODE SCIPparamsetGetString(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   char**                value               /**< pointer to store the parameter */
    );
 
-/** changes the value of an existing Bool parameter */
+/** changes the value of an existing SCIP_Bool parameter */
 extern
-RETCODE SCIPparamsetSetBool(
-   PARAMSET*        paramset,           /**< parameter set */
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   Bool             value               /**< new value of the parameter */
+SCIP_RETCODE SCIPparamsetSetBool(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool             value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing int parameter */
 extern
-RETCODE SCIPparamsetSetInt(
-   PARAMSET*        paramset,           /**< parameter set */
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   int              value               /**< new value of the parameter */
+SCIP_RETCODE SCIPparamsetSetInt(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   int                   value               /**< new value of the parameter */
    );
 
-/** changes the value of an existing Longint parameter */
+/** changes the value of an existing SCIP_Longint parameter */
 extern
-RETCODE SCIPparamsetSetLongint(
-   PARAMSET*        paramset,           /**< parameter set */
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   Longint          value               /**< new value of the parameter */
+SCIP_RETCODE SCIPparamsetSetLongint(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Longint          value               /**< new value of the parameter */
    );
 
-/** changes the value of an existing Real parameter */
+/** changes the value of an existing SCIP_Real parameter */
 extern
-RETCODE SCIPparamsetSetReal(
-   PARAMSET*        paramset,           /**< parameter set */
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   Real             value               /**< new value of the parameter */
+SCIP_RETCODE SCIPparamsetSetReal(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Real             value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing char parameter */
 extern
-RETCODE SCIPparamsetSetChar(
-   PARAMSET*        paramset,           /**< parameter set */
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   char             value               /**< new value of the parameter */
+SCIP_RETCODE SCIPparamsetSetChar(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   char                  value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing string parameter */
 extern
-RETCODE SCIPparamsetSetString(
-   PARAMSET*        paramset,           /**< parameter set */
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   const char*      value               /**< new value of the parameter */
+SCIP_RETCODE SCIPparamsetSetString(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   const char*           value               /**< new value of the parameter */
    );
 
 /** reads parameters from a file */
-RETCODE SCIPparamsetRead(
-   PARAMSET*        paramset,           /**< parameter set */
-   SET*             set,                /**< global SCIP settings */
-   const char*      filename            /**< file name */
+SCIP_RETCODE SCIPparamsetRead(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           filename            /**< file name */
    );
 
 /** writes all parameters in the parameter set to a file */
-RETCODE SCIPparamsetWrite(
-   PARAMSET*        paramset,           /**< parameter set */
-   const char*      filename,           /**< file name, or NULL for stdout */
-   Bool             comments,           /**< should parameter descriptions be written as comments? */
-   Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
+SCIP_RETCODE SCIPparamsetWrite(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           filename,           /**< file name, or NULL for stdout */
+   SCIP_Bool             comments,           /**< should parameter descriptions be written as comments? */
+   SCIP_Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
    );
 
 /** returns the array of parameters */
 extern
-PARAM** SCIPparamsetGetParams(
-   PARAMSET*        paramset            /**< parameter set */
+SCIP_PARAM** SCIPparamsetGetParams(
+   SCIP_PARAMSET*        paramset            /**< parameter set */
    );
 
 /** returns the number of parameters in the parameter set */
 extern
 int SCIPparamsetGetNParams(
-   PARAMSET*        paramset            /**< parameter set */
+   SCIP_PARAMSET*        paramset            /**< parameter set */
    );
 
 #endif

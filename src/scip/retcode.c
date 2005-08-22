@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: retcode.c,v 1.19 2005/07/15 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: retcode.c,v 1.20 2005/08/22 18:35:46 bzfpfend Exp $"
 
 /**@file   retcode.c
  * @brief  methods for return codes for SCIP methods
@@ -32,8 +32,8 @@
 
 /** prints error message for return code */
 void SCIPretcodePrint(
-   FILE*            file,               /**< file stream to write error message */
-   RETCODE          retcode             /**< SCIP return code causing the error */
+   FILE*                 file,               /**< file stream to write error message */
+   SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
    )
 {
    assert(file != NULL);
@@ -62,7 +62,7 @@ void SCIPretcodePrint(
       SCIPmessageFPrintInfo(file, "cannot create file");
       break;
    case SCIP_LPERROR:
-      SCIPmessageFPrintInfo(file, "error in LP solver");
+      SCIPmessageFPrintInfo(file, "error in SCIP_LP solver");
       break;
    case SCIP_NOPROBLEM:
       SCIPmessageFPrintInfo(file, "no problem exists");

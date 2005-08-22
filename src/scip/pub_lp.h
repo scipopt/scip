@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.27 2005/07/15 17:20:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.28 2005/08/22 18:35:45 bzfpfend Exp $"
 
 /**@file   pub_lp.h
- * @brief  public methods for LP management
+ * @brief  public methods for SCIP_LP management
  * @author Tobias Achterberg
  */
 
@@ -51,135 +51,135 @@
 /** output column to file stream */
 extern
 void SCIPcolPrint(
-   COL*             col,                /**< LP column */
-   FILE*            file                /**< output file (or NULL for standard output) */
+   SCIP_COL*             col,                /**< SCIP_LP column */
+   FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 #ifndef NDEBUG
 
-/* In debug mode, the following methods are implemented as function calls to ensure
+/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
 
 /** gets objective value of column */
 extern
-Real SCIPcolGetObj(
-   COL*             col                 /**< LP column */
+SCIP_Real SCIPcolGetObj(
+   SCIP_COL*             col                 /**< SCIP_LP column */
    );
 
 /** gets lower bound of column */
 extern
-Real SCIPcolGetLb(
-   COL*             col                 /**< LP column */
+SCIP_Real SCIPcolGetLb(
+   SCIP_COL*             col                 /**< SCIP_LP column */
    );
 
 /** gets upper bound of column */
 extern
-Real SCIPcolGetUb(
-   COL*             col                 /**< LP column */
+SCIP_Real SCIPcolGetUb(
+   SCIP_COL*             col                 /**< SCIP_LP column */
    );
 
 /** gets best bound of column with respect to the objective function */
 extern
-Real SCIPcolGetBestBound(
-   COL*             col                 /**< LP column */
+SCIP_Real SCIPcolGetBestBound(
+   SCIP_COL*             col                 /**< SCIP_LP column */
    );
 
-/** gets the primal LP solution of a column */
+/** gets the primal SCIP_LP solution of a column */
 extern
-Real SCIPcolGetPrimsol(
-   COL*             col                 /**< LP column */
+SCIP_Real SCIPcolGetPrimsol(
+   SCIP_COL*             col                 /**< SCIP_LP column */
    );
 
-/** gets the basis status of a row in the LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL
- *  and with SCIPisLPSolBasic(scip) == TRUE; returns SCIP_BASESTAT_BASIC for rows not in the current LP
+/** gets the basis status of a row in the SCIP_LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL
+ *  and with SCIPisLPSolBasic(scip) == TRUE; returns SCIP_BASESTAT_BASIC for rows not in the current SCIP_LP
  */
 extern
-BASESTAT SCIPcolGetBasisStatus(
-   COL*             col                 /**< LP column */
+SCIP_BASESTAT SCIPcolGetBasisStatus(
+   SCIP_COL*             col                 /**< SCIP_LP column */
    );
 
 /** gets variable this column represents */
 extern
-VAR* SCIPcolGetVar(
-   COL*             col                 /**< LP column */
+SCIP_VAR* SCIPcolGetVar(
+   SCIP_COL*             col                 /**< SCIP_LP column */
    );
 
 /** returns whether the associated variable is of integral type (binary, integer, implicit integer) */
 extern
-Bool SCIPcolIsIntegral(
-   COL*             col                 /**< LP column */
+SCIP_Bool SCIPcolIsIntegral(
+   SCIP_COL*             col                 /**< SCIP_LP column */
    );
 
-/** returns TRUE iff column is removeable from the LP (due to aging or cleanup) */
+/** returns TRUE iff column is removeable from the SCIP_LP (due to aging or cleanup) */
 extern
-Bool SCIPcolIsRemoveable(
-   COL*             col                 /**< LP column */
+SCIP_Bool SCIPcolIsRemoveable(
+   SCIP_COL*             col                 /**< SCIP_LP column */
    );
 
-/** gets position of column in current LP, or -1 if it is not in LP */
+/** gets position of column in current LP, or -1 if it is not in SCIP_LP */
 extern
 int SCIPcolGetLPPos(
-   COL*             col                 /**< LP column */
+   SCIP_COL*             col                 /**< SCIP_LP column */
    );
 
-/** gets depth in the tree where the column entered the LP, or -1 if it is not in LP */
+/** gets depth in the tree where the column entered the LP, or -1 if it is not in SCIP_LP */
 extern
 int SCIPcolGetLPDepth(
-   COL*             col                 /**< LP column */
+   SCIP_COL*             col                 /**< SCIP_LP column */
    );
 
-/** returns TRUE iff column is member of current LP */
+/** returns TRUE iff column is member of current SCIP_LP */
 extern
-Bool SCIPcolIsInLP(
-   COL*             col                 /**< LP column */
+SCIP_Bool SCIPcolIsInLP(
+   SCIP_COL*             col                 /**< SCIP_LP column */
    );
 
 /** get number of nonzero entries in column vector */
 extern
 int SCIPcolGetNNonz(
-   COL*             col                 /**< LP column */
+   SCIP_COL*             col                 /**< SCIP_LP column */
    );
 
-/** get number of nonzero entries in column vector, that correspond to rows currently in the LP;
+/** get number of nonzero entries in column vector, that correspond to rows currently in the SCIP_LP;
  *  Warning! This method is only applicable on columns, that are completely linked to their rows (e.g. a column
- *  that is in the current LP and the LP was solved, or a column that was in a solved LP and didn't change afterwards
+ *  that is in the current SCIP_LP and the SCIP_LP was solved, or a column that was in a solved SCIP_LP and didn't change afterwards
  */
 extern
 int SCIPcolGetNLPNonz(
-   COL*             col                 /**< LP column */
+   SCIP_COL*             col                 /**< SCIP_LP column */
    );
 
 /** gets array with rows of nonzero entries */
 extern
-ROW** SCIPcolGetRows(
-   COL*             col                 /**< LP column */
+SCIP_ROW** SCIPcolGetRows(
+   SCIP_COL*             col                 /**< SCIP_LP column */
    );
 
 /** gets array with coefficients of nonzero entries */
 extern
-Real* SCIPcolGetVals(
-   COL*             col                 /**< LP column */
+SCIP_Real* SCIPcolGetVals(
+   SCIP_COL*             col                 /**< SCIP_LP column */
    );
 
 /** gets node number of the last node in current branch and bound run, where strong branching was used on the
  *  given column, or -1 if strong branching was never applied to the column in current run
  */
 extern
-Longint SCIPcolGetStrongbranchNode(
-   COL*             col                 /**< LP column */
+SCIP_Longint SCIPcolGetStrongbranchNode(
+   SCIP_COL*             col                 /**< SCIP_LP column */
    );
 
 /** gets number of times, strong branching was applied in current run on the given column */
 extern
 int SCIPcolGetNStrongbranchs(
-   COL*             col                 /**< LP column */
+   SCIP_COL*             col                 /**< SCIP_LP column */
    );
 
 /** gets opposite bound type of given bound type */
 extern
-BOUNDTYPE SCIPboundtypeOpposite(
-   BOUNDTYPE        boundtype           /**< type of bound (lower or upper) */
+SCIP_BOUNDTYPE SCIPboundtypeOpposite(
+   SCIP_BOUNDTYPE        boundtype           /**< type of bound (lower or upper) */
    );
 
 #else
@@ -215,26 +215,26 @@ BOUNDTYPE SCIPboundtypeOpposite(
 
 
 /*
- * Row methods
+ * SCIP_Row methods
  */
 
 /** locks an unmodifiable row, which forbids further changes; has no effect on modifiable rows */
 extern
 void SCIProwLock(
-   ROW*             row                 /**< LP row */
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
 /** unlocks a lock of an unmodifiable row; a row with no sealed lock may be modified; has no effect on modifiable rows */
 extern
 void SCIProwUnlock(
-   ROW*             row                 /**< LP row */
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
 /** returns the scalar product of the coefficient vectors of the two given rows */
 extern
-Real SCIProwGetScalarProduct(
-   ROW*             row1,               /**< first LP row */
-   ROW*             row2                /**< second LP row */
+SCIP_Real SCIProwGetScalarProduct(
+   SCIP_ROW*             row1,               /**< first SCIP_LP row */
+   SCIP_ROW*             row2                /**< second SCIP_LP row */
    );
 
 /** returns the degree of parallelism between the hyperplanes defined by the two row vectors v, w:
@@ -242,9 +242,9 @@ Real SCIProwGetScalarProduct(
  *  the hyperplanes are parellel, iff p = 1, they are orthogonal, iff p = 0
  */
 extern
-Real SCIProwGetParallelism(
-   ROW*             row1,               /**< first LP row */
-   ROW*             row2                /**< second LP row */
+SCIP_Real SCIProwGetParallelism(
+   SCIP_ROW*             row1,               /**< first SCIP_LP row */
+   SCIP_ROW*             row2                /**< second SCIP_LP row */
    );
 
 /** returns the degree of orthogonality between the hyperplanes defined by the two row vectors v, w:
@@ -252,153 +252,153 @@ Real SCIProwGetParallelism(
  *  the hyperplanes are orthogonal, iff p = 1, they are parallel, iff p = 0
  */
 extern
-Real SCIProwGetOrthogonality(
-   ROW*             row1,               /**< first LP row */
-   ROW*             row2                /**< second LP row */
+SCIP_Real SCIProwGetOrthogonality(
+   SCIP_ROW*             row1,               /**< first SCIP_LP row */
+   SCIP_ROW*             row2                /**< second SCIP_LP row */
    );
 
 /** output row to file stream */
 extern
 void SCIProwPrint(
-   ROW*             row,                /**< LP row */
-   FILE*            file                /**< output file (or NULL for standard output) */
+   SCIP_ROW*             row,                /**< SCIP_LP row */
+   FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 #ifndef NDEBUG
 
-/* In debug mode, the following methods are implemented as function calls to ensure
+/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
 
 /** get number of nonzero entries in row vector */
 extern
 int SCIProwGetNNonz(
-   ROW*             row                 /**< LP row */
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
-/** get number of nonzero entries in row vector, that correspond to columns currently in the LP;
+/** get number of nonzero entries in row vector, that correspond to columns currently in the SCIP_LP;
  *  Warning! This method is only applicable on rows, that are completely linked to their columns (e.g. a row
- *  that is in the current LP and the LP was solved, or a row that was in a solved LP and didn't change afterwards
+ *  that is in the current SCIP_LP and the SCIP_LP was solved, or a row that was in a solved SCIP_LP and didn't change afterwards
  */
 extern
 int SCIProwGetNLPNonz(
-   ROW*             row                 /**< LP row */
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
 /** gets array with columns of nonzero entries */
 extern
-COL** SCIProwGetCols(
-   ROW*             row                 /**< LP row */
+SCIP_COL** SCIProwGetCols(
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
 /** gets array with coefficients of nonzero entries */
 extern
-Real* SCIProwGetVals(
-   ROW*             row                 /**< LP row */
+SCIP_Real* SCIProwGetVals(
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
 /** gets constant shift of row */
 extern
-Real SCIProwGetConstant(
-   ROW*             row                 /**< LP row */
+SCIP_Real SCIProwGetConstant(
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
 /** gets euclidean norm of row vector */
 extern
-Real SCIProwGetNorm(
-   ROW*             row                 /**< LP row */
+SCIP_Real SCIProwGetNorm(
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
 /** gets sum norm of row vector (sum of absolute values of coefficients) */
 extern
-Real SCIProwGetSumNorm(
-   ROW*             row                 /**< LP row */
+SCIP_Real SCIProwGetSumNorm(
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
 /** returns the left hand side of the row */
 extern
-Real SCIProwGetLhs(
-   ROW*             row                 /**< LP row */
+SCIP_Real SCIProwGetLhs(
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
 /** returns the right hand side of the row */
 extern
-Real SCIProwGetRhs(
-   ROW*             row                 /**< LP row */
+SCIP_Real SCIProwGetRhs(
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
-/** gets the dual LP solution of a row */
+/** gets the dual SCIP_LP solution of a row */
 extern
-Real SCIProwGetDualsol(
-   ROW*             row                 /**< LP row */
+SCIP_Real SCIProwGetDualsol(
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
-/** gets the dual farkas coefficient of a row in an infeasible LP */
+/** gets the dual farkas coefficient of a row in an infeasible SCIP_LP */
 extern
-Real SCIProwGetDualfarkas(
-   ROW*             row                 /**< LP row */
+SCIP_Real SCIProwGetDualfarkas(
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
-/** gets the basis status of a row in the LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL
- *  and with SCIPisLPSolBasic(scip) == TRUE; returns SCIP_BASESTAT_BASIC for rows not in the current LP
+/** gets the basis status of a row in the SCIP_LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL
+ *  and with SCIPisLPSolBasic(scip) == TRUE; returns SCIP_BASESTAT_BASIC for rows not in the current SCIP_LP
  */
 extern
-BASESTAT SCIProwGetBasisStatus(
-   ROW*             row                 /**< LP row */
+SCIP_BASESTAT SCIProwGetBasisStatus(
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
 /** returns the name of the row */
 extern
 const char* SCIProwGetName(
-   ROW*             row                 /**< LP row */
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
 /** gets unique index of row */
 extern
 int SCIProwGetIndex(
-   ROW*             row                 /**< LP row */
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
 /** returns TRUE iff the activity of the row (without the row's constant) is always integral in a feasible solution */
 extern
-Bool SCIProwIsIntegral(
-   ROW*             row                 /**< LP row */
+SCIP_Bool SCIProwIsIntegral(
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
 /** returns TRUE iff row is only valid locally */
 extern
-Bool SCIProwIsLocal(
-   ROW*             row                 /**< LP row */
+SCIP_Bool SCIProwIsLocal(
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
 /** returns TRUE iff row is modifiable during node processing (subject to column generation) */
 extern
-Bool SCIProwIsModifiable(
-   ROW*             row                 /**< LP row */
+SCIP_Bool SCIProwIsModifiable(
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
-/** returns TRUE iff row is removeable from the LP (due to aging or cleanup) */
+/** returns TRUE iff row is removeable from the SCIP_LP (due to aging or cleanup) */
 extern
-Bool SCIProwIsRemoveable(
-   ROW*             row                 /**< LP row */
+SCIP_Bool SCIProwIsRemoveable(
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
-/** gets position of row in current LP, or -1 if it is not in LP */
+/** gets position of row in current LP, or -1 if it is not in SCIP_LP */
 extern
 int SCIProwGetLPPos(
-   ROW*             row                 /**< LP row */
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
-/** gets depth in the tree where the row entered the LP, or -1 if it is not in LP */
+/** gets depth in the tree where the row entered the LP, or -1 if it is not in SCIP_LP */
 extern
 int SCIProwGetLPDepth(
-   ROW*             row                 /**< LP row */
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
-/** returns TRUE iff row is member of current LP */
+/** returns TRUE iff row is member of current SCIP_LP */
 extern
-Bool SCIProwIsInLP(
-   ROW*             row                 /**< LP row */
+SCIP_Bool SCIProwIsInLP(
+   SCIP_ROW*             row                 /**< SCIP_LP row */
    );
 
 #else

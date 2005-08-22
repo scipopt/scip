@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.37 2005/07/15 17:20:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.38 2005/08/22 18:35:48 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -38,9 +38,9 @@
 #define DEFAULT_MAXROUNDS             3 /**< maximal number of cmir separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXTRIES            100 /**< maximal number of rows to start aggregation with per separation round
-                                         *   (-1: unlimited) */
+                                              *   (-1: unlimited) */
 #define DEFAULT_MAXTRIESROOT         -1 /**< maximal number of rows to start aggregation with per round in the root node
-                                         *   (-1: unlimited) */
+                                              *   (-1: unlimited) */
 #define DEFAULT_MAXAGGRS              3 /**< maximal number of aggregations for each row per separation round */
 #define DEFAULT_MAXAGGRSROOT          6 /**< maximal number of aggreagtions for each row per round in the root node */
 #define DEFAULT_MAXSEPACUTS          50 /**< maximal number of cmir cuts separated per separation round */
@@ -54,7 +54,7 @@
 #define DEFAULT_MAXTESTDELTAROOT    100 /**< maximal number of different deltas to try in the root node */
 #define DEFAULT_MAXCONTS             10 /**< maximal number of active continuous variables in aggregated row */
 #define DEFAULT_MAXCONTSROOT         10 /**< maximal number of active continuous variables in aggregated row in the root */
-#define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
+#define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the SCIP_LP if they are no longer tight? */
 
 #define BOUNDSWITCH                 0.5
 #define USEVBDS                    TRUE
@@ -68,28 +68,28 @@
  */
 
 /** separator data */
-struct SepaData
+struct SCIP_SepaData
 {
-   Real             maxslack;           /**< maximal slack of rows to be used in aggregation */
-   Real             maxslackroot;       /**< maximal slack of rows to be used in aggregation in the root node */
-   Real             slackscore;         /**< weight of slack in the aggregation scoring of the rows */
-   Real             maxrowdensity;      /**< maximal density of row to be used in aggregation */
-   Real             maxrowfac;          /**< maximal row aggregation factor */
-   int              maxrounds;          /**< maximal number of cmir separation rounds per node (-1: unlimited) */
-   int              maxroundsroot;      /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
-   int              maxtries;           /**< maximal number of rows to start aggregation with per separation round
-                                         *   (-1: unlimited) */
-   int              maxtriesroot;       /**< maximal number of rows to start aggregation with per round in the root node
-                                         *   (-1: unlimited) */
-   int              maxaggrs;           /**< maximal number of aggregations for each row per separation round */
-   int              maxaggrsroot;       /**< maximal number of aggreagtions for each row per round in the root node */
-   int              maxsepacuts;        /**< maximal number of cmir cuts separated per separation round */
-   int              maxsepacutsroot;    /**< maximal number of cmir cuts separated per separation round in root node */
-   int              maxtestdelta;	/**< maximal number of different deltas to try */
-   int              maxtestdeltaroot;   /**< maximal number of different deltas to try in the root node */
-   int              maxconts;	        /**< maximal number of active continuous variables in aggregated row */
-   int              maxcontsroot;       /**< maximal number of active continuous variables in aggregated row in the root */
-   Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
+   SCIP_Real             maxslack;           /**< maximal slack of rows to be used in aggregation */
+   SCIP_Real             maxslackroot;       /**< maximal slack of rows to be used in aggregation in the root node */
+   SCIP_Real             slackscore;         /**< weight of slack in the aggregation scoring of the rows */
+   SCIP_Real             maxrowdensity;      /**< maximal density of row to be used in aggregation */
+   SCIP_Real             maxrowfac;          /**< maximal row aggregation factor */
+   int                   maxrounds;          /**< maximal number of cmir separation rounds per node (-1: unlimited) */
+   int                   maxroundsroot;      /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
+   int                   maxtries;           /**< maximal number of rows to start aggregation with per separation round
+                                              *   (-1: unlimited) */
+   int                   maxtriesroot;       /**< maximal number of rows to start aggregation with per round in the root node
+                                              *   (-1: unlimited) */
+   int                   maxaggrs;           /**< maximal number of aggregations for each row per separation round */
+   int                   maxaggrsroot;       /**< maximal number of aggreagtions for each row per round in the root node */
+   int                   maxsepacuts;        /**< maximal number of cmir cuts separated per separation round */
+   int                   maxsepacutsroot;    /**< maximal number of cmir cuts separated per separation round in root node */
+   int                   maxtestdelta;	/**< maximal number of different deltas to try */
+   int                   maxtestdeltaroot;   /**< maximal number of different deltas to try in the root node */
+   int                   maxconts;	        /**< maximal number of active continuous variables in aggregated row */
+   int                   maxcontsroot;       /**< maximal number of active continuous variables in aggregated row in the root */
+   SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the SCIP_LP if they are no longer tight? */
 };
 
 
@@ -101,25 +101,25 @@ struct SepaData
 
 /** stores nonzero elements of dense coefficient vector as sparse vector, and calculates activity and norm */
 static
-RETCODE storeCutInArrays(
-   SCIP*            scip,               /**< SCIP data structure */
-   int              nvars,              /**< number of problem variables */
-   VAR**            vars,               /**< problem variables */
-   Real*            cutcoefs,           /**< dense coefficient vector */
-   Real*            varsolvals,         /**< dense variable LP solution vector */
-   char             normtype,           /**< type of norm to use for efficacy norm calculation */
-   VAR**            cutvars,            /**< array to store variables of sparse cut vector */
-   Real*            cutvals,            /**< array to store coefficients of sparse cut vector */
-   int*             cutlen,             /**< pointer to store number of nonzero entries in cut */
-   Real*            cutact,             /**< pointer to store activity of cut */
-   Real*            cutnorm             /**< pointer to store norm of cut vector */
+SCIP_RETCODE storeCutInArrays(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of problem variables */
+   SCIP_VAR**            vars,               /**< problem variables */
+   SCIP_Real*            cutcoefs,           /**< dense coefficient vector */
+   SCIP_Real*            varsolvals,         /**< dense variable SCIP_LP solution vector */
+   char                  normtype,           /**< type of norm to use for efficacy norm calculation */
+   SCIP_VAR**            cutvars,            /**< array to store variables of sparse cut vector */
+   SCIP_Real*            cutvals,            /**< array to store coefficients of sparse cut vector */
+   int*                  cutlen,             /**< pointer to store number of nonzero entries in cut */
+   SCIP_Real*            cutact,             /**< pointer to store activity of cut */
+   SCIP_Real*            cutnorm             /**< pointer to store norm of cut vector */
    )
 {
-   Real val;
-   Real absval;
-   Real cutsqrnorm;
-   Real act;
-   Real norm;
+   SCIP_Real val;
+   SCIP_Real absval;
+   SCIP_Real cutsqrnorm;
+   SCIP_Real act;
+   SCIP_Real norm;
    int len;
    int v;
 
@@ -196,7 +196,7 @@ RETCODE storeCutInArrays(
       }
       break;
    default:
-      errorMessage("invalid efficacy norm parameter '%c'\n", normtype);
+      SCIPerrorMessage("invalid efficacy norm parameter '%c'\n", normtype);
       return SCIP_INVALIDDATA;
    }
 
@@ -207,27 +207,27 @@ RETCODE storeCutInArrays(
    return SCIP_OKAY;
 }
 
-/** adds given cut to LP if violated */
+/** adds given cut to SCIP_LP if violated */
 static
-RETCODE addCut(
-   SCIP*            scip,               /**< SCIP data structure */
-   SEPADATA*        sepadata,           /**< separator data */
-   Real*            varsolvals,         /**< solution values of active variables */
-   Real*            cutcoefs,           /**< coefficients of active variables in cut */
-   Real             cutrhs,             /**< right hand side of cut */
-   Bool             cutislocal,         /**< is the cut only locally valid? */
-   char             normtype,           /**< type of norm to use for efficacy norm calculation */
-   int*             ncuts               /**< pointer to count the number of added cuts */
+SCIP_RETCODE addCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_Real*            varsolvals,         /**< solution values of active variables */
+   SCIP_Real*            cutcoefs,           /**< coefficients of active variables in cut */
+   SCIP_Real             cutrhs,             /**< right hand side of cut */
+   SCIP_Bool             cutislocal,         /**< is the cut only locally valid? */
+   char                  normtype,           /**< type of norm to use for efficacy norm calculation */
+   int*                  ncuts               /**< pointer to count the number of added cuts */
    )
 {
-   VAR** vars;
-   VAR** cutvars;
-   Real* cutvals;
-   Real cutact;
-   Real cutnorm;
+   SCIP_VAR** vars;
+   SCIP_VAR** cutvars;
+   SCIP_Real* cutvals;
+   SCIP_Real cutact;
+   SCIP_Real cutnorm;
    int nvars;
    int cutlen;
-   Bool success;
+   SCIP_Bool success;
    
    assert(scip != NULL);
    assert(sepadata != NULL);      
@@ -236,41 +236,41 @@ RETCODE addCut(
    assert(ncuts != NULL);
 
    /* get active problem variables */
-   CHECK_OKAY( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
    assert(nvars == 0 || vars != NULL);
 
    /* get temporary memory for storing the cut as sparse row */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &cutvars, nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &cutvals, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutvals, nvars) );
    
    /* store the cut as sparse row, calculate activity and norm of cut */
-   CHECK_OKAY( storeCutInArrays(scip, nvars, vars, cutcoefs, varsolvals, normtype,
+   SCIP_CALL( storeCutInArrays(scip, nvars, vars, cutcoefs, varsolvals, normtype,
          cutvars, cutvals, &cutlen, &cutact, &cutnorm) );
 
    if( SCIPisPositive(scip, cutnorm) && SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm) )
    {
-      ROW* cut;
-      char cutname[MAXSTRLEN];
+      SCIP_ROW* cut;
+      char cutname[SCIP_MAXSTRLEN];
       
       /* create the cut */
       sprintf(cutname, "cmir%d_%d", SCIPgetNLPs(scip), *ncuts);
-      CHECK_OKAY( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs, 
+      SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs, 
             cutislocal, FALSE, sepadata->dynamiccuts) );
-      CHECK_OKAY( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
+      SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
 
-      debugMessage(" -> found potential c-mir cut <%s>: activity=%f, rhs=%f, norm=%f, eff=%f\n",
+      SCIPdebugMessage(" -> found potential c-mir cut <%s>: activity=%f, rhs=%f, norm=%f, eff=%f\n",
          cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut));
-      debug(SCIPprintRow(scip, cut, NULL));
+      SCIPdebug(SCIPprintRow(scip, cut, NULL));
       
 #if 0
       /* try to scale the cut to integral values */
-      CHECK_OKAY( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
+      SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
             10, 100.0, MAKECONTINTEGRAL, &success) );
       if( success && !SCIPisCutEfficacious(scip, cut) )
       {
-         debugMessage(" -> c-mir cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
+         SCIPdebugMessage(" -> c-mir cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
             cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut));
-         debug(SCIPprintRow(scip, cut, NULL));
+         SCIPdebug(SCIPprintRow(scip, cut, NULL));
          success = FALSE;
       }
 #else
@@ -280,21 +280,21 @@ RETCODE addCut(
       /* if scaling was successful, add the cut */
       if( success ) /*lint !e774*/ /* Boolean within 'if' always evaluates to True */
       {
-         debugMessage(" -> found c-mir cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%g)\n",
+         SCIPdebugMessage(" -> found c-mir cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%g)\n",
             cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut),
             SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
             SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-         debug(SCIPprintRow(scip, cut, NULL));
-         CHECK_OKAY( SCIPaddCut(scip, cut, FALSE) );
+         SCIPdebug(SCIPprintRow(scip, cut, NULL));
+         SCIP_CALL( SCIPaddCut(scip, cut, FALSE) );
          if( !cutislocal )
          {
-            CHECK_OKAY( SCIPaddPoolCut(scip, cut) );
+            SCIP_CALL( SCIPaddPoolCut(scip, cut) );
          }
          (*ncuts)++;
       }
       
       /* release the row */
-      CHECK_OKAY( SCIPreleaseRow(scip, &cut) );
+      SCIP_CALL( SCIPreleaseRow(scip, &cut) );
    }
    
    /* free temporary memory */
@@ -307,16 +307,16 @@ RETCODE addCut(
 /** adds delta to continuous variables counters */
 static
 void updateNConts(
-   SCIP*            scip,               /**< SCIP data structure */ 
-   COL*             col,                /**< column of continuous variable */
-   int              delta,              /**< delta value of counters */
-   int*             nconts,             /**< pointer to count number of continuous variabls */
-   int*             nactiveconts        /**< pointer to count number of active continuous variabls */
+   SCIP*                 scip,               /**< SCIP data structure */ 
+   SCIP_COL*             col,                /**< column of continuous variable */
+   int                   delta,              /**< delta value of counters */
+   int*                  nconts,             /**< pointer to count number of continuous variabls */
+   int*                  nactiveconts        /**< pointer to count number of active continuous variabls */
    )
 {
-   Real primsol;
-   Real lb;
-   Real ub;
+   SCIP_Real primsol;
+   SCIP_Real lb;
+   SCIP_Real ub;
 
    assert(nconts != NULL);
    assert(nactiveconts != NULL);
@@ -337,10 +337,10 @@ void updateNConts(
 /** decreases the score of a row in order to not aggregate it again too soon */
 static
 void decreaseRowScore(
-   SCIP*            scip,               /**< SCIP data structure */ 
-   Real*            rowlhsscores,       /**< aggregation scores for left hand sides of row */
-   Real*            rowrhsscores,       /**< aggregation scores for right hand sides of row */
-   int              rowidx              /**< index of row to decrease score for */
+   SCIP*                 scip,               /**< SCIP data structure */ 
+   SCIP_Real*            rowlhsscores,       /**< aggregation scores for left hand sides of row */
+   SCIP_Real*            rowrhsscores,       /**< aggregation scores for right hand sides of row */
+   int                   rowidx              /**< index of row to decrease score for */
    )
 {
    assert(rowlhsscores != NULL);
@@ -356,14 +356,14 @@ void decreaseRowScore(
 
 /** calculates efficacy of the given cut */
 static
-Real calcEfficacy(
-   int              nvars,              /**< number of variables in the problem */
-   Real*            cutcoefs,           /**< dense vector of cut coefficients */
-   Real             cutrhs,             /**< right hand side of cut */
-   Real             cutact              /**< activity of cut */
+SCIP_Real calcEfficacy(
+   int                   nvars,              /**< number of variables in the problem */
+   SCIP_Real*            cutcoefs,           /**< dense vector of cut coefficients */
+   SCIP_Real             cutrhs,             /**< right hand side of cut */
+   SCIP_Real             cutact              /**< activity of cut */
    )
 {
-   Real sqrnorm;
+   SCIP_Real sqrnorm;
    int i;
    
    assert(cutcoefs != NULL);
@@ -375,48 +375,48 @@ Real calcEfficacy(
    return (cutact - cutrhs)/SQRT(sqrnorm);
 }
 
-/** aggregates different single mixed integer constraints by taking linear combinations of the rows of the LP  */
+/** aggregates different single mixed integer constraints by taking linear combinations of the rows of the SCIP_LP  */
 static
-RETCODE aggregation(
-   SCIP*            scip,               /**< SCIP data structure */ 
-   SEPADATA*        sepadata,           /**< separator data */
-   Real*            varsolvals,         /**< LP solution value of all variables in LP */
-   Real*            rowlhsscores,       /**< aggregation scores for left hand sides of row */
-   Real*            rowrhsscores,       /**< aggregation scores for right hand sides of row */
-   int              startrow,           /**< index of row to start aggregation */ 
-   int              maxaggrs,           /**< maximal number of aggregations */
-   Real             maxslack,           /**< maximal slack of rows to be used in aggregation */
-   int              maxtestdelta,	/**< maximal number of different deltas to try */
-   int              maxconts,	        /**< maximal number of active continuous variables in aggregated row */
-   char             normtype,           /**< type of norm to use for efficacy norm calculation */
-   int*             ncuts               /**< pointer to count the number of generated cuts */
+SCIP_RETCODE aggregation(
+   SCIP*                 scip,               /**< SCIP data structure */ 
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_Real*            varsolvals,         /**< SCIP_LP solution value of all variables in SCIP_LP */
+   SCIP_Real*            rowlhsscores,       /**< aggregation scores for left hand sides of row */
+   SCIP_Real*            rowrhsscores,       /**< aggregation scores for right hand sides of row */
+   int                   startrow,           /**< index of row to start aggregation */ 
+   int                   maxaggrs,           /**< maximal number of aggregations */
+   SCIP_Real             maxslack,           /**< maximal slack of rows to be used in aggregation */
+   int                   maxtestdelta,	/**< maximal number of different deltas to try */
+   int                   maxconts,	        /**< maximal number of active continuous variables in aggregated row */
+   char                  normtype,           /**< type of norm to use for efficacy norm calculation */
+   int*                  ncuts               /**< pointer to count the number of generated cuts */
    )
 {
-   Real* aggrcoefs;       /* coefficients of all variables in aggregated row */
-   Real* rowweights;      /* weight of rows in all aggregations */ 
-   Real* testeddeltas;
-   Real maxweight;
+   SCIP_Real* aggrcoefs;       /* coefficients of all variables in aggregated row */
+   SCIP_Real* rowweights;      /* weight of rows in all aggregations */ 
+   SCIP_Real* testeddeltas;
+   SCIP_Real maxweight;
 
    int nstartnonzcols;    /* number of nonzero columns of startrow */
-   COL** startnonzcols;   /* columns with nonzero coefficients of startrow */
-   Real* startnonzcoefs;  /* nonzero coefficients of startrow */    
-   Real startrowact;      /* activity of startrow */
+   SCIP_COL** startnonzcols;   /* columns with nonzero coefficients of startrow */
+   SCIP_Real* startnonzcoefs;  /* nonzero coefficients of startrow */    
+   SCIP_Real startrowact;      /* activity of startrow */
 
-   Real* cutcoefs;         /* coefficients of variables in cut */
-   Real cutrhs;            /* right hand side of the cut */
-   Bool success;
-   Bool cutislocal;
+   SCIP_Real* cutcoefs;         /* coefficients of variables in cut */
+   SCIP_Real cutrhs;            /* right hand side of the cut */
+   SCIP_Bool success;
+   SCIP_Bool cutislocal;
 
    int naggrs;
    int nconts;
    int nactiveconts;
-   COL* bestcol;          
+   SCIP_COL* bestcol;          
 
-   VAR** vars;
+   SCIP_VAR** vars;
    int nvars;
-   COL** cols;
+   SCIP_COL** cols;
    int ncols;
-   ROW** rows;
+   SCIP_ROW** rows;
    int nrows;
    int c;
    int r;
@@ -428,22 +428,22 @@ RETCODE aggregation(
    assert(rowrhsscores != NULL);
    assert(ncuts != NULL);
 
-   /* get active problem variables and LP data */
-   CHECK_OKAY( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+   /* get active problem variables and SCIP_LP data */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
    assert(nvars == 0 || vars != NULL);
-   CHECK_OKAY( SCIPgetLPColsData(scip, &cols, &ncols) );
+   SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
    assert(ncols == 0 || cols != NULL);
-   CHECK_OKAY( SCIPgetLPRowsData(scip, &rows, &nrows) );
+   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
    assert(nrows == 0 || rows != NULL);
    assert(0 <= startrow && startrow < nrows);
 
-   debugMessage("start c-MIR aggregation with row <%s> (%d/%d)\n", SCIProwGetName(rows[startrow]), startrow, nrows);
+   SCIPdebugMessage("start c-MIR aggregation with row <%s> (%d/%d)\n", SCIProwGetName(rows[startrow]), startrow, nrows);
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &aggrcoefs, ncols) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &rowweights, nrows) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &testeddeltas, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &aggrcoefs, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rowweights, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &testeddeltas, ncols) );
 
    /* initialize weights of rows in aggregation */
    for( r = 0; r < nrows; r++ )
@@ -464,12 +464,12 @@ RETCODE aggregation(
    startnonzcoefs = SCIProwGetVals(rows[startrow]);
    
    /* for all columns of startrow store coefficient as coefficient in aggregated row */ 
-   clearMemoryArray(aggrcoefs, ncols);
+   BMSclearMemoryArray(aggrcoefs, ncols);
    nconts = 0;
    nactiveconts = 0;
    for( c = 0; c < nstartnonzcols; c++ )
    {
-      VAR* var;
+      SCIP_VAR* var;
       int pos;
 
       var = SCIPcolGetVar(startnonzcols[c]);
@@ -487,29 +487,29 @@ RETCODE aggregation(
    naggrs = 0;
    while( nactiveconts <= maxconts && naggrs <= maxaggrs )
    {
-      Real bestdelta;
-      Real bestefficacy; 
+      SCIP_Real bestdelta;
+      SCIP_Real bestefficacy; 
       int ntesteddeltas;
 
-      ROW* bestrow;          
-      COL** bestrownonzcols;     /* columns with nonzero coefficients in best row to add */
-      Real* bestrownonzcoefs;    /* nonzero coefficients of columns in best row to add */
+      SCIP_ROW* bestrow;          
+      SCIP_COL** bestrownonzcols;     /* columns with nonzero coefficients in best row to add */
+      SCIP_Real* bestrownonzcoefs;    /* nonzero coefficients of columns in best row to add */
       int nbestrownonzcols;      /* number of columns with nonzero coefficients in best row to add */
-      Real bestbounddist;
-      Real bestscore;
-      Real aggrfac;
-      Real absaggrfac;
+      SCIP_Real bestbounddist;
+      SCIP_Real bestscore;
+      SCIP_Real aggrfac;
+      SCIP_Real absaggrfac;
 
-#ifdef DEBUG
-      debugMessage("aggregation of startrow %d and %d additional rows with %d continuous variables (%d active):\n",
+#ifdef SCIP_DEBUG
+      SCIPdebugMessage("aggregation of startrow %d and %d additional rows with %d continuous variables (%d active):\n",
          startrow, naggrs, nconts, nactiveconts);
       for( c = 0; c < ncols; ++c )
       {
          if( aggrcoefs[c] != 0.0 )
-            debugPrintf(" %+g<%s>(%g)", aggrcoefs[c], SCIPvarGetName(SCIPcolGetVar(cols[c])),
+            SCIPdebugPrintf(" %+g<%s>(%g)", aggrcoefs[c], SCIPvarGetName(SCIPcolGetVar(cols[c])),
                SCIPvarGetLPSol(SCIPcolGetVar(cols[c])));
       }
-      debugPrintf("\n");
+      SCIPdebugPrintf("\n");
 #endif
 
       /* Step 1: try to generate a MIR cut out of the current aggregation */
@@ -522,14 +522,14 @@ RETCODE aggregation(
       bestefficacy = 0.0;
       for( c = 0; c < ncols && ntesteddeltas < maxtestdelta; c++ )
       {
-         VAR* var;
-         Real primsol;
-         Real lb;
-         Real ub;
-         Real delta;
-         Real cutact;
-         Real efficacy;
-         Bool tested;
+         SCIP_VAR* var;
+         SCIP_Real primsol;
+         SCIP_Real lb;
+         SCIP_Real ub;
+         SCIP_Real delta;
+         SCIP_Real cutact;
+         SCIP_Real efficacy;
+         SCIP_Bool tested;
          int i;
 
          /* ignore variables not existing in current aggregation (or with close to zero coefficients) */
@@ -568,17 +568,17 @@ RETCODE aggregation(
          testeddeltas[ntesteddeltas] = delta;
          ntesteddeltas++;
          
-         /* create a MIR cut out of the weighted LP rows */
-         CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->maxrowfac, MINFRAC,
+         /* create a MIR cut out of the weighted SCIP_LP rows */
+         SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->maxrowfac, MINFRAC,
                rowweights, delta, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
          assert(ALLOWLOCAL || !cutislocal);
-         debugMessage("delta = %g -> success: %d\n", delta, success);
+         SCIPdebugMessage("delta = %g -> success: %d\n", delta, success);
          
          /* delta generates cut which is more violated */
          if( success )
          {
             efficacy = calcEfficacy(nvars, cutcoefs, cutrhs, cutact);
-            debugMessage("act = %g  rhs = %g  eff = %g, old besteff = %g\n", 
+            SCIPdebugMessage("act = %g  rhs = %g  eff = %g, old besteff = %g\n", 
                cutact, cutrhs, efficacy, bestefficacy);
             if( efficacy > bestefficacy )
             {
@@ -591,10 +591,10 @@ RETCODE aggregation(
       /* delta found */
       if( SCIPisEfficacious(scip, bestefficacy) )
       {
-         Real cutact;
-         Real efficacy;
-         Real delta;
-         Bool tested;
+         SCIP_Real cutact;
+         SCIP_Real efficacy;
+         SCIP_Real delta;
+         SCIP_Bool tested;
          int i;
          int j;
          int oldncuts;
@@ -611,11 +611,11 @@ RETCODE aggregation(
             if( tested )
                continue;
 
-            /* create a MIR cut out of the weighted LP rows */
-            CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->maxrowfac, MINFRAC,
+            /* create a MIR cut out of the weighted SCIP_LP rows */
+            SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->maxrowfac, MINFRAC,
                   rowweights, delta, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
             assert(ALLOWLOCAL || !cutislocal);
-            debugMessage("delta = %g -> success: %d\n", delta, success);
+            SCIPdebugMessage("delta = %g -> success: %d\n", delta, success);
             if( success )
             {
                efficacy = calcEfficacy(nvars, cutcoefs, cutrhs, cutact);
@@ -629,10 +629,10 @@ RETCODE aggregation(
          
          /* generate cut with bestdelta */
          oldncuts = *ncuts;
-         CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->maxrowfac, MINFRAC,
+         SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->maxrowfac, MINFRAC,
                rowweights, bestdelta, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
          assert(ALLOWLOCAL || !cutislocal);
-         CHECK_OKAY( addCut(scip, sepadata, varsolvals, cutcoefs, cutrhs, cutislocal, normtype, ncuts) );
+         SCIP_CALL( addCut(scip, sepadata, varsolvals, cutcoefs, cutrhs, cutislocal, normtype, ncuts) );
 
          /* if the cut was successfully added, abort the aggregation of further rows */
          if( *ncuts > oldncuts )
@@ -645,7 +645,7 @@ RETCODE aggregation(
 
 
       /* Step 2: aggregate an additional row in order to remove a continuous variable */
-      debugMessage(" -> search column to eliminate\n");
+      SCIPdebugMessage(" -> search column to eliminate\n");
 
       /* search for "best" continuous variable in aggregated row:
        * - solution value is strictly between lower and upper bound
@@ -661,14 +661,14 @@ RETCODE aggregation(
       aggrfac = 0.0;
       for( c = 0; c < ncols; c++ )
       {
-         VAR* var;
-         COL* col;
-         Real primsol;
-         Real lb;
-         Real ub;
-         Real distlower;
-         Real distupper;
-         Real bounddist;
+         SCIP_VAR* var;
+         SCIP_COL* col;
+         SCIP_Real primsol;
+         SCIP_Real lb;
+         SCIP_Real ub;
+         SCIP_Real distlower;
+         SCIP_Real distupper;
+         SCIP_Real bounddist;
          
          /* ignore columns not in current aggregation */
          if( aggrcoefs[c] == 0.0 )
@@ -681,7 +681,7 @@ RETCODE aggregation(
          if( SCIPvarIsIntegral(var) )
             continue;
          
-         /* get minimum distance of LP solution value of variable to its bounds */
+         /* get minimum distance of SCIP_LP solution value of variable to its bounds */
          primsol = SCIPcolGetPrimsol(col);
          lb = SCIPcolGetLb(col);
          ub = SCIPcolGetUb(col);
@@ -692,11 +692,11 @@ RETCODE aggregation(
          /* check, if variable is candidate to be the new best variable */
          if( SCIPisPositive(scip, bounddist) && bounddist >= bestbounddist - 0.1 )
          {
-            ROW** nonzrows;
-            Real* nonzcoefs;
+            SCIP_ROW** nonzrows;
+            SCIP_Real* nonzcoefs;
             int nnonzrows;
             
-            debugMessage("     -> col <%s>[%g,%g]: sol=%g, dist=%g\n", SCIPvarGetName(var), lb, ub, primsol, bounddist);
+            SCIPdebugMessage("     -> col <%s>[%g,%g]: sol=%g, dist=%g\n", SCIPvarGetName(var), lb, ub, primsol, bounddist);
             
             /* look for "best" row to add (minimal slack), but don't add rows again,
              * that are already involved in aggregation
@@ -707,22 +707,22 @@ RETCODE aggregation(
             
             for( r = 0; r < nnonzrows; r++ )
             {
-               Real score;
-               Real factor;
-               Real absfactor;
-               Real activity;
-               Real lhs;
-               Real rhs;
+               SCIP_Real score;
+               SCIP_Real factor;
+               SCIP_Real absfactor;
+               SCIP_Real activity;
+               SCIP_Real lhs;
+               SCIP_Real rhs;
                int lppos;
                
                lppos = SCIProwGetLPPos(nonzrows[r]);
                assert(0 <= lppos && lppos < nrows);
                
-               debugMessage("        -> row <%s>: weight=%g, pos=%d, factor=%g, %g <= %g <= %g\n",
+               SCIPdebugMessage("        -> row <%s>: weight=%g, pos=%d, factor=%g, %g <= %g <= %g\n",
                   SCIProwGetName(nonzrows[r]), rowweights[lppos], lppos, - aggrcoefs[c] / nonzcoefs[r],
                   SCIProwGetLhs(nonzrows[r]), SCIPgetRowLPActivity(scip, nonzrows[r]), SCIProwGetRhs(nonzrows[r]));
                
-               /* take only unmodifiable LP rows, that are not yet aggregated */
+               /* take only unmodifiable SCIP_LP rows, that are not yet aggregated */
                if( rowweights[lppos] != 0.0 || SCIProwIsModifiable(nonzrows[r]) )
                   continue;
                
@@ -753,7 +753,7 @@ RETCODE aggregation(
                   bestcol = col;
                   bestrow = nonzrows[r];
                   aggrfac = factor;
-                  debugMessage("     -> col <%s>: %g * row <%s>, bounddist=%g, score=%g\n",
+                  SCIPdebugMessage("     -> col <%s>: %g * row <%s>, bounddist=%g, score=%g\n",
                      SCIPvarGetName(SCIPcolGetVar(bestcol)), aggrfac, SCIProwGetName(bestrow), bestbounddist, score);
                }
             }
@@ -767,7 +767,7 @@ RETCODE aggregation(
 
             
       /* Step 3: add row to aggregation */
-      debugMessage(" -> adding %+g<%s> to eliminate variable <%s> (aggregation %d)\n", 
+      SCIPdebugMessage(" -> adding %+g<%s> to eliminate variable <%s> (aggregation %d)\n", 
          aggrfac, SCIProwGetName(bestrow), SCIPvarGetName(SCIPcolGetVar(bestcol)), naggrs+1);
       assert(rowweights[SCIProwGetLPPos(bestrow)] == 0.0);
       assert(!SCIPisZero(scip, aggrfac));
@@ -786,7 +786,7 @@ RETCODE aggregation(
       nbestrownonzcols = SCIProwGetNLPNonz(bestrow);
       for( c = 0; c < nbestrownonzcols; c++ )
       {
-         VAR* var;
+         SCIP_VAR* var;
          int pos;
 
          var = SCIPcolGetVar(bestrownonzcols[c]);
@@ -803,7 +803,7 @@ RETCODE aggregation(
       }
       naggrs++;
 
-      debugMessage(" -> %d continuous variables left (%d/%d active), %d/%d aggregations\n", 
+      SCIPdebugMessage(" -> %d continuous variables left (%d/%d active), %d/%d aggregations\n", 
          nconts, nactiveconts, maxconts, naggrs, maxaggrs);
    }
 
@@ -824,9 +824,9 @@ RETCODE aggregation(
 
 /** destructor of separator to free user data (called when SCIP is exiting) */
 static
-DECL_SEPAFREE(sepaFreeCmir)
+SCIP_DECL_SEPAFREE(sepaFreeCmir)
 {  /*lint --e{715}*/
-   SEPADATA* sepadata;
+   SCIP_SEPADATA* sepadata;
 
    /* free separator data */
    sepadata = SCIPsepaGetData(sepa);
@@ -859,17 +859,17 @@ DECL_SEPAFREE(sepaFreeCmir)
 
 /** execution method of separator */
 static
-DECL_SEPAEXEC(sepaExecCmir)
+SCIP_DECL_SEPAEXEC(sepaExecCmir)
 {  /*lint --e{715}*/
-   SEPADATA* sepadata;
-   VAR** vars;
-   Real* varsolvals;
-   ROW** rows;     
-   Real* rowlhsscores;
-   Real* rowrhsscores;
-   Real* rowscores;
+   SCIP_SEPADATA* sepadata;
+   SCIP_VAR** vars;
+   SCIP_Real* varsolvals;
+   SCIP_ROW** rows;     
+   SCIP_Real* rowlhsscores;
+   SCIP_Real* rowrhsscores;
+   SCIP_Real* rowscores;
    int* roworder;
-   Real maxslack;
+   SCIP_Real maxslack;
    int nvars;
    int nrows;
    int ntries;
@@ -899,10 +899,10 @@ DECL_SEPAEXEC(sepaExecCmir)
       return SCIP_OKAY;
 
    /* get all rows and number of columns */
-   CHECK_OKAY( SCIPgetLPRowsData(scip, &rows, &nrows) ); 
+   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) ); 
    assert(nrows == 0 || rows != NULL);
 
-   /* nothing to do, if LP is empty */
+   /* nothing to do, if SCIP_LP is empty */
    if( nrows == 0 )
       return SCIP_OKAY;
 
@@ -918,17 +918,17 @@ DECL_SEPAEXEC(sepaExecCmir)
    *result = SCIP_DIDNOTFIND;
 
    /* get the type of norm to use for efficacy calculations */
-   CHECK_OKAY( SCIPgetCharParam(scip, "separating/efficacynorm", &normtype) );
+   SCIP_CALL( SCIPgetCharParam(scip, "separating/efficacynorm", &normtype) );
 
    /* get data structure */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &rowlhsscores, nrows) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &rowrhsscores, nrows) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &rowscores, nrows) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &roworder, nrows) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &varsolvals, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rowlhsscores, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rowrhsscores, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rowscores, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &roworder, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varsolvals, nvars) );
   
-   /* get the LP solution for all active variables */
-   CHECK_OKAY( SCIPgetVarSols(scip, nvars, vars, varsolvals) );
+   /* get the SCIP_LP solution for all active variables */
+   SCIP_CALL( SCIPgetVarSols(scip, nvars, vars, varsolvals) );
 
    /* get the maximal number of cuts allowed in a separation round */
    if( depth == 0 )
@@ -967,19 +967,19 @@ DECL_SEPAEXEC(sepaExecCmir)
       }
       else
       {
-         Real activity;
-         Real lhs;
-         Real rhs;
-         Real rowdensity;
-         Real rownorm;
-         Real slack;
+         SCIP_Real activity;
+         SCIP_Real lhs;
+         SCIP_Real rhs;
+         SCIP_Real rowdensity;
+         SCIP_Real rownorm;
+         SCIP_Real slack;
 
          activity = SCIPgetRowLPActivity(scip, rows[r]);
          lhs = SCIProwGetLhs(rows[r]);
          rhs = SCIProwGetRhs(rows[r]);
          rownorm = SCIProwGetNorm(rows[r]);
          rownorm = MAX(rownorm, 0.1);
-         rowdensity = (Real)nnonz/(Real)nvars;
+         rowdensity = (SCIP_Real)nnonz/(SCIP_Real)nvars;
          assert(SCIPisPositive(scip, rownorm));
 
          slack = (activity - lhs)/rownorm;
@@ -1006,12 +1006,12 @@ DECL_SEPAEXEC(sepaExecCmir)
       roworder[i] = r;
    }
  
-   /* start aggregation heuristic for each row in the LP */
+   /* start aggregation heuristic for each row in the SCIP_LP */
    ncuts = 0;
    ntries = (maxtries >= 0 ? MIN(maxtries, nrows) : nrows);
    for( r = 0; r < ntries && ncuts < maxsepacuts && !SCIPisInfinity(scip, -rowscores[roworder[r]]); r++ )
    {
-      CHECK_OKAY( aggregation(scip, sepadata, varsolvals, rowlhsscores, rowrhsscores, roworder[r], 
+      SCIP_CALL( aggregation(scip, sepadata, varsolvals, rowlhsscores, rowrhsscores, roworder[r], 
             maxaggrs, maxslack, maxtestdelta, maxconts, normtype, &ncuts) );
    }
 
@@ -1036,93 +1036,93 @@ DECL_SEPAEXEC(sepaExecCmir)
  */
 
 /** creates the cmir separator and includes it in SCIP */
-RETCODE SCIPincludeSepaCmir(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeSepaCmir(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SEPADATA* sepadata;
+   SCIP_SEPADATA* sepadata;
 
    /* create cmir separator data */
-   CHECK_OKAY( SCIPallocMemory(scip, &sepadata) );
+   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
 
    /* include separator */
-   CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
          sepaFreeCmir, sepaInitCmir, sepaExitCmir, 
          sepaInitsolCmir, sepaExitsolCmir, sepaExecCmir,
          sepadata) );
 
    /* add cmir separator parameters */
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "separating/cmir/maxrounds",
          "maximal number of cmir separation rounds per node (-1: unlimited)",
          &sepadata->maxrounds, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "separating/cmir/maxroundsroot",
          "maximal number of cmir separation rounds in the root node (-1: unlimited)",
          &sepadata->maxroundsroot, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "separating/cmir/maxtries",
          "maximal number of rows to start aggregation with per separation round (-1: unlimited)",
          &sepadata->maxtries, DEFAULT_MAXTRIES, -1, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "separating/cmir/maxtriesroot",
          "maximal number of rows to start aggregation with per separation round in the root node (-1: unlimited)",
          &sepadata->maxtriesroot, DEFAULT_MAXTRIESROOT, -1, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "separating/cmir/maxaggrs",
          "maximal number of aggregations for each row per separation round",
          &sepadata->maxaggrs, DEFAULT_MAXAGGRS, 0, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "separating/cmir/maxaggrsroot",
          "maximal number of aggregations for each row per separation round in the root node",
          &sepadata->maxaggrsroot, DEFAULT_MAXAGGRSROOT, 0, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "separating/cmir/maxsepacuts",
          "maximal number of cmir cuts separated per separation round",
          &sepadata->maxsepacuts, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "separating/cmir/maxsepacutsroot",
          "maximal number of cmir cuts separated per separation round in the root node",
          &sepadata->maxsepacutsroot, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddRealParam(scip,
+   SCIP_CALL( SCIPaddRealParam(scip,
          "separating/cmir/maxslack",
          "maximal slack of rows to be used in aggregation",
-         &sepadata->maxslack, DEFAULT_MAXSLACK, 0.0, REAL_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddRealParam(scip,
+         &sepadata->maxslack, DEFAULT_MAXSLACK, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
          "separating/cmir/maxslackroot",
          "maximal slack of rows to be used in aggregation in the root node",
-         &sepadata->maxslackroot, DEFAULT_MAXSLACKROOT, 0.0, REAL_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddRealParam(scip,
+         &sepadata->maxslackroot, DEFAULT_MAXSLACKROOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
          "separating/cmir/slackscore",
          "weight of slack in the aggregation scoring of the rows",
-         &sepadata->slackscore, DEFAULT_SLACKSCORE, 0.0, REAL_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddRealParam(scip,
+         &sepadata->slackscore, DEFAULT_SLACKSCORE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
          "separating/cmir/maxrowdensity",
          "maximal density of row to be used in aggregation",
-         &sepadata->maxrowdensity, DEFAULT_MAXROWDENSITY, 0.0, REAL_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddRealParam(scip,
+         &sepadata->maxrowdensity, DEFAULT_MAXROWDENSITY, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
          "separating/cmir/maxrowfac",
          "maximal row aggregation factor",
-         &sepadata->maxrowfac, DEFAULT_MAXROWFAC, 0.0, REAL_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddIntParam(scip,
+         &sepadata->maxrowfac, DEFAULT_MAXROWFAC, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
          "separating/cmir/maxtestdelta",
          "maximal number of different deltas to try",
          &sepadata->maxtestdelta, DEFAULT_MAXTESTDELTA, 0, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "separating/cmir/maxtestdeltaroot",
          "maximal number of different deltas to try in the root node",
          &sepadata->maxtestdeltaroot, DEFAULT_MAXTESTDELTAROOT, 0, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "separating/cmir/maxconts",
          "maximal number of active continuous variables in aggregated row", 
          &sepadata->maxconts, DEFAULT_MAXCONTS, 0, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "separating/cmir/maxcontsroot",
          "maximal number of active continuous variables in aggregated row in the root node", 
          &sepadata->maxcontsroot, DEFAULT_MAXCONTSROOT, 0, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddBoolParam(scip,
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cmir/dynamiccuts",
-         "should generated cuts be removed from the LP if they are no longer tight?",
+         "should generated cuts be removed from the SCIP_LP if they are no longer tight?",
          &sepadata->dynamiccuts, DEFAULT_DYNAMICCUTS, NULL, NULL) );
 
    return SCIP_OKAY;

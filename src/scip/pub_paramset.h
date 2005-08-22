@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_paramset.h,v 1.8 2005/07/15 17:20:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_paramset.h,v 1.9 2005/08/22 18:35:45 bzfpfend Exp $"
 
 /**@file   pub_paramset.h
  * @brief  public methods for handling parameter settings
@@ -35,194 +35,194 @@
 
 /** returns type of parameter */
 extern
-PARAMTYPE SCIPparamGetType(
-   PARAM*           param               /**< parameter */
+SCIP_PARAMTYPE SCIPparamGetType(
+   SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns name of parameter */
 extern
 const char* SCIPparamGetName(
-   PARAM*           param               /**< parameter */
+   SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns description of parameter */
 extern
 const char* SCIPparamGetDesc(
-   PARAM*           param               /**< parameter */
+   SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns locally defined parameter specific data */
 extern
-PARAMDATA* SCIPparamGetData(
-   PARAM*           param               /**< parameter */
+SCIP_PARAMDATA* SCIPparamGetData(
+   SCIP_PARAM*           param               /**< parameter */
    );
 
-/** returns value of Bool parameter */
+/** returns value of SCIP_Bool parameter */
 extern
-Bool SCIPparamGetBool(
-   PARAM*           param               /**< parameter */
+SCIP_Bool SCIPparamGetBool(
+   SCIP_PARAM*           param               /**< parameter */
    );
 
-/** returns default value of Bool parameter */
+/** returns default value of SCIP_Bool parameter */
 extern
-Bool SCIPparamGetBoolDefault(
-   PARAM*           param               /**< parameter */
+SCIP_Bool SCIPparamGetBoolDefault(
+   SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns value of int parameter */
 extern
 int SCIPparamGetInt(
-   PARAM*           param               /**< parameter */
+   SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns minimal value of int parameter */
 extern
 int SCIPparamGetIntMin(
-   PARAM*           param               /**< parameter */
+   SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns maximal value of int parameter */
 extern
 int SCIPparamGetIntMax(
-   PARAM*           param               /**< parameter */
+   SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns default value of int parameter */
 extern
 int SCIPparamGetIntDefault(
-   PARAM*           param               /**< parameter */
+   SCIP_PARAM*           param               /**< parameter */
    );
 
-/** returns value of Longint parameter */
+/** returns value of SCIP_Longint parameter */
 extern
-Longint SCIPparamGetLongint(
-   PARAM*           param               /**< parameter */
+SCIP_Longint SCIPparamGetLongint(
+   SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns minimal value of longint parameter */
 extern
-Longint SCIPparamGetLongintMin(
-   PARAM*           param               /**< parameter */
+SCIP_Longint SCIPparamGetLongintMin(
+   SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns maximal value of longint parameter */
 extern
-Longint SCIPparamGetLongintMax(
-   PARAM*           param               /**< parameter */
+SCIP_Longint SCIPparamGetLongintMax(
+   SCIP_PARAM*           param               /**< parameter */
    );
 
-/** returns default value of Longint parameter */
+/** returns default value of SCIP_Longint parameter */
 extern
-Longint SCIPparamGetLongintDefault(
-   PARAM*           param               /**< parameter */
+SCIP_Longint SCIPparamGetLongintDefault(
+   SCIP_PARAM*           param               /**< parameter */
    );
 
-/** returns value of Real parameter */
+/** returns value of SCIP_Real parameter */
 extern
-Real SCIPparamGetReal(
-   PARAM*           param               /**< parameter */
+SCIP_Real SCIPparamGetReal(
+   SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns minimal value of real parameter */
 extern
-Real SCIPparamGetRealMin(
-   PARAM*           param               /**< parameter */
+SCIP_Real SCIPparamGetRealMin(
+   SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns maximal value of real parameter */
 extern
-Real SCIPparamGetRealMax(
-   PARAM*           param               /**< parameter */
+SCIP_Real SCIPparamGetRealMax(
+   SCIP_PARAM*           param               /**< parameter */
    );
 
-/** returns default value of Real parameter */
+/** returns default value of SCIP_Real parameter */
 extern
-Real SCIPparamGetRealDefault(
-   PARAM*           param               /**< parameter */
+SCIP_Real SCIPparamGetRealDefault(
+   SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns value of char parameter */
 extern
 char SCIPparamGetChar(
-   PARAM*           param               /**< parameter */
+   SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns default value of char parameter */
 extern
 char SCIPparamGetCharDefault(
-   PARAM*           param               /**< parameter */
+   SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns value of string parameter */
 extern
 char* SCIPparamGetString(
-   PARAM*           param               /**< parameter */
+   SCIP_PARAM*           param               /**< parameter */
    );
 
 /** returns default value of String parameter */
 extern
 char* SCIPparamGetStringDefault(
-   PARAM*           param               /**< parameter */
+   SCIP_PARAM*           param               /**< parameter */
    );
 
-/** sets value of Bool parameter */
-RETCODE SCIPparamSetBool(
-   PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   Bool             value               /**< new value of the parameter */
+/** sets value of SCIP_Bool parameter */
+SCIP_RETCODE SCIPparamSetBool(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   SCIP_Bool             value               /**< new value of the parameter */
    );
 
 /** sets value of int parameter */
 extern
-RETCODE SCIPparamSetInt(
-   PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   int              value               /**< new value of the parameter */
+SCIP_RETCODE SCIPparamSetInt(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   int                   value               /**< new value of the parameter */
    );
 
-/** sets value of Longint parameter */
+/** sets value of SCIP_Longint parameter */
 extern
-RETCODE SCIPparamSetLongint(
-   PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   Longint          value               /**< new value of the parameter */
+SCIP_RETCODE SCIPparamSetLongint(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   SCIP_Longint          value               /**< new value of the parameter */
    );
 
-/** sets value of Real parameter */
+/** sets value of SCIP_Real parameter */
 extern
-RETCODE SCIPparamSetReal(
-   PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   Real             value               /**< new value of the parameter */
+SCIP_RETCODE SCIPparamSetReal(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   SCIP_Real             value               /**< new value of the parameter */
    );
 
 /** sets value of char parameter */
 extern
-RETCODE SCIPparamSetChar(
-   PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   char             value               /**< new value of the parameter */
+SCIP_RETCODE SCIPparamSetChar(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   char                  value               /**< new value of the parameter */
    );
 
 /** sets value of string parameter */
 extern
-RETCODE SCIPparamSetString(
-   PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   const char*      value               /**< new value of the parameter */
+SCIP_RETCODE SCIPparamSetString(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   const char*           value               /**< new value of the parameter */
    );
 
 /** returns whether the parameter is on its default setting */
 extern
-Bool SCIPparamIsDefault(
-   PARAM*           param               /**< parameter */
+SCIP_Bool SCIPparamIsDefault(
+   SCIP_PARAM*           param               /**< parameter */
    );
 
 /** sets the parameter to its default setting */
 extern
-RETCODE SCIPparamSetToDefault(
-   PARAM*           param,              /**< parameter */
-   SCIP*            scip                /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+SCIP_RETCODE SCIPparamSetToDefault(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP*                 scip                /**< SCIP data structure, or NULL if paramchgd method should not be called */   
    );
 
 

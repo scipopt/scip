@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.cpp,v 1.11 2005/05/31 17:20:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objsepa.cpp,v 1.12 2005/08/22 18:35:31 bzfpfend Exp $"
 
 /**@file   objsepa.cpp
  * @brief  C++ wrapper for cut separators
@@ -35,10 +35,10 @@
  */
 
 /** cut separator data */
-struct SepaData
+struct SCIP_SepaData
 {
-   scip::ObjSepa*   objsepa;            /**< cut separator object */
-   Bool             deleteobject;       /**< should the cut separator object be deleted when cut separator is freed? */
+   scip::ObjSepa*        objsepa;            /**< cut separator object */
+   SCIP_Bool             deleteobject;       /**< should the cut separator object be deleted when cut separator is freed? */
 };
 
 
@@ -50,16 +50,16 @@ struct SepaData
 
 /** destructor of cut separator to free user data (called when SCIP is exiting) */
 static
-DECL_SEPAFREE(sepaFreeObj)
+SCIP_DECL_SEPAFREE(sepaFreeObj)
 {  /*lint --e{715}*/
-   SEPADATA* sepadata;
+   SCIP_SEPADATA* sepadata;
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
    assert(sepadata->objsepa != NULL);
 
    /* call virtual method of sepa object */
-   CHECK_OKAY( sepadata->objsepa->scip_free(scip, sepa) );
+   SCIP_CALL( sepadata->objsepa->scip_free(scip, sepa) );
 
    /* free sepa object */
    if( sepadata->deleteobject )
@@ -75,16 +75,16 @@ DECL_SEPAFREE(sepaFreeObj)
 
 /** initialization method of cut separator (called after problem was transformed) */
 static
-DECL_SEPAINIT(sepaInitObj)
+SCIP_DECL_SEPAINIT(sepaInitObj)
 {  /*lint --e{715}*/
-   SEPADATA* sepadata;
+   SCIP_SEPADATA* sepadata;
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
    assert(sepadata->objsepa != NULL);
 
    /* call virtual method of sepa object */
-   CHECK_OKAY( sepadata->objsepa->scip_init(scip, sepa) );
+   SCIP_CALL( sepadata->objsepa->scip_init(scip, sepa) );
 
    return SCIP_OKAY;
 }
@@ -92,16 +92,16 @@ DECL_SEPAINIT(sepaInitObj)
 
 /** deinitialization method of cut separator (called before transformed problem is freed) */
 static
-DECL_SEPAEXIT(sepaExitObj)
+SCIP_DECL_SEPAEXIT(sepaExitObj)
 {  /*lint --e{715}*/
-   SEPADATA* sepadata;
+   SCIP_SEPADATA* sepadata;
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
    assert(sepadata->objsepa != NULL);
 
    /* call virtual method of sepa object */
-   CHECK_OKAY( sepadata->objsepa->scip_exit(scip, sepa) );
+   SCIP_CALL( sepadata->objsepa->scip_exit(scip, sepa) );
 
    return SCIP_OKAY;
 }
@@ -109,16 +109,16 @@ DECL_SEPAEXIT(sepaExitObj)
 
 /** solving process initialization method of separator (called when branch and bound process is about to begin) */
 static
-DECL_SEPAINITSOL(sepaInitsolObj)
+SCIP_DECL_SEPAINITSOL(sepaInitsolObj)
 {  /*lint --e{715}*/
-   SEPADATA* sepadata;
+   SCIP_SEPADATA* sepadata;
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
    assert(sepadata->objsepa != NULL);
 
    /* call virtual method of sepa object */
-   CHECK_OKAY( sepadata->objsepa->scip_initsol(scip, sepa) );
+   SCIP_CALL( sepadata->objsepa->scip_initsol(scip, sepa) );
 
    return SCIP_OKAY;
 }
@@ -126,16 +126,16 @@ DECL_SEPAINITSOL(sepaInitsolObj)
 
 /** solving process deinitialization method of separator (called before branch and bound process data is freed) */
 static
-DECL_SEPAEXITSOL(sepaExitsolObj)
+SCIP_DECL_SEPAEXITSOL(sepaExitsolObj)
 {  /*lint --e{715}*/
-   SEPADATA* sepadata;
+   SCIP_SEPADATA* sepadata;
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
    assert(sepadata->objsepa != NULL);
 
    /* call virtual method of sepa object */
-   CHECK_OKAY( sepadata->objsepa->scip_exitsol(scip, sepa) );
+   SCIP_CALL( sepadata->objsepa->scip_exitsol(scip, sepa) );
 
    return SCIP_OKAY;
 }
@@ -143,16 +143,16 @@ DECL_SEPAEXITSOL(sepaExitsolObj)
 
 /** execution method of separator */
 static
-DECL_SEPAEXEC(sepaExecObj)
+SCIP_DECL_SEPAEXEC(sepaExecObj)
 {  /*lint --e{715}*/
-   SEPADATA* sepadata;
+   SCIP_SEPADATA* sepadata;
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
    assert(sepadata->objsepa != NULL);
 
    /* call virtual method of sepa object */
-   CHECK_OKAY( sepadata->objsepa->scip_exec(scip, sepa, result) );
+   SCIP_CALL( sepadata->objsepa->scip_exec(scip, sepa, result) );
 
    return SCIP_OKAY;
 }
@@ -165,21 +165,21 @@ DECL_SEPAEXEC(sepaExecObj)
  */
 
 /** creates the cut separator for the given cut separator object and includes it in SCIP */
-RETCODE SCIPincludeObjSepa(
-   SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjSepa*   objsepa,            /**< cut separator object */
-   Bool             deleteobject        /**< should the cut separator object be deleted when cut separator is freed? */
+SCIP_RETCODE SCIPincludeObjSepa(
+   SCIP*                 scip,               /**< SCIP data structure */
+   scip::ObjSepa*        objsepa,            /**< cut separator object */
+   SCIP_Bool             deleteobject        /**< should the cut separator object be deleted when cut separator is freed? */
    )
 {
-   SEPADATA* sepadata;
+   SCIP_SEPADATA* sepadata;
 
    /* create cut separator data */
-   sepadata = new SEPADATA;
+   sepadata = new SCIP_SEPADATA;
    sepadata->objsepa = objsepa;
    sepadata->deleteobject = deleteobject;
 
    /* include cut separator */
-   CHECK_OKAY( SCIPincludeSepa(scip, objsepa->scip_name_, objsepa->scip_desc_, 
+   SCIP_CALL( SCIPincludeSepa(scip, objsepa->scip_name_, objsepa->scip_desc_, 
          objsepa->scip_priority_, objsepa->scip_freq_, objsepa->scip_delay_,
          sepaFreeObj, sepaInitObj, sepaExitObj, sepaInitsolObj, sepaExitsolObj, sepaExecObj,
          sepadata) );
@@ -189,12 +189,12 @@ RETCODE SCIPincludeObjSepa(
 
 /** returns the sepa object of the given name, or NULL if not existing */
 scip::ObjSepa* SCIPfindObjSepa(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< name of cut separator */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of cut separator */
    )
 {
-   SEPA* sepa;
-   SEPADATA* sepadata;
+   SCIP_SEPA* sepa;
+   SCIP_SEPADATA* sepadata;
 
    sepa = SCIPfindSepa(scip, name);
    if( sepa == NULL )
@@ -208,11 +208,11 @@ scip::ObjSepa* SCIPfindObjSepa(
    
 /** returns the sepa object for the given cut separator */
 scip::ObjSepa* SCIPgetObjSepa(
-   SCIP*            scip,               /**< SCIP data structure */
-   SEPA*            sepa                /**< cut separator */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa                /**< cut separator */
    )
 {
-   SEPADATA* sepadata;
+   SCIP_SEPADATA* sepadata;
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);

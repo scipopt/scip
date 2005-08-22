@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_message.h,v 1.1 2005/07/15 17:20:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_message.h,v 1.2 2005/08/22 18:35:50 bzfpfend Exp $"
 
 /**@file   struct_message.h
  * @brief  datastructures for problem statistics
@@ -32,21 +32,21 @@
 
 
 /** message handler to redirect output */
-struct Messagehdlr
+struct SCIP_Messagehdlr
 {
-   DECL_MESSAGEERROR((*messageerror));  /**< error message print method of message handler */
-   DECL_MESSAGEWARNING((*messagewarning));/**< warning message print method of message handler */
-   DECL_MESSAGEDIALOG((*messagedialog));/**< dialog message print method of message handler */
-   DECL_MESSAGEINFO ((*messageinfo));   /**< info message print method of message handler */
-   MESSAGEHDLRDATA* messagehdlrdata;    /**< message handler data */
-   char*            errorbuffer;        /**< buffer for constructing complete error output lines */
-   char*            warningbuffer;      /**< buffer for constructing complete warning output lines */
-   char*            dialogbuffer;       /**< buffer for constructing complete dialog output lines */
-   char*            infobuffer;         /**< buffer for constructing complete info output lines */
-   int              errorbufferlen;     /**< currently used space in the error buffer */
-   int              warningbufferlen;   /**< currently used space in the warning buffer */
-   int              dialogbufferlen;    /**< currently used space in the dialog buffer */
-   int              infobufferlen;      /**< currently used space in the info buffer */
+   SCIP_DECL_MESSAGEERROR((*messageerror));  /**< error message print method of message handler */
+   SCIP_DECL_MESSAGEWARNING((*messagewarning));/**< warning message print method of message handler */
+   SCIP_DECL_MESSAGEDIALOG((*messagedialog));/**< dialog message print method of message handler */
+   SCIP_DECL_MESSAGEINFO ((*messageinfo));   /**< info message print method of message handler */
+   SCIP_MESSAGEHDLRDATA* messagehdlrdata;    /**< message handler data */
+   char*                 errorbuffer;        /**< buffer for constructing complete error output lines */
+   char*                 warningbuffer;      /**< buffer for constructing complete warning output lines */
+   char*                 dialogbuffer;       /**< buffer for constructing complete dialog output lines */
+   char*                 infobuffer;         /**< buffer for constructing complete info output lines */
+   int                   errorbufferlen;     /**< currently used space in the error buffer */
+   int                   warningbufferlen;   /**< currently used space in the warning buffer */
+   int                   dialogbufferlen;    /**< currently used space in the dialog buffer */
+   int                   infobufferlen;      /**< currently used space in the info buffer */
 };
 
 

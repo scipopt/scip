@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_pricestore.h,v 1.9 2005/07/15 17:20:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_pricestore.h,v 1.10 2005/08/22 18:35:51 bzfpfend Exp $"
 
 /**@file   struct_pricestore.h
  * @brief  datastructures for storing priced variables
@@ -34,24 +34,24 @@
 
 
 /** storage for priced variables */
-struct Pricestore
+struct SCIP_Pricestore
 {
-   CLOCK*           probpricingtime;    /**< time needed to price existing problem variables */
-   VAR**            vars;               /**< array with priced variables with violated reduced costs sorted by score */
-   Real*            scores;             /**< score for each priced variable (e.g. |redcost|/#nonzeros) */
-   VAR**            bdviolvars;         /**< variables where zero violates the bounds */
-   Real*            bdviolvarslb;       /**< lower bounds of bdviolvars */
-   Real*            bdviolvarsub;       /**< upper bounds of bdbiolvars */
-   int              varssize;           /**< size of vars and score arrays */
-   int              nvars;              /**< number of priced variables (max. is set->price_maxvars) */
-   int              bdviolvarssize;     /**< size of bdviolvars, bdviolvarslb, and bdviolvarsub arrays */
-   int              nbdviolvars;        /**< number of variables, where zero violates the bounds */
-   int              naddedbdviolvars;   /**< number of bound violated variables already added to the LP */
-   int              nprobpricings;      /**< total number of calls to problem variable pricing */
-   int              nprobvarsfound;     /**< total number of problem variables, that were added (and evtl. thrown away) */
-   int              nvarsfound;         /**< total number of variables, that were added (and evtl. thrown away) */
-   int              nvarsapplied;       /**< total number of variables, that were added to the LP */
-   Bool             initiallp;          /**< is the pricing storage currently being filled with the initial LP columns? */
+   SCIP_CLOCK*           probpricingtime;    /**< time needed to price existing problem variables */
+   SCIP_VAR**            vars;               /**< array with priced variables with violated reduced costs sorted by score */
+   SCIP_Real*            scores;             /**< score for each priced variable (e.g. |redcost|/#nonzeros) */
+   SCIP_VAR**            bdviolvars;         /**< variables where zero violates the bounds */
+   SCIP_Real*            bdviolvarslb;       /**< lower bounds of bdviolvars */
+   SCIP_Real*            bdviolvarsub;       /**< upper bounds of bdbiolvars */
+   int                   varssize;           /**< size of vars and score arrays */
+   int                   nvars;              /**< number of priced variables (max. is set->price_maxvars) */
+   int                   bdviolvarssize;     /**< size of bdviolvars, bdviolvarslb, and bdviolvarsub arrays */
+   int                   nbdviolvars;        /**< number of variables, where zero violates the bounds */
+   int                   naddedbdviolvars;   /**< number of bound violated variables already added to the SCIP_LP */
+   int                   nprobpricings;      /**< total number of calls to problem variable pricing */
+   int                   nprobvarsfound;     /**< total number of problem variables, that were added (and evtl. thrown away) */
+   int                   nvarsfound;         /**< total number of variables, that were added (and evtl. thrown away) */
+   int                   nvarsapplied;       /**< total number of variables, that were added to the SCIP_LP */
+   SCIP_Bool             initiallp;          /**< is the pricing storage currently being filled with the initial SCIP_LP columns? */
 };
 
 

@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.h,v 1.9 2005/07/15 17:20:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: vbc.h,v 1.10 2005/08/22 18:35:55 bzfpfend Exp $"
 
 /**@file   vbc.h
- * @brief  methods for VBC Tool output
+ * @brief  methods for SCIP_VBC Tool output
  * @author Tobias Achterberg
  */
 
@@ -37,101 +37,101 @@
 
 /** creates VBCTool data structure */
 extern
-RETCODE SCIPvbcCreate(
-   VBC**            vbc                 /**< pointer to store the VBC information */
+SCIP_RETCODE SCIPvbcCreate(
+   SCIP_VBC**            vbc                 /**< pointer to store the SCIP_VBC information */
    );
 
-/** frees VBC Tool data structure */
+/** frees SCIP_VBC Tool data structure */
 extern
 void SCIPvbcFree(
-   VBC**            vbc                 /**< pointer to store the VBC information */
+   SCIP_VBC**            vbc                 /**< pointer to store the SCIP_VBC information */
    );
 
-/** initializes VBC information and creates a file for VBC output */
+/** initializes SCIP_VBC information and creates a file for SCIP_VBC output */
 extern
-RETCODE SCIPvbcInit(
-   VBC*             vbc,                /**< VBC information */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPvbcInit(
+   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** closes the VBC output file */
+/** closes the SCIP_VBC output file */
 extern
 void SCIPvbcExit(
-   VBC*             vbc,                /**< VBC information */
-   SET*             set                 /**< global SCIP settings */
+   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** creates a new node entry in the VBC output file */
+/** creates a new node entry in the SCIP_VBC output file */
 extern
-RETCODE SCIPvbcNewChild(
-   VBC*             vbc,                /**< VBC information */
-   STAT*            stat,               /**< problem statistics */
-   NODE*            node                /**< new node, that was created */
+SCIP_RETCODE SCIPvbcNewChild(
+   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_NODE*            node                /**< new node, that was created */
    );
 
 /** changes the color of the node to the color of solved nodes */
 extern
 void SCIPvbcSolvedNode(
-   VBC*             vbc,                /**< VBC information */
-   STAT*            stat,               /**< problem statistics */
-   NODE*            node                /**< new node, that was created */
+   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_NODE*            node                /**< new node, that was created */
    );
 
 /** changes the color of the node to the color of cutoff nodes */
 extern
 void SCIPvbcCutoffNode(
-   VBC*             vbc,                /**< VBC information */
-   STAT*            stat,               /**< problem statistics */
-   NODE*            node                /**< new node, that was created */
+   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_NODE*            node                /**< new node, that was created */
    );
 
 /** changes the color of the node to the color of nodes where a conflict clause was found */
 extern
 void SCIPvbcFoundConflict(
-   VBC*             vbc,                /**< VBC information */
-   STAT*            stat,               /**< problem statistics */
-   NODE*            node                /**< new node, that was created */
+   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_NODE*            node                /**< new node, that was created */
    );
 
 /** changes the color of the node to the color of nodes that were marked to be repropagated */
 extern
 void SCIPvbcMarkedRepropagateNode(
-   VBC*             vbc,                /**< VBC information */
-   STAT*            stat,               /**< problem statistics */
-   NODE*            node                /**< new node, that was created */
+   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_NODE*            node                /**< new node, that was created */
    );
 
 /** changes the color of the node to the color of repropagated nodes */
 extern
 void SCIPvbcRepropagatedNode(
-   VBC*             vbc,                /**< VBC information */
-   STAT*            stat,               /**< problem statistics */
-   NODE*            node                /**< new node, that was created */
+   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_NODE*            node                /**< new node, that was created */
    );
 
 /** changes the color of the node to the color of nodes with a primal solution */
 extern
 void SCIPvbcFoundSolution(
-   VBC*             vbc,                /**< VBC information */
-   STAT*            stat,               /**< problem statistics */
-   NODE*            node                /**< new node, that was created */
+   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_NODE*            node                /**< new node, that was created */
    );
 
-/** outputs a new global lower bound to the VBC output file */
+/** outputs a new global lower bound to the SCIP_VBC output file */
 extern
 void SCIPvbcLowerbound(
-   VBC*             vbc,                /**< VBC information */
-   STAT*            stat,               /**< problem statistics */
-   Real             lowerbound          /**< new lower bound */
+   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real             lowerbound          /**< new lower bound */
    );
 
-/** outputs a new global upper bound to the VBC output file */
+/** outputs a new global upper bound to the SCIP_VBC output file */
 extern
 void SCIPvbcUpperbound(
-   VBC*             vbc,                /**< VBC information */
-   STAT*            stat,               /**< problem statistics */
-   Real             upperbound          /**< new upper bound */
+   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real             upperbound          /**< new upper bound */
    );
 
 

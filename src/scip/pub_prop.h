@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_prop.h,v 1.7 2005/07/15 17:20:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_prop.h,v 1.8 2005/08/22 18:35:45 bzfpfend Exp $"
 
 /**@file   pub_prop.h
  * @brief  public methods for propagators
@@ -35,85 +35,85 @@
 
 /** compares two propagators w. r. to their priority */
 extern
-DECL_SORTPTRCOMP(SCIPpropComp);
+SCIP_DECL_SORTPTRCOMP(SCIPpropComp);
 
 /** gets user data of propagator */
 extern
-PROPDATA* SCIPpropGetData(
-   PROP*            prop                /**< propagator */
+SCIP_PROPDATA* SCIPpropGetData(
+   SCIP_PROP*            prop                /**< propagator */
    );
 
 /** sets user data of propagator; user has to free old data in advance! */
 extern
 void SCIPpropSetData(
-   PROP*            prop,               /**< propagator */
-   PROPDATA*        propdata            /**< new propagator user data */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_PROPDATA*        propdata            /**< new propagator user data */
    );
 
 /** gets name of propagator */
 extern
 const char* SCIPpropGetName(
-   PROP*            prop                /**< propagator */
+   SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets description of propagator */
 extern
 const char* SCIPpropGetDesc(
-   PROP*            prop                /**< propagator */
+   SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets priority of propagator */
 extern
 int SCIPpropGetPriority(
-   PROP*            prop                /**< propagator */
+   SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets frequency of propagator */
 extern
 int SCIPpropGetFreq(
-   PROP*            prop                /**< propagator */
+   SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets time in seconds used in this propagator */
 extern
-Real SCIPpropGetTime(
-   PROP*            prop                /**< propagator */
+SCIP_Real SCIPpropGetTime(
+   SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets the total number of times, the propagator was called */
 extern
-Longint SCIPpropGetNCalls(
-   PROP*            prop                /**< propagator */
+SCIP_Longint SCIPpropGetNCalls(
+   SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets total number of times, this propagator detected a cutoff */
 extern
-Longint SCIPpropGetNCutoffs(
-   PROP*            prop                /**< propagator */
+SCIP_Longint SCIPpropGetNCutoffs(
+   SCIP_PROP*            prop                /**< propagator */
    );
 
 /** gets total number of domain reductions found by this propagator */
 extern
-Longint SCIPpropGetNDomredsFound(
-   PROP*            prop                /**< propagator */
+SCIP_Longint SCIPpropGetNDomredsFound(
+   SCIP_PROP*            prop                /**< propagator */
    );
 
 /** should propagator be delayed, if other propagators found reductions? */
 extern
-Bool SCIPpropIsDelayed(
-   PROP*            prop                /**< propagator */
+SCIP_Bool SCIPpropIsDelayed(
+   SCIP_PROP*            prop                /**< propagator */
    );
 
 /** was propagator delayed at the last call? */
 extern
-Bool SCIPpropWasDelayed(
-   PROP*            prop                /**< propagator */
+SCIP_Bool SCIPpropWasDelayed(
+   SCIP_PROP*            prop                /**< propagator */
    );
 
 /** is propagator initialized? */
 extern
-Bool SCIPpropIsInitialized(
-   PROP*            prop                /**< propagator */
+SCIP_Bool SCIPpropIsInitialized(
+   SCIP_PROP*            prop                /**< propagator */
    );
 
 

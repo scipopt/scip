@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_xxx.h,v 1.8 2005/07/15 17:20:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_xxx.h,v 1.9 2005/08/22 18:35:43 bzfpfend Exp $"
 
 /**@file   presol_xxx.h
  * @brief  xxx presolver
@@ -32,8 +32,8 @@
 
 /** creates the xxx presolver and includes it in SCIP */
 extern
-RETCODE SCIPincludePresolXxx(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludePresolXxx(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

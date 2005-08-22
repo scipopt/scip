@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_relax.h,v 1.7 2005/07/15 17:20:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_relax.h,v 1.8 2005/08/22 18:35:45 bzfpfend Exp $"
 
 /**@file   pub_relax.h
  * @brief  public methods for relaxators
@@ -35,67 +35,67 @@
 
 /** compares two relaxators w. r. to their priority */
 extern
-DECL_SORTPTRCOMP(SCIPrelaxComp);
+SCIP_DECL_SORTPTRCOMP(SCIPrelaxComp);
 
 /** gets user data of relaxator */
 extern
-RELAXDATA* SCIPrelaxGetData(
-   RELAX*           relax               /**< relaxator */
+SCIP_RELAXDATA* SCIPrelaxGetData(
+   SCIP_RELAX*           relax               /**< relaxator */
    );
 
 /** sets user data of relaxator; user has to free old data in advance! */
 extern
 void SCIPrelaxSetData(
-   RELAX*           relax,              /**< relaxator */
-   RELAXDATA*       relaxdata           /**< new relaxator user data */
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_RELAXDATA*       relaxdata           /**< new relaxator user data */
    );
 
 /** gets name of relaxator */
 extern
 const char* SCIPrelaxGetName(
-   RELAX*           relax               /**< relaxator */
+   SCIP_RELAX*           relax               /**< relaxator */
    );
 
 /** gets description of relaxator */
 extern
 const char* SCIPrelaxGetDesc(
-   RELAX*           relax               /**< relaxator */
+   SCIP_RELAX*           relax               /**< relaxator */
    );
 
 /** gets priority of relaxator */
 extern
 int SCIPrelaxGetPriority(
-   RELAX*           relax               /**< relaxator */
+   SCIP_RELAX*           relax               /**< relaxator */
    );
 
 /** gets frequency of relaxator */
 extern
 int SCIPrelaxGetFreq(
-   RELAX*           relax               /**< relaxator */
+   SCIP_RELAX*           relax               /**< relaxator */
    );
 
 /** gets time in seconds used in this relaxator */
 extern
-Real SCIPrelaxGetTime(
-   RELAX*           relax               /**< relaxator */
+SCIP_Real SCIPrelaxGetTime(
+   SCIP_RELAX*           relax               /**< relaxator */
    );
 
 /** gets the total number of times, the relaxator was called */
 extern
-Longint SCIPrelaxGetNCalls(
-   RELAX*           relax               /**< relaxator */
+SCIP_Longint SCIPrelaxGetNCalls(
+   SCIP_RELAX*           relax               /**< relaxator */
    );
 
 /** is relaxator initialized? */
 extern
-Bool SCIPrelaxIsInitialized(
-   RELAX*           relax               /**< relaxator */
+SCIP_Bool SCIPrelaxIsInitialized(
+   SCIP_RELAX*           relax               /**< relaxator */
    );
 
 /** marks the current relaxation unsolved, s.t. the relaxator is called again in the next solving round */
 extern
 void SCIPrelaxMarkUnsolved(
-   RELAX*           relax               /**< relaxator */
+   SCIP_RELAX*           relax               /**< relaxator */
    );
 
 

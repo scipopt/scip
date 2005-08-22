@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.h,v 1.6 2005/07/15 17:20:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.h,v 1.7 2005/08/22 18:35:38 bzfpfend Exp $"
 
 /**@file   heur_objpscostdiving.h
- * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
+ * @brief  SCIP_LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
  * @author Tobias Achterberg
  */
 
@@ -32,8 +32,8 @@
 
 /** creates the objpscostdiving heuristic and includes it in SCIP */
 extern
-RETCODE SCIPincludeHeurObjpscostdiving(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeHeurObjpscostdiving(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

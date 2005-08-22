@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_primal.h,v 1.6 2005/07/15 17:20:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_primal.h,v 1.7 2005/08/22 18:35:54 bzfpfend Exp $"
 
 /**@file   type_primal.h
  * @brief  type definitions for collecting primal CIP solutions and primal informations
@@ -27,7 +27,7 @@
 #define __SCIP_TYPE_PRIMAL_H__
 
 
-typedef struct Primal PRIMAL;           /**< primal data */
+typedef struct SCIP_Primal SCIP_PRIMAL;           /**< primal data */
 
 
 #endif

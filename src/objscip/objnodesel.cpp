@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objnodesel.cpp,v 1.10 2005/05/31 17:20:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objnodesel.cpp,v 1.11 2005/08/22 18:35:30 bzfpfend Exp $"
 
 /**@file   objnodesel.cpp
  * @brief  C++ wrapper for node selectors
@@ -35,10 +35,10 @@
  */
 
 /** node selector data */
-struct NodeselData
+struct SCIP_NodeselData
 {
-   scip::ObjNodesel* objnodesel;        /**< node selector object */
-   Bool             deleteobject;       /**< should the node selector object be deleted when node selector is freed? */
+   scip::ObjNodesel*     objnodesel;         /**< node selector object */
+   SCIP_Bool             deleteobject;       /**< should the node selector object be deleted when node selector is freed? */
 };
 
 
@@ -50,16 +50,16 @@ struct NodeselData
 
 /** destructor of node selector to free user data (called when SCIP is exiting) */
 static
-DECL_NODESELFREE(nodeselFreeObj)
+SCIP_DECL_NODESELFREE(nodeselFreeObj)
 {  /*lint --e{715}*/
-   NODESELDATA* nodeseldata;
+   SCIP_NODESELDATA* nodeseldata;
 
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
    assert(nodeseldata->objnodesel != NULL);
 
    /* call virtual method of nodesel object */
-   CHECK_OKAY( nodeseldata->objnodesel->scip_free(scip, nodesel) );
+   SCIP_CALL( nodeseldata->objnodesel->scip_free(scip, nodesel) );
 
    /* free nodesel object */
    if( nodeseldata->deleteobject )
@@ -75,16 +75,16 @@ DECL_NODESELFREE(nodeselFreeObj)
 
 /** initialization method of node selector (called after problem was transformed) */
 static
-DECL_NODESELINIT(nodeselInitObj)
+SCIP_DECL_NODESELINIT(nodeselInitObj)
 {  /*lint --e{715}*/
-   NODESELDATA* nodeseldata;
+   SCIP_NODESELDATA* nodeseldata;
 
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
    assert(nodeseldata->objnodesel != NULL);
 
    /* call virtual method of nodesel object */
-   CHECK_OKAY( nodeseldata->objnodesel->scip_init(scip, nodesel) );
+   SCIP_CALL( nodeseldata->objnodesel->scip_init(scip, nodesel) );
 
    return SCIP_OKAY;
 }
@@ -92,16 +92,16 @@ DECL_NODESELINIT(nodeselInitObj)
 
 /** deinitialization method of node selector (called before transformed problem is freed) */
 static
-DECL_NODESELEXIT(nodeselExitObj)
+SCIP_DECL_NODESELEXIT(nodeselExitObj)
 {  /*lint --e{715}*/
-   NODESELDATA* nodeseldata;
+   SCIP_NODESELDATA* nodeseldata;
 
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
    assert(nodeseldata->objnodesel != NULL);
 
    /* call virtual method of nodesel object */
-   CHECK_OKAY( nodeseldata->objnodesel->scip_exit(scip, nodesel) );
+   SCIP_CALL( nodeseldata->objnodesel->scip_exit(scip, nodesel) );
 
    return SCIP_OKAY;
 }
@@ -109,16 +109,16 @@ DECL_NODESELEXIT(nodeselExitObj)
 
 /** solving process initialization method of node selector (called when branch and bound process is about to begin) */
 static
-DECL_NODESELINITSOL(nodeselInitsolObj)
+SCIP_DECL_NODESELINITSOL(nodeselInitsolObj)
 {  /*lint --e{715}*/
-   NODESELDATA* nodeseldata;
+   SCIP_NODESELDATA* nodeseldata;
 
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
    assert(nodeseldata->objnodesel != NULL);
 
    /* call virtual method of nodesel object */
-   CHECK_OKAY( nodeseldata->objnodesel->scip_initsol(scip, nodesel) );
+   SCIP_CALL( nodeseldata->objnodesel->scip_initsol(scip, nodesel) );
 
    return SCIP_OKAY;
 }
@@ -126,16 +126,16 @@ DECL_NODESELINITSOL(nodeselInitsolObj)
 
 /** solving process deinitialization method of node selector (called before branch and bound process data is freed) */
 static
-DECL_NODESELEXITSOL(nodeselExitsolObj)
+SCIP_DECL_NODESELEXITSOL(nodeselExitsolObj)
 {  /*lint --e{715}*/
-   NODESELDATA* nodeseldata;
+   SCIP_NODESELDATA* nodeseldata;
 
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
    assert(nodeseldata->objnodesel != NULL);
 
    /* call virtual method of nodesel object */
-   CHECK_OKAY( nodeseldata->objnodesel->scip_exitsol(scip, nodesel) );
+   SCIP_CALL( nodeseldata->objnodesel->scip_exitsol(scip, nodesel) );
 
    return SCIP_OKAY;
 }
@@ -143,16 +143,16 @@ DECL_NODESELEXITSOL(nodeselExitsolObj)
 
 /** node selection method of node selector */
 static
-DECL_NODESELSELECT(nodeselSelectObj)
+SCIP_DECL_NODESELSELECT(nodeselSelectObj)
 {  /*lint --e{715}*/
-   NODESELDATA* nodeseldata;
+   SCIP_NODESELDATA* nodeseldata;
 
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
    assert(nodeseldata->objnodesel != NULL);
 
    /* call virtual method of nodesel object */
-   CHECK_OKAY( nodeseldata->objnodesel->scip_select(scip, nodesel, selnode) );
+   SCIP_CALL( nodeseldata->objnodesel->scip_select(scip, nodesel, selnode) );
 
    return SCIP_OKAY;
 }
@@ -160,9 +160,9 @@ DECL_NODESELSELECT(nodeselSelectObj)
 
 /** node comparison method of node selector */
 static
-DECL_NODESELCOMP(nodeselCompObj)
+SCIP_DECL_NODESELCOMP(nodeselCompObj)
 {  /*lint --e{715}*/
-   NODESELDATA* nodeseldata;
+   SCIP_NODESELDATA* nodeseldata;
 
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
@@ -180,21 +180,21 @@ DECL_NODESELCOMP(nodeselCompObj)
  */
 
 /** creates the node selector for the given node selector object and includes it in SCIP */
-RETCODE SCIPincludeObjNodesel(
-   SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjNodesel* objnodesel,        /**< node selector object */
-   Bool             deleteobject        /**< should the node selector object be deleted when node selector is freed? */
+SCIP_RETCODE SCIPincludeObjNodesel(
+   SCIP*                 scip,               /**< SCIP data structure */
+   scip::ObjNodesel*     objnodesel,         /**< node selector object */
+   SCIP_Bool             deleteobject        /**< should the node selector object be deleted when node selector is freed? */
    )
 {
-   NODESELDATA* nodeseldata;
+   SCIP_NODESELDATA* nodeseldata;
 
    /* create node selector data */
-   nodeseldata = new NODESELDATA;
+   nodeseldata = new SCIP_NODESELDATA;
    nodeseldata->objnodesel = objnodesel;
    nodeseldata->deleteobject = deleteobject;
 
    /* include node selector */
-   CHECK_OKAY( SCIPincludeNodesel(scip, objnodesel->scip_name_, objnodesel->scip_desc_, 
+   SCIP_CALL( SCIPincludeNodesel(scip, objnodesel->scip_name_, objnodesel->scip_desc_, 
          objnodesel->scip_stdpriority_, objnodesel->scip_memsavepriority_, objnodesel->scip_lowestboundfirst_,
          nodeselFreeObj, nodeselInitObj, nodeselExitObj, 
          nodeselInitsolObj, nodeselExitsolObj, nodeselSelectObj, nodeselCompObj,
@@ -205,12 +205,12 @@ RETCODE SCIPincludeObjNodesel(
 
 /** returns the nodesel object of the given name, or NULL if not existing */
 scip::ObjNodesel* SCIPfindObjNodesel(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< name of node selector */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of node selector */
    )
 {
-   NODESEL* nodesel;
-   NODESELDATA* nodeseldata;
+   SCIP_NODESEL* nodesel;
+   SCIP_NODESELDATA* nodeseldata;
 
    nodesel = SCIPfindNodesel(scip, name);
    if( nodesel == NULL )
@@ -224,11 +224,11 @@ scip::ObjNodesel* SCIPfindObjNodesel(
    
 /** returns the nodesel object for the given node selector */
 scip::ObjNodesel* SCIPgetObjNodesel(
-   SCIP*            scip,               /**< SCIP data structure */
-   NODESEL*         nodesel             /**< node selector */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel             /**< node selector */
    )
 {
-   NODESELDATA* nodeseldata;
+   SCIP_NODESELDATA* nodeseldata;
 
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);

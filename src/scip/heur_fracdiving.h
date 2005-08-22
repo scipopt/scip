@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fracdiving.h,v 1.7 2005/07/15 17:20:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fracdiving.h,v 1.8 2005/08/22 18:35:38 bzfpfend Exp $"
 
 /**@file   heur_fracdiving.h
- * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
+ * @brief  SCIP_LP diving heuristic that chooses fixings w.r.t. the fractionalities
  * @author Tobias Achterberg
  */
 
@@ -32,8 +32,8 @@
 
 /** creates the fracdiving heuristic and includes it in SCIP */
 extern
-RETCODE SCIPincludeHeurFracdiving(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeHeurFracdiving(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

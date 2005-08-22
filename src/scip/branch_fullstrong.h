@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.h,v 1.8 2005/07/15 17:20:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.h,v 1.9 2005/08/22 18:35:32 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.h
  * @brief  full strong LP branching rule
@@ -30,10 +30,10 @@
 #include "scip/scip.h"
 
 
-/** creates the full strong LP braching rule and includes it in SCIP */
+/** creates the full strong SCIP_LP braching rule and includes it in SCIP */
 extern
-RETCODE SCIPincludeBranchruleFullstrong(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeBranchruleFullstrong(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

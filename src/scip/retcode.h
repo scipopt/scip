@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: retcode.h,v 1.22 2005/07/15 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: retcode.h,v 1.23 2005/08/22 18:35:47 bzfpfend Exp $"
 
 /**@file   retcode.h
  * @brief  internal methods for return codes for SCIP methods
@@ -35,8 +35,8 @@
 /** prints error message for return code */
 extern
 void SCIPretcodePrint(
-   FILE*            file,               /**< file stream to write error message */
-   RETCODE          retcode             /**< SCIP return code causing the error */
+   FILE*                 file,               /**< file stream to write error message */
+   SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
    );
 
 

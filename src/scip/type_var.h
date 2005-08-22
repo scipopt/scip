@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_var.h,v 1.16 2005/08/08 13:20:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_var.h,v 1.17 2005/08/22 18:35:55 bzfpfend Exp $"
 
 /**@file   type_var.h
  * @brief  type definitions for problem variables
@@ -29,7 +29,7 @@
 
 
 /** status of problem variables */
-enum Varstatus
+enum SCIP_Varstatus
 {
    SCIP_VARSTATUS_ORIGINAL   = 0,       /**< variable belongs to original problem */
    SCIP_VARSTATUS_LOOSE      = 1,       /**< variable is a loose variable of the transformed problem */
@@ -39,55 +39,55 @@ enum Varstatus
    SCIP_VARSTATUS_MULTAGGR   = 5,       /**< variable is aggregated to x = a_1*y_1 + ... + a_k*y_k + c */
    SCIP_VARSTATUS_NEGATED    = 6        /**< variable is the negation of an original or transformed variable */
 };
-typedef enum Varstatus VARSTATUS;
+typedef enum SCIP_Varstatus SCIP_VARSTATUS;
 
 /** variable type */
-enum Vartype
+enum SCIP_Vartype
 {
    SCIP_VARTYPE_BINARY     = 0,         /**< binary variable: x in {0,1} */
    SCIP_VARTYPE_INTEGER    = 1,         /**< integer variable: x in {lb, ..., ub} */
    SCIP_VARTYPE_IMPLINT    = 2,         /**< implicit integer variable: continuous variable, that is always integral */
    SCIP_VARTYPE_CONTINUOUS = 3          /**< continuous variable: x in [lb,ub] */
 };
-typedef enum Vartype VARTYPE;
+typedef enum SCIP_Vartype SCIP_VARTYPE;
 
 /** domain change data type */
-enum DomchgType
+enum SCIP_DomchgType
 {
    SCIP_DOMCHGTYPE_DYNAMIC = 0,         /**< dynamic bound changes with size information of arrays */
    SCIP_DOMCHGTYPE_BOTH    = 1,         /**< static domain changes: number of entries equals size of arrays */
    SCIP_DOMCHGTYPE_BOUND   = 2          /**< static domain changes without any hole changes */
 };
-typedef enum DomchgType DOMCHGTYPE;
+typedef enum SCIP_DomchgType SCIP_DOMCHGTYPE;
 
 /** bound change type */
-enum BoundchgType
+enum SCIP_BoundchgType
 {
    SCIP_BOUNDCHGTYPE_BRANCHING = 0,     /**< bound change was due to a branching decision */
    SCIP_BOUNDCHGTYPE_CONSINFER = 1,     /**< bound change was due to an inference of a constraint (domain propagation) */
    SCIP_BOUNDCHGTYPE_PROPINFER = 2      /**< bound change was due to an inference of a domain propagator */
 };
-typedef enum BoundchgType BOUNDCHGTYPE;
+typedef enum SCIP_BoundchgType SCIP_BOUNDCHGTYPE;
 
-typedef struct DomChgBound DOMCHGBOUND; /**< static domain change data for bound changes */
-typedef struct DomChgBoth DOMCHGBOTH;   /**< static domain change data for bound and hole changes */
-typedef struct DomChgDyn DOMCHGDYN;     /**< dynamic domain change data for bound and hole changes */
-typedef union DomChg DOMCHG;            /**< changes in domains of variables */
-typedef struct BoundChg BOUNDCHG;       /**< changes in bounds of variables */
-typedef struct BdChgIdx BDCHGIDX;       /**< bound change index in path from root to current node */
-typedef struct BdChgInfo BDCHGINFO;     /**< bound change information to track bound changes from root to current node */
-typedef struct BranchingData BRANCHINGDATA; /**< data for branching decision bound changes */
-typedef struct InferenceData INFERENCEDATA; /**< data for inferred bound changes */
-typedef struct HoleChg HOLECHG;         /**< changes in holelist of variables */
-typedef struct Hole HOLE;               /**< hole in a domain of an integer variable */
-typedef struct Holelist HOLELIST;       /**< list of holes in a domain of an integer variable */
-typedef struct Dom DOM;                 /**< datastructures for storing domains of variables */
-typedef struct Original ORIGINAL;       /**< original variable information */
-typedef struct Aggregate AGGREGATE;     /**< aggregation information */
-typedef struct Multaggr MULTAGGR;       /**< multiple aggregation information */
-typedef struct Negate NEGATE;           /**< negation information */
-typedef struct Var VAR;                 /**< variable of the problem */
-typedef struct VarData VARDATA;         /**< user variable data */
+typedef struct SCIP_DomChgBound SCIP_DOMCHGBOUND; /**< static domain change data for bound changes */
+typedef struct SCIP_DomChgBoth SCIP_DOMCHGBOTH;   /**< static domain change data for bound and hole changes */
+typedef struct SCIP_DomChgDyn SCIP_DOMCHGDYN;     /**< dynamic domain change data for bound and hole changes */
+typedef union SCIP_DomChg SCIP_DOMCHG;            /**< changes in domains of variables */
+typedef struct SCIP_BoundChg SCIP_BOUNDCHG;       /**< changes in bounds of variables */
+typedef struct SCIP_BdChgIdx SCIP_BDCHGIDX;       /**< bound change index in path from root to current node */
+typedef struct SCIP_BdChgInfo SCIP_BDCHGINFO;     /**< bound change information to track bound changes from root to current node */
+typedef struct SCIP_BranchingData SCIP_BRANCHINGDATA; /**< data for branching decision bound changes */
+typedef struct SCIP_InferenceData SCIP_INFERENCEDATA; /**< data for inferred bound changes */
+typedef struct SCIP_HoleChg SCIP_HOLECHG;         /**< changes in holelist of variables */
+typedef struct SCIP_Hole SCIP_HOLE;               /**< hole in a domain of an integer variable */
+typedef struct SCIP_Holelist SCIP_HOLELIST;       /**< list of holes in a domain of an integer variable */
+typedef struct SCIP_Dom SCIP_DOM;                 /**< datastructures for storing domains of variables */
+typedef struct SCIP_Original SCIP_ORIGINAL;       /**< original variable information */
+typedef struct SCIP_Aggregate SCIP_AGGREGATE;     /**< aggregation information */
+typedef struct SCIP_Multaggr SCIP_MULTAGGR;       /**< multiple aggregation information */
+typedef struct SCIP_Negate SCIP_NEGATE;           /**< negation information */
+typedef struct SCIP_Var SCIP_VAR;                 /**< variable of the problem */
+typedef struct SCIP_VarData SCIP_VARDATA;         /**< user variable data */
 
 
 /** frees user data of original variable (called when the original variable is freed)
@@ -99,7 +99,7 @@ typedef struct VarData VARDATA;         /**< user variable data */
  *    var             : original variable the data to free is belonging to
  *    vardata         : pointer to the user variable data to free
  */
-#define DECL_VARDELORIG(x) RETCODE x (SCIP* scip, VAR* var, VARDATA** vardata)
+#define SCIP_DECL_VARDELORIG(x) SCIP_RETCODE x (SCIP* scip, SCIP_VAR* var, SCIP_VARDATA** vardata)
 
 /** creates transformed variable for original user variable
  *
@@ -119,7 +119,7 @@ typedef struct VarData VARDATA;         /**< user variable data */
  *    targetvar       : transformed variable
  *    targetdata      : pointer to store created transformed variable data
  */
-#define DECL_VARTRANS(x) RETCODE x (SCIP* scip, VAR* sourcevar, VARDATA* sourcedata, VAR* targetvar, VARDATA** targetdata)
+#define SCIP_DECL_VARTRANS(x) SCIP_RETCODE x (SCIP* scip, SCIP_VAR* sourcevar, SCIP_VARDATA* sourcedata, SCIP_VAR* targetvar, SCIP_VARDATA** targetdata)
 
 /** frees user data of transformed variable (called when the transformed variable is freed)
  *
@@ -132,6 +132,6 @@ typedef struct VarData VARDATA;         /**< user variable data */
  *    var             : transformed variable the data to free is belonging to
  *    vardata         : pointer to the user variable data to free
  */
-#define DECL_VARDELTRANS(x) RETCODE x (SCIP* scip, VAR* var, VARDATA** vardata)
+#define SCIP_DECL_VARDELTRANS(x) SCIP_RETCODE x (SCIP* scip, SCIP_VAR* var, SCIP_VARDATA** vardata)
 
 #endif

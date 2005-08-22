@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_vbc.h,v 1.6 2005/07/15 17:20:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_vbc.h,v 1.7 2005/08/22 18:35:55 bzfpfend Exp $"
 
 /**@file   type_vbc.h
- * @brief  type definitions for VBC Tool output
+ * @brief  type definitions for SCIP_VBC Tool output
  * @author Tobias Achterberg
  */
 
@@ -27,7 +27,7 @@
 #define __SCIP_TYPE_VBC_H__
 
 
-typedef struct Vbc VBC;                 /**< VBC Tool data structure */
+typedef struct SCIP_Vbc SCIP_VBC;                 /**< SCIP_VBC Tool data structure */
 
 
 #endif

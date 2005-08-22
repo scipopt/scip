@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.h,v 1.28 2005/07/15 17:20:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.h,v 1.29 2005/08/22 18:35:37 bzfpfend Exp $"
 
 /**@file   disp.h
  * @brief  internal methods for displaying runtime statistics
@@ -41,87 +41,87 @@
 
 /** parameter change information method to autoselect display columns again */
 extern
-DECL_PARAMCHGD(SCIPparamChgdDispActive);
+SCIP_DECL_PARAMCHGD(SCIPparamChgdDispActive);
 
 /** creates a display column */
 extern
-RETCODE SCIPdispCreate(
-   DISP**           disp,               /**< pointer to store display column */
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory for parameter settings */
-   const char*      name,               /**< name of display column */
-   const char*      desc,               /**< description of display column */
-   const char*      header,             /**< head line of display column */
-   DISPSTATUS       dispstatus,         /**< display activation status of display column */
-   DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
-   DECL_DISPINIT    ((*dispinit)),      /**< initialize display column */
-   DECL_DISPEXIT    ((*dispexit)),      /**< deinitialize display column */
-   DECL_DISPINITSOL ((*dispinitsol)),   /**< solving process initialization method of display column */
-   DECL_DISPEXITSOL ((*dispexitsol)),   /**< solving process deinitialization method of display column */
-   DECL_DISPOUTPUT  ((*dispoutput)),    /**< output method */
-   DISPDATA*        dispdata,           /**< display column data */
-   int              width,              /**< width of display column (no. of chars used) */
-   int              priority,           /**< priority of display column */
-   int              position,           /**< relative position of display column */
-   Bool             stripline           /**< should the column be separated with a line from its right neighbour? */
+SCIP_RETCODE SCIPdispCreate(
+   SCIP_DISP**           disp,               /**< pointer to store display column */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of display column */
+   const char*           desc,               /**< description of display column */
+   const char*           header,             /**< head line of display column */
+   SCIP_DISPSTATUS       dispstatus,         /**< display activation status of display column */
+   SCIP_DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
+   SCIP_DECL_DISPINIT    ((*dispinit)),      /**< initialize display column */
+   SCIP_DECL_DISPEXIT    ((*dispexit)),      /**< deinitialize display column */
+   SCIP_DECL_DISPINITSOL ((*dispinitsol)),   /**< solving process initialization method of display column */
+   SCIP_DECL_DISPEXITSOL ((*dispexitsol)),   /**< solving process deinitialization method of display column */
+   SCIP_DECL_DISPOUTPUT  ((*dispoutput)),    /**< output method */
+   SCIP_DISPDATA*        dispdata,           /**< display column data */
+   int                   width,              /**< width of display column (no. of chars used) */
+   int                   priority,           /**< priority of display column */
+   int                   position,           /**< relative position of display column */
+   SCIP_Bool             stripline           /**< should the column be separated with a line from its right neighbour? */
    );
 
 /** frees memory of display column */
 extern
-RETCODE SCIPdispFree(
-   DISP**           disp,               /**< pointer to display column data structure */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPdispFree(
+   SCIP_DISP**           disp,               /**< pointer to display column data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** initializes display column */
 extern
-RETCODE SCIPdispInit(
-   DISP*            disp,               /**< display column */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPdispInit(
+   SCIP_DISP*            disp,               /**< display column */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** deinitializes display column */
 extern
-RETCODE SCIPdispExit(
-   DISP*            disp,               /**< display column */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPdispExit(
+   SCIP_DISP*            disp,               /**< display column */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs display column that the branch and bound process is being started */
 extern
-RETCODE SCIPdispInitsol(
-   DISP*            disp,               /**< display column */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPdispInitsol(
+   SCIP_DISP*            disp,               /**< display column */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs display column that the branch and bound process data is being freed */
 extern
-RETCODE SCIPdispExitsol(
-   DISP*            disp,               /**< display column */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPdispExitsol(
+   SCIP_DISP*            disp,               /**< display column */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** output display column to screen */
 extern
-RETCODE SCIPdispOutput(
-   DISP*            disp,               /**< display column */
-   SET*             set,                /**< global SCIP settings */
-   FILE*            file                /**< output file (or NULL for standard output) */
+SCIP_RETCODE SCIPdispOutput(
+   SCIP_DISP*            disp,               /**< display column */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 /** prints one line of output with the active display columns */
 extern
-RETCODE SCIPdispPrintLine(
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   FILE*            file,               /**< output file (or NULL for standard output) */
-   Bool             forcedisplay        /**< should the line be printed without regarding frequency? */
+SCIP_RETCODE SCIPdispPrintLine(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             forcedisplay        /**< should the line be printed without regarding frequency? */
    );
 
 /** activates all display lines fitting in the display w.r. to priority */
 extern
-RETCODE SCIPdispAutoActivate(
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPdispAutoActivate(
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 

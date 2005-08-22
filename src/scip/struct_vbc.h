@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_vbc.h,v 1.7 2005/07/15 17:20:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_vbc.h,v 1.8 2005/08/22 18:35:52 bzfpfend Exp $"
 
 /**@file   struct_vbc.h
- * @brief  datastructures for VBC Tool output
+ * @brief  datastructures for SCIP_VBC Tool output
  * @author Tobias Achterberg
  */
 
@@ -32,13 +32,13 @@
 #include "scip/type_misc.h"
 
 
-/** VBC Tool data structure */
-struct Vbc
+/** SCIP_VBC Tool data structure */
+struct SCIP_Vbc
 {
-   FILE*            file;               /**< file to store VBC information */
-   HASHMAP*         nodenum;            /**< hash map for mapping nodes to node numbers */
-   Longint          timestep;           /**< time step counter for non real time output */
-   Bool             userealtime;        /**< should the real solving time be used instead of a time step counter? */
+   FILE*                 file;               /**< file to store SCIP_VBC information */
+   SCIP_HASHMAP*         nodenum;            /**< hash map for mapping nodes to node numbers */
+   SCIP_Longint          timestep;           /**< time step counter for non real time output */
+   SCIP_Bool             userealtime;        /**< should the real solving time be used instead of a time step counter? */
 };
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_xxx.h,v 1.7 2005/07/15 17:20:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_xxx.h,v 1.8 2005/08/22 18:35:42 bzfpfend Exp $"
 
 /**@file   nodesel_xxx.h
  * @brief  xxx node selector
@@ -32,8 +32,8 @@
 
 /** creates the xxx node selector and includes it in SCIP */
 extern
-RETCODE SCIPincludeNodeselXxx(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeNodeselXxx(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

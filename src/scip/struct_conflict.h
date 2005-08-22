@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_conflict.h,v 1.18 2005/07/15 17:20:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_conflict.h,v 1.19 2005/08/22 18:35:50 bzfpfend Exp $"
 
 /**@file   struct_conflict.h
  * @brief  datastructures for conflict analysis
@@ -37,76 +37,76 @@
 
 
 /** conflict handler */
-struct Conflicthdlr
+struct SCIP_Conflicthdlr
 {
-   char*            name;               /**< name of conflict handler */
-   char*            desc;               /**< description of conflict handler */
-   DECL_CONFLICTFREE((*conflictfree));  /**< destructor of conflict handler */
-   DECL_CONFLICTINIT((*conflictinit));  /**< initialize conflict handler */
-   DECL_CONFLICTEXIT((*conflictexit));  /**< deinitialize conflict handler */
-   DECL_CONFLICTINITSOL((*conflictinitsol));/**< solving process initialization method of conflict handler */
-   DECL_CONFLICTEXITSOL((*conflictexitsol));/**< solving process deinitialization method of conflict handler */
-   DECL_CONFLICTEXEC((*conflictexec));  /**< conflict processing method of conflict handler */
-   CONFLICTHDLRDATA* conflicthdlrdata;  /**< conflict handler data */
-   int              priority;           /**< priority of the conflict handler */
-   Bool             initialized;        /**< is conflict handler initialized? */
+   char*                 name;               /**< name of conflict handler */
+   char*                 desc;               /**< description of conflict handler */
+   SCIP_DECL_CONFLICTFREE((*conflictfree));  /**< destructor of conflict handler */
+   SCIP_DECL_CONFLICTINIT((*conflictinit));  /**< initialize conflict handler */
+   SCIP_DECL_CONFLICTEXIT((*conflictexit));  /**< deinitialize conflict handler */
+   SCIP_DECL_CONFLICTINITSOL((*conflictinitsol));/**< solving process initialization method of conflict handler */
+   SCIP_DECL_CONFLICTEXITSOL((*conflictexitsol));/**< solving process deinitialization method of conflict handler */
+   SCIP_DECL_CONFLICTEXEC((*conflictexec));  /**< conflict processing method of conflict handler */
+   SCIP_CONFLICTHDLRDATA* conflicthdlrdata;  /**< conflict handler data */
+   int                   priority;           /**< priority of the conflict handler */
+   SCIP_Bool             initialized;        /**< is conflict handler initialized? */
 };
 
 /** conflict clause */
-struct Clause
+struct SCIP_Clause
 {
-   VAR**            vars;               /**< literals of the clause, sorted by variable index */
-   int              nvars;              /**< number of literals in the clause */
-   int              validdepth;         /**< depth in the tree where the clause is valid */
-   int              insertdepth;        /**< depth level where constraint should be added */
-   int              conflictdepth;      /**< depth in the tree where the clause yields a conflict */
-   int              repropdepth;        /**< depth at which the clause triggers a deduction */
-   int              score;              /**< score (usefulness) of the clause */
+   SCIP_VAR**            vars;               /**< literals of the clause, sorted by variable index */
+   int                   nvars;              /**< number of literals in the clause */
+   int                   validdepth;         /**< depth in the tree where the clause is valid */
+   int                   insertdepth;        /**< depth level where constraint should be added */
+   int                   conflictdepth;      /**< depth in the tree where the clause yields a conflict */
+   int                   repropdepth;        /**< depth at which the clause triggers a deduction */
+   int                   score;              /**< score (usefulness) of the clause */
 };
 
 /** conflict analysis data structure */
-struct Conflict
+struct SCIP_Conflict
 {
-   Longint          nappliedglbclauses; /**< total number of conflict clauses added globally to the problem */
-   Longint          nappliedglbliterals;/**< total number of literals in globally applied conflict clauses */
-   Longint          nappliedlocclauses; /**< total number of conflict clauses added locally to the problem */
-   Longint          nappliedlocliterals;/**< total number of literals in locally applied conflict clauses */
-   Longint          npropcalls;         /**< number of calls to propagation conflict analysis */
-   Longint          npropconfclauses;   /**< number of valid conflict clauses detected in propagation conflict analysis */
-   Longint          npropconfliterals;  /**< total number of literals in valid propagation conflict clauses */
-   Longint          npropreconvclauses; /**< number of reconvergence clauses detected in propagation conflict analysis */
-   Longint          npropreconvliterals;/**< total number of literals in valid propagation reconvergence clauses */
-   Longint          nlpcalls;           /**< number of calls to infeasible LP conflict analysis */
-   Longint          nlpconfclauses;     /**< number of valid conflict clauses detected in infeas LP conflict analysis */
-   Longint          nlpconfliterals;    /**< total number of literals in valid infeasible LP conflict clauses */
-   Longint          nlpreconvclauses;   /**< number of reconvergence clauses detected in infeasible LP conflict analysis */
-   Longint          nlpreconvliterals;  /**< total number of literals in valid infeasible LP reconvergence clauses */
-   Longint          nlpiterations;      /**< total number of LP iterations used in LP conflict analysis */
-   Longint          nsbcalls;           /**< number of calls to infeasible strong branching conflict analysis */
-   Longint          nsbconfclauses;     /**< number of conflict clauses detected in strong branching conflict analysis */
-   Longint          nsbconfliterals;    /**< total number of literals in valid strong branching conflict clauses */
-   Longint          nsbreconvclauses;   /**< number of reconvergence clauses detected in strong branch conflict analysis */
-   Longint          nsbreconvliterals;  /**< total number of literals in valid strong branching reconvergence clauses */
-   Longint          nsbiterations;      /**< total number of LP iterations used in strong branching conflict analysis */
-   Longint          npseudocalls;       /**< number of calls to pseudo solution conflict analysis */
-   Longint          npseudoconfclauses; /**< number of valid conflict clauses detected in pseudo sol conflict analysis */
-   Longint          npseudoconfliterals;/**< total number of literals in valid pseudo solution conflict clauses */
-   Longint          npseudoreconvclauses; /**< number of reconvergence clauses detected in pseudo sol conflict analysis */
-   Longint          npseudoreconvliterals;/**< total number of literals in valid pseudo solution reconvergence clauses */
-   CLOCK*           propanalyzetime;    /**< time used for propagation conflict analysis */
-   CLOCK*           lpanalyzetime;      /**< time used for infeasible LP conflict analysis */
-   CLOCK*           sbanalyzetime;      /**< time used for infeasible LP conflict analysis */
-   CLOCK*           pseudoanalyzetime;  /**< time used for pseudo solution conflict analysis */
-   CLAUSE**         clauses;            /**< conflict clauses found at the current node */
-   PQUEUE*          binbdchgqueue;      /**< unprocessed conflict bound changes on binary variables */
-   PQUEUE*          nonbinbdchgqueue;   /**< unprocessed conflict bound changes on non-binary variables */
-   VAR**            conflictvars;       /**< variables resembling the conflict clause */
-   int              conflictvarssize;   /**< size of conflictvars array */
-   int              nconflictvars;      /**< number of variables in the conflict set (used slots of conflictvars array) */
-   int              ntmpconflictvars;   /**< number of additional variables added temporarily to conflict set */
-   int              count;              /**< conflict set counter to label conflict variables with */
-   int              clausessize;        /**< size of clauses array */
-   int              nclauses;           /**< number of available conflict clauses (used slots in clauses array) */
+   SCIP_Longint          nappliedglbclauses; /**< total number of conflict clauses added globally to the problem */
+   SCIP_Longint          nappliedglbliterals;/**< total number of literals in globally applied conflict clauses */
+   SCIP_Longint          nappliedlocclauses; /**< total number of conflict clauses added locally to the problem */
+   SCIP_Longint          nappliedlocliterals;/**< total number of literals in locally applied conflict clauses */
+   SCIP_Longint          npropcalls;         /**< number of calls to propagation conflict analysis */
+   SCIP_Longint          npropconfclauses;   /**< number of valid conflict clauses detected in propagation conflict analysis */
+   SCIP_Longint          npropconfliterals;  /**< total number of literals in valid propagation conflict clauses */
+   SCIP_Longint          npropreconvclauses; /**< number of reconvergence clauses detected in propagation conflict analysis */
+   SCIP_Longint          npropreconvliterals;/**< total number of literals in valid propagation reconvergence clauses */
+   SCIP_Longint          nlpcalls;           /**< number of calls to infeasible SCIP_LP conflict analysis */
+   SCIP_Longint          nlpconfclauses;     /**< number of valid conflict clauses detected in infeas SCIP_LP conflict analysis */
+   SCIP_Longint          nlpconfliterals;    /**< total number of literals in valid infeasible SCIP_LP conflict clauses */
+   SCIP_Longint          nlpreconvclauses;   /**< number of reconvergence clauses detected in infeasible SCIP_LP conflict analysis */
+   SCIP_Longint          nlpreconvliterals;  /**< total number of literals in valid infeasible SCIP_LP reconvergence clauses */
+   SCIP_Longint          nlpiterations;      /**< total number of SCIP_LP iterations used in SCIP_LP conflict analysis */
+   SCIP_Longint          nsbcalls;           /**< number of calls to infeasible strong branching conflict analysis */
+   SCIP_Longint          nsbconfclauses;     /**< number of conflict clauses detected in strong branching conflict analysis */
+   SCIP_Longint          nsbconfliterals;    /**< total number of literals in valid strong branching conflict clauses */
+   SCIP_Longint          nsbreconvclauses;   /**< number of reconvergence clauses detected in strong branch conflict analysis */
+   SCIP_Longint          nsbreconvliterals;  /**< total number of literals in valid strong branching reconvergence clauses */
+   SCIP_Longint          nsbiterations;      /**< total number of SCIP_LP iterations used in strong branching conflict analysis */
+   SCIP_Longint          npseudocalls;       /**< number of calls to pseudo solution conflict analysis */
+   SCIP_Longint          npseudoconfclauses; /**< number of valid conflict clauses detected in pseudo sol conflict analysis */
+   SCIP_Longint          npseudoconfliterals;/**< total number of literals in valid pseudo solution conflict clauses */
+   SCIP_Longint          npseudoreconvclauses; /**< number of reconvergence clauses detected in pseudo sol conflict analysis */
+   SCIP_Longint          npseudoreconvliterals;/**< total number of literals in valid pseudo solution reconvergence clauses */
+   SCIP_CLOCK*           propanalyzetime;    /**< time used for propagation conflict analysis */
+   SCIP_CLOCK*           lpanalyzetime;      /**< time used for infeasible SCIP_LP conflict analysis */
+   SCIP_CLOCK*           sbanalyzetime;      /**< time used for infeasible SCIP_LP conflict analysis */
+   SCIP_CLOCK*           pseudoanalyzetime;  /**< time used for pseudo solution conflict analysis */
+   SCIP_CLAUSE**         clauses;            /**< conflict clauses found at the current node */
+   SCIP_PQUEUE*          binbdchgqueue;      /**< unprocessed conflict bound changes on binary variables */
+   SCIP_PQUEUE*          nonbinbdchgqueue;   /**< unprocessed conflict bound changes on non-binary variables */
+   SCIP_VAR**            conflictvars;       /**< variables resembling the conflict clause */
+   int                   conflictvarssize;   /**< size of conflictvars array */
+   int                   nconflictvars;      /**< number of variables in the conflict set (used slots of conflictvars array) */
+   int                   ntmpconflictvars;   /**< number of additional variables added temporarily to conflict set */
+   int                   count;              /**< conflict set counter to label conflict variables with */
+   int                   clausessize;        /**< size of clauses array */
+   int                   nclauses;           /**< number of available conflict clauses (used slots in clauses array) */
 };
 
 

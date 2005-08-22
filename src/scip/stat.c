@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.63 2005/07/15 17:20:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.64 2005/08/22 18:35:49 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -37,33 +37,33 @@
 
 
 /** creates problem statistics data */
-RETCODE SCIPstatCreate(
-   STAT**           stat,               /**< pointer to problem statistics data */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPstatCreate(
+   SCIP_STAT**           stat,               /**< pointer to problem statistics data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(stat != NULL);
    assert(set != NULL);
 
-   ALLOC_OKAY( allocMemory(stat) );
+   SCIP_ALLOC( BMSallocMemory(stat) );
 
-   CHECK_OKAY( SCIPclockCreate(&(*stat)->solvingtime, SCIP_CLOCKTYPE_DEFAULT) );
-   CHECK_OKAY( SCIPclockCreate(&(*stat)->presolvingtime, SCIP_CLOCKTYPE_DEFAULT) );
-   CHECK_OKAY( SCIPclockCreate(&(*stat)->primallptime, SCIP_CLOCKTYPE_DEFAULT) );
-   CHECK_OKAY( SCIPclockCreate(&(*stat)->duallptime, SCIP_CLOCKTYPE_DEFAULT) );
-   CHECK_OKAY( SCIPclockCreate(&(*stat)->barrierlptime, SCIP_CLOCKTYPE_DEFAULT) );
-   CHECK_OKAY( SCIPclockCreate(&(*stat)->divinglptime, SCIP_CLOCKTYPE_DEFAULT) );
-   CHECK_OKAY( SCIPclockCreate(&(*stat)->strongbranchtime, SCIP_CLOCKTYPE_DEFAULT) );
-   CHECK_OKAY( SCIPclockCreate(&(*stat)->conflictlptime, SCIP_CLOCKTYPE_DEFAULT) );
-   CHECK_OKAY( SCIPclockCreate(&(*stat)->lpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
-   CHECK_OKAY( SCIPclockCreate(&(*stat)->pseudosoltime, SCIP_CLOCKTYPE_DEFAULT) );
-   CHECK_OKAY( SCIPclockCreate(&(*stat)->redcoststrtime, SCIP_CLOCKTYPE_DEFAULT) );
-   CHECK_OKAY( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->solvingtime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->presolvingtime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->primallptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->duallptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->barrierlptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->divinglptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->strongbranchtime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->conflictlptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->lpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->pseudosoltime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->redcoststrtime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
 
-   CHECK_OKAY( SCIPhistoryCreate(&(*stat)->glbhistory, blkmem) );
-   CHECK_OKAY( SCIPhistoryCreate(&(*stat)->glbhistorycrun, blkmem) );
-   CHECK_OKAY( SCIPvbcCreate(&(*stat)->vbc) );
+   SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistory, blkmem) );
+   SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistorycrun, blkmem) );
+   SCIP_CALL( SCIPvbcCreate(&(*stat)->vbc) );
 
    (*stat)->status = SCIP_STATUS_UNKNOWN;
    (*stat)->marked_nvaridx = 0;
@@ -77,9 +77,9 @@ RETCODE SCIPstatCreate(
 }
 
 /** frees problem statistics data */
-RETCODE SCIPstatFree(
-   STAT**           stat,               /**< pointer to problem statistics data */
-   BLKMEM*          blkmem              /**< block memory */
+SCIP_RETCODE SCIPstatFree(
+   SCIP_STAT**           stat,               /**< pointer to problem statistics data */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(stat != NULL);
@@ -102,14 +102,14 @@ RETCODE SCIPstatFree(
    SCIPhistoryFree(&(*stat)->glbhistorycrun, blkmem);
    SCIPvbcFree(&(*stat)->vbc);
 
-   freeMemory(stat);
+   BMSfreeMemory(stat);
 
    return SCIP_OKAY;
 }
 
 /** marks statistics to be able to reset them when solving process is freed */
 void SCIPstatMark(
-   STAT*            stat                /**< problem statistics data */
+   SCIP_STAT*            stat                /**< problem statistics data */
    )
 {
    assert(stat != NULL);
@@ -129,7 +129,7 @@ void SCIPstatMark(
 
 /** reset statistics to the data before solving started */
 void SCIPstatReset(
-   STAT*            stat                /**< problem statistics data */
+   SCIP_STAT*            stat                /**< problem statistics data */
    )
 {
    assert(stat != NULL);
@@ -207,7 +207,7 @@ void SCIPstatReset(
 
 /** reset implication counter */
 void SCIPstatResetImplications(
-   STAT*            stat                /**< problem statistics data */
+   SCIP_STAT*            stat                /**< problem statistics data */
    )
 {
    assert(stat != NULL);
@@ -217,7 +217,7 @@ void SCIPstatResetImplications(
 
 /** reset presolving and current run specific statistics */
 void SCIPstatResetPresolving(
-   STAT*            stat                /**< problem statistics data */
+   SCIP_STAT*            stat                /**< problem statistics data */
    )
 {
    assert(stat != NULL);
@@ -238,7 +238,7 @@ void SCIPstatResetPresolving(
 
 /** reset current branch and bound run specific statistics */
 void SCIPstatResetCurrentRun(
-   STAT*            stat                /**< problem statistics data */
+   SCIP_STAT*            stat                /**< problem statistics data */
    )
 {
    assert(stat != NULL);
@@ -251,7 +251,7 @@ void SCIPstatResetCurrentRun(
    stat->ndelayedcutoffs = 0;
    stat->nreprops = 0;
    stat->lastdivenode = 0;
-   stat->rootlowerbound = REAL_MIN;
+   stat->rootlowerbound = SCIP_REAL_MIN;
    stat->lastbranchvar = NULL;
    stat->status = SCIP_STATUS_UNKNOWN;
    stat->lastbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
@@ -268,7 +268,7 @@ void SCIPstatResetCurrentRun(
 
 /** resets display statistics, such that a new header line is displayed before the next display line */
 void SCIPstatResetDisplay(
-   STAT*            stat                /**< problem statistics data */
+   SCIP_STAT*            stat                /**< problem statistics data */
    )
 {
    assert(stat != NULL);
@@ -279,9 +279,9 @@ void SCIPstatResetDisplay(
 
 /** depending on the current memory usage, switches mode flag to standard or memory saving mode */
 void SCIPstatUpdateMemsaveMode(
-   STAT*            stat,               /**< problem statistics data */
-   SET*             set,                /**< global SCIP settings */
-   MEM*             mem                 /**< block memory pools */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MEM*             mem                 /**< block memory pools */
    )
 {
    assert(stat != NULL);
@@ -289,7 +289,7 @@ void SCIPstatUpdateMemsaveMode(
 
    if( SCIPsetIsLT(set, set->mem_savefac, 1.0) )
    {
-      Longint memused;
+      SCIP_Longint memused;
 
       memused = SCIPmemGetUsed(mem);
       if( !stat->memsavemode && memused >= set->mem_savefac * set->limit_memory * 1024.0 * 1024.0 )
@@ -297,7 +297,7 @@ void SCIPstatUpdateMemsaveMode(
          /* switch to memory saving mode */
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
             "(node %lld) switching to memory saving mode (mem: %.1fM/%.1fM)\n", 
-            stat->nnodes, (Real)memused/(1024.0*1024.0), set->limit_memory);
+            stat->nnodes, (SCIP_Real)memused/(1024.0*1024.0), set->limit_memory);
          stat->memsavemode = TRUE;
          set->nodesel = NULL;
       }
@@ -306,7 +306,7 @@ void SCIPstatUpdateMemsaveMode(
          /* switch to standard mode */
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
             "(node %lld) switching to standard mode (mem: %.1fM/%.1fM)\n", 
-            stat->nnodes, (Real)memused/(1024.0*1024.0), set->limit_memory);
+            stat->nnodes, (SCIP_Real)memused/(1024.0*1024.0), set->limit_memory);
          stat->memsavemode = FALSE;
          set->nodesel = NULL;
       }

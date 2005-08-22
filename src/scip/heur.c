@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.46 2005/05/31 17:20:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.47 2005/08/22 18:35:37 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -40,10 +40,10 @@
 
 
 /** compares two heuristics w. r. to their delay positions and their priority */
-DECL_SORTPTRCOMP(SCIPheurComp)
+SCIP_DECL_SORTPTRCOMP(SCIPheurComp)
 {  /*lint --e{715}*/
-   HEUR* heur1 = (HEUR*)elem1;
-   HEUR* heur2 = (HEUR*)elem2;
+   SCIP_HEUR* heur1 = (SCIP_HEUR*)elem1;
+   SCIP_HEUR* heur2 = (SCIP_HEUR*)elem2;
 
    assert(heur1 != NULL);
    assert(heur2 != NULL);
@@ -68,45 +68,45 @@ DECL_SORTPTRCOMP(SCIPheurComp)
 
 /** method to call, when the priority of a heuristic was changed */
 static
-DECL_PARAMCHGD(paramChgdHeurPriority)
+SCIP_DECL_PARAMCHGD(paramChgdHeurPriority)
 {  /*lint --e{715}*/
-   PARAMDATA* paramdata;
+   SCIP_PARAMDATA* paramdata;
 
    paramdata = SCIPparamGetData(param);
    assert(paramdata != NULL);
 
    /* use SCIPsetHeurPriority() to mark the heurs unsorted */
-   CHECK_OKAY( SCIPsetHeurPriority(scip, (HEUR*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
+   SCIP_CALL( SCIPsetHeurPriority(scip, (SCIP_HEUR*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
 
 /** creates a primal heuristic */
-RETCODE SCIPheurCreate(
-   HEUR**           heur,               /**< pointer to primal heuristic data structure */
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory for parameter settings */
-   const char*      name,               /**< name of primal heuristic */
-   const char*      desc,               /**< description of primal heuristic */
-   char             dispchar,           /**< display character of primal heuristic */
-   int              priority,           /**< priority of the primal heuristic */
-   int              freq,               /**< frequency for calling primal heuristic */
-   int              freqofs,            /**< frequency offset for calling primal heuristic */
-   int              maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
-   Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
-   Bool             duringplunging,     /**< call heuristic during plunging? */
-   Bool             afternode,          /**< call heuristic after or before the current node was solved? */
-   DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
-   DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
-   DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
-   DECL_HEURINITSOL ((*heurinitsol)),   /**< solving process initialization method of primal heuristic */
-   DECL_HEUREXITSOL ((*heurexitsol)),   /**< solving process deinitialization method of primal heuristic */
-   DECL_HEUREXEC    ((*heurexec)),      /**< execution method of primal heuristic */
-   HEURDATA*        heurdata            /**< primal heuristic data */
+SCIP_RETCODE SCIPheurCreate(
+   SCIP_HEUR**           heur,               /**< pointer to primal heuristic data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of primal heuristic */
+   const char*           desc,               /**< description of primal heuristic */
+   char                  dispchar,           /**< display character of primal heuristic */
+   int                   priority,           /**< priority of the primal heuristic */
+   int                   freq,               /**< frequency for calling primal heuristic */
+   int                   freqofs,            /**< frequency offset for calling primal heuristic */
+   int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
+   SCIP_Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
+   SCIP_Bool             duringplunging,     /**< call heuristic during plunging? */
+   SCIP_Bool             afternode,          /**< call heuristic after or before the current node was solved? */
+   SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
+   SCIP_DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
+   SCIP_DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
+   SCIP_DECL_HEURINITSOL ((*heurinitsol)),   /**< solving process initialization method of primal heuristic */
+   SCIP_DECL_HEUREXITSOL ((*heurexitsol)),   /**< solving process deinitialization method of primal heuristic */
+   SCIP_DECL_HEUREXEC    ((*heurexec)),      /**< execution method of primal heuristic */
+   SCIP_HEURDATA*        heurdata            /**< primal heuristic data */
    )
 {
-   char paramname[MAXSTRLEN];
-   char paramdesc[MAXSTRLEN];
+   char paramname[SCIP_MAXSTRLEN];
+   char paramdesc[SCIP_MAXSTRLEN];
 
    assert(heur != NULL);
    assert(name != NULL);
@@ -115,9 +115,9 @@ RETCODE SCIPheurCreate(
    assert(freqofs >= 0);
    assert(heurexec != NULL);
 
-   ALLOC_OKAY( allocMemory(heur) );
-   ALLOC_OKAY( duplicateMemoryArray(&(*heur)->name, name, strlen(name)+1) );
-   ALLOC_OKAY( duplicateMemoryArray(&(*heur)->desc, desc, strlen(desc)+1) );
+   SCIP_ALLOC( BMSallocMemory(heur) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*heur)->name, name, strlen(name)+1) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*heur)->desc, desc, strlen(desc)+1) );
    (*heur)->dispchar = dispchar;
    (*heur)->priority = priority;
    (*heur)->freq = freq;
@@ -134,7 +134,7 @@ RETCODE SCIPheurCreate(
    (*heur)->heurexitsol = heurexitsol;
    (*heur)->heurexec = heurexec;
    (*heur)->heurdata = heurdata;
-   CHECK_OKAY( SCIPclockCreate(&(*heur)->clock, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*heur)->heurclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*heur)->ncalls = 0;
    (*heur)->nsolsfound = 0;
    (*heur)->initialized = FALSE;
@@ -142,29 +142,29 @@ RETCODE SCIPheurCreate(
    /* add parameters */
    sprintf(paramname, "heuristics/%s/priority", name);
    sprintf(paramdesc, "priority of heuristic <%s>", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
+   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*heur)->priority, priority, INT_MIN, INT_MAX, 
-                  paramChgdHeurPriority, (PARAMDATA*)(*heur)) ); /*lint !e740*/
+                  paramChgdHeurPriority, (SCIP_PARAMDATA*)(*heur)) ); /*lint !e740*/
    sprintf(paramname, "heuristics/%s/freq", name);
    sprintf(paramdesc, "frequency for calling primal heuristic <%s> (-1: never, 0: only in root node)", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
+   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*heur)->freq, freq, -1, INT_MAX, NULL, NULL) );
    sprintf(paramname, "heuristics/%s/freqofs", name);
    sprintf(paramdesc, "frequency offset for calling primal heuristic <%s>", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
+   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*heur)->freqofs, freqofs, 0, INT_MAX, NULL, NULL) );
    sprintf(paramname, "heuristics/%s/maxdepth", name);
    sprintf(paramdesc, "maximal depth level to call primal heuristic <%s> (-1: no limit)", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
+   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*heur)->maxdepth, maxdepth, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
 
 /** calls destructor and frees memory of primal heuristic */
-RETCODE SCIPheurFree(
-   HEUR**           heur,               /**< pointer to primal heuristic data structure */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPheurFree(
+   SCIP_HEUR**           heur,               /**< pointer to primal heuristic data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(heur != NULL);
@@ -175,21 +175,21 @@ RETCODE SCIPheurFree(
    /* call destructor of primal heuristic */
    if( (*heur)->heurfree != NULL )
    {
-      CHECK_OKAY( (*heur)->heurfree(set->scip, *heur) );
+      SCIP_CALL( (*heur)->heurfree(set->scip, *heur) );
    }
 
-   SCIPclockFree(&(*heur)->clock);
-   freeMemoryArray(&(*heur)->name);
-   freeMemoryArray(&(*heur)->desc);
-   freeMemory(heur);
+   SCIPclockFree(&(*heur)->heurclock);
+   BMSfreeMemoryArray(&(*heur)->name);
+   BMSfreeMemoryArray(&(*heur)->desc);
+   BMSfreeMemory(heur);
 
    return SCIP_OKAY;
 }
 
 /** initializes primal heuristic */
-RETCODE SCIPheurInit(
-   HEUR*            heur,               /**< primal heuristic */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPheurInit(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(heur != NULL);
@@ -197,18 +197,18 @@ RETCODE SCIPheurInit(
 
    if( heur->initialized )
    {
-      errorMessage("primal heuristic <%s> already initialized\n", heur->name);
+      SCIPerrorMessage("primal heuristic <%s> already initialized\n", heur->name);
       return SCIP_INVALIDCALL;
    }
 
-   SCIPclockReset(heur->clock);
+   SCIPclockReset(heur->heurclock);
 
    heur->ncalls = 0;
    heur->nsolsfound = 0;
 
    if( heur->heurinit != NULL )
    {
-      CHECK_OKAY( heur->heurinit(set->scip, heur) );
+      SCIP_CALL( heur->heurinit(set->scip, heur) );
    }
    heur->initialized = TRUE;
 
@@ -216,9 +216,9 @@ RETCODE SCIPheurInit(
 }
 
 /** calls exit method of primal heuristic */
-RETCODE SCIPheurExit(
-   HEUR*            heur,               /**< primal heuristic */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPheurExit(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(heur != NULL);
@@ -226,13 +226,13 @@ RETCODE SCIPheurExit(
 
    if( !heur->initialized )
    {
-      errorMessage("primal heuristic <%s> not initialized\n", heur->name);
+      SCIPerrorMessage("primal heuristic <%s> not initialized\n", heur->name);
       return SCIP_INVALIDCALL;
    }
 
    if( heur->heurexit != NULL )
    {
-      CHECK_OKAY( heur->heurexit(set->scip, heur) );
+      SCIP_CALL( heur->heurexit(set->scip, heur) );
    }
    heur->initialized = FALSE;
 
@@ -240,9 +240,9 @@ RETCODE SCIPheurExit(
 }
 
 /** informs primal heuristic that the branch and bound process is being started */
-RETCODE SCIPheurInitsol(
-   HEUR*            heur,               /**< primal heuristic */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPheurInitsol(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(heur != NULL);
@@ -257,16 +257,16 @@ RETCODE SCIPheurInitsol(
    /* call solving process initialization method of primal heuristic */
    if( heur->heurinitsol != NULL )
    {
-      CHECK_OKAY( heur->heurinitsol(set->scip, heur) );
+      SCIP_CALL( heur->heurinitsol(set->scip, heur) );
    }
 
    return SCIP_OKAY;
 }
 
 /** informs primal heuristic that the branch and bound process data is being freed */
-RETCODE SCIPheurExitsol(
-   HEUR*            heur,               /**< primal heuristic */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPheurExitsol(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(heur != NULL);
@@ -275,27 +275,27 @@ RETCODE SCIPheurExitsol(
    /* call solving process deinitialization method of primal heuristic */
    if( heur->heurexitsol != NULL )
    {
-      CHECK_OKAY( heur->heurexitsol(set->scip, heur) );
+      SCIP_CALL( heur->heurexitsol(set->scip, heur) );
    }
 
    return SCIP_OKAY;
 }
 
 /** calls execution method of primal heuristic */
-RETCODE SCIPheurExec(
-   HEUR*            heur,               /**< primal heuristic */
-   SET*             set,                /**< global SCIP settings */
-   PRIMAL*          primal,             /**< primal data */
-   int              depth,              /**< depth of current node */
-   int              lpforkdepth,        /**< depth of the last node with solved LP */
-   Bool             currentnodehaslp,   /**< is LP being processed in the current node? */
-   Bool             plunging,           /**< is the next node to be processed a child or sibling? */
-   Bool             nodesolved,         /**< is the current node already solved? */
-   int*             ndelayedheurs,      /**< pointer to count the number of delayed heuristics */
-   RESULT*          result              /**< pointer to store the result of the callback method */
+SCIP_RETCODE SCIPheurExec(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   int                   depth,              /**< depth of current node */
+   int                   lpforkdepth,        /**< depth of the last node with solved SCIP_LP */
+   SCIP_Bool             currentnodehaslp,   /**< is SCIP_LP being processed in the current node? */
+   SCIP_Bool             plunging,           /**< is the next node to be processed a child or sibling? */
+   SCIP_Bool             nodesolved,         /**< is the current node already solved? */
+   int*                  ndelayedheurs,      /**< pointer to count the number of delayed heuristics */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
-   Bool execute;
+   SCIP_Bool execute;
 
    assert(heur != NULL);
    assert(heur->heurexec != NULL);
@@ -318,8 +318,8 @@ RETCODE SCIPheurExec(
    }
    else
    {
-      /* heuristic may only be executed on LP nodes: check, if a node matching the execution frequency lies between the
-       * current node and the last LP node of the path
+      /* heuristic may only be executed on SCIP_LP nodes: check, if a node matching the execution frequency lies between the
+       * current node and the last SCIP_LP node of the path
        */
       execute = (heur->freq > 0
          && ((depth + heur->freq - heur->freqofs) / heur->freq
@@ -335,7 +335,7 @@ RETCODE SCIPheurExec(
    /* if the heuristic was delayed, execute it anywas */
    execute = execute || (heur->delaypos >= 0);
    
-   /* execute LP heuristics only at LP nodes */
+   /* execute SCIP_LP heuristics only at SCIP_LP nodes */
    execute = execute && (heur->pseudonodes || currentnodehaslp);
 
    /* execute heuristic, depending on its "afternode" flag */
@@ -350,20 +350,20 @@ RETCODE SCIPheurExec(
       }
       else
       {
-         Longint oldnsolsfound;
+         SCIP_Longint oldnsolsfound;
          
-         debugMessage("executing primal heuristic <%s> in depth %d (delaypos: %d)\n", heur->name, depth, heur->delaypos);
+         SCIPdebugMessage("executing primal heuristic <%s> in depth %d (delaypos: %d)\n", heur->name, depth, heur->delaypos);
 
          oldnsolsfound = primal->nsolsfound;
 
          /* start timing */
-         SCIPclockStart(heur->clock, set);
+         SCIPclockStart(heur->heurclock, set);
 
          /* call external method */
-         CHECK_OKAY( heur->heurexec(set->scip, heur, result) );
+         SCIP_CALL( heur->heurexec(set->scip, heur, result) );
 
          /* stop timing */
-         SCIPclockStop(heur->clock, set);
+         SCIPclockStop(heur->heurclock, set);
 
          /* evaluate result */
          if( *result != SCIP_FOUNDSOL
@@ -371,7 +371,7 @@ RETCODE SCIPheurExec(
             && *result != SCIP_DIDNOTRUN
             && *result != SCIP_DELAYED )
          {
-            errorMessage("execution method of primal heuristic <%s> returned invalid result <%d>\n", 
+            SCIPerrorMessage("execution method of primal heuristic <%s> returned invalid result <%d>\n", 
                heur->name, *result);
             return SCIP_INVALIDRESULT;
          }
@@ -392,7 +392,7 @@ RETCODE SCIPheurExec(
    /* check if the heuristic was (still) delayed */
    if( *result == SCIP_DELAYED || heur->delaypos >= 0 )
    {
-      debugMessage("delaying execution of primal heuristic <%s> in depth %d (delaypos: %d)\n", 
+      SCIPdebugMessage("delaying execution of primal heuristic <%s> in depth %d (delaypos: %d)\n", 
          heur->name, depth, *ndelayedheurs);
 
       /* mark the heuristic delayed */
@@ -408,8 +408,8 @@ RETCODE SCIPheurExec(
 }
 
 /** gets user data of primal heuristic */
-HEURDATA* SCIPheurGetData(
-   HEUR*            heur                /**< primal heuristic */
+SCIP_HEURDATA* SCIPheurGetData(
+   SCIP_HEUR*            heur                /**< primal heuristic */
    )
 {
    assert(heur != NULL);
@@ -419,8 +419,8 @@ HEURDATA* SCIPheurGetData(
 
 /** sets user data of primal heuristic; user has to free old data in advance! */
 void SCIPheurSetData(
-   HEUR*            heur,               /**< primal heuristic */
-   HEURDATA*        heurdata            /**< new primal heuristic user data */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_HEURDATA*        heurdata            /**< new primal heuristic user data */
    )
 {
    assert(heur != NULL);
@@ -430,7 +430,7 @@ void SCIPheurSetData(
 
 /** gets name of primal heuristic */
 const char* SCIPheurGetName(
-   HEUR*            heur                /**< primal heuristic */
+   SCIP_HEUR*            heur                /**< primal heuristic */
    )
 {
    assert(heur != NULL);
@@ -440,7 +440,7 @@ const char* SCIPheurGetName(
 
 /** gets description of primal heuristic */
 const char* SCIPheurGetDesc(
-   HEUR*            heur                /**< primal heuristic */
+   SCIP_HEUR*            heur                /**< primal heuristic */
    )
 {
    assert(heur != NULL);
@@ -450,7 +450,7 @@ const char* SCIPheurGetDesc(
 
 /** gets display character of primal heuristic */
 char SCIPheurGetDispchar(
-   HEUR*            heur                /**< primal heuristic */
+   SCIP_HEUR*            heur                /**< primal heuristic */
    )
 {
    if( heur == NULL )
@@ -461,7 +461,7 @@ char SCIPheurGetDispchar(
 
 /** gets priority of primal heuristic */
 int SCIPheurGetPriority(
-   HEUR*            heur                /**< primal heuristic */
+   SCIP_HEUR*            heur                /**< primal heuristic */
    )
 {
    assert(heur != NULL);
@@ -471,9 +471,9 @@ int SCIPheurGetPriority(
 
 /** sets priority of primal heuristic */
 void SCIPheurSetPriority(
-   HEUR*            heur,               /**< primal heuristic */
-   SET*             set,                /**< global SCIP settings */
-   int              priority            /**< new priority of the primal heuristic */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   priority            /**< new priority of the primal heuristic */
    )
 {
    assert(heur != NULL);
@@ -485,7 +485,7 @@ void SCIPheurSetPriority(
 
 /** gets frequency of primal heuristic */
 int SCIPheurGetFreq(
-   HEUR*            heur                /**< primal heuristic */
+   SCIP_HEUR*            heur                /**< primal heuristic */
    )
 {
    assert(heur != NULL);
@@ -495,7 +495,7 @@ int SCIPheurGetFreq(
 
 /** gets frequency offset of primal heuristic */
 int SCIPheurGetFreqofs(
-   HEUR*            heur                /**< primal heuristic */
+   SCIP_HEUR*            heur                /**< primal heuristic */
    )
 {
    assert(heur != NULL);
@@ -505,7 +505,7 @@ int SCIPheurGetFreqofs(
 
 /** gets maximal depth level for calling primal heuristic (returns -1, if no depth limit exists) */
 int SCIPheurGetMaxdepth(
-   HEUR*            heur                /**< primal heuristic */
+   SCIP_HEUR*            heur                /**< primal heuristic */
    )
 {
    assert(heur != NULL);
@@ -514,8 +514,8 @@ int SCIPheurGetMaxdepth(
 }
 
 /** gets the number of times, the heuristic was called and tried to find a solution */
-Longint SCIPheurGetNCalls(
-   HEUR*            heur                /**< primal heuristic */
+SCIP_Longint SCIPheurGetNCalls(
+   SCIP_HEUR*            heur                /**< primal heuristic */
    )
 {
    assert(heur != NULL);
@@ -524,8 +524,8 @@ Longint SCIPheurGetNCalls(
 }
 
 /** gets the number of primal feasible solutions found by this heuristic */
-Longint SCIPheurGetNSolsFound(
-   HEUR*            heur                /**< primal heuristic */
+SCIP_Longint SCIPheurGetNSolsFound(
+   SCIP_HEUR*            heur                /**< primal heuristic */
    )
 {
    assert(heur != NULL);
@@ -534,8 +534,8 @@ Longint SCIPheurGetNSolsFound(
 }
 
 /** is primal heuristic initialized? */
-Bool SCIPheurIsInitialized(
-   HEUR*            heur                /**< primal heuristic */
+SCIP_Bool SCIPheurIsInitialized(
+   SCIP_HEUR*            heur                /**< primal heuristic */
    )
 {
    assert(heur != NULL);
@@ -544,12 +544,12 @@ Bool SCIPheurIsInitialized(
 }
 
 /** gets time in seconds used in this heuristic */
-Real SCIPheurGetTime(
-   HEUR*            heur                /**< primal heuristic */
+SCIP_Real SCIPheurGetTime(
+   SCIP_HEUR*            heur                /**< primal heuristic */
    )
 {
    assert(heur != NULL);
 
-   return SCIPclockGetTime(heur->clock);
+   return SCIPclockGetTime(heur->heurclock);
 }
 

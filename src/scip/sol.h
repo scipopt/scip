@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.41 2005/07/15 17:20:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.42 2005/08/22 18:35:49 bzfpfend Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -48,259 +48,259 @@
 
 /** creates primal CIP solution, initialized to zero */
 extern
-RETCODE SCIPsolCreate(
-   SOL**            sol,                /**< pointer to primal CIP solution */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   PRIMAL*          primal,             /**< primal data */
-   TREE*            tree,               /**< branch and bound tree, or NULL */
-   HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+SCIP_RETCODE SCIPsolCreate(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
 /** creates primal CIP solution in original problem space, initialized to zero */
 extern
-RETCODE SCIPsolCreateOriginal(
-   SOL**            sol,                /**< pointer to primal CIP solution */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   PRIMAL*          primal,             /**< primal data */
-   TREE*            tree,               /**< branch and bound tree */
-   HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+SCIP_RETCODE SCIPsolCreateOriginal(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
 /** creates a copy of a primal CIP solution */
 extern
-RETCODE SCIPsolCopy(
-   SOL**            sol,                /**< pointer to store the copy of the primal CIP solution */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   PRIMAL*          primal,             /**< primal data */
-   SOL*             sourcesol           /**< primal CIP solution to copy */
+SCIP_RETCODE SCIPsolCopy(
+   SCIP_SOL**            sol,                /**< pointer to store the copy of the primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_SOL*             sourcesol           /**< primal CIP solution to copy */
    );
 
-/** creates primal CIP solution, initialized to the current LP solution */
+/** creates primal CIP solution, initialized to the current SCIP_LP solution */
 extern
-RETCODE SCIPsolCreateLPSol(
-   SOL**            sol,                /**< pointer to primal CIP solution */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   PRIMAL*          primal,             /**< primal data */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< current LP data */
-   HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+SCIP_RETCODE SCIPsolCreateLPSol(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
 /** creates primal CIP solution, initialized to the current pseudo solution */
 extern
-RETCODE SCIPsolCreatePseudoSol(
-   SOL**            sol,                /**< pointer to primal CIP solution */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   PRIMAL*          primal,             /**< primal data */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< current LP data */
-   HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+SCIP_RETCODE SCIPsolCreatePseudoSol(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
 /** creates primal CIP solution, initialized to the current solution */
 extern
-RETCODE SCIPsolCreateCurrentSol(
-   SOL**            sol,                /**< pointer to primal CIP solution */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   PRIMAL*          primal,             /**< primal data */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< current LP data */
-   HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+SCIP_RETCODE SCIPsolCreateCurrentSol(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
 /** frees primal CIP solution */
 extern
-RETCODE SCIPsolFree(
-   SOL**            sol,                /**< pointer to primal CIP solution */
-   BLKMEM*          blkmem,             /**< block memory */
-   PRIMAL*          primal              /**< primal data */
+SCIP_RETCODE SCIPsolFree(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_PRIMAL*          primal              /**< primal data */
    );
 
 /** informs the solution that it now belongs to the given primal heuristic */
 extern
 void SCIPsolSetHeur(
-   SOL*             sol,                /**< primal CIP solution */
-   HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
-/** copies current LP solution into CIP solution by linking */
+/** copies current SCIP_LP solution into CIP solution by linking */
 extern
-RETCODE SCIPsolLinkLPSol(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp                  /**< current LP data */
+SCIP_RETCODE SCIPsolLinkLPSol(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp                  /**< current SCIP_LP data */
    );
 
 /** copies current pseudo solution into CIP solution by linking */
 extern
-RETCODE SCIPsolLinkPseudoSol(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp                  /**< current LP data */
+SCIP_RETCODE SCIPsolLinkPseudoSol(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp                  /**< current SCIP_LP data */
    );
 
-/** copies current solution (LP or pseudo solution) into CIP solution by linking */
+/** copies current solution (SCIP_LP or pseudo solution) into CIP solution by linking */
 extern
-RETCODE SCIPsolLinkCurrentSol(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp                  /**< current LP data */
+SCIP_RETCODE SCIPsolLinkCurrentSol(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp                  /**< current SCIP_LP data */
    );
 
 /** clears primal CIP solution */
 extern
-RETCODE SCIPsolClear(
-   SOL*             sol,                /**< primal CIP solution */
-   STAT*            stat,               /**< problem statistics data */
-   TREE*            tree                /**< branch and bound tree */
+SCIP_RETCODE SCIPsolClear(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
 /** stores solution values of variables in solution's own array */
 extern
-RETCODE SCIPsolUnlink(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   PROB*            prob                /**< transformed problem data */
+SCIP_RETCODE SCIPsolUnlink(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< transformed problem data */
    );
 
 /** sets value of variable in primal CIP solution */
 extern
-RETCODE SCIPsolSetVal(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch and bound tree */
-   VAR*             var,                /**< variable to add to solution */
-   Real             val                 /**< solution value of variable */
+SCIP_RETCODE SCIPsolSetVal(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_VAR*             var,                /**< variable to add to solution */
+   SCIP_Real             val                 /**< solution value of variable */
    );
 
 /** increases value of variable in primal CIP solution */
 extern
-RETCODE SCIPsolIncVal(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch and bound tree */
-   VAR*             var,                /**< variable to increase solution value for */
-   Real             incval              /**< increment for solution value of variable */
+SCIP_RETCODE SCIPsolIncVal(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_VAR*             var,                /**< variable to increase solution value for */
+   SCIP_Real             incval              /**< increment for solution value of variable */
    );
 
 /** returns value of variable in primal CIP solution */
 extern
-Real SCIPsolGetVal(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   VAR*             var                 /**< variable to get value for */
+SCIP_Real SCIPsolGetVal(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_VAR*             var                 /**< variable to get value for */
    );
 
 /** gets objective value of primal CIP solution in transformed problem */
 extern
-Real SCIPsolGetObj(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   PROB*            prob                /**< transformed problem data */
+SCIP_Real SCIPsolGetObj(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< transformed problem data */
    );
 
 /** updates primal solutions after a change in a variable's objective value */
 extern
 void SCIPsolUpdateVarObj(
-   SOL*             sol,                /**< primal CIP solution */
-   VAR*             var,                /**< problem variable */
-   Real             oldobj,             /**< old objective value */
-   Real             newobj              /**< new objective value */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             oldobj,             /**< old objective value */
+   SCIP_Real             newobj              /**< new objective value */
    );
 
 /** checks primal CIP solution for feasibility */
 extern
-RETCODE SCIPsolCheck(
-   SOL*             sol,                /**< primal CIP solution */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   PROB*            prob,               /**< transformed problem data */
-   Bool             checkbounds,        /**< should the bounds of the variables be checked? */
-   Bool             checkintegrality,   /**< has integrality to be checked? */
-   Bool             checklprows,        /**< have current LP rows to be checked? */
-   Bool*            feasible            /**< stores whether solution is feasible */
+SCIP_RETCODE SCIPsolCheck(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< have current SCIP_LP rows to be checked? */
+   SCIP_Bool*            feasible            /**< stores whether solution is feasible */
    );
 
 /** try to round given solution */
 extern
-RETCODE SCIPsolRound(
-   SOL*             sol,                /**< primal solution */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   PROB*            prob,               /**< transformed problem data */
-   TREE*            tree,               /**< branch and bound tree */
-   Bool*            success             /**< pointer to store whether rounding was successful */
+SCIP_RETCODE SCIPsolRound(
+   SCIP_SOL*             sol,                /**< primal solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_Bool*            success             /**< pointer to store whether rounding was successful */
    );
 
 /** updates the solution value sums in variables by adding the value in the given solution */
 extern
 void SCIPsolUpdateVarsum(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   PROB*            prob,               /**< transformed problem data */
-   Real             weight              /**< weight of solution in weighted average */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_Real             weight              /**< weight of solution in weighted average */
    );
 
 /** retransforms solution to original problem space */
 extern
-RETCODE SCIPsolRetransform(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   PROB*            origprob            /**< original problem */
+SCIP_RETCODE SCIPsolRetransform(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob            /**< original problem */
    );
 
 /** outputs non-zero elements of solution to file stream */
 extern
-RETCODE SCIPsolPrint(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   PROB*            prob,               /**< problem data (original or transformed) */
-   PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
-   FILE*            file                /**< output file (or NULL for standard output) */
+SCIP_RETCODE SCIPsolPrint(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< problem data (original or transformed) */
+   SCIP_PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
+   FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 
 #ifndef NDEBUG
 
-/* In debug mode, the following methods are implemented as function calls to ensure
+/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
 
 /** gets current position of solution in array of existing solutions of primal data */
 extern
 int SCIPsolGetPrimalIndex(
-   SOL*             sol                 /**< primal CIP solution */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** sets current position of solution in array of existing solutions of primal data */
 extern
 void SCIPsolSetPrimalIndex(
-   SOL*             sol,                /**< primal CIP solution */
-   int              primalindex         /**< new primal index of solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   int                   primalindex         /**< new primal index of solution */
    );
 
 #else

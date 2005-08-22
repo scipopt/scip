@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_reader.h,v 1.8 2005/07/15 17:20:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_reader.h,v 1.9 2005/08/22 18:35:54 bzfpfend Exp $"
 
 /**@file   type_reader.h
  * @brief  type definitions for input file readers
@@ -27,8 +27,8 @@
 #define __SCIP_TYPE_READER_H__
 
 
-typedef struct Reader READER;               /**< reader data structure */
-typedef struct ReaderData READERDATA;       /**< reader specific data */
+typedef struct SCIP_Reader SCIP_READER;               /**< reader data structure */
+typedef struct SCIP_ReaderData SCIP_READERDATA;       /**< reader specific data */
 
 
 /** destructor of reader to free user data (called when SCIP is exiting)
@@ -37,7 +37,7 @@ typedef struct ReaderData READERDATA;       /**< reader specific data */
  *  - scip            : SCIP main data structure
  *  - reader          : the reader itself
  */
-#define DECL_READERFREE(x) RETCODE x (SCIP* scip, READER* reader)
+#define SCIP_DECL_READERFREE(x) SCIP_RETCODE x (SCIP* scip, SCIP_READER* reader)
 
 /** problem reading method of reader
  *
@@ -51,9 +51,9 @@ typedef struct ReaderData READERDATA;       /**< reader specific data */
  *  - SCIP_SUCCESS    : the reader read the file correctly and created an appropritate problem
  *  - SCIP_DIDNOTRUN  : the reader is not responsible for given input file
  *
- *  If the reader detected an error in the input file, it should return with RETCODE SCIP_READERR or SCIP_NOFILE.
+ *  If the reader detected an error in the input file, it should return with SCIP_RETCODE SCIP_READERR or SCIP_NOFILE.
  */
-#define DECL_READERREAD(x) RETCODE x (SCIP* scip, READER* reader, const char* filename, RESULT* result)
+#define SCIP_DECL_READERREAD(x) SCIP_RETCODE x (SCIP* scip, SCIP_READER* reader, const char* filename, SCIP_RESULT* result)
 
 
 

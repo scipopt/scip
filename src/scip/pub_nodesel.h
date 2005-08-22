@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_nodesel.h,v 1.7 2005/07/15 17:20:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_nodesel.h,v 1.8 2005/08/22 18:35:45 bzfpfend Exp $"
 
 /**@file   pub_nodesel.h
  * @brief  public methods for node selectors
@@ -35,44 +35,44 @@
 /** gets name of node selector */
 extern
 const char* SCIPnodeselGetName(
-   NODESEL*         nodesel             /**< node selector */
+   SCIP_NODESEL*         nodesel             /**< node selector */
    );
 
 /** gets description of node selector */
 extern
 const char* SCIPnodeselGetDesc(
-   NODESEL*         nodesel             /**< node selector */
+   SCIP_NODESEL*         nodesel             /**< node selector */
    );
 
 /** gets priority of node selector in standard mode */
 extern
 int SCIPnodeselGetStdPriority(
-   NODESEL*         nodesel             /**< node selector */
+   SCIP_NODESEL*         nodesel             /**< node selector */
    );
 
 /** gets priority of node selector in memory saving mode */
 extern
 int SCIPnodeselGetMemsavePriority(
-   NODESEL*         nodesel             /**< node selector */
+   SCIP_NODESEL*         nodesel             /**< node selector */
    );
 
 /** gets user data of node selector */
 extern
-NODESELDATA* SCIPnodeselGetData(
-   NODESEL*         nodesel             /**< node selector */
+SCIP_NODESELDATA* SCIPnodeselGetData(
+   SCIP_NODESEL*         nodesel             /**< node selector */
    );
 
 /** sets user data of node selector; user has to free old data in advance! */
 extern
 void SCIPnodeselSetData(
-   NODESEL*         nodesel,            /**< node selector */
-   NODESELDATA*     nodeseldata         /**< new node selector user data */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_NODESELDATA*     nodeseldata         /**< new node selector user data */
    );
 
 /** is node selector initialized? */
 extern
-Bool SCIPnodeselIsInitialized(
-   NODESEL*         nodesel             /**< node selector */
+SCIP_Bool SCIPnodeselIsInitialized(
+   SCIP_NODESEL*         nodesel             /**< node selector */
    );
 
 

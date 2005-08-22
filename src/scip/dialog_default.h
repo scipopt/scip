@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.26 2005/07/15 17:20:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.27 2005/08/22 18:35:37 bzfpfend Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog
@@ -33,162 +33,162 @@
 
 /** standard menu dialog execution method, that displays it's help screen if the remaining command line is empty */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecMenu);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecMenu);
 
 /** standard menu dialog execution method, that doesn't display it's help screen */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecMenuLazy);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecMenuLazy);
 
 /** dialog execution method for the checksol command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecChecksol);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol);
 
 /** dialog execution method for the conflictgraph command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecConflictgraph);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecConflictgraph);
 
 /** dialog execution method for the display branching command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecDisplayBranching);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayBranching);
 
 /** dialog execution method for the display conflict command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecDisplayConflict);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayConflict);
 
 /** dialog execution method for the display conshdlrs command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecDisplayConshdlrs);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayConshdlrs);
 
 /** dialog execution method for the display displaycols command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecDisplayDisplaycols);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayDisplaycols);
 
 /** dialog execution method for the display heuristics command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics);
 
 /** dialog execution method for the display memory command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecDisplayMemory);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayMemory);
 
 /** dialog execution method for the display nodeselectors command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecDisplayNodeselectors);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayNodeselectors);
 
 /** dialog execution method for the display presolvers command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecDisplayPresolvers);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPresolvers);
 
 /** dialog execution method for the display problem command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecDisplayProblem);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayProblem);
 
 /** dialog execution method for the display propagators command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecDisplayPropagators);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPropagators);
 
 /** dialog execution method for the display readers command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecDisplayReaders);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayReaders);
 
 /** dialog execution method for the display separators command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecDisplaySeparators);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySeparators);
 
 /** dialog execution method for the display solution command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution);
 
 /** dialog execution method for the display statistics command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics);
 
 /** dialog execution method for the display transproblem command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecDisplayTransproblem);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayTransproblem);
 
 /** dialog execution method for the display value command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecDisplayValue);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayValue);
 
 /** dialog execution method for the display varbranchstatistics command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecDisplayVarbranchstatistics);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayVarbranchstatistics);
 
 /** dialog execution method for the display transsolution command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecDisplayTranssolution);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayTranssolution);
 
 /** dialog execution method for the help command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecHelp);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecHelp);
 
 /** dialog execution method for the free command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecFree);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecFree);
 
 /** dialog execution method for the newstart command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecNewstart);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecNewstart);
 
 /** dialog execution method for the optimize command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecOptimize);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecOptimize);
 
 /** dialog execution method for the presolve command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecPresolve);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecPresolve);
 
 /** dialog execution method for the quit command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecQuit);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecQuit);
 
 /** dialog execution method for the read command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecRead);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecRead);
 
 /** dialog execution method for the set load command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecSetLoad);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLoad);
 
 /** dialog execution method for the set save command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecSetSave);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSave);
 
 /** dialog execution method for the set diffsave command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecSetDiffsave);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetDiffsave);
 
 /** dialog execution method for the set parameter command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecSetParam);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam);
 
 /** dialog description method for the set parameter command */
 extern
-DECL_DIALOGDESC(SCIPdialogDescSetParam);
+SCIP_DECL_DIALOGDESC(SCIPdialogDescSetParam);
 
 /** dialog execution method for the set branching direction command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection);
 
 /** dialog execution method for the set branching priority command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority);
 
 /** dialog execution method for the set limits objective command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective);
 
 /** includes or updates the default dialog menus in SCIP */
 extern
-RETCODE SCIPincludeDialogDefault(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeDialogDefault(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** includes or updates the "set" menu for each available parameter setting */
 extern
-RETCODE SCIPincludeDialogDefaultSet(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeDialogDefaultSet(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.86 2005/07/15 17:20:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.87 2005/08/22 18:35:49 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -28,7 +28,6 @@
 
 
 #include "scip/def.h"
-#include "scip/message.h"
 #include "scip/memory.h"
 #include "scip/buffer.h"
 #include "scip/type_set.h"
@@ -61,1005 +60,1005 @@
 
 /** creates global SCIP settings */
 extern
-RETCODE SCIPsetCreate(
-   SET**            set,                /**< pointer to SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   SCIP*            scip                /**< SCIP data structure */   
+SCIP_RETCODE SCIPsetCreate(
+   SCIP_SET**            set,                /**< pointer to SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP*                 scip                /**< SCIP data structure */   
    );
 
 /** frees global SCIP settings */
 extern
-RETCODE SCIPsetFree(
-   SET**            set,                /**< pointer to SCIP settings */
-   BLKMEM*          blkmem              /**< block memory */
+SCIP_RETCODE SCIPsetFree(
+   SCIP_SET**            set,                /**< pointer to SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
-/** creates a Bool parameter, sets it to its default value, and adds it to the parameter set */
+/** creates a SCIP_Bool parameter, sets it to its default value, and adds it to the parameter set */
 extern
-RETCODE SCIPsetAddBoolParam(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
-   Bool             defaultvalue,       /**< default value of the parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE SCIPsetAddBoolParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   SCIP_Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             defaultvalue,       /**< default value of the parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
 /** creates a int parameter, sets it to its default value, and adds it to the parameter set */
 extern
-RETCODE SCIPsetAddIntParam(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   int*             valueptr,           /**< pointer to store the current parameter value, or NULL */
-   int              defaultvalue,       /**< default value of the parameter */
-   int              minvalue,           /**< minimum value for parameter */
-   int              maxvalue,           /**< maximum value for parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE SCIPsetAddIntParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   int*                  valueptr,           /**< pointer to store the current parameter value, or NULL */
+   int                   defaultvalue,       /**< default value of the parameter */
+   int                   minvalue,           /**< minimum value for parameter */
+   int                   maxvalue,           /**< maximum value for parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
-/** creates a Longint parameter, sets it to its default value, and adds it to the parameter set */
+/** creates a SCIP_Longint parameter, sets it to its default value, and adds it to the parameter set */
 extern
-RETCODE SCIPsetAddLongintParam(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
-   Longint          defaultvalue,       /**< default value of the parameter */
-   Longint          minvalue,           /**< minimum value for parameter */
-   Longint          maxvalue,           /**< maximum value for parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE SCIPsetAddLongintParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   SCIP_Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Longint          defaultvalue,       /**< default value of the parameter */
+   SCIP_Longint          minvalue,           /**< minimum value for parameter */
+   SCIP_Longint          maxvalue,           /**< maximum value for parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
-/** creates a Real parameter, sets it to its default value, and adds it to the parameter set */
+/** creates a SCIP_Real parameter, sets it to its default value, and adds it to the parameter set */
 extern
-RETCODE SCIPsetAddRealParam(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
-   Real             defaultvalue,       /**< default value of the parameter */
-   Real             minvalue,           /**< minimum value for parameter */
-   Real             maxvalue,           /**< maximum value for parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE SCIPsetAddRealParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   SCIP_Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Real             defaultvalue,       /**< default value of the parameter */
+   SCIP_Real             minvalue,           /**< minimum value for parameter */
+   SCIP_Real             maxvalue,           /**< maximum value for parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
 /** creates a char parameter, sets it to its default value, and adds it to the parameter set */
 extern
-RETCODE SCIPsetAddCharParam(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   char*            valueptr,           /**< pointer to store the current parameter value, or NULL */
-   char             defaultvalue,       /**< default value of the parameter */
-   const char*      allowedvalues,      /**< array with possible parameter values, or NULL if not restricted */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE SCIPsetAddCharParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   char*                 valueptr,           /**< pointer to store the current parameter value, or NULL */
+   char                  defaultvalue,       /**< default value of the parameter */
+   const char*           allowedvalues,      /**< array with possible parameter values, or NULL if not restricted */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
 /** creates a string parameter, sets it to its default value, and adds it to the parameter set */
 extern
-RETCODE SCIPsetAddStringParam(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   char**           valueptr,           /**< pointer to store the current parameter value, or NULL */
-   const char*      defaultvalue,       /**< default value of the parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE SCIPsetAddStringParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   char**                valueptr,           /**< pointer to store the current parameter value, or NULL */
+   const char*           defaultvalue,       /**< default value of the parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    );
 
-/** gets the value of an existing Bool parameter */
-RETCODE SCIPsetGetBoolParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   Bool*            value               /**< pointer to store the parameter */
+/** gets the value of an existing SCIP_Bool parameter */
+SCIP_RETCODE SCIPsetGetBoolParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool*            value               /**< pointer to store the parameter */
    );
 
 /** gets the value of an existing Int parameter */
 extern
-RETCODE SCIPsetGetIntParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   int*             value               /**< pointer to store the parameter */
+SCIP_RETCODE SCIPsetGetIntParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   int*                  value               /**< pointer to store the parameter */
    );
 
-/** gets the value of an existing Longint parameter */
+/** gets the value of an existing SCIP_Longint parameter */
 extern
-RETCODE SCIPsetGetLongintParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   Longint*         value               /**< pointer to store the parameter */
+SCIP_RETCODE SCIPsetGetLongintParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Longint*         value               /**< pointer to store the parameter */
    );
 
-/** gets the value of an existing Real parameter */
+/** gets the value of an existing SCIP_Real parameter */
 extern
-RETCODE SCIPsetGetRealParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   Real*            value               /**< pointer to store the parameter */
+SCIP_RETCODE SCIPsetGetRealParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Real*            value               /**< pointer to store the parameter */
    );
 
 /** gets the value of an existing Char parameter */
 extern
-RETCODE SCIPsetGetCharParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   char*            value               /**< pointer to store the parameter */
+SCIP_RETCODE SCIPsetGetCharParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   char*                 value               /**< pointer to store the parameter */
    );
 
 /** gets the value of an existing String parameter */
 extern
-RETCODE SCIPsetGetStringParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   char**           value               /**< pointer to store the parameter */
+SCIP_RETCODE SCIPsetGetStringParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   char**                value               /**< pointer to store the parameter */
    );
 
-/** changes the value of an existing Bool parameter */
+/** changes the value of an existing SCIP_Bool parameter */
 extern
-RETCODE SCIPsetSetBoolParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   Bool             value               /**< new value of the parameter */
+SCIP_RETCODE SCIPsetSetBoolParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool             value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing Int parameter */
 extern
-RETCODE SCIPsetSetIntParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   int              value               /**< new value of the parameter */
+SCIP_RETCODE SCIPsetSetIntParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   int                   value               /**< new value of the parameter */
    );
 
-/** changes the value of an existing Longint parameter */
+/** changes the value of an existing SCIP_Longint parameter */
 extern
-RETCODE SCIPsetSetLongintParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   Longint          value               /**< new value of the parameter */
+SCIP_RETCODE SCIPsetSetLongintParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Longint          value               /**< new value of the parameter */
    );
 
-/** changes the value of an existing Real parameter */
+/** changes the value of an existing SCIP_Real parameter */
 extern
-RETCODE SCIPsetSetRealParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   Real             value               /**< new value of the parameter */
+SCIP_RETCODE SCIPsetSetRealParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Real             value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing Char parameter */
 extern
-RETCODE SCIPsetSetCharParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   char             value               /**< new value of the parameter */
+SCIP_RETCODE SCIPsetSetCharParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   char                  value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing String parameter */
 extern
-RETCODE SCIPsetSetStringParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   const char*      value               /**< new value of the parameter */
+SCIP_RETCODE SCIPsetSetStringParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   const char*           value               /**< new value of the parameter */
    );
 
 /** reads parameters from a file */
 extern
-RETCODE SCIPsetReadParams(
-   SET*             set,                /**< global SCIP settings */
-   const char*      filename            /**< file name */
+SCIP_RETCODE SCIPsetReadParams(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           filename            /**< file name */
    );
 
 /** writes all parameters in the parameter set to a file */
 extern
-RETCODE SCIPsetWriteParams(
-   SET*             set,                /**< global SCIP settings */
-   const char*      filename,           /**< file name, or NULL for stdout */
-   Bool             comments,           /**< should parameter descriptions be written as comments? */
-   Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
+SCIP_RETCODE SCIPsetWriteParams(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           filename,           /**< file name, or NULL for stdout */
+   SCIP_Bool             comments,           /**< should parameter descriptions be written as comments? */
+   SCIP_Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
    );
 
 /** returns the array of all available SCIP parameters */
 extern
-PARAM** SCIPsetGetParams(
-   SET*             set                 /**< global SCIP settings */
+SCIP_PARAM** SCIPsetGetParams(
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** returns the total number of all available SCIP parameters */
 extern
 int SCIPsetGetNParams(
-   SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** inserts file reader in file reader list */
 extern
-RETCODE SCIPsetIncludeReader(
-   SET*             set,                /**< global SCIP settings */
-   READER*          reader              /**< file reader */
+SCIP_RETCODE SCIPsetIncludeReader(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_READER*          reader              /**< file reader */
    );
 
 /** returns the file reader of the given name, or NULL if not existing */
 extern
-READER* SCIPsetFindReader(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of file reader */
+SCIP_READER* SCIPsetFindReader(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of file reader */
    );
 
 /** inserts variable pricer in variable pricer list */
 extern
-RETCODE SCIPsetIncludePricer(
-   SET*             set,                /**< global SCIP settings */
-   PRICER*          pricer              /**< variable pricer */
+SCIP_RETCODE SCIPsetIncludePricer(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
 /** returns the variable pricer of the given name, or NULL if not existing */
 extern
-PRICER* SCIPsetFindPricer(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of variable pricer */
+SCIP_PRICER* SCIPsetFindPricer(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of variable pricer */
    );
 
 /** sorts pricers by priorities */
 extern
 void SCIPsetSortPricers(
-   SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** inserts constraint handler in constraint handler list */
 extern
-RETCODE SCIPsetIncludeConshdlr(
-   SET*             set,                /**< global SCIP settings */
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_RETCODE SCIPsetIncludeConshdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** returns the constraint handler of the given name, or NULL if not existing */
 extern
-CONSHDLR* SCIPsetFindConshdlr(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of constraint handler */
+SCIP_CONSHDLR* SCIPsetFindConshdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of constraint handler */
    );
 
 /** inserts conflict handler in conflict handler list */
 extern
-RETCODE SCIPsetIncludeConflicthdlr(
-   SET*             set,                /**< global SCIP settings */
-   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+SCIP_RETCODE SCIPsetIncludeConflicthdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
 /** returns the conflict handler of the given name, or NULL if not existing */
 extern
-CONFLICTHDLR* SCIPsetFindConflicthdlr(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of conflict handler */
+SCIP_CONFLICTHDLR* SCIPsetFindConflicthdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of conflict handler */
    );
 
 /** sorts conflict handlers by priorities */
 extern
 void SCIPsetSortConflicthdlrs(
-   SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** inserts presolver in presolver list */
 extern
-RETCODE SCIPsetIncludePresol(
-   SET*             set,                /**< global SCIP settings */
-   PRESOL*          presol              /**< presolver */
+SCIP_RETCODE SCIPsetIncludePresol(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** returns the presolver of the given name, or NULL if not existing */
 extern
-PRESOL* SCIPsetFindPresol(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of presolver */
+SCIP_PRESOL* SCIPsetFindPresol(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of presolver */
    );
 
 /** sorts presolvers by priorities */
 extern
 void SCIPsetSortPresols(
-   SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** inserts relaxator in relaxator list */
 extern
-RETCODE SCIPsetIncludeRelax(
-   SET*             set,                /**< global SCIP settings */
-   RELAX*           relax               /**< relaxator */
+SCIP_RETCODE SCIPsetIncludeRelax(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RELAX*           relax               /**< relaxator */
    );
 
 /** returns the relaxator of the given name, or NULL if not existing */
 extern
-RELAX* SCIPsetFindRelax(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of relaxator */
+SCIP_RELAX* SCIPsetFindRelax(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of relaxator */
    );
 
 /** sorts relaxators by priorities */
 extern
 void SCIPsetSortRelaxs(
-   SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** inserts separator in separator list */
 extern
-RETCODE SCIPsetIncludeSepa(
-   SET*             set,                /**< global SCIP settings */
-   SEPA*            sepa                /**< separator */
+SCIP_RETCODE SCIPsetIncludeSepa(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SEPA*            sepa                /**< separator */
    );
 
 /** returns the separator of the given name, or NULL if not existing */
 extern
-SEPA* SCIPsetFindSepa(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of separator */
+SCIP_SEPA* SCIPsetFindSepa(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of separator */
    );
 
 /** sorts separators by priorities */
 extern
 void SCIPsetSortSepas(
-   SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** inserts propagator in propagator list */
 extern
-RETCODE SCIPsetIncludeProp(
-   SET*             set,                /**< global SCIP settings */
-   PROP*            prop                /**< propagator */
+SCIP_RETCODE SCIPsetIncludeProp(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROP*            prop                /**< propagator */
    );
 
 /** returns the propagator of the given name, or NULL if not existing */
 extern
-PROP* SCIPsetFindProp(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of propagator */
+SCIP_PROP* SCIPsetFindProp(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of propagator */
    );
 
 /** sorts propagators by priorities */
 extern
 void SCIPsetSortProps(
-   SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** inserts primal heuristic in primal heuristic list */
 extern
-RETCODE SCIPsetIncludeHeur(
-   SET*             set,                /**< global SCIP settings */
-   HEUR*            heur                /**< primal heuristic */
+SCIP_RETCODE SCIPsetIncludeHeur(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** returns the primal heuristic of the given name, or NULL if not existing */
 extern
-HEUR* SCIPsetFindHeur(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of primal heuristic */
+SCIP_HEUR* SCIPsetFindHeur(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of primal heuristic */
    );
 
 /** sorts heuristics by priorities */
 extern
 void SCIPsetSortHeurs(
-   SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** inserts event handler in event handler list */
 extern
-RETCODE SCIPsetIncludeEventhdlr(
-   SET*             set,                /**< global SCIP settings */
-   EVENTHDLR*       eventhdlr           /**< event handler */
+SCIP_RETCODE SCIPsetIncludeEventhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    );
 
 /** returns the event handler of the given name, or NULL if not existing */
 extern
-EVENTHDLR* SCIPsetFindEventhdlr(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of event handler */
+SCIP_EVENTHDLR* SCIPsetFindEventhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of event handler */
    );
 
 /** inserts node selector in node selector list */
 extern
-RETCODE SCIPsetIncludeNodesel(
-   SET*             set,                /**< global SCIP settings */
-   NODESEL*         nodesel             /**< node selector */
+SCIP_RETCODE SCIPsetIncludeNodesel(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODESEL*         nodesel             /**< node selector */
    );
 
 /** returns the node selector of the given name, or NULL if not existing */
 extern
-NODESEL* SCIPsetFindNodesel(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of event handler */
+SCIP_NODESEL* SCIPsetFindNodesel(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of event handler */
    );
 
 /** returns node selector with highest priority in the current mode */
 extern
-NODESEL* SCIPsetGetNodesel(
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat                /**< dynamic problem statistics */
+SCIP_NODESEL* SCIPsetGetNodesel(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** inserts branching rule in branching rule list */
 extern
-RETCODE SCIPsetIncludeBranchrule(
-   SET*             set,                /**< global SCIP settings */
-   BRANCHRULE*      branchrule          /**< branching rule */
+SCIP_RETCODE SCIPsetIncludeBranchrule(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
 /** returns the branching rule of the given name, or NULL if not existing */
 extern
-BRANCHRULE* SCIPsetFindBranchrule(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of event handler */
+SCIP_BRANCHRULE* SCIPsetFindBranchrule(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of event handler */
    );
 
 /** sorts branching rules by priorities */
 extern
 void SCIPsetSortBranchrules(
-   SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** inserts display column in display column list */
 extern
-RETCODE SCIPsetIncludeDisp(
-   SET*             set,                /**< global SCIP settings */
-   DISP*            disp                /**< display column */
+SCIP_RETCODE SCIPsetIncludeDisp(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_DISP*            disp                /**< display column */
    );
 
 /** returns the display column of the given name, or NULL if not existing */
 extern
-DISP* SCIPsetFindDisp(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of event handler */
+SCIP_DISP* SCIPsetFindDisp(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of event handler */
    );
 
 /** calls init methods of all plugins */
 extern
-RETCODE SCIPsetInitPlugins(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   STAT*            stat                /**< dynamic problem statistics */
+SCIP_RETCODE SCIPsetInitPlugins(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** calls exit methods of all plugins */
 extern
-RETCODE SCIPsetExitPlugins(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   STAT*            stat                /**< dynamic problem statistics */
+SCIP_RETCODE SCIPsetExitPlugins(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** calls initpre methods of all plugins */
 extern
-RETCODE SCIPsetInitprePlugins(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   STAT*            stat,               /**< dynamic problem statistics */
-   Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
-   Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
+SCIP_RETCODE SCIPsetInitprePlugins(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
+   SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
    );
 
 /** calls exitpre methods of all plugins */
 extern
-RETCODE SCIPsetExitprePlugins(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   STAT*            stat,               /**< dynamic problem statistics */
-   Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
-   Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
+SCIP_RETCODE SCIPsetExitprePlugins(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
+   SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
    );
 
 /** calls initsol methods of all plugins */
 extern
-RETCODE SCIPsetInitsolPlugins(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   STAT*            stat                /**< dynamic problem statistics */
+SCIP_RETCODE SCIPsetInitsolPlugins(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** calls exitsol methods of all plugins */
 extern
-RETCODE SCIPsetExitsolPlugins(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   STAT*            stat                /**< dynamic problem statistics */
+SCIP_RETCODE SCIPsetExitsolPlugins(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** calculate memory size for dynamically allocated arrays */
 extern
 int SCIPsetCalcMemGrowSize(
-   SET*             set,                /**< global SCIP settings */
-   int              num                 /**< minimum number of entries to store */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
    );
 
 /** calculate memory size for tree array */
 extern
 int SCIPsetCalcTreeGrowSize(
-   SET*             set,                /**< global SCIP settings */
-   int              num                 /**< minimum number of entries to store */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
    );
 
 /** calculate memory size for path array */
 extern
 int SCIPsetCalcPathGrowSize(
-   SET*             set,                /**< global SCIP settings */
-   int              num                 /**< minimum number of entries to store */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
    );
 
 /** sets verbosity level for message output */
 extern
-RETCODE SCIPsetSetVerbLevel(
-   SET*             set,                /**< global SCIP settings */
-   VERBLEVEL        verblevel           /**< verbosity level for message output */
+SCIP_RETCODE SCIPsetSetVerbLevel(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VERBLEVEL        verblevel           /**< verbosity level for message output */
    );
 
-/** sets LP feasibility tolerance */
+/** sets SCIP_LP feasibility tolerance */
 extern
-RETCODE SCIPsetSetFeastol(
-   SET*             set,                /**< global SCIP settings */
-   Real             feastol             /**< new feasibility tolerance */
+SCIP_RETCODE SCIPsetSetFeastol(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             feastol             /**< new feasibility tolerance */
    );
 
-/** sets LP feasibility tolerance for reduced costs */
+/** sets SCIP_LP feasibility tolerance for reduced costs */
 extern
-RETCODE SCIPsetSetDualfeastol(
-   SET*             set,                /**< global SCIP settings */
-   Real             dualfeastol         /**< new reduced costs feasibility tolerance */
+SCIP_RETCODE SCIPsetSetDualfeastol(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             dualfeastol         /**< new reduced costs feasibility tolerance */
    );
 
-/** sets LP convergence tolerance used in barrier algorithm */
+/** sets SCIP_LP convergence tolerance used in barrier algorithm */
 extern
-RETCODE SCIPsetSetBarrierconvtol(
-   SET*             set,                /**< global SCIP settings */
-   Real             barrierconvtol      /**< new convergence tolerance used in barrier algorithm */
+SCIP_RETCODE SCIPsetSetBarrierconvtol(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             barrierconvtol      /**< new convergence tolerance used in barrier algorithm */
    );
 
-/** returns the maximal number of variables priced into the LP per round */
+/** returns the maximal number of variables priced into the SCIP_LP per round */
 extern
 int SCIPsetGetPriceMaxvars(
-   SET*             set,                /**< global SCIP settings */
-   Bool             root                /**< are we at the root node? */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             root                /**< are we at the root node? */
    );
 
 /** returns the maximal number of cuts separated per round */
 extern
 int SCIPsetGetSepaMaxcuts(
-   SET*             set,                /**< global SCIP settings */
-   Bool             root                /**< are we at the root node? */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             root                /**< are we at the root node? */
    );
 
 
 
 #ifndef NDEBUG
 
-/* In debug mode, the following methods are implemented as function calls to ensure
+/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
 
 /** returns value treated as infinity */
 extern
-Real SCIPsetInfinity(
-   SET*             set                 /**< global SCIP settings */
+SCIP_Real SCIPsetInfinity(
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** returns value treated as zero */
 extern
-Real SCIPsetEpsilon(
-   SET*             set                 /**< global SCIP settings */
+SCIP_Real SCIPsetEpsilon(
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** returns value treated as zero for sums of floating point values */
 extern
-Real SCIPsetSumepsilon(
-   SET*             set                 /**< global SCIP settings */
+SCIP_Real SCIPsetSumepsilon(
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** returns feasibility tolerance for constraints */
 extern
-Real SCIPsetFeastol(
-   SET*             set                 /**< global SCIP settings */
+SCIP_Real SCIPsetFeastol(
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** returns feasibility tolerance for reduced costs */
 extern
-Real SCIPsetDualfeastol(
-   SET*             set                 /**< global SCIP settings */
+SCIP_Real SCIPsetDualfeastol(
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** returns convergence tolerance used in barrier algorithm */
 extern
-Real SCIPsetBarrierconvtol(
-   SET*             set                 /**< global SCIP settings */
+SCIP_Real SCIPsetBarrierconvtol(
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** returns minimal variable distance value to use for pseudo cost updates */
 extern
-Real SCIPsetPseudocosteps(
-   SET*             set                 /**< global SCIP settings */
+SCIP_Real SCIPsetPseudocosteps(
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** returns minimal minimal objective distance value to use for pseudo cost updates */
 extern
-Real SCIPsetPseudocostdelta(
-   SET*             set                 /**< global SCIP settings */
+SCIP_Real SCIPsetPseudocostdelta(
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** checks, if values are in range of epsilon */
 extern
-Bool SCIPsetIsEQ(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsEQ(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if val1 is (more than epsilon) lower than val2 */
 extern
-Bool SCIPsetIsLT(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsLT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if val1 is not (more than epsilon) greater than val2 */
 extern
-Bool SCIPsetIsLE(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsLE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if val1 is (more than epsilon) greater than val2 */
 extern
-Bool SCIPsetIsGT(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsGT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if val1 is not (more than epsilon) lower than val2 */
 extern
-Bool SCIPsetIsGE(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsGE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if value is (positive) infinite */
 extern
-Bool SCIPsetIsInfinity(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against infinity */
+SCIP_Bool SCIPsetIsInfinity(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against infinity */
    );
 
 /** checks, if value is in range epsilon of 0.0 */
 extern
-Bool SCIPsetIsZero(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+SCIP_Bool SCIPsetIsZero(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if value is greater than epsilon */
 extern
-Bool SCIPsetIsPositive(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+SCIP_Bool SCIPsetIsPositive(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if value is lower than -epsilon */
 extern
-Bool SCIPsetIsNegative(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+SCIP_Bool SCIPsetIsNegative(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if value is integral within epsilon */
 extern
-Bool SCIPsetIsIntegral(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+SCIP_Bool SCIPsetIsIntegral(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
    );
 
 /** checks whether the product val * scalar is integral in epsilon scaled by scalar */
 extern
-Bool SCIPsetIsScalingIntegral(
-   SET*             set,                /**< global SCIP settings */
-   Real             val,                /**< unscaled value to check for scaled integrality */
-   Real             scalar              /**< value to scale val with for checking for integrality */
+SCIP_Bool SCIPsetIsScalingIntegral(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val,                /**< unscaled value to check for scaled integrality */
+   SCIP_Real             scalar              /**< value to scale val with for checking for integrality */
    );
 
 /** checks, if given fractional part is smaller than epsilon */
 extern
-Bool SCIPsetIsFracIntegral(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+SCIP_Bool SCIPsetIsFracIntegral(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
    );
 
 /** rounds value + feasibility tolerance down to the next integer in epsilon tolerance */
 extern
-Real SCIPsetFloor(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+SCIP_Real SCIPsetFloor(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
    );
 
 /** rounds value - feasibility tolerance up to the next integer in epsilon tolerance */
 extern
-Real SCIPsetCeil(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+SCIP_Real SCIPsetCeil(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
    );
 
 /** returns fractional part of value, i.e. x - floor(x) in epsilon tolerance */
 extern
-Real SCIPsetFrac(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to return fractional part for */
+SCIP_Real SCIPsetFrac(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to return fractional part for */
    );
 
 /** checks, if values are in range of sumepsilon */
 extern
-Bool SCIPsetIsSumEQ(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsSumEQ(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if val1 is (more than sumepsilon) lower than val2 */
 extern
-Bool SCIPsetIsSumLT(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsSumLT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if val1 is not (more than sumepsilon) greater than val2 */
 extern
-Bool SCIPsetIsSumLE(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsSumLE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if val1 is (more than sumepsilon) greater than val2 */
 extern
-Bool SCIPsetIsSumGT(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsSumGT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if val1 is not (more than sumepsilon) lower than val2 */
 extern
-Bool SCIPsetIsSumGE(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsSumGE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if value is in range sumepsilon of 0.0 */
 extern
-Bool SCIPsetIsSumZero(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+SCIP_Bool SCIPsetIsSumZero(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if value is greater than sumepsilon */
 extern
-Bool SCIPsetIsSumPositive(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+SCIP_Bool SCIPsetIsSumPositive(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if value is lower than -sumepsilon */
 extern
-Bool SCIPsetIsSumNegative(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+SCIP_Bool SCIPsetIsSumNegative(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if values are in range of feasibility tolerance */
 extern
-Bool SCIPsetIsFeasEQ(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsFeasEQ(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if val1 is (more than feasibility tolerance) lower than val2 */
 extern
-Bool SCIPsetIsFeasLT(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsFeasLT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if val1 is not (more than feasibility tolerance) greater than val2 */
 extern
-Bool SCIPsetIsFeasLE(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsFeasLE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if val1 is (more than feasibility tolerance) greater than val2 */
 extern
-Bool SCIPsetIsFeasGT(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsFeasGT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if val1 is not (more than feasibility tolerance) lower than val2 */
 extern
-Bool SCIPsetIsFeasGE(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsFeasGE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if value is in range feasibility tolerance of 0.0 */
 extern
-Bool SCIPsetIsFeasZero(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+SCIP_Bool SCIPsetIsFeasZero(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if value is greater than feasibility tolerance */
 extern
-Bool SCIPsetIsFeasPositive(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+SCIP_Bool SCIPsetIsFeasPositive(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if value is lower than -feasibility tolerance */
 extern
-Bool SCIPsetIsFeasNegative(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+SCIP_Bool SCIPsetIsFeasNegative(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
    );
 
-/** checks, if value is integral within the LP feasibility bounds */
+/** checks, if value is integral within the SCIP_LP feasibility bounds */
 extern
-Bool SCIPsetIsFeasIntegral(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+SCIP_Bool SCIPsetIsFeasIntegral(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
    );
 
 /** checks, if given fractional part is smaller than feastol */
 extern
-Bool SCIPsetIsFeasFracIntegral(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+SCIP_Bool SCIPsetIsFeasFracIntegral(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
    );
 
 /** rounds value + feasibility tolerance down to the next integer in feasibility tolerance */
 extern
-Real SCIPsetFeasFloor(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+SCIP_Real SCIPsetFeasFloor(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
    );
 
 /** rounds value - feasibility tolerance up to the next integer in feasibility tolerance */
 extern
-Real SCIPsetFeasCeil(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+SCIP_Real SCIPsetFeasCeil(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
    );
 
 /** returns fractional part of value, i.e. x - floor(x) in feasibility tolerance */
 extern
-Real SCIPsetFeasFrac(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to return fractional part for */
+SCIP_Real SCIPsetFeasFrac(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to return fractional part for */
    );
 
 /** checks, if the first given lower bound is tighter (w.r.t. bound strengthening epsilon) than the second one */
 extern
-Bool SCIPsetIsLbBetter(
-   SET*             set,                /**< global SCIP settings */
-   Real             lb1,                /**< first lower bound to compare */
-   Real             lb2                 /**< second lower bound to compare */
+SCIP_Bool SCIPsetIsLbBetter(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             lb1,                /**< first lower bound to compare */
+   SCIP_Real             lb2                 /**< second lower bound to compare */
    );
 
 /** checks, if the first given upper bound is tighter (w.r.t. bound strengthening epsilon) than the second one */
 extern
-Bool SCIPsetIsUbBetter(
-   SET*             set,                /**< global SCIP settings */
-   Real             ub1,                /**< first upper bound to compare */
-   Real             ub2                 /**< second upper bound to compare */
+SCIP_Bool SCIPsetIsUbBetter(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             ub1,                /**< first upper bound to compare */
+   SCIP_Real             ub2                 /**< second upper bound to compare */
    );
 
 /** checks, if the given cut's efficacy is larger than the minimal cut efficacy */
 extern
-Bool SCIPsetIsEfficacious(
-   SET*             set,                /**< global SCIP settings */
-   Bool             root,               /**< should the root's minimal cut efficacy be used? */
-   Real             efficacy            /**< efficacy of the cut */
+SCIP_Bool SCIPsetIsEfficacious(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             root,               /**< should the root's minimal cut efficacy be used? */
+   SCIP_Real             efficacy            /**< efficacy of the cut */
    );
 
 /** checks, if relative difference of values is in range of epsilon */
 extern
-Bool SCIPsetIsRelEQ(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsRelEQ(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if relative difference of val1 and val2 is lower than epsilon */
 extern
-Bool SCIPsetIsRelLT(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsRelLT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if relative difference of val1 and val2 is not greater than epsilon */
 extern
-Bool SCIPsetIsRelLE(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsRelLE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if relative difference of val1 and val2 is greater than epsilon */
 extern
-Bool SCIPsetIsRelGT(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsRelGT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if relative difference of val1 and val2 is not lower than -epsilon */
 extern
-Bool SCIPsetIsRelGE(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsRelGE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if relative difference of values is in range of sumepsilon */
 extern
-Bool SCIPsetIsSumRelEQ(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsSumRelEQ(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if relative difference of val1 and val2 is lower than sumepsilon */
 extern
-Bool SCIPsetIsSumRelLT(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsSumRelLT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if relative difference of val1 and val2 is not greater than sumepsilon */
 extern
-Bool SCIPsetIsSumRelLE(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsSumRelLE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if relative difference of val1 and val2 is greater than sumepsilon */
 extern
-Bool SCIPsetIsSumRelGT(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsSumRelGT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 /** checks, if relative difference of val1 and val2 is not lower than -sumepsilon */
 extern
-Bool SCIPsetIsSumRelGE(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsSumRelGE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    );
 
 #else
@@ -1137,16 +1136,16 @@ Bool SCIPsetIsSumRelGE(
 
 
 #define SCIPsetAllocBufferArray(set,ptr,num)    ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), \
-                                                    (int)((num)*sizeof(**(ptr)))) )
+                                                         (int)((num)*sizeof(**(ptr)))) )
 #define SCIPsetDuplicateBufferArray(set,ptr,source,num) \
-                                                ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source, \
-                                                    (int)((num)*sizeof(**(ptr)))) )
+                                                     ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source, \
+                                                         (int)((num)*sizeof(**(ptr)))) )
 #define SCIPsetReallocBufferArray(set,ptr,num)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), \
-                                                    (int)((num)*sizeof(**(ptr)))) )
+                                                         (int)((num)*sizeof(**(ptr)))) )
 #define SCIPsetFreeBufferArray(set,ptr)         ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0*sizeof(**(ptr))) )
 #define SCIPsetAllocBufferSize(set,ptr,size)    ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), size) )
 #define SCIPsetDuplicateBufferSize(set,ptr,source,size) \
-                                                ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source, size) )
+                                                     ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source, size) )
 #define SCIPsetReallocBufferSize(set,ptr,size)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), size) )
 #define SCIPsetFreeBufferSize(set,ptr)          ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) )
 

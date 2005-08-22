@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.106 2005/08/17 14:25:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.107 2005/08/22 18:35:34 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -41,7 +41,7 @@
 #define CONSHDLR_SEPAFREQ             1 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
-                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -71,45 +71,45 @@
  */
 
 /** constraint handler data */
-struct ConshdlrData
+struct SCIP_ConshdlrData
 {
-   EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
-   int              sepacardfreq;       /**< multiplier on separation frequency, how often cardinality cuts are separated */
-   int              maxrounds;          /**< maximal number of separation rounds per node (-1: unlimited) */
-   int              maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
-   int              maxsepacuts;        /**< maximal number of cuts separated per separation round */
-   int              maxsepacutsroot;    /**< maximal number of cuts separated per separation round in the root node */
-   int              maxnumcardlift;     /**< maximal number of cardinality inequ. lifted per sepa round (-1: unlimited) */
-   Bool             disaggregation;     /**< should disaggregation of knapsack constraints be allowed in preprocessing? */
+   SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
+   int                   sepacardfreq;       /**< multiplier on separation frequency, how often cardinality cuts are separated */
+   int                   maxrounds;          /**< maximal number of separation rounds per node (-1: unlimited) */
+   int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
+   int                   maxsepacuts;        /**< maximal number of cuts separated per separation round */
+   int                   maxsepacutsroot;    /**< maximal number of cuts separated per separation round in the root node */
+   int                   maxnumcardlift;     /**< maximal number of cardinality inequ. lifted per sepa round (-1: unlimited) */
+   SCIP_Bool             disaggregation;     /**< should disaggregation of knapsack constraints be allowed in preprocessing? */
 };
 
 
 /** constraint data for knapsack constraints */
-struct ConsData
+struct SCIP_ConsData
 {
-   VAR**            vars;               /**< variables in knapsack constraint */
-   Longint*         weights;            /**< weights of variables in knapsack constraint */
-   EVENTDATA**      eventdatas;         /**< event datas for bound change events of the variables */
-   int*             cliquepartition;    /**< clique indices of the clique partition */
-   ROW*             row;                /**< corresponding LP row */
-   int              nvars;              /**< number of variables in knapsack constraint */
-   int              varssize;           /**< size of vars, weights, and eventdatas arrays */
-   Longint          capacity;           /**< capacity of knapsack */
-   Longint          weightsum;          /**< sum of all weights */
-   Longint          onesweightsum;      /**< sum of weights of variables fixed to one */
-   unsigned int     propagated:1;       /**< is the knapsack constraint already propagated? */
-   unsigned int     presolved:1;        /**< is the knapsack constraint already presolved? */
-   unsigned int     sorted:1;           /**< are the knapsack items sorted by weight? */
-   unsigned int     cliquepartitioned;  /**< is the clique partition valid? */
-   unsigned int     merged:1;           /**< are the constraint's equal variables already merged? */
+   SCIP_VAR**            vars;               /**< variables in knapsack constraint */
+   SCIP_Longint*         weights;            /**< weights of variables in knapsack constraint */
+   SCIP_EVENTDATA**      eventdatas;         /**< event datas for bound change events of the variables */
+   int*                  cliquepartition;    /**< clique indices of the clique partition */
+   SCIP_ROW*             row;                /**< corresponding SCIP_LP row */
+   int                   nvars;              /**< number of variables in knapsack constraint */
+   int                   varssize;           /**< size of vars, weights, and eventdatas arrays */
+   SCIP_Longint          capacity;           /**< capacity of knapsack */
+   SCIP_Longint          weightsum;          /**< sum of all weights */
+   SCIP_Longint          onesweightsum;      /**< sum of weights of variables fixed to one */
+   unsigned int          propagated:1;       /**< is the knapsack constraint already propagated? */
+   unsigned int          presolved:1;        /**< is the knapsack constraint already presolved? */
+   unsigned int          sorted:1;           /**< are the knapsack items sorted by weight? */
+   unsigned int          cliquepartitioned;  /**< is the clique partition valid? */
+   unsigned int          merged:1;           /**< are the constraint's equal variables already merged? */
 };
 
 
 /** event data for bound changes events */
-struct EventData
+struct SCIP_EventData
 {
-   CONSDATA*        consdata;           /**< knapsack constraint data to process the bound change for */
-   Longint          weight;             /**< weight of variable */
+   SCIP_CONSDATA*        consdata;           /**< knapsack constraint data to process the bound change for */
+   SCIP_Longint          weight;             /**< weight of variable */
 };
 
 
@@ -121,16 +121,16 @@ struct EventData
 
 /** creates event data */
 static
-RETCODE eventdataCreate(
-   SCIP*            scip,               /**< SCIP data structure */
-   EVENTDATA**      eventdata,          /**< pointer to store event data */
-   CONSDATA*        consdata,           /**< constraint data */
-   Longint          weight              /**< weight of variable */
+SCIP_RETCODE eventdataCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTDATA**      eventdata,          /**< pointer to store event data */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   SCIP_Longint          weight              /**< weight of variable */
    )
 {
    assert(eventdata != NULL);
 
-   CHECK_OKAY( SCIPallocBlockMemory(scip, eventdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, eventdata) );
    (*eventdata)->consdata = consdata;
    (*eventdata)->weight = weight;
 
@@ -139,9 +139,9 @@ RETCODE eventdataCreate(
 
 /** frees event data */
 static
-RETCODE eventdataFree(
-   SCIP*            scip,               /**< SCIP data structure */
-   EVENTDATA**      eventdata           /**< pointer to event data */
+SCIP_RETCODE eventdataFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTDATA**      eventdata           /**< pointer to event data */
    )
 {
    assert(eventdata != NULL);
@@ -154,7 +154,7 @@ RETCODE eventdataFree(
 /** sorts items in knapsack with nonincreasing weights */
 static 
 void sortItems(
-   CONSDATA*        consdata            /**< constraint data */
+   SCIP_CONSDATA*        consdata            /**< constraint data */
    )
 {
    assert(consdata != NULL);
@@ -169,9 +169,9 @@ void sortItems(
 
       for( i = 0; i < consdata->nvars; i++)
       {
-         VAR* var;
-         Longint weight;
-         EVENTDATA* eventdata;
+         SCIP_VAR* var;
+         SCIP_Longint weight;
+         SCIP_EVENTDATA* eventdata;
          int cliqueid;
          int j;
 
@@ -205,9 +205,9 @@ void sortItems(
 
 /** calculates a partition of the variables into cliques */
 static
-RETCODE calcCliquepartition(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata            /**< constraint data */
+SCIP_RETCODE calcCliquepartition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata            /**< constraint data */
    )
 {
    assert(consdata != NULL);
@@ -215,7 +215,7 @@ RETCODE calcCliquepartition(
 
    if( !consdata->cliquepartitioned )
    {
-      CHECK_OKAY( SCIPcalcCliquePartition(scip, consdata->vars, consdata->nvars, consdata->cliquepartition) );
+      SCIP_CALL( SCIPcalcCliquePartition(scip, consdata->vars, consdata->nvars, consdata->cliquepartition) );
       consdata->cliquepartitioned = TRUE;
    }
 
@@ -224,38 +224,38 @@ RETCODE calcCliquepartition(
 
 /** installs rounding locks for the given variable in the given knapsack constraint */
 static
-RETCODE lockRounding(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< knapsack constraint */
-   VAR*             var                 /**< variable of constraint entry */
+SCIP_RETCODE lockRounding(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< knapsack constraint */
+   SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
    /* rounding up may violate the constraint */
-   CHECK_OKAY( SCIPlockVarCons(scip, var, cons, FALSE, TRUE) );
+   SCIP_CALL( SCIPlockVarCons(scip, var, cons, FALSE, TRUE) );
 
    return SCIP_OKAY;
 }
 
 /** removes rounding locks for the given variable in the given knapsack constraint */
 static
-RETCODE unlockRounding(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< knapsack constraint */
-   VAR*             var                 /**< variable of constraint entry */
+SCIP_RETCODE unlockRounding(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< knapsack constraint */
+   SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
    /* rounding up may violate the constraint */
-   CHECK_OKAY( SCIPunlockVarCons(scip, var, cons, FALSE, TRUE) );
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, FALSE, TRUE) );
 
    return SCIP_OKAY;
 }
 
 /** catches bound change events for variables in knapsack */
 static
-RETCODE catchEvents(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata,           /**< constraint data */
-   EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
+SCIP_RETCODE catchEvents(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
    )
 {
    int i;
@@ -267,8 +267,8 @@ RETCODE catchEvents(
 
    for( i = 0; i < consdata->nvars; i++)
    {
-      CHECK_OKAY( eventdataCreate(scip, &consdata->eventdatas[i], consdata, consdata->weights[i]) );
-      CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[i], 
+      SCIP_CALL( eventdataCreate(scip, &consdata->eventdatas[i], consdata, consdata->weights[i]) );
+      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[i], 
             SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_IMPLADDED,
             eventhdlr, consdata->eventdatas[i], NULL) );
    }
@@ -278,10 +278,10 @@ RETCODE catchEvents(
 
 /** drops bound change events for variables in knapsack */
 static
-RETCODE dropEvents(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata,           /**< constraint data */
-   EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
+SCIP_RETCODE dropEvents(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
    )
 {
    int i;
@@ -293,10 +293,10 @@ RETCODE dropEvents(
 
    for( i = 0; i < consdata->nvars; i++)
    {
-      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[i],
+      SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[i],
             SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_IMPLADDED,
             eventhdlr, consdata->eventdatas[i], -1) );
-      CHECK_OKAY( eventdataFree(scip, &consdata->eventdatas[i]) );
+      SCIP_CALL( eventdataFree(scip, &consdata->eventdatas[i]) );
    }
 
    return SCIP_OKAY;
@@ -304,11 +304,11 @@ RETCODE dropEvents(
 
 /** ensures, that vars and vals arrays can store at least num entries */
 static
-RETCODE consdataEnsureVarsSize(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata,           /**< knapsack constraint data */
-   int              num,                /**< minimum number of entries to store */
-   Bool             transformed         /**< is constraint from transformed problem? */
+SCIP_RETCODE consdataEnsureVarsSize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< knapsack constraint data */
+   int                   num,                /**< minimum number of entries to store */
+   SCIP_Bool             transformed         /**< is constraint from transformed problem? */
    )
 {
    assert(consdata != NULL);
@@ -319,12 +319,12 @@ RETCODE consdataEnsureVarsSize(
       int newsize;
 
       newsize = SCIPcalcMemGrowSize(scip, num);
-      CHECK_OKAY( SCIPreallocBlockMemoryArray(scip, &consdata->vars, consdata->varssize, newsize) );
-      CHECK_OKAY( SCIPreallocBlockMemoryArray(scip, &consdata->weights, consdata->varssize, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->vars, consdata->varssize, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->weights, consdata->varssize, newsize) );
       if( transformed )
       {
-         CHECK_OKAY( SCIPreallocBlockMemoryArray(scip, &consdata->eventdatas, consdata->varssize, newsize) );
-         CHECK_OKAY( SCIPreallocBlockMemoryArray(scip, &consdata->cliquepartition, consdata->varssize, newsize) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->eventdatas, consdata->varssize, newsize) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->cliquepartition, consdata->varssize, newsize) );
       }
       else
       {
@@ -340,25 +340,25 @@ RETCODE consdataEnsureVarsSize(
 
 /** creates knapsack constraint data */
 static
-RETCODE consdataCreate(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA**       consdata,           /**< pointer to store constraint data */
-   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   int              nvars,              /**< number of variables in knapsack */
-   VAR**            vars,               /**< variables of knapsack */
-   Longint*         weights,            /**< weights of knapsack items */
-   Longint          capacity            /**< capacity of knapsack */
+SCIP_RETCODE consdataCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA**       consdata,           /**< pointer to store constraint data */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   int                   nvars,              /**< number of variables in knapsack */
+   SCIP_VAR**            vars,               /**< variables of knapsack */
+   SCIP_Longint*         weights,            /**< weights of knapsack items */
+   SCIP_Longint          capacity            /**< capacity of knapsack */
    )
 {
    int i;
 
    assert(consdata != NULL);
 
-   CHECK_OKAY( SCIPallocBlockMemory(scip, consdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
    if( nvars > 0 )
    {
-      CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
-      CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->weights, weights, nvars) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->weights, weights, nvars) );
    }
    else
    {
@@ -382,14 +382,14 @@ RETCODE consdataCreate(
    /* get transformed variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
    {
-      CHECK_OKAY( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
+      SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
 
       /* allocate memory for additional data structures */
-      CHECK_OKAY( SCIPallocBlockMemoryArray(scip, &(*consdata)->eventdatas, nvars) );
-      CHECK_OKAY( SCIPallocBlockMemoryArray(scip, &(*consdata)->cliquepartition, nvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->eventdatas, nvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cliquepartition, nvars) );
 
       /* catch events for variables */
-      CHECK_OKAY( catchEvents(scip, *consdata, eventhdlr) );
+      SCIP_CALL( catchEvents(scip, *consdata, eventhdlr) );
    } 
 
    /* calculate sum of weights */
@@ -405,10 +405,10 @@ RETCODE consdataCreate(
 
 /** frees knapsack constraint data */
 static
-RETCODE consdataFree(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA**       consdata,           /**< pointer to the constraint data */
-   EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
+SCIP_RETCODE consdataFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA**       consdata,           /**< pointer to the constraint data */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
    )
 {
    assert(consdata != NULL);
@@ -416,11 +416,11 @@ RETCODE consdataFree(
 
    if( (*consdata)->row != NULL )
    {
-      CHECK_OKAY( SCIPreleaseRow(scip, &(*consdata)->row) );
+      SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
    }
    if( (*consdata)->eventdatas != NULL )
    {
-      CHECK_OKAY( dropEvents(scip, *consdata, eventhdlr) );
+      SCIP_CALL( dropEvents(scip, *consdata, eventhdlr) );
       SCIPfreeBlockMemoryArray(scip, &(*consdata)->eventdatas, (*consdata)->varssize);
    }
    if( (*consdata)->cliquepartition != NULL )
@@ -438,12 +438,12 @@ RETCODE consdataFree(
 /** changes a single weight in knapsack constraint data */
 static
 void consdataChgWeight(
-   CONSDATA*        consdata,           /**< knapsack constraint data */
-   int              item,               /**< item number */
-   Longint          newweight           /**< new weight of item */
+   SCIP_CONSDATA*        consdata,           /**< knapsack constraint data */
+   int                   item,               /**< item number */
+   SCIP_Longint          newweight           /**< new weight of item */
    )
 {
-   Longint oldweight;
+   SCIP_Longint oldweight;
 
    assert(consdata != NULL);
    assert(0 <= item && item < consdata->nvars);
@@ -468,90 +468,90 @@ void consdataChgWeight(
    consdata->cliquepartitioned = FALSE; /* recalculate the clique partition after a weight was changed */
 }
 
-/** creates LP row corresponding to knapsack constraint */
+/** creates SCIP_LP row corresponding to knapsack constraint */
 static 
-RETCODE createRelaxation(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< knapsack constraint */
+SCIP_RETCODE createRelaxation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< knapsack constraint */
    )
 {
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
    int i;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->row == NULL);
 
-   CHECK_OKAY( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons),
-         -SCIPinfinity(scip), (Real)consdata->capacity,
+   SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons),
+         -SCIPinfinity(scip), (SCIP_Real)consdata->capacity,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
 
-   CHECK_OKAY( SCIPcacheRowExtensions(scip, consdata->row) );
+   SCIP_CALL( SCIPcacheRowExtensions(scip, consdata->row) );
    for( i = 0; i < consdata->nvars; ++i )
    {
-      CHECK_OKAY( SCIPaddVarToRow(scip, consdata->row, consdata->vars[i], (Real)consdata->weights[i]) );
+      SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, consdata->vars[i], (SCIP_Real)consdata->weights[i]) );
    }
-   CHECK_OKAY( SCIPflushRowExtensions(scip, consdata->row) );
+   SCIP_CALL( SCIPflushRowExtensions(scip, consdata->row) );
 
    return SCIP_OKAY;
 }  
 
-/** adds linear relaxation of knapsack constraint to the LP */
+/** adds linear relaxation of knapsack constraint to the SCIP_LP */
 static 
-RETCODE addRelaxation(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< knapsack constraint */
+SCIP_RETCODE addRelaxation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< knapsack constraint */
    )
 {
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
    
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    if( consdata->row == NULL )
    {
-      CHECK_OKAY( createRelaxation(scip, cons) );
+      SCIP_CALL( createRelaxation(scip, cons) );
    }
    assert(consdata->row != NULL);
    assert(!SCIProwIsInLP(consdata->row));
 
-   debugMessage("adding relaxation of knapsack constraint <%s> (capacity %lld): ", 
+   SCIPdebugMessage("adding relaxation of knapsack constraint <%s> (capacity %lld): ", 
       SCIPconsGetName(cons), consdata->capacity);
-   debug( SCIProwPrint(consdata->row, NULL) );
-   CHECK_OKAY( SCIPaddCut(scip, consdata->row, FALSE) );
+   SCIPdebug( SCIProwPrint(consdata->row, NULL) );
+   SCIP_CALL( SCIPaddCut(scip, consdata->row, FALSE) );
 
    return SCIP_OKAY;
 }
 
 /** checks knapsack constraint for feasibility of given solution: returns TRUE iff constraint is feasible */
 static
-RETCODE checkCons(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< constraint to check */
-   SOL*             sol,                /**< solution to check, NULL for current solution */
-   Bool             checklprows,        /**< should LP rows be checked? */
-   Bool*            violated            /**< pointer to store whether the constraint is violated */
+SCIP_RETCODE checkCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to check */
+   SCIP_SOL*             sol,                /**< solution to check, NULL for current solution */
+   SCIP_Bool             checklprows,        /**< should SCIP_LP rows be checked? */
+   SCIP_Bool*            violated            /**< pointer to store whether the constraint is violated */
    )
 {
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
 
    assert(violated != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   debugMessage("checking knapsack constraint <%s> for feasibility of solution %p (lprows=%d)\n",
+   SCIPdebugMessage("checking knapsack constraint <%s> for feasibility of solution %p (lprows=%d)\n",
       SCIPconsGetName(cons), sol, checklprows);
 
    *violated = FALSE;
 
    if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
    {
-      Real sum;
+      SCIP_Real sum;
       int i;
 
       /* increase age of constraint; age is reset to zero, if a violation was found */
-      CHECK_OKAY( SCIPincConsAge(scip, cons) );
+      SCIP_CALL( SCIPincConsAge(scip, cons) );
 
       sum = 0.0;
       for( i = 0; i < consdata->nvars && sum <= consdata->capacity + 0.1; i++ )
@@ -559,9 +559,9 @@ RETCODE checkCons(
          sum += consdata->weights[i] * SCIPgetSolVal(scip, sol, consdata->vars[i]);
       }
 
-      if( SCIPisFeasGT(scip, sum, (Real)consdata->capacity) )
+      if( SCIPisFeasGT(scip, sum, (SCIP_Real)consdata->capacity) )
       {
-         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
          *violated = TRUE;
       }
    }
@@ -574,21 +574,21 @@ RETCODE checkCons(
 /** solves knapsack problem with dynamic programming;
  *  if needed, one can provide arrays to store all selected items and all not selected items
  */
-RETCODE SCIPsolveKnapsack(
-   SCIP*            scip,               /**< SCIP data structure */
-   int              nitems,             /**< number of available items */
-   Longint*         weights,            /**< item weights */
-   Real*            profits,            /**< item profits */
-   Longint          capacity,           /**< capacity of knapsack */
-   int*             items,              /**< item numbers, or NULL */
-   int*             solitems,           /**< array to store items in solution, or NULL */
-   int*             nonsolitems,        /**< array to store items not in solution, or NULL */
-   int*             nsolitems,          /**< pointer to store number of items in solution, or NULL */
-   int*             nnonsolitems,       /**< pointer to store number of items not in solution, or NULL */
-   Real*            solval              /**< pointer to store optimal solution value, or NULL */
+SCIP_RETCODE SCIPsolveKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nitems,             /**< number of available items */
+   SCIP_Longint*         weights,            /**< item weights */
+   SCIP_Real*            profits,            /**< item profits */
+   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   int*                  items,              /**< item numbers, or NULL */
+   int*                  solitems,           /**< array to store items in solution, or NULL */
+   int*                  nonsolitems,        /**< array to store items not in solution, or NULL */
+   int*                  nsolitems,          /**< pointer to store number of items in solution, or NULL */
+   int*                  nnonsolitems,       /**< pointer to store number of items not in solution, or NULL */
+   SCIP_Real*            solval              /**< pointer to store optimal solution value, or NULL */
    ) 
 {
-   Real* optvalues;
+   SCIP_Real* optvalues;
    int intcap;
    int d;
    int j;
@@ -601,7 +601,7 @@ RETCODE SCIPsolveKnapsack(
 
    intcap = (int)capacity;
    assert(intcap >= 0);
-   CHECK_OKAY( SCIPallocBufferArray(scip, &optvalues, (nitems+1)*(intcap+1)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &optvalues, (nitems+1)*(intcap+1)) );
    
    /* fill dynamic programming table with optimal values */
    for( d = 0; d <= intcap; d++ )
@@ -618,7 +618,7 @@ RETCODE SCIPsolveKnapsack(
          optvalues[IDX(j,d)] = optvalues[IDX(j-1,d)];
       for( d = intweight; d <= intcap; d++ )
       {
-         Real sumprofit;
+         SCIP_Real sumprofit;
 
          sumprofit = optvalues[IDX(j-1,d-intweight)] + profits[j-1];
          optvalues[IDX(j,d)] = MAX(sumprofit, optvalues[IDX(j-1,d)]);
@@ -668,33 +668,33 @@ RETCODE SCIPsolveKnapsack(
  *  in a given set C2 of variables in knapsack constraint are fixed to one (variables for downlifting)
  */
 static
-RETCODE getCover(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR**            vars,               /**< variables in knapsack constraint */
-   int              nvars,              /**< number of variables in knapsack constraint */
-   Longint*         weights,            /**< weights of variables in knapsack constraint */
-   Longint          capacity,           /**< capacity of knapsack */
-   Real*            solvals,            /**< LP values of all problem variables */
-   int*             varsc2,             /**< set C2 of variables in knapsack constraint (variables for downlifting) */
-   int*             varscn2,            /**< set of variables in knapsack constraint that are not in C2 (cand. for C1) */
-   int              nvarsc2,            /**< number of variables in C2 */
-   int              nvarscn2,           /**< number of variables not in C2 */
-   Longint          varsc2weight,       /**< sum of weights of variables in C2 */
-   int*             covervars,          /**< pointer to store cover variables C = C2 & C1 */
-   int*             noncovervars,       /**< pointer to store noncover variables */
-   int*             ncovervars,         /**< pointer to store number of cover variables */
-   int*             ncovervarsc1,       /**< pointer to store number of cover variables in C1 (at the end of covervars) */
-   int*             ncovervarsc2,       /**< pointer to store number of cover variables in C2 (at the beg of covervars) */
-   int*             nnoncovervars,      /**< pointer to store number of noncover variables */
-   Longint*         coverweight,        /**< pointer to store weight of cover */
-   Real*            covervarsc1activity,/**< pointer to store activity of cover variables in C1 */  
-   Bool*            found               /**< pointer to store whether a cover was found */
+SCIP_RETCODE getCover(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variables in knapsack constraint */
+   int                   nvars,              /**< number of variables in knapsack constraint */
+   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
+   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   SCIP_Real*            solvals,            /**< SCIP_LP values of all problem variables */
+   int*                  varsc2,             /**< set C2 of variables in knapsack constraint (variables for downlifting) */
+   int*                  varscn2,            /**< set of variables in knapsack constraint that are not in C2 (cand. for C1) */
+   int                   nvarsc2,            /**< number of variables in C2 */
+   int                   nvarscn2,           /**< number of variables not in C2 */
+   SCIP_Longint          varsc2weight,       /**< sum of weights of variables in C2 */
+   int*                  covervars,          /**< pointer to store cover variables C = C2 & C1 */
+   int*                  noncovervars,       /**< pointer to store noncover variables */
+   int*                  ncovervars,         /**< pointer to store number of cover variables */
+   int*                  ncovervarsc1,       /**< pointer to store number of cover variables in C1 (at the end of covervars) */
+   int*                  ncovervarsc2,       /**< pointer to store number of cover variables in C2 (at the beg of covervars) */
+   int*                  nnoncovervars,      /**< pointer to store number of noncover variables */
+   SCIP_Longint*         coverweight,        /**< pointer to store weight of cover */
+   SCIP_Real*            covervarsc1activity,/**< pointer to store activity of cover variables in C1 */  
+   SCIP_Bool*            found               /**< pointer to store whether a cover was found */
    )
 {
-   Real* dpprofits;
-   Real relslack;
-   Longint* dpweights;
-   Longint dpcapacity;
+   SCIP_Real* dpprofits;
+   SCIP_Real relslack;
+   SCIP_Longint* dpweights;
+   SCIP_Longint dpcapacity;
    int* items;
    int* fixedzeros;
    int* setvars;
@@ -729,12 +729,12 @@ RETCODE getCover(
    assert(found != NULL);
    
    /* allocate temporary memory */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &items, nvarscn2) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &dpweights, nvarscn2) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &dpprofits, nvarscn2) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &fixedzeros, nvarscn2) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &setvars, nvarscn2) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &nonsetvars, nvarscn2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &items, nvarscn2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &dpweights, nvarscn2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &dpprofits, nvarscn2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &fixedzeros, nvarscn2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &setvars, nvarscn2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nonsetvars, nvarscn2) );
 
    *found = FALSE;
    *ncovervars = 0;
@@ -751,7 +751,7 @@ RETCODE getCover(
     * with the meaning: x_i is member of cover <==> z_i == 0
     */
    
-   /* use all variables with fractional LP value from the set of variables not in C2 */
+   /* use all variables with fractional SCIP_LP value from the set of variables not in C2 */
    nitems = 0;
    nfixedzeros = 0;
    dpcapacity = varsc2weight - capacity - 1;
@@ -759,7 +759,7 @@ RETCODE getCover(
    {
       assert(SCIPvarGetType(vars[varscn2[i]]) == SCIP_VARTYPE_BINARY);
       
-      /* variable has fractional LP value */
+      /* variable has fractional SCIP_LP value */
       if( SCIPisFeasGT(scip, solvals[varscn2[i]], 0.0) )
       {
          /* sort items by non-decreasing relative slack value (1-x_i^*)/w_i */
@@ -770,7 +770,7 @@ RETCODE getCover(
          nitems++;
          dpcapacity += weights[varscn2[i]];
       }
-      /* variable has LP value 0 */
+      /* variable has SCIP_LP value 0 */
       else
       {
          fixedzeros[nfixedzeros] = varscn2[i];
@@ -795,17 +795,17 @@ RETCODE getCover(
       if( dpcapacity <= MAX_DYNPROG_CAPACITY )
       {
          /* solve separation knapsack with dynamic programming */
-         CHECK_OKAY( SCIPsolveKnapsack(scip, nitems, dpweights, dpprofits, dpcapacity, 
+         SCIP_CALL( SCIPsolveKnapsack(scip, nitems, dpweights, dpprofits, dpcapacity, 
                items, nonsetvars, setvars, &nnonsetvars, &nsetvars, NULL) ); 
          assert(nsetvars + nnonsetvars == nitems);
       }
       else
       {
-         Longint setweight;
-         Longint minimumweight;
+         SCIP_Longint setweight;
+         SCIP_Longint minimumweight;
          int minimumweightidx;
          int removevar;
-         Bool minimal;
+         SCIP_Bool minimal;
 
          /* use greedy heuristic on separation knapsack */
          nnonsetvars = 0;
@@ -829,7 +829,7 @@ RETCODE getCover(
 
          /* get minimum weigth of set variables */
          minimal = FALSE;
-         minimumweight = LONGINT_MAX;
+         minimumweight = SCIP_LONGINT_MAX;
          minimumweightidx = -1;
          for( i = 0; i < nsetvars; i++ )
          {
@@ -869,7 +869,7 @@ RETCODE getCover(
             if( minimumweightidx == i )
             {
                /* get minimum weigth of setvars */
-               minimumweight = LONGINT_MAX;
+               minimumweight = SCIP_LONGINT_MAX;
                minimumweightidx = -1;
                for( j = 0; j < nsetvars; j++ )
                {
@@ -934,7 +934,7 @@ RETCODE getCover(
          (*nnoncovervars)++;
       }  
 
-      /* add all variables with LP value zero to noncovervars */
+      /* add all variables with SCIP_LP value zero to noncovervars */
       for( i = 0; i < nfixedzeros; i++ )
       {
          noncovervars[*nnoncovervars] = fixedzeros[i];
@@ -981,15 +981,15 @@ RETCODE getCover(
  */
 static
 void getPartition(
-   SCIP*            scip,               /**< SCIP data structure */
-   int              nvars,              /**< number of variables in knapsack constraint */
-   Longint*         weights,            /**< weights of variables in knapsack constraint */
-   Real*            solvals,            /**< LP values of all problem variables */
-   int*             varsc2,             /**< pointer to store variables of knapsack constraint in C2 */
-   int*             varscn2,            /**< pointer to store variables of knapsack constraint not in C1 */
-   int*             nvarsc2,            /**< pointer to store number of variables of knapsack constraint in C2 */
-   int*             nvarscn2,           /**< pointer to store number of variables of knapsack constraint not in C2 */
-   Longint*         varsc2weight        /**< pointer to store sum of weights of variables of knapsack constraint in C2 */
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of variables in knapsack constraint */
+   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
+   SCIP_Real*            solvals,            /**< SCIP_LP values of all problem variables */
+   int*                  varsc2,             /**< pointer to store variables of knapsack constraint in C2 */
+   int*                  varscn2,            /**< pointer to store variables of knapsack constraint not in C1 */
+   int*                  nvarsc2,            /**< pointer to store number of variables of knapsack constraint in C2 */
+   int*                  nvarscn2,           /**< pointer to store number of variables of knapsack constraint not in C2 */
+   SCIP_Longint*         varsc2weight        /**< pointer to store sum of weights of variables of knapsack constraint in C2 */
    )
 {
    int i;
@@ -1008,7 +1008,7 @@ void getPartition(
    *nvarsc2 = 0;
    *varsc2weight = 0;
 
-   /* choses all variables with LP value equal to one for the set of variables for downlifting (C2) */
+   /* choses all variables with SCIP_LP value equal to one for the set of variables for downlifting (C2) */
    for( i = 0; i < nvars; i++ )
    {
       if( SCIPisFeasEQ(scip, solvals[i], 1.0) )
@@ -1026,18 +1026,18 @@ void getPartition(
    }
 }
 
-/** sorts given set of variables in knapsack constraint by non-increasing LP value (variables with equal LP value 
+/** sorts given set of variables in knapsack constraint by non-increasing SCIP_LP value (variables with equal SCIP_LP value 
  *  are ordered by non-increasing weight)
  */
 static
 void sortSetvars(
-   SCIP*            scip,               /**< SCIP data structure */
-   int*             setvars,            /**< set of variables in knapsack constraint to be sorted */
-   int              nsetvars,           /**< number of variables in set of variables in knapsack cons. to be sorted */
-   Real*            solvals             /**< LP values of all problem variables */
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  setvars,            /**< set of variables in knapsack constraint to be sorted */
+   int                   nsetvars,           /**< number of variables in set of variables in knapsack cons. to be sorted */
+   SCIP_Real*            solvals             /**< SCIP_LP values of all problem variables */
    )
 {
-   Real solval;
+   SCIP_Real solval;
    int idx;
    int i;
    int j;
@@ -1047,7 +1047,7 @@ void sortSetvars(
    assert(nsetvars >= 0);
    assert(solvals != NULL);
 
-   /* sorts setvars by non-increasing LP value */
+   /* sorts setvars by non-increasing SCIP_LP value */
    for( i = 0; i < nsetvars; i++ ) 
    {
       idx = setvars[i];
@@ -1060,12 +1060,12 @@ void sortSetvars(
 
 /** enlarges minweight table to at least the given length */
 static
-RETCODE enlargeMinweights(
-   SCIP*            scip,               /**< SCIP data structure */
-   Longint**        minweightsptr,      /**< pointer to minweights table */
-   int*             minweightslen,      /**< pointer to store number of entries in minweights table (incl. z=0) */
-   int*             minweightssize,     /**< pointer to current size of minweights table */
-   int              newlen              /**< new length of minweights table */
+SCIP_RETCODE enlargeMinweights(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Longint**        minweightsptr,      /**< pointer to minweights table */
+   int*                  minweightslen,      /**< pointer to store number of entries in minweights table (incl. z=0) */
+   int*                  minweightssize,     /**< pointer to current size of minweights table */
+   int                   newlen              /**< new length of minweights table */
    )
 {
    int j;
@@ -1079,14 +1079,14 @@ RETCODE enlargeMinweights(
 
       /* reallocate table memory */
       newsize = SCIPcalcMemGrowSize(scip, newlen);
-      CHECK_OKAY( SCIPreallocBufferArray(scip, minweightsptr, newsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, minweightsptr, newsize) );
       *minweightssize = newsize;
    }
    assert(newlen <= *minweightssize);
 
    /* initialize new elements */
    for( j = *minweightslen; j < newlen; ++j )
-      (*minweightsptr)[j] = LONGINT_MAX;
+      (*minweightsptr)[j] = SCIP_LONGINT_MAX;
    *minweightslen = newlen;
 
    return SCIP_OKAY;
@@ -1095,34 +1095,34 @@ RETCODE enlargeMinweights(
 /** lifts up given inequality sum(j in C1) x_j <= liftrhs which is valid for the knapsack polytop { x binary | 
  *  x is solution of knapsack constraint, x_j = 1 for all j in C2, x_j = 0 for all j in noncovervars } to a valid 
  *  inequality for the knapsack polytop { x binary | x is solution of knapsack constraint, x_j = 1 for all j in C2,
- *  x_j = 0 for all j in noncovervars with LP value = 0 }
+ *  x_j = 0 for all j in noncovervars with SCIP_LP value = 0 }
  */
 static
-RETCODE liftupKnapsackCover(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR**            vars,               /**< variables in knapsack constraint */
-   Longint*         weights,            /**< weights of variables in knapsack constraint */
-   Longint          capacity,           /**< capacity of knapsack */
-   Real*            solvals,            /**< LP values of all problem variables */
-   int*             covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr LP val then weight) */
-   int*             noncovervars,       /**< noncover variables (sorted by non-incr LP val then weight) */
-   int              ncovervars,         /**< number of cover variables */
-   int              ncovervarsc1,       /**< number of cover variables in C1 (at the end of covervars) */
-   int              ncovervarsc2,       /**< number of cover variables in C2 (at the beginning of covervars) */
-   int              nnoncovervars,      /**< number of noncover variables */
-   Longint          fixedoneweight,     /**< sum of weights of variables from C2 which are still fixed to 1 */ 
-   int*             liftcoefs,          /**< lifting coefficients of var in knapsack constraint in lifted inequality */
-   int*             liftrhs,            /**< right hand side of lifted inequality */
-   Real*            liftlpval,          /**< LP solution value of lifted variables (without C1) */  
-   int*             lastlifted,         /**< pointer to store index of noncover var lifted last (-1 if no var lifted) */
-   Longint*         initminweight,      /**< initial minweight table (aggregation of sorted weights) */
-   Longint**        minweightsptr,      /**< pointer to minweights table */
-   int*             minweightslen,      /**< pointer to store number of entries in minweights table (incl. z=0) */
-   int*             minweightssize      /**< pointer to current size of minweights table */
+SCIP_RETCODE liftupKnapsackCover(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variables in knapsack constraint */
+   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
+   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   SCIP_Real*            solvals,            /**< SCIP_LP values of all problem variables */
+   int*                  covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr SCIP_LP val then weight) */
+   int*                  noncovervars,       /**< noncover variables (sorted by non-incr SCIP_LP val then weight) */
+   int                   ncovervars,         /**< number of cover variables */
+   int                   ncovervarsc1,       /**< number of cover variables in C1 (at the end of covervars) */
+   int                   ncovervarsc2,       /**< number of cover variables in C2 (at the beginning of covervars) */
+   int                   nnoncovervars,      /**< number of noncover variables */
+   SCIP_Longint          fixedoneweight,     /**< sum of weights of variables from C2 which are still fixed to 1 */ 
+   int*                  liftcoefs,          /**< lifting coefficients of var in knapsack constraint in lifted inequality */
+   int*                  liftrhs,            /**< right hand side of lifted inequality */
+   SCIP_Real*            liftlpval,          /**< SCIP_LP solution value of lifted variables (without C1) */  
+   int*                  lastlifted,         /**< pointer to store index of noncover var lifted last (-1 if no var lifted) */
+   SCIP_Longint*         initminweight,      /**< initial minweight table (aggregation of sorted weights) */
+   SCIP_Longint**        minweightsptr,      /**< pointer to minweights table */
+   int*                  minweightslen,      /**< pointer to store number of entries in minweights table (incl. z=0) */
+   int*                  minweightssize      /**< pointer to current size of minweights table */
    )
 {
-   Longint* minweights;
-   Longint rescapacity;
+   SCIP_Longint* minweights;
+   SCIP_Longint rescapacity;
    int i;
 
    assert(scip != NULL);
@@ -1156,12 +1156,12 @@ RETCODE liftupKnapsackCover(
    /* initialize the minweight table
     *  minweights[z] := minimal sum of weights s.t. activity of cut inequality equals z
     */
-   copyMemoryArray(minweights, initminweight, ncovervarsc1+1);
+   BMScopyMemoryArray(minweights, initminweight, ncovervarsc1+1);
    *minweightslen = ncovervarsc1 + 1;
    assert(*liftrhs < *minweightslen);
    assert(0 <= *minweightslen && *minweightslen <= *minweightssize);
 
-   /* calculate lifting coefficients for noncover variables with LP value > 0:
+   /* calculate lifting coefficients for noncover variables with SCIP_LP value > 0:
     *  for each noncovervar x_i with LP-value > 0 (in non-increasing order of LP-value and weight): 
     *   1. calculates max activity z_max of current lifted inequality s.t. the knapsack is still feasible with 
     *      x_i = 1, x_j = 0 for all j in noncovervars with j > i, x_j = 1 for all j in C2
@@ -1170,7 +1170,7 @@ RETCODE liftupKnapsackCover(
     */
    for( i = 0; i < nnoncovervars && SCIPisFeasPositive(scip, solvals[noncovervars[i]]); i++ )
    {
-      Longint weight;
+      SCIP_Longint weight;
       int liftvar;
       int liftcoef;
       int z;
@@ -1243,7 +1243,7 @@ RETCODE liftupKnapsackCover(
       }
       liftcoefs[liftvar] = liftcoef;
 
-      /* update LP solution value of lifted variables (without C1) */
+      /* update SCIP_LP solution value of lifted variables (without C1) */
       *liftlpval += liftcoef * solvals[liftvar];
          
 #ifdef LIFTUPOUT
@@ -1255,14 +1255,14 @@ RETCODE liftupKnapsackCover(
        */
       if( ncovervarsc2 > 0 )
       {
-         CHECK_OKAY( enlargeMinweights(scip, minweightsptr, minweightslen, minweightssize, *minweightslen + liftcoef) );
+         SCIP_CALL( enlargeMinweights(scip, minweightsptr, minweightslen, minweightssize, *minweightslen + liftcoef) );
          minweights = *minweightsptr;
       }
 
       /* update minweights table: calculates minimal sum of weights s.t. activity of curr lifted inequality equals z */
       for( z = (*minweightslen) - 1; z >= liftcoef; z-- )
       {
-         Longint min;
+         SCIP_Longint min;
          min = MIN(minweights[z], minweights[z - liftcoef] + weights[liftvar]);
          assert(min > 0);
          minweights[z] = min;
@@ -1275,34 +1275,34 @@ RETCODE liftupKnapsackCover(
    return SCIP_OKAY;
 }
 
-/** lifts down given inequality sum(j in C1 & noncovervars with LP value > 0) beta_j * x_j <= liftrhs which is valid for 
+/** lifts down given inequality sum(j in C1 & noncovervars with SCIP_LP value > 0) beta_j * x_j <= liftrhs which is valid for 
  *  the knapsack polytop { x binary | x is solution of knapsack constraint, x_j = 1 for all j in C2, x_j = 0 for all j in 
- *  noncovervars with LP value 0} to a valid inequality for the knapsack polytop { x binary | x is solution of knapsack 
- *  constraint, x_j = 0 for all j in noncovervars with LP value 0}
+ *  noncovervars with SCIP_LP value 0} to a valid inequality for the knapsack polytop { x binary | x is solution of knapsack 
+ *  constraint, x_j = 0 for all j in noncovervars with SCIP_LP value 0}
  */
 static
-RETCODE liftdownKnapsackCover(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR**            vars,               /**< variables in knapsack constraint */
-   Longint*         weights,            /**< weights of variables in knapsack constraint */
-   Longint          capacity,           /**< capacity of knapsack */
-   Real*            solvals,            /**< LP values of all problem variables */
-   int*             covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr LP val then weight) */
-   int*             noncovervars,       /**< noncover variables (sorted by non-incr LP val then weight) */
-   int              ncovervars,         /**< number of cover variables */
-   int              ncovervarsc1,       /**< number of cover variables in C1 (at the end of covervars) */
-   int              ncovervarsc2,       /**< number of cover variables in C2 (at the beginning of covervars) */
-   int              nnoncovervars,      /**< number of noncover variables */
-   Longint          fixedoneweight,     /**< sum of weights of variables from C2 which are still fixed to 1 */ 
-   int*             liftcoefs,          /**< lifting coefficients of var in knapsack constraint in lifted inequality */
-   int*             liftrhs,            /**< right hand side of lifted inequality */
-   Real*            liftlpval,          /**< LP solution value of lifted variables (without C1) */  
-   Longint**        minweightsptr,      /**< pointer to minweights table */
-   int*             minweightslen,      /**< pointer to store number of entries in minweights table (incl. z=0) */
-   int*             minweightssize       /**< pointer to current size of minweights table */
+SCIP_RETCODE liftdownKnapsackCover(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variables in knapsack constraint */
+   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
+   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   SCIP_Real*            solvals,            /**< SCIP_LP values of all problem variables */
+   int*                  covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr SCIP_LP val then weight) */
+   int*                  noncovervars,       /**< noncover variables (sorted by non-incr SCIP_LP val then weight) */
+   int                   ncovervars,         /**< number of cover variables */
+   int                   ncovervarsc1,       /**< number of cover variables in C1 (at the end of covervars) */
+   int                   ncovervarsc2,       /**< number of cover variables in C2 (at the beginning of covervars) */
+   int                   nnoncovervars,      /**< number of noncover variables */
+   SCIP_Longint          fixedoneweight,     /**< sum of weights of variables from C2 which are still fixed to 1 */ 
+   int*                  liftcoefs,          /**< lifting coefficients of var in knapsack constraint in lifted inequality */
+   int*                  liftrhs,            /**< right hand side of lifted inequality */
+   SCIP_Real*            liftlpval,          /**< SCIP_LP solution value of lifted variables (without C1) */  
+   SCIP_Longint**        minweightsptr,      /**< pointer to minweights table */
+   int*                  minweightslen,      /**< pointer to store number of entries in minweights table (incl. z=0) */
+   int*                  minweightssize       /**< pointer to current size of minweights table */
    )
 {
-   Longint* minweights;
+   SCIP_Longint* minweights;
    int i;
 
    assert(scip != NULL);
@@ -1331,14 +1331,14 @@ RETCODE liftdownKnapsackCover(
    /* calculate lifting coefficients for cover variables in C2:
     *  for each covervar x_i in C2 (in non-increasing order of LP-value and weight): 
     *   1. calculate max activity z_max of current lifted inequality s.t. the knapsack is still feasible with 
-    *      x_i = 0, x_j = 1 for all covervars in C2 with j > i, x_j = 0 for all j in noncovervars with LP value 0
+    *      x_i = 0, x_j = 1 for all covervars in C2 with j > i, x_j = 0 for all j in noncovervars with SCIP_LP value 0
     *   2. add x_i with lifting coefficient beta_i = z_max - liftrhs to current lifted inequality
     *   3. change liftrhs: liftrhs = liftrhs + beta_i
     *   4. update minweight table: calculate minimal sum of weights s.t. activity of current lifted inequality equals z 
     */
    for( i = 0; i < ncovervarsc2; i++ )
    {
-      Longint rescapacity;
+      SCIP_Longint rescapacity;
       int liftvar;
       int liftcoef;
       int left;
@@ -1403,7 +1403,7 @@ RETCODE liftdownKnapsackCover(
       if( liftcoef == 0 )
          continue;
 
-      /* update LP solution value of lifted variables (without C1) */
+      /* update SCIP_LP solution value of lifted variables (without C1) */
       *liftlpval += liftcoef * solvals[liftvar];
       
 #ifdef LIFTDOWNOUT
@@ -1416,11 +1416,11 @@ RETCODE liftdownKnapsackCover(
       (*liftrhs) += liftcoef;
       
       /* update minweights table: calculate minimal sum of weights s.t. activity of curr lifted inequality equals z */
-      CHECK_OKAY( enlargeMinweights(scip, minweightsptr, minweightslen, minweightssize, *minweightslen + liftcoef) );
+      SCIP_CALL( enlargeMinweights(scip, minweightsptr, minweightslen, minweightssize, *minweightslen + liftcoef) );
       minweights = *minweightsptr;
       for( z = *minweightslen - 1; z >= liftcoef; z-- )
       {
-         Longint min;
+         SCIP_Longint min;
          min = MIN(minweights[z], minweights[z - liftcoef] + weights[liftvar]);
          assert(min > 0);
          minweights[z] = min;
@@ -1430,28 +1430,28 @@ RETCODE liftdownKnapsackCover(
    return SCIP_OKAY;
 }
 
-/** lifts up given inequality sum(j in C1 & noncovervars with LP value > 0 & C2) beta_j * x_j <= liftrhs which is valid 
+/** lifts up given inequality sum(j in C1 & noncovervars with SCIP_LP value > 0 & C2) beta_j * x_j <= liftrhs which is valid 
  *  for the knapsack polytop { x binary | x is solution of knapsack constraint, x_j = 0 for all j in noncovervars with 
- *  LP value 0} to a valid inequality for the knapsack polytop { x binary | x is solution of knapsack constraint }
+ *  SCIP_LP value 0} to a valid inequality for the knapsack polytop { x binary | x is solution of knapsack constraint }
  */
 static
 void liftupZerosKnapsackCover(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR**            vars,               /**< variables in knapsack constraint */
-   Longint*         weights,            /**< weights of variables in knapsack constraint */
-   Longint          capacity,           /**< capacity of knapsack */
-   Real*            solvals,            /**< LP values of all problem variables */
-   int*             covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr LP val then weight) */
-   int*             noncovervars,       /**< noncover variables (sorted by non-incr LP value then weight) */
-   int              ncovervars,         /**< number of cover variables */
-   int              ncovervarsc1,       /**< number of cover variables in C1 (at the end of covervars) */
-   int              ncovervarsc2,       /**< number of cover variables in C2 (at the beginning of covervars) */
-   int              nnoncovervars,      /**< number of noncover variables */
-   int*             liftcoefs,          /**< lifting coefficients of variables in knapsack cons in lifted inequality */
-   int*             liftrhs,            /**< right hand side of lifted inequality */
-   Real*            liftlpval,          /**< LP solution value of lifted variables (without C1) */  
-   int              lastlifted,         /**< index of last noncover var with LP value > 0 lifted (-1 if no var lifted) */
-   Longint*         minweights          /**< minweights table */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variables in knapsack constraint */
+   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
+   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   SCIP_Real*            solvals,            /**< SCIP_LP values of all problem variables */
+   int*                  covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr SCIP_LP val then weight) */
+   int*                  noncovervars,       /**< noncover variables (sorted by non-incr SCIP_LP value then weight) */
+   int                   ncovervars,         /**< number of cover variables */
+   int                   ncovervarsc1,       /**< number of cover variables in C1 (at the end of covervars) */
+   int                   ncovervarsc2,       /**< number of cover variables in C2 (at the beginning of covervars) */
+   int                   nnoncovervars,      /**< number of noncover variables */
+   int*                  liftcoefs,          /**< lifting coefficients of variables in knapsack cons in lifted inequality */
+   int*                  liftrhs,            /**< right hand side of lifted inequality */
+   SCIP_Real*            liftlpval,          /**< SCIP_LP solution value of lifted variables (without C1) */  
+   int                   lastlifted,         /**< index of last noncover var with SCIP_LP value > 0 lifted (-1 if no var lifted) */
+   SCIP_Longint*         minweights          /**< minweights table */
    )
 {
    int i;
@@ -1473,7 +1473,7 @@ void liftupZerosKnapsackCover(
    assert(liftlpval != NULL);
    assert(minweights != NULL);
 
-   /* calculates lifting coefficients for noncover variables with LP value = 0:
+   /* calculates lifting coefficients for noncover variables with SCIP_LP value = 0:
     *  for each noncovervar x_i with LP-value = 0 (i > lastlifted) (in non-increasing order of LP-value and weight): 
     *   1. calculates max activity z_max of current lifted inequality s.t. the knapsack is still feasible with 
     *      x_i = 1, x_j = 0 for all j in noncovervars with j > i
@@ -1482,8 +1482,8 @@ void liftupZerosKnapsackCover(
     */
    for( i = lastlifted + 1; i < nnoncovervars; i++ )
    {
-      Longint weight;
-      Longint rescapacity;
+      SCIP_Longint weight;
+      SCIP_Longint rescapacity;
       int liftvar;
       int liftcoef;
       int z;
@@ -1553,7 +1553,7 @@ void liftupZerosKnapsackCover(
       }
       liftcoefs[liftvar] = liftcoef;
 
-      /* updates LP solution value of lifted variables (without C1) */
+      /* updates SCIP_LP solution value of lifted variables (without C1) */
       *liftlpval += liftcoef * solvals[liftvar];
          
 #ifdef LIFTUPOUT
@@ -1563,7 +1563,7 @@ void liftupZerosKnapsackCover(
       /* update minweights table: calculates minimal sum of weights s.t. activity of curr lifted inequality equals z */
       for( z = *liftrhs; z >= liftcoef; z-- )
       {
-         Longint min;
+         SCIP_Longint min;
          min = MIN(minweights[z], minweights[z - liftcoef] + weights[liftvar]);
          assert(min > 0);
          minweights[z] = min;
@@ -1576,27 +1576,27 @@ void liftupZerosKnapsackCover(
  *  are fixed to one (C2)
  */
 static
-RETCODE liftKnapsackCover(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR**            vars,               /**< variables in knapsack constraint */
-   int              nvars,              /**< number of variables in knapsack constraint */
-   Longint*         weights,            /**< weights of variables in knapsack constraint */
-   Longint          capacity,           /**< capacity of knapsack */
-   Real*            solvals,            /**< LP values of all problem variables */
-   int*             covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr LP val then weight) */
-   int*             noncovervars,       /**< noncover variables (sorted by non-incr LP val then weight) */
-   int              ncovervars,         /**< number of cover variables */
-   int              ncovervarsc1,       /**< number of cover variables in C1 (at the end of covervars) */
-   int              ncovervarsc2,       /**< number of cover variables in C2 (at the beginning of covervars) */
-   int              nnoncovervars,      /**< number of noncover variables */
-   Longint*         initminweight,      /**< initial minweight table (aggregation of sorted weights) */
-   int*             liftcoefs,          /**< pointer to store lifting coefficient of variables in knapsack constraint */
-   int*             liftrhs,            /**< pointer to store right hand side of the lifted cover inequality */
-   Real*            liftlpval           /**< pointer to store LP solution value of lifted variables */  
+SCIP_RETCODE liftKnapsackCover(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variables in knapsack constraint */
+   int                   nvars,              /**< number of variables in knapsack constraint */
+   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
+   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   SCIP_Real*            solvals,            /**< SCIP_LP values of all problem variables */
+   int*                  covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr SCIP_LP val then weight) */
+   int*                  noncovervars,       /**< noncover variables (sorted by non-incr SCIP_LP val then weight) */
+   int                   ncovervars,         /**< number of cover variables */
+   int                   ncovervarsc1,       /**< number of cover variables in C1 (at the end of covervars) */
+   int                   ncovervarsc2,       /**< number of cover variables in C2 (at the beginning of covervars) */
+   int                   nnoncovervars,      /**< number of noncover variables */
+   SCIP_Longint*         initminweight,      /**< initial minweight table (aggregation of sorted weights) */
+   int*                  liftcoefs,          /**< pointer to store lifting coefficient of variables in knapsack constraint */
+   int*                  liftrhs,            /**< pointer to store right hand side of the lifted cover inequality */
+   SCIP_Real*            liftlpval           /**< pointer to store SCIP_LP solution value of lifted variables */  
    )
 {
-   Longint fixedoneweight;
-   Longint* minweights;
+   SCIP_Longint fixedoneweight;
+   SCIP_Longint* minweights;
    int minweightssize;
    int minweightslen;
    int lastlifted;
@@ -1625,11 +1625,11 @@ RETCODE liftKnapsackCover(
 
    /* allocates temporary memory */
    minweightssize = ncovervarsc1+1;
-   CHECK_OKAY( SCIPallocBufferArray(scip, &minweights, minweightssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &minweights, minweightssize) );
 
    /* initializes data structures */
    *liftlpval = 0.0;
-   clearMemoryArray(liftcoefs, nvars);
+   BMSclearMemoryArray(liftcoefs, nvars);
 
    /* sets lifting coefficient of cover variables of C1 */
    for( i = ncovervarsc2; i < ncovervars; i++ )
@@ -1638,22 +1638,22 @@ RETCODE liftKnapsackCover(
       liftcoefs[covervars[i]] = 1;
    }
    
-   /* lifts up all noncover variables with LP value > 0 */
+   /* lifts up all noncover variables with SCIP_LP value > 0 */
    fixedoneweight = 0;
    for( i = 0; i < ncovervarsc2; i++ )
       fixedoneweight += weights[covervars[i]];
-   CHECK_OKAY( liftupKnapsackCover(scip, vars, weights, capacity, solvals, covervars, noncovervars, ncovervars, 
+   SCIP_CALL( liftupKnapsackCover(scip, vars, weights, capacity, solvals, covervars, noncovervars, ncovervars, 
          ncovervarsc1, ncovervarsc2, nnoncovervars, fixedoneweight, liftcoefs, liftrhs, liftlpval, &lastlifted, 
          initminweight, &minweights, &minweightslen, &minweightssize) );
    assert(minweightslen <= minweightssize);
    assert(lastlifted < nnoncovervars);
 
    /* lifts down all cover variables from C2 */
-   CHECK_OKAY( liftdownKnapsackCover(scip, vars, weights, capacity, solvals, covervars, noncovervars, ncovervars,
+   SCIP_CALL( liftdownKnapsackCover(scip, vars, weights, capacity, solvals, covervars, noncovervars, ncovervars,
          ncovervarsc1, ncovervarsc2, nnoncovervars, fixedoneweight, liftcoefs, liftrhs, liftlpval,
          &minweights, &minweightslen, &minweightssize) );
 
-   /* lifts up all remaining noncover variables (noncover variables with LP value 0) */
+   /* lifts up all remaining noncover variables (noncover variables with SCIP_LP value 0) */
    liftupZerosKnapsackCover(scip, vars, weights, capacity, solvals, covervars, noncovervars, ncovervars, ncovervarsc1, 
       ncovervarsc2, nnoncovervars, liftcoefs, liftrhs, liftlpval, lastlifted, minweights);
 
@@ -1667,37 +1667,37 @@ RETCODE liftKnapsackCover(
  *  polytop by using uplifting for all variables not in the cover and downlifting for all variables in the cover that 
  *  are fixed to one (C2)
  */
-RETCODE SCIPliftKnapsackCover(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR**            vars,               /**< variables in knapsack constraint */
-   int              nvars,              /**< number of variables in knapsack constraint */
-   Longint*         weights,            /**< weights of variables in knapsack constraint */
-   Longint          capacity,           /**< capacity of knapsack */
-   Real*            solvals,            /**< LP values of all problem variables */
-   int*             covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr LP val then weight) */
-   int*             noncovervars,       /**< noncover variables (sorted by non-incr LP val then weight) */
-   int              ncovervars,         /**< number of cover variables */
-   int              ncovervarsc1,       /**< number of cover variables in C1 (at the end of covervars) */
-   int              ncovervarsc2,       /**< number of cover variables in C2 (at the beginning of covervars) */
-   int              nnoncovervars,      /**< number of noncover variables */
-   int*             liftcoefs,          /**< pointer to store lifting coefficient of variables in knapsack constraint */
-   int*             liftrhs,            /**< pointer to store right hand side of the lifted cover inequality */
-   Real*            liftlpval           /**< pointer to store LP solution value of lifted variables */  
+SCIP_RETCODE SCIPliftKnapsackCover(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variables in knapsack constraint */
+   int                   nvars,              /**< number of variables in knapsack constraint */
+   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
+   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   SCIP_Real*            solvals,            /**< SCIP_LP values of all problem variables */
+   int*                  covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr SCIP_LP val then weight) */
+   int*                  noncovervars,       /**< noncover variables (sorted by non-incr SCIP_LP val then weight) */
+   int                   ncovervars,         /**< number of cover variables */
+   int                   ncovervarsc1,       /**< number of cover variables in C1 (at the end of covervars) */
+   int                   ncovervarsc2,       /**< number of cover variables in C2 (at the beginning of covervars) */
+   int                   nnoncovervars,      /**< number of noncover variables */
+   int*                  liftcoefs,          /**< pointer to store lifting coefficient of variables in knapsack constraint */
+   int*                  liftrhs,            /**< pointer to store right hand side of the lifted cover inequality */
+   SCIP_Real*            liftlpval           /**< pointer to store SCIP_LP solution value of lifted variables */  
    )
 {
-   Longint* initminweight;
+   SCIP_Longint* initminweight;
    int i;
 
    assert(weights != NULL);
    assert(covervars != NULL);
 
    /* allocate temporary memory for initial minweight table */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &initminweight, ncovervarsc1+1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &initminweight, ncovervarsc1+1) );
    
    /* sort weights of variables in C1 (leave open position 0 to store a zero afterwards) */
    for( i = 0; i < ncovervarsc1; i++ )
    {
-      Longint weight;
+      SCIP_Longint weight;
       int j;
 
       assert(ncovervarsc2 + i < ncovervars);
@@ -1713,7 +1713,7 @@ RETCODE SCIPliftKnapsackCover(
       initminweight[i] += initminweight[i-1];
 
    /* calculate the lifted knapsack cover cut */
-   CHECK_OKAY( liftKnapsackCover(scip, vars, nvars, weights, capacity, solvals, covervars, noncovervars,
+   SCIP_CALL( liftKnapsackCover(scip, vars, nvars, weights, capacity, solvals, covervars, noncovervars,
          ncovervars, ncovervarsc1, ncovervarsc2, nnoncovervars, initminweight, liftcoefs, liftrhs, liftlpval) );
 
    /* free temporary memory */
@@ -1723,25 +1723,25 @@ RETCODE SCIPliftKnapsackCover(
 }
 
 /** separates lifted cover inequalities for given knapsack problem */
-RETCODE SCIPseparateKnapsackCover(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< constraint that originates the knapsack problem */
-   VAR**            vars,               /**< variables in knapsack constraint */
-   int              nvars,              /**< number of variables in knapsack constraint */
-   Longint*         weights,            /**< weights of variables in knapsack constraint */
-   Longint          capacity,           /**< capacity of knapsack */
-   int              maxnumcardlift,     /**< maximal number of cardinality inequ. lifted per sepa round (-1: unlimited) */
-   int*             ncuts               /**< pointer to add up the number of found cuts */
+SCIP_RETCODE SCIPseparateKnapsackCover(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint that originates the knapsack problem */
+   SCIP_VAR**            vars,               /**< variables in knapsack constraint */
+   int                   nvars,              /**< number of variables in knapsack constraint */
+   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
+   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   int                   maxnumcardlift,     /**< maximal number of cardinality inequ. lifted per sepa round (-1: unlimited) */
+   int*                  ncuts               /**< pointer to add up the number of found cuts */
    )
 {
-   Real* solvals;
-   Real solval;
-   Real covervarsc1activity;
-   Real liftlpval;
-   Bool coverfound;
-   Longint varsc2weight;
-   Longint coverweight;
-   Longint weight;
+   SCIP_Real* solvals;
+   SCIP_Real solval;
+   SCIP_Real covervarsc1activity;
+   SCIP_Real liftlpval;
+   SCIP_Bool coverfound;
+   SCIP_Longint varsc2weight;
+   SCIP_Longint coverweight;
+   SCIP_Longint weight;
    int* varscn2;
    int* varsc2;
    int* covervars;
@@ -1767,18 +1767,18 @@ RETCODE SCIPseparateKnapsackCover(
    assert(ncuts != NULL);
 
    /* increase age of constraint (age is reset to zero, if a cut was found) */
-   CHECK_OKAY( SCIPincConsAge(scip, cons) );
+   SCIP_CALL( SCIPincConsAge(scip, cons) );
    
    /* allocate temporary memory */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &solvals, nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &varscn2, nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &varsc2, nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &covervars, nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &noncovervars, nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &liftcoefs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varscn2, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varsc2, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &covervars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &noncovervars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &liftcoefs, nvars) );
 
-   /* get LP solution values of all problem variables */
-   CHECK_OKAY( SCIPgetVarSols(scip, nvars, vars, solvals) );
+   /* get SCIP_LP solution values of all problem variables */
+   SCIP_CALL( SCIPgetVarSols(scip, nvars, vars, solvals) );
 
 #ifdef SEPARATEOUT
    printf("=================================== separating knapsack constraint <%s>: =================================\n", 
@@ -1797,14 +1797,14 @@ RETCODE SCIPseparateKnapsackCover(
    /* get a most violated minimal cover C = C2 & C1, considering that the variables for downlifting (varsc2) are fixed 
     * to one 
     */
-   CHECK_OKAY( getCover(scip, vars, nvars, weights, capacity, solvals, varsc2, varscn2, nvarsc2, nvarscn2, varsc2weight,
+   SCIP_CALL( getCover(scip, vars, nvars, weights, capacity, solvals, varsc2, varscn2, nvarsc2, nvarscn2, varsc2weight,
          covervars, noncovervars, &ncovervars, &ncovervarsc1, &ncovervarsc2, &nnoncovervars, 
          &coverweight, &covervarsc1activity, &coverfound) );
    assert(ncovervars + nnoncovervars == nvars);
 
    if( coverfound ) 
    {
-      Longint* initminweight;
+      SCIP_Longint* initminweight;
 
 #if 0
       /* increase C1 if |C1| = 1 */
@@ -1817,7 +1817,7 @@ RETCODE SCIPseparateKnapsackCover(
 #endif 
       
       /* allocate temporary memory for initial minweight table */
-      CHECK_OKAY( SCIPallocBufferArray(scip, &initminweight, ncovervarsc1+1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &initminweight, ncovervarsc1+1) );
 
       /* sort weights of variables in C1 (leave open position 0 to store a zero afterwards) */
       for( i = 0; i < ncovervarsc1; i++ )
@@ -1834,7 +1834,7 @@ RETCODE SCIPseparateKnapsackCover(
       for( i = 1; i <= ncovervarsc1; ++i )
          initminweight[i] += initminweight[i-1];
 
-      /* sort covervars and noncovervars by non-increasing LP value */
+      /* sort covervars and noncovervars by non-increasing SCIP_LP value */
       sortSetvars(scip, covervars, ncovervars, solvals);
       sortSetvars(scip, noncovervars, nnoncovervars, solvals);
          
@@ -1848,8 +1848,8 @@ RETCODE SCIPseparateKnapsackCover(
       assert(loopend >= ncovervarsc2 && loopend <= ncovervars);
       for( j = ncovervars - 1; j >= loopend; j-- )
       {
-         Longint oldweight;
-         Longint newweight;
+         SCIP_Longint oldweight;
+         SCIP_Longint newweight;
          int n;
 
 #ifdef SEPARATEOUT
@@ -1921,40 +1921,40 @@ RETCODE SCIPseparateKnapsackCover(
 
          /* lift cardinality inequality sum(j in C1) x_j <= |C1| to a valid inequality of the full dimensional knapsack 
           * polytop: 
-          *  1. uplifting of noncovervars with LP value > 0 
+          *  1. uplifting of noncovervars with SCIP_LP value > 0 
           *  2. downlifting of covervarsc2 (C2)
-          *  3. uplifting of noncovervars with LP value = 0 
+          *  3. uplifting of noncovervars with SCIP_LP value = 0 
           */
-         CHECK_OKAY( liftKnapsackCover(scip, vars, nvars, weights, capacity, solvals, covervars, noncovervars, 
+         SCIP_CALL( liftKnapsackCover(scip, vars, nvars, weights, capacity, solvals, covervars, noncovervars, 
                ncovervars, ncovervarsc1, ncovervarsc2, nnoncovervars, initminweight,
                liftcoefs, &liftrhs, &liftlpval) );
          
          /* check, if lifting yielded a violated cut */
-         if( SCIPisEfficacious(scip, (covervarsc1activity + liftlpval - liftrhs)/sqrt((Real)liftrhs)) )
+         if( SCIPisEfficacious(scip, (covervarsc1activity + liftlpval - liftrhs)/sqrt((SCIP_Real)liftrhs)) )
          {
-            ROW* row;
-            char name[MAXSTRLEN];
+            SCIP_ROW* row;
+            char name[SCIP_MAXSTRLEN];
             int v;
             
-            /* create LP row */
+            /* create SCIP_LP row */
             sprintf(name, "%s_card%lld_%d", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)), j);
-            CHECK_OKAY( SCIPcreateEmptyRow (scip, &row, name, -SCIPinfinity(scip), (Real)liftrhs, 
+            SCIP_CALL( SCIPcreateEmptyRow (scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, 
                   SCIPconsIsLocal(cons), FALSE, SCIPconsIsRemoveable(cons)) );
             
             /* add all variables in the knapsack constraint with calculated lifting coefficient to the cut */
-            CHECK_OKAY( SCIPcacheRowExtensions(scip, row) );
+            SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
             for( v = 0; v < ncovervars; v++ )
             {
-               CHECK_OKAY( SCIPaddVarToRow(scip, row, vars[covervars[v]], (Real)liftcoefs[covervars[v]]) ); 
+               SCIP_CALL( SCIPaddVarToRow(scip, row, vars[covervars[v]], (SCIP_Real)liftcoefs[covervars[v]]) ); 
             }
             for( v = 0; v < nnoncovervars; v++ )
             {
                if( liftcoefs[noncovervars[v]] > 0 )
                {
-                  CHECK_OKAY( SCIPaddVarToRow(scip, row, vars[noncovervars[v]], (Real)liftcoefs[noncovervars[v]]) );
+                  SCIP_CALL( SCIPaddVarToRow(scip, row, vars[noncovervars[v]], (SCIP_Real)liftcoefs[noncovervars[v]]) );
                }
             }
-            CHECK_OKAY( SCIPflushRowExtensions(scip, row) );
+            SCIP_CALL( SCIPflushRowExtensions(scip, row) );
             
             /* check, if cut is violated enough */
             if( SCIPisCutEfficacious(scip, row) )
@@ -1966,11 +1966,11 @@ RETCODE SCIPseparateKnapsackCover(
                printf("\n");
 
 #endif               
-               CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-               CHECK_OKAY( SCIPaddCut(scip, row, FALSE) );
+               SCIP_CALL( SCIPresetConsAge(scip, cons) );
+               SCIP_CALL( SCIPaddCut(scip, row, FALSE) );
                (*ncuts)++;
             }
-            CHECK_OKAY( SCIPreleaseRow(scip, &row) );
+            SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
 
          /* if no variable in noncovervar is left that does not fit in the knapsack, we can break the separation loop */
@@ -1995,36 +1995,36 @@ RETCODE SCIPseparateKnapsackCover(
 
 /** separates given knapsack constraint */
 static
-RETCODE separateCons(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< knapsack constraint */
-   Bool             sepacardinality,    /**< should knapsack cardinality cuts be separated? */
-   int              maxnumcardlift,     /**< maximal number of cardinality inequ. lifted per sepa round (-1: unlimited) */
-   int*             ncuts               /**< pointer to add up the number of found cuts */
+SCIP_RETCODE separateCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< knapsack constraint */
+   SCIP_Bool             sepacardinality,    /**< should knapsack cardinality cuts be separated? */
+   int                   maxnumcardlift,     /**< maximal number of cardinality inequ. lifted per sepa round (-1: unlimited) */
+   int*                  ncuts               /**< pointer to add up the number of found cuts */
    )
 {
-   CONSDATA* consdata;
-   Bool violated;
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool violated;
 
    assert(ncuts != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   debugMessage("separating knapsack constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMessage("separating knapsack constraint <%s>\n", SCIPconsGetName(cons));
    
    /* check knapsack constraint itself for feasibility */
-   CHECK_OKAY( checkCons(scip, cons, NULL, FALSE, &violated) );
+   SCIP_CALL( checkCons(scip, cons, NULL, FALSE, &violated) );
    
    if( violated )
    {
-      /* add knapsack constraint as LP row to the LP */
-      CHECK_OKAY( addRelaxation(scip, cons) );
+      /* add knapsack constraint as SCIP_LP row to the SCIP_LP */
+      SCIP_CALL( addRelaxation(scip, cons) );
       (*ncuts)++;
    }
    else if( sepacardinality )
    {
-      CHECK_OKAY( SCIPseparateKnapsackCover(scip, cons, consdata->vars, consdata->nvars, consdata->weights, 
+      SCIP_CALL( SCIPseparateKnapsackCover(scip, cons, consdata->vars, consdata->nvars, consdata->weights, 
             consdata->capacity, maxnumcardlift, ncuts) );
    }
    
@@ -2033,19 +2033,19 @@ RETCODE separateCons(
 
 /** propagation method for knapsack constraints */
 static
-RETCODE propagateCons(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< knapsack constraint */
-   Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
-   Bool*            redundant,          /**< pointer to store whether constraint is redundant */
-   int*             nfixedvars          /**< pointer to count number of fixings */
+SCIP_RETCODE propagateCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< knapsack constraint */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
+   SCIP_Bool*            redundant,          /**< pointer to store whether constraint is redundant */
+   int*                  nfixedvars          /**< pointer to count number of fixings */
    )
 {
-   CONSDATA* consdata;
-   Bool infeasible;
-   Bool tightened;
-   Longint zerosweightsum;
-   Longint onesweightsum;
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool infeasible;
+   SCIP_Bool tightened;
+   SCIP_Longint zerosweightsum;
+   SCIP_Longint onesweightsum;
    int i;
 
    assert(cutoff != NULL);
@@ -2062,10 +2062,10 @@ RETCODE propagateCons(
    if( consdata->propagated )
       return SCIP_OKAY;
 
-   debugMessage("propagating knapsack constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMessage("propagating knapsack constraint <%s>\n", SCIPconsGetName(cons));
 
    /* increase age of constraint; age is reset to zero, if a conflict or a propagation was found */
-   CHECK_OKAY( SCIPincConsAge(scip, cons) );
+   SCIP_CALL( SCIPincConsAge(scip, cons) );
 
    do
    {
@@ -2077,24 +2077,24 @@ RETCODE propagateCons(
       /* check, if weights of fixed variables already exceeds knapsack capacity */
       if( consdata->capacity < onesweightsum )
       {
-         debugMessage(" -> cutoff - fixed weight: %lld, capacity: %lld\n", onesweightsum, consdata->capacity);
+         SCIPdebugMessage(" -> cutoff - fixed weight: %lld, capacity: %lld\n", onesweightsum, consdata->capacity);
             
-         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
          *cutoff = TRUE;
 
          if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
          {
             /* start conflict analysis with the fixed-to-one variables */
-            CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
+            SCIP_CALL( SCIPinitConflictAnalysis(scip) );
             for( i = 0; i < consdata->nvars; i++ )
             {
                if( SCIPvarGetLbLocal(consdata->vars[i]) > 0.5)
                {
-                  CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
                }
             }
          
-            CHECK_OKAY( SCIPanalyzeConflictCons(scip, cons, NULL) );
+            SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
          }
 
          return SCIP_OKAY;
@@ -2113,9 +2113,9 @@ RETCODE propagateCons(
             {
                if( SCIPvarGetUbLocal(consdata->vars[i]) > 0.5 )
                {
-                  debugMessage(" -> fixing variable <%s> to 0\n", SCIPvarGetName(consdata->vars[i]));
-                  CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-                  CHECK_OKAY( SCIPinferBinvarCons(scip, consdata->vars[i], FALSE, cons, i, &infeasible, &tightened) );
+                  SCIPdebugMessage(" -> fixing variable <%s> to 0\n", SCIPvarGetName(consdata->vars[i]));
+                  SCIP_CALL( SCIPresetConsAge(scip, cons) );
+                  SCIP_CALL( SCIPinferBinvarCons(scip, consdata->vars[i], FALSE, cons, i, &infeasible, &tightened) );
                   assert(!infeasible);
                   assert(tightened);
                   (*nfixedvars)++;
@@ -2133,9 +2133,9 @@ RETCODE propagateCons(
    /* if the remaining (potentially unfixed) variables would fit all into the knapsack, the knapsack is now redundant */
    if( consdata->weightsum - zerosweightsum <= consdata->capacity )
    {
-      debugMessage(" -> knapsack constraint <%s> is redundant: weightsum=%lld, zerosweightsum=%lld, capacity=%lld\n",
+      SCIPdebugMessage(" -> knapsack constraint <%s> is redundant: weightsum=%lld, zerosweightsum=%lld, capacity=%lld\n",
          SCIPconsGetName(cons), consdata->weightsum, zerosweightsum, consdata->capacity);
-      CHECK_OKAY( SCIPdelConsLocal(scip, cons) );
+      SCIP_CALL( SCIPdelConsLocal(scip, cons) );
       *redundant = TRUE;
    }
 
@@ -2147,24 +2147,24 @@ RETCODE propagateCons(
 
 /** adds coefficient to constraint data */
 static
-RETCODE addCoef(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< knapsack constraint */
-   VAR*             var,                /**< variable to add to knapsack */
-   Longint          weight              /**< weight of variable in knapsack */
+SCIP_RETCODE addCoef(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< knapsack constraint */
+   SCIP_VAR*             var,                /**< variable to add to knapsack */
+   SCIP_Longint          weight              /**< weight of variable in knapsack */
    )
 {
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
    assert(weight > 0);
 
-   /* add the new coefficient to the LP row */
+   /* add the new coefficient to the SCIP_LP row */
    if( consdata->row != NULL )
    {
-      CHECK_OKAY( SCIPaddVarToRow(scip, consdata->row, var, (Real)weight) );
+      SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, var, (SCIP_Real)weight) );
    }
 
    /* check for fixed variable */
@@ -2175,29 +2175,29 @@ RETCODE addCoef(
    }
    else if( SCIPvarGetUbGlobal(var) > 0.5 )
    {
-      Bool negated;
+      SCIP_Bool negated;
 
       /* get binary representative of variable */
-      CHECK_OKAY( SCIPgetBinvarRepresentative(scip, var, &var, &negated) );
+      SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &var, &negated) );
 
       /* insert coefficient */
-      CHECK_OKAY( consdataEnsureVarsSize(scip, consdata, consdata->nvars+1, SCIPconsIsTransformed(cons)) );
+      SCIP_CALL( consdataEnsureVarsSize(scip, consdata, consdata->nvars+1, SCIPconsIsTransformed(cons)) );
       consdata->vars[consdata->nvars] = var;
       consdata->weights[consdata->nvars] = weight;
       consdata->nvars++;
 
       /* install the rounding locks of variable */
-      CHECK_OKAY( lockRounding(scip, cons, var) );
+      SCIP_CALL( lockRounding(scip, cons, var) );
 
       /* catch events */
       if( SCIPconsIsTransformed(cons) )
       {
-         CONSHDLRDATA* conshdlrdata;
+         SCIP_CONSHDLRDATA* conshdlrdata;
 
          conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
          assert(conshdlrdata != NULL);
-         CHECK_OKAY( eventdataCreate(scip, &consdata->eventdatas[consdata->nvars-1], consdata, weight) );
-         CHECK_OKAY( SCIPcatchVarEvent(scip, var,
+         SCIP_CALL( eventdataCreate(scip, &consdata->eventdatas[consdata->nvars-1], consdata, weight) );
+         SCIP_CALL( SCIPcatchVarEvent(scip, var,
                SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_IMPLADDED,
                conshdlrdata->eventhdlr, consdata->eventdatas[consdata->nvars-1], NULL) );
       }
@@ -2219,39 +2219,39 @@ RETCODE addCoef(
 
 /** deletes coefficient at given position from constraint data */
 static
-RETCODE delCoefPos(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< knapsack constraint */
-   int              pos                 /**< position of coefficient to delete */
+SCIP_RETCODE delCoefPos(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< knapsack constraint */
+   int                   pos                 /**< position of coefficient to delete */
    )
 {
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(0 <= pos && pos < consdata->nvars);
    assert(SCIPconsIsTransformed(cons) == SCIPvarIsTransformed(consdata->vars[pos]));
 
-   /* delete the coefficient from the LP row */
+   /* delete the coefficient from the SCIP_LP row */
    if( consdata->row != NULL )
    {
-      CHECK_OKAY( SCIPaddVarToRow(scip, consdata->row, consdata->vars[pos], -(Real)consdata->weights[pos]) );
+      SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, consdata->vars[pos], -(SCIP_Real)consdata->weights[pos]) );
    }
 
    /* remove the rounding locks of variable */
-   CHECK_OKAY( unlockRounding(scip, cons, consdata->vars[pos]) );
+   SCIP_CALL( unlockRounding(scip, cons, consdata->vars[pos]) );
 
    /* drop events */
    if( SCIPconsIsTransformed(cons) )
    {
-      CONSHDLRDATA* conshdlrdata;
+      SCIP_CONSHDLRDATA* conshdlrdata;
       
       conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
       assert(conshdlrdata != NULL);
-      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos],
+      SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos],
             SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_IMPLADDED,
             conshdlrdata->eventhdlr, consdata->eventdatas[pos], -1) );
-      CHECK_OKAY( eventdataFree(scip, &consdata->eventdatas[pos]) );
+      SCIP_CALL( eventdataFree(scip, &consdata->eventdatas[pos]) );
    }
 
    /* update weight sums */
@@ -2282,12 +2282,12 @@ RETCODE delCoefPos(
 
 /** removes all items with weight zero from knapsack constraint */
 static
-RETCODE removeZeroWeights(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< knapsack constraint */
+SCIP_RETCODE removeZeroWeights(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< knapsack constraint */
    )
 {
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
    int v;
 
    consdata = SCIPconsGetData(cons);
@@ -2297,7 +2297,7 @@ RETCODE removeZeroWeights(
    {
       if( consdata->weights[v] == 0 )
       {
-         CHECK_OKAY( delCoefPos(scip, cons, v) );
+         SCIP_CALL( delCoefPos(scip, cons, v) );
       }
    }
 
@@ -2306,12 +2306,12 @@ RETCODE removeZeroWeights(
 
 /** replaces multiple occurrences of a variable or its negation by a single coefficient */
 static
-RETCODE mergeMultiples(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< knapsack constraint */
+SCIP_RETCODE mergeMultiples(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< knapsack constraint */
    )
 {
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
    int v;
 
    consdata = SCIPconsGetData(cons);
@@ -2323,8 +2323,8 @@ RETCODE mergeMultiples(
    /* loop backwards through the items: deletion only affects rear items */
    for( v = consdata->nvars-1; v >= 0; --v )
    {
-      VAR* var;
-      VAR* negvar;
+      SCIP_VAR* var;
+      SCIP_VAR* negvar;
       int w;
 
       var = consdata->vars[v];
@@ -2339,7 +2339,7 @@ RETCODE mergeMultiples(
          {
             /* variables v and w are equal: add weight of v to w, and delete v */
             consdataChgWeight(consdata, w, consdata->weights[v] + consdata->weights[w]);
-            CHECK_OKAY( delCoefPos(scip, cons, v) );
+            SCIP_CALL( delCoefPos(scip, cons, v) );
             break;
          }
          else if( consdata->vars[w] == negvar )
@@ -2351,16 +2351,16 @@ RETCODE mergeMultiples(
             {
                /* both variables eliminate themselves: w*x + w*(1-x) == w */
                consdata->capacity -= consdata->weights[v];
-               CHECK_OKAY( delCoefPos(scip, cons, v) ); /* this does not affect w, because w < v */
+               SCIP_CALL( delCoefPos(scip, cons, v) ); /* this does not affect w, because w < v */
                assert(consdata->vars[w] == negvar);
-               CHECK_OKAY( delCoefPos(scip, cons, w) );
+               SCIP_CALL( delCoefPos(scip, cons, w) );
                v = MIN(v, consdata->nvars); /* we could have removed the last two coefficients */
             }
             else if( consdata->weights[v] < consdata->weights[w] )
             {
                consdata->capacity -= consdata->weights[v];
                consdataChgWeight(consdata, w, consdata->weights[w] - consdata->weights[v]);
-               CHECK_OKAY( delCoefPos(scip, cons, v) ); /* this does not affect w, because w < v */
+               SCIP_CALL( delCoefPos(scip, cons, v) ); /* this does not affect w, because w < v */
                assert(consdata->vars[w] == negvar);
                assert(consdata->weights[w] > 0);
             }
@@ -2368,7 +2368,7 @@ RETCODE mergeMultiples(
             {
                consdata->capacity -= consdata->weights[w];
                consdataChgWeight(consdata, v, consdata->weights[v] - consdata->weights[w]);
-               CHECK_OKAY( delCoefPos(scip, cons, w) ); /* this may move v, but does no harm */
+               SCIP_CALL( delCoefPos(scip, cons, w) ); /* this may move v, but does no harm */
             }
             break;
          }
@@ -2382,12 +2382,12 @@ RETCODE mergeMultiples(
 
 /** deletes all fixed variables from knapsack constraint, and replaces variables with binary representatives */
 static
-RETCODE applyFixings(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< knapsack constraint */
+SCIP_RETCODE applyFixings(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< knapsack constraint */
    )
 {
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
    int v;
 
    consdata = SCIPconsGetData(cons);
@@ -2397,7 +2397,7 @@ RETCODE applyFixings(
    v = 0;
    while( v < consdata->nvars )
    {
-      VAR* var;
+      SCIP_VAR* var;
 
       var = consdata->vars[v];
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
@@ -2406,21 +2406,21 @@ RETCODE applyFixings(
       {
          assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
          consdata->capacity -= consdata->weights[v];
-         CHECK_OKAY( delCoefPos(scip, cons, v) );
+         SCIP_CALL( delCoefPos(scip, cons, v) );
       }
       else if( SCIPvarGetUbGlobal(var) < 0.5 )
       {
          assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
-         CHECK_OKAY( delCoefPos(scip, cons, v) );
+         SCIP_CALL( delCoefPos(scip, cons, v) );
       }
       else
       {
-         VAR* repvar;
-         Longint weight;
-         Bool negated;
+         SCIP_VAR* repvar;
+         SCIP_Longint weight;
+         SCIP_Bool negated;
          
          /* get binary representative of variable */
-         CHECK_OKAY( SCIPgetBinvarRepresentative(scip, var, &repvar, &negated) );
+         SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &repvar, &negated) );
 
          /* check, if the variable should be replaced with the representative */
          if( repvar != var )
@@ -2428,10 +2428,10 @@ RETCODE applyFixings(
             weight = consdata->weights[v];
 
             /* delete old (aggregated) variable */
-            CHECK_OKAY( delCoefPos(scip, cons, v) );
+            SCIP_CALL( delCoefPos(scip, cons, v) );
 
             /* add representative instead */
-            CHECK_OKAY( addCoef(scip, cons, repvar, weight) );
+            SCIP_CALL( addCoef(scip, cons, repvar, weight) );
          }
          else
             ++v;
@@ -2439,16 +2439,16 @@ RETCODE applyFixings(
    }
    assert(consdata->onesweightsum == 0);
 
-   debugMessage("after fixings:\n");
-   debug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
+   SCIPdebugMessage("after fixings:\n");
+   SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
 
    /* if aggregated variables have been replaced, multiple entries of the same variable are possible and we have
     * to clean up the constraint
     */
-   CHECK_OKAY( mergeMultiples(scip, cons) );
+   SCIP_CALL( mergeMultiples(scip, cons) );
    
-   debugMessage("after merging:\n");
-   debug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
+   SCIPdebugMessage("after merging:\n");
+   SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
 
    return SCIP_OKAY;
 }
@@ -2456,13 +2456,13 @@ RETCODE applyFixings(
 /** divides weights by their greatest common divisor and divides capacity by the same value, rounding down the result */
 static
 void normalizeWeights(
-   CONS*            cons,               /**< knapsack constraint */
-   int*             nchgcoefs,          /**< pointer to count total number of changed coefficients */
-   int*             nchgsides           /**< pointer to count number of side changes */
+   SCIP_CONS*            cons,               /**< knapsack constraint */
+   int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients */
+   int*                  nchgsides           /**< pointer to count number of side changes */
    )
 {
-   CONSDATA* consdata;
-   Longint gcd;
+   SCIP_CONSDATA* consdata;
+   SCIP_Longint gcd;
    int i;
 
    assert(nchgcoefs != NULL);
@@ -2471,7 +2471,7 @@ void normalizeWeights(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->row == NULL); /* we are in presolve, so no LP row exists */
+   assert(consdata->row == NULL); /* we are in presolve, so no SCIP_LP row exists */
    assert(consdata->onesweightsum == 0); /* all fixed variables should have been removed */
    assert(consdata->weightsum > consdata->capacity); /* otherwise, the constraint is redundant */
    assert(consdata->nvars >= 1);
@@ -2479,18 +2479,18 @@ void normalizeWeights(
    /* sort items, because we can stop earlier if the smaller weights are evaluated first */
    sortItems(consdata);
 
-   gcd = (Longint)consdata->weights[consdata->nvars-1];
+   gcd = (SCIP_Longint)consdata->weights[consdata->nvars-1];
    for( i = consdata->nvars-2; i >= 0 && gcd >= 2; --i )
    {
       assert(SCIPvarGetLbLocal(consdata->vars[i]) < 0.5);
       assert(SCIPvarGetUbLocal(consdata->vars[i]) > 0.5); /* all fixed variables should have been removed */
 
-      gcd = SCIPcalcGreComDiv(gcd, (Longint)consdata->weights[i]);
+      gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)consdata->weights[i]);
    }
 
    if( gcd >= 2 )
    {
-      debugMessage("knapsack constraint <%s>: dividing weights by %lld\n", SCIPconsGetName(cons), gcd);
+      SCIPdebugMessage("knapsack constraint <%s>: dividing weights by %lld\n", SCIPconsGetName(cons), gcd);
 
       for( i = 0; i < consdata->nvars; ++i )
          consdataChgWeight(consdata, i, consdata->weights[i]/gcd);
@@ -2502,20 +2502,20 @@ void normalizeWeights(
 
 /** inserts an element into the list of binary zero implications */
 static
-RETCODE insertZerolist(
-   SCIP*            scip,               /**< SCIP data structure */
-   int**            liftcands,          /**< array of the lifting candidates */
-   int*             nliftcands,         /**< number of lifting candidates */
-   int**            firstidxs,          /**< array of first zeroitems indices */
-   Longint**        zeroweightsums,     /**< array of sums of weights of the implied-to-zero items */
-   int**            zeroitems,          /**< pointer to zero items array */
-   int**            nextidxs,           /**< pointer to array of next zeroitems indeces */
-   int*             zeroitemssize,      /**< pointer to size of zero items array */
-   int*             nzeroitems,         /**< pointer to length of zero items array */
-   int              probindex,          /**< problem index of variable y in implication y == v -> x == 0 */
-   Bool             value,              /**< value v of variable y in implication */
-   int              knapsackidx,        /**< index of variable x in knapsack */
-   Longint          knapsackweight      /**< weight of variable x in knapsack */
+SCIP_RETCODE insertZerolist(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int**                 liftcands,          /**< array of the lifting candidates */
+   int*                  nliftcands,         /**< number of lifting candidates */
+   int**                 firstidxs,          /**< array of first zeroitems indices */
+   SCIP_Longint**        zeroweightsums,     /**< array of sums of weights of the implied-to-zero items */
+   int**                 zeroitems,          /**< pointer to zero items array */
+   int**                 nextidxs,           /**< pointer to array of next zeroitems indeces */
+   int*                  zeroitemssize,      /**< pointer to size of zero items array */
+   int*                  nzeroitems,         /**< pointer to length of zero items array */
+   int                   probindex,          /**< problem index of variable y in implication y == v -> x == 0 */
+   SCIP_Bool             value,              /**< value v of variable y in implication */
+   int                   knapsackidx,        /**< index of variable x in knapsack */
+   SCIP_Longint          knapsackweight      /**< weight of variable x in knapsack */
    )
 {
    assert(liftcands != NULL);
@@ -2536,8 +2536,8 @@ RETCODE insertZerolist(
    if( *nzeroitems == *zeroitemssize )
    {
       *zeroitemssize *= 2;
-      CHECK_OKAY( SCIPreallocBufferArray(scip, zeroitems, *zeroitemssize) );
-      CHECK_OKAY( SCIPreallocBufferArray(scip, nextidxs, *zeroitemssize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, zeroitems, *zeroitemssize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, nextidxs, *zeroitemssize) );
    }
    assert(*nzeroitems < *zeroitemssize);
 
@@ -2567,29 +2567,29 @@ RETCODE insertZerolist(
  *      this rule can also be applied to binary variables not in the knapsack!
  */
 static
-RETCODE tightenWeightsLift(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< knapsack constraint */
-   int*             nchgcoefs           /**< pointer to count total number of changed coefficients */
+SCIP_RETCODE tightenWeightsLift(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< knapsack constraint */
+   int*                  nchgcoefs           /**< pointer to count total number of changed coefficients */
    )
 {
-   CONSDATA* consdata;
-   VAR** binvars;
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** binvars;
    int nbinvars;
    int* liftcands[2];          /* binary variables that have at least one entry in zeroitems */
    int* firstidxs[2];          /* first index in zeroitems for each binary variable/value pair, or zero for empty list */
-   Longint* zeroweightsums[2]; /* sums of weights of the implied-to-zero items */
+   SCIP_Longint* zeroweightsums[2]; /* sums of weights of the implied-to-zero items */
    int* zeroitems;             /* item number in knapsack that is implied to zero */
    int* nextidxs;              /* next index in zeroitems for the same binary variable, or zero for end of list */
    int zeroitemssize;
    int nzeroitems;
    int nliftcands[2];
-   Bool* cliqueused;
-   Bool* itemremoved;
-   Longint maxcliqueweightsum;
-   VAR** addvars;
-   Longint* addweights;
-   Longint addweightsum;
+   SCIP_Bool* cliqueused;
+   SCIP_Bool* itemremoved;
+   SCIP_Longint maxcliqueweightsum;
+   SCIP_VAR** addvars;
+   SCIP_Longint* addweights;
+   SCIP_Longint addweightsum;
    int naddvars;
    int val;
    int i;
@@ -2599,7 +2599,7 @@ RETCODE tightenWeightsLift(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->row == NULL); /* we are in presolve, so no LP row exists */
+   assert(consdata->row == NULL); /* we are in presolve, so no SCIP_LP row exists */
    assert(consdata->weightsum > consdata->capacity); /* otherwise, the constraint is redundant */
    assert(consdata->nvars > 0);
    assert(consdata->merged);
@@ -2613,18 +2613,18 @@ RETCODE tightenWeightsLift(
 
    /* allocate temporary memory for the list of implied to zero variables */
    zeroitemssize = nbinvars; /* initial size of zeroitems buffer */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &liftcands[0], nbinvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &liftcands[1], nbinvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &firstidxs[0], nbinvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &firstidxs[1], nbinvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &zeroweightsums[0], nbinvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &zeroweightsums[1], nbinvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &zeroitems, zeroitemssize) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &nextidxs, zeroitemssize) );
-   clearMemoryArray(firstidxs[0], nbinvars);
-   clearMemoryArray(firstidxs[1], nbinvars);
-   clearMemoryArray(zeroweightsums[0], nbinvars);
-   clearMemoryArray(zeroweightsums[1], nbinvars);
+   SCIP_CALL( SCIPallocBufferArray(scip, &liftcands[0], nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &liftcands[1], nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &firstidxs[0], nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &firstidxs[1], nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &zeroweightsums[0], nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &zeroweightsums[1], nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &zeroitems, zeroitemssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nextidxs, zeroitemssize) );
+   BMSclearMemoryArray(firstidxs[0], nbinvars);
+   BMSclearMemoryArray(firstidxs[1], nbinvars);
+   BMSclearMemoryArray(zeroweightsums[0], nbinvars);
+   BMSclearMemoryArray(zeroweightsums[1], nbinvars);
    zeroitems[0] = -1; /* dummy element */
    nextidxs[0] = -1;
    nzeroitems = 1;
@@ -2634,19 +2634,19 @@ RETCODE tightenWeightsLift(
    /* identify all binary variable/value pairs that would fix a knapsack item to zero */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      VAR* var;
-      Bool value;
-      VAR** implvars;
-      BOUNDTYPE* impltypes;
+      SCIP_VAR* var;
+      SCIP_Bool value;
+      SCIP_VAR** implvars;
+      SCIP_BOUNDTYPE* impltypes;
       int nimpls;
-      CLIQUE** cliques;
+      SCIP_CLIQUE** cliques;
       int ncliques;
       int j;
 
       /* get corresponding active problem variable */
       var = consdata->vars[i];
       value = TRUE;
-      CHECK_OKAY( SCIPvarGetProbvarBinary(&var, &value) );
+      SCIP_CALL( SCIPvarGetProbvarBinary(&var, &value) );
       assert(0 <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < nbinvars);
 
       /* update the zeroweightsum */
@@ -2661,7 +2661,7 @@ RETCODE tightenWeightsLift(
       for( j = 0; j < nimpls; ++j )
       {
          int probindex;
-         Bool implvalue;
+         SCIP_Bool implvalue;
 
          assert(SCIPvarGetType(implvars[j]) == SCIP_VARTYPE_BINARY);
          probindex = SCIPvarGetProbindex(implvars[j]);
@@ -2669,7 +2669,7 @@ RETCODE tightenWeightsLift(
          implvalue = (impltypes[j] == SCIP_BOUNDTYPE_UPPER); /* the negation of the implication */
          
          /* insert the item into the list of the implied variable/value */
-         CHECK_OKAY( insertZerolist(scip, liftcands, nliftcands, firstidxs, zeroweightsums,
+         SCIP_CALL( insertZerolist(scip, liftcands, nliftcands, firstidxs, zeroweightsums,
                &zeroitems, &nextidxs, &zeroitemssize, &nzeroitems, probindex, implvalue, i, consdata->weights[i]) );
       }
 
@@ -2678,8 +2678,8 @@ RETCODE tightenWeightsLift(
       cliques = SCIPvarGetCliques(var, value);
       for( j = 0; j < ncliques; ++j )
       {
-         VAR** cliquevars;
-         Bool* cliquevalues;
+         SCIP_VAR** cliquevars;
+         SCIP_Bool* cliquevalues;
          int ncliquevars;
          int k;
 
@@ -2691,7 +2691,7 @@ RETCODE tightenWeightsLift(
             if( cliquevars[k] != var )
             {
                /* insert the item into the list of the clique variable/value */
-               CHECK_OKAY( insertZerolist(scip, liftcands, nliftcands, firstidxs, zeroweightsums,
+               SCIP_CALL( insertZerolist(scip, liftcands, nliftcands, firstidxs, zeroweightsums,
                      &zeroitems, &nextidxs, &zeroitemssize, &nzeroitems,
                      SCIPvarGetProbindex(cliquevars[k]), cliquevalues[k], i, consdata->weights[i]) );
             }
@@ -2701,9 +2701,9 @@ RETCODE tightenWeightsLift(
 
    /* calculate the clique partition and the maximal sum of weights using the clique information */
    assert(consdata->sorted);
-   CHECK_OKAY( calcCliquepartition(scip, consdata) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &cliqueused, consdata->nvars) );
-   clearMemoryArray(cliqueused, consdata->nvars);
+   SCIP_CALL( calcCliquepartition(scip, consdata) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cliqueused, consdata->nvars) );
+   BMSclearMemoryArray(cliqueused, consdata->nvars);
    maxcliqueweightsum = 0;
    for( i = 0; i < consdata->nvars; ++i )
    {
@@ -2719,16 +2719,16 @@ RETCODE tightenWeightsLift(
     * variable in the knapsack (this is sequence-dependent because the new or modified weights have to be
     * included in subsequent cliqueweightsum calculations)
     */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &itemremoved, consdata->nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &addvars, 2*nbinvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &addweights, 2*nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &itemremoved, consdata->nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &addvars, 2*nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &addweights, 2*nbinvars) );
    naddvars = 0;
    addweightsum = 0;
    for( val = 0; val < 2 && addweightsum < consdata->capacity; ++val )
    {
       for( i = 0; i < nliftcands[val] && addweightsum < consdata->capacity; ++i )
       {
-         Longint cliqueweightsum;
+         SCIP_Longint cliqueweightsum;
          int probindex;
          int idx;
          int j;
@@ -2742,7 +2742,7 @@ RETCODE tightenWeightsLift(
             continue;
 
          /* mark the items that are implied to zero by setting the current variable to the current value */
-         clearMemoryArray(itemremoved, consdata->nvars);
+         BMSclearMemoryArray(itemremoved, consdata->nvars);
          for( idx = firstidxs[val][probindex]; idx != 0; idx = nextidxs[idx] )
          {
             assert(0 < idx && idx < nzeroitems);
@@ -2752,7 +2752,7 @@ RETCODE tightenWeightsLift(
 
          /* calculate the residual cliqueweight sum */
          cliqueweightsum = addweightsum; /* the previously added items are single-element cliques */
-         clearMemoryArray(cliqueused, consdata->nvars);
+         BMSclearMemoryArray(cliqueused, consdata->nvars);
          for( j = 0; j < consdata->nvars; ++j )
          {
             assert(0 <= consdata->cliquepartition[j] && consdata->cliquepartition[j] < consdata->nvars);
@@ -2768,22 +2768,22 @@ RETCODE tightenWeightsLift(
          /* check if the weight of the variable/value can be increased */
          if( cliqueweightsum < consdata->capacity )
          {
-            VAR* var;
-            Longint weight;
+            SCIP_VAR* var;
+            SCIP_Longint weight;
 
             /* insert the variable (with value TRUE) in the list of additional items */
             assert(naddvars < 2*nbinvars);
             var = binvars[probindex];
             if( val == FALSE )
             {
-               CHECK_OKAY( SCIPgetNegatedVar(scip, var, &var) );
+               SCIP_CALL( SCIPgetNegatedVar(scip, var, &var) );
             }
             weight = consdata->capacity - cliqueweightsum;
             addvars[naddvars] = var;
             addweights[naddvars] = weight;
             addweightsum += weight;
             naddvars++;
-            debugMessage("knapsack constraint <%s>: adding lifted item %lld<%s>\n",
+            SCIPdebugMessage("knapsack constraint <%s>: adding lifted item %lld<%s>\n",
                SCIPconsGetName(cons), weight, SCIPvarGetName(var));
          }
       }
@@ -2792,12 +2792,12 @@ RETCODE tightenWeightsLift(
    /* add all additional item weights */
    for( i = 0; i < naddvars; ++i )
    {
-      CHECK_OKAY( addCoef(scip, cons, addvars[i], addweights[i]) );
+      SCIP_CALL( addCoef(scip, cons, addvars[i], addweights[i]) );
    }
    *nchgcoefs += naddvars;
 
    /* if new items were added, multiple entries of the same variable are possible and we have to clean up the constraint */
-   CHECK_OKAY( mergeMultiples(scip, cons) );
+   SCIP_CALL( mergeMultiples(scip, cons) );
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &addweights);
@@ -2822,7 +2822,7 @@ RETCODE tightenWeightsLift(
  *      if weightsum - wi < capacity:
  *      - not using item i would make the knapsack constraint redundant
  *      - wi and capacity can be changed to have the same redundancy effect and the same results for
- *        fixing xi to zero or one, but with a reduced wi and tightened capacity to tighten the LP relaxation
+ *        fixing xi to zero or one, but with a reduced wi and tightened capacity to tighten the SCIP_LP relaxation
  *      - change coefficients:
  *          wi'       := weightsum - capacity
  *          capacity' := capacity - (wi - wi')
@@ -2831,7 +2831,7 @@ RETCODE tightenWeightsLift(
  *      if cliqueweightsum - W(C) < capacity:
  *      - not using any item of C would make the knapsack constraint redundant
  *      - weights wi, i \in C, and capacity can be changed to have the same redundancy effect and the same results for
- *        fixing xi, i \in C, to zero or one, but with a reduced wi and tightened capacity to tighten the LP relaxation
+ *        fixing xi, i \in C, to zero or one, but with a reduced wi and tightened capacity to tighten the SCIP_LP relaxation
  *      - change coefficients:
  *          delta     := capacity - (cliqueweightsum - W(C))
  *          wi'       := max(wi - delta, 0)
@@ -2851,16 +2851,16 @@ RETCODE tightenWeightsLift(
  *      - wi can be increased to the capacity
  */
 static
-RETCODE tightenWeights(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< knapsack constraint */
-   int*             nchgcoefs,          /**< pointer to count total number of changed coefficients */
-   int*             nchgsides           /**< pointer to count number of side changes */
+SCIP_RETCODE tightenWeights(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< knapsack constraint */
+   int*                  nchgcoefs,          /**< pointer to count total number of changed coefficients */
+   int*                  nchgsides           /**< pointer to count number of side changes */
    )
 {
-   CONSHDLRDATA* conshdlrdata;
-   CONSDATA* consdata;
-   Longint minweight;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   SCIP_Longint minweight;
    int i;
 
    assert(nchgcoefs != NULL);
@@ -2872,13 +2872,13 @@ RETCODE tightenWeights(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->row == NULL); /* we are in presolve, so no LP row exists */
+   assert(consdata->row == NULL); /* we are in presolve, so no SCIP_LP row exists */
    assert(consdata->onesweightsum == 0); /* all fixed variables should have been removed */
    assert(consdata->weightsum > consdata->capacity); /* otherwise, the constraint is redundant */
    assert(consdata->nvars > 0);
 
    /* make sure, all multiple items are merged */
-   CHECK_OKAY( mergeMultiples(scip, cons) );
+   SCIP_CALL( mergeMultiples(scip, cons) );
 
    /* apply rule (1) */
    do
@@ -2890,12 +2890,12 @@ RETCODE tightenWeights(
 
       for( i = 0; i < consdata->nvars; ++i )
       {
-         Longint weight;
+         SCIP_Longint weight;
          
          weight = consdata->weights[i];
          if( consdata->weightsum - weight < consdata->capacity )
          {
-            Longint newweight;
+            SCIP_Longint newweight;
             
             newweight = consdata->weightsum - consdata->capacity;
             consdataChgWeight(consdata, i, newweight);
@@ -2903,7 +2903,7 @@ RETCODE tightenWeights(
             (*nchgcoefs)++;
             (*nchgsides)++;
             assert(!consdata->sorted);
-            debugMessage("knapsack constraint <%s>: changed weight of <%s> from %lld to %lld, capacity from %lld to %lld\n",
+            SCIPdebugMessage("knapsack constraint <%s>: changed weight of <%s> from %lld to %lld, capacity from %lld to %lld\n",
                SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[i]), weight, newweight,
                consdata->capacity + (weight-newweight), consdata->capacity);
          }
@@ -2920,14 +2920,14 @@ RETCODE tightenWeights(
    /* apply rule (2) */
    if( conshdlrdata->disaggregation )
    {
-      Longint* maxcliqueweights;
-      Longint cliqueweightsum;
+      SCIP_Longint* maxcliqueweights;
+      SCIP_Longint cliqueweightsum;
 
-      CHECK_OKAY( SCIPallocBufferArray(scip, &maxcliqueweights, consdata->nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &maxcliqueweights, consdata->nvars) );
       do
       {
          int ncliques;
-         Bool zeroweights;
+         SCIP_Bool zeroweights;
 
          assert(consdata->merged);
 
@@ -2935,7 +2935,7 @@ RETCODE tightenWeights(
          sortItems(consdata);
 
          /* calculate a clique partition */
-         CHECK_OKAY( calcCliquepartition(scip, consdata) );
+         SCIP_CALL( calcCliquepartition(scip, consdata) );
 
          /* if there are only single element cliques, rule (2) is equivalent to rule (1) */
          if( consdata->cliquepartition[consdata->nvars-1] == consdata->nvars-1 )
@@ -2961,15 +2961,15 @@ RETCODE tightenWeights(
          zeroweights = FALSE;
          for( i = 0; i < ncliques; ++i )
          {
-            Longint delta;
+            SCIP_Longint delta;
 
             delta = consdata->capacity - (cliqueweightsum - maxcliqueweights[i]);
             if( delta > 0 )
             {
                int j;
-               Bool cliquezeroweights;
+               SCIP_Bool cliquezeroweights;
 
-               debugMessage("knapsack constraint <%s>: weights of clique %d (maxweight: %lld) can be tightened: cliqueweightsum=%lld, capacity=%lld -> delta: %lld\n",
+               SCIPdebugMessage("knapsack constraint <%s>: weights of clique %d (maxweight: %lld) can be tightened: cliqueweightsum=%lld, capacity=%lld -> delta: %lld\n",
                   SCIPconsGetName(cons), i, maxcliqueweights[i], cliqueweightsum, consdata->capacity, delta);
                cliquezeroweights = FALSE;
 #ifndef NDEBUG
@@ -2980,12 +2980,12 @@ RETCODE tightenWeights(
                {
                   if( consdata->cliquepartition[j] == i )
                   {
-                     Longint newweight;
+                     SCIP_Longint newweight;
                   
                      newweight = consdata->weights[j] - delta;
                      newweight = MAX(newweight, 0);
                      cliquezeroweights = cliquezeroweights || (newweight == 0);
-                     debugMessage(" -> changed weight of <%s> from %lld to %lld\n",
+                     SCIPdebugMessage(" -> changed weight of <%s> from %lld to %lld\n",
                         SCIPvarGetName(consdata->vars[j]), consdata->weights[j], newweight);
                      consdataChgWeight(consdata, j, newweight);
                      (*nchgcoefs)++;
@@ -2994,7 +2994,7 @@ RETCODE tightenWeights(
                }
                consdata->capacity -= delta;
                (*nchgsides)++;
-               debugMessage(" -> changed capacity from %lld to %lld\n", consdata->capacity + delta, consdata->capacity);
+               SCIPdebugMessage(" -> changed capacity from %lld to %lld\n", consdata->capacity + delta, consdata->capacity);
 
                /* if at least one of the weights in the clique was reduced to zero, we have to make sure, the clique is
                 * enforced - the clique might have been constructed partially from this constraint, and by setting the
@@ -3002,13 +3002,13 @@ RETCODE tightenWeights(
                 */
                if( cliquezeroweights )
                {
-                  CONS* cliquecons;
-                  char name[MAXSTRLEN];
-                  VAR** cliquevars;
+                  SCIP_CONS* cliquecons;
+                  char name[SCIP_MAXSTRLEN];
+                  SCIP_VAR** cliquevars;
                   int ncliquevars;
 
                   zeroweights = TRUE;
-                  CHECK_OKAY( SCIPallocBufferArray(scip, &cliquevars, consdata->nvars) );
+                  SCIP_CALL( SCIPallocBufferArray(scip, &cliquevars, consdata->nvars) );
                   ncliquevars = 0;
                   for( j = i; j < consdata->nvars; ++j )
                   {
@@ -3019,21 +3019,21 @@ RETCODE tightenWeights(
                      }
                   }
                   sprintf(name, "%s_clq_%lld_%d", SCIPconsGetName(cons), consdata->capacity, i);
-                  CHECK_OKAY( SCIPcreateConsSetpack(scip, &cliquecons, name, ncliquevars, cliquevars,
+                  SCIP_CALL( SCIPcreateConsSetpack(scip, &cliquecons, name, ncliquevars, cliquevars,
                         FALSE /*SCIPconsIsInitial(cons)*/, TRUE /*SCIPconsIsSeparated(cons)*/, SCIPconsIsEnforced(cons),
                         SCIPconsIsChecked(cons), TRUE /*SCIPconsIsPropagated(cons)*/, SCIPconsIsLocal(cons),
                         FALSE, SCIPconsIsDynamic(cons), SCIPconsIsRemoveable(cons)) );
-                  debugMessage(" -> adding clique constraint: ");
-                  debug(SCIPprintCons(scip, cliquecons, NULL));
-                  CHECK_OKAY( SCIPaddCons(scip, cliquecons) );
-                  CHECK_OKAY( SCIPreleaseCons(scip, &cliquecons) );
+                  SCIPdebugMessage(" -> adding clique constraint: ");
+                  SCIPdebug(SCIPprintCons(scip, cliquecons, NULL));
+                  SCIP_CALL( SCIPaddCons(scip, cliquecons) );
+                  SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
                   SCIPfreeBufferArray(scip, &cliquevars);
                }
             }
          }
          if( zeroweights )
          {
-            CHECK_OKAY( removeZeroWeights(scip, cons) );
+            SCIP_CALL( removeZeroWeights(scip, cons) );
          }
       }
       while( !consdata->sorted && consdata->weightsum > consdata->capacity );
@@ -3045,7 +3045,7 @@ RETCODE tightenWeights(
    }
 
    /* apply rule (3) */
-   CHECK_OKAY( tightenWeightsLift(scip, cons, nchgcoefs) );
+   SCIP_CALL( tightenWeightsLift(scip, cons, nchgcoefs) );
 
    /* check for redundancy */
    if( consdata->weightsum <= consdata->capacity )
@@ -3057,7 +3057,7 @@ RETCODE tightenWeights(
    minweight = consdata->weights[consdata->nvars-1];
    for( i = 0; i < consdata->nvars-1; ++i )
    {
-      Longint weight;
+      SCIP_Longint weight;
 
       weight = consdata->weights[i];
       assert(weight >= minweight);
@@ -3065,7 +3065,7 @@ RETCODE tightenWeights(
       {
          if( weight < consdata->capacity )
          {
-            debugMessage("knapsack constraint <%s>: changed weight of <%s> from %lld to %lld\n",
+            SCIPdebugMessage("knapsack constraint <%s>: changed weight of <%s> from %lld to %lld\n",
                SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[i]), weight, consdata->capacity);
             assert(consdata->sorted);
             consdataChgWeight(consdata, i, consdata->capacity); /* this does not destroy the weight order! */
@@ -3081,14 +3081,14 @@ RETCODE tightenWeights(
    /* apply rule (4) (smallest weight) */
    if( consdata->nvars >= 2 )
    {
-      Longint weight;
+      SCIP_Longint weight;
 
       minweight = consdata->weights[consdata->nvars-2];
       weight = consdata->weights[consdata->nvars-1];
       assert(minweight >= weight);
       if( minweight + weight > consdata->capacity && weight < consdata->capacity )
       {
-         debugMessage("knapsack constraint <%s>: changed weight of <%s> from %lld to %lld\n",
+         SCIPdebugMessage("knapsack constraint <%s>: changed weight of <%s> from %lld to %lld\n",
             SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[consdata->nvars-1]), weight, consdata->capacity);
          assert(consdata->sorted);
          consdataChgWeight(consdata, consdata->nvars-1, consdata->capacity); /* this does not destroy the weight order! */
@@ -3110,9 +3110,9 @@ RETCODE tightenWeights(
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
-DECL_CONSFREE(consFreeKnapsack)
+SCIP_DECL_CONSFREE(consFreeKnapsack)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    /* free constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -3148,9 +3148,9 @@ DECL_CONSFREE(consFreeKnapsack)
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
-DECL_CONSEXITSOL(consExitsolKnapsack)
+SCIP_DECL_CONSEXITSOL(consExitsolKnapsack)
 {  /*lint --e{715}*/
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
    int c;
 
    /* release the rows of all constraints */
@@ -3161,7 +3161,7 @@ DECL_CONSEXITSOL(consExitsolKnapsack)
 
       if( consdata->row != NULL )
       {
-         CHECK_OKAY( SCIPreleaseRow(scip, &consdata->row) );
+         SCIP_CALL( SCIPreleaseRow(scip, &consdata->row) );
       }
    }
 
@@ -3170,9 +3170,9 @@ DECL_CONSEXITSOL(consExitsolKnapsack)
 
 /** frees specific constraint data */
 static
-DECL_CONSDELETE(consDeleteKnapsack)
+SCIP_DECL_CONSDELETE(consDeleteKnapsack)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -3183,18 +3183,18 @@ DECL_CONSDELETE(consDeleteKnapsack)
    assert(conshdlrdata->eventhdlr != NULL);
    
    /* free knapsack constraint */
-   CHECK_OKAY( consdataFree(scip, consdata, conshdlrdata->eventhdlr) );
+   SCIP_CALL( consdataFree(scip, consdata, conshdlrdata->eventhdlr) );
    
    return SCIP_OKAY;
 }
 
 /** transforms constraint data into data belonging to the transformed problem */ 
 static
-DECL_CONSTRANS(consTransKnapsack)
+SCIP_DECL_CONSTRANS(consTransKnapsack)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
-   CONSDATA* sourcedata;
-   CONSDATA* targetdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* sourcedata;
+   SCIP_CONSDATA* targetdata;
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -3204,7 +3204,7 @@ DECL_CONSTRANS(consTransKnapsack)
 
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
-   assert(sourcedata->row == NULL);  /* in original problem, there cannot be LP rows */
+   assert(sourcedata->row == NULL);  /* in original problem, there cannot be SCIP_LP rows */
 
    /* get event handler */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -3212,11 +3212,11 @@ DECL_CONSTRANS(consTransKnapsack)
    assert(conshdlrdata->eventhdlr != NULL);
 
    /* create target constraint data */
-   CHECK_OKAY( consdataCreate(scip, &targetdata, conshdlrdata->eventhdlr,
+   SCIP_CALL( consdataCreate(scip, &targetdata, conshdlrdata->eventhdlr,
          sourcedata->nvars, sourcedata->vars, sourcedata->weights, sourcedata->capacity) ); 
 
    /* create target constraint */
-   CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
+   SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
@@ -3225,9 +3225,9 @@ DECL_CONSTRANS(consTransKnapsack)
    return SCIP_OKAY;
 }
 
-/** LP initialization method of constraint handler */
+/** SCIP_LP initialization method of constraint handler */
 static
-DECL_CONSINITLP(consInitlpKnapsack)
+SCIP_DECL_CONSINITLP(consInitlpKnapsack)
 {  /*lint --e{715}*/
    int i;
 
@@ -3235,7 +3235,7 @@ DECL_CONSINITLP(consInitlpKnapsack)
    {
       if( SCIPconsIsInitial(conss[i]) )
       {
-         CHECK_OKAY( addRelaxation(scip, conss[i]) );
+         SCIP_CALL( addRelaxation(scip, conss[i]) );
       }
    }
 
@@ -3244,10 +3244,10 @@ DECL_CONSINITLP(consInitlpKnapsack)
 
 /** separation method of constraint handler */
 static
-DECL_CONSSEPA(consSepaKnapsack)
+SCIP_DECL_CONSSEPA(consSepaKnapsack)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
-   Bool sepacardinality;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool sepacardinality;
    int depth;
    int nrounds;
    int sepafreq;
@@ -3264,7 +3264,7 @@ DECL_CONSSEPA(consSepaKnapsack)
    depth = SCIPgetDepth(scip);
    nrounds = SCIPgetNSepaRounds(scip);
    
-   debugMessage("knapsack separation of %d/%d constraints, round %d (max %d/%d)\n",
+   SCIPdebugMessage("knapsack separation of %d/%d constraints, round %d (max %d/%d)\n",
       nusefulconss, nconss, nrounds, conshdlrdata->maxroundsroot, conshdlrdata->maxrounds);
 
    /* only call the separator a given number of times at each node */
@@ -3287,7 +3287,7 @@ DECL_CONSSEPA(consSepaKnapsack)
    /* separate useful constraints */
    for( i = 0; i < nusefulconss && ncuts < maxsepacuts; i++ )
    {
-      CHECK_OKAY( separateCons(scip, conss[i], sepacardinality, conshdlrdata->maxnumcardlift, &ncuts) );
+      SCIP_CALL( separateCons(scip, conss[i], sepacardinality, conshdlrdata->maxnumcardlift, &ncuts) );
    }
    
    /* adjust return value */
@@ -3297,19 +3297,19 @@ DECL_CONSSEPA(consSepaKnapsack)
    return SCIP_OKAY;
 }
 
-/** constraint enforcing method of constraint handler for LP solutions */
+/** constraint enforcing method of constraint handler for SCIP_LP solutions */
 static
-DECL_CONSENFOLP(consEnfolpKnapsack)
+SCIP_DECL_CONSENFOLP(consEnfolpKnapsack)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
-   Bool violated;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool violated;
    int maxncuts;
    int ncuts;
    int i;
 
    *result = SCIP_FEASIBLE;
 
-   debugMessage("knapsack enforcement of %d/%d constraints\n", nusefulconss, nconss);
+   SCIPdebugMessage("knapsack enforcement of %d/%d constraints\n", nusefulconss, nconss);
 
    /* get maximal number of cuts per round */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -3321,11 +3321,11 @@ DECL_CONSENFOLP(consEnfolpKnapsack)
    /* search for violated useful knapsack constraints */
    for( i = 0; i < nusefulconss && ncuts < maxncuts; i++ )
    {
-      CHECK_OKAY( checkCons(scip, conss[i], NULL, FALSE, &violated) );
+      SCIP_CALL( checkCons(scip, conss[i], NULL, FALSE, &violated) );
       if( violated )
       {
-         /* add knapsack constraint as LP row to the LP */
-         CHECK_OKAY( addRelaxation(scip, conss[i]) );
+         /* add knapsack constraint as SCIP_LP row to the SCIP_LP */
+         SCIP_CALL( addRelaxation(scip, conss[i]) );
          ncuts++;
       }
    } 
@@ -3333,11 +3333,11 @@ DECL_CONSENFOLP(consEnfolpKnapsack)
    /* as long as no violations were found, search for violated obsolete knapsack constraints */
    for( i = nusefulconss; i < nconss && ncuts == 0; i++ )
    {
-      CHECK_OKAY( checkCons(scip, conss[i], NULL, FALSE, &violated) );
+      SCIP_CALL( checkCons(scip, conss[i], NULL, FALSE, &violated) );
       if( violated )
       {
-         /* add knapsack constraint as LP row to the LP */
-         CHECK_OKAY( addRelaxation(scip, conss[i]) );
+         /* add knapsack constraint as SCIP_LP row to the SCIP_LP */
+         SCIP_CALL( addRelaxation(scip, conss[i]) );
          ncuts++;
       }
    } 
@@ -3351,14 +3351,14 @@ DECL_CONSENFOLP(consEnfolpKnapsack)
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
-DECL_CONSENFOPS(consEnfopsKnapsack)
+SCIP_DECL_CONSENFOPS(consEnfopsKnapsack)
 {  /*lint --e{715}*/
-   Bool violated;
+   SCIP_Bool violated;
    int i;
 
    for( i = 0; i < nconss; i++ )
    {
-      CHECK_OKAY( checkCons(scip, conss[i], NULL, TRUE, &violated) );
+      SCIP_CALL( checkCons(scip, conss[i], NULL, TRUE, &violated) );
       if( violated )
       {
          *result = SCIP_INFEASIBLE;
@@ -3372,14 +3372,14 @@ DECL_CONSENFOPS(consEnfopsKnapsack)
 
 /** feasibility check method of constraint handler for integral solutions */
 static
-DECL_CONSCHECK(consCheckKnapsack)
+SCIP_DECL_CONSCHECK(consCheckKnapsack)
 {  /*lint --e{715}*/
-   Bool violated;
+   SCIP_Bool violated;
    int i;
 
    for( i = 0; i < nconss; i++ )
    {
-      CHECK_OKAY( checkCons(scip, conss[i], sol, checklprows, &violated) );
+      SCIP_CALL( checkCons(scip, conss[i], sol, checklprows, &violated) );
       if( violated )
       {
          *result = SCIP_INFEASIBLE;
@@ -3393,10 +3393,10 @@ DECL_CONSCHECK(consCheckKnapsack)
 
 /** domain propagation method of constraint handler */
 static
-DECL_CONSPROP(consPropKnapsack)
+SCIP_DECL_CONSPROP(consPropKnapsack)
 {  /*lint --e{715}*/
-   Bool cutoff;
-   Bool redundant;
+   SCIP_Bool cutoff;
+   SCIP_Bool redundant;
    int nfixedvars;
    int i;
 
@@ -3406,7 +3406,7 @@ DECL_CONSPROP(consPropKnapsack)
    /* process useful constraints */
    for( i = 0; i < nusefulconss && !cutoff; i++ )
    {
-      CHECK_OKAY( propagateCons(scip, conss[i], &cutoff, &redundant, &nfixedvars) );
+      SCIP_CALL( propagateCons(scip, conss[i], &cutoff, &redundant, &nfixedvars) );
    } 
 
    /* adjust result code */
@@ -3422,11 +3422,11 @@ DECL_CONSPROP(consPropKnapsack)
 
 /** presolving method of constraint handler */
 static
-DECL_CONSPRESOL(consPresolKnapsack)
+SCIP_DECL_CONSPRESOL(consPresolKnapsack)
 {  /*lint --e{715}*/
-   CONSDATA* consdata;
-   Bool cutoff;
-   Bool redundant;
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool cutoff;
+   SCIP_Bool redundant;
    int oldnfixedvars;
    int oldndelconss;
    int oldnchgcoefs;
@@ -3442,7 +3442,7 @@ DECL_CONSPRESOL(consPresolKnapsack)
 
    for( i = 0; i < nconss; i++ )
    {
-      CONS* cons;
+      SCIP_CONS* cons;
       int thisnfixedvars;
 
       cons = conss[i];
@@ -3456,20 +3456,20 @@ DECL_CONSPRESOL(consPresolKnapsack)
       if( consdata->presolved )
          continue;
 
-      debugMessage("presolving knapsack constraint <%s>\n", SCIPconsGetName(cons));
-      debug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
+      SCIPdebugMessage("presolving knapsack constraint <%s>\n", SCIPconsGetName(cons));
+      SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
 
       consdata->presolved = TRUE;
 
       /* remove all fixed variables */
       if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || *nfixedvars > oldnfixedvars )
       {
-         CHECK_OKAY( applyFixings(scip, cons) );
+         SCIP_CALL( applyFixings(scip, cons) );
       }
 
       /* propagate constraint */
       thisnfixedvars = *nfixedvars;
-      CHECK_OKAY( propagateCons(scip, cons, &cutoff, &redundant, nfixedvars) );
+      SCIP_CALL( propagateCons(scip, cons, &cutoff, &redundant, nfixedvars) );
       if( cutoff )
          break;
       if( redundant )
@@ -3481,7 +3481,7 @@ DECL_CONSPRESOL(consPresolKnapsack)
       /* remove again all fixed variables, if further fixings were found */
       if( *nfixedvars > thisnfixedvars )
       {
-         CHECK_OKAY( applyFixings(scip, cons) );
+         SCIP_CALL( applyFixings(scip, cons) );
       }
 
       if( !SCIPconsIsModifiable(cons) )
@@ -3490,7 +3490,7 @@ DECL_CONSPRESOL(consPresolKnapsack)
          normalizeWeights(cons, nchgcoefs, nchgsides);
 
          /* tighten capacity and weights */
-         CHECK_OKAY( tightenWeights(scip, cons, nchgcoefs, nchgsides) );
+         SCIP_CALL( tightenWeights(scip, cons, nchgcoefs, nchgsides) );
       }
    } 
 
@@ -3509,10 +3509,10 @@ DECL_CONSPRESOL(consPresolKnapsack)
 
 /** propagation conflict resolving method of constraint handler */
 static
-DECL_CONSRESPROP(consRespropKnapsack)
+SCIP_DECL_CONSRESPROP(consRespropKnapsack)
 {  /*lint --e{715}*/
-   CONSDATA* consdata;
-   Longint capsum;
+   SCIP_CONSDATA* consdata;
+   SCIP_Longint capsum;
    int i;
 
    assert(result != NULL);
@@ -3545,7 +3545,7 @@ DECL_CONSRESPROP(consRespropKnapsack)
       {
          if( SCIPvarGetLbAtIndex(consdata->vars[i], bdchgidx, FALSE) > 0.5 )
          {
-            CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
             capsum += consdata->weights[i];
             if( capsum > consdata->capacity )
                break;
@@ -3559,9 +3559,9 @@ DECL_CONSRESPROP(consRespropKnapsack)
 
 /** variable rounding lock method of constraint handler */
 static
-DECL_CONSLOCK(consLockKnapsack)
+SCIP_DECL_CONSLOCK(consLockKnapsack)
 {  /*lint --e{715}*/
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
    int i;
 
    consdata = SCIPconsGetData(cons);
@@ -3569,7 +3569,7 @@ DECL_CONSLOCK(consLockKnapsack)
 
    for( i = 0; i < consdata->nvars; i++)
    {
-      CHECK_OKAY( SCIPaddVarLocks(scip, consdata->vars[i], nlocksneg, nlockspos) );
+      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlocksneg, nlockspos) );
    }
 
    return SCIP_OKAY;
@@ -3593,9 +3593,9 @@ DECL_CONSLOCK(consLockKnapsack)
 
 /** constraint display method of constraint handler */
 static
-DECL_CONSPRINT(consPrintKnapsack)
+SCIP_DECL_CONSPRINT(consPrintKnapsack)
 {  /*lint --e{715}*/
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
    int i;
 
    consdata = SCIPconsGetData(cons);
@@ -3621,30 +3621,30 @@ DECL_CONSPRINT(consPrintKnapsack)
 
 /** creates and captures a knapsack constraint out of a linear inequality */
 static
-RETCODE createNormalizedKnapsack(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*      name,               /**< name of constraint */
-   int              nvars,              /**< number of variables in the constraint */
-   VAR**            vars,               /**< array with variables of constraint entries */
-   Real*            vals,               /**< array with inequality coefficients */
-   Real             lhs,                /**< left hand side of inequality */
-   Real             rhs,                /**< right hand side of inequality */
-   Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             separate,           /**< should the constraint be separated during LP processing? */
-   Bool             enforce,            /**< should the constraint be enforced during node processing? */
-   Bool             check,              /**< should the constraint be checked for feasibility? */
-   Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   Bool             dynamic,            /**< is constraint subject to aging? */
-   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+SCIP_RETCODE createNormalizedKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
+   SCIP_Real*            vals,               /**< array with inequality coefficients */
+   SCIP_Real             lhs,                /**< left hand side of inequality */
+   SCIP_Real             rhs,                /**< right hand side of inequality */
+   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   SCIP_Bool             local,              /**< is constraint only valid locally? */
+   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
+   SCIP_Bool             removeable          /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
    )
 {
-   VAR** transvars;
-   Longint* weights;
-   Longint capacity;
-   Longint weight;
+   SCIP_VAR** transvars;
+   SCIP_Longint* weights;
+   SCIP_Longint capacity;
+   SCIP_Longint weight;
    int mult;
    int v;
 
@@ -3653,8 +3653,8 @@ RETCODE createNormalizedKnapsack(
    assert(SCIPisInfinity(scip, -lhs) != SCIPisInfinity(scip, rhs));
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &transvars, nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &weights, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &transvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &weights, nvars) );
 
    /* if the right hand side is non-infinite, we have to negate all variables with negative coefficient;
     * otherwise, we have to negate all variables with positive coefficient and multiply the row with -1
@@ -3662,19 +3662,19 @@ RETCODE createNormalizedKnapsack(
    if( SCIPisInfinity(scip, rhs) )
    {
       mult = -1;
-      capacity = (Longint)SCIPfeasFloor(scip, -lhs);
+      capacity = (SCIP_Longint)SCIPfeasFloor(scip, -lhs);
    }
    else
    {
       mult = +1;
-      capacity = (Longint)SCIPfeasFloor(scip, rhs);
+      capacity = (SCIP_Longint)SCIPfeasFloor(scip, rhs);
    }
 
    /* negate positive or negative variables */
    for( v = 0; v < nvars; ++v )
    {
       assert(SCIPisFeasIntegral(scip, vals[v]));
-      weight = mult * (Longint)SCIPfeasFloor(scip, vals[v]);
+      weight = mult * (SCIP_Longint)SCIPfeasFloor(scip, vals[v]);
       if( weight > 0 )
       {
          transvars[v] = vars[v];
@@ -3682,7 +3682,7 @@ RETCODE createNormalizedKnapsack(
       }
       else
       {
-         CHECK_OKAY( SCIPgetNegatedVar(scip, vars[v], &transvars[v]) );
+         SCIP_CALL( SCIPgetNegatedVar(scip, vars[v], &transvars[v]) );
          weights[v] = -weight;
          capacity -= weight;
       }
@@ -3690,7 +3690,7 @@ RETCODE createNormalizedKnapsack(
    }
 
    /* create the constraint */
-   CHECK_OKAY( SCIPcreateConsKnapsack(scip, cons, name, nvars, transvars, weights, capacity,
+   SCIP_CALL( SCIPcreateConsKnapsack(scip, cons, name, nvars, transvars, weights, capacity,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable) );
 
    /* free temporary memory */
@@ -3702,9 +3702,9 @@ RETCODE createNormalizedKnapsack(
 
 /** tries to upgrade a linear constraint into a knapsack constraint */
 static
-DECL_LINCONSUPGD(linconsUpgdKnapsack)
+SCIP_DECL_LINCONSUPGD(linconsUpgdKnapsack)
 {  /*lint --e{715}*/
-   Bool upgrade;
+   SCIP_Bool upgrade;
 
    assert(upgdcons != NULL);
    
@@ -3719,11 +3719,11 @@ DECL_LINCONSUPGD(linconsUpgdKnapsack)
 
    if( upgrade )
    {
-      debugMessage("upgrading constraint <%s> to knapsack constraint\n", SCIPconsGetName(cons));
+      SCIPdebugMessage("upgrading constraint <%s> to knapsack constraint\n", SCIPconsGetName(cons));
       
       /* create the knapsack constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));
-      CHECK_OKAY( createNormalizedKnapsack(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, lhs, rhs,
+      SCIP_CALL( createNormalizedKnapsack(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, lhs, rhs,
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
@@ -3737,12 +3737,12 @@ DECL_LINCONSUPGD(linconsUpgdKnapsack)
 
 
 /*
- * Event handler
+ * SCIP_Event handler
  */
 
 /** execution methode of bound change event handler */
 static
-DECL_EVENTEXEC(eventExecKnapsack)
+SCIP_DECL_EVENTEXEC(eventExecKnapsack)
 {  /*lint --e{715}*/
    assert(eventdata != NULL);
    assert(eventdata->consdata != NULL);
@@ -3766,7 +3766,7 @@ DECL_EVENTEXEC(eventExecKnapsack)
       eventdata->consdata->presolved = FALSE;
       break;
    default:
-      errorMessage("invalid event type %x\n", SCIPeventGetType(event));
+      SCIPerrorMessage("invalid event type %x\n", SCIPeventGetType(event));
       return SCIP_INVALIDDATA;
    }
 
@@ -3781,32 +3781,32 @@ DECL_EVENTEXEC(eventExecKnapsack)
  */
 
 /** creates the handler for knapsack constraints and includes it in SCIP */
-RETCODE SCIPincludeConshdlrKnapsack(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeConshdlrKnapsack(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   EVENTHDLRDATA* eventhdlrdata;
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    /* include event handler for bound change events */
    eventhdlrdata = NULL;
-   CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC, 
+   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC, 
          NULL, NULL, NULL, NULL, NULL, NULL, eventExecKnapsack,
          eventhdlrdata) );
 
    /* create knapsack constraint handler data */
-   CHECK_OKAY( SCIPallocMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
 
    /* get event handler for bound change events */
    conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    if( conshdlrdata->eventhdlr == NULL )
    {
-      errorMessage("event handler for knapsack constraints not found\n");
+      SCIPerrorMessage("event handler for knapsack constraints not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 
    /* include constraint handler */
-   CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
@@ -3821,34 +3821,34 @@ RETCODE SCIPincludeConshdlrKnapsack(
          conshdlrdata) );
   
    /* include the linear constraint upgrade in the linear constraint handler */
-   CHECK_OKAY( SCIPincludeLinconsUpgrade(scip, linconsUpgdKnapsack, LINCONSUPGD_PRIORITY) );
+   SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdKnapsack, LINCONSUPGD_PRIORITY) );
 
    /* add knapsack constraint handler parameters */
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/knapsack/sepacardfreq",
          "multiplier on separation frequency, how often cardinality cuts are separated (-1: never, 0: only at root)",
          &conshdlrdata->sepacardfreq, DEFAULT_SEPACARDFREQ, -1, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/knapsack/maxrounds",
          "maximal number of separation rounds per node (-1: unlimited)",
          &conshdlrdata->maxrounds, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/knapsack/maxroundsroot",
          "maximal number of separation rounds per node in the root node (-1: unlimited)",
          &conshdlrdata->maxroundsroot, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/knapsack/maxsepacuts",
          "maximal number of cuts separated per separation round",
          &conshdlrdata->maxsepacuts, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/knapsack/maxsepacutsroot",
          "maximal number of cuts separated per separation round in the root node",
          &conshdlrdata->maxsepacutsroot, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/knapsack/maxnumcardlift",
          "maximal number of cardinality inequalities lifted per separation round (-1: unlimited)",
          &conshdlrdata->maxnumcardlift, DEFAULT_MAXNUMCARDLIFT, -1, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddBoolParam(scip,
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/knapsack/disaggregation",
          "should disaggregation of knapsack constraints be allowed in preprocessing?",
          &conshdlrdata->disaggregation, DEFAULT_DISAGGREGATION, NULL, NULL) );
@@ -3857,34 +3857,34 @@ RETCODE SCIPincludeConshdlrKnapsack(
 }
 
 /** creates and captures a knapsack constraint */
-RETCODE SCIPcreateConsKnapsack(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*      name,               /**< name of constraint */
-   int              nvars,              /**< number of items in the knapsack */
-   VAR**            vars,               /**< array with item variables */
-   Longint*         weights,            /**< array with item weights */
-   Longint          capacity,           /**< capacity of knapsack */
-   Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             separate,           /**< should the constraint be separated during LP processing? */
-   Bool             enforce,            /**< should the constraint be enforced during node processing? */
-   Bool             check,              /**< should the constraint be checked for feasibility? */
-   Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
-   Bool             dynamic,            /**< is constraint subject to aging? */
-   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+SCIP_RETCODE SCIPcreateConsKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of items in the knapsack */
+   SCIP_VAR**            vars,               /**< array with item variables */
+   SCIP_Longint*         weights,            /**< array with item weights */
+   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   SCIP_Bool             local,              /**< is constraint only valid locally? */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
+   SCIP_Bool             removeable          /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
    )
 {
-   CONSHDLRDATA* conshdlrdata;
-   CONSHDLR* conshdlr;
-   CONSDATA* consdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
 
    /* find the knapsack constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      errorMessage("knapsack constraint handler not found\n");
+      SCIPerrorMessage("knapsack constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 
@@ -3894,47 +3894,47 @@ RETCODE SCIPcreateConsKnapsack(
    assert(conshdlrdata->eventhdlr != NULL);
 
    /* create constraint data */
-   CHECK_OKAY( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, nvars, vars, weights, capacity) );
+   SCIP_CALL( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, nvars, vars, weights, capacity) );
         
    /* create constraint */
-   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
+   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removeable) );
 
    return SCIP_OKAY;
 }
 
 /** adds new item to knapsack constraint */
-RETCODE SCIPaddCoefKnapsack(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< constraint data */
-   VAR*             var,                /**< item variable */
-   Longint          weight              /**< item weight */
+SCIP_RETCODE SCIPaddCoefKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var,                /**< item variable */
+   SCIP_Longint          weight              /**< item weight */
    )
 {
    assert(var != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      errorMessage("constraint is not a knapsack constraint\n");
+      SCIPerrorMessage("constraint is not a knapsack constraint\n");
       return SCIP_INVALIDDATA;
    }
    
-   CHECK_OKAY( addCoef(scip, cons, var, weight) );
+   SCIP_CALL( addCoef(scip, cons, var, weight) );
 
    return SCIP_OKAY;
 }
 
-/** gets the dual solution of the knapsack constraint in the current LP */
-Real SCIPgetDualsolKnapsack(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< constraint data */
+/** gets the dual solution of the knapsack constraint in the current SCIP_LP */
+SCIP_Real SCIPgetDualsolKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
    )
 {
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      errorMessage("constraint is not a knapsack constraint\n");
+      SCIPerrorMessage("constraint is not a knapsack constraint\n");
       SCIPABORT();
    }
    
@@ -3947,17 +3947,17 @@ Real SCIPgetDualsolKnapsack(
       return 0.0;
 }
 
-/** gets the dual farkas value of the knapsack constraint in the current infeasible LP */
-Real SCIPgetDualfarkasKnapsack(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< constraint data */
+/** gets the dual farkas value of the knapsack constraint in the current infeasible SCIP_LP */
+SCIP_Real SCIPgetDualfarkasKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
    )
 {
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      errorMessage("constraint is not a knapsack constraint\n");
+      SCIPerrorMessage("constraint is not a knapsack constraint\n");
       SCIPABORT();
    }
    

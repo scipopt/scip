@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: bitencode.c,v 1.12 2005/05/31 17:20:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: bitencode.c,v 1.13 2005/08/22 18:35:31 bzfpfend Exp $"
 
 /**@file   bitencode.c
  * @brief  packing single and dual bit values
@@ -31,12 +31,13 @@
 
 /** encode a single bit vector into packed format */
 void SCIPencodeSingleBit(
-   const int*       inp,                /**< unpacked input vector */
-   SINGLEPACKET*    out,                /**< buffer to store the packed vector */
-   int              count               /**< number of elements */
+   const int*            inp,                /**< unpacked input vector */
+   SCIP_SINGLEPACKET*    out,                /**< buffer to store the packed vector */
+   int                   count               /**< number of elements */
    )
 {
-   static const SINGLEPACKET mask[SINGLEPACKETSIZE][2] = {   /* if the packetsize changes, the mask has to be updated */
+   /* if the packetsize changes, the mask has to be updated */
+   static const SCIP_SINGLEPACKET mask[SCIP_SINGLEPACKETSIZE][2] = {
       {0x00000000, 0x00000001},
       {0x00000000, 0x00000002},
       {0x00000000, 0x00000004},
@@ -77,12 +78,12 @@ void SCIPencodeSingleBit(
    assert(inp != NULL || count == 0);
    assert(out != NULL || count == 0);
    assert(count >= 0);
-   assert(SINGLEPACKETSIZE == 32);
+   assert(SCIP_SINGLEPACKETSIZE == 32);
 
-   rest = count % (int)SINGLEPACKETSIZE;
+   rest = count % (int)SCIP_SINGLEPACKETSIZE;
    nfull = count - rest;
 
-   for( i = 0; i < nfull; i += (int)SINGLEPACKETSIZE )
+   for( i = 0; i < nfull; i += (int)SCIP_SINGLEPACKETSIZE )
    {
       assert(inp != NULL);
       assert(out != NULL);
@@ -90,7 +91,7 @@ void SCIPencodeSingleBit(
 #ifndef NDEBUG
       {
          unsigned int j;
-         for( j = 0; j < SINGLEPACKETSIZE; ++j )
+         for( j = 0; j < SCIP_SINGLEPACKETSIZE; ++j )
             assert(0 <= inp[j] && inp[j] <= 1);
       }
 #endif
@@ -103,12 +104,12 @@ void SCIPencodeSingleBit(
          | mask[20][inp[20]] | mask[21][inp[21]] | mask[22][inp[22]] | mask[23][inp[23]]
          | mask[24][inp[24]] | mask[25][inp[25]] | mask[26][inp[26]] | mask[27][inp[27]]
          | mask[28][inp[28]] | mask[29][inp[29]] | mask[30][inp[30]] | mask[31][inp[31]];
-      inp += SINGLEPACKETSIZE;
+      inp += SCIP_SINGLEPACKETSIZE;
    }
 
    if( rest > 0 )
    {
-      SINGLEPACKET  m = (SINGLEPACKET) 0u;
+      SCIP_SINGLEPACKET  m = (SCIP_SINGLEPACKET) 0u;
 
       assert(inp != NULL);
       assert(out != NULL);
@@ -121,12 +122,12 @@ void SCIPencodeSingleBit(
 
 /** decode a packed single bit vector into unpacked format */
 void SCIPdecodeSingleBit(
-   const SINGLEPACKET* inp,             /**< packed input vector */
-   int*             out,                /**< buffer to store unpacked vector */
-   int              count               /**< number of elements */
+   const SCIP_SINGLEPACKET* inp,             /**< packed input vector */
+   int*                  out,                /**< buffer to store unpacked vector */
+   int                   count               /**< number of elements */
    )
 {
-   SINGLEPACKET m;
+   SCIP_SINGLEPACKET m;
    int rest;
    int nfull;
    int i;
@@ -134,12 +135,12 @@ void SCIPdecodeSingleBit(
    assert(inp != NULL || count == 0);
    assert(out != NULL || count == 0);
    assert(count >= 0);
-   assert(SINGLEPACKETSIZE == 32);
+   assert(SCIP_SINGLEPACKETSIZE == 32);
 
-   rest = count % (int)SINGLEPACKETSIZE;
+   rest = count % (int)SCIP_SINGLEPACKETSIZE;
    nfull = count - rest;
 
-   for( i = 0; i < nfull; i += (int)SINGLEPACKETSIZE )
+   for( i = 0; i < nfull; i += (int)SCIP_SINGLEPACKETSIZE )
    {
       assert(inp != NULL);
       assert(out != NULL);
@@ -228,12 +229,13 @@ void SCIPdecodeSingleBit(
 
 /** encode a dual bit vector into packed format */
 void SCIPencodeDualBit(
-   const int*       inp,                /**< unpacked input vector */
-   DUALPACKET*      out,                /**< buffer to store the packed vector */
-   int              count               /**< number of elements */
+   const int*            inp,                /**< unpacked input vector */
+   SCIP_DUALPACKET*      out,                /**< buffer to store the packed vector */
+   int                   count               /**< number of elements */
    )
 {
-   static const DUALPACKET mask[DUALPACKETSIZE][4] = {   /* if the packetsize changes, the mask has to be updated */
+   /* if the packetsize changes, the mask has to be updated */
+   static const SCIP_DUALPACKET mask[SCIP_DUALPACKETSIZE][4] = {
       {0x00000000, 0x00000001, 0x00000002, 0x00000003},
       {0x00000000, 0x00000004, 0x00000008, 0x0000000C},
       {0x00000000, 0x00000010, 0x00000020, 0x00000030},
@@ -258,12 +260,12 @@ void SCIPencodeDualBit(
    assert(inp != NULL || count == 0);
    assert(out != NULL || count == 0);
    assert(count >= 0);
-   assert(DUALPACKETSIZE == 16);
+   assert(SCIP_DUALPACKETSIZE == 16);
 
-   rest = count % (int)DUALPACKETSIZE;
+   rest = count % (int)SCIP_DUALPACKETSIZE;
    nfull = count - rest;
 
-   for( i = 0; i < nfull; i += (int)DUALPACKETSIZE, inp += (int)DUALPACKETSIZE )
+   for( i = 0; i < nfull; i += (int)SCIP_DUALPACKETSIZE, inp += (int)SCIP_DUALPACKETSIZE )
    {
       assert(inp != NULL);
       assert(out != NULL);
@@ -271,7 +273,7 @@ void SCIPencodeDualBit(
 #ifndef NDEBUG
       {
          unsigned int j;
-         for( j = 0; j < DUALPACKETSIZE; ++j )
+         for( j = 0; j < SCIP_DUALPACKETSIZE; ++j )
             assert(0 <= inp[j] && inp[j] <= 3);
       }
 #endif
@@ -285,7 +287,7 @@ void SCIPencodeDualBit(
 
    if( rest > 0 )
    {
-      DUALPACKET m = (DUALPACKET) 0u;
+      SCIP_DUALPACKET m = (SCIP_DUALPACKET) 0u;
 
       assert(inp != NULL);
       assert(out != NULL);
@@ -298,12 +300,12 @@ void SCIPencodeDualBit(
 
 /** decode a packed dual bit vector into unpacked format */
 void SCIPdecodeDualBit(
-   const DUALPACKET* inp,               /**< packed input vector */
-   int*             out,                /**< buffer to store unpacked vector */
-   int              count               /**< number of elements */
+   const SCIP_DUALPACKET* inp,               /**< packed input vector */
+   int*                  out,                /**< buffer to store unpacked vector */
+   int                   count               /**< number of elements */
    )
 {
-   DUALPACKET m;
+   SCIP_DUALPACKET m;
    int rest;
    int nfull;
    int i;
@@ -311,12 +313,12 @@ void SCIPdecodeDualBit(
    assert(inp != NULL || count == 0);
    assert(out != NULL || count == 0);
    assert(count >= 0);
-   assert(DUALPACKETSIZE == 16);
+   assert(SCIP_DUALPACKETSIZE == 16);
 
-   rest = count % (int)DUALPACKETSIZE;
+   rest = count % (int)SCIP_DUALPACKETSIZE;
    nfull = count - rest;
 
-   for( i = 0; i < nfull; i += (int)DUALPACKETSIZE )
+   for( i = 0; i < nfull; i += (int)SCIP_DUALPACKETSIZE )
    {
       assert(inp != NULL);
       assert(out != NULL);

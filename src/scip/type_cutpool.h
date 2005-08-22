@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cutpool.h,v 1.6 2005/07/15 17:20:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cutpool.h,v 1.7 2005/08/22 18:35:53 bzfpfend Exp $"
 
 /**@file   type_cutpool.h
  * @brief  type definitions for storing cuts in a cut pool
@@ -27,8 +27,8 @@
 #define __SCIP_TYPE_CUTPOOL_H__
 
 
-typedef struct Cutpool CUTPOOL;         /**< storage for pooled cuts */
-typedef struct Cut CUT;                 /**< datastructure for cuts in a cut pool */
+typedef struct SCIP_Cutpool SCIP_CUTPOOL;         /**< storage for pooled cuts */
+typedef struct SCIP_Cut SCIP_CUT;                 /**< datastructure for cuts in a cut pool */
 
 
 #endif

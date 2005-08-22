@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.cpp,v 1.7 2005/05/31 17:20:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprobdata.cpp,v 1.8 2005/08/22 18:35:31 bzfpfend Exp $"
 
 /**@file   objprobdata.cpp
  * @brief  C++ wrapper for user problem data
@@ -35,10 +35,10 @@
  */
 
 /** user problem data */
-struct ProbData
+struct SCIP_ProbData
 {
-   scip::ObjProbData* objprobdata;      /**< user problem data object */
-   Bool             deleteobject;       /**< should the user problem data object be deleted when problem is freed? */
+   scip::ObjProbData*    objprobdata;        /**< user problem data object */
+   SCIP_Bool             deleteobject;       /**< should the user problem data object be deleted when problem is freed? */
 };
 
 
@@ -50,14 +50,14 @@ struct ProbData
 
 /** frees user data of original problem (called when the original problem is freed) */
 static
-DECL_PROBDELORIG(probDelorigObj)
+SCIP_DECL_PROBDELORIG(probDelorigObj)
 {  /*lint --e{715}*/
    assert(probdata != NULL);
    assert(*probdata != NULL);
    assert((*probdata)->objprobdata != NULL);
 
    /* call virtual method of probdata object */
-   CHECK_OKAY( (*probdata)->objprobdata->scip_delorig(scip) );
+   SCIP_CALL( (*probdata)->objprobdata->scip_delorig(scip) );
 
    /* free probdata object */
    if( (*probdata)->deleteobject )
@@ -75,10 +75,10 @@ DECL_PROBDELORIG(probDelorigObj)
  *  (called after problem was transformed)
  */
 static
-DECL_PROBTRANS(probTransObj)
+SCIP_DECL_PROBTRANS(probTransObj)
 {  /*lint --e{715}*/
    scip::ObjProbData* objprobdata;
-   Bool deleteobject;
+   SCIP_Bool deleteobject;
 
    assert(sourcedata != NULL);
    assert(sourcedata->objprobdata != NULL);
@@ -86,10 +86,10 @@ DECL_PROBTRANS(probTransObj)
    assert(*targetdata == NULL);
 
    /* call virtual method of probdata object */
-   CHECK_OKAY( sourcedata->objprobdata->scip_trans(scip, &objprobdata, &deleteobject) );
+   SCIP_CALL( sourcedata->objprobdata->scip_trans(scip, &objprobdata, &deleteobject) );
 
    /* create transformed user problem data */
-   *targetdata = new PROBDATA;
+   *targetdata = new SCIP_PROBDATA;
    (*targetdata)->objprobdata = objprobdata;
    (*targetdata)->deleteobject = deleteobject;
 
@@ -99,14 +99,14 @@ DECL_PROBTRANS(probTransObj)
 
 /** frees user data of transformed problem (called when the transformed problem is freed) */
 static
-DECL_PROBDELTRANS(probDeltransObj)
+SCIP_DECL_PROBDELTRANS(probDeltransObj)
 {  /*lint --e{715}*/
    assert(probdata != NULL);
    assert(*probdata != NULL);
    assert((*probdata)->objprobdata != NULL);
 
    /* call virtual method of probdata object */
-   CHECK_OKAY( (*probdata)->objprobdata->scip_deltrans(scip) );
+   SCIP_CALL( (*probdata)->objprobdata->scip_deltrans(scip) );
 
    /* free probdata object */
    if( (*probdata)->deleteobject )
@@ -122,13 +122,13 @@ DECL_PROBDELTRANS(probDeltransObj)
 
 /** solving process initialization method of transformed data (called before the branch and bound process begins) */
 static
-DECL_PROBINITSOL(probInitsolObj)
+SCIP_DECL_PROBINITSOL(probInitsolObj)
 {  /*lint --e{715}*/
    assert(probdata != NULL);
    assert(probdata->objprobdata != NULL);
 
    /* call virtual method of probdata object */
-   CHECK_OKAY( probdata->objprobdata->scip_initsol(scip) );
+   SCIP_CALL( probdata->objprobdata->scip_initsol(scip) );
 
    return SCIP_OKAY;
 }
@@ -136,13 +136,13 @@ DECL_PROBINITSOL(probInitsolObj)
 
 /** solving process deinitialization method of transformed data (called before the branch and bound data is freed) */
 static
-DECL_PROBEXITSOL(probExitsolObj)
+SCIP_DECL_PROBEXITSOL(probExitsolObj)
 {  /*lint --e{715}*/
    assert(probdata != NULL);
    assert(probdata->objprobdata != NULL);
 
    /* call virtual method of probdata object */
-   CHECK_OKAY( probdata->objprobdata->scip_exitsol(scip) );
+   SCIP_CALL( probdata->objprobdata->scip_exitsol(scip) );
 
    return SCIP_OKAY;
 }
@@ -157,22 +157,22 @@ DECL_PROBEXITSOL(probExitsolObj)
 /** creates empty problem, initializes all solving data structures, and sets the user problem data to point to the
  *  given user data object
  */
-RETCODE SCIPcreateObjProb(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name,               /**< problem name */
-   scip::ObjProbData* objprobdata,      /**< user problem data object */
-   Bool             deleteobject        /**< should the user problem data object be deleted when problem is freed? */
+SCIP_RETCODE SCIPcreateObjProb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name,               /**< problem name */
+   scip::ObjProbData*    objprobdata,        /**< user problem data object */
+   SCIP_Bool             deleteobject        /**< should the user problem data object be deleted when problem is freed? */
    )
 {
-   PROBDATA* probdata;
+   SCIP_PROBDATA* probdata;
 
    /* create user problem data */
-   probdata = new PROBDATA;
+   probdata = new SCIP_PROBDATA;
    probdata->objprobdata = objprobdata;
    probdata->deleteobject = deleteobject;
 
    /* create problem */
-   CHECK_OKAY( SCIPcreateProb(scip, name, probDelorigObj, probTransObj, probDeltransObj, 
+   SCIP_CALL( SCIPcreateProb(scip, name, probDelorigObj, probTransObj, probDeltransObj, 
          probInitsolObj, probExitsolObj, probdata) );
 
    return SCIP_OKAY;
@@ -183,10 +183,10 @@ RETCODE SCIPcreateObjProb(
  *  Otherwise, a segmentation fault may arise, or an undefined pointer is returned.
  */
 scip::ObjProbData* SCIPgetObjProbData(
-   SCIP*            scip                /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   PROBDATA* probdata;
+   SCIP_PROBDATA* probdata;
 
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);

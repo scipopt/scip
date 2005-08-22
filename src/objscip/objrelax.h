@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.h,v 1.10 2005/07/15 17:20:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objrelax.h,v 1.11 2005/08/22 18:35:31 bzfpfend Exp $"
 
 /**@file   objrelax.h
  * @brief  C++ wrapper for relaxators
@@ -46,7 +46,7 @@ public:
    /** description of the relaxator */
    const char* const scip_desc_;
    
-   /** default priority of the relaxator (negative: call after LP, non-negative: call before LP) */
+   /** default priority of the relaxator (negative: call after LP, non-negative: call before SCIP_LP) */
    const int scip_priority_;
 
    /** frequency for calling relaxator */
@@ -54,10 +54,10 @@ public:
 
    /** default constructor */
    ObjRelax(
-      const char*   name,               /**< name of relaxator */
-      const char*   desc,               /**< description of relaxator */
-      int           priority,           /**< priority of the relaxator (negative: after LP, non-negative: before LP) */
-      int           freq                /**< frequency for calling relaxator */
+      const char*        name,               /**< name of relaxator */
+      const char*        desc,               /**< description of relaxator */
+      int                priority,           /**< priority of the relaxator (negative: after LP, non-negative: before SCIP_LP) */
+      int                freq                /**< frequency for calling relaxator */
       )
       : scip_name_(name),
         scip_desc_(desc),
@@ -72,27 +72,27 @@ public:
    }
 
    /** destructor of relaxator to free user data (called when SCIP is exiting) */
-   virtual RETCODE scip_free(
-      SCIP*         scip,               /**< SCIP data structure */
-      RELAX*        relax               /**< the relaxator itself */
+   virtual SCIP_RETCODE scip_free(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_RELAX*        relax               /**< the relaxator itself */
       )
    {
       return SCIP_OKAY;
    }
    
    /** initialization method of relaxator (called after problem was transformed) */
-   virtual RETCODE scip_init(
-      SCIP*         scip,               /**< SCIP data structure */
-      RELAX*        relax               /**< the relaxator itself */
+   virtual SCIP_RETCODE scip_init(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_RELAX*        relax               /**< the relaxator itself */
       )
    {
       return SCIP_OKAY;
    }
    
    /** deinitialization method of relaxator (called before transformed problem is freed) */
-   virtual RETCODE scip_exit(
-      SCIP*         scip,               /**< SCIP data structure */
-      RELAX*        relax               /**< the relaxator itself */
+   virtual SCIP_RETCODE scip_exit(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_RELAX*        relax               /**< the relaxator itself */
       )
    {
       return SCIP_OKAY;
@@ -104,9 +104,9 @@ public:
     *  The relaxator may use this call to initialize its branch and bound specific data.
     *
     */
-   virtual RETCODE scip_initsol(
-      SCIP*         scip,               /**< SCIP data structure */
-      RELAX*        relax               /**< the relaxator itself */
+   virtual SCIP_RETCODE scip_initsol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_RELAX*        relax               /**< the relaxator itself */
       )
    {
       return SCIP_OKAY;
@@ -117,9 +117,9 @@ public:
     *  This method is called before the branch and bound process is freed.
     *  The relaxator should use this call to clean up its branch and bound data.
     */
-   virtual RETCODE scip_exitsol(
-      SCIP*         scip,               /**< SCIP data structure */
-      RELAX*        relax               /**< the relaxator itself */
+   virtual SCIP_RETCODE scip_exitsol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_RELAX*        relax               /**< the relaxator itself */
       )
    {
       return SCIP_OKAY;
@@ -128,7 +128,7 @@ public:
    /** execution method of relaxator
     *
     *  The method is called in the node processing loop. It solves the current subproblem's relaxation.
-    *  Like the LP relaxation, the relaxator should only operate on COLUMN variables.
+    *  Like the SCIP_LP relaxation, the relaxator should only operate on COLUMN variables.
     *
     *  possible return values for *result (if more than one applies, the first in the list should be used):
     *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
@@ -140,10 +140,10 @@ public:
     *                      planes); however, it is able to continue the solving in order to improve the dual bound
     *  - SCIP_DIDNOTRUN  : the relaxator was skipped
     */
-   virtual RETCODE scip_exec(
-      SCIP*         scip,               /**< SCIP data structure */
-      RELAX*        relax,              /**< the relaxator itself */
-      RESULT*       result              /**< pointer to store the result of the relaxation call */
+   virtual SCIP_RETCODE scip_exec(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_RELAX*        relax,              /**< the relaxator itself */
+      SCIP_RESULT*       result              /**< pointer to store the result of the relaxation call */
       ) = 0;
 };
 
@@ -156,40 +156,40 @@ public:
  *  The method should be called in one of the following ways:
  *
  *   1. The user is resposible of deleting the object:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MyRelax* myrelax = new MyRelax(...);
- *       CHECK_OKAY( SCIPincludeObjRelax(scip, &myrelax, FALSE) );
+ *       SCIP_CALL( SCIPincludeObjRelax(scip, &myrelax, FALSE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );
+ *       SCIP_CALL( SCIPfree(&scip) );
  *       delete myrelax;    // delete relax AFTER SCIPfree() !
  *
  *   2. The object pointer is passed to SCIP and deleted by SCIP in the SCIPfree() call:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
- *       CHECK_OKAY( SCIPincludeObjRelax(scip, new MyRelax(...), TRUE) );
+ *       SCIP_CALL( SCIPincludeObjRelax(scip, new MyRelax(...), TRUE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );  // destructor of MyRelax is called here
+ *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyRelax is called here
  */
 extern
-RETCODE SCIPincludeObjRelax(
-   SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjRelax*  objrelax,           /**< relaxator object */
-   Bool             deleteobject        /**< should the relaxator object be deleted when relaxator is freed? */
+SCIP_RETCODE SCIPincludeObjRelax(
+   SCIP*                 scip,               /**< SCIP data structure */
+   scip::ObjRelax*       objrelax,           /**< relaxator object */
+   SCIP_Bool             deleteobject        /**< should the relaxator object be deleted when relaxator is freed? */
    );
 
 /** returns the relax object of the given name, or NULL if not existing */
 extern
 scip::ObjRelax* SCIPfindObjRelax(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< name of relaxator */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of relaxator */
    );
 
 /** returns the relax object for the given relaxator */
 extern
 scip::ObjRelax* SCIPgetObjRelax(
-   SCIP*            scip,               /**< SCIP data structure */
-   RELAX*           relax               /**< relaxator */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax               /**< relaxator */
    );
 
 #endif

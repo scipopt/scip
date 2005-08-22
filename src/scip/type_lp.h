@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_lp.h,v 1.9 2005/07/15 17:20:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_lp.h,v 1.10 2005/08/22 18:35:53 bzfpfend Exp $"
 
 /**@file   type_lp.h
- * @brief  type definitions for LP management
+ * @brief  type definitions for SCIP_LP management
  * @author Tobias Achterberg
  */
 
@@ -27,49 +27,49 @@
 #define __SCIP_TYPE_LP_H__
 
 
-/** solution status after solving LP */
-enum LPSolStat
+/** solution status after solving SCIP_LP */
+enum SCIP_LPSolStat
 {
-   SCIP_LPSOLSTAT_NOTSOLVED    = 0,     /**< LP was not solved, no solution exists */
-   SCIP_LPSOLSTAT_OPTIMAL      = 1,     /**< LP was solved to optimality */
-   SCIP_LPSOLSTAT_INFEASIBLE   = 2,     /**< LP is primal infeasible */
-   SCIP_LPSOLSTAT_UNBOUNDEDRAY = 3,     /**< LP has a primal unbounded ray */
+   SCIP_LPSOLSTAT_NOTSOLVED    = 0,     /**< SCIP_LP was not solved, no solution exists */
+   SCIP_LPSOLSTAT_OPTIMAL      = 1,     /**< SCIP_LP was solved to optimality */
+   SCIP_LPSOLSTAT_INFEASIBLE   = 2,     /**< SCIP_LP is primal infeasible */
+   SCIP_LPSOLSTAT_UNBOUNDEDRAY = 3,     /**< SCIP_LP has a primal unbounded ray */
    SCIP_LPSOLSTAT_OBJLIMIT     = 4,     /**< objective limit was reached during optimization */
    SCIP_LPSOLSTAT_ITERLIMIT    = 5,     /**< iteration limit was reached during optimization */
    SCIP_LPSOLSTAT_TIMELIMIT    = 6,     /**< time limit was reached during optimization */
    SCIP_LPSOLSTAT_ERROR        = 7      /**< an error occured during optimization */
 };
-typedef enum LPSolStat LPSOLSTAT;
+typedef enum SCIP_LPSolStat SCIP_LPSOLSTAT;
 
 /** type of variable bound: lower or upper bound */
-enum BoundType
+enum SCIP_BoundType
 {
    SCIP_BOUNDTYPE_LOWER = 0,            /**< lower bound */
    SCIP_BOUNDTYPE_UPPER = 1             /**< upper bound */
 };
-typedef enum BoundType BOUNDTYPE;
+typedef enum SCIP_BoundType SCIP_BOUNDTYPE;
 
 /** type of row side: left hand or right hand side */
-enum SideType
+enum SCIP_SideType
 {
    SCIP_SIDETYPE_LEFT  = 0,             /**< left hand side */
    SCIP_SIDETYPE_RIGHT = 1              /**< right hand side */
 };
-typedef enum SideType SIDETYPE;
+typedef enum SCIP_SideType SCIP_SIDETYPE;
 
-/** type of LP algorithm */
-enum LPAlgo
+/** type of SCIP_LP algorithm */
+enum SCIP_LPAlgo
 {
    SCIP_LPALGO_PRIMALSIMPLEX    = 0,    /**< primal simplex */
    SCIP_LPALGO_DUALSIMPLEX      = 1,    /**< dual simplex */
    SCIP_LPALGO_BARRIER          = 2,    /**< barrier algorithm */
    SCIP_LPALGO_BARRIERCROSSOVER = 3     /**< barrier algorithm with crossover */
 };
-typedef enum LPAlgo LPALGO;
+typedef enum SCIP_LPAlgo SCIP_LPALGO;
 
-typedef struct Col COL;                 /**< column of an LP */
-typedef struct Row ROW;                 /**< row of an LP */
-typedef struct Lp LP;                   /**< current LP data */
+typedef struct SCIP_Col SCIP_COL;                 /**< column of an SCIP_LP */
+typedef struct SCIP_Row SCIP_ROW;                 /**< row of an SCIP_LP */
+typedef struct SCIP_Lp SCIP_LP;                   /**< current SCIP_LP data */
 
 
 #endif

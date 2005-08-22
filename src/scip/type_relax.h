@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_relax.h,v 1.8 2005/07/15 17:20:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_relax.h,v 1.9 2005/08/22 18:35:54 bzfpfend Exp $"
 
 /**@file   type_relax.h
  * @brief  type definitions for relaxators
@@ -27,8 +27,8 @@
 #define __SCIP_TYPE_RELAX_H__
 
 
-typedef struct Relax RELAX;             /**< relaxator */
-typedef struct RelaxData RELAXDATA;     /**< locally defined relaxator data */
+typedef struct SCIP_Relax SCIP_RELAX;             /**< relaxator */
+typedef struct SCIP_RelaxData SCIP_RELAXDATA;     /**< locally defined relaxator data */
 
 
 
@@ -38,7 +38,7 @@ typedef struct RelaxData RELAXDATA;     /**< locally defined relaxator data */
  *  - scip            : SCIP main data structure
  *  - relax           : the relaxator itself
  */
-#define DECL_RELAXFREE(x) RETCODE x (SCIP* scip, RELAX* relax)
+#define SCIP_DECL_RELAXFREE(x) SCIP_RETCODE x (SCIP* scip, SCIP_RELAX* relax)
 
 /** initialization method of relaxator (called after problem was transformed)
  *
@@ -46,7 +46,7 @@ typedef struct RelaxData RELAXDATA;     /**< locally defined relaxator data */
  *  - scip            : SCIP main data structure
  *  - relax           : the relaxator itself
  */
-#define DECL_RELAXINIT(x) RETCODE x (SCIP* scip, RELAX* relax)
+#define SCIP_DECL_RELAXINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_RELAX* relax)
 
 /** deinitialization method of relaxator (called before transformed problem is freed)
  *
@@ -54,7 +54,7 @@ typedef struct RelaxData RELAXDATA;     /**< locally defined relaxator data */
  *  - scip            : SCIP main data structure
  *  - relax           : the relaxator itself
  */
-#define DECL_RELAXEXIT(x) RETCODE x (SCIP* scip, RELAX* relax)
+#define SCIP_DECL_RELAXEXIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_RELAX* relax)
 
 /** solving process initialization method of relaxator (called when branch and bound process is about to begin)
  *
@@ -65,7 +65,7 @@ typedef struct RelaxData RELAXDATA;     /**< locally defined relaxator data */
  *  - scip            : SCIP main data structure
  *  - relax           : the relaxator itself
  */
-#define DECL_RELAXINITSOL(x) RETCODE x (SCIP* scip, RELAX* relax)
+#define SCIP_DECL_RELAXINITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_RELAX* relax)
 
 /** solving process deinitialization method of relaxator (called before branch and bound process data is freed)
  *
@@ -76,12 +76,12 @@ typedef struct RelaxData RELAXDATA;     /**< locally defined relaxator data */
  *  - scip            : SCIP main data structure
  *  - relax           : the relaxator itself
  */
-#define DECL_RELAXEXITSOL(x) RETCODE x (SCIP* scip, RELAX* relax)
+#define SCIP_DECL_RELAXEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_RELAX* relax)
 
 /** execution method of relaxator
  *
  *  The method is called in the node processing loop. It solves the current subproblem's relaxation.
- *  Like the LP relaxation, the relaxator should only operate on COLUMN variables.
+ *  Like the SCIP_LP relaxation, the relaxator should only operate on COLUMN variables.
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -98,7 +98,7 @@ typedef struct RelaxData RELAXDATA;     /**< locally defined relaxator data */
  *                      planes); however, it is able to continue the solving in order to improve the dual bound
  *  - SCIP_DIDNOTRUN  : the relaxator was skipped
  */
-#define DECL_RELAXEXEC(x) RETCODE x (SCIP* scip, RELAX* relax, RESULT* result)
+#define SCIP_DECL_RELAXEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_RELAX* relax, SCIP_RESULT* result)
 
 
 #include "scip/def.h"

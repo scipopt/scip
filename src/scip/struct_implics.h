@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_implics.h,v 1.4 2005/08/12 11:06:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_implics.h,v 1.5 2005/08/22 18:35:50 bzfpfend Exp $"
 
 /**@file   struct_implics.h
  * @brief  datastructures for implications, variable bounds, and cliques
@@ -34,13 +34,13 @@
 
 
 /** variable bounds of a variable x in the form x <= b*z + d  or  x >= b*z + d */
-struct VBounds
+struct SCIP_VBounds
 {
-   VAR**            vars;               /**< variables z    in variable bounds x <= b*z + d  or  x >= b*z + d */
-   Real*            coefs;              /**< coefficients b in variable bounds x <= b*z + d  or  x >= b*z + d */
-   Real*            constants;          /**< constants d    in variable bounds x <= b*z + d  or  x >= b*z + d */
-   int              len;                /**< number of existing variable bounds (used slots in arrays) */
-   int              size;               /**< size of vars, coefs, and constants arrays */
+   SCIP_VAR**            vars;               /**< variables z    in variable bounds x <= b*z + d  or  x >= b*z + d */
+   SCIP_Real*            coefs;              /**< coefficients b in variable bounds x <= b*z + d  or  x >= b*z + d */
+   SCIP_Real*            constants;          /**< constants d    in variable bounds x <= b*z + d  or  x >= b*z + d */
+   int                   len;                /**< number of existing variable bounds (used slots in arrays) */
+   int                   size;               /**< size of vars, coefs, and constants arrays */
 };
 
 /** implications for binary variable x in the form 
@@ -49,43 +49,43 @@ struct VBounds
  *  implications with    binary variable y are stored at the beginning of arrays (sorted by pointer of y)
  *  implications with nonbinary variable y are stored at the end       of arrays (sorted by pointer of y)
  */
-struct Implics
+struct SCIP_Implics
 {
-   VAR**            vars[2];            /**< variables y  in implications y <= b or y >= b */
-   BOUNDTYPE*       types[2];           /**< types        of implications y <= b (SCIP_BOUNDTYPE_UPPER)
-                                         *                             or y >= b (SCIP_BOUNDTYPE_LOWER) */
-   Real*            bounds[2];          /**< bounds b     in implications y <= b or y >= b */
-   int*             ids[2];             /**< unique ids of implications */
-   int              size[2];            /**< size of implvars, implbounds and implvals arrays  for x <= 0 and x >= 1*/
-   int              nimpls[2];          /**< number of all implications                        for x <= 0 and x >= 1 */
-   int              nbinimpls[2];       /**< number of     implications with binary variable y for x <= 0 and x >= 1 */
+   SCIP_VAR**            vars[2];            /**< variables y  in implications y <= b or y >= b */
+   SCIP_BOUNDTYPE*       types[2];           /**< types        of implications y <= b (SCIP_BOUNDTYPE_UPPER)
+                                              *                             or y >= b (SCIP_BOUNDTYPE_LOWER) */
+   SCIP_Real*            bounds[2];          /**< bounds b     in implications y <= b or y >= b */
+   int*                  ids[2];             /**< unique ids of implications */
+   int                   size[2];            /**< size of implvars, implbounds and implvals arrays  for x <= 0 and x >= 1*/
+   int                   nimpls[2];          /**< number of all implications                        for x <= 0 and x >= 1 */
+   int                   nbinimpls[2];       /**< number of     implications with binary variable y for x <= 0 and x >= 1 */
 };
 
 /** single clique, stating that at most one of the binary variables can be fixed to the corresponding value */
-struct Clique
+struct SCIP_Clique
 {
-   VAR**            vars;               /**< variables in the clique */
-   Bool*            values;             /**< values of the variables in the clique */
-   int              nvars;              /**< number of variables in the clique */
-   int              size;               /**< size of vars and values arrays */
-   int              id;                 /**< unique identifier of clique */
+   SCIP_VAR**            vars;               /**< variables in the clique */
+   SCIP_Bool*            values;             /**< values of the variables in the clique */
+   int                   nvars;              /**< number of variables in the clique */
+   int                   size;               /**< size of vars and values arrays */
+   int                   id;                 /**< unique identifier of clique */
 };
 
 /** list of cliques for a single variable */
-struct CliqueList
+struct SCIP_CliqueList
 {
-   CLIQUE**         cliques[2];         /**< cliques the variable fixed to FALSE/TRUE is member of */
-   int              ncliques[2];        /**< number of cliques the variable fixed to FALSE/TRUE is member of */
-   int              size[2];            /**< size of cliques arrays */
+   SCIP_CLIQUE**         cliques[2];         /**< cliques the variable fixed to FALSE/TRUE is member of */
+   int                   ncliques[2];        /**< number of cliques the variable fixed to FALSE/TRUE is member of */
+   int                   size[2];            /**< size of cliques arrays */
 };
 
 /** collection of cliques */
-struct CliqueTable
+struct SCIP_CliqueTable
 {
-   CLIQUE**         cliques;            /**< cliques stored in the table */
-   int              ncliques;           /**< number of cliques stored in the table */
-   int              size;               /**< size of cliques array */
-   int              ncreatedcliques;    /**< number of ever created cliques */
+   SCIP_CLIQUE**         cliques;            /**< cliques stored in the table */
+   int                   ncliques;           /**< number of cliques stored in the table */
+   int                   size;               /**< size of cliques array */
+   int                   ncreatedcliques;    /**< number of ever created cliques */
 };
 
 

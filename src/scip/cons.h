@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.94 2005/08/11 11:21:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.95 2005/08/22 18:35:33 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -56,220 +56,220 @@
 
 /** creates a constraint handler */
 extern
-RETCODE SCIPconshdlrCreate(
-   CONSHDLR**       conshdlr,           /**< pointer to constraint handler data structure */
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory for parameter settings */
-   const char*      name,               /**< name of constraint handler */
-   const char*      desc,               /**< description of constraint handler */
-   int              sepapriority,       /**< priority of the constraint handler for separation */
-   int              enfopriority,       /**< priority of the constraint handler for constraint enforcing */
-   int              checkpriority,      /**< priority of the constraint handler for checking feasibility */
-   int              sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
-   int              propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
-   int              eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
-                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
-   int              maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-   Bool             delaysepa,          /**< should separation method be delayed, if other separators found cuts? */
-   Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
-   Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
-   Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
-   DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
-   DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
-   DECL_CONSEXIT    ((*consexit)),      /**< deinitialize constraint handler */
-   DECL_CONSINITPRE ((*consinitpre)),   /**< presolving initialization method of constraint handler */
-   DECL_CONSEXITPRE ((*consexitpre)),   /**< presolving deinitialization method of constraint handler */
-   DECL_CONSINITSOL ((*consinitsol)),   /**< solving process initialization method of constraint handler */
-   DECL_CONSEXITSOL ((*consexitsol)),   /**< solving process deinitialization method of constraint handler */
-   DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
-   DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
-   DECL_CONSINITLP  ((*consinitlp)),    /**< initialize LP with relaxations of "initial" constraints */
-   DECL_CONSSEPA    ((*conssepa)),      /**< separate cutting planes */
-   DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
-   DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
-   DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
-   DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
-   DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
-   DECL_CONSRESPROP ((*consresprop)),   /**< propagation conflict resolving method */
-   DECL_CONSLOCK    ((*conslock)),      /**< variable rounding lock method */
-   DECL_CONSACTIVE  ((*consactive)),    /**< activation notification method */
-   DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
-   DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
-   DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
-   DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
-   CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
+SCIP_RETCODE SCIPconshdlrCreate(
+   SCIP_CONSHDLR**       conshdlr,           /**< pointer to constraint handler data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of constraint handler */
+   const char*           desc,               /**< description of constraint handler */
+   int                   sepapriority,       /**< priority of the constraint handler for separation */
+   int                   enfopriority,       /**< priority of the constraint handler for constraint enforcing */
+   int                   checkpriority,      /**< priority of the constraint handler for checking feasibility */
+   int                   sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
+   int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
+   int                   eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
+                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+   int                   maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+   SCIP_Bool             delaysepa,          /**< should separation method be delayed, if other separators found cuts? */
+   SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
+   SCIP_Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
+   SCIP_Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
+   SCIP_DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
+   SCIP_DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
+   SCIP_DECL_CONSEXIT    ((*consexit)),      /**< deinitialize constraint handler */
+   SCIP_DECL_CONSINITPRE ((*consinitpre)),   /**< presolving initialization method of constraint handler */
+   SCIP_DECL_CONSEXITPRE ((*consexitpre)),   /**< presolving deinitialization method of constraint handler */
+   SCIP_DECL_CONSINITSOL ((*consinitsol)),   /**< solving process initialization method of constraint handler */
+   SCIP_DECL_CONSEXITSOL ((*consexitsol)),   /**< solving process deinitialization method of constraint handler */
+   SCIP_DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
+   SCIP_DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
+   SCIP_DECL_CONSINITLP  ((*consinitlp)),    /**< initialize SCIP_LP with relaxations of "initial" constraints */
+   SCIP_DECL_CONSSEPA    ((*conssepa)),      /**< separate cutting planes */
+   SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for SCIP_LP solutions */
+   SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
+   SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
+   SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
+   SCIP_DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
+   SCIP_DECL_CONSRESPROP ((*consresprop)),   /**< propagation conflict resolving method */
+   SCIP_DECL_CONSLOCK    ((*conslock)),      /**< variable rounding lock method */
+   SCIP_DECL_CONSACTIVE  ((*consactive)),    /**< activation notification method */
+   SCIP_DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
+   SCIP_DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
+   SCIP_DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
+   SCIP_DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    );
 
 /** calls destructor and frees memory of constraint handler */
 extern
-RETCODE SCIPconshdlrFree(
-   CONSHDLR**       conshdlr,           /**< pointer to constraint handler data structure */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPconshdlrFree(
+   SCIP_CONSHDLR**       conshdlr,           /**< pointer to constraint handler data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** calls init method of constraint handler */
 extern
-RETCODE SCIPconshdlrInit(
-   CONSHDLR*        conshdlr,           /**< constraint handler */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat                /**< dynamic problem statistics */
+SCIP_RETCODE SCIPconshdlrInit(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** calls exit method of constraint handler */
 extern
-RETCODE SCIPconshdlrExit(
-   CONSHDLR*        conshdlr,           /**< constraint handler */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat                /**< dynamic problem statistics */
+SCIP_RETCODE SCIPconshdlrExit(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** informs constraint handler that the presolving process is being started */
 extern
-RETCODE SCIPconshdlrInitpre(
-   CONSHDLR*        conshdlr,           /**< constraint handler */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   RESULT*          result              /**< pointer to store the result of the callback method */
+SCIP_RETCODE SCIPconshdlrInitpre(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 /** informs constraint handler that the presolving is finished */
 extern
-RETCODE SCIPconshdlrExitpre(
-   CONSHDLR*        conshdlr,           /**< constraint handler */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   RESULT*          result              /**< pointer to store the result of the callback method */
+SCIP_RETCODE SCIPconshdlrExitpre(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 /** informs constraint handler that the branch and bound process is being started */
 extern
-RETCODE SCIPconshdlrInitsol(
-   CONSHDLR*        conshdlr,           /**< constraint handler */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat                /**< dynamic problem statistics */
+SCIP_RETCODE SCIPconshdlrInitsol(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** informs constraint handler that the branch and bound process data is being freed */
 extern
-RETCODE SCIPconshdlrExitsol(
-   CONSHDLR*        conshdlr,           /**< constraint handler */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat                /**< dynamic problem statistics */
+SCIP_RETCODE SCIPconshdlrExitsol(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
-/** calls LP initialization method of constraint handler to separate all initial active constraints */
+/** calls SCIP_LP initialization method of constraint handler to separate all initial active constraints */
 extern
-RETCODE SCIPconshdlrInitLP(
-   CONSHDLR*        conshdlr,           /**< constraint handler */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat                /**< dynamic problem statistics */
+SCIP_RETCODE SCIPconshdlrInitLP(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** calls separator method of constraint handler to separate all constraints added after last conshdlrReset() call */
 extern
-RETCODE SCIPconshdlrSeparate(
-   CONSHDLR*        conshdlr,           /**< constraint handler */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   SEPASTORE*       sepastore,          /**< separation storage */
-   int              depth,              /**< depth of current node */
-   Bool             execdelayed,        /**< execute separation method even if it is marked to be delayed */
-   RESULT*          result              /**< pointer to store the result of the callback method */
+SCIP_RETCODE SCIPconshdlrSeparate(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   int                   depth,              /**< depth of current node */
+   SCIP_Bool             execdelayed,        /**< execute separation method even if it is marked to be delayed */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** calls enforcing method of constraint handler for LP solution for all constraints added after last
+/** calls enforcing method of constraint handler for SCIP_LP solution for all constraints added after last
  *  conshdlrReset() call
  */
 extern
-RETCODE SCIPconshdlrEnforceLPSol(
-   CONSHDLR*        conshdlr,           /**< constraint handler */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   TREE*            tree,               /**< branch and bound tree */
-   SEPASTORE*       sepastore,          /**< separation storage */
-   RESULT*          result              /**< pointer to store the result of the callback method */
+SCIP_RETCODE SCIPconshdlrEnforceLPSol(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 /** calls enforcing method of constraint handler for pseudo solution for all constraints added after last
  *  conshdlrReset() call
  */
 extern
-RETCODE SCIPconshdlrEnforcePseudoSol(
-   CONSHDLR*        conshdlr,           /**< constraint handler */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   TREE*            tree,               /**< branch and bound tree */
-   Bool             objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
-   RESULT*          result              /**< pointer to store the result of the callback method */
+SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_Bool             objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 /** calls feasibility check method of constraint handler */
 extern
-RETCODE SCIPconshdlrCheck(
-   CONSHDLR*        conshdlr,           /**< constraint handler */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   SOL*             sol,                /**< primal CIP solution */
-   Bool             checkintegrality,   /**< has integrality to be checked? */
-   Bool             checklprows,        /**< have current LP rows to be checked? */
-   RESULT*          result              /**< pointer to store the result of the callback method */
+SCIP_RETCODE SCIPconshdlrCheck(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< have current SCIP_LP rows to be checked? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 /** calls propagation method of constraint handler */
 extern
-RETCODE SCIPconshdlrPropagate(
-   CONSHDLR*        conshdlr,           /**< constraint handler */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   int              depth,              /**< depth of current node; -1 if preprocessing domain propagation */
-   Bool             execdelayed,        /**< execute propagation method even if it is marked to be delayed */
-   RESULT*          result              /**< pointer to store the result of the callback method */
+SCIP_RETCODE SCIPconshdlrPropagate(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   int                   depth,              /**< depth of current node; -1 if preprocessing domain propagation */
+   SCIP_Bool             execdelayed,        /**< execute propagation method even if it is marked to be delayed */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 /** calls presolving method of constraint handler */
 extern
-RETCODE SCIPconshdlrPresolve(
-   CONSHDLR*        conshdlr,           /**< constraint handler */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   Bool             execdelayed,        /**< execute presolving method even if it is marked to be delayed */
-   int              nrounds,            /**< number of presolving rounds already done */
-   int*             nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
-   int*             naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */
-   int*             nchgvartypes,       /**< pointer to total number of variable type changes of all presolvers */
-   int*             nchgbds,            /**< pointer to total number of variable bounds tightend of all presolvers */
-   int*             naddholes,          /**< pointer to total number of domain holes added of all presolvers */
-   int*             ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
-   int*             nupgdconss,         /**< pointer to total number of upgraded constraints of all presolvers */
-   int*             nchgcoefs,          /**< pointer to total number of changed coefficients of all presolvers */
-   int*             nchgsides,          /**< pointer to total number of changed left/right hand sides of all presolvers */
-   RESULT*          result              /**< pointer to store the result of the callback method */
+SCIP_RETCODE SCIPconshdlrPresolve(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_Bool             execdelayed,        /**< execute presolving method even if it is marked to be delayed */
+   int                   nrounds,            /**< number of presolving rounds already done */
+   int*                  nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
+   int*                  naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */
+   int*                  nchgvartypes,       /**< pointer to total number of variable type changes of all presolvers */
+   int*                  nchgbds,            /**< pointer to total number of variable bounds tightend of all presolvers */
+   int*                  naddholes,          /**< pointer to total number of domain holes added of all presolvers */
+   int*                  ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
+   int*                  nupgdconss,         /**< pointer to total number of upgraded constraints of all presolvers */
+   int*                  nchgcoefs,          /**< pointer to total number of changed coefficients of all presolvers */
+   int*                  nchgsides,          /**< pointer to total number of changed left/right hand sides of all presolvers */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 /** locks rounding of variables involved in the given constraint constraint handler that doesn't need constraints */
-RETCODE SCIPconshdlrLockVars(
-   CONSHDLR*        conshdlr,           /**< constraint handler */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPconshdlrLockVars(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** unlocks rounding of variables involved in the given constraint constraint handler that doesn't need constraints */
 extern
-RETCODE SCIPconshdlrUnlockVars(
-   CONSHDLR*        conshdlr,           /**< constraint handler */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPconshdlrUnlockVars(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 
@@ -281,52 +281,52 @@ RETCODE SCIPconshdlrUnlockVars(
 
 /** frees constraint set change data and releases all included constraints */
 extern
-RETCODE SCIPconssetchgFree(
-   CONSSETCHG**     conssetchg,         /**< pointer to constraint set change */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPconssetchgFree(
+   SCIP_CONSSETCHG**     conssetchg,         /**< pointer to constraint set change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** adds constraint addition to constraint set changes, and captures constraint; activates constraint if the
  *  constraint set change data is currently active
  */
 extern
-RETCODE SCIPconssetchgAddAddedCons(
-   CONSSETCHG**     conssetchg,         /**< pointer to constraint set change data structure */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   CONS*            cons,               /**< added constraint */
-   int              depth,              /**< depth of constraint set change's node */
-   Bool             active              /**< is the constraint set change currently active? */
+SCIP_RETCODE SCIPconssetchgAddAddedCons(
+   SCIP_CONSSETCHG**     conssetchg,         /**< pointer to constraint set change data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_CONS*            cons,               /**< added constraint */
+   int                   depth,              /**< depth of constraint set change's node */
+   SCIP_Bool             active              /**< is the constraint set change currently active? */
    );
 
 /** adds constraint disabling to constraint set changes, and captures constraint */
 extern
-RETCODE SCIPconssetchgAddDisabledCons(
-   CONSSETCHG**     conssetchg,         /**< pointer to constraint set change data structure */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   CONS*            cons                /**< disabled constraint */
+SCIP_RETCODE SCIPconssetchgAddDisabledCons(
+   SCIP_CONSSETCHG**     conssetchg,         /**< pointer to constraint set change data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONS*            cons                /**< disabled constraint */
    );
 
 /** applies constraint set change */
 extern
-RETCODE SCIPconssetchgApply(
-   CONSSETCHG*      conssetchg,         /**< constraint set change to apply */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   int              depth               /**< depth of constraint set change's node */
+SCIP_RETCODE SCIPconssetchgApply(
+   SCIP_CONSSETCHG*      conssetchg,         /**< constraint set change to apply */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   int                   depth               /**< depth of constraint set change's node */
    );
 
 /** undoes constraint set change */
 extern
-RETCODE SCIPconssetchgUndo(
-   CONSSETCHG*      conssetchg,         /**< constraint set change to undo */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat                /**< dynamic problem statistics */
+SCIP_RETCODE SCIPconssetchgUndo(
+   SCIP_CONSSETCHG*      conssetchg,         /**< constraint set change to undo */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
 
@@ -337,157 +337,157 @@ RETCODE SCIPconssetchgUndo(
  */
 
 /** creates and captures a constraint, and inserts it into the conss array of its constraint handler
- *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
+ *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a SCIP_LP or pseudo solution
  *  may be declared feasible even if it violates this particular constraint.
- *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
+ *  This constellation should only be used, if no SCIP_LP or pseudo solution can violate the constraint -- e.g. if a
  *  local constraint is redundant due to the variable's local bounds.
  */
 extern
-RETCODE SCIPconsCreate(
-   CONS**           cons,               /**< pointer to constraint */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of constraint */
-   CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
-   CONSDATA*        consdata,           /**< data for this specific constraint */
-   Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             separate,           /**< should the constraint be separated during LP processing? */
-   Bool             enforce,            /**< should the constraint be enforced during node processing? */
-   Bool             check,              /**< should the constraint be checked for feasibility? */
-   Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
-   Bool             dynamic,            /**< is constraint subject to aging? */
-   Bool             removeable,         /**< should the relaxation be removed from the LP due to aging or cleanup? */
-   Bool             original            /**< is constraint belonging to the original problem? */
+SCIP_RETCODE SCIPconsCreate(
+   SCIP_CONS**           cons,               /**< pointer to constraint */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of constraint */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
+   SCIP_CONSDATA*        consdata,           /**< data for this specific constraint */
+   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   SCIP_Bool             local,              /**< is constraint only valid locally? */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
+   SCIP_Bool             removeable,         /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
+   SCIP_Bool             original            /**< is constraint belonging to the original problem? */
    );
 
 /** frees a constraint and removes it from the conss array of its constraint handler */
 extern
-RETCODE SCIPconsFree(
-   CONS**           cons,               /**< constraint to free */
-   BLKMEM*          blkmem,             /**< block memory buffer */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPconsFree(
+   SCIP_CONS**           cons,               /**< constraint to free */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffer */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** increases usage counter of constraint */
 extern
 void SCIPconsCapture(
-   CONS*            cons                /**< constraint */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** decreases usage counter of constraint, and frees memory if necessary */
 extern
-RETCODE SCIPconsRelease(
-   CONS**           cons,               /**< pointer to constraint */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPconsRelease(
+   SCIP_CONS**           cons,               /**< pointer to constraint */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** outputs constraint information to file stream */
 extern
-RETCODE SCIPconsPrint(
-   CONS*            cons,               /**< constraint to print */
-   SET*             set,                /**< global SCIP settings */
-   FILE*            file                /**< output file (or NULL for standard output) */
+SCIP_RETCODE SCIPconsPrint(
+   SCIP_CONS*            cons,               /**< constraint to print */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 /** globally removes constraint from all subproblems; removes constraint from the constraint set change data of the
  *  node, where it was created, or from the problem, if it was a problem constraint
  */
 extern
-RETCODE SCIPconsDelete(
-   CONS*            cons,               /**< constraint to delete */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   PROB*            prob                /**< problem data */
+SCIP_RETCODE SCIPconsDelete(
+   SCIP_CONS*            cons,               /**< constraint to delete */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob                /**< problem data */
    );
 
 /** gets and captures transformed constraint of a given constraint; if the constraint is not yet transformed,
  *  a new transformed constraint for this constraint is created
  */
 extern
-RETCODE SCIPconsTransform(
-   CONS*            origcons,           /**< original constraint */
-   BLKMEM*          blkmem,             /**< block memory buffer */
-   SET*             set,                /**< global SCIP settings */
-   CONS**           transcons           /**< pointer to store the transformed constraint */
+SCIP_RETCODE SCIPconsTransform(
+   SCIP_CONS*            origcons,           /**< original constraint */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffer */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONS**           transcons           /**< pointer to store the transformed constraint */
    );
 
 /** marks the constraint to be globally valid */
 extern
 void SCIPconsSetGlobal(
-   CONS*            cons                /**< constraint */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** gets associated transformed constraint of an original constraint, or NULL if no associated transformed constraint
  *  exists
  */
 extern
-CONS* SCIPconsGetTransformed(
-   CONS*            cons                /**< constraint */
+SCIP_CONS* SCIPconsGetTransformed(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** activates constraint or marks constraint to be activated in next update */
 extern
-RETCODE SCIPconsActivate(
-   CONS*            cons,               /**< constraint */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   int              depth               /**< depth in the tree where the constraint activation takes place, or -1 for global problem */
+SCIP_RETCODE SCIPconsActivate(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   int                   depth               /**< depth in the tree where the constraint activation takes place, or -1 for global problem */
    );
 
 /** deactivates constraint or marks constraint to be deactivated in next update */
 extern
-RETCODE SCIPconsDeactivate(
-   CONS*            cons,               /**< constraint */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat                /**< dynamic problem statistics */
+SCIP_RETCODE SCIPconsDeactivate(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** enables constraint's separation, enforcing, and propagation capabilities or marks them to be enabled in next update */
 extern
-RETCODE SCIPconsEnable(
-   CONS*            cons,               /**< constraint */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat                /**< dynamic problem statistics */
+SCIP_RETCODE SCIPconsEnable(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** disables constraint's separation, enforcing, and propagation capabilities or marks them to be disabled in next update */
 extern
-RETCODE SCIPconsDisable(
-   CONS*            cons,               /**< constraint */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat                /**< dynamic problem statistics */
+SCIP_RETCODE SCIPconsDisable(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** enables constraint's separation capabilities or marks them to be enabled in next update */
 extern
-RETCODE SCIPconsEnableSeparation(
-   CONS*            cons,               /**< constraint */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPconsEnableSeparation(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** disables constraint's separation capabilities or marks them to be disabled in next update */
 extern
-RETCODE SCIPconsDisableSeparation(
-   CONS*            cons,               /**< constraint */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPconsDisableSeparation(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** enables constraint's propagation capabilities or marks them to be enabled in next update */
 extern
-RETCODE SCIPconsEnablePropagation(
-   CONS*            cons,               /**< constraint */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPconsEnablePropagation(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** disables constraint's propagation capabilities or marks them to be disabled in next update */
 extern
-RETCODE SCIPconsDisablePropagation(
-   CONS*            cons,               /**< constraint */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPconsDisablePropagation(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** adds given value to age of constraint, but age can never become negative;
@@ -499,13 +499,13 @@ RETCODE SCIPconsDisablePropagation(
  *  in next update
  */
 extern
-RETCODE SCIPconsAddAge(
-   CONS*            cons,               /**< constraint */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   PROB*            prob,               /**< problem data */
-   Real             deltaage            /**< value to add to the constraint's age */
+SCIP_RETCODE SCIPconsAddAge(
+   SCIP_CONS*            cons,               /**< constraint */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Real             deltaage            /**< value to add to the constraint's age */
    );
 
 /** increases age of constraint by 1.0;
@@ -517,12 +517,12 @@ RETCODE SCIPconsAddAge(
  *  in next update
  */
 extern
-RETCODE SCIPconsIncAge(
-   CONS*            cons,               /**< constraint */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   PROB*            prob                /**< problem data */
+SCIP_RETCODE SCIPconsIncAge(
+   SCIP_CONS*            cons,               /**< constraint */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob                /**< problem data */
    );
 
 /** resets age of constraint to zero;
@@ -533,50 +533,50 @@ RETCODE SCIPconsIncAge(
  *  if it was obsolete, makes constraint useful again or marks constraint to be made useful again in next update
  */
 extern
-RETCODE SCIPconsResetAge(
-   CONS*            cons,               /**< constraint */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPconsResetAge(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** resolves the given conflicting bound, that was deduced by the given constraint, by putting all "reason" bounds
  *  leading to the deduction into the conflict queue with calls to SCIPaddConflictLb() and SCIPaddConflictUb()
  */
 extern
-RETCODE SCIPconsResolvePropagation(
-   CONS*            cons,               /**< constraint that deduced the assignment */
-   SET*             set,                /**< global SCIP settings */
-   VAR*             infervar,           /**< variable whose bound was deduced by the constraint */
-   int              inferinfo,          /**< user inference information attached to the bound change */
-   BOUNDTYPE        inferboundtype,     /**< bound that was deduced (lower or upper bound) */
-   BDCHGIDX*        bdchgidx,           /**< bound change index, representing the point of time where change took place */
-   RESULT*          result              /**< pointer to store the result of the callback method */
+SCIP_RETCODE SCIPconsResolvePropagation(
+   SCIP_CONS*            cons,               /**< constraint that deduced the assignment */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             infervar,           /**< variable whose bound was deduced by the constraint */
+   int                   inferinfo,          /**< user inference information attached to the bound change */
+   SCIP_BOUNDTYPE        inferboundtype,     /**< bound that was deduced (lower or upper bound) */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index, representing the point of time where change took place */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 /** adds given values to lock status of the constraint and updates the rounding locks of the involved variables */
 extern
-RETCODE SCIPconsAddLocks(
-   CONS*            cons,               /**< constraint */
-   SET*             set,                /**< global SCIP settings */
-   int              nlockspos,          /**< increase in number of rounding locks for constraint */
-   int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
+SCIP_RETCODE SCIPconsAddLocks(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   nlockspos,          /**< increase in number of rounding locks for constraint */
+   int                   nlocksneg           /**< increase in number of rounding locks for constraint's negation */
    );
 
 /** checks single constraint for feasibility of the given solution */
 extern
-RETCODE SCIPconsCheck(
-   CONS*            cons,               /**< constraint to check */
-   SET*             set,                /**< global SCIP settings */
-   SOL*             sol,                /**< primal CIP solution */
-   Bool             checkintegrality,   /**< has integrality to be checked? */
-   Bool             checklprows,        /**< have current LP rows to be checked? */
-   RESULT*          result              /**< pointer to store the result of the callback method */
+SCIP_RETCODE SCIPconsCheck(
+   SCIP_CONS*            cons,               /**< constraint to check */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< have current SCIP_LP rows to be checked? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 /** marks the constraint to be essential for feasibility */
 extern
-RETCODE SCIPconsSetChecked(
-   CONS*            cons,               /**< constraint */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPconsSetChecked(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 
@@ -588,7 +588,7 @@ RETCODE SCIPconsSetChecked(
 
 /** gets the key (i.e. the name) of the given constraint */
 extern
-DECL_HASHGETKEY(SCIPhashGetKeyCons);
+SCIP_DECL_HASHGETKEY(SCIPhashGetKeyCons);
 
 
 #endif

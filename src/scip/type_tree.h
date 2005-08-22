@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_tree.h,v 1.12 2005/07/15 17:20:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_tree.h,v 1.13 2005/08/22 18:35:55 bzfpfend Exp $"
 
 /**@file   type_tree.h
  * @brief  type definitions for branch and bound tree
@@ -27,7 +27,7 @@
 #define __SCIP_TYPE_TREE_H__
 
 
-enum NodeType
+enum SCIP_NodeType
 {
    SCIP_NODETYPE_FOCUSNODE      =  0,   /**< the focus node, whose data is stored in the tree data structure */
    SCIP_NODETYPE_PROBINGNODE    =  1,   /**< temporary child node of the focus or refocused node used for probing */
@@ -35,21 +35,21 @@ enum NodeType
    SCIP_NODETYPE_CHILD          =  3,   /**< unsolved child of the focus node */
    SCIP_NODETYPE_LEAF           =  4,   /**< unsolved leaf of the tree, stored in the tree's queue */
    SCIP_NODETYPE_DEADEND        =  5,   /**< temporary type of focus node, if it was solved completely */
-   SCIP_NODETYPE_JUNCTION       =  6,   /**< fork without LP solution */
-   SCIP_NODETYPE_FORK           =  7,   /**< fork with solved LP and added rows and columns */
-   SCIP_NODETYPE_SUBROOT        =  8,   /**< fork with solved LP and arbitrarily changed rows and columns */
+   SCIP_NODETYPE_JUNCTION       =  6,   /**< fork without SCIP_LP solution */
+   SCIP_NODETYPE_FORK           =  7,   /**< fork with solved SCIP_LP and added rows and columns */
+   SCIP_NODETYPE_SUBROOT        =  8,   /**< fork with solved SCIP_LP and arbitrarily changed rows and columns */
    SCIP_NODETYPE_REFOCUSNODE    =  9    /**< junction, fork, or subroot that was refocused for domain propagation */
 };
-typedef enum NodeType NODETYPE;         /**< type of node */
+typedef enum SCIP_NodeType SCIP_NODETYPE;         /**< type of node */
 
-typedef struct Child CHILD;             /**< data for child nodes */
-typedef struct Sibling SIBLING;         /**< data for sibling nodes */
-typedef struct Leaf LEAF;               /**< data for leaf nodes */
-typedef struct Junction JUNCTION;       /**< data for junction nodes */
-typedef struct Fork FORK;               /**< data for fork nodes */
-typedef struct Subroot SUBROOT;         /**< data for subroot nodes */
-typedef struct Node NODE;               /**< node data structure */
-typedef struct Tree TREE;               /**< branch and bound tree */
+typedef struct SCIP_Child SCIP_CHILD;             /**< data for child nodes */
+typedef struct SCIP_Sibling SCIP_SIBLING;         /**< data for sibling nodes */
+typedef struct SCIP_Leaf SCIP_LEAF;               /**< data for leaf nodes */
+typedef struct SCIP_Junction SCIP_JUNCTION;       /**< data for junction nodes */
+typedef struct SCIP_Fork SCIP_FORK;               /**< data for fork nodes */
+typedef struct SCIP_Subroot SCIP_SUBROOT;         /**< data for subroot nodes */
+typedef struct SCIP_Node SCIP_NODE;               /**< node data structure */
+typedef struct SCIP_Tree SCIP_TREE;               /**< branch and bound tree */
 
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.43 2005/05/31 17:20:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.44 2005/08/22 18:35:36 bzfpfend Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -45,11 +45,11 @@
 
 /** gets the hash key of a cut */
 static
-DECL_HASHGETKEY(hashGetKeyCut)
+SCIP_DECL_HASHGETKEY(hashGetKeyCut)
 {  /*lint --e{715}*/
-   CUT* cut;
+   SCIP_CUT* cut;
 
-   cut = (CUT*)elem;
+   cut = (SCIP_CUT*)elem;
    assert(cut != NULL);
    assert(cut->row != NULL);
 
@@ -59,7 +59,7 @@ DECL_HASHGETKEY(hashGetKeyCut)
 
 /** returns TRUE iff both cuts are identical */
 static
-DECL_HASHKEYEQ(hashKeyEqCut)
+SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
 {  /*lint --e{715}*/
    /* Warning: The comparison of real values is made against default epsilon.
     *          This is ugly, but we have no settings at hand.
@@ -67,11 +67,11 @@ DECL_HASHKEYEQ(hashKeyEqCut)
 
    int i;
 
-   ROW* row1;
-   ROW* row2;
+   SCIP_ROW* row1;
+   SCIP_ROW* row2;
 
-   row1 = (ROW*)key1;
-   row2 = (ROW*)key2;
+   row1 = (SCIP_ROW*)key1;
+   row2 = (SCIP_ROW*)key2;
    assert(row1 != NULL);
    assert(row2 != NULL);
 
@@ -116,12 +116,12 @@ DECL_HASHKEYEQ(hashKeyEqCut)
 }
 
 static
-DECL_HASHKEYVAL(hashKeyValCut)
+SCIP_DECL_HASHKEYVAL(hashKeyValCut)
 {  /*lint --e{715}*/
-   ROW* row;
+   SCIP_ROW* row;
    unsigned int keyval;
 
-   row = (ROW*)key;
+   row = (SCIP_ROW*)key;
    assert(row != NULL);
 
    keyval = (row->nummaxval << 29) + (row->len << 22) + (row->minidx << 11) + row->maxidx; /*lint !e701*/
@@ -137,10 +137,10 @@ DECL_HASHKEYVAL(hashKeyValCut)
 
 /** resizes cuts array to be able to store at least num entries */
 static
-RETCODE cutpoolEnsureCutsMem(
-   CUTPOOL*         cutpool,            /**< cut pool */
-   SET*             set,                /**< global SCIP settings */
-   int              num                 /**< minimal number of slots in array */
+SCIP_RETCODE cutpoolEnsureCutsMem(
+   SCIP_CUTPOOL*         cutpool,            /**< cut pool */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimal number of slots in array */
    )
 {
    assert(cutpool != NULL);
@@ -151,7 +151,7 @@ RETCODE cutpoolEnsureCutsMem(
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(&cutpool->cuts, newsize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&cutpool->cuts, newsize) );
       cutpool->cutssize = newsize;
    }
    assert(num <= cutpool->cutssize);
@@ -162,15 +162,15 @@ RETCODE cutpoolEnsureCutsMem(
 
 
 /*
- * Cut methods
+ * SCIP_Cut methods
  */
 
 /** creates a cut and captures the row */
 static
-RETCODE cutCreate(
-   CUT**            cut,                /**< pointer to store the cut */
-   BLKMEM*          blkmem,             /**< block memory */
-   ROW*             row                 /**< row this cut represents */
+SCIP_RETCODE cutCreate(
+   SCIP_CUT**            cut,                /**< pointer to store the cut */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_ROW*             row                 /**< row this cut represents */
    )
 {
    assert(cut != NULL);
@@ -178,7 +178,7 @@ RETCODE cutCreate(
    assert(row != NULL);
 
    /* allocate cut memory */
-   ALLOC_OKAY( allocBlockMemory(blkmem, cut) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, cut) );
    (*cut)->row = row;
    (*cut)->age = 0;
    (*cut)->processedlp = -1;
@@ -192,11 +192,11 @@ RETCODE cutCreate(
 
 /** frees a cut and releases the row */
 static
-RETCODE cutFree(
-   CUT**            cut,                /**< pointer to store the cut */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   LP*              lp                  /**< current LP data */
+SCIP_RETCODE cutFree(
+   SCIP_CUT**            cut,                /**< pointer to store the cut */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp                  /**< current SCIP_LP data */
    )
 {
    assert(cut != NULL);
@@ -205,19 +205,19 @@ RETCODE cutFree(
    assert(blkmem != NULL);
    
    /* release row */
-   CHECK_OKAY( SCIProwRelease(&(*cut)->row, blkmem, set, lp) );
+   SCIP_CALL( SCIProwRelease(&(*cut)->row, blkmem, set, lp) );
 
    /* free cut memory */
-   freeBlockMemory(blkmem, cut);
+   BMSfreeBlockMemory(blkmem, cut);
 
    return SCIP_OKAY;
 }
 
 /** returns whether the cut's age exceeds the age limit */
 static
-Bool cutIsAged(
-   CUT*             cut,                /**< cut to check */
-   int              agelimit            /**< maximum age a cut can reach before it is deleted from the pool, or -1 */
+SCIP_Bool cutIsAged(
+   SCIP_CUT*             cut,                /**< cut to check */
+   int                   agelimit            /**< maximum age a cut can reach before it is deleted from the pool, or -1 */
    )
 {
    assert(cut != NULL);
@@ -229,24 +229,24 @@ Bool cutIsAged(
 
 
 /*
- * Cutpool methods
+ * SCIP_Cutpool methods
  */
 
 /** creates cut pool */
-RETCODE SCIPcutpoolCreate(
-   CUTPOOL**        cutpool,            /**< pointer to store cut pool */
-   BLKMEM*          blkmem,             /**< block memory */
-   int              agelimit            /**< maximum age a cut can reach before it is deleted from the pool */
+SCIP_RETCODE SCIPcutpoolCreate(
+   SCIP_CUTPOOL**        cutpool,            /**< pointer to store cut pool */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   int                   agelimit            /**< maximum age a cut can reach before it is deleted from the pool */
    )
 {
    assert(cutpool != NULL);
    assert(agelimit >= -1);
 
-   ALLOC_OKAY( allocMemory(cutpool) );
+   SCIP_ALLOC( BMSallocMemory(cutpool) );
 
-   CHECK_OKAY( SCIPclockCreate(&(*cutpool)->clock, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*cutpool)->poolclock, SCIP_CLOCKTYPE_DEFAULT) );
 
-   CHECK_OKAY( SCIPhashtableCreate(&(*cutpool)->hashtable, blkmem, SCIP_HASHSIZE_CUTPOOLS,
+   SCIP_CALL( SCIPhashtableCreate(&(*cutpool)->hashtable, blkmem, SCIP_HASHSIZE_CUTPOOLS,
                   hashGetKeyCut, hashKeyEqCut, hashKeyValCut) );
 
    (*cutpool)->cuts = NULL;
@@ -263,37 +263,37 @@ RETCODE SCIPcutpoolCreate(
 }
 
 /** frees cut pool */
-RETCODE SCIPcutpoolFree(
-   CUTPOOL**        cutpool,            /**< pointer to store cut pool */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   LP*              lp                  /**< current LP data */
+SCIP_RETCODE SCIPcutpoolFree(
+   SCIP_CUTPOOL**        cutpool,            /**< pointer to store cut pool */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp                  /**< current SCIP_LP data */
    )
 {
    assert(cutpool != NULL);
    assert(*cutpool != NULL);
 
    /* remove all cuts from the pool */
-   CHECK_OKAY( SCIPcutpoolClear(*cutpool, blkmem, set, lp) );
+   SCIP_CALL( SCIPcutpoolClear(*cutpool, blkmem, set, lp) );
 
    /* free clock */
-   SCIPclockFree(&(*cutpool)->clock);
+   SCIPclockFree(&(*cutpool)->poolclock);
 
    /* free hash table */
    SCIPhashtableFree(&(*cutpool)->hashtable);
    
-   freeMemoryArrayNull(&(*cutpool)->cuts);
-   freeMemory(cutpool);
+   BMSfreeMemoryArrayNull(&(*cutpool)->cuts);
+   BMSfreeMemory(cutpool);
 
    return SCIP_OKAY;
 }
 
 /** removes all rows from the cut pool */
-RETCODE SCIPcutpoolClear(
-   CUTPOOL*         cutpool,            /**< cut pool */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   LP*              lp                  /**< current LP data */
+SCIP_RETCODE SCIPcutpoolClear(
+   SCIP_CUTPOOL*         cutpool,            /**< cut pool */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp                  /**< current SCIP_LP data */
    )
 {
    int i;
@@ -304,7 +304,7 @@ RETCODE SCIPcutpoolClear(
    for( i = 0; i < cutpool->ncuts; ++i )
    {
       SCIProwUnlock(cutpool->cuts[i]->row);
-      CHECK_OKAY( cutFree(&cutpool->cuts[i], blkmem, set, lp) );
+      SCIP_CALL( cutFree(&cutpool->cuts[i], blkmem, set, lp) );
    }
    cutpool->ncuts = 0;
 
@@ -312,11 +312,11 @@ RETCODE SCIPcutpoolClear(
 }
 
 /** if not already existing, adds row to cut pool and captures it */
-RETCODE SCIPcutpoolAddRow(
-   CUTPOOL*         cutpool,            /**< cut pool */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   ROW*             row                 /**< cutting plane to add */
+SCIP_RETCODE SCIPcutpoolAddRow(
+   SCIP_CUTPOOL*         cutpool,            /**< cut pool */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             row                 /**< cutting plane to add */
    )
 {
    assert(cutpool != NULL);
@@ -325,21 +325,21 @@ RETCODE SCIPcutpoolAddRow(
    /* check in hash table, if cut already exists in the pool */
    if( SCIPhashtableRetrieve(cutpool->hashtable, (void*)row) == NULL )
    {
-      CHECK_OKAY( SCIPcutpoolAddNewRow(cutpool, blkmem, set, row) );
+      SCIP_CALL( SCIPcutpoolAddNewRow(cutpool, blkmem, set, row) );
    }
 
    return SCIP_OKAY;
 }
 
 /** adds row to cut pool and captures it; doesn't check for multiple cuts */
-RETCODE SCIPcutpoolAddNewRow(
-   CUTPOOL*         cutpool,            /**< cut pool */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   ROW*             row                 /**< cutting plane to add */
+SCIP_RETCODE SCIPcutpoolAddNewRow(
+   SCIP_CUTPOOL*         cutpool,            /**< cut pool */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             row                 /**< cutting plane to add */
    )
 {
-   CUT* cut;
+   SCIP_CUT* cut;
 
    assert(cutpool != NULL);
    assert(row != NULL);
@@ -347,27 +347,27 @@ RETCODE SCIPcutpoolAddNewRow(
    /* check, if row is modifiable or local */
    if( SCIProwIsModifiable(row) )
    {
-      errorMessage("cannot store modifiable row <%s> in a cut pool\n", SCIProwGetName(row));
+      SCIPerrorMessage("cannot store modifiable row <%s> in a cut pool\n", SCIProwGetName(row));
       return SCIP_INVALIDDATA;
    }
    if( SCIProwIsLocal(row) )
    {
-      errorMessage("cannot store locally valid row <%s> in a cut pool\n", SCIProwGetName(row));
+      SCIPerrorMessage("cannot store locally valid row <%s> in a cut pool\n", SCIProwGetName(row));
       return SCIP_INVALIDDATA;
    }
 
    /* create the cut */
-   CHECK_OKAY( cutCreate(&cut, blkmem, row) );
+   SCIP_CALL( cutCreate(&cut, blkmem, row) );
    cut->pos = cutpool->ncuts;
 
    /* add cut to the pool */
-   CHECK_OKAY( cutpoolEnsureCutsMem(cutpool, set, cutpool->ncuts+1) );
+   SCIP_CALL( cutpoolEnsureCutsMem(cutpool, set, cutpool->ncuts+1) );
    cutpool->cuts[cutpool->ncuts] = cut;
    cutpool->ncuts++;
    cutpool->maxncuts = MAX(cutpool->maxncuts, cutpool->ncuts);
 
    /* insert cut in the hash table */
-   CHECK_OKAY( SCIPhashtableInsert(cutpool->hashtable, (void*)cut) );
+   SCIP_CALL( SCIPhashtableInsert(cutpool->hashtable, (void*)cut) );
 
    /* lock the row */
    SCIProwLock(row);
@@ -377,13 +377,13 @@ RETCODE SCIPcutpoolAddNewRow(
 
 /** removes the cut from the cut pool */
 static
-RETCODE cutpoolDelCut(
-   CUTPOOL*         cutpool,            /**< cut pool */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   LP*              lp,                 /**< current LP data */
-   CUT*             cut                 /**< cut to remove */
+SCIP_RETCODE cutpoolDelCut(
+   SCIP_CUTPOOL*         cutpool,            /**< cut pool */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_CUT*             cut                 /**< cut to remove */
    )
 {
    int pos;
@@ -405,10 +405,10 @@ RETCODE cutpoolDelCut(
 
    /* remove the cut from the hash table */
    assert(SCIPhashtableExists(cutpool->hashtable, (void*)cut));
-   CHECK_OKAY( SCIPhashtableRemove(cutpool->hashtable, (void*)cut) );
+   SCIP_CALL( SCIPhashtableRemove(cutpool->hashtable, (void*)cut) );
 
    /* free the cut */
-   CHECK_OKAY( cutFree(&cutpool->cuts[pos], blkmem, set, lp) );
+   SCIP_CALL( cutFree(&cutpool->cuts[pos], blkmem, set, lp) );
    
    /* move the last cut of the pool to the free position */
    if( pos < cutpool->ncuts-1 )
@@ -427,49 +427,49 @@ RETCODE cutpoolDelCut(
    return SCIP_OKAY;
 }
 
-/** removes the LP row from the cut pool */
-RETCODE SCIPcutpoolDelRow(
-   CUTPOOL*         cutpool,            /**< cut pool */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   LP*              lp,                 /**< current LP data */
-   ROW*             row                 /**< row to remove */
+/** removes the SCIP_LP row from the cut pool */
+SCIP_RETCODE SCIPcutpoolDelRow(
+   SCIP_CUTPOOL*         cutpool,            /**< cut pool */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_ROW*             row                 /**< row to remove */
    )
 {
-   CUT* cut;
+   SCIP_CUT* cut;
 
    assert(cutpool != NULL);
    assert(row != NULL);
 
    /* find the cut in hash table */
-   cut = (CUT*)SCIPhashtableRetrieve(cutpool->hashtable, (void*)row);
+   cut = (SCIP_CUT*)SCIPhashtableRetrieve(cutpool->hashtable, (void*)row);
    if( cut == NULL )
    {
-      errorMessage("row <%s> is not existing in cutpool %p\n", SCIProwGetName(row), cutpool);
+      SCIPerrorMessage("row <%s> is not existing in cutpool %p\n", SCIProwGetName(row), cutpool);
       return SCIP_INVALIDDATA;
    }
 
-   CHECK_OKAY( cutpoolDelCut(cutpool, blkmem, set, stat, lp, cut) );
+   SCIP_CALL( cutpoolDelCut(cutpool, blkmem, set, stat, lp, cut) );
 
    return SCIP_OKAY;
 }
 
 
 /** separates cuts of the cut pool */
-RETCODE SCIPcutpoolSeparate(
-   CUTPOOL*         cutpool,            /**< cut pool */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   LP*              lp,                 /**< current LP data */
-   SEPASTORE*       sepastore,          /**< separation storage */
-   Bool             root,               /**< are we at the root node? */
-   RESULT*          result              /**< pointer to store the result of the separation call */
+SCIP_RETCODE SCIPcutpoolSeparate(
+   SCIP_CUTPOOL*         cutpool,            /**< cut pool */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_Bool             root,               /**< are we at the root node? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    )
 {
-   CUT* cut;
-   Bool found;
+   SCIP_CUT* cut;
+   SCIP_Bool found;
    int oldncutsstored;
    int c;
 
@@ -494,11 +494,11 @@ RETCODE SCIPcutpoolSeparate(
    cutpool->ncalls++;
    found = FALSE;
 
-   debugMessage("separating cut pool %p with %d cuts, beginning with cut %d\n",
+   SCIPdebugMessage("separating cut pool %p with %d cuts, beginning with cut %d\n",
       cutpool, cutpool->ncuts, cutpool->firstunprocessed);
 
    /* start timing */
-   SCIPclockStart(cutpool->clock, set);
+   SCIPclockStart(cutpool->poolclock, set);
 
    /* remember the current total number of found cuts */
    oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
@@ -513,7 +513,7 @@ RETCODE SCIPcutpoolSeparate(
 
       if( cut->processedlp < stat->lpcount )
       {
-         ROW* row;
+         SCIP_ROW* row;
 
          cut->processedlp = stat->lpcount;
          row = cut->row;
@@ -523,9 +523,9 @@ RETCODE SCIPcutpoolSeparate(
             if( SCIProwIsEfficacious(row, set, stat, lp, root) )
             {
                /* insert cut in separation storage */
-               debugMessage(" -> separated cut <%s> from the cut pool (feasibility: %g)\n",
+               SCIPdebugMessage(" -> separated cut <%s> from the cut pool (feasibility: %g)\n",
                   SCIProwGetName(row), SCIProwGetLPFeasibility(row, stat, lp));
-               CHECK_OKAY( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, lp, row, FALSE, root) );
+               SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, lp, row, FALSE, root) );
                found = TRUE;
             }
             else
@@ -533,7 +533,7 @@ RETCODE SCIPcutpoolSeparate(
                cut->age++;
                if( cutIsAged(cut, cutpool->agelimit) )
                {
-                  CHECK_OKAY( cutpoolDelCut(cutpool, blkmem, set, stat, lp, cut) );
+                  SCIP_CALL( cutpoolDelCut(cutpool, blkmem, set, stat, lp, cut) );
                }
             }
          }
@@ -547,7 +547,7 @@ RETCODE SCIPcutpoolSeparate(
    cutpool->ncutsfound += SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored; /*lint !e776*/
 
    /* stop timing */
-   SCIPclockStop(cutpool->clock, set);
+   SCIPclockStop(cutpool->poolclock, set);
 
    if( found )
       *result = SCIP_SEPARATED;
@@ -557,7 +557,7 @@ RETCODE SCIPcutpoolSeparate(
 
 /** get number of cuts in the cut pool */
 int SCIPcutpoolGetNCuts(
-   CUTPOOL*         cutpool             /**< cut pool */
+   SCIP_CUTPOOL*         cutpool             /**< cut pool */
    )
 {
    assert(cutpool != NULL);
@@ -567,7 +567,7 @@ int SCIPcutpoolGetNCuts(
 
 /** get maximum number of cuts that were stored in the cut pool at the same time */
 int SCIPcutpoolGetMaxNCuts(
-   CUTPOOL*         cutpool             /**< cut pool */
+   SCIP_CUTPOOL*         cutpool             /**< cut pool */
    )
 {
    assert(cutpool != NULL);
@@ -576,18 +576,18 @@ int SCIPcutpoolGetMaxNCuts(
 }
 
 /** gets time in seconds used for separating cuts from the pool */
-Real SCIPcutpoolGetTime(
-   CUTPOOL*         cutpool             /**< cut pool */
+SCIP_Real SCIPcutpoolGetTime(
+   SCIP_CUTPOOL*         cutpool             /**< cut pool */
    )
 {
    assert(cutpool != NULL);
 
-   return SCIPclockGetTime(cutpool->clock);
+   return SCIPclockGetTime(cutpool->poolclock);
 }
 
 /** get number of times, the cut pool was separated */
-Longint SCIPcutpoolGetNCalls(
-   CUTPOOL*         cutpool             /**< cut pool */
+SCIP_Longint SCIPcutpoolGetNCalls(
+   SCIP_CUTPOOL*         cutpool             /**< cut pool */
    )
 {
    assert(cutpool != NULL);
@@ -596,8 +596,8 @@ Longint SCIPcutpoolGetNCalls(
 }
 
 /** get total number of cuts that were separated from the cut pool */
-Longint SCIPcutpoolGetNCutsFound(
-   CUTPOOL*         cutpool             /**< cut pool */
+SCIP_Longint SCIPcutpoolGetNCutsFound(
+   SCIP_CUTPOOL*         cutpool             /**< cut pool */
    )
 {
    assert(cutpool != NULL);

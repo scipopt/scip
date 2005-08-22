@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop.h,v 1.11 2005/07/15 17:20:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop.h,v 1.12 2005/08/22 18:35:44 bzfpfend Exp $"
 
 /**@file   prop.h
  * @brief  internal methods for propagators
@@ -42,91 +42,91 @@
 
 /** creates a propagator */
 extern
-RETCODE SCIPpropCreate(
-   PROP**           prop,               /**< pointer to propagator data structure */
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory for parameter settings */
-   const char*      name,               /**< name of propagator */
-   const char*      desc,               /**< description of propagator */
-   int              priority,           /**< priority of propagator (>= 0: before, < 0: after constraint handlers) */
-   int              freq,               /**< frequency for calling propagator */
-   Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
-   DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
-   DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
-   DECL_PROPEXIT    ((*propexit)),      /**< deinitialize propagator */
-   DECL_PROPINITSOL ((*propinitsol)),   /**< solving process initialization method of propagator */
-   DECL_PROPEXITSOL ((*propexitsol)),   /**< solving process deinitialization method of propagator */
-   DECL_PROPEXEC    ((*propexec)),      /**< execution method of propagator */
-   DECL_PROPRESPROP ((*propresprop)),   /**< propagation conflict resolving method */
-   PROPDATA*        propdata            /**< propagator data */
+SCIP_RETCODE SCIPpropCreate(
+   SCIP_PROP**           prop,               /**< pointer to propagator data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of propagator */
+   const char*           desc,               /**< description of propagator */
+   int                   priority,           /**< priority of propagator (>= 0: before, < 0: after constraint handlers) */
+   int                   freq,               /**< frequency for calling propagator */
+   SCIP_Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
+   SCIP_DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
+   SCIP_DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
+   SCIP_DECL_PROPEXIT    ((*propexit)),      /**< deinitialize propagator */
+   SCIP_DECL_PROPINITSOL ((*propinitsol)),   /**< solving process initialization method of propagator */
+   SCIP_DECL_PROPEXITSOL ((*propexitsol)),   /**< solving process deinitialization method of propagator */
+   SCIP_DECL_PROPEXEC    ((*propexec)),      /**< execution method of propagator */
+   SCIP_DECL_PROPRESPROP ((*propresprop)),   /**< propagation conflict resolving method */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
    );
 
 /** calls destructor and frees memory of propagator */
 extern
-RETCODE SCIPpropFree(
-   PROP**           prop,               /**< pointer to propagator data structure */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPpropFree(
+   SCIP_PROP**           prop,               /**< pointer to propagator data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** initializes propagator */
 extern
-RETCODE SCIPpropInit(
-   PROP*            prop,               /**< propagator */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPpropInit(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** calls exit method of propagator */
 extern
-RETCODE SCIPpropExit(
-   PROP*            prop,               /**< propagator */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPpropExit(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs propagator that the branch and bound process is being started */
 extern
-RETCODE SCIPpropInitsol(
-   PROP*            prop,               /**< propagator */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPpropInitsol(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs propagator that the branch and bound process data is being freed */
 extern
-RETCODE SCIPpropExitsol(
-   PROP*            prop,               /**< propagator */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPpropExitsol(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** calls execution method of propagator */
 extern
-RETCODE SCIPpropExec(
-   PROP*            prop,               /**< propagator */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   int              depth,              /**< depth of current node */
-   Bool             execdelayed,        /**< execute propagator even if it is marked to be delayed */
-   RESULT*          result              /**< pointer to store the result of the callback method */
+SCIP_RETCODE SCIPpropExec(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   int                   depth,              /**< depth of current node */
+   SCIP_Bool             execdelayed,        /**< execute propagator even if it is marked to be delayed */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 /** resolves the given conflicting bound, that was deduced by the given propagator, by putting all "reason" bounds
  *  leading to the deduction into the conflict queue with calls to SCIPaddConflictLb() and SCIPaddConflictUb()
  */
 extern
-RETCODE SCIPpropResolvePropagation(
-   PROP*            prop,               /**< propagator */
-   SET*             set,                /**< global SCIP settings */
-   VAR*             infervar,           /**< variable whose bound was deduced by the constraint */
-   int              inferinfo,          /**< user inference information attached to the bound change */
-   BOUNDTYPE        inferboundtype,     /**< bound that was deduced (lower or upper bound) */
-   BDCHGIDX*        bdchgidx,           /**< bound change index, representing the point of time where change took place */
-   RESULT*          result              /**< pointer to store the result of the callback method */
+SCIP_RETCODE SCIPpropResolvePropagation(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             infervar,           /**< variable whose bound was deduced by the constraint */
+   int                   inferinfo,          /**< user inference information attached to the bound change */
+   SCIP_BOUNDTYPE        inferboundtype,     /**< bound that was deduced (lower or upper bound) */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index, representing the point of time where change took place */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 /** sets priority of propagator */
 extern
 void SCIPpropSetPriority(
-   PROP*            prop,               /**< propagator */
-   SET*             set,                /**< global SCIP settings */
-   int              priority            /**< new priority of the propagator */
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   priority            /**< new priority of the propagator */
    );
 
 #endif

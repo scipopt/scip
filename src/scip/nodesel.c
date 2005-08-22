@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.46 2005/05/31 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.47 2005/08/22 18:35:41 bzfpfend Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -50,10 +50,10 @@
 
 /** resizes node memory to hold at least the given number of nodes */
 static
-RETCODE nodepqResize(
-   NODEPQ*          nodepq,             /**< node priority queue */
-   SET*             set,                /**< global SCIP settings */
-   int              minsize             /**< minimal number of storeable nodes */
+SCIP_RETCODE nodepqResize(
+   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   minsize             /**< minimal number of storeable nodes */
    )
 {
    assert(nodepq != NULL);
@@ -62,7 +62,7 @@ RETCODE nodepqResize(
       return SCIP_OKAY;
 
    nodepq->size = SCIPsetCalcTreeGrowSize(set, minsize);
-   ALLOC_OKAY( reallocMemoryArray(&nodepq->slots, nodepq->size) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&nodepq->slots, nodepq->size) );
 
    return SCIP_OKAY;
 }
@@ -72,9 +72,9 @@ RETCODE nodepqResize(
  */
 static
 void nodepqUpdateLowerbound(
-   NODEPQ*          nodepq,             /**< node priority queue */
-   SET*             set,                /**< global SCIP settings */
-   NODE*            node                /**< node to be inserted */
+   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE*            node                /**< node to be inserted */
    )
 {
    assert(nodepq != NULL);
@@ -83,7 +83,7 @@ void nodepqUpdateLowerbound(
    assert(node != NULL);
 
    assert(nodepq->nlowerbounds > 0 || nodepq->lowerboundnode == NULL);
-   debugMessage("update queue's lower bound after adding node %p: nodebound=%g, queuebound=%g, nlowerbounds=%d, lowerboundnode=%p (bound=%g)\n",
+   SCIPdebugMessage("update queue's lower bound after adding node %p: nodebound=%g, queuebound=%g, nlowerbounds=%d, lowerboundnode=%p (bound=%g)\n",
       node, SCIPnodeGetLowerbound(node), nodepq->lowerbound, nodepq->nlowerbounds,
       nodepq->lowerboundnode, nodepq->lowerboundnode != NULL ? SCIPnodeGetLowerbound(nodepq->lowerboundnode) : 0.0);
    if( nodepq->validlowerbound )
@@ -104,7 +104,7 @@ void nodepqUpdateLowerbound(
          }
       }
    }
-   debugMessage(" -> new queuebound=%g, nlowerbounds=%d, lowerboundnode=%p\n",
+   SCIPdebugMessage(" -> new queuebound=%g, nlowerbounds=%d, lowerboundnode=%p\n",
       nodepq->lowerbound, nodepq->nlowerbounds, nodepq->lowerboundnode);
 
    assert(nodepq->nlowerbounds > 0 || nodepq->lowerboundnode == NULL);
@@ -115,8 +115,8 @@ void nodepqUpdateLowerbound(
  */
 static
 void nodepqCalcLowerbound(
-   NODEPQ*          nodepq,             /**< node priority queue */
-   SET*             set                 /**< global SCIP settings */
+   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    int i;
@@ -135,15 +135,15 @@ void nodepqCalcLowerbound(
 }
 
 /** creates node priority queue */
-RETCODE SCIPnodepqCreate(
-   NODEPQ**         nodepq,             /**< pointer to a node priority queue */
-   SET*             set,                /**< global SCIP settings */
-   NODESEL*         nodesel             /**< node selector to use for sorting the nodes in the queue */
+SCIP_RETCODE SCIPnodepqCreate(
+   SCIP_NODEPQ**         nodepq,             /**< pointer to a node priority queue */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODESEL*         nodesel             /**< node selector to use for sorting the nodes in the queue */
    )
 {
    assert(nodepq != NULL);
 
-   ALLOC_OKAY( allocMemory(nodepq) );
+   SCIP_ALLOC( BMSallocMemory(nodepq) );
    (*nodepq)->nodesel = nodesel;
    (*nodepq)->slots = NULL;
    (*nodepq)->len = 0;
@@ -159,30 +159,30 @@ RETCODE SCIPnodepqCreate(
 
 /** frees node priority queue, but not the data nodes themselves */
 void SCIPnodepqDestroy(
-   NODEPQ**         nodepq              /**< pointer to a node priority queue */
+   SCIP_NODEPQ**         nodepq              /**< pointer to a node priority queue */
    )
 {
    assert(nodepq != NULL);
    assert(*nodepq != NULL);
 
-   freeMemoryArrayNull(&(*nodepq)->slots);
-   freeMemory(nodepq);
+   BMSfreeMemoryArrayNull(&(*nodepq)->slots);
+   BMSfreeMemory(nodepq);
 }
 
 /** frees node priority queue and all nodes in the queue */
-RETCODE SCIPnodepqFree(
-   NODEPQ**         nodepq,             /**< pointer to a node priority queue */
-   BLKMEM*          blkmem,             /**< block memory buffers */
-   SET*             set,                /**< global SCIP settings */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp                  /**< current LP data */
+SCIP_RETCODE SCIPnodepqFree(
+   SCIP_NODEPQ**         nodepq,             /**< pointer to a node priority queue */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp                  /**< current SCIP_LP data */
    )
 {
    assert(nodepq != NULL);
    assert(*nodepq != NULL);
 
    /* free the nodes of the queue */
-   CHECK_OKAY( SCIPnodepqClear(*nodepq, blkmem, set, tree, lp) );
+   SCIP_CALL( SCIPnodepqClear(*nodepq, blkmem, set, tree, lp) );
    
    /* free the queue data structure */
    SCIPnodepqDestroy(nodepq);
@@ -191,12 +191,12 @@ RETCODE SCIPnodepqFree(
 }
 
 /** deletes all nodes in the node priority queue */
-RETCODE SCIPnodepqClear(
-   NODEPQ*          nodepq,             /**< node priority queue */
-   BLKMEM*          blkmem,             /**< block memory buffers */
-   SET*             set,                /**< global SCIP settings */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp                  /**< current LP data */
+SCIP_RETCODE SCIPnodepqClear(
+   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp                  /**< current SCIP_LP data */
    )
 {
    int i;
@@ -208,7 +208,7 @@ RETCODE SCIPnodepqClear(
    {
       assert(nodepq->slots[i] != NULL);
       assert(SCIPnodeGetType(nodepq->slots[i]) == SCIP_NODETYPE_LEAF);
-      CHECK_OKAY( SCIPnodeFree(&nodepq->slots[i], blkmem, set, tree, lp) );
+      SCIP_CALL( SCIPnodeFree(&nodepq->slots[i], blkmem, set, tree, lp) );
    }
 
    /* reset data */
@@ -223,8 +223,8 @@ RETCODE SCIPnodepqClear(
 }
 
 /** returns the node selector associated with the given node priority queue */
-NODESEL* SCIPnodepqGetNodesel(
-   NODEPQ*          nodepq              /**< node priority queue */
+SCIP_NODESEL* SCIPnodepqGetNodesel(
+   SCIP_NODEPQ*          nodepq              /**< node priority queue */
    )
 {
    assert(nodepq != NULL);
@@ -233,10 +233,10 @@ NODESEL* SCIPnodepqGetNodesel(
 }
 
 /** sets the node selector used for sorting the nodes in the queue, and resorts the queue if necessary */
-RETCODE SCIPnodepqSetNodesel(
-   NODEPQ**         nodepq,             /**< pointer to a node priority queue */
-   SET*             set,                /**< global SCIP settings */
-   NODESEL*         nodesel             /**< node selector to use for sorting the nodes in the queue */
+SCIP_RETCODE SCIPnodepqSetNodesel(
+   SCIP_NODEPQ**         nodepq,             /**< pointer to a node priority queue */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODESEL*         nodesel             /**< node selector to use for sorting the nodes in the queue */
    )
 {
    assert(nodepq != NULL);
@@ -247,19 +247,19 @@ RETCODE SCIPnodepqSetNodesel(
 
    if( (*nodepq)->nodesel != nodesel )
    {
-      NODEPQ* newnodepq;
+      SCIP_NODEPQ* newnodepq;
       int i;
 
       /* create new node priority queue */
-      CHECK_OKAY( SCIPnodepqCreate(&newnodepq, set, nodesel) );
+      SCIP_CALL( SCIPnodepqCreate(&newnodepq, set, nodesel) );
       
       /* resize the new node priority queue to be able to store all nodes */
-      CHECK_OKAY( nodepqResize(newnodepq, set, (*nodepq)->len) );
+      SCIP_CALL( nodepqResize(newnodepq, set, (*nodepq)->len) );
       
       /* insert all nodes in the new node priority queue */
       for( i = 0; i < (*nodepq)->len; ++i )
       {
-         CHECK_OKAY( SCIPnodepqInsert(newnodepq, set, (*nodepq)->slots[i]) );
+         SCIP_CALL( SCIPnodepqInsert(newnodepq, set, (*nodepq)->slots[i]) );
       }
       
       /* destroy the old node priority queue without freeing the nodes */
@@ -274,10 +274,10 @@ RETCODE SCIPnodepqSetNodesel(
 
 /** compares two nodes; returns -1/0/+1 if node1 better/equal/worse than node2 */
 int SCIPnodepqCompare(
-   NODEPQ*          nodepq,             /**< node priority queue */
-   SET*             set,                /**< global SCIP settings */
-   NODE*            node1,              /**< first node to compare */
-   NODE*            node2               /**< second node to compare */
+   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE*            node1,              /**< first node to compare */
+   SCIP_NODE*            node2               /**< second node to compare */
    )
 {
    assert(nodepq != NULL);
@@ -289,13 +289,13 @@ int SCIPnodepqCompare(
 }
 
 /** inserts node into node priority queue */
-RETCODE SCIPnodepqInsert(
-   NODEPQ*          nodepq,             /**< node priority queue */
-   SET*             set,                /**< global SCIP settings */
-   NODE*            node                /**< node to be inserted */
+SCIP_RETCODE SCIPnodepqInsert(
+   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE*            node                /**< node to be inserted */
    )
 {
-   NODESEL* nodesel;
+   SCIP_NODESEL* nodesel;
    int pos;
 
    assert(nodepq != NULL);
@@ -307,7 +307,7 @@ RETCODE SCIPnodepqInsert(
    assert(nodesel != NULL);
    assert(nodesel->nodeselcomp != NULL);
 
-   CHECK_OKAY( nodepqResize(nodepq, set, nodepq->len+1) );
+   SCIP_CALL( nodepqResize(nodepq, set, nodepq->len+1) );
 
    /* insert node as leaf in the tree, move it towards the root as long it is better than its parent */
    pos = nodepq->len;
@@ -333,19 +333,19 @@ RETCODE SCIPnodepqInsert(
  *  free position
  */
 static
-Bool nodepqDelPos(
-   NODEPQ*          nodepq,             /**< node priority queue */
-   SET*             set,                /**< global SCIP settings */
-   int              rempos              /**< queue position of node to remove */
+SCIP_Bool nodepqDelPos(
+   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   rempos              /**< queue position of node to remove */
    )
 {
-   NODESEL* nodesel;
-   NODE* lastnode;
+   SCIP_NODESEL* nodesel;
+   SCIP_NODE* lastnode;
    int freepos;
    int childpos;
    int parentpos;
    int brotherpos;
-   Bool parentfelldown;
+   SCIP_Bool parentfelldown;
 
    assert(nodepq != NULL);
    assert(nodepq->len > 0);
@@ -363,12 +363,12 @@ Bool nodepqDelPos(
       /* update the minimal lower bound */
       if( nodepq->nlowerbounds > 0 )
       {
-         NODE* node;
+         SCIP_NODE* node;
          
          node = nodepq->slots[rempos];
          assert(SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), nodepq->lowerbound));
          
-         debugMessage("update queue's lower bound after removal of node %p: nodebound=%g, queuebound=%g, nlowerbounds=%d, lowerboundnode=%p (bound=%g)\n",
+         SCIPdebugMessage("update queue's lower bound after removal of node %p: nodebound=%g, queuebound=%g, nlowerbounds=%d, lowerboundnode=%p (bound=%g)\n",
             node, SCIPnodeGetLowerbound(node), nodepq->lowerbound, nodepq->nlowerbounds, 
             nodepq->lowerboundnode, nodepq->lowerboundnode != NULL ? SCIPnodeGetLowerbound(nodepq->lowerboundnode) : 0.0);
          if( SCIPsetIsEQ(set, SCIPnodeGetLowerbound(node), nodepq->lowerbound) )
@@ -382,7 +382,7 @@ Bool nodepqDelPos(
          }
          if( node == nodepq->lowerboundnode )
             nodepq->lowerboundnode = NULL;
-         debugMessage(" -> new queuebound=%g, nlowerbounds=%d, lowerboundnode=%p\n",
+         SCIPdebugMessage(" -> new queuebound=%g, nlowerbounds=%d, lowerboundnode=%p\n",
             nodepq->lowerbound, nodepq->nlowerbounds, nodepq->lowerboundnode);
       }
       assert(nodepq->nlowerbounds > 0 || nodepq->lowerboundnode == NULL);
@@ -445,9 +445,9 @@ Bool nodepqDelPos(
 /** returns the position of given node in the priority queue, or -1 if not existing */
 static
 int nodepqFindNode(
-   NODEPQ*          nodepq,             /**< node priority queue */
-   SET*             set,                /**< global SCIP settings */
-   NODE*            node                /**< node to find */
+   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE*            node                /**< node to find */
    )
 {
    int pos;
@@ -468,10 +468,10 @@ int nodepqFindNode(
 }
 
 /** removes node from the node priority queue */
-RETCODE SCIPnodepqRemove(
-   NODEPQ*          nodepq,             /**< node priority queue */
-   SET*             set,                /**< global SCIP settings */
-   NODE*            node                /**< node to remove */
+SCIP_RETCODE SCIPnodepqRemove(
+   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE*            node                /**< node to remove */
    )
 {
    int pos;
@@ -479,7 +479,7 @@ RETCODE SCIPnodepqRemove(
    pos = nodepqFindNode(nodepq, set, node);
    if( pos == -1 )
    {
-      errorMessage("node doesn't exist in node priority queue\n");
+      SCIPerrorMessage("node doesn't exist in node priority queue\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -489,8 +489,8 @@ RETCODE SCIPnodepqRemove(
 }
 
 /** returns the best node of the queue without removing it */
-NODE* SCIPnodepqFirst(
-   const NODEPQ*    nodepq              /**< node priority queue */
+SCIP_NODE* SCIPnodepqFirst(
+   const SCIP_NODEPQ*    nodepq              /**< node priority queue */
    )
 {
    assert(nodepq != NULL);
@@ -505,8 +505,8 @@ NODE* SCIPnodepqFirst(
 }
 
 /** returns the nodes array of the queue */
-NODE** SCIPnodepqNodes(
-   const NODEPQ*    nodepq              /**< node priority queue */
+SCIP_NODE** SCIPnodepqNodes(
+   const SCIP_NODEPQ*    nodepq              /**< node priority queue */
    )
 {
    assert(nodepq != NULL);
@@ -516,7 +516,7 @@ NODE** SCIPnodepqNodes(
 
 /** returns the number of nodes stored in the node priority queue */
 int SCIPnodepqLen(
-   const NODEPQ*    nodepq              /**< node priority queue */
+   const SCIP_NODEPQ*    nodepq              /**< node priority queue */
    )
 {
    assert(nodepq != NULL);
@@ -526,9 +526,9 @@ int SCIPnodepqLen(
 }
 
 /** gets the minimal lower bound of all nodes in the queue */
-Real SCIPnodepqGetLowerbound(
-   NODEPQ*          nodepq,             /**< node priority queue */
-   SET*             set                 /**< global SCIP settings */
+SCIP_Real SCIPnodepqGetLowerbound(
+   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(nodepq != NULL);
@@ -562,9 +562,9 @@ Real SCIPnodepqGetLowerbound(
 }
 
 /** gets the node with minimal lower bound of all nodes in the queue */
-NODE* SCIPnodepqGetLowerboundNode(
-   NODEPQ*          nodepq,             /**< node priority queue */
-   SET*             set                 /**< global SCIP settings */
+SCIP_NODE* SCIPnodepqGetLowerboundNode(
+   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(nodepq != NULL);
@@ -599,8 +599,8 @@ NODE* SCIPnodepqGetLowerboundNode(
 }
 
 /** gets the sum of lower bounds of all nodes in the queue */
-Real SCIPnodepqGetLowerboundSum(
-   NODEPQ*          nodepq              /**< node priority queue */
+SCIP_Real SCIPnodepqGetLowerboundSum(
+   SCIP_NODEPQ*          nodepq              /**< node priority queue */
    )
 {
    assert(nodepq != NULL);
@@ -609,23 +609,23 @@ Real SCIPnodepqGetLowerboundSum(
 }
 
 /** free all nodes from the queue that are cut off by the given upper bound */
-RETCODE SCIPnodepqBound(
-   NODEPQ*          nodepq,             /**< node priority queue */
-   BLKMEM*          blkmem,             /**< block memory buffer */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< current LP data */
-   Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
+SCIP_RETCODE SCIPnodepqBound(
+   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffer */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    )
 {
-   NODE* node;
+   SCIP_NODE* node;
    int pos;
-   Bool parentfelldown;
+   SCIP_Bool parentfelldown;
 
    assert(nodepq != NULL);
 
-   debugMessage("bounding node queue of length %d with cutoffbound=%g\n", nodepq->len, cutoffbound);
+   SCIPdebugMessage("bounding node queue of length %d with cutoffbound=%g\n", nodepq->len, cutoffbound);
    pos = nodepq->len-1;
    while( pos >= 0 )
    {
@@ -635,7 +635,7 @@ RETCODE SCIPnodepqBound(
       assert(SCIPnodeGetType(node) == SCIP_NODETYPE_LEAF);
       if( SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), cutoffbound) )
       {
-         debugMessage("free node in slot %d (len=%d) at depth %d with lowerbound=%g\n",
+         SCIPdebugMessage("free node in slot %d (len=%d) at depth %d with lowerbound=%g\n",
             pos, nodepq->len, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node));
 
          /* cut off node; because we looped from back to front, the existing children of the node must have a smaller
@@ -660,12 +660,12 @@ RETCODE SCIPnodepqBound(
          SCIPvbcCutoffNode(stat->vbc, stat, node);
 
          /* free memory of the node */
-         CHECK_OKAY( SCIPnodeFree(&node, blkmem, set, tree, lp) );
+         SCIP_CALL( SCIPnodeFree(&node, blkmem, set, tree, lp) );
       }
       else
          pos--;
    }
-   debugMessage(" -> bounded node queue has length %d\n", nodepq->len);
+   SCIPdebugMessage(" -> bounded node queue has length %d\n", nodepq->len);
 
    return SCIP_OKAY;
 }
@@ -679,56 +679,56 @@ RETCODE SCIPnodepqBound(
 
 /** method to call, when the standard mode priority of a node selector was changed */
 static
-DECL_PARAMCHGD(paramChgdNodeselStdPriority)
+SCIP_DECL_PARAMCHGD(paramChgdNodeselStdPriority)
 {  /*lint --e{715}*/
-   PARAMDATA* paramdata;
+   SCIP_PARAMDATA* paramdata;
 
    paramdata = SCIPparamGetData(param);
    assert(paramdata != NULL);
 
    /* use SCIPsetNodeselStdPriority() to mark the nodesels unsorted */
-   CHECK_OKAY( SCIPsetNodeselStdPriority(scip, (NODESEL*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
+   SCIP_CALL( SCIPsetNodeselStdPriority(scip, (SCIP_NODESEL*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
 
 /** method to call, when the memory saving mode priority of a node selector was changed */
 static
-DECL_PARAMCHGD(paramChgdNodeselMemsavePriority)
+SCIP_DECL_PARAMCHGD(paramChgdNodeselMemsavePriority)
 {  /*lint --e{715}*/
-   PARAMDATA* paramdata;
+   SCIP_PARAMDATA* paramdata;
 
    paramdata = SCIPparamGetData(param);
    assert(paramdata != NULL);
 
    /* use SCIPsetNodeselMemsavePriority() to mark the nodesels unsorted */
-   CHECK_OKAY( SCIPsetNodeselMemsavePriority(scip, (NODESEL*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
+   SCIP_CALL( SCIPsetNodeselMemsavePriority(scip, (SCIP_NODESEL*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
 
 /** creates a node selector */
-RETCODE SCIPnodeselCreate(
-   NODESEL**        nodesel,            /**< pointer to store node selector */
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory for parameter settings */
-   const char*      name,               /**< name of node selector */
-   const char*      desc,               /**< description of node selector */
-   int              stdpriority,        /**< priority of the node selector in standard mode */
-   int              memsavepriority,    /**< priority of the node selector in memory saving mode */
-   Bool             lowestboundfirst,   /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
-   DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
-   DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
-   DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */
-   DECL_NODESELINITSOL((*nodeselinitsol)),/**< solving process initialization method of node selector */
-   DECL_NODESELEXITSOL((*nodeselexitsol)),/**< solving process deinitialization method of node selector */
-   DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
-   DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
-   NODESELDATA*     nodeseldata         /**< node selector data */
+SCIP_RETCODE SCIPnodeselCreate(
+   SCIP_NODESEL**        nodesel,            /**< pointer to store node selector */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of node selector */
+   const char*           desc,               /**< description of node selector */
+   int                   stdpriority,        /**< priority of the node selector in standard mode */
+   int                   memsavepriority,    /**< priority of the node selector in memory saving mode */
+   SCIP_Bool             lowestboundfirst,   /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
+   SCIP_DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
+   SCIP_DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
+   SCIP_DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */
+   SCIP_DECL_NODESELINITSOL((*nodeselinitsol)),/**< solving process initialization method of node selector */
+   SCIP_DECL_NODESELEXITSOL((*nodeselexitsol)),/**< solving process deinitialization method of node selector */
+   SCIP_DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
+   SCIP_DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
+   SCIP_NODESELDATA*     nodeseldata         /**< node selector data */
    )
 {
-   char paramname[MAXSTRLEN];
-   char paramdesc[MAXSTRLEN];
+   char paramname[SCIP_MAXSTRLEN];
+   char paramdesc[SCIP_MAXSTRLEN];
 
    assert(nodesel != NULL);
    assert(name != NULL);
@@ -736,9 +736,9 @@ RETCODE SCIPnodeselCreate(
    assert(nodeselselect != NULL);
    assert(nodeselcomp != NULL);
 
-   ALLOC_OKAY( allocMemory(nodesel) );
-   ALLOC_OKAY( duplicateMemoryArray(&(*nodesel)->name, name, strlen(name)+1) );
-   ALLOC_OKAY( duplicateMemoryArray(&(*nodesel)->desc, desc, strlen(desc)+1) );
+   SCIP_ALLOC( BMSallocMemory(nodesel) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*nodesel)->name, name, strlen(name)+1) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*nodesel)->desc, desc, strlen(desc)+1) );
    (*nodesel)->stdpriority = stdpriority;
    (*nodesel)->memsavepriority = memsavepriority;
    (*nodesel)->nodeselfree = nodeselfree;
@@ -755,23 +755,23 @@ RETCODE SCIPnodeselCreate(
    /* add parameters */
    sprintf(paramname, "nodeselection/%s/stdpriority", name);
    sprintf(paramdesc, "priority of branching rule <%s> in standard mode", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
+   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*nodesel)->stdpriority, stdpriority, INT_MIN, INT_MAX, 
-                  paramChgdNodeselStdPriority, (PARAMDATA*)(*nodesel)) ); /*lint !e740*/
+                  paramChgdNodeselStdPriority, (SCIP_PARAMDATA*)(*nodesel)) ); /*lint !e740*/
 
    sprintf(paramname, "nodeselection/%s/memsavepriority", name);
    sprintf(paramdesc, "priority of branching rule <%s> in memory saving mode", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
+   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*nodesel)->memsavepriority, memsavepriority, INT_MIN, INT_MAX, 
-                  paramChgdNodeselMemsavePriority, (PARAMDATA*)(*nodesel)) ); /*lint !e740*/
+                  paramChgdNodeselMemsavePriority, (SCIP_PARAMDATA*)(*nodesel)) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
    
 /** frees memory of node selector */
-RETCODE SCIPnodeselFree(
-   NODESEL**        nodesel,            /**< pointer to node selector data structure */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPnodeselFree(
+   SCIP_NODESEL**        nodesel,            /**< pointer to node selector data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(nodesel != NULL);
@@ -782,20 +782,20 @@ RETCODE SCIPnodeselFree(
    /* call destructor of node selector */
    if( (*nodesel)->nodeselfree != NULL )
    {
-      CHECK_OKAY( (*nodesel)->nodeselfree(set->scip, *nodesel) );
+      SCIP_CALL( (*nodesel)->nodeselfree(set->scip, *nodesel) );
    }
 
-   freeMemoryArray(&(*nodesel)->name);
-   freeMemoryArray(&(*nodesel)->desc);
-   freeMemory(nodesel);
+   BMSfreeMemoryArray(&(*nodesel)->name);
+   BMSfreeMemoryArray(&(*nodesel)->desc);
+   BMSfreeMemory(nodesel);
 
    return SCIP_OKAY;
 }
 
 /** initializes node selector */
-RETCODE SCIPnodeselInit(
-   NODESEL*         nodesel,            /**< node selector */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPnodeselInit(
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(nodesel != NULL);
@@ -803,13 +803,13 @@ RETCODE SCIPnodeselInit(
 
    if( nodesel->initialized )
    {
-      errorMessage("node selector <%s> already initialized", nodesel->name);
+      SCIPerrorMessage("node selector <%s> already initialized", nodesel->name);
       return SCIP_INVALIDCALL;
    }
 
    if( nodesel->nodeselinit != NULL )
    {
-      CHECK_OKAY( nodesel->nodeselinit(set->scip, nodesel) );
+      SCIP_CALL( nodesel->nodeselinit(set->scip, nodesel) );
    }
    nodesel->initialized = TRUE;
 
@@ -817,9 +817,9 @@ RETCODE SCIPnodeselInit(
 }
 
 /** deinitializes node selector */
-RETCODE SCIPnodeselExit(
-   NODESEL*         nodesel,            /**< node selector */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPnodeselExit(
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(nodesel != NULL);
@@ -827,13 +827,13 @@ RETCODE SCIPnodeselExit(
 
    if( !nodesel->initialized )
    {
-      errorMessage("node selector <%s> not initialized", nodesel->name);
+      SCIPerrorMessage("node selector <%s> not initialized", nodesel->name);
       return SCIP_INVALIDCALL;
    }
 
    if( nodesel->nodeselexit != NULL )
    {
-      CHECK_OKAY( nodesel->nodeselexit(set->scip, nodesel) );
+      SCIP_CALL( nodesel->nodeselexit(set->scip, nodesel) );
    }
    nodesel->initialized = FALSE;
 
@@ -841,9 +841,9 @@ RETCODE SCIPnodeselExit(
 }
 
 /** informs node selector that the branch and bound process is being started */
-RETCODE SCIPnodeselInitsol(
-   NODESEL*         nodesel,            /**< node selector */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPnodeselInitsol(
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(nodesel != NULL);
@@ -852,16 +852,16 @@ RETCODE SCIPnodeselInitsol(
    /* call solving process initialization method of node selector */
    if( nodesel->nodeselinitsol != NULL )
    {
-      CHECK_OKAY( nodesel->nodeselinitsol(set->scip, nodesel) );
+      SCIP_CALL( nodesel->nodeselinitsol(set->scip, nodesel) );
    }
 
    return SCIP_OKAY;
 }
 
 /** informs node selector that the branch and bound process data is being freed */
-RETCODE SCIPnodeselExitsol(
-   NODESEL*         nodesel,            /**< node selector */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPnodeselExitsol(
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(nodesel != NULL);
@@ -870,17 +870,17 @@ RETCODE SCIPnodeselExitsol(
    /* call solving process deinitialization method of node selector */
    if( nodesel->nodeselexitsol != NULL )
    {
-      CHECK_OKAY( nodesel->nodeselexitsol(set->scip, nodesel) );
+      SCIP_CALL( nodesel->nodeselexitsol(set->scip, nodesel) );
    }
 
    return SCIP_OKAY;
 }
 
 /** select next node to be processed */
-RETCODE SCIPnodeselSelect(
-   NODESEL*         nodesel,            /**< node selector */
-   SET*             set,                /**< global SCIP settings */
-   NODE**           selnode             /**< pointer to store node to be processed next */
+SCIP_RETCODE SCIPnodeselSelect(
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE**           selnode             /**< pointer to store node to be processed next */
    )
 {
    assert(nodesel != NULL);
@@ -888,17 +888,17 @@ RETCODE SCIPnodeselSelect(
    assert(set != NULL);
    assert(selnode != NULL);
 
-   CHECK_OKAY( nodesel->nodeselselect(set->scip, nodesel, selnode) );
+   SCIP_CALL( nodesel->nodeselselect(set->scip, nodesel, selnode) );
 
    return SCIP_OKAY;
 }
 
 /** compares two nodes; returns -1/0/+1 if node1 better/equal/worse than node2 */
 int SCIPnodeselCompare(
-   NODESEL*         nodesel,            /**< node selector */
-   SET*             set,                /**< global SCIP settings */
-   NODE*            node1,              /**< first node to compare */
-   NODE*            node2               /**< second node to compare */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE*            node1,              /**< first node to compare */
+   SCIP_NODE*            node2               /**< second node to compare */
    )
 {
    assert(nodesel != NULL);
@@ -912,7 +912,7 @@ int SCIPnodeselCompare(
 
 /** gets name of node selector */
 const char* SCIPnodeselGetName(
-   NODESEL*         nodesel             /**< node selector */
+   SCIP_NODESEL*         nodesel             /**< node selector */
    )
 {
    assert(nodesel != NULL);
@@ -922,7 +922,7 @@ const char* SCIPnodeselGetName(
 
 /** gets description of node selector */
 const char* SCIPnodeselGetDesc(
-   NODESEL*         nodesel             /**< node selector */
+   SCIP_NODESEL*         nodesel             /**< node selector */
    )
 {
    assert(nodesel != NULL);
@@ -932,7 +932,7 @@ const char* SCIPnodeselGetDesc(
 
 /** gets priority of node selector in standard mode */
 int SCIPnodeselGetStdPriority(
-   NODESEL*         nodesel             /**< node selector */
+   SCIP_NODESEL*         nodesel             /**< node selector */
    )
 {
    assert(nodesel != NULL);
@@ -942,9 +942,9 @@ int SCIPnodeselGetStdPriority(
 
 /** gets priority of node selector in standard mode */
 void SCIPnodeselSetStdPriority(
-   NODESEL*         nodesel,            /**< node selector */
-   SET*             set,                /**< global SCIP settings */
-   int              priority            /**< new priority of the node selector */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   priority            /**< new priority of the node selector */
    )
 {
    assert(nodesel != NULL);
@@ -956,7 +956,7 @@ void SCIPnodeselSetStdPriority(
 
 /** gets priority of node selector in memory saving mode */
 int SCIPnodeselGetMemsavePriority(
-   NODESEL*         nodesel             /**< node selector */
+   SCIP_NODESEL*         nodesel             /**< node selector */
    )
 {
    assert(nodesel != NULL);
@@ -966,9 +966,9 @@ int SCIPnodeselGetMemsavePriority(
 
 /** sets priority of node selector in memory saving mode */
 void SCIPnodeselSetMemsavePriority(
-   NODESEL*         nodesel,            /**< node selector */
-   SET*             set,                /**< global SCIP settings */
-   int              priority            /**< new priority of the node selector */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   priority            /**< new priority of the node selector */
    )
 {
    assert(nodesel != NULL);
@@ -979,8 +979,8 @@ void SCIPnodeselSetMemsavePriority(
 }
 
 /** gets user data of node selector */
-NODESELDATA* SCIPnodeselGetData(
-   NODESEL*         nodesel             /**< node selector */
+SCIP_NODESELDATA* SCIPnodeselGetData(
+   SCIP_NODESEL*         nodesel             /**< node selector */
    )
 {
    assert(nodesel != NULL);
@@ -990,8 +990,8 @@ NODESELDATA* SCIPnodeselGetData(
 
 /** sets user data of node selector; user has to free old data in advance! */
 void SCIPnodeselSetData(
-   NODESEL*         nodesel,            /**< node selector */
-   NODESELDATA*     nodeseldata         /**< new node selector user data */
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_NODESELDATA*     nodeseldata         /**< new node selector user data */
    )
 {
    assert(nodesel != NULL);
@@ -1000,8 +1000,8 @@ void SCIPnodeselSetData(
 }
 
 /** is node selector initialized? */
-Bool SCIPnodeselIsInitialized(
-   NODESEL*         nodesel             /**< node selector */
+SCIP_Bool SCIPnodeselIsInitialized(
+   SCIP_NODESEL*         nodesel             /**< node selector */
    )
 {
    assert(nodesel != NULL);

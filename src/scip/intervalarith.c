@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.11 2005/07/15 17:20:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.12 2005/08/22 18:35:40 bzfpfend Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -55,7 +55,7 @@ void setRoundingMode(
 {
    if( fesetround(roundmode) != 0 )
    {
-      errorMessage("error setting rounding mode to %d\n", roundmode);
+      SCIPerrorMessage("error setting rounding mode to %d\n", roundmode);
       SCIPABORT();
    }
 }
@@ -96,7 +96,7 @@ void setRoundingMode(
 {
    if( write_rnd(roundmode) != 0 )
    {
-      errorMessage("error setting rounding mode to %d\n", roundmode);
+      SCIPerrorMessage("error setting rounding mode to %d\n", roundmode);
       SCIPABORT();
    }
 }
@@ -130,7 +130,7 @@ void setRoundingMode(
    ROUNDMODE        roundmode           /**< rounding mode to activate */
    )
 {  /*lint --e{715}*/
-   warningMessage("setting rounding mode not available - interval arithmetic is invalid!\n");
+   SCIPwarningMessage("setting rounding mode not available - interval arithmetic is invalid!\n");
 }
 
 /** gets current rounding mode of floating point operations */
@@ -149,13 +149,13 @@ ROUNDMODE getRoundingMode(
 
 
 /*
- * Interval arithmetic operations
+ * SCIP_Interval arithmetic operations
  */
 
 /** stores given value as interval */
 void SCIPintervalSet(
-   INTERVAL*        resultant,          /**< interval to store value into */
-   Real             value               /**< value to store */
+   SCIP_INTERVAL*        resultant,          /**< interval to store value into */
+   SCIP_Real             value               /**< value to store */
    )
 {
    assert(resultant != NULL);
@@ -166,9 +166,9 @@ void SCIPintervalSet(
 
 /** stores given infimum and supremum as interval */
 void SCIPintervalSetBounds(
-   INTERVAL*        resultant,          /**< interval to store value into */
-   Real             inf,                /**< value to store as infimum */
-   Real             sup                 /**< value to store as supremum */
+   SCIP_INTERVAL*        resultant,          /**< interval to store value into */
+   SCIP_Real             inf,                /**< value to store as infimum */
+   SCIP_Real             sup                 /**< value to store as supremum */
    )
 {
    assert(resultant != NULL);
@@ -180,9 +180,9 @@ void SCIPintervalSetBounds(
 
 /** adds operand1 and operand2 and stores result in resultant */
 void SCIPintervalAdd(
-   INTERVAL*        resultant,          /**< resultant interval of operation */
-   INTERVAL         operand1,           /**< first operand of operation */
-   INTERVAL         operand2            /**< second operand of operation */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_INTERVAL         operand2            /**< second operand of operation */
    )
 {
    ROUNDMODE roundmode;
@@ -203,9 +203,9 @@ void SCIPintervalAdd(
 
 /** substracts operand2 from operand1 and stores result in resultant */
 void SCIPintervalSub(
-   INTERVAL*        resultant,          /**< resultant interval of operation */
-   INTERVAL         operand1,           /**< first operand of operation */
-   INTERVAL         operand2            /**< second operand of operation */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_INTERVAL         operand2            /**< second operand of operation */
    )
 {
    ROUNDMODE roundmode;
@@ -226,9 +226,9 @@ void SCIPintervalSub(
 
 /** multiplies operand1 with operand2 and stores result in resultant */
 void SCIPintervalMul(
-   INTERVAL*        resultant,          /**< resultant interval of operation */
-   INTERVAL         operand1,           /**< first operand of operation */
-   INTERVAL         operand2            /**< second operand of operation */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_INTERVAL         operand2            /**< second operand of operation */
    )
 {
    ROUNDMODE roundmode;
@@ -278,8 +278,8 @@ void SCIPintervalMul(
       }
       else if( operand2.sup >= 0.0 )
       {
-         Real x;
-         Real y;
+         SCIP_Real x;
+         SCIP_Real y;
 
          /* [-,+] * [-,+] */
          setRoundingMode(SCIP_ROUND_DOWNWARDS);
@@ -332,16 +332,16 @@ void SCIPintervalMul(
 }
 
 /** returns infimum of interval */
-Real SCIPintervalGetInf(
-   INTERVAL         interval            /**< interval */
+SCIP_Real SCIPintervalGetInf(
+   SCIP_INTERVAL         interval            /**< interval */
    )
 {
    return interval.inf;
 }
 
 /** returns supremum of interval */
-Real SCIPintervalGetSup(
-   INTERVAL         interval            /**< interval */
+SCIP_Real SCIPintervalGetSup(
+   SCIP_INTERVAL         interval            /**< interval */
    )
 {
    return interval.sup;

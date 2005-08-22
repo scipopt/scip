@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.24 2005/05/31 17:20:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.25 2005/08/22 18:35:29 bzfpfend Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -35,10 +35,10 @@
  */
 
 /** constraint handler data */
-struct ConshdlrData
+struct SCIP_ConshdlrData
 {
-   scip::ObjConshdlr* objconshdlr;      /**< constraint handler object */
-   Bool             deleteobject;       /**< should the constraint handler object be deleted when conshdlr is freed? */
+   scip::ObjConshdlr*    objconshdlr;        /**< constraint handler object */
+   SCIP_Bool             deleteobject;       /**< should the constraint handler object be deleted when conshdlr is freed? */
 };
 
 
@@ -50,16 +50,16 @@ struct ConshdlrData
 
 /** destructor of constraint handler to free user data (called when SCIP is exiting) */
 static
-DECL_CONSFREE(consFreeObj)
+SCIP_DECL_CONSFREE(consFreeObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_free(scip, conshdlr) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_free(scip, conshdlr) );
 
    /* free conshdlr object */
    if( conshdlrdata->deleteobject )
@@ -75,16 +75,16 @@ DECL_CONSFREE(consFreeObj)
 
 /** initialization method of constraint handler (called after problem was transformed) */
 static
-DECL_CONSINIT(consInitObj)
+SCIP_DECL_CONSINIT(consInitObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_init(scip, conshdlr, conss, nconss) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_init(scip, conshdlr, conss, nconss) );
 
    return SCIP_OKAY;
 }
@@ -92,16 +92,16 @@ DECL_CONSINIT(consInitObj)
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
 static
-DECL_CONSEXIT(consExitObj)
+SCIP_DECL_CONSEXIT(consExitObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_exit(scip, conshdlr, conss, nconss) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_exit(scip, conshdlr, conss, nconss) );
 
    return SCIP_OKAY;
 }
@@ -109,16 +109,16 @@ DECL_CONSEXIT(consExitObj)
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 static
-DECL_CONSINITPRE(consInitpreObj)
+SCIP_DECL_CONSINITPRE(consInitpreObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_initpre(scip, conshdlr, conss, nconss, result) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_initpre(scip, conshdlr, conss, nconss, result) );
 
    return SCIP_OKAY;
 }
@@ -126,16 +126,16 @@ DECL_CONSINITPRE(consInitpreObj)
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 static
-DECL_CONSEXITPRE(consExitpreObj)
+SCIP_DECL_CONSEXITPRE(consExitpreObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_exitpre(scip, conshdlr, conss, nconss, result) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_exitpre(scip, conshdlr, conss, nconss, result) );
 
    return SCIP_OKAY;
 }
@@ -143,16 +143,16 @@ DECL_CONSEXITPRE(consExitpreObj)
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 static
-DECL_CONSINITSOL(consInitsolObj)
+SCIP_DECL_CONSINITSOL(consInitsolObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_initsol(scip, conshdlr, conss, nconss) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_initsol(scip, conshdlr, conss, nconss) );
 
    return SCIP_OKAY;
 }
@@ -160,16 +160,16 @@ DECL_CONSINITSOL(consInitsolObj)
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
-DECL_CONSEXITSOL(consExitsolObj)
+SCIP_DECL_CONSEXITSOL(consExitsolObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_exitsol(scip, conshdlr, conss, nconss) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_exitsol(scip, conshdlr, conss, nconss) );
 
    return SCIP_OKAY;
 }
@@ -177,16 +177,16 @@ DECL_CONSEXITSOL(consExitsolObj)
 
 /** frees specific constraint data */
 static
-DECL_CONSDELETE(consDeleteObj)
+SCIP_DECL_CONSDELETE(consDeleteObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_delete(scip, conshdlr, consdata) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_delete(scip, conshdlr, consdata) );
 
    return SCIP_OKAY;
 }
@@ -194,33 +194,33 @@ DECL_CONSDELETE(consDeleteObj)
 
 /** transforms constraint data into data belonging to the transformed problem */ 
 static
-DECL_CONSTRANS(consTransObj)
+SCIP_DECL_CONSTRANS(consTransObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_trans(scip, conshdlr, sourcecons, targetcons) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_trans(scip, conshdlr, sourcecons, targetcons) );
 
    return SCIP_OKAY;
 }
 
 
-/** LP initialization method of constraint handler */
+/** SCIP_LP initialization method of constraint handler */
 static
-DECL_CONSINITLP(consInitlpObj)
+SCIP_DECL_CONSINITLP(consInitlpObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_initlp(scip, conshdlr, conss, nconss) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_initlp(scip, conshdlr, conss, nconss) );
 
    return SCIP_OKAY;
 }
@@ -228,33 +228,33 @@ DECL_CONSINITLP(consInitlpObj)
 
 /** separation method of constraint handler */
 static
-DECL_CONSSEPA(consSepaObj)
+SCIP_DECL_CONSSEPA(consSepaObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_sepa(scip, conshdlr, conss, nconss, nusefulconss, result) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_sepa(scip, conshdlr, conss, nconss, nusefulconss, result) );
 
    return SCIP_OKAY;
 }
 
 
-/** constraint enforcing method of constraint handler for LP solutions */
+/** constraint enforcing method of constraint handler for SCIP_LP solutions */
 static
-DECL_CONSENFOLP(consEnfolpObj)
+SCIP_DECL_CONSENFOLP(consEnfolpObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_enfolp(scip, conshdlr, conss, nconss, nusefulconss, result) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_enfolp(scip, conshdlr, conss, nconss, nusefulconss, result) );
 
    return SCIP_OKAY;
 }
@@ -262,16 +262,16 @@ DECL_CONSENFOLP(consEnfolpObj)
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
-DECL_CONSENFOPS(consEnfopsObj)
+SCIP_DECL_CONSENFOPS(consEnfopsObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_enfops(scip, conshdlr, conss, nconss, nusefulconss, objinfeasible, result) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_enfops(scip, conshdlr, conss, nconss, nusefulconss, objinfeasible, result) );
 
    return SCIP_OKAY;
 }
@@ -279,16 +279,16 @@ DECL_CONSENFOPS(consEnfopsObj)
 
 /** feasibility check method of constraint handler for primal solutions */
 static
-DECL_CONSCHECK(consCheckObj)
+SCIP_DECL_CONSCHECK(consCheckObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_check(scip, conshdlr, conss, nconss, sol, 
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_check(scip, conshdlr, conss, nconss, sol, 
          checkintegrality, checklprows, result) );
 
    return SCIP_OKAY;
@@ -297,16 +297,16 @@ DECL_CONSCHECK(consCheckObj)
 
 /** domain propagation method of constraint handler */
 static
-DECL_CONSPROP(consPropObj)
+SCIP_DECL_CONSPROP(consPropObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_prop(scip, conshdlr, conss, nconss, nusefulconss, result) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_prop(scip, conshdlr, conss, nconss, nusefulconss, result) );
 
    return SCIP_OKAY;
 }
@@ -314,16 +314,16 @@ DECL_CONSPROP(consPropObj)
 
 /** presolving method of constraint handler */
 static
-DECL_CONSPRESOL(consPresolObj)
+SCIP_DECL_CONSPRESOL(consPresolObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_presol(scip, conshdlr, conss, nconss, nrounds,
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_presol(scip, conshdlr, conss, nconss, nrounds,
          nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
          nnewdelconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
          nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
@@ -335,16 +335,16 @@ DECL_CONSPRESOL(consPresolObj)
 
 /** propagation conflict resolving method of constraint handler */
 static
-DECL_CONSRESPROP(consRespropObj)
+SCIP_DECL_CONSRESPROP(consRespropObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_resprop(scip, conshdlr, cons, infervar, inferinfo, boundtype, bdchgidx,
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_resprop(scip, conshdlr, cons, infervar, inferinfo, boundtype, bdchgidx,
          result) );
 
    return SCIP_OKAY;
@@ -353,16 +353,16 @@ DECL_CONSRESPROP(consRespropObj)
 
 /** variable rounding lock method of constraint handler */
 static
-DECL_CONSLOCK(consLockObj)
+SCIP_DECL_CONSLOCK(consLockObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_lock(scip, conshdlr, cons, nlockspos, nlocksneg) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_lock(scip, conshdlr, cons, nlockspos, nlocksneg) );
 
    return SCIP_OKAY;
 }
@@ -370,16 +370,16 @@ DECL_CONSLOCK(consLockObj)
 
 /** constraint activation notification method of constraint handler */
 static
-DECL_CONSACTIVE(consActiveObj)
+SCIP_DECL_CONSACTIVE(consActiveObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_active(scip, conshdlr, cons) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_active(scip, conshdlr, cons) );
 
    return SCIP_OKAY;
 }
@@ -387,16 +387,16 @@ DECL_CONSACTIVE(consActiveObj)
 
 /** constraint deactivation notification method of constraint handler */
 static
-DECL_CONSDEACTIVE(consDeactiveObj)
+SCIP_DECL_CONSDEACTIVE(consDeactiveObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_deactive(scip, conshdlr, cons) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_deactive(scip, conshdlr, cons) );
 
    return SCIP_OKAY;
 }
@@ -404,16 +404,16 @@ DECL_CONSDEACTIVE(consDeactiveObj)
 
 /** constraint enabling notification method of constraint handler */
 static
-DECL_CONSENABLE(consEnableObj)
+SCIP_DECL_CONSENABLE(consEnableObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_enable(scip, conshdlr, cons) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_enable(scip, conshdlr, cons) );
 
    return SCIP_OKAY;
 }
@@ -421,32 +421,32 @@ DECL_CONSENABLE(consEnableObj)
 
 /** constraint disabling notification method of constraint handler */
 static
-DECL_CONSDISABLE(consDisableObj)
+SCIP_DECL_CONSDISABLE(consDisableObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_disable(scip, conshdlr, cons) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_disable(scip, conshdlr, cons) );
 
    return SCIP_OKAY;
 }
 
 /** constraint display method of constraint handler */
 static
-DECL_CONSPRINT(consPrintObj)
+SCIP_DECL_CONSPRINT(consPrintObj)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_print(scip, conshdlr, cons, file) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_print(scip, conshdlr, cons, file) );
 
    return SCIP_OKAY;
 }
@@ -459,21 +459,21 @@ DECL_CONSPRINT(consPrintObj)
  */
 
 /** creates the constraint handler for the given constraint handler object and includes it in SCIP */
-RETCODE SCIPincludeObjConshdlr(
-   SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjConshdlr* objconshdlr,      /**< constraint handler object */
-   Bool             deleteobject        /**< should the constraint handler object be deleted when conshdlr is freed? */
+SCIP_RETCODE SCIPincludeObjConshdlr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   scip::ObjConshdlr*    objconshdlr,        /**< constraint handler object */
+   SCIP_Bool             deleteobject        /**< should the constraint handler object be deleted when conshdlr is freed? */
    )
 {
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    /* create obj constraint handler data */
-   conshdlrdata = new CONSHDLRDATA;
+   conshdlrdata = new SCIP_CONSHDLRDATA;
    conshdlrdata->objconshdlr = objconshdlr;
    conshdlrdata->deleteobject = deleteobject;
 
    /* include constraint handler */
-   CHECK_OKAY( SCIPincludeConshdlr(scip, objconshdlr->scip_name_, objconshdlr->scip_desc_, 
+   SCIP_CALL( SCIPincludeConshdlr(scip, objconshdlr->scip_name_, objconshdlr->scip_desc_, 
          objconshdlr->scip_sepapriority_, objconshdlr->scip_enfopriority_, objconshdlr->scip_checkpriority_,
          objconshdlr->scip_sepafreq_, objconshdlr->scip_propfreq_, objconshdlr->scip_eagerfreq_,
          objconshdlr->scip_maxprerounds_, 
@@ -494,12 +494,12 @@ RETCODE SCIPincludeObjConshdlr(
 
 /** returns the conshdlr object of the given name, or NULL if not existing */
 scip::ObjConshdlr* SCIPfindObjConshdlr(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< name of constraint handler */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of constraint handler */
    )
 {
-   CONSHDLR* conshdlr;
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlr = SCIPfindConshdlr(scip, name);
    if( conshdlr == NULL )
@@ -513,11 +513,11 @@ scip::ObjConshdlr* SCIPfindObjConshdlr(
    
 /** returns the conshdlr object for the given constraint handler */
 scip::ObjConshdlr* SCIPgetObjConshdlr(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);

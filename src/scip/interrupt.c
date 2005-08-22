@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: interrupt.c,v 1.17 2005/07/15 17:20:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: interrupt.c,v 1.18 2005/08/22 18:35:40 bzfpfend Exp $"
 
 /**@file   interrupt.c
  * @brief  methods and datastructures for catching the user CTRL-C interrupt
@@ -39,17 +39,17 @@ int                 ninterrupts = 0;    /**< static variable counting the number
 
 
 /** CTRL-C interrupt data */
-struct Interrupt
+struct SCIP_Interrupt
 {
    struct sigaction oldsigaction;       /**< old CTRL-C interrupt handler */
-   int              nuses;              /**< number of times, the interrupt is captured */
+   int                   nuses;              /**< number of times, the interrupt is captured */
 };
 
 
 /** interrupt handler for CTRL-C interrupts */
 static
 void interruptHandler(
-   int              signum              /**< interrupt signal number */
+   int                   signum              /**< interrupt signal number */
    )
 {  /*lint --e{715}*/
    ninterrupts++;
@@ -63,13 +63,13 @@ void interruptHandler(
 }
 
 /** creates a CTRL-C interrupt data */
-RETCODE SCIPinterruptCreate(
-   INTERRUPT**      interrupt           /**< pointer to store the CTRL-C interrupt data */
+SCIP_RETCODE SCIPinterruptCreate(
+   SCIP_INTERRUPT**      interrupt           /**< pointer to store the CTRL-C interrupt data */
    )
 {
    assert(interrupt != NULL);
 
-   ALLOC_OKAY( allocMemory(interrupt) );
+   SCIP_ALLOC( BMSallocMemory(interrupt) );
    (*interrupt)->nuses = 0;
 
    return SCIP_OKAY;
@@ -77,17 +77,17 @@ RETCODE SCIPinterruptCreate(
 
 /** frees a CTRL-C interrupt data */
 void SCIPinterruptFree(
-   INTERRUPT**      interrupt           /**< pointer to the CTRL-C interrupt data */
+   SCIP_INTERRUPT**      interrupt           /**< pointer to the CTRL-C interrupt data */
    )
 {
    assert(interrupt != NULL);
 
-   freeMemory(interrupt);
+   BMSfreeMemory(interrupt);
 }
 
 /** captures the CTRL-C interrupt to call the SCIP's own interrupt handler */
 void SCIPinterruptCapture(
-   INTERRUPT*       interrupt           /**< CTRL-C interrupt data */
+   SCIP_INTERRUPT*       interrupt           /**< CTRL-C interrupt data */
    )
 {
    assert(interrupt != NULL);
@@ -111,7 +111,7 @@ void SCIPinterruptCapture(
 
 /** releases the CTRL-C interrupt and restores the old interrupt handler */
 void SCIPinterruptRelease(
-   INTERRUPT*       interrupt           /**< CTRL-C interrupt data */
+   SCIP_INTERRUPT*       interrupt           /**< CTRL-C interrupt data */
    )
 {
    assert(interrupt != NULL);
@@ -126,7 +126,7 @@ void SCIPinterruptRelease(
 }
 
 /** returns whether the user interrupted by pressing CTRL-C */
-Bool SCIPinterrupted(
+SCIP_Bool SCIPinterrupted(
    void
    )
 {

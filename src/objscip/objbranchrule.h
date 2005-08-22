@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.h,v 1.19 2005/07/15 17:20:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objbranchrule.h,v 1.20 2005/08/22 18:35:29 bzfpfend Exp $"
 
 /**@file   objbranchrule.h
  * @brief  C++ wrapper for branching rules
@@ -58,17 +58,17 @@ public:
     *  compared to best node's dual bound for applying branching rule
     *  (0.0: only on current best node, 1.0: on all nodes)
     */
-   const Real scip_maxbounddist_;
+   const SCIP_Real scip_maxbounddist_;
 
    /** default constructor */
    ObjBranchrule(
-      const char*   name,               /**< name of branching rule */
-      const char*   desc,               /**< description of branching rule */
-      int           priority,           /**< priority of the branching rule */
-      int           maxdepth,           /**< maximal depth level, up to which this branching rule should be used (or -1) */
-      Real          maxbounddist        /**< maximal relative distance from current node's dual bound to primal bound
-                                         *   compared to best node's dual bound for applying branching rule
-                                         *   (0.0: only on current best node, 1.0: on all nodes) */
+      const char*        name,               /**< name of branching rule */
+      const char*        desc,               /**< description of branching rule */
+      int                priority,           /**< priority of the branching rule */
+      int                maxdepth,           /**< maximal depth level, up to which this branching rule should be used (or -1) */
+      SCIP_Real          maxbounddist        /**< maximal relative distance from current node's dual bound to primal bound
+                                              *   compared to best node's dual bound for applying branching rule
+                                              *   (0.0: only on current best node, 1.0: on all nodes) */
       )
       : scip_name_(name),
         scip_desc_(desc),
@@ -84,66 +84,66 @@ public:
    }
 
    /** destructor of branching rule to free user data (called when SCIP is exiting) */
-   virtual RETCODE scip_free(
-      SCIP*         scip,               /**< SCIP data structure */
-      BRANCHRULE*   branchrule          /**< the branching rule itself */
+   virtual SCIP_RETCODE scip_free(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_BRANCHRULE*   branchrule          /**< the branching rule itself */
       )
    {
       return SCIP_OKAY;
    }
    
    /** initialization method of branching rule (called after problem was transformed) */
-   virtual RETCODE scip_init(
-      SCIP*         scip,               /**< SCIP data structure */
-      BRANCHRULE*   branchrule          /**< the branching rule itself */
+   virtual SCIP_RETCODE scip_init(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_BRANCHRULE*   branchrule          /**< the branching rule itself */
       )
    {
       return SCIP_OKAY;
    }
    
    /** deinitialization method of branching rule (called before transformed problem is freed) */
-   virtual RETCODE scip_exit(
-      SCIP*         scip,               /**< SCIP data structure */
-      BRANCHRULE*   branchrule          /**< the branching rule itself */
+   virtual SCIP_RETCODE scip_exit(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_BRANCHRULE*   branchrule          /**< the branching rule itself */
       )
    {
       return SCIP_OKAY;
    }
    
    /** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
-   virtual RETCODE scip_initsol(
-      SCIP*         scip,               /**< SCIP data structure */
-      BRANCHRULE*   branchrule          /**< the branching rule itself */
+   virtual SCIP_RETCODE scip_initsol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_BRANCHRULE*   branchrule          /**< the branching rule itself */
       )
    {
       return SCIP_OKAY;
    }
    
    /** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
-   virtual RETCODE scip_exitsol(
-      SCIP*         scip,               /**< SCIP data structure */
-      BRANCHRULE*   branchrule          /**< the branching rule itself */
+   virtual SCIP_RETCODE scip_exitsol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_BRANCHRULE*   branchrule          /**< the branching rule itself */
       )
    {
       return SCIP_OKAY;
    }
    
-   /** branching execution method for fractional LP solutions
+   /** branching execution method for fractional SCIP_LP solutions
     *
     *  possible return values for *result (if more than one applies, the first in the list should be used):
     *  - SCIP_CUTOFF     : the current node was detected to be infeasible
     *  - SCIP_CONSADDED  : an additional constraint (e.g. a conflict clause) was generated; this result code must not be
     *                      returned, if allowaddcons is FALSE
-    *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current LP solution infeasible
+    *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current SCIP_LP solution infeasible
     *  - SCIP_SEPARATED  : a cutting plane was generated
     *  - SCIP_BRANCHED   : branching was applied
     *  - SCIP_DIDNOTRUN  : the branching rule was skipped
     */
-   virtual RETCODE scip_execlp(
-      SCIP*         scip,               /**< SCIP data structure */
-      BRANCHRULE*   branchrule,         /**< the branching rule itself */
-      Bool          allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
-      RESULT*       result              /**< pointer to store the result of the branching call */
+   virtual SCIP_RETCODE scip_execlp(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_BRANCHRULE*   branchrule,         /**< the branching rule itself */
+      SCIP_Bool          allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
+      SCIP_RESULT*       result              /**< pointer to store the result of the branching call */
       )
    {
       assert(result != NULL);
@@ -161,11 +161,11 @@ public:
     *  - SCIP_BRANCHED   : branching was applied
     *  - SCIP_DIDNOTRUN  : the branching rule was skipped
     */
-   virtual RETCODE scip_execps(
-      SCIP*         scip,               /**< SCIP data structure */
-      BRANCHRULE*   branchrule,         /**< the branching rule itself */
-      Bool          allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
-      RESULT*       result              /**< pointer to store the result of the branching call */
+   virtual SCIP_RETCODE scip_execps(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_BRANCHRULE*   branchrule,         /**< the branching rule itself */
+      SCIP_Bool          allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
+      SCIP_RESULT*       result              /**< pointer to store the result of the branching call */
       )
    {
       assert(result != NULL);
@@ -183,40 +183,40 @@ public:
  *  The method should be called in one of the following ways:
  *
  *   1. The user is resposible of deleting the object:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MyBranchrule* mybranchrule = new MyBranchrule(...);
- *       CHECK_OKAY( SCIPincludeObjBranchrule(scip, &mybranchrule, FALSE) );
+ *       SCIP_CALL( SCIPincludeObjBranchrule(scip, &mybranchrule, FALSE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );
+ *       SCIP_CALL( SCIPfree(&scip) );
  *       delete mybranchrule;    // delete branchrule AFTER SCIPfree() !
  *
  *   2. The object pointer is passed to SCIP and deleted by SCIP in the SCIPfree() call:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
- *       CHECK_OKAY( SCIPincludeObjBranchrule(scip, new MyBranchrule(...), TRUE) );
+ *       SCIP_CALL( SCIPincludeObjBranchrule(scip, new MyBranchrule(...), TRUE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );  // destructor of MyBranchrule is called here
+ *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyBranchrule is called here
  */
 extern
-RETCODE SCIPincludeObjBranchrule(
-   SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjBranchrule* objbranchrule,  /**< branching rule object */
-   Bool             deleteobject        /**< should the branching rule object be deleted when branching rule is freed? */
+SCIP_RETCODE SCIPincludeObjBranchrule(
+   SCIP*                 scip,               /**< SCIP data structure */
+   scip::ObjBranchrule*  objbranchrule,      /**< branching rule object */
+   SCIP_Bool             deleteobject        /**< should the branching rule object be deleted when branching rule is freed? */
    );
 
 /** returns the branchrule object of the given name, or NULL if not existing */
 extern
 scip::ObjBranchrule* SCIPfindObjBranchrule(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< name of branching rule */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of branching rule */
    );
 
 /** returns the branchrule object for the given branching rule */
 extern
 scip::ObjBranchrule* SCIPgetObjBranchrule(
-   SCIP*            scip,               /**< SCIP data structure */
-   BRANCHRULE*      branchrule          /**< branching rule */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
 #endif

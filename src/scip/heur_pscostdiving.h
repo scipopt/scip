@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_pscostdiving.h,v 1.6 2005/07/15 17:20:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_pscostdiving.h,v 1.7 2005/08/22 18:35:39 bzfpfend Exp $"
 
 /**@file   heur_pscostdiving.h
- * @brief  LP diving heuristic that chooses fixings w.r.t. the pseudo cost values
+ * @brief  SCIP_LP diving heuristic that chooses fixings w.r.t. the pseudo cost values
  * @author Tobias Achterberg
  */
 
@@ -32,8 +32,8 @@
 
 /** creates the pscostdiving heuristic and includes it in SCIP */
 extern
-RETCODE SCIPincludeHeurPscostdiving(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeHeurPscostdiving(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

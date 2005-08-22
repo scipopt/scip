@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_history.h,v 1.9 2005/07/15 17:20:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_history.h,v 1.10 2005/08/22 18:35:53 bzfpfend Exp $"
 
 /**@file   type_history.h
  * @brief  type definitions for branching and inference history
@@ -28,15 +28,15 @@
 
 
 /** branching direction for branching on variables */
-enum BranchDir
+enum SCIP_BranchDir
 {
    SCIP_BRANCHDIR_DOWNWARDS = 0,        /**< downwards branching: decreasing upper bound */
    SCIP_BRANCHDIR_UPWARDS   = 1,        /**< upwards branching: increasing lower bound */
    SCIP_BRANCHDIR_AUTO      = 2         /**< automatic setting for choosing bound changes */
 };
-typedef enum BranchDir BRANCHDIR;       /**< branching direction for branching on variables */
+typedef enum SCIP_BranchDir SCIP_BRANCHDIR;       /**< branching direction for branching on variables */
 
-typedef struct History HISTORY;         /**< branching and inference history information for single variable */
+typedef struct SCIP_History SCIP_HISTORY;         /**< branching and inference history information for single variable */
 
 
 #endif

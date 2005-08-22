@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.h,v 1.15 2005/07/15 17:20:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objsepa.h,v 1.16 2005/08/22 18:35:31 bzfpfend Exp $"
 
 /**@file   objsepa.h
  * @brief  C++ wrapper for cut separators
@@ -53,15 +53,15 @@ public:
    const int scip_freq_;
 
    /** should separator be delayed, if other separators found cuts? */
-   const Bool scip_delay_;
+   const SCIP_Bool scip_delay_;
 
    /** default constructor */
    ObjSepa(
-      const char*   name,               /**< name of cut separator */
-      const char*   desc,               /**< description of cut separator */
-      int           priority,           /**< priority of the cut separator */
-      int           freq,               /**< frequency for calling separator */
-      Bool          delay               /**< should separator be delayed, if other separators found cuts? */
+      const char*        name,               /**< name of cut separator */
+      const char*        desc,               /**< description of cut separator */
+      int                priority,           /**< priority of the cut separator */
+      int                freq,               /**< frequency for calling separator */
+      SCIP_Bool          delay               /**< should separator be delayed, if other separators found cuts? */
       )
       : scip_name_(name),
         scip_desc_(desc),
@@ -77,27 +77,27 @@ public:
    }
 
    /** destructor of cut separator to free user data (called when SCIP is exiting) */
-   virtual RETCODE scip_free(
-      SCIP*         scip,               /**< SCIP data structure */
-      SEPA*         sepa                /**< the cut separator itself */
+   virtual SCIP_RETCODE scip_free(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_SEPA*         sepa                /**< the cut separator itself */
       )
    {
       return SCIP_OKAY;
    }
    
    /** initialization method of cut separator (called after problem was transformed) */
-   virtual RETCODE scip_init(
-      SCIP*         scip,               /**< SCIP data structure */
-      SEPA*         sepa                /**< the cut separator itself */
+   virtual SCIP_RETCODE scip_init(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_SEPA*         sepa                /**< the cut separator itself */
       )
    {
       return SCIP_OKAY;
    }
    
    /** deinitialization method of cut separator (called before transformed problem is freed) */
-   virtual RETCODE scip_exit(
-      SCIP*         scip,               /**< SCIP data structure */
-      SEPA*         sepa                /**< the cut separator itself */
+   virtual SCIP_RETCODE scip_exit(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_SEPA*         sepa                /**< the cut separator itself */
       )
    {
       return SCIP_OKAY;
@@ -108,9 +108,9 @@ public:
     *  This method is called when the presolving was finished and the branch and bound process is about to begin.
     *  The separator may use this call to initialize its branch and bound specific data.
     */
-   virtual RETCODE scip_initsol(
-      SCIP*         scip,               /**< SCIP data structure */
-      SEPA*         sepa                /**< the cut separator itself */
+   virtual SCIP_RETCODE scip_initsol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_SEPA*         sepa                /**< the cut separator itself */
       )
    {
       return SCIP_OKAY;
@@ -121,9 +121,9 @@ public:
     *  This method is called before the branch and bound process is freed.
     *  The separator should use this call to clean up its branch and bound data.
     */
-   virtual RETCODE scip_exitsol(
-      SCIP*         scip,               /**< SCIP data structure */
-      SEPA*         sepa                /**< the cut separator itself */
+   virtual SCIP_RETCODE scip_exitsol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_SEPA*         sepa                /**< the cut separator itself */
       )
    {
       return SCIP_OKAY;
@@ -131,7 +131,7 @@ public:
    
    /** execution method of separator
     *
-    *  Searches for cutting planes. The method is called in the LP solving loop.
+    *  Searches for cutting planes. The method is called in the SCIP_LP solving loop.
     *
     *  possible return values for *result:
     *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
@@ -142,10 +142,10 @@ public:
     *  - SCIP_DIDNOTRUN  : the separator was skipped
     *  - SCIP_DELAYED    : the separator was skipped, but should be called again
     */
-   virtual RETCODE scip_exec(
-      SCIP*         scip,               /**< SCIP data structure */
-      SEPA*         sepa,               /**< the cut separator itself */
-      RESULT*       result              /**< pointer to store the result of the separation call */
+   virtual SCIP_RETCODE scip_exec(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_SEPA*         sepa,               /**< the cut separator itself */
+      SCIP_RESULT*       result              /**< pointer to store the result of the separation call */
       ) = 0;
 };
 
@@ -158,40 +158,40 @@ public:
  *  The method should be called in one of the following ways:
  *
  *   1. The user is resposible of deleting the object:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MySepa* mysepa = new MySepa(...);
- *       CHECK_OKAY( SCIPincludeObjSepa(scip, &mysepa, FALSE) );
+ *       SCIP_CALL( SCIPincludeObjSepa(scip, &mysepa, FALSE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );
+ *       SCIP_CALL( SCIPfree(&scip) );
  *       delete mysepa;    // delete sepa AFTER SCIPfree() !
  *
  *   2. The object pointer is passed to SCIP and deleted by SCIP in the SCIPfree() call:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
- *       CHECK_OKAY( SCIPincludeObjSepa(scip, new MySepa(...), TRUE) );
+ *       SCIP_CALL( SCIPincludeObjSepa(scip, new MySepa(...), TRUE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );  // destructor of MySepa is called here
+ *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MySepa is called here
  */
 extern
-RETCODE SCIPincludeObjSepa(
-   SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjSepa*   objsepa,            /**< cut separator object */
-   Bool             deleteobject        /**< should the cut separator object be deleted when cut separator is freed? */
+SCIP_RETCODE SCIPincludeObjSepa(
+   SCIP*                 scip,               /**< SCIP data structure */
+   scip::ObjSepa*        objsepa,            /**< cut separator object */
+   SCIP_Bool             deleteobject        /**< should the cut separator object be deleted when cut separator is freed? */
    );
 
 /** returns the sepa object of the given name, or NULL if not existing */
 extern
 scip::ObjSepa* SCIPfindObjSepa(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< name of cut separator */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of cut separator */
    );
 
 /** returns the sepa object for the given cut separator */
 extern
 scip::ObjSepa* SCIPgetObjSepa(
-   SCIP*            scip,               /**< SCIP data structure */
-   SEPA*            sepa                /**< cut separator */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa                /**< cut separator */
    );
 
 #endif

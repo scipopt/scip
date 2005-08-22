@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.11 2005/06/24 15:17:20 bzfberth Exp $"
+#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.12 2005/08/22 18:35:44 bzfpfend Exp $"
 
 /**@file   prop_pseudoobj.c
  * @brief  pseudoobj propagator
@@ -35,7 +35,7 @@
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 
 #define DEFAULT_MAXCANDS            100 /**< maximal number of variables to look at in a single propagation round
-                                         *   (-1: process all variables) */
+                                              *   (-1: process all variables) */
 
 
 
@@ -45,10 +45,10 @@
  */
 
 /** propagator data */
-struct PropData
+struct SCIP_PropData
 {
-   int              maxcands;           /**< maximal number of variables to look at in a single propagation round */
-   int              lastvarnum;         /**< last variable number that was looked at */
+   int                   maxcands;           /**< maximal number of variables to look at in a single propagation round */
+   int                   lastvarnum;         /**< last variable number that was looked at */
 };
 
 
@@ -60,15 +60,15 @@ struct PropData
 
 /** resolves a propagation by supplying the variables whose bound changes increased the pseudo objective value */
 static
-RETCODE resolvePropagation(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             infervar,           /**< variable that was deduced, or NULL for conflict analysis initialization */
-   BDCHGIDX*        bdchgidx            /**< bound change index (time stamp of bound change), or NULL for current time */
+SCIP_RETCODE resolvePropagation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             infervar,           /**< variable that was deduced, or NULL for conflict analysis initialization */
+   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index (time stamp of bound change), or NULL for current time */
    )
 {
-   VAR** vars;
-   VAR* var;
-   Real obj;
+   SCIP_VAR** vars;
+   SCIP_VAR* var;
+   SCIP_Real obj;
    int nvars;
    int v;
 
@@ -91,26 +91,26 @@ RETCODE resolvePropagation(
       obj = SCIPvarGetObj(var);
       if( SCIPisPositive(scip, obj) )
       {
-         Real loclb;
-         Real glblb;
+         SCIP_Real loclb;
+         SCIP_Real glblb;
 
          glblb = SCIPvarGetLbGlobal(var);
          loclb = SCIPvarGetLbAtIndex(var, bdchgidx, FALSE);
          if( SCIPisGT(scip, loclb, glblb) )
          {
-            CHECK_OKAY( SCIPaddConflictLb(scip, var, bdchgidx) );
+            SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
          }
       }
       else if( SCIPisNegative(scip, obj) )
       {
-         Real locub;
-         Real glbub;
+         SCIP_Real locub;
+         SCIP_Real glbub;
 
          glbub = SCIPvarGetUbGlobal(var);
          locub = SCIPvarGetUbAtIndex(var, bdchgidx, FALSE);
          if( SCIPisLT(scip, locub, glbub) )
          {
-            CHECK_OKAY( SCIPaddConflictUb(scip, var, bdchgidx) );
+            SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
          }
       }
    }
@@ -127,9 +127,9 @@ RETCODE resolvePropagation(
 
 /** destructor of propagator to free user data (called when SCIP is exiting) */
 static
-DECL_PROPFREE(propFreePseudoobj)
+SCIP_DECL_PROPFREE(propFreePseudoobj)
 {  /*lint --e{715}*/
-   PROPDATA* propdata;
+   SCIP_PROPDATA* propdata;
 
    /* free branching rule data */
    propdata = SCIPpropGetData(prop);
@@ -158,16 +158,16 @@ DECL_PROPFREE(propFreePseudoobj)
 
 /** execution method of propagator */
 static
-DECL_PROPEXEC(propExecPseudoobj)
+SCIP_DECL_PROPEXEC(propExecPseudoobj)
 {  /*lint --e{715}*/
-   PROPDATA* propdata;
-   VAR** vars;
-   VAR* var;
-   Real pseudoobjval;
-   Real cutoffbound;
-   Real obj;
-   Real lb;
-   Real ub;
+   SCIP_PROPDATA* propdata;
+   SCIP_VAR** vars;
+   SCIP_VAR* var;
+   SCIP_Real pseudoobjval;
+   SCIP_Real cutoffbound;
+   SCIP_Real obj;
+   SCIP_Real lb;
+   SCIP_Real ub;
    int ncands;
    int nvars;
    int c;
@@ -187,21 +187,21 @@ DECL_PROPEXEC(propExecPseudoobj)
       return SCIP_OKAY;
    if( SCIPisGE(scip, pseudoobjval, cutoffbound) )
    {
-      debugMessage("pseudo objective value %g exceeds cutoff bound %g\n", pseudoobjval, cutoffbound);
+      SCIPdebugMessage("pseudo objective value %g exceeds cutoff bound %g\n", pseudoobjval, cutoffbound);
 
       /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-      CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
-      CHECK_OKAY( resolvePropagation(scip, NULL, NULL) );
+      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+      SCIP_CALL( resolvePropagation(scip, NULL, NULL) );
 
       /* analyze the conflict */
-      CHECK_OKAY( SCIPanalyzeConflict(scip, 0, NULL) );
+      SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
       
       *result = SCIP_CUTOFF;
 
       return SCIP_OKAY;
    }
 
-   debugMessage("propagating pseudo objective function (pseudoobj: %g, cutoffbound: %g)\n", pseudoobjval, cutoffbound);
+   SCIPdebugMessage("propagating pseudo objective function (pseudoobj: %g, cutoffbound: %g)\n", pseudoobjval, cutoffbound);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -224,15 +224,15 @@ DECL_PROPEXEC(propExecPseudoobj)
 
       if( SCIPisPositive(scip, obj) )
       {
-         Real newub;
-         Bool infeasible;
-         Bool tightened;
+         SCIP_Real newub;
+         SCIP_Bool infeasible;
+         SCIP_Bool tightened;
 
          newub = lb + (cutoffbound - pseudoobjval)/obj;
          if( SCIPisUbBetter(scip, newub, ub) )
          {
-            debugMessage(" -> new upper bound of variable <%s>[%.10f,%.10f]: %.10f\n", SCIPvarGetName(var), lb, ub, newub);
-            CHECK_OKAY( SCIPinferVarUbProp(scip, var, newub, prop, 0, &infeasible, &tightened) );
+            SCIPdebugMessage(" -> new upper bound of variable <%s>[%.10f,%.10f]: %.10f\n", SCIPvarGetName(var), lb, ub, newub);
+            SCIP_CALL( SCIPinferVarUbProp(scip, var, newub, prop, 0, &infeasible, &tightened) );
             assert(!infeasible);
             if( tightened ) /* might not be tightened due to numerical reasons */
                *result = SCIP_REDUCEDDOM;
@@ -240,15 +240,15 @@ DECL_PROPEXEC(propExecPseudoobj)
       }
       else if( SCIPisNegative(scip, obj) )
       {
-         Real newlb;
-         Bool infeasible;
-         Bool tightened;
+         SCIP_Real newlb;
+         SCIP_Bool infeasible;
+         SCIP_Bool tightened;
 
          newlb = ub + (cutoffbound - pseudoobjval)/obj;
          if( SCIPisLbBetter(scip, newlb, lb) )
          {
-            debugMessage(" -> new lower bound of variable <%s>[%g,%g]: %g\n", SCIPvarGetName(var), lb, ub, newlb);
-            CHECK_OKAY( SCIPinferVarLbProp(scip, var, newlb, prop, 0, &infeasible, &tightened) );
+            SCIPdebugMessage(" -> new lower bound of variable <%s>[%g,%g]: %g\n", SCIPvarGetName(var), lb, ub, newlb);
+            SCIP_CALL( SCIPinferVarLbProp(scip, var, newlb, prop, 0, &infeasible, &tightened) );
             assert(!infeasible);
             if( tightened ) /* might not be tightened due to numerical reasons */
                *result = SCIP_REDUCEDDOM;
@@ -263,9 +263,9 @@ DECL_PROPEXEC(propExecPseudoobj)
 
 /** propagation conflict resolving method of propagator */
 static
-DECL_PROPRESPROP(propRespropPseudoobj)
+SCIP_DECL_PROPRESPROP(propRespropPseudoobj)
 {  /*lint --e{715}*/
-   CHECK_OKAY( resolvePropagation(scip, infervar, bdchgidx) );
+   SCIP_CALL( resolvePropagation(scip, infervar, bdchgidx) );
 
    *result = SCIP_SUCCESS;
 
@@ -280,24 +280,24 @@ DECL_PROPRESPROP(propRespropPseudoobj)
  */
 
 /** creates the pseudo objective function propagator and includes it in SCIP */
-RETCODE SCIPincludePropPseudoobj(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludePropPseudoobj(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   PROPDATA* propdata;
+   SCIP_PROPDATA* propdata;
 
    /* create pseudoobj propagator data */
-   CHECK_OKAY( SCIPallocMemory(scip, &propdata) );
+   SCIP_CALL( SCIPallocMemory(scip, &propdata) );
    propdata->lastvarnum = -1;
 
    /* include propagator */
-   CHECK_OKAY( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY,
+   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY,
          propFreePseudoobj, propInitPseudoobj, propExitPseudoobj, 
          propInitsolPseudoobj, propExitsolPseudoobj, propExecPseudoobj, propRespropPseudoobj,
          propdata) );
 
    /* add pseudoobj propagator parameters */
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/pseudoobj/maxcands", 
          "maximal number of variables to look at in a single propagation round (-1: process all variables)",
          &propdata->maxcands, DEFAULT_MAXCANDS, -1, INT_MAX, NULL, NULL) );

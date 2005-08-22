@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.31 2005/07/15 17:20:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.32 2005/08/22 18:35:33 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -42,117 +42,117 @@
 
 
 /*
- * Conflict Handler
+ * SCIP_Conflict Handler
  */
 
 /** creates a conflict handler */
 extern
-RETCODE SCIPconflicthdlrCreate(
-   CONFLICTHDLR**   conflicthdlr,       /**< pointer to conflict handler data structure */
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory for parameter settings */
-   const char*      name,               /**< name of conflict handler */
-   const char*      desc,               /**< description of conflict handler */
-   int              priority,           /**< priority of the conflict handler */
-   DECL_CONFLICTFREE((*conflictfree)),  /**< destructor of conflict handler */
-   DECL_CONFLICTINIT((*conflictinit)),  /**< initialize conflict handler */
-   DECL_CONFLICTEXIT((*conflictexit)),  /**< deinitialize conflict handler */
-   DECL_CONFLICTINITSOL((*conflictinitsol)),/**< solving process initialization method of conflict handler */
-   DECL_CONFLICTEXITSOL((*conflictexitsol)),/**< solving process deinitialization method of conflict handler */
-   DECL_CONFLICTEXEC((*conflictexec)),  /**< conflict processing method of conflict handler */
-   CONFLICTHDLRDATA* conflicthdlrdata   /**< conflict handler data */
+SCIP_RETCODE SCIPconflicthdlrCreate(
+   SCIP_CONFLICTHDLR**   conflicthdlr,       /**< pointer to conflict handler data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of conflict handler */
+   const char*           desc,               /**< description of conflict handler */
+   int                   priority,           /**< priority of the conflict handler */
+   SCIP_DECL_CONFLICTFREE((*conflictfree)),  /**< destructor of conflict handler */
+   SCIP_DECL_CONFLICTINIT((*conflictinit)),  /**< initialize conflict handler */
+   SCIP_DECL_CONFLICTEXIT((*conflictexit)),  /**< deinitialize conflict handler */
+   SCIP_DECL_CONFLICTINITSOL((*conflictinitsol)),/**< solving process initialization method of conflict handler */
+   SCIP_DECL_CONFLICTEXITSOL((*conflictexitsol)),/**< solving process deinitialization method of conflict handler */
+   SCIP_DECL_CONFLICTEXEC((*conflictexec)),  /**< conflict processing method of conflict handler */
+   SCIP_CONFLICTHDLRDATA* conflicthdlrdata   /**< conflict handler data */
    );
 
 /** calls destructor and frees memory of conflict handler */
 extern
-RETCODE SCIPconflicthdlrFree(
-   CONFLICTHDLR**   conflicthdlr,       /**< pointer to conflict handler data structure */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPconflicthdlrFree(
+   SCIP_CONFLICTHDLR**   conflicthdlr,       /**< pointer to conflict handler data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** calls init method of conflict handler */
 extern
-RETCODE SCIPconflicthdlrInit(
-   CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPconflicthdlrInit(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** calls exit method of conflict handler */
 extern
-RETCODE SCIPconflicthdlrExit(
-   CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPconflicthdlrExit(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs conflict handler that the branch and bound process is being started */
 extern
-RETCODE SCIPconflicthdlrInitsol(
-   CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPconflicthdlrInitsol(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs conflict handler that the branch and bound process data is being freed */
 extern
-RETCODE SCIPconflicthdlrExitsol(
-   CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPconflicthdlrExitsol(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** calls execution method of conflict handler */
 extern
-RETCODE SCIPconflicthdlrExec(
-   CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
-   SET*             set,                /**< global SCIP settings */
-   NODE*            node,               /**< node to add conflict constraint to */
-   NODE*            validnode,          /**< node at which the constraint is valid */
-   VAR**            conflictvars,       /**< variables of the conflict set */
-   int              nconflictvars,      /**< number of variables in the conflict set */
-   Bool             resolved,           /**< is the conflict set already used to create a constraint? */
-   RESULT*          result              /**< pointer to store the result of the callback method */
+SCIP_RETCODE SCIPconflicthdlrExec(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE*            node,               /**< node to add conflict constraint to */
+   SCIP_NODE*            validnode,          /**< node at which the constraint is valid */
+   SCIP_VAR**            conflictvars,       /**< variables of the conflict set */
+   int                   nconflictvars,      /**< number of variables in the conflict set */
+   SCIP_Bool             resolved,           /**< is the conflict set already used to create a constraint? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 /** sets priority of conflict handler */
 extern
 void SCIPconflicthdlrSetPriority(
-   CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
-   SET*             set,                /**< global SCIP settings */
-   int              priority            /**< new priority of the conflict handler */
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   priority            /**< new priority of the conflict handler */
    );
 
 
 
 
 /*
- * Conflict Analysis
+ * SCIP_Conflict Analysis
  */
 
 /** creates conflict analysis data for propagation conflicts */
 extern
-RETCODE SCIPconflictCreate(
-   CONFLICT**       conflict,           /**< pointer to conflict analysis data */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPconflictCreate(
+   SCIP_CONFLICT**       conflict,           /**< pointer to conflict analysis data */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** frees conflict analysis data for propagation conflicts */
 extern
-RETCODE SCIPconflictFree(
-   CONFLICT**       conflict            /**< pointer to conflict analysis data */
+SCIP_RETCODE SCIPconflictFree(
+   SCIP_CONFLICT**       conflict            /**< pointer to conflict analysis data */
    );
 
 /** initializes the propagation conflict analysis by clearing the conflict candidate queue */
 extern
-RETCODE SCIPconflictInit(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_RETCODE SCIPconflictInit(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** adds variable's bound to conflict candidate queue */
 extern
-RETCODE SCIPconflictAddBound(
-   CONFLICT*        conflict,           /**< conflict analysis data */
-   SET*             set,                /**< global SCIP settings */
-   VAR*             var,                /**< problem variable */
-   BOUNDTYPE        boundtype,          /**< type of bound that was changed: lower or upper bound */
-   BDCHGIDX*        bdchgidx            /**< bound change index (time stamp of bound change), or NULL for current time */
+SCIP_RETCODE SCIPconflictAddBound(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BOUNDTYPE        boundtype,          /**< type of bound that was changed: lower or upper bound */
+   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index (time stamp of bound change), or NULL for current time */
    );
 
 /** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound(), and on success, calls the
@@ -160,15 +160,15 @@ RETCODE SCIPconflictAddBound(
  *  updates statistics for propagation conflict analysis
  */
 extern
-RETCODE SCIPconflictAnalyze(
-   CONFLICT*        conflict,           /**< conflict analysis data */
-   BLKMEM*          blkmem,             /**< block memory of transformed problem */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   PROB*            prob,               /**< problem data */
-   TREE*            tree,               /**< branch and bound tree */
-   int              validdepth,         /**< minimal depth level at which the initial conflict set is valid */
-   Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
+SCIP_RETCODE SCIPconflictAnalyze(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
+   SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
 
 /** adds the collected conflict clauses to the corresponding nodes; the best set->conf_maxclauses clauses are added
@@ -176,158 +176,158 @@ RETCODE SCIPconflictAnalyze(
  *  trigger the deduction but not get introduced to a more global subtree
  */
 extern
-RETCODE SCIPconflictFlushClauses(
-   CONFLICT*        conflict,           /**< conflict analysis data */
-   BLKMEM*          blkmem,             /**< block memory of transformed problem */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   PROB*            prob,               /**< problem data */
-   TREE*            tree                /**< branch and bound tree */
+SCIP_RETCODE SCIPconflictFlushClauses(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
 /** returns the current number of conflict clauses in the conflict clause storage */
 extern
 int SCIPconflictGetNClauses(
-   CONFLICT*        conflict            /**< conflict analysis data */
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** returns the total number of conflict clauses that were added to the problem */
 extern
-Longint SCIPconflictGetNAppliedClauses(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNAppliedClauses(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** returns the total number of literals in conflict clauses that were added to the problem */
 extern
-Longint SCIPconflictGetNAppliedLiterals(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNAppliedLiterals(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** returns the total number of conflict clauses that were added globally to the problem */
 extern
-Longint SCIPconflictGetNAppliedGlobalClauses(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNAppliedGlobalClauses(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** returns the total number of literals in conflict clauses that were added globally to the problem */
 extern
-Longint SCIPconflictGetNAppliedGlobalLiterals(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNAppliedGlobalLiterals(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** returns the total number of conflict clauses that were added locally to the problem */
 extern
-Longint SCIPconflictGetNAppliedLocalClauses(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNAppliedLocalClauses(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** returns the total number of literals in conflict clauses that were added locally to the problem */
 extern
-Longint SCIPconflictGetNAppliedLocalLiterals(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNAppliedLocalLiterals(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** gets time in seconds used for analyzing propagation conflicts */
 extern
-Real SCIPconflictGetPropTime(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Real SCIPconflictGetPropTime(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** gets number of calls to propagation conflict analysis */
 extern
-Longint SCIPconflictGetNPropCalls(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNPropCalls(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** gets number of conflict clauses detected in propagation conflict analysis */
 extern
-Longint SCIPconflictGetNPropConflictClauses(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNPropConflictClauses(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** gets total number of literals in conflict clauses created in propagation conflict analysis */
 extern
-Longint SCIPconflictGetNPropConflictLiterals(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNPropConflictLiterals(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** gets number of reconvergence clauses detected in propagation conflict analysis */
 extern
-Longint SCIPconflictGetNPropReconvergenceClauses(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNPropReconvergenceClauses(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** gets total number of literals in reconvergence clauses created in propagation conflict analysis */
 extern
-Longint SCIPconflictGetNPropReconvergenceLiterals(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNPropReconvergenceLiterals(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 
 
 
 /*
- * Infeasible LP Conflict Analysis
+ * Infeasible SCIP_LP SCIP_Conflict Analysis
  */
 
-/** analyzes an infeasible LP to find out the bound changes on binary variables that were responsible for the 
+/** analyzes an infeasible SCIP_LP to find out the bound changes on binary variables that were responsible for the 
  *  infeasibility;
  *  on success, calls standard conflict analysis with the responsible variables as starting conflict set, thus creating
  *  a conflict constraint out of the resulting conflict set;
- *  updates statistics for infeasible LP conflict analysis
+ *  updates statistics for infeasible SCIP_LP conflict analysis
  */
 extern
-RETCODE SCIPconflictAnalyzeLP(
-   CONFLICT*        conflict,           /**< conflict analysis data */
-   BLKMEM*          blkmem,             /**< block memory of transformed problem */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   PROB*            prob,               /**< problem data */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< LP data */
-   Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
+SCIP_RETCODE SCIPconflictAnalyzeLP(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
 
-/** gets time in seconds used for analyzing infeasible LP conflicts */
+/** gets time in seconds used for analyzing infeasible SCIP_LP conflicts */
 extern
-Real SCIPconflictGetLPTime(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Real SCIPconflictGetLPTime(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of calls to infeasible LP conflict analysis */
+/** gets number of calls to infeasible SCIP_LP conflict analysis */
 extern
-Longint SCIPconflictGetNLPCalls(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNLPCalls(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of conflict clauses detected in infeasible LP conflict analysis */
+/** gets number of conflict clauses detected in infeasible SCIP_LP conflict analysis */
 extern
-Longint SCIPconflictGetNLPConflictClauses(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNLPConflictClauses(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets total number of literals in conflict clauses created in infeasible LP conflict analysis */
+/** gets total number of literals in conflict clauses created in infeasible SCIP_LP conflict analysis */
 extern
-Longint SCIPconflictGetNLPConflictLiterals(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNLPConflictLiterals(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of reconvergence clauses detected in infeasible LP conflict analysis */
+/** gets number of reconvergence clauses detected in infeasible SCIP_LP conflict analysis */
 extern
-Longint SCIPconflictGetNLPReconvergenceClauses(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNLPReconvergenceClauses(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets total number of literals in reconvergence clauses created in infeasible LP conflict analysis */
+/** gets total number of literals in reconvergence clauses created in infeasible SCIP_LP conflict analysis */
 extern
-Longint SCIPconflictGetNLPReconvergenceLiterals(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNLPReconvergenceLiterals(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of LP iterations in infeasible LP conflict analysis */
+/** gets number of SCIP_LP iterations in infeasible SCIP_LP conflict analysis */
 extern
-Longint SCIPconflictGetNLPIterations(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNLPIterations(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 
@@ -339,61 +339,61 @@ Longint SCIPconflictGetNLPIterations(
 
 /** analyses infeasible strong branching sub problems for conflicts */
 extern
-RETCODE SCIPconflictAnalyzeStrongbranch(
-   CONFLICT*        conflict,           /**< conflict analysis data */
-   BLKMEM*          blkmem,             /**< block memory buffers */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   PROB*            prob,               /**< transformed problem after presolve */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< LP data */
-   COL*             col,                /**< LP column with at least one infeasible strong branching subproblem */
-   Bool*            downconflict,       /**< pointer to store whether a conflict clause was created for an infeasible
-                                         *   downwards branch, or NULL */
-   Bool*            upconflict          /**< pointer to store whether a conflict clause was created for an infeasible
-                                         *   upwards branch, or NULL */
+SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_COL*             col,                /**< SCIP_LP column with at least one infeasible strong branching subproblem */
+   SCIP_Bool*            downconflict,       /**< pointer to store whether a conflict clause was created for an infeasible
+                                              *   downwards branch, or NULL */
+   SCIP_Bool*            upconflict          /**< pointer to store whether a conflict clause was created for an infeasible
+                                              *   upwards branch, or NULL */
    );
 
 /** gets time in seconds used for analyzing infeasible strong branching conflicts */
 extern
-Real SCIPconflictGetStrongbranchTime(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Real SCIPconflictGetStrongbranchTime(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** gets number of calls to infeasible strong branching conflict analysis */
 extern
-Longint SCIPconflictGetNStrongbranchCalls(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNStrongbranchCalls(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** gets number of conflict clauses detected in infeasible strong branching conflict analysis */
 extern
-Longint SCIPconflictGetNStrongbranchConflictClauses(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNStrongbranchConflictClauses(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** gets total number of literals in conflict clauses created in infeasible strong branching conflict analysis */
 extern
-Longint SCIPconflictGetNStrongbranchConflictLiterals(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNStrongbranchConflictLiterals(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** gets number of reconvergence clauses detected in infeasible strong branching conflict analysis */
 extern
-Longint SCIPconflictGetNStrongbranchReconvergenceClauses(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNStrongbranchReconvergenceClauses(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** gets total number of literals in reconvergence clauses created in infeasible strong branching conflict analysis */
 extern
-Longint SCIPconflictGetNStrongbranchReconvergenceLiterals(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNStrongbranchReconvergenceLiterals(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of LP iterations in infeasible strong branching conflict analysis */
+/** gets number of SCIP_LP iterations in infeasible strong branching conflict analysis */
 extern
-Longint SCIPconflictGetNStrongbranchIterations(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNStrongbranchIterations(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 
@@ -410,51 +410,51 @@ Longint SCIPconflictGetNStrongbranchIterations(
  *  updates statistics for pseudo solution conflict analysis
  */
 extern
-RETCODE SCIPconflictAnalyzePseudo(
-   CONFLICT*        conflict,           /**< conflict analysis data */
-   BLKMEM*          blkmem,             /**< block memory of transformed problem */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   PROB*            prob,               /**< problem data */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< LP data */
-   Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
+SCIP_RETCODE SCIPconflictAnalyzePseudo(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
 
 /** gets time in seconds used for analyzing pseudo solution conflicts */
 extern
-Real SCIPconflictGetPseudoTime(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Real SCIPconflictGetPseudoTime(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** gets number of calls to pseudo solution conflict analysis */
 extern
-Longint SCIPconflictGetNPseudoCalls(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNPseudoCalls(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** gets number of conflict clauses detected in pseudo solution conflict analysis */
 extern
-Longint SCIPconflictGetNPseudoConflictClauses(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNPseudoConflictClauses(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** gets total number of literals in conflict clauses created in pseudo solution conflict analysis */
 extern
-Longint SCIPconflictGetNPseudoConflictLiterals(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNPseudoConflictLiterals(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** gets number of reconvergence clauses detected in pseudo solution conflict analysis */
 extern
-Longint SCIPconflictGetNPseudoReconvergenceClauses(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNPseudoReconvergenceClauses(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** gets total number of literals in reconvergence clauses created in pseudo solution conflict analysis */
 extern
-Longint SCIPconflictGetNPseudoReconvergenceLiterals(
-   CONFLICT*        conflict            /**< conflict analysis data */
+SCIP_Longint SCIPconflictGetNPseudoReconvergenceLiterals(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 

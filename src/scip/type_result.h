@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_result.h,v 1.9 2005/07/15 17:20:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_result.h,v 1.10 2005/08/22 18:35:54 bzfpfend Exp $"
 
 /**@file   type_result.h
  * @brief  result codes for SCIP callback methods
@@ -27,7 +27,7 @@
 #define __SCIP_TYPE_RESULT_H__
 
 /** result codes for SCIP callback methods */
-enum Result
+enum SCIP_Result
 {
    SCIP_DIDNOTRUN   =   1,            /**< the method was not executed */
    SCIP_DELAYED     =   2,            /**< the method was not executed, but should be called again later */
@@ -41,12 +41,12 @@ enum Result
    SCIP_CONSADDED   =  10,            /**< the method added a constraint */
    SCIP_CONSCHANGED =  11,            /**< the method changed a constraint */
    SCIP_BRANCHED    =  12,            /**< the method created a branching */
-   SCIP_SOLVELP     =  13,            /**< the current node's LP must be solved */
+   SCIP_SOLVELP     =  13,            /**< the current node's SCIP_LP must be solved */
    SCIP_FOUNDSOL    =  14,            /**< the method found a feasible primal solution */
    SCIP_SUCCESS     =  15,            /**< the method was successfully executed */  
    SCIP_SUSPENDED   =  16             /**< the method interrupted its execution, but can continue if needed */
 };
-typedef enum Result RESULT;           /**< result codes for SCIP callback methods */
+typedef enum SCIP_Result SCIP_RESULT;           /**< result codes for SCIP callback methods */
 
 
 

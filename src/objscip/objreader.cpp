@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.cpp,v 1.8 2005/05/31 17:20:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objreader.cpp,v 1.9 2005/08/22 18:35:31 bzfpfend Exp $"
 
 /**@file   objreader.cpp
  * @brief  C++ wrapper for file readers
@@ -35,10 +35,10 @@
  */
 
 /** file reader data */
-struct ReaderData
+struct SCIP_ReaderData
 {
-   scip::ObjReader* objreader;          /**< file reader object */
-   Bool             deleteobject;       /**< should the reader object be deleted when reader is freed? */
+   scip::ObjReader*      objreader;          /**< file reader object */
+   SCIP_Bool             deleteobject;       /**< should the reader object be deleted when reader is freed? */
 };
 
 
@@ -50,16 +50,16 @@ struct ReaderData
 
 /** destructor of file reader to free user data (called when SCIP is exiting) */
 static
-DECL_READERFREE(readerFreeObj)
+SCIP_DECL_READERFREE(readerFreeObj)
 {  /*lint --e{715}*/
-   READERDATA* readerdata;
+   SCIP_READERDATA* readerdata;
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
    assert(readerdata->objreader != NULL);
 
    /* call virtual method of reader object */
-   CHECK_OKAY( readerdata->objreader->scip_free(scip, reader) );
+   SCIP_CALL( readerdata->objreader->scip_free(scip, reader) );
 
    /* free reader object */
    if( readerdata->deleteobject )
@@ -75,16 +75,16 @@ DECL_READERFREE(readerFreeObj)
 
 /** problem reading method of reader */
 static
-DECL_READERREAD(readerReadObj)
+SCIP_DECL_READERREAD(readerReadObj)
 {  /*lint --e{715}*/
-   READERDATA* readerdata;
+   SCIP_READERDATA* readerdata;
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
    assert(readerdata->objreader != NULL);
 
    /* call virtual method of reader object */
-   CHECK_OKAY( readerdata->objreader->scip_read(scip, reader, filename, result) );
+   SCIP_CALL( readerdata->objreader->scip_read(scip, reader, filename, result) );
 
    return SCIP_OKAY;
 }
@@ -97,21 +97,21 @@ DECL_READERREAD(readerReadObj)
  */
 
 /** creates the file reader for the given file reader object and includes it in SCIP */
-RETCODE SCIPincludeObjReader(
-   SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjReader* objreader,          /**< file reader object */
-   Bool             deleteobject        /**< should the reader object be deleted when reader is freed? */
+SCIP_RETCODE SCIPincludeObjReader(
+   SCIP*                 scip,               /**< SCIP data structure */
+   scip::ObjReader*      objreader,          /**< file reader object */
+   SCIP_Bool             deleteobject        /**< should the reader object be deleted when reader is freed? */
    )
 {
-   READERDATA* readerdata;
+   SCIP_READERDATA* readerdata;
 
    /* create file reader data */
-   readerdata = new READERDATA;
+   readerdata = new SCIP_READERDATA;
    readerdata->objreader = objreader;
    readerdata->deleteobject = deleteobject;
 
    /* include file reader */
-   CHECK_OKAY( SCIPincludeReader(scip, objreader->scip_name_, objreader->scip_desc_, objreader->scip_extension_,
+   SCIP_CALL( SCIPincludeReader(scip, objreader->scip_name_, objreader->scip_desc_, objreader->scip_extension_,
          readerFreeObj, readerReadObj,
          readerdata) );
 
@@ -120,12 +120,12 @@ RETCODE SCIPincludeObjReader(
 
 /** returns the reader object of the given name, or NULL if not existing */
 scip::ObjReader* SCIPfindObjReader(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< name of file reader */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of file reader */
    )
 {
-   READER* reader;
-   READERDATA* readerdata;
+   SCIP_READER* reader;
+   SCIP_READERDATA* readerdata;
 
    reader = SCIPfindReader(scip, name);
    if( reader == NULL )
@@ -139,11 +139,11 @@ scip::ObjReader* SCIPfindObjReader(
    
 /** returns the reader object for the given file reader */
 scip::ObjReader* SCIPgetObjReader(
-   SCIP*            scip,               /**< SCIP data structure */
-   READER*          reader              /**< file reader */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader              /**< file reader */
    )
 {
-   READERDATA* readerdata;
+   SCIP_READERDATA* readerdata;
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);

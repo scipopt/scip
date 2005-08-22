@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_paramset.h,v 1.9 2005/07/15 17:20:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_paramset.h,v 1.10 2005/08/22 18:35:51 bzfpfend Exp $"
 
 /**@file   struct_paramset.h
  * @brief  datastructures for handling parameter settings
@@ -32,93 +32,93 @@
 
 
 
-/** data for Bool parameters */
-struct BoolParam
+/** data for SCIP_Bool parameters */
+struct SCIP_BoolParam
 {
-   Bool*            valueptr;           /**< pointer to store the current parameter value, or NULL */
-   Bool             curvalue;           /**< stores the current parameter value if it is not stored in *valueptr */
-   Bool             defaultvalue;       /**< default value of the parameter */
+   SCIP_Bool*            valueptr;           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             curvalue;           /**< stores the current parameter value if it is not stored in *valueptr */
+   SCIP_Bool             defaultvalue;       /**< default value of the parameter */
 };
-typedef struct BoolParam BOOLPARAM;
+typedef struct SCIP_BoolParam SCIP_BOOLPARAM;
 
 /** data for int parameters */
-struct IntParam
+struct SCIP_IntParam
 {
-   int*             valueptr;           /**< pointer to store the current parameter value, or NULL */
-   int              curvalue;           /**< stores the current parameter value if it is not stored in *valueptr */
-   int              defaultvalue;       /**< default value of the parameter */
-   int              minvalue;           /**< minimum value for parameter */
-   int              maxvalue;           /**< maximum value for parameter */
+   int*                  valueptr;           /**< pointer to store the current parameter value, or NULL */
+   int                   curvalue;           /**< stores the current parameter value if it is not stored in *valueptr */
+   int                   defaultvalue;       /**< default value of the parameter */
+   int                   minvalue;           /**< minimum value for parameter */
+   int                   maxvalue;           /**< maximum value for parameter */
 };
-typedef struct IntParam INTPARAM;
+typedef struct SCIP_IntParam SCIP_INTPARAM;
 
-/** data for Longint parameters */
-struct LongintParam
+/** data for SCIP_Longint parameters */
+struct SCIP_LongintParam
 {
-   Longint          curvalue;           /**< stores the current parameter value if it is not stored in *valueptr */
-   Longint          defaultvalue;       /**< default value of the parameter */
-   Longint          minvalue;           /**< minimum value for parameter */
-   Longint          maxvalue;           /**< maximum value for parameter */
-   Longint*         valueptr;           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Longint          curvalue;           /**< stores the current parameter value if it is not stored in *valueptr */
+   SCIP_Longint          defaultvalue;       /**< default value of the parameter */
+   SCIP_Longint          minvalue;           /**< minimum value for parameter */
+   SCIP_Longint          maxvalue;           /**< maximum value for parameter */
+   SCIP_Longint*         valueptr;           /**< pointer to store the current parameter value, or NULL */
 };
-typedef struct LongintParam LONGINTPARAM;
+typedef struct SCIP_LongintParam SCIP_LONGINTPARAM;
 
-/** data for Real parameters */
-struct RealParam
+/** data for SCIP_Real parameters */
+struct SCIP_RealParam
 {
-   Real             curvalue;           /**< stores the current parameter value if it is not stored in *valueptr */
-   Real             defaultvalue;       /**< default value of the parameter */
-   Real             minvalue;           /**< minimum value for parameter */
-   Real             maxvalue;           /**< maximum value for parameter */
-   Real*            valueptr;           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Real             curvalue;           /**< stores the current parameter value if it is not stored in *valueptr */
+   SCIP_Real             defaultvalue;       /**< default value of the parameter */
+   SCIP_Real             minvalue;           /**< minimum value for parameter */
+   SCIP_Real             maxvalue;           /**< maximum value for parameter */
+   SCIP_Real*            valueptr;           /**< pointer to store the current parameter value, or NULL */
 };
-typedef struct RealParam REALPARAM;
+typedef struct SCIP_RealParam SCIP_REALPARAM;
 
 /** data for char parameters */
-struct CharParam
+struct SCIP_CharParam
 {
-   char*            valueptr;           /**< pointer to store the current parameter value, or NULL */
-   char*            allowedvalues;      /**< array with possible parameter values, or NULL if not restricted */
-   char             curvalue;           /**< stores the current parameter value if it is not stored in *valueptr */
-   char             defaultvalue;       /**< default value of the parameter */
+   char*                 valueptr;           /**< pointer to store the current parameter value, or NULL */
+   char*                 allowedvalues;      /**< array with possible parameter values, or NULL if not restricted */
+   char                  curvalue;           /**< stores the current parameter value if it is not stored in *valueptr */
+   char                  defaultvalue;       /**< default value of the parameter */
 };
-typedef struct CharParam CHARPARAM;
+typedef struct SCIP_CharParam SCIP_CHARPARAM;
 
 /** data for char* parameters */
-struct StringParam
+struct SCIP_StringParam
 {
-   char**           valueptr;           /**< pointer to store the current parameter value, or NULL */
-   char*            curvalue;           /**< stores the current parameter value if it is not stored in *valueptr */
-   char*            defaultvalue;       /**< default value of the parameter */
+   char**                valueptr;           /**< pointer to store the current parameter value, or NULL */
+   char*                 curvalue;           /**< stores the current parameter value if it is not stored in *valueptr */
+   char*                 defaultvalue;       /**< default value of the parameter */
 };
-typedef struct StringParam STRINGPARAM;
+typedef struct SCIP_StringParam SCIP_STRINGPARAM;
 
 /** single parameter */
-struct Param
+struct SCIP_Param
 {
    union
    {
-      BOOLPARAM     boolparam;          /**< data for Bool parameters */
-      INTPARAM      intparam;           /**< data for int parameters */
-      LONGINTPARAM  longintparam;       /**< data for Longint parameters */
-      REALPARAM     realparam;          /**< data for Real parameters */
-      CHARPARAM     charparam;          /**< data for char parameters */
-      STRINGPARAM   stringparam;        /**< data for char* parameters */
+      SCIP_BOOLPARAM     boolparam;          /**< data for SCIP_Bool parameters */
+      SCIP_INTPARAM      intparam;           /**< data for int parameters */
+      SCIP_LONGINTPARAM  longintparam;       /**< data for SCIP_Longint parameters */
+      SCIP_REALPARAM     realparam;          /**< data for SCIP_Real parameters */
+      SCIP_CHARPARAM     charparam;          /**< data for char parameters */
+      SCIP_STRINGPARAM   stringparam;        /**< data for char* parameters */
    } data;
-   char*            name;               /**< name of the parameter */
-   char*            desc;               /**< description of the parameter */
-   DECL_PARAMCHGD   ((*paramchgd));     /**< change information method of parameter */
-   PARAMDATA*       paramdata;          /**< locally defined parameter specific data */
-   PARAMTYPE        paramtype;          /**< type of this parameter */
+   char*                 name;               /**< name of the parameter */
+   char*                 desc;               /**< description of the parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd));     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata;          /**< locally defined parameter specific data */
+   SCIP_PARAMTYPE        paramtype;          /**< type of this parameter */
 };
 
 /** set of parameters */
-struct ParamSet
+struct SCIP_ParamSet
 {
-   HASHTABLE*       hashtable;          /**< hash table to store the parameters */
-   PARAM**          params;             /**< array with parameters */
-   int              nparams;            /**< number of parameters */
-   int              paramssize;         /**< size of params array */
+   SCIP_HASHTABLE*       hashtable;          /**< hash table to store the parameters */
+   SCIP_PARAM**          params;             /**< array with parameters */
+   int                   nparams;            /**< number of parameters */
+   int                   paramssize;         /**< size of params array */
 };
 
 

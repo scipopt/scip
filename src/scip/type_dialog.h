@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_dialog.h,v 1.7 2005/07/15 17:20:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_dialog.h,v 1.8 2005/08/22 18:35:53 bzfpfend Exp $"
 
 /**@file   type_dialog.h
  * @brief  type definitions for user interface dialog
@@ -27,9 +27,9 @@
 #define __SCIP_TYPE_DIALOG_H__
 
 
-typedef struct Dialog DIALOG;           /**< user interface dialog */
-typedef struct DialogData DIALOGDATA;   /**< user defined dialog data */
-typedef struct Dialoghdlr DIALOGHDLR;   /**< dialog handler */
+typedef struct SCIP_Dialog SCIP_DIALOG;           /**< user interface dialog */
+typedef struct SCIP_DialogData SCIP_DIALOGDATA;   /**< user defined dialog data */
+typedef struct SCIP_Dialoghdlr SCIP_DIALOGHDLR;   /**< dialog handler */
 
 
 /** execution method of dialog
@@ -44,7 +44,7 @@ typedef struct Dialoghdlr DIALOGHDLR;   /**< dialog handler */
  *  output:
  *  - *nextdialog     : next dialog to process (or NULL to quit dialog processing)
  */
-#define DECL_DIALOGEXEC(x) RETCODE x (SCIP* scip, DIALOG* dialog, DIALOGHDLR* dialoghdlr, DIALOG** nextdialog)
+#define SCIP_DECL_DIALOGEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIALOG* dialog, SCIP_DIALOGHDLR* dialoghdlr, SCIP_DIALOG** nextdialog)
 
 /** description output method of dialog
  *
@@ -56,7 +56,7 @@ typedef struct Dialoghdlr DIALOGHDLR;   /**< dialog handler */
  *  - scip            : SCIP main data structure
  *  - *dialog         : the dialog itself
  */
-#define DECL_DIALOGDESC(x) RETCODE x (SCIP* scip, DIALOG* dialog)
+#define SCIP_DECL_DIALOGDESC(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIALOG* dialog)
 
 
 

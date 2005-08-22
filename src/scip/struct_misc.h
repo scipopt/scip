@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_misc.h,v 1.12 2005/07/15 17:20:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_misc.h,v 1.13 2005/08/22 18:35:50 bzfpfend Exp $"
 
 /**@file   struct_misc.h
  * @brief  miscellaneous datastructures
@@ -42,91 +42,91 @@
  *  At any time, the condition holds that $p <= q$ for each parent $p$ and its children $q$.
  *  Insertion and removal of single elements needs time $O(log n)$.
  */
-struct PQueue
+struct SCIP_PQueue
 {
-   Real             sizefac;            /**< memory growing factor */
-   DECL_SORTPTRCOMP((*ptrcomp));        /**< compares two data elements */
-   void**           slots;              /**< array of element slots */
-   int              len;                /**< number of used element slots */
-   int              size;               /**< total number of available element slots */
+   SCIP_Real             sizefac;            /**< memory growing factor */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp));        /**< compares two data elements */
+   void**                slots;              /**< array of element slots */
+   int                   len;                /**< number of used element slots */
+   int                   size;               /**< total number of available element slots */
 };
 
 /** element list to store single elements of a hash table */
-struct HashTableList
+struct SCIP_HashTableList
 {
-   void*            element;            /**< this element */
-   HASHTABLELIST*   next;               /**< rest of the hash table list */
+   void*                 element;            /**< this element */
+   SCIP_HASHTABLELIST*   next;               /**< rest of the hash table list */
 };
 
 /** hash table data structure */
-struct HashTable
+struct SCIP_HashTable
 {
-   DECL_HASHGETKEY((*hashgetkey));      /**< gets the key of the given element */
-   DECL_HASHKEYEQ ((*hashkeyeq));       /**< returns TRUE iff both keys are equal */
-   DECL_HASHKEYVAL((*hashkeyval));      /**< returns the hash value of the key */
-   BLKMEM*          blkmem;             /**< block memory used to store hash map entries */
-   HASHTABLELIST**  lists;              /**< hash table lists of the hash table */
-   int              nlists;             /**< number of lists stored in the hash table */
+   SCIP_DECL_HASHGETKEY((*hashgetkey));      /**< gets the key of the given element */
+   SCIP_DECL_HASHKEYEQ ((*hashkeyeq));       /**< returns TRUE iff both keys are equal */
+   SCIP_DECL_HASHKEYVAL((*hashkeyval));      /**< returns the hash value of the key */
+   BMS_BLKMEM*           blkmem;             /**< block memory used to store hash map entries */
+   SCIP_HASHTABLELIST**  lists;              /**< hash table lists of the hash table */
+   int                   nlists;             /**< number of lists stored in the hash table */
 };
 
 /** element list to store single mappings of a hash map */
-struct HashMapList
+struct SCIP_HashMapList
 {
-   void*            origin;             /**< origin of the mapping origin -> image */
-   void*            image;              /**< image of the mapping origin -> image */
-   HASHMAPLIST*     next;               /**< rest of the hash map list */
+   void*                 origin;             /**< origin of the mapping origin -> image */
+   void*                 image;              /**< image of the mapping origin -> image */
+   SCIP_HASHMAPLIST*     next;               /**< rest of the hash map list */
 };
 
 /** hash map data structure to map pointers on pointers */
-struct HashMap
+struct SCIP_HashMap
 {
-   BLKMEM*          blkmem;             /**< block memory used to store hash map entries */
-   HASHMAPLIST**    lists;              /**< hash map lists of the hash map */
-   int              nlists;             /**< number of lists stored in the hash map */
+   BMS_BLKMEM*           blkmem;             /**< block memory used to store hash map entries */
+   SCIP_HASHMAPLIST**    lists;              /**< hash map lists of the hash map */
+   int                   nlists;             /**< number of lists stored in the hash map */
 };
 
 /** dynamic array for storing real values */
-struct RealArray
+struct SCIP_RealArray
 {
-   BLKMEM*          blkmem;             /**< block memory that stores the vals array */
-   Real*            vals;               /**< array values */
-   int              valssize;           /**< size of vals array */
-   int              firstidx;           /**< index of first element in vals array */
-   int              minusedidx;         /**< index of first non zero element in vals array */
-   int              maxusedidx;         /**< index of last non zero element in vals array */
+   BMS_BLKMEM*           blkmem;             /**< block memory that stores the vals array */
+   SCIP_Real*            vals;               /**< array values */
+   int                   valssize;           /**< size of vals array */
+   int                   firstidx;           /**< index of first element in vals array */
+   int                   minusedidx;         /**< index of first non zero element in vals array */
+   int                   maxusedidx;         /**< index of last non zero element in vals array */
 };
 
 /** dynamic array for storing int values */
-struct IntArray
+struct SCIP_IntArray
 {
-   BLKMEM*          blkmem;             /**< block memory that stores the vals array */
-   int*             vals;               /**< array values */
-   int              valssize;           /**< size of vals array */
-   int              firstidx;           /**< index of first element in vals array */
-   int              minusedidx;         /**< index of first non zero element in vals array */
-   int              maxusedidx;         /**< index of last non zero element in vals array */
+   BMS_BLKMEM*           blkmem;             /**< block memory that stores the vals array */
+   int*                  vals;               /**< array values */
+   int                   valssize;           /**< size of vals array */
+   int                   firstidx;           /**< index of first element in vals array */
+   int                   minusedidx;         /**< index of first non zero element in vals array */
+   int                   maxusedidx;         /**< index of last non zero element in vals array */
 };
 
 /** dynamic array for storing bool values */
-struct BoolArray
+struct SCIP_BoolArray
 {
-   BLKMEM*          blkmem;             /**< block memory that stores the vals array */
-   Bool*            vals;               /**< array values */
-   int              valssize;           /**< size of vals array */
-   int              firstidx;           /**< index of first element in vals array */
-   int              minusedidx;         /**< index of first non zero element in vals array */
-   int              maxusedidx;         /**< index of last non zero element in vals array */
+   BMS_BLKMEM*           blkmem;             /**< block memory that stores the vals array */
+   SCIP_Bool*            vals;               /**< array values */
+   int                   valssize;           /**< size of vals array */
+   int                   firstidx;           /**< index of first element in vals array */
+   int                   minusedidx;         /**< index of first non zero element in vals array */
+   int                   maxusedidx;         /**< index of last non zero element in vals array */
 };
 
 /** dynamic array for storing pointers */
-struct PtrArray
+struct SCIP_PtrArray
 {
-   BLKMEM*          blkmem;             /**< block memory that stores the vals array */
-   void**           vals;               /**< array values */
-   int              valssize;           /**< size of vals array */
-   int              firstidx;           /**< index of first element in vals array */
-   int              minusedidx;         /**< index of first non zero element in vals array */
-   int              maxusedidx;         /**< index of last non zero element in vals array */
+   BMS_BLKMEM*           blkmem;             /**< block memory that stores the vals array */
+   void**                vals;               /**< array values */
+   int                   valssize;           /**< size of vals array */
+   int                   firstidx;           /**< index of first element in vals array */
+   int                   minusedidx;         /**< index of first non zero element in vals array */
+   int                   maxusedidx;         /**< index of last non zero element in vals array */
 };
 
 

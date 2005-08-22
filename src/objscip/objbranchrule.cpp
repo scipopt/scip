@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.14 2005/05/31 17:20:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.15 2005/08/22 18:35:29 bzfpfend Exp $"
 
 /**@file   objbranchrule.cpp
  * @brief  C++ wrapper for branching rules
@@ -35,10 +35,10 @@
  */
 
 /** branching rule data */
-struct BranchruleData
+struct SCIP_BranchruleData
 {
-   scip::ObjBranchrule* objbranchrule;  /**< branching rule object */
-   Bool             deleteobject;       /**< should the branching rule object be deleted when branching rule is freed? */
+   scip::ObjBranchrule*  objbranchrule;      /**< branching rule object */
+   SCIP_Bool             deleteobject;       /**< should the branching rule object be deleted when branching rule is freed? */
 };
 
 
@@ -50,16 +50,16 @@ struct BranchruleData
 
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
 static
-DECL_BRANCHFREE(branchFreeObj)
+SCIP_DECL_BRANCHFREE(branchFreeObj)
 {  /*lint --e{715}*/
-   BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULEDATA* branchruledata;
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
    assert(branchruledata->objbranchrule != NULL);
 
    /* call virtual method of branchrule object */
-   CHECK_OKAY( branchruledata->objbranchrule->scip_free(scip, branchrule) );
+   SCIP_CALL( branchruledata->objbranchrule->scip_free(scip, branchrule) );
 
    /* free branchrule object */
    if( branchruledata->deleteobject )
@@ -75,16 +75,16 @@ DECL_BRANCHFREE(branchFreeObj)
 
 /** initialization method of branching rule (called after problem was transformed) */
 static
-DECL_BRANCHINIT(branchInitObj)
+SCIP_DECL_BRANCHINIT(branchInitObj)
 {  /*lint --e{715}*/
-   BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULEDATA* branchruledata;
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
    assert(branchruledata->objbranchrule != NULL);
 
    /* call virtual method of branchrule object */
-   CHECK_OKAY( branchruledata->objbranchrule->scip_init(scip, branchrule) );
+   SCIP_CALL( branchruledata->objbranchrule->scip_init(scip, branchrule) );
 
    return SCIP_OKAY;
 }
@@ -92,16 +92,16 @@ DECL_BRANCHINIT(branchInitObj)
 
 /** deinitialization method of branching rule (called before transformed problem is freed) */
 static
-DECL_BRANCHEXIT(branchExitObj)
+SCIP_DECL_BRANCHEXIT(branchExitObj)
 {  /*lint --e{715}*/
-   BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULEDATA* branchruledata;
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
    assert(branchruledata->objbranchrule != NULL);
 
    /* call virtual method of branchrule object */
-   CHECK_OKAY( branchruledata->objbranchrule->scip_exit(scip, branchrule) );
+   SCIP_CALL( branchruledata->objbranchrule->scip_exit(scip, branchrule) );
 
    return SCIP_OKAY;
 }
@@ -109,16 +109,16 @@ DECL_BRANCHEXIT(branchExitObj)
 
 /** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
 static
-DECL_BRANCHINITSOL(branchInitsolObj)
+SCIP_DECL_BRANCHINITSOL(branchInitsolObj)
 {  /*lint --e{715}*/
-   BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULEDATA* branchruledata;
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
    assert(branchruledata->objbranchrule != NULL);
 
    /* call virtual method of branchrule object */
-   CHECK_OKAY( branchruledata->objbranchrule->scip_initsol(scip, branchrule) );
+   SCIP_CALL( branchruledata->objbranchrule->scip_initsol(scip, branchrule) );
 
    return SCIP_OKAY;
 }
@@ -126,49 +126,49 @@ DECL_BRANCHINITSOL(branchInitsolObj)
 
 /** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
 static
-DECL_BRANCHEXITSOL(branchExitsolObj)
+SCIP_DECL_BRANCHEXITSOL(branchExitsolObj)
 {  /*lint --e{715}*/
-   BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULEDATA* branchruledata;
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
    assert(branchruledata->objbranchrule != NULL);
 
    /* call virtual method of branchrule object */
-   CHECK_OKAY( branchruledata->objbranchrule->scip_exitsol(scip, branchrule) );
+   SCIP_CALL( branchruledata->objbranchrule->scip_exitsol(scip, branchrule) );
 
    return SCIP_OKAY;
 }
 
 
-/** branching execution method for fractional LP solutions */
+/** branching execution method for fractional SCIP_LP solutions */
 static
-DECL_BRANCHEXECLP(branchExeclpObj)
+SCIP_DECL_BRANCHEXECLP(branchExeclpObj)
 {  /*lint --e{715}*/
-   BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULEDATA* branchruledata;
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
    assert(branchruledata->objbranchrule != NULL);
 
    /* call virtual method of branchrule object */
-   CHECK_OKAY( branchruledata->objbranchrule->scip_execlp(scip, branchrule, allowaddcons, result) );
+   SCIP_CALL( branchruledata->objbranchrule->scip_execlp(scip, branchrule, allowaddcons, result) );
 
    return SCIP_OKAY;
 }
 
 /** branching execution method for not completely fixed pseudo solutions */
 static
-DECL_BRANCHEXECPS(branchExecpsObj)
+SCIP_DECL_BRANCHEXECPS(branchExecpsObj)
 {  /*lint --e{715}*/
-   BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULEDATA* branchruledata;
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
    assert(branchruledata->objbranchrule != NULL);
 
    /* call virtual method of branchrule object */
-   CHECK_OKAY( branchruledata->objbranchrule->scip_execps(scip, branchrule, allowaddcons, result) );
+   SCIP_CALL( branchruledata->objbranchrule->scip_execps(scip, branchrule, allowaddcons, result) );
 
    return SCIP_OKAY;
 }
@@ -181,21 +181,21 @@ DECL_BRANCHEXECPS(branchExecpsObj)
  */
 
 /** creates the branching rule for the given branching rule object and includes it in SCIP */
-RETCODE SCIPincludeObjBranchrule(
-   SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjBranchrule* objbranchrule,  /**< branching rule object */
-   Bool             deleteobject        /**< should the branching rule object be deleted when branching rule is freed? */
+SCIP_RETCODE SCIPincludeObjBranchrule(
+   SCIP*                 scip,               /**< SCIP data structure */
+   scip::ObjBranchrule*  objbranchrule,      /**< branching rule object */
+   SCIP_Bool             deleteobject        /**< should the branching rule object be deleted when branching rule is freed? */
    )
 {
-   BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULEDATA* branchruledata;
 
    /* create branching rule data */
-   branchruledata = new BRANCHRULEDATA;
+   branchruledata = new SCIP_BRANCHRULEDATA;
    branchruledata->objbranchrule = objbranchrule;
    branchruledata->deleteobject = deleteobject;
 
    /* include branching rule */
-   CHECK_OKAY( SCIPincludeBranchrule(scip, objbranchrule->scip_name_, objbranchrule->scip_desc_, 
+   SCIP_CALL( SCIPincludeBranchrule(scip, objbranchrule->scip_name_, objbranchrule->scip_desc_, 
          objbranchrule->scip_priority_, objbranchrule->scip_maxdepth_, objbranchrule->scip_maxbounddist_,
          branchFreeObj, branchInitObj, branchExitObj, branchInitsolObj, branchExitsolObj,
          branchExeclpObj, branchExecpsObj,
@@ -206,12 +206,12 @@ RETCODE SCIPincludeObjBranchrule(
 
 /** returns the branchrule object of the given name, or NULL if not existing */
 scip::ObjBranchrule* SCIPfindObjBranchrule(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< name of branching rule */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of branching rule */
    )
 {
-   BRANCHRULE* branchrule;
-   BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULE* branchrule;
+   SCIP_BRANCHRULEDATA* branchruledata;
 
    branchrule = SCIPfindBranchrule(scip, name);
    if( branchrule == NULL )
@@ -225,11 +225,11 @@ scip::ObjBranchrule* SCIPfindObjBranchrule(
    
 /** returns the branchrule object for the given branching rule */
 scip::ObjBranchrule* SCIPgetObjBranchrule(
-   SCIP*            scip,               /**< SCIP data structure */
-   BRANCHRULE*      branchrule          /**< branching rule */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    )
 {
-   BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULEDATA* branchruledata;
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.h,v 1.10 2005/07/15 17:20:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.h,v 1.11 2005/08/22 18:35:37 bzfpfend Exp $"
 
 /**@file   disp_default.h
  * @brief  default display columns
@@ -32,8 +32,8 @@
 
 /** includes the default display columns in SCIP */
 extern
-RETCODE SCIPincludeDispDefault(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeDispDefault(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

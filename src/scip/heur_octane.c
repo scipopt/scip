@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.1 2005/06/23 16:30:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.2 2005/08/22 18:35:38 bzfpfend Exp $"
 
 /**@file   heur_octane.c
  * @brief  octane primal heuristic based on Balas, Ceria, Dawande, Margot, and Pataki
@@ -44,47 +44,47 @@
 #define DEFAULT_USEFRACSPACE  TRUE      /**< use heuristic for the space of fractional variables or for whole space? */
 
 /** primal heuristic data */
-struct HeurData
+struct SCIP_HeurData
 {
-   SOL* sol;                 /**< working solution */
+   SCIP_SOL* sol;                 /**< working solution */
    int fmax;                 /**< {0,1}-points to be checked */
    int ffirst;               /**< {0,1}-points to be generated at first in order to check whether restart is neccessary */
-   Bool usefracspace;        /**< use heuristic for the space of fractional variables or for the whole space? */
-   Bool useobjray;           /**< should the inner normal of the objective be used as one ray direction? */
-   Bool useavgray;           /**< should the inner normal of the objective be used as one ray direction? */
-   Bool usediffray;          /**< should difference between root sol and current LP sol be used as one ray direction? */
-   Bool usediffbwray;        /**< should difference between current sol and root sol be used as one ray direction?  */
+   SCIP_Bool usefracspace;        /**< use heuristic for the space of fractional variables or for the whole space? */
+   SCIP_Bool useobjray;           /**< should the inner normal of the objective be used as one ray direction? */
+   SCIP_Bool useavgray;           /**< should the inner normal of the objective be used as one ray direction? */
+   SCIP_Bool usediffray;          /**< should difference between root sol and current SCIP_LP sol be used as one ray direction? */
+   SCIP_Bool usediffbwray;        /**< should difference between current sol and root sol be used as one ray direction?  */
 };
 
 /*
  * Local methods
  */
 
-/** boring method, only swapping two elements of a Real array */
+/** boring method, only swapping two elements of a SCIP_Real array */
 static 
-void swapreal(Real* arr, int i, int j)
+void swapreal(SCIP_Real* arr, int i, int j)
 {
-   Real tmp;
+   SCIP_Real tmp;
    tmp = arr[i]; 
    arr[i] = arr[j]; 
    arr[j] = tmp;
 }
 
-/** boring method, only swapping two elements of a VAR* array */
+/** boring method, only swapping two elements of a SCIP_VAR* array */
 static 
-void swapvar(VAR** arr, int i, int j)
+void swapvar(SCIP_VAR** arr, int i, int j)
 {
-   VAR* tmp;
+   SCIP_VAR* tmp;
    tmp = arr[i]; 
    arr[i] = arr[j]; 
    arr[j] = tmp;
 }
 
-/** boring method, only swapping two elements of a Bool array */
+/** boring method, only swapping two elements of a SCIP_Bool array */
 static 
-void swapbool(Bool* arr, int i, int j)
+void swapbool(SCIP_Bool* arr, int i, int j)
 {
-   Bool tmp;
+   SCIP_Bool tmp;
    tmp = arr[i]; 
    arr[i] = arr[j]; 
    arr[j] = tmp;
@@ -94,7 +94,7 @@ void swapbool(Bool* arr, int i, int j)
  *  where perm should be used to store the sorting permutation
  */
 static 
-void resortCoords( Real* v, Real* a, Real* x, Bool* sign, VAR** subspacevars, int l, int r)
+void resortCoords( SCIP_Real* v, SCIP_Real* a, SCIP_Real* x, SCIP_Bool* sign, SCIP_VAR** subspacevars, int l, int r)
 {
    int i;
    int j;
@@ -140,9 +140,9 @@ void resortCoords( Real* v, Real* a, Real* x, Bool* sign, VAR** subspacevars, in
 
 /** tries to insert the facet obtained from facet i flipped in component j into the list of the fmax nearest facets */
 static 
-void tryToInsert( SCIP* scip, Bool** facets, Real* lambda, int i, int j, int fmax, int nsubspacevars, Real lam, int* nfacets )
+void tryToInsert( SCIP* scip, SCIP_Bool** facets, SCIP_Real* lambda, int i, int j, int fmax, int nsubspacevars, SCIP_Real lam, int* nfacets )
 {
-   Bool* lastfacet;
+   SCIP_Bool* lastfacet;
    int k;
 
    if( SCIPisFeasGE(scip,lam, lambda[fmax-1]) || lam < 0.0 )
@@ -160,21 +160,21 @@ void tryToInsert( SCIP* scip, Bool** facets, Real* lambda, int i, int j, int fma
    /* inserting new facet into list, new facet is facet at position i flipped in coordinate j, new distance lam */
    facets[k] = lastfacet;
    lambda[k] = lam;
-   copyMemoryArray(facets[k], facets[i], nsubspacevars);
+   BMScopyMemoryArray(facets[k], facets[i], nsubspacevars);
    facets[k][j] = !facets[k][j];
    (*nfacets)++;
 }
 
 /** constructs a solution from a given facet paying attention to the transformations made at the beginning of OCTANE */
 static 
-RETCODE getSolFromFacet( SCIP* scip, Bool* facet, SOL* sol, Bool* sign, VAR** subspacevars, int nsubspacevars)
+SCIP_RETCODE getSolFromFacet( SCIP* scip, SCIP_Bool* facet, SCIP_SOL* sol, SCIP_Bool* sign, SCIP_VAR** subspacevars, int nsubspacevars)
 {
    int i;
 
    assert(facet != NULL);
    assert(sign != NULL);
 
-   CHECK_OKAY( SCIPlinkLPSol(scip, sol) );
+   SCIP_CALL( SCIPlinkLPSol(scip, sol) );
 
    for( i = 0; i < nsubspacevars; i++ )
    {
@@ -182,11 +182,11 @@ RETCODE getSolFromFacet( SCIP* scip, Bool* facet, SOL* sol, Bool* sign, VAR** su
        * facet has coordinate + or there was a reflection and the facet has coordinate - */
       if( facet[i] == sign[i] )
       {
-         CHECK_OKAY( SCIPsetSolVal(scip, sol, subspacevars[i], 1.0) );
+         SCIP_CALL( SCIPsetSolVal(scip, sol, subspacevars[i], 1.0) );
       }
       else
       {
-         CHECK_OKAY( SCIPsetSolVal(scip, sol, subspacevars[i], 0.0) );
+         SCIP_CALL( SCIPsetSolVal(scip, sol, subspacevars[i], 0.0) );
       }
    }
 
@@ -195,7 +195,7 @@ RETCODE getSolFromFacet( SCIP* scip, Bool* facet, SOL* sol, Bool* sign, VAR** su
 
 /** generates the direction of the shooting ray as th inner normal of the objective function */
 static
-RETCODE generateObjectiveRay( SCIP* scip, Real* a, VAR** subspacevars, int nsubspacevars )
+SCIP_RETCODE generateObjectiveRay( SCIP* scip, SCIP_Real* a, SCIP_VAR** subspacevars, int nsubspacevars )
 {
    int i;
      
@@ -208,9 +208,9 @@ RETCODE generateObjectiveRay( SCIP* scip, Real* a, VAR** subspacevars, int nsubs
    return SCIP_OKAY;
 }
 
-/** generates the direction of the shooting ray as the difference between the root and the current LP solution */
+/** generates the direction of the shooting ray as the difference between the root and the current SCIP_LP solution */
 static
-RETCODE generateDifferenceRay( SCIP* scip, Real* a, VAR** subspacevars, int nsubspacevars )
+SCIP_RETCODE generateDifferenceRay( SCIP* scip, SCIP_Real* a, SCIP_VAR** subspacevars, int nsubspacevars )
 {
    int i;
      
@@ -223,9 +223,9 @@ RETCODE generateDifferenceRay( SCIP* scip, Real* a, VAR** subspacevars, int nsub
    return SCIP_OKAY;
 }
 
-/** generates the direction of the shooting ray as the difference between the current and the root LP solution */
+/** generates the direction of the shooting ray as the difference between the current and the root SCIP_LP solution */
 static
-RETCODE generateDifferenceBackwRay( SCIP* scip, Real* a, VAR** subspacevars, int nsubspacevars )
+SCIP_RETCODE generateDifferenceBackwRay( SCIP* scip, SCIP_Real* a, SCIP_VAR** subspacevars, int nsubspacevars )
 {
    int i;
      
@@ -240,10 +240,10 @@ RETCODE generateDifferenceBackwRay( SCIP* scip, Real* a, VAR** subspacevars, int
 
 /** generates the direction of the shooting ray as the average of the normalized non-basic vars and rows */
 static
-RETCODE generateAverageRay( SCIP* scip, Real* a, int* fracspace, VAR** subspacevars, int nsubspacevars )
+SCIP_RETCODE generateAverageRay( SCIP* scip, SCIP_Real* a, int* fracspace, SCIP_VAR** subspacevars, int nsubspacevars )
 {
-   ROW** rows;
-   COL** cols;
+   SCIP_ROW** rows;
+   SCIP_COL** cols;
    int nrows;
    int ncols;
    int i;
@@ -251,13 +251,13 @@ RETCODE generateAverageRay( SCIP* scip, Real* a, int* fracspace, VAR** subspacev
    assert(a != NULL);
    assert(subspacevars != NULL);
   
-   CHECK_OKAY( SCIPgetLPRowsData(scip, &rows, &nrows) );
-   CHECK_OKAY( SCIPgetLPColsData(scip, &cols, &ncols) );
+   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
+   SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
 
    /* add up non-basic variables */
    for( i = 0; i < nsubspacevars; ++i )
    { 
-      Real solval;
+      SCIP_Real solval;
 
       solval = SCIPvarGetLPSol(subspacevars[i]);
 
@@ -272,10 +272,10 @@ RETCODE generateAverageRay( SCIP* scip, Real* a, int* fracspace, VAR** subspacev
    /* add up non-basic rows */
    for( i = 0; i < nrows; i++ )
    {
-      Real dualsol = SCIProwGetDualsol(rows[i]);
-      Real factor; 
-      Real* coeffs;
-      Real rownorm;
+      SCIP_Real dualsol = SCIProwGetDualsol(rows[i]);
+      SCIP_Real factor; 
+      SCIP_Real* coeffs;
+      SCIP_Real rownorm;
       int j;
       int nnonz;
 
@@ -295,7 +295,7 @@ RETCODE generateAverageRay( SCIP* scip, Real* a, int* fracspace, VAR** subspacev
       rownorm = 0.0;
       for( j = 0; j < nnonz; j++ )
       {
-         VAR* var;
+         SCIP_VAR* var;
          var = SCIPcolGetVar(cols[j]);
          if( fracspace[SCIPvarGetProbindex(var)] >= 0 )
             rownorm += coeffs[j] * coeffs[j];
@@ -311,12 +311,12 @@ RETCODE generateAverageRay( SCIP* scip, Real* a, int* fracspace, VAR** subspacev
 
       for( j = 0; j < nnonz; j++ )
       { 
-         VAR* var = SCIPcolGetVar(cols[j]);
+         SCIP_VAR* var = SCIPcolGetVar(cols[j]);
          int f = fracspace[SCIPvarGetProbindex(var)];
          if( f >= 0 )
          {
             a[f] += factor * coeffs[j] / rownorm;
-            assert( -REAL_MAX <= a[f]  && a[f]  <= REAL_MAX );
+            assert(SCIP_REAL_MIN <= a[f] && a[f]  <= SCIP_REAL_MAX);
          }
       }
 
@@ -326,7 +326,7 @@ RETCODE generateAverageRay( SCIP* scip, Real* a, int* fracspace, VAR** subspacev
 
 /** generates the starting point for the shooting ray in original coordinates */
 static
-RETCODE generateStartingPoint( SCIP* scip, Real* x, VAR** subspacevars, int nsubspacevars )
+SCIP_RETCODE generateStartingPoint( SCIP* scip, SCIP_Real* x, SCIP_VAR** subspacevars, int nsubspacevars )
 {
    int i;
 
@@ -339,11 +339,11 @@ RETCODE generateStartingPoint( SCIP* scip, Real* x, VAR** subspacevars, int nsub
    return SCIP_OKAY;
 }
 
-/** translates the inner point of the LP to an inner point x of the unit hyper octahedron and 
+/** translates the inner point of the SCIP_LP to an inner point x of the unit hyper octahedron and 
  *  transforms a and x by reflections stored in sign 
  */
 static
-void flipCoords( Real* x, Real* a, Bool* sign, int nsubspacevars )
+void flipCoords( SCIP_Real* x, SCIP_Real* a, SCIP_Bool* sign, int nsubspacevars )
 {  
    int i;
    assert(x != NULL);
@@ -367,11 +367,11 @@ void flipCoords( Real* x, Real* a, Bool* sign, int nsubspacevars )
  *  or a nonincreasing - to + flip and tests whether they are among the fmax nearest ones
  */
 static
-void generateNeighborFacets(SCIP* scip, Bool** facets, Real* lambda, Real* x, Real* a, Real* v, int nsubspacevars, int fmax, int i, int* nfacets)
+void generateNeighborFacets(SCIP* scip, SCIP_Bool** facets, SCIP_Real* lambda, SCIP_Real* x, SCIP_Real* a, SCIP_Real* v, int nsubspacevars, int fmax, int i, int* nfacets)
 {
-   Real p;
-   Real q;
-   Real lam;
+   SCIP_Real p;
+   SCIP_Real q;
+   SCIP_Real lam;
    int minplus;
    int j;
 
@@ -448,7 +448,7 @@ void generateNeighborFacets(SCIP* scip, Bool** facets, Real* lambda, Real* x, Re
 
 /** tests, whether an array is completly zero */
 static
-Bool isZero( SCIP* scip, Real* a, int nsubspacevars )
+SCIP_Bool isZero( SCIP* scip, SCIP_Real* a, int nsubspacevars )
 {
    int i;
    for( i = 0; i < nsubspacevars; i++)
@@ -468,9 +468,9 @@ Bool isZero( SCIP* scip, Real* a, int nsubspacevars )
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
-DECL_HEURFREE(heurFreeOctane)
+SCIP_DECL_HEURFREE(heurFreeOctane)
 {   /*lint --e{715}*/
-   HEURDATA* heurdata;
+   SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -488,9 +488,9 @@ DECL_HEURFREE(heurFreeOctane)
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
-DECL_HEURINIT(heurInitOctane)
+SCIP_DECL_HEURINIT(heurInitOctane)
 {  /*lint --e{715}*/
-   HEURDATA* heurdata;
+   SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -500,7 +500,7 @@ DECL_HEURINIT(heurInitOctane)
    assert(heurdata != NULL);
 
    /* create working solution */
-   CHECK_OKAY( SCIPcreateSol(scip, &heurdata->sol, heur) );
+   SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
    /* initialize data */
 
@@ -511,9 +511,9 @@ DECL_HEURINIT(heurInitOctane)
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 
 static
-DECL_HEUREXIT(heurExitOctane)
+SCIP_DECL_HEUREXIT(heurExitOctane)
 {  /*lint --e{715}*/
-   HEURDATA* heurdata;
+   SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -523,7 +523,7 @@ DECL_HEUREXIT(heurExitOctane)
    assert(heurdata != NULL);
 
    /* free working solution */
-   CHECK_OKAY( SCIPfreeSol(scip, &heurdata->sol) );
+   SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 
    return SCIP_OKAY;
 }
@@ -534,34 +534,34 @@ DECL_HEUREXIT(heurExitOctane)
 
 /** execution method of primal heuristic */
 static
-DECL_HEUREXEC(heurExecOctane)
+SCIP_DECL_HEUREXEC(heurExecOctane)
 {  
-   HEURDATA* heurdata; 
-   SOL* sol;
-   SOL** first_sols;     /* stores the first ffirst sols in order to check for common viloation of a row */
+   SCIP_HEURDATA* heurdata; 
+   SCIP_SOL* sol;
+   SCIP_SOL** first_sols;     /* stores the first ffirst sols in order to check for common viloation of a row */
 
-   VAR** vars;           /* the variables of the problem */
-   VAR** fracvars;       /* variables, that are fractional in current LP solution */
-   VAR** subspacevars;   /* the variables on which the search is performed. Either coinciding with vars or with the
-                          * space of all fractional variables of the current LP solution */
+   SCIP_VAR** vars;           /* the variables of the problem */
+   SCIP_VAR** fracvars;       /* variables, that are fractional in current SCIP_LP solution */
+   SCIP_VAR** subspacevars;   /* the variables on which the search is performed. Either coinciding with vars or with the
+                          * space of all fractional variables of the current SCIP_LP solution */
 
-   Real p;               /* n/2 - <delta,x> ( for some facet delta ) */
-   Real q;               /* <delta,a> */
+   SCIP_Real p;               /* n/2 - <delta,x> ( for some facet delta ) */
+   SCIP_Real q;               /* <delta,a> */
 
-   Real* x;              /* origin of the ray */
-   Real* a;              /* direction of the ray */
-   Real* v;              /* negated quotient of x and a */        
-   Real* lambda;         /* stores the distance of the facets (s.b.) to the origin of the ray */
+   SCIP_Real* x;              /* origin of the ray */
+   SCIP_Real* a;              /* direction of the ray */
+   SCIP_Real* v;              /* negated quotient of x and a */        
+   SCIP_Real* lambda;         /* stores the distance of the facets (s.b.) to the origin of the ray */
 
-   Bool usefracspace;    /* determines whether the search concentrates on fractional variables and fixes integer ones */
-   Bool cons_viol;       /* used for checking whether a linear constraint is violated by one of the possible solutions */
-   Bool success;
-   Bool* sign;           /* signature of the direction of the ray */
-   Bool** facets;        /* list of extended facets */
+   SCIP_Bool usefracspace;    /* determines whether the search concentrates on fractional variables and fixes integer ones */
+   SCIP_Bool cons_viol;       /* used for checking whether a linear constraint is violated by one of the possible solutions */
+   SCIP_Bool success;
+   SCIP_Bool* sign;           /* signature of the direction of the ray */
+   SCIP_Bool** facets;        /* list of extended facets */
 
    int nvars;            /* number of variables  */
    int nbinvars;         /* number of 0-1-variables */
-   int nfracvars;        /* number of fractional variables in current LP solution */
+   int nfracvars;        /* number of fractional variables in current SCIP_LP solution */
    int nsubspacevars;    /* dimension of the subspace on which the search is performed */
    int nfacets;          /* number of facets hidden by the ray that where already found */
    int i;                /* counter */
@@ -581,19 +581,19 @@ DECL_HEUREXEC(heurExecOctane)
 
    *result = SCIP_DELAYED;
 
-   /* only call heuristic, if an optimal LP solution is at hand */
+   /* only call heuristic, if an optimal SCIP_LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTRUN;
 
-   CHECK_OKAY( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, NULL, NULL, NULL) );
 
    /* OCTANE is for use in 0-1 programs only */
    if( nvars != nbinvars )
       return SCIP_OKAY;
 
-   CHECK_OKAY( SCIPgetLPBranchCands(scip, &fracvars, NULL, NULL, &nfracvars, NULL) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &fracvars, NULL, NULL, &nfracvars, NULL) );
 
    /* don't use integral starting points */
    if( nfracvars == 0 )
@@ -608,14 +608,14 @@ DECL_HEUREXEC(heurExecOctane)
    ffirst = heurdata->ffirst;
    usefracspace = heurdata->usefracspace;
 
-   CHECK_OKAY( SCIPallocBufferArray(scip, &fracspace, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &fracspace, nvars) );
 
    /* determine the space one which OCTANE should work either as the whole space or as the space of fractional variables */
    if( usefracspace )
    {
       nsubspacevars = nfracvars; 
-      CHECK_OKAY( SCIPallocBufferArray(scip, &subspacevars, nsubspacevars) );
-      copyMemoryArray(subspacevars, fracvars, nsubspacevars);
+      SCIP_CALL( SCIPallocBufferArray(scip, &subspacevars, nsubspacevars) );
+      BMScopyMemoryArray(subspacevars, fracvars, nsubspacevars);
       for( i = 0; i < nvars; i++)
          fracspace[i] = -1;
       for( i = 0; i < nsubspacevars; i++)
@@ -624,8 +624,8 @@ DECL_HEUREXEC(heurExecOctane)
    else
    {
       nsubspacevars = nvars; 
-      CHECK_OKAY( SCIPallocBufferArray(scip, &subspacevars, nsubspacevars) );
-      copyMemoryArray(subspacevars, vars, nvars);
+      SCIP_CALL( SCIPallocBufferArray(scip, &subspacevars, nsubspacevars) );
+      BMScopyMemoryArray(subspacevars, vars, nvars);
       for( i = 0; i < nvars; i++)
          fracspace[i] = i;
    }
@@ -644,34 +644,34 @@ DECL_HEUREXEC(heurExecOctane)
    }
 
    /* memory allociation */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &x, nsubspacevars) ); 
-   CHECK_OKAY( SCIPallocBufferArray(scip, &a, nsubspacevars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &v, nsubspacevars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &sign, nsubspacevars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &perm, nsubspacevars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &lambda, fmax+1) );  
-   CHECK_OKAY( SCIPallocBufferArray(scip, &facets, fmax+1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &x, nsubspacevars) ); 
+   SCIP_CALL( SCIPallocBufferArray(scip, &a, nsubspacevars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &v, nsubspacevars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sign, nsubspacevars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &perm, nsubspacevars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lambda, fmax+1) );  
+   SCIP_CALL( SCIPallocBufferArray(scip, &facets, fmax+1) );
    for( i = 0; i <= fmax; i++)
    {  
-      CHECK_OKAY( SCIPallocBufferArray(scip, &facets[i], nsubspacevars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &facets[i], nsubspacevars) );
    }
-   CHECK_OKAY( SCIPallocBufferArray(scip, &first_sols, ffirst) ); 
+   SCIP_CALL( SCIPallocBufferArray(scip, &first_sols, ffirst) ); 
    
    *result = SCIP_DIDNOTFIND;
 
    /* starting OCTANE */
 
    /* generate starting point in original coordinates */
-   CHECK_OKAY( generateStartingPoint(scip,x,subspacevars,nsubspacevars) );
+   SCIP_CALL( generateStartingPoint(scip,x,subspacevars,nsubspacevars) );
    for( i = 0; i < nsubspacevars; i++ )
       x[i] -= 0.5;
 
    for( nrun = 1; nrun <= 4; nrun++ )
    {
-      ROW** rows;
+      SCIP_ROW** rows;
      
       int nrows;
-      Bool raycreated; 
+      SCIP_Bool raycreated; 
       raycreated = FALSE;
       
       /* generate shooting ray in original coordinates by certain rules */
@@ -680,28 +680,28 @@ DECL_HEUREXEC(heurExecOctane)
       case 1:
          if( heurdata->useobjray )
          {
-            CHECK_OKAY( generateObjectiveRay(scip,a,subspacevars,nsubspacevars) );
+            SCIP_CALL( generateObjectiveRay(scip,a,subspacevars,nsubspacevars) );
             raycreated = TRUE;
          }
          break;
       case 2:
          if( heurdata->usediffray )
          {
-            CHECK_OKAY( generateDifferenceRay(scip,a,subspacevars,nsubspacevars) );
+            SCIP_CALL( generateDifferenceRay(scip,a,subspacevars,nsubspacevars) );
             raycreated = TRUE;
          }
          break;
       case 3:
          if( heurdata->useavgray )
          {
-            CHECK_OKAY( generateAverageRay(scip,a,fracspace,subspacevars,nsubspacevars) );
+            SCIP_CALL( generateAverageRay(scip,a,fracspace,subspacevars,nsubspacevars) );
             raycreated = TRUE;
          }         
          break;
       case 4: 
          if( heurdata->usediffbwray )
          {
-            CHECK_OKAY( generateDifferenceBackwRay(scip,a,subspacevars,nsubspacevars) );
+            SCIP_CALL( generateDifferenceBackwRay(scip,a,subspacevars,nsubspacevars) );
             raycreated = TRUE;
          }
          break;
@@ -717,7 +717,7 @@ DECL_HEUREXEC(heurExecOctane)
       flipCoords(x,a,sign,nsubspacevars);
 
       for( i = 0; i < fmax; i++)
-         lambda[i] = REAL_MAX;
+         lambda[i] = SCIP_REAL_MAX;
 
       /* calculate v, initialize perm, facets[0], p, and q */
       p = 0.5 * nsubspacevars;
@@ -728,9 +728,9 @@ DECL_HEUREXEC(heurExecOctane)
          if( SCIPisFeasZero(scip, a[i]) )
          {
             if( x[i] < 0 )
-               v[i] = REAL_MAX;
+               v[i] = SCIP_REAL_MAX;
             else
-               v[i] = -1*REAL_MAX;
+               v[i] = SCIP_REAL_MIN;
          }
          else
             v[i] = -1.0 * x[i] / a[i];
@@ -781,8 +781,8 @@ DECL_HEUREXEC(heurExecOctane)
       { 
          if( i < nfacets )
          {
-            CHECK_OKAY( SCIPcreateSol(scip, &first_sols[i], heur) );
-            CHECK_OKAY( getSolFromFacet(scip, facets[i], first_sols[i], sign, subspacevars, nsubspacevars) );
+            SCIP_CALL( SCIPcreateSol(scip, &first_sols[i], heur) );
+            SCIP_CALL( getSolFromFacet(scip, facets[i], first_sols[i], sign, subspacevars, nsubspacevars) );
             assert( first_sols[i] != NULL );
          }
          else 
@@ -791,19 +791,19 @@ DECL_HEUREXEC(heurExecOctane)
 
       /* try, whether there is a row violated by all of the first ffirst solutions */
       cons_viol = FALSE;
-      CHECK_OKAY( SCIPgetLPRowsData(scip, &rows, &nrows) );
+      SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
       for( i = 0; i < nrows; i++ )
       {
          if( SCIProwIsLocal(rows[i]) )
             continue;
          else
          {
-            COL** cols;
-            Real constant;
-            Real lhs;
-            Real rhs;
-            Real rowval;
-            Real* coeffs;
+            SCIP_COL** cols;
+            SCIP_Real constant;
+            SCIP_Real lhs;
+            SCIP_Real rhs;
+            SCIP_Real rowval;
+            SCIP_Real* coeffs;
             int nnonzerovars;
             int k;
             
@@ -859,7 +859,7 @@ DECL_HEUREXEC(heurExecOctane)
          for( i = 0; i < ffirst && i < nfacets; i++)
          {
             assert(first_sols[i] != NULL);
-            CHECK_OKAY( SCIPtrySol(scip, first_sols[i], TRUE, FALSE, TRUE, &success) );
+            SCIP_CALL( SCIPtrySol(scip, first_sols[i], TRUE, FALSE, TRUE, &success) );
             if( success )
                *result = SCIP_FOUNDSOL; 
          }
@@ -869,8 +869,8 @@ DECL_HEUREXEC(heurExecOctane)
             if( i >= nfacets )
                break;
             generateNeighborFacets(scip, facets, lambda, x, a, v, nsubspacevars, fmax, i, &nfacets);
-            CHECK_OKAY( getSolFromFacet(scip, facets[i], sol, sign, subspacevars, nsubspacevars) );
-            CHECK_OKAY( SCIPtrySol(scip, sol, TRUE, FALSE, TRUE, &success) );
+            SCIP_CALL( getSolFromFacet(scip, facets[i], sol, sign, subspacevars, nsubspacevars) );
+            SCIP_CALL( SCIPtrySol(scip, sol, TRUE, FALSE, TRUE, &success) );
             if( success )
                *result = SCIP_FOUNDSOL; 
          }
@@ -879,7 +879,7 @@ DECL_HEUREXEC(heurExecOctane)
       /* finished OCTANE */
       for( i = 0; i < ffirst  && i < nfacets; i++ )
       {
-         CHECK_OKAY( SCIPfreeSol(scip, &first_sols[i]) );
+         SCIP_CALL( SCIPfreeSol(scip, &first_sols[i]) );
       }
       
    }
@@ -907,55 +907,55 @@ DECL_HEUREXEC(heurExecOctane)
  */
 
 /** creates the octane primal heuristic and includes it in SCIP */
-RETCODE SCIPincludeHeurOctane(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeHeurOctane(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   HEURDATA* heurdata;
+   SCIP_HEURDATA* heurdata;
    /* create octane primal heuristic data */
-   CHECK_OKAY( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    
    /* include primal heuristic */
-   CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING, HEUR_AFTERNODE,
          heurFreeOctane, heurInitOctane, heurExitOctane, 
          heurInitsolOctane, heurExitsolOctane, heurExecOctane,
          heurdata) );
 
    /* add octane primal heuristic parameters */
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/octane/fmax", 
          "number of 0-1-points to be tested as possible solutions by OCTANE",
          &heurdata->fmax, DEFAULT_FMAX, 1, INT_MAX, NULL, NULL) );
 
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/octane/ffirst", 
          "number of 0-1-points to be tested at first whether they violate a common row",
          &heurdata->ffirst, DEFAULT_FFIRST, 1, INT_MAX, NULL, NULL) );
 
-   CHECK_OKAY( SCIPaddBoolParam(scip,
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "heuristics/octane/usefracspace", 
          "execute OCTANE only in the space of fractional variables (TRUE) or in the full space? ",
          &heurdata->usefracspace, DEFAULT_USEFRACSPACE, NULL, NULL) );
 
-   CHECK_OKAY( SCIPaddBoolParam(scip, 
+   SCIP_CALL( SCIPaddBoolParam(scip, 
          "heuristics/octane/useobjray",
          "should the inner normal of the objective be used as one ray direction?",
          &heurdata->useobjray, TRUE, NULL, NULL) );
 
-   CHECK_OKAY( SCIPaddBoolParam(scip, 
+   SCIP_CALL( SCIPaddBoolParam(scip, 
          "heuristics/octane/useavgray",
          "should the average of the non-basics be used as one ray direction?",
          &heurdata->useavgray, TRUE, NULL, NULL) );
 
-   CHECK_OKAY( SCIPaddBoolParam(scip, 
+   SCIP_CALL( SCIPaddBoolParam(scip, 
          "heuristics/octane/usediffray",
-         "should the difference between the root solution and the current LP solution be used as one ray direction?",
+         "should the difference between the root solution and the current SCIP_LP solution be used as one ray direction?",
          &heurdata->usediffray, TRUE, NULL, NULL) );
 
-   CHECK_OKAY( SCIPaddBoolParam(scip, 
+   SCIP_CALL( SCIPaddBoolParam(scip, 
          "heuristics/octane/usediffbwray",
-         "should the difference between the current LP solution and the root solution be used as one ray direction?",
+         "should the difference between the current SCIP_LP solution and the root solution be used as one ray direction?",
          &heurdata->usediffbwray, TRUE, NULL, NULL) );
 
    return SCIP_OKAY;

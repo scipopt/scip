@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.h,v 1.17 2005/07/15 17:20:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objheur.h,v 1.18 2005/08/22 18:35:30 bzfpfend Exp $"
 
 /**@file   objheur.h
  * @brief  C++ wrapper for primal heuristics
@@ -62,26 +62,26 @@ public:
    const int scip_maxdepth_;
 
    /** call heuristic at nodes where only a pseudo solution exist? */
-   const Bool scip_pseudonodes_;
+   const SCIP_Bool scip_pseudonodes_;
 
    /** call heuristic during plunging? */
-   const Bool scip_duringplunging_;
+   const SCIP_Bool scip_duringplunging_;
 
    /** call heuristic after or before the current node was solved? */
-   const Bool scip_afternode_;
+   const SCIP_Bool scip_afternode_;
 
    /** default constructor */
    ObjHeur(
-      const char*   name,               /**< name of primal heuristic */
-      const char*   desc,               /**< description of primal heuristic */
-      char          dispchar,           /**< display character of primal heuristic */
-      int           priority,           /**< priority of the primal heuristic */
-      int           freq,               /**< frequency for calling primal heuristic */
-      int           freqofs,            /**< frequency offset for calling primal heuristic */
-      int           maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
-      Bool          pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
-      Bool          duringplunging,     /**< call heuristic during plunging? */
-      Bool          afternode           /**< call heuristic after or before the current node was solved? */
+      const char*        name,               /**< name of primal heuristic */
+      const char*        desc,               /**< description of primal heuristic */
+      char               dispchar,           /**< display character of primal heuristic */
+      int                priority,           /**< priority of the primal heuristic */
+      int                freq,               /**< frequency for calling primal heuristic */
+      int                freqofs,            /**< frequency offset for calling primal heuristic */
+      int                maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
+      SCIP_Bool          pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
+      SCIP_Bool          duringplunging,     /**< call heuristic during plunging? */
+      SCIP_Bool          afternode           /**< call heuristic after or before the current node was solved? */
       )
       : scip_name_(name),
         scip_desc_(desc),
@@ -102,27 +102,27 @@ public:
    }
 
    /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-   virtual RETCODE scip_free(
-      SCIP*         scip,               /**< SCIP data structure */
-      HEUR*         heur                /**< the primal heuristic itself */
+   virtual SCIP_RETCODE scip_free(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_HEUR*         heur                /**< the primal heuristic itself */
       )
    {
       return SCIP_OKAY;
    }
    
    /** initialization method of primal heuristic (called after problem was transformed) */
-   virtual RETCODE scip_init(
-      SCIP*         scip,               /**< SCIP data structure */
-      HEUR*         heur                /**< the primal heuristic itself */
+   virtual SCIP_RETCODE scip_init(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_HEUR*         heur                /**< the primal heuristic itself */
       )
    {
       return SCIP_OKAY;
    }
    
    /** deinitialization method of primal heuristic (called before transformed problem is freed) */
-   virtual RETCODE scip_exit(
-      SCIP*         scip,               /**< SCIP data structure */
-      HEUR*         heur                /**< the primal heuristic itself */
+   virtual SCIP_RETCODE scip_exit(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_HEUR*         heur                /**< the primal heuristic itself */
       )
    {
       return SCIP_OKAY;
@@ -134,9 +134,9 @@ public:
     *  The primal heuristic may use this call to initialize its branch and bound specific data.
     *
     */
-   virtual RETCODE scip_initsol(
-      SCIP*         scip,               /**< SCIP data structure */
-      HEUR*         heur                /**< the primal heuristic itself */
+   virtual SCIP_RETCODE scip_initsol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_HEUR*         heur                /**< the primal heuristic itself */
       )
    {
       return SCIP_OKAY;
@@ -147,9 +147,9 @@ public:
     *  This method is called before the branch and bound process is freed.
     *  The primal heuristic should use this call to clean up its branch and bound data.
     */
-   virtual RETCODE scip_exitsol(
-      SCIP*         scip,               /**< SCIP data structure */
-      HEUR*         heur                /**< the primal heuristic itself */
+   virtual SCIP_RETCODE scip_exitsol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_HEUR*         heur                /**< the primal heuristic itself */
       )
    {
       return SCIP_OKAY;
@@ -166,10 +166,10 @@ public:
     *  - SCIP_DELAYED    : the heuristic was skipped, but should be called again as soon as possible, disregarding
     *                      its frequency
     */
-   virtual RETCODE scip_exec(
-      SCIP*         scip,               /**< SCIP data structure */
-      HEUR*         heur,               /**< the primal heuristic itself */
-      RESULT*       result              /**< pointer to store the result of the heuristic call */
+   virtual SCIP_RETCODE scip_exec(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_HEUR*         heur,               /**< the primal heuristic itself */
+      SCIP_RESULT*       result              /**< pointer to store the result of the heuristic call */
       ) = 0;
 };
 
@@ -182,40 +182,40 @@ public:
  *  The method should be called in one of the following ways:
  *
  *   1. The user is resposible of deleting the object:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MyHeur* myheur = new MyHeur(...);
- *       CHECK_OKAY( SCIPincludeObjHeur(scip, &myheur, FALSE) );
+ *       SCIP_CALL( SCIPincludeObjHeur(scip, &myheur, FALSE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );
+ *       SCIP_CALL( SCIPfree(&scip) );
  *       delete myheur;    // delete heur AFTER SCIPfree() !
  *
  *   2. The object pointer is passed to SCIP and deleted by SCIP in the SCIPfree() call:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
- *       CHECK_OKAY( SCIPincludeObjHeur(scip, new MyHeur(...), TRUE) );
+ *       SCIP_CALL( SCIPincludeObjHeur(scip, new MyHeur(...), TRUE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );  // destructor of MyHeur is called here
+ *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyHeur is called here
  */
 extern
-RETCODE SCIPincludeObjHeur(
-   SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjHeur*   objheur,            /**< primal heuristic object */
-   Bool             deleteobject        /**< should the primal heuristic object be deleted when heuristic is freed? */
+SCIP_RETCODE SCIPincludeObjHeur(
+   SCIP*                 scip,               /**< SCIP data structure */
+   scip::ObjHeur*        objheur,            /**< primal heuristic object */
+   SCIP_Bool             deleteobject        /**< should the primal heuristic object be deleted when heuristic is freed? */
    );
 
 /** returns the heur object of the given name, or NULL if not existing */
 extern
 scip::ObjHeur* SCIPfindObjHeur(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< name of primal heuristic */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of primal heuristic */
    );
 
 /** returns the heur object for the given primal heuristic */
 extern
 scip::ObjHeur* SCIPgetObjHeur(
-   SCIP*            scip,               /**< SCIP data structure */
-   HEUR*            heur                /**< primal heuristic */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 #endif

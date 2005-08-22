@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.29 2005/05/31 17:20:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.30 2005/08/22 18:35:42 bzfpfend Exp $"
 
 /**@file   presol.c
  * @brief  methods for presolvers
@@ -43,55 +43,55 @@
  */
 
 /** compares two presolvers w. r. to their priority */
-DECL_SORTPTRCOMP(SCIPpresolComp)
+SCIP_DECL_SORTPTRCOMP(SCIPpresolComp)
 {  /*lint --e{715}*/
-   return ((PRESOL*)elem2)->priority - ((PRESOL*)elem1)->priority;
+   return ((SCIP_PRESOL*)elem2)->priority - ((SCIP_PRESOL*)elem1)->priority;
 }
 
 /** method to call, when the priority of a presolver was changed */
 static
-DECL_PARAMCHGD(paramChgdPresolPriority)
+SCIP_DECL_PARAMCHGD(paramChgdPresolPriority)
 {  /*lint --e{715}*/
-   PARAMDATA* paramdata;
+   SCIP_PARAMDATA* paramdata;
 
    paramdata = SCIPparamGetData(param);
    assert(paramdata != NULL);
 
    /* use SCIPsetPresolPriority() to mark the presols unsorted */
-   CHECK_OKAY( SCIPsetPresolPriority(scip, (PRESOL*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
+   SCIP_CALL( SCIPsetPresolPriority(scip, (SCIP_PRESOL*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
 
 /** creates a presolver */
-RETCODE SCIPpresolCreate(
-   PRESOL**         presol,             /**< pointer to store presolver */
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory for parameter settings */
-   const char*      name,               /**< name of presolver */
-   const char*      desc,               /**< description of presolver */
-   int              priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
-   int              maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-   Bool             delay,              /**< should presolver be delayed, if other presolvers found reductions? */
-   DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
-   DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
-   DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialization method of presolver (called before transformed problem is freed) */
-   DECL_PRESOLINITPRE((*presolinitpre)),/**< presolving initialization method of presolver (called when presolving is about to begin) */
-   DECL_PRESOLEXITPRE((*presolexitpre)),/**< presolving deinitialization method of presolver (called after presolving has been finished) */
-   DECL_PRESOLEXEC  ((*presolexec)),    /**< execution method of presolver */
-   PRESOLDATA*      presoldata          /**< presolver data */
+SCIP_RETCODE SCIPpresolCreate(
+   SCIP_PRESOL**         presol,             /**< pointer to store presolver */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of presolver */
+   const char*           desc,               /**< description of presolver */
+   int                   priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+   int                   maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+   SCIP_Bool             delay,              /**< should presolver be delayed, if other presolvers found reductions? */
+   SCIP_DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
+   SCIP_DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
+   SCIP_DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialization method of presolver (called before transformed problem is freed) */
+   SCIP_DECL_PRESOLINITPRE((*presolinitpre)),/**< presolving initialization method of presolver (called when presolving is about to begin) */
+   SCIP_DECL_PRESOLEXITPRE((*presolexitpre)),/**< presolving deinitialization method of presolver (called after presolving has been finished) */
+   SCIP_DECL_PRESOLEXEC  ((*presolexec)),    /**< execution method of presolver */
+   SCIP_PRESOLDATA*      presoldata          /**< presolver data */
    )
 {
-   char paramname[MAXSTRLEN];
-   char paramdesc[MAXSTRLEN];
+   char paramname[SCIP_MAXSTRLEN];
+   char paramdesc[SCIP_MAXSTRLEN];
 
    assert(presol != NULL);
    assert(name != NULL);
    assert(desc != NULL);
 
-   ALLOC_OKAY( allocMemory(presol) );
-   ALLOC_OKAY( duplicateMemoryArray(&(*presol)->name, name, strlen(name)+1) );
-   ALLOC_OKAY( duplicateMemoryArray(&(*presol)->desc, desc, strlen(desc)+1) );
+   SCIP_ALLOC( BMSallocMemory(presol) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*presol)->name, name, strlen(name)+1) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*presol)->desc, desc, strlen(desc)+1) );
    (*presol)->presolfree = presolfree;
    (*presol)->presolinit = presolinit;
    (*presol)->presolexit = presolexit;
@@ -99,24 +99,24 @@ RETCODE SCIPpresolCreate(
    (*presol)->presolexitpre = presolexitpre;
    (*presol)->presolexec = presolexec;
    (*presol)->presoldata = presoldata;
-   CHECK_OKAY( SCIPclockCreate(&(*presol)->clock, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*presol)->presolclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*presol)->wasdelayed = FALSE;
    (*presol)->initialized = FALSE;
 
    /* add parameters */
    sprintf(paramname, "presolving/%s/priority", name);
    sprintf(paramdesc, "priority of presolver <%s>", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
+   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*presol)->priority, priority, INT_MIN, INT_MAX, 
-         paramChgdPresolPriority, (PARAMDATA*)(*presol)) ); /*lint !e740*/
+         paramChgdPresolPriority, (SCIP_PARAMDATA*)(*presol)) ); /*lint !e740*/
 
    sprintf(paramname, "presolving/%s/maxrounds", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname,
+   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname,
          "maximal number of presolving rounds the presolver participates in (-1: no limit)",
          &(*presol)->maxrounds, maxrounds, -1, INT_MAX, NULL, NULL) ); /*lint !e740*/
 
    sprintf(paramname, "presolving/%s/delay", name);
-   CHECK_OKAY( SCIPsetAddBoolParam(set, blkmem, paramname,
+   SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
          "should presolver be delayed, if other presolvers found reductions?",
          &(*presol)->delay, delay, NULL, NULL) ); /*lint !e740*/
 
@@ -124,9 +124,9 @@ RETCODE SCIPpresolCreate(
 }
 
 /** frees memory of presolver */   
-RETCODE SCIPpresolFree(
-   PRESOL**         presol,             /**< pointer to presolver data structure */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPpresolFree(
+   SCIP_PRESOL**         presol,             /**< pointer to presolver data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(presol != NULL);
@@ -137,21 +137,21 @@ RETCODE SCIPpresolFree(
    /* call destructor of presolver */
    if( (*presol)->presolfree != NULL )
    {
-      CHECK_OKAY( (*presol)->presolfree(set->scip, *presol) );
+      SCIP_CALL( (*presol)->presolfree(set->scip, *presol) );
    }
 
-   SCIPclockFree(&(*presol)->clock);
-   freeMemoryArray(&(*presol)->name);
-   freeMemoryArray(&(*presol)->desc);
-   freeMemory(presol);
+   SCIPclockFree(&(*presol)->presolclock);
+   BMSfreeMemoryArray(&(*presol)->name);
+   BMSfreeMemoryArray(&(*presol)->desc);
+   BMSfreeMemory(presol);
 
    return SCIP_OKAY;
 }
 
 /** initializes presolver */
-RETCODE SCIPpresolInit(
-   PRESOL*          presol,             /**< presolver */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPpresolInit(
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(presol != NULL);
@@ -159,11 +159,11 @@ RETCODE SCIPpresolInit(
 
    if( presol->initialized )
    {
-      errorMessage("presolver <%s> already initialized\n", presol->name);
+      SCIPerrorMessage("presolver <%s> already initialized\n", presol->name);
       return SCIP_INVALIDCALL;
    }
 
-   SCIPclockReset(presol->clock);
+   SCIPclockReset(presol->presolclock);
 
    presol->lastnfixedvars = 0;
    presol->lastnaggrvars = 0;
@@ -187,7 +187,7 @@ RETCODE SCIPpresolInit(
    /* call initialization method of presolver */
    if( presol->presolinit != NULL )
    {
-      CHECK_OKAY( presol->presolinit(set->scip, presol) );
+      SCIP_CALL( presol->presolinit(set->scip, presol) );
    }
    presol->initialized = TRUE;
 
@@ -195,9 +195,9 @@ RETCODE SCIPpresolInit(
 }
 
 /** deinitializes presolver */
-RETCODE SCIPpresolExit(
-   PRESOL*          presol,             /**< presolver */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPpresolExit(
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(presol != NULL);
@@ -205,14 +205,14 @@ RETCODE SCIPpresolExit(
 
    if( !presol->initialized )
    {
-      errorMessage("presolver <%s> not initialized\n", presol->name);
+      SCIPerrorMessage("presolver <%s> not initialized\n", presol->name);
       return SCIP_INVALIDCALL;
    }
 
    /* call deinitialization method of presolver */
    if( presol->presolexit != NULL )
    {
-      CHECK_OKAY( presol->presolexit(set->scip, presol) );
+      SCIP_CALL( presol->presolexit(set->scip, presol) );
    }
    presol->initialized = FALSE;
 
@@ -220,10 +220,10 @@ RETCODE SCIPpresolExit(
 }
 
 /** informs presolver that the presolving process is being started */
-RETCODE SCIPpresolInitpre(
-   PRESOL*          presol,             /**< presolver */
-   SET*             set,                /**< global SCIP settings */
-   RESULT*          result              /**< pointer to store the result of the callback method */
+SCIP_RETCODE SCIPpresolInitpre(
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    assert(presol != NULL);
@@ -245,14 +245,14 @@ RETCODE SCIPpresolInitpre(
    /* call presolving initialization method of presolver */
    if( presol->presolinitpre != NULL )
    {
-      CHECK_OKAY( presol->presolinitpre(set->scip, presol, result) );
+      SCIP_CALL( presol->presolinitpre(set->scip, presol, result) );
 
       /* evaluate result */
       if( *result != SCIP_CUTOFF
          && *result != SCIP_UNBOUNDED
          && *result != SCIP_FEASIBLE )
       {
-         errorMessage("presolving initialization method of presolver <%s> returned invalid result <%d>\n", 
+         SCIPerrorMessage("presolving initialization method of presolver <%s> returned invalid result <%d>\n", 
             presol->name, *result);
          return SCIP_INVALIDRESULT;
       }
@@ -262,10 +262,10 @@ RETCODE SCIPpresolInitpre(
 }
 
 /** informs presolver that the presolving process is finished */
-RETCODE SCIPpresolExitpre(
-   PRESOL*          presol,             /**< presolver */
-   SET*             set,                /**< global SCIP settings */
-   RESULT*          result              /**< pointer to store the result of the callback method */
+SCIP_RETCODE SCIPpresolExitpre(
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    assert(presol != NULL);
@@ -277,14 +277,14 @@ RETCODE SCIPpresolExitpre(
    /* call presolving deinitialization method of presolver */
    if( presol->presolexitpre != NULL )
    {
-      CHECK_OKAY( presol->presolexitpre(set->scip, presol, result) );
+      SCIP_CALL( presol->presolexitpre(set->scip, presol, result) );
 
       /* evaluate result */
       if( *result != SCIP_CUTOFF
          && *result != SCIP_UNBOUNDED
          && *result != SCIP_FEASIBLE )
       {
-         errorMessage("presolving deinitialization method of presolver <%s> returned invalid result <%d>\n", 
+         SCIPerrorMessage("presolving deinitialization method of presolver <%s> returned invalid result <%d>\n", 
             presol->name, *result);
          return SCIP_INVALIDRESULT;
       }
@@ -294,21 +294,21 @@ RETCODE SCIPpresolExitpre(
 }
 
 /** executes presolver */
-RETCODE SCIPpresolExec(
-   PRESOL*          presol,             /**< presolver */
-   SET*             set,                /**< global SCIP settings */
-   Bool             execdelayed,        /**< execute presolver even if it is marked to be delayed */
-   int              nrounds,            /**< number of presolving rounds already done */
-   int*             nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
-   int*             naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */
-   int*             nchgvartypes,       /**< pointer to total number of variable type changes of all presolvers */
-   int*             nchgbds,            /**< pointer to total number of variable bounds tightend of all presolvers */
-   int*             naddholes,          /**< pointer to total number of domain holes added of all presolvers */
-   int*             ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
-   int*             nupgdconss,         /**< pointer to total number of upgraded constraints of all presolvers */
-   int*             nchgcoefs,          /**< pointer to total number of changed coefficients of all presolvers */
-   int*             nchgsides,          /**< pointer to total number of changed left/right hand sides of all presolvers */
-   RESULT*          result              /**< pointer to store the result of the callback method */
+SCIP_RETCODE SCIPpresolExec(
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             execdelayed,        /**< execute presolver even if it is marked to be delayed */
+   int                   nrounds,            /**< number of presolving rounds already done */
+   int*                  nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
+   int*                  naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */
+   int*                  nchgvartypes,       /**< pointer to total number of variable type changes of all presolvers */
+   int*                  nchgbds,            /**< pointer to total number of variable bounds tightend of all presolvers */
+   int*                  naddholes,          /**< pointer to total number of domain holes added of all presolvers */
+   int*                  ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
+   int*                  nupgdconss,         /**< pointer to total number of upgraded constraints of all presolvers */
+   int*                  nchgcoefs,          /**< pointer to total number of changed coefficients of all presolvers */
+   int*                  nchgsides,          /**< pointer to total number of changed left/right hand sides of all presolvers */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    int nnewfixedvars;
@@ -375,20 +375,20 @@ RETCODE SCIPpresolExec(
    /* check, if presolver should be delayed */
    if( !presol->delay || execdelayed )
    {
-      debugMessage("calling presolver <%s>\n", presol->name);
+      SCIPdebugMessage("calling presolver <%s>\n", presol->name);
 
       /* start timing */
-      SCIPclockStart(presol->clock, set);
+      SCIPclockStart(presol->presolclock, set);
 
       /* call external method */
-      CHECK_OKAY( presol->presolexec(set->scip, presol, nrounds,
+      SCIP_CALL( presol->presolexec(set->scip, presol, nrounds,
             nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
             nnewdelconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
             nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
             ndelconss, nupgdconss, nchgcoefs, nchgsides, result) );
 
       /* stop timing */
-      SCIPclockStop(presol->clock, set);
+      SCIPclockStop(presol->presolclock, set);
 
       /* count the new changes */
       presol->nfixedvars += *nfixedvars - presol->lastnfixedvars;
@@ -409,13 +409,13 @@ RETCODE SCIPpresolExec(
          && *result != SCIP_DIDNOTRUN
          && *result != SCIP_DELAYED )
       {
-         errorMessage("presolver <%s> returned invalid result <%d>\n", presol->name, *result);
+         SCIPerrorMessage("presolver <%s> returned invalid result <%d>\n", presol->name, *result);
          return SCIP_INVALIDRESULT;
       }
    }
    else
    {
-      debugMessage("presolver <%s> was delayed\n", presol->name);
+      SCIPdebugMessage("presolver <%s> was delayed\n", presol->name);
       *result = SCIP_DELAYED;
    }
 
@@ -426,8 +426,8 @@ RETCODE SCIPpresolExec(
 }
 
 /** gets user data of presolver */
-PRESOLDATA* SCIPpresolGetData(
-   PRESOL*          presol              /**< presolver */
+SCIP_PRESOLDATA* SCIPpresolGetData(
+   SCIP_PRESOL*          presol              /**< presolver */
    )
 {
    assert(presol != NULL);
@@ -437,8 +437,8 @@ PRESOLDATA* SCIPpresolGetData(
 
 /** sets user data of presolver; user has to free old data in advance! */
 void SCIPpresolSetData(
-   PRESOL*          presol,             /**< presolver */
-   PRESOLDATA*      presoldata          /**< new presolver user data */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_PRESOLDATA*      presoldata          /**< new presolver user data */
    )
 {
    assert(presol != NULL);
@@ -448,7 +448,7 @@ void SCIPpresolSetData(
 
 /** gets name of presolver */
 const char* SCIPpresolGetName(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    )
 {
    assert(presol != NULL);
@@ -458,7 +458,7 @@ const char* SCIPpresolGetName(
 
 /** gets description of presolver */
 const char* SCIPpresolGetDesc(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    )
 {
    assert(presol != NULL);
@@ -468,7 +468,7 @@ const char* SCIPpresolGetDesc(
 
 /** gets priority of presolver */
 int SCIPpresolGetPriority(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    )
 {
    assert(presol != NULL);
@@ -478,9 +478,9 @@ int SCIPpresolGetPriority(
 
 /** sets priority of presolver */
 void SCIPpresolSetPriority(
-   PRESOL*          presol,             /**< presolver */
-   SET*             set,                /**< global SCIP settings */
-   int              priority            /**< new priority of the presolver */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   priority            /**< new priority of the presolver */
    )
 {
    assert(presol != NULL);
@@ -491,8 +491,8 @@ void SCIPpresolSetPriority(
 }
 
 /** should presolver be delayed, if other presolvers found reductions? */
-Bool SCIPpresolIsDelayed(
-   PRESOL*          presol              /**< presolver */
+SCIP_Bool SCIPpresolIsDelayed(
+   SCIP_PRESOL*          presol              /**< presolver */
    )
 {
    assert(presol != NULL);
@@ -501,8 +501,8 @@ Bool SCIPpresolIsDelayed(
 }
 
 /** was presolver delayed at the last call? */
-Bool SCIPpresolWasDelayed(
-   PRESOL*          presol              /**< presolver */
+SCIP_Bool SCIPpresolWasDelayed(
+   SCIP_PRESOL*          presol              /**< presolver */
    )
 {
    assert(presol != NULL);
@@ -511,8 +511,8 @@ Bool SCIPpresolWasDelayed(
 }
 
 /** is presolver initialized? */
-Bool SCIPpresolIsInitialized(
-   PRESOL*          presol              /**< presolver */
+SCIP_Bool SCIPpresolIsInitialized(
+   SCIP_PRESOL*          presol              /**< presolver */
    )
 {
    assert(presol != NULL);
@@ -521,18 +521,18 @@ Bool SCIPpresolIsInitialized(
 }
 
 /** gets time in seconds used in this presolver */
-Real SCIPpresolGetTime(
-   PRESOL*          presol              /**< presolver */
+SCIP_Real SCIPpresolGetTime(
+   SCIP_PRESOL*          presol              /**< presolver */
    )
 {
    assert(presol != NULL);
 
-   return SCIPclockGetTime(presol->clock);
+   return SCIPclockGetTime(presol->presolclock);
 }
 
 /** gets number of variables fixed in presolver */
 int SCIPpresolGetNFixedVars(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    )
 {
    assert(presol != NULL);
@@ -542,7 +542,7 @@ int SCIPpresolGetNFixedVars(
 
 /** gets number of variables aggregated in presolver */
 int SCIPpresolGetNAggrVars(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    )
 {
    assert(presol != NULL);
@@ -552,7 +552,7 @@ int SCIPpresolGetNAggrVars(
 
 /** gets number of variable types changed in presolver */
 int SCIPpresolGetNVarTypes(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    )
 {
    assert(presol != NULL);
@@ -562,7 +562,7 @@ int SCIPpresolGetNVarTypes(
 
 /** gets number of bounds changed in presolver */
 int SCIPpresolGetNChgBds(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    )
 {
    assert(presol != NULL);
@@ -572,7 +572,7 @@ int SCIPpresolGetNChgBds(
 
 /** gets number of holes added to domains of variables in presolver */
 int SCIPpresolGetNAddHoles(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    )
 {
    assert(presol != NULL);
@@ -582,7 +582,7 @@ int SCIPpresolGetNAddHoles(
 
 /** gets number of constraints deleted in presolver */
 int SCIPpresolGetNDelConss(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    )
 {
    assert(presol != NULL);
@@ -592,7 +592,7 @@ int SCIPpresolGetNDelConss(
 
 /** gets number of constraints upgraded in presolver */
 int SCIPpresolGetNUpgdConss(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    )
 {
    assert(presol != NULL);
@@ -602,7 +602,7 @@ int SCIPpresolGetNUpgdConss(
 
 /** gets number of coefficients changed in presolver */
 int SCIPpresolGetNChgCoefs(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    )
 {
    assert(presol != NULL);
@@ -612,7 +612,7 @@ int SCIPpresolGetNChgCoefs(
 
 /** gets number of constraint sides changed in presolver */
 int SCIPpresolGetNChgSides(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    )
 {
    assert(presol != NULL);

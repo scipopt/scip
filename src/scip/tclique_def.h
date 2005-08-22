@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_def.h,v 1.1 2005/08/08 13:20:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_def.h,v 1.2 2005/08/22 18:35:52 bzfpfend Exp $"
 
 /**@file   tclique_def.h
  * @brief  tclique defines
@@ -53,7 +53,7 @@
 #endif
 
 #ifndef debug
-#ifdef DEBUG
+#ifdef TCLIQUE_DEBUG
 #define debug(x)                        x
 #define debugMessage                    printf("[%s:%d] debug: ", __FILE__, __LINE__); printf
 #define debugPrintf                     printf

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.h,v 1.4 2005/07/15 17:20:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.h,v 1.5 2005/08/22 18:35:42 bzfpfend Exp $"
 
 /**@file   presol_probing.h
  * @brief  probing presolver
@@ -32,8 +32,8 @@
 
 /** creates the probing presolver and includes it in SCIP */
 extern
-RETCODE SCIPincludePresolProbing(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludePresolProbing(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

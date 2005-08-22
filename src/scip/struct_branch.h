@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_branch.h,v 1.16 2005/07/15 17:20:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_branch.h,v 1.17 2005/08/22 18:35:49 bzfpfend Exp $"
 
 /**@file   struct_branch.h
  * @brief  datastructures for branching rules and branching candidate storage
@@ -32,54 +32,54 @@
 
 
 /** branching candidate storage */
-struct BranchCand
+struct SCIP_BranchCand
 {
-   VAR**            lpcands;            /**< candidates for branching on LP solution (fractional integer variables) */
-   Real*            lpcandssol;         /**< solution values of LP candidates */
-   Real*            lpcandsfrac;        /**< fractionalities of LP candidates */
-   VAR**            pseudocands;        /**< candidates for branching on pseudo solution (non-fixed integer variables) */
-   int              lpcandssize;        /**< number of available slots in lpcands array */
-   int              nlpcands;           /**< number of candidates for branching on LP solution */
-   int              npriolpcands;       /**< number of LP candidates with largest branch priority value */
-   int              npriolpbins;        /**< number of binary LP candidates with largest branch priority value */
-   int              lpmaxpriority;      /**< maximal branch priority of all LP candidates */
-   int              pseudocandssize;    /**< number of available slots in pseudocands array */
-   int              npseudocands;       /**< number of candidates for branching on pseudo solution */
-   int              npriopseudocands;   /**< number of pseudo candidates with largest branch priority value */
-   int              npriopseudobins;    /**< number of binary pseudo candidates with largest branch priority value */
-   int              npriopseudoints;    /**< number of integer pseudo candidates with largest branch priority value */
-   int              pseudomaxpriority;  /**< maximal branch priority of all pseudo candidates */
-   int              validlpcandslp;     /**< lp number for which lpcands are valid */
+   SCIP_VAR**            lpcands;            /**< candidates for branching on SCIP_LP solution (fractional integer variables) */
+   SCIP_Real*            lpcandssol;         /**< solution values of SCIP_LP candidates */
+   SCIP_Real*            lpcandsfrac;        /**< fractionalities of SCIP_LP candidates */
+   SCIP_VAR**            pseudocands;        /**< candidates for branching on pseudo solution (non-fixed integer variables) */
+   int                   lpcandssize;        /**< number of available slots in lpcands array */
+   int                   nlpcands;           /**< number of candidates for branching on SCIP_LP solution */
+   int                   npriolpcands;       /**< number of SCIP_LP candidates with largest branch priority value */
+   int                   npriolpbins;        /**< number of binary SCIP_LP candidates with largest branch priority value */
+   int                   lpmaxpriority;      /**< maximal branch priority of all SCIP_LP candidates */
+   int                   pseudocandssize;    /**< number of available slots in pseudocands array */
+   int                   npseudocands;       /**< number of candidates for branching on pseudo solution */
+   int                   npriopseudocands;   /**< number of pseudo candidates with largest branch priority value */
+   int                   npriopseudobins;    /**< number of binary pseudo candidates with largest branch priority value */
+   int                   npriopseudoints;    /**< number of integer pseudo candidates with largest branch priority value */
+   int                   pseudomaxpriority;  /**< maximal branch priority of all pseudo candidates */
+   int                   validlpcandslp;     /**< lp number for which lpcands are valid */
 };
 
 /** branching rule */
-struct Branchrule
+struct SCIP_Branchrule
 {
-   Real             maxbounddist;       /**< maximal relative distance from current node's dual bound to primal bound
-                                         *   compared to best node's dual bound for applying branching rule
-                                         *   (0.0: only on current best node, 1.0: on all nodes) */
-   Longint          nlpcalls;           /**< number of times, this branching rule was called on an LP solution */
-   Longint          npseudocalls;       /**< number of times, this branching rule was called on a pseudo solution */
-   Longint          ncutoffs;           /**< number of cutoffs found so far by this branching rule */
-   Longint          ncutsfound;         /**< number of cutting planes found so far by this branching rule */
-   Longint          nconssfound;        /**< number of cutting constraints added so far by this branching rule (not
-                                         *   counting constraint additions to child nodes used for branching) */
-   Longint          ndomredsfound;      /**< number of domain reductions found so far by this branching rule */
-   Longint          nchildren;          /**< number of children created so far by this branching rule */
-   char*            name;               /**< name of branching rule */
-   char*            desc;               /**< description of branching rule */
-   DECL_BRANCHFREE  ((*branchfree));    /**< destructor of branching rule */
-   DECL_BRANCHINIT  ((*branchinit));    /**< initialize branching rule */
-   DECL_BRANCHEXIT  ((*branchexit));    /**< deinitialize branching rule */
-   DECL_BRANCHINITSOL((*branchinitsol));/**< solving process initialization method of branching rule */
-   DECL_BRANCHEXITSOL((*branchexitsol));/**< solving process deinitialization method of branching rule */
-   DECL_BRANCHEXECLP((*branchexeclp));  /**< branching execution method for fractional LP solutions */
-   DECL_BRANCHEXECPS((*branchexecps));  /**< branching execution method for not completely fixed pseudo solutions */
-   BRANCHRULEDATA*  branchruledata;     /**< branching rule data */
-   CLOCK*           clock;              /**< branching rule execution time */
-   int              priority;           /**< priority of the branching rule */
-   int              maxdepth;           /**< maximal depth level, up to which this branching rule should be used (or -1) */
-   Bool             initialized;        /**< is branching rule initialized? */
+   SCIP_Real             maxbounddist;       /**< maximal relative distance from current node's dual bound to primal bound
+                                              *   compared to best node's dual bound for applying branching rule
+                                              *   (0.0: only on current best node, 1.0: on all nodes) */
+   SCIP_Longint          nlpcalls;           /**< number of times, this branching rule was called on an SCIP_LP solution */
+   SCIP_Longint          npseudocalls;       /**< number of times, this branching rule was called on a pseudo solution */
+   SCIP_Longint          ncutoffs;           /**< number of cutoffs found so far by this branching rule */
+   SCIP_Longint          ncutsfound;         /**< number of cutting planes found so far by this branching rule */
+   SCIP_Longint          nconssfound;        /**< number of cutting constraints added so far by this branching rule (not
+                                              *   counting constraint additions to child nodes used for branching) */
+   SCIP_Longint          ndomredsfound;      /**< number of domain reductions found so far by this branching rule */
+   SCIP_Longint          nchildren;          /**< number of children created so far by this branching rule */
+   char*                 name;               /**< name of branching rule */
+   char*                 desc;               /**< description of branching rule */
+   SCIP_DECL_BRANCHFREE  ((*branchfree));    /**< destructor of branching rule */
+   SCIP_DECL_BRANCHINIT  ((*branchinit));    /**< initialize branching rule */
+   SCIP_DECL_BRANCHEXIT  ((*branchexit));    /**< deinitialize branching rule */
+   SCIP_DECL_BRANCHINITSOL((*branchinitsol));/**< solving process initialization method of branching rule */
+   SCIP_DECL_BRANCHEXITSOL((*branchexitsol));/**< solving process deinitialization method of branching rule */
+   SCIP_DECL_BRANCHEXECLP((*branchexeclp));  /**< branching execution method for fractional SCIP_LP solutions */
+   SCIP_DECL_BRANCHEXECPS((*branchexecps));  /**< branching execution method for not completely fixed pseudo solutions */
+   SCIP_BRANCHRULEDATA*  branchruledata;     /**< branching rule data */
+   SCIP_CLOCK*           branchclock;        /**< branching rule execution time */
+   int                   priority;           /**< priority of the branching rule */
+   int                   maxdepth;           /**< maximal depth level, up to which this branching rule should be used (or -1) */
+   SCIP_Bool             initialized;        /**< is branching rule initialized? */
 };
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.h,v 1.39 2005/07/15 17:20:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.h,v 1.40 2005/08/22 18:35:35 bzfpfend Exp $"
 
 /**@file   cons_linear.h
  * @brief  constraint handler for linear constraints
@@ -27,7 +27,7 @@
 #define __SCIP_CONS_LINEAR_H__
 
 
-typedef struct LinConsUpgrade LINCONSUPGRADE; /**< linear constraint update method */
+typedef struct SCIP_LinConsUpgrade SCIP_LINCONSUPGRADE; /**< linear constraint update method */
 
 
 
@@ -65,10 +65,10 @@ typedef struct LinConsUpgrade LINCONSUPGRADE; /**< linear constraint update meth
  *    SCIP_DIDNOTFIND : the linear constraint data was not upgraded to a more specific constraint
  *    SCIP_SUCCESS    : the linear constraint data was upgraded to the more specific constraint stored in *upgdcons
  */
-#define DECL_LINCONSUPGD(x) RETCODE x (SCIP* scip, CONS* cons, int nvars, VAR** vars, Real* vals, Real lhs, Real rhs, \
+#define SCIP_DECL_LINCONSUPGD(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS* cons, int nvars, SCIP_VAR** vars, SCIP_Real* vals, SCIP_Real lhs, SCIP_Real rhs, \
             int nposbin, int nnegbin, int nposint, int nnegint, int nposimpl, int nnegimpl, int nposcont, int nnegcont, \
             int ncoeffspone, int ncoeffsnone, int ncoeffspint, int ncoeffsnint, int ncoeffspfrac, int ncoeffsnfrac, \
-            Real poscoeffsum, Real negcoeffsum, Bool integral, CONS** upgdcons)
+            SCIP_Real poscoeffsum, SCIP_Real negcoeffsum, SCIP_Bool integral, SCIP_CONS** upgdcons)
 
 
 #include "scip/scip.h"
@@ -81,115 +81,115 @@ typedef struct LinConsUpgrade LINCONSUPGRADE; /**< linear constraint update meth
 
 /** creates the handler for linear constraints and includes it in SCIP */
 extern
-RETCODE SCIPincludeConshdlrLinear(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeConshdlrLinear(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** includes a linear constraint update method into the linear constraint handler */
 extern
-RETCODE SCIPincludeLinconsUpgrade(
-   SCIP*            scip,               /**< SCIP data structure */
-   DECL_LINCONSUPGD((*linconsupgd)),    /**< method to call for upgrading linear constraint */
-   int              priority            /**< priority of upgrading method */
+SCIP_RETCODE SCIPincludeLinconsUpgrade(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_LINCONSUPGD((*linconsupgd)),    /**< method to call for upgrading linear constraint */
+   int                   priority            /**< priority of upgrading method */
    );
 
 /** creates and captures a linear constraint */
 extern
-RETCODE SCIPcreateConsLinear(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*      name,               /**< name of constraint */
-   int              nvars,              /**< number of nonzeros in the constraint */
-   VAR**            vars,               /**< array with variables of constraint entries */
-   Real*            vals,               /**< array with coefficients of constraint entries */
-   Real             lhs,                /**< left hand side of constraint */
-   Real             rhs,                /**< right hand side of constraint */
-   Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             separate,           /**< should the constraint be separated during LP processing? */
-   Bool             enforce,            /**< should the constraint be enforced during node processing? */
-   Bool             check,              /**< should the constraint be checked for feasibility? */
-   Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
-   Bool             dynamic,            /**< is constraint subject to aging? */
-   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+SCIP_RETCODE SCIPcreateConsLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of nonzeros in the constraint */
+   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
+   SCIP_Real*            vals,               /**< array with coefficients of constraint entries */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs,                /**< right hand side of constraint */
+   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   SCIP_Bool             local,              /**< is constraint only valid locally? */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
+   SCIP_Bool             removeable          /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
    );
 
 /** adds coefficient to linear constraint */
 extern
-RETCODE SCIPaddCoefLinear(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< constraint data */
-   VAR*             var,                /**< variable of constraint entry */
-   Real             val                 /**< coefficient of constraint entry */
+SCIP_RETCODE SCIPaddCoefLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var,                /**< variable of constraint entry */
+   SCIP_Real             val                 /**< coefficient of constraint entry */
    );
 
 /** gets left hand side of linear constraint */
 extern
-Real SCIPgetLhsLinear(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< constraint data */
+SCIP_Real SCIPgetLhsLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets right hand side of linear constraint */
 extern
-Real SCIPgetRhsLinear(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< constraint data */
+SCIP_Real SCIPgetRhsLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** changes left hand side of linear constraint */
 extern
-RETCODE SCIPchgLhsLinear(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< constraint data */
-   Real             lhs                 /**< new left hand side */
+SCIP_RETCODE SCIPchgLhsLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Real             lhs                 /**< new left hand side */
    );
 
 /** changes right hand side of linear constraint */
 extern
-RETCODE SCIPchgRhsLinear(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< constraint data */
-   Real             rhs                 /**< new right hand side */
+SCIP_RETCODE SCIPchgRhsLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Real             rhs                 /**< new right hand side */
    );
 
 /** gets the activity of the linear constraint in the given solution */
 extern
-Real SCIPgetActivityLinear(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< constraint data */
-   SOL*             sol                 /**< solution, or NULL to use current node's solution */
+SCIP_Real SCIPgetActivityLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
    );
 
 /** gets the feasibility of the linear constraint in the given solution */
 extern
-Real SCIPgetFeasibilityLinear(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< constraint data */
-   SOL*             sol                 /**< solution, or NULL to use current node's solution */
+SCIP_Real SCIPgetFeasibilityLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
    );
 
-/** gets the dual solution of the linear constraint in the current LP */
+/** gets the dual solution of the linear constraint in the current SCIP_LP */
 extern
-Real SCIPgetDualsolLinear(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< constraint data */
+SCIP_Real SCIPgetDualsolLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** gets the dual farkas value of the linear constraint in the current infeasible LP */
+/** gets the dual farkas value of the linear constraint in the current infeasible SCIP_LP */
 extern
-Real SCIPgetDualfarkasLinear(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< constraint data */
+SCIP_Real SCIPgetDualfarkasLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** tries to automatically convert a linear constraint into a more specific and more specialized constraint */
 extern
-RETCODE SCIPupgradeConsLinear(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< source constraint to try to convert */
-   CONS**           upgdcons            /**< pointer to store upgraded constraint, or NULL if not successful */
+SCIP_RETCODE SCIPupgradeConsLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< source constraint to try to convert */
+   SCIP_CONS**           upgdcons            /**< pointer to store upgraded constraint, or NULL if not successful */
    );
 
 #endif

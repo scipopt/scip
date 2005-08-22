@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.42 2005/05/31 17:20:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.43 2005/08/22 18:35:34 bzfpfend Exp $"
 
 /**@file   cons_integral.c
  * @brief  constraint handler for the integrality constraint
@@ -38,7 +38,7 @@
 #define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ            -1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ           -1 /**< frequency for using all instead of only the useful constraints in separation,
-                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -88,7 +88,7 @@
 #define consTransIntegral NULL
 
 
-/** LP initialization method of constraint handler */
+/** SCIP_LP initialization method of constraint handler */
 #define consInitlpIntegral NULL
 
 
@@ -96,9 +96,9 @@
 #define consSepaIntegral NULL
 
 
-/** constraint enforcing method of constraint handler for LP solutions */
+/** constraint enforcing method of constraint handler for SCIP_LP solutions */
 static
-DECL_CONSENFOLP(consEnfolpIntegral)
+SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
 {  /*lint --e{715}*/
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -107,12 +107,12 @@ DECL_CONSENFOLP(consEnfolpIntegral)
    assert(nconss == 0);
    assert(result != NULL);
 
-   debugMessage("Enfolp method of integrality constraint: %d fractional variables\n", SCIPgetNLPBranchCands(scip));
+   SCIPdebugMessage("Enfolp method of integrality constraint: %d fractional variables\n", SCIPgetNLPBranchCands(scip));
 
    /* call branching methods */
-   CHECK_OKAY( SCIPbranchLP(scip, result) );
+   SCIP_CALL( SCIPbranchLP(scip, result) );
 
-   /* if no branching was done, the LP solution was not fractional */
+   /* if no branching was done, the SCIP_LP solution was not fractional */
    if( *result == SCIP_DIDNOTRUN )
       *result = SCIP_FEASIBLE;
 
@@ -126,10 +126,10 @@ DECL_CONSENFOLP(consEnfolpIntegral)
 
 /** feasibility check method of constraint handler for integral solutions */
 static
-DECL_CONSCHECK(consCheckIntegral)
+SCIP_DECL_CONSCHECK(consCheckIntegral)
 {  /*lint --e{715}*/
-   VAR** vars;
-   Real solval;
+   SCIP_VAR** vars;
+   SCIP_Real solval;
    int nbin;
    int nint;
    int v;
@@ -138,9 +138,9 @@ DECL_CONSCHECK(consCheckIntegral)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
 
-   debugMessage("Check method of integrality constraint\n");
+   SCIPdebugMessage("Check method of integrality constraint\n");
 
-   CHECK_OKAY( SCIPgetSolVarsData(scip, sol, &vars, NULL, &nbin, &nint, NULL, NULL) );
+   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, NULL, &nbin, &nint, NULL, NULL) );
 
    *result = SCIP_FEASIBLE;
 
@@ -182,7 +182,7 @@ DECL_CONSCHECK(consCheckIntegral)
 
 /** variable rounding lock method of constraint handler */
 static
-DECL_CONSLOCK(consLockIntegral)
+SCIP_DECL_CONSLOCK(consLockIntegral)
 {  /*lint --e{715}*/
    return SCIP_OKAY;
 }
@@ -214,17 +214,17 @@ DECL_CONSLOCK(consLockIntegral)
  */
 
 /** creates the handler for integrality constraint and includes it in SCIP */
-RETCODE SCIPincludeConshdlrIntegral(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeConshdlrIntegral(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    /* create integral constraint handler data */
    conshdlrdata = NULL;
 
    /* include constraint handler */
-   CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,

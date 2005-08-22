@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.h,v 1.6 2005/07/15 17:20:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: intervalarith.h,v 1.7 2005/08/22 18:35:40 bzfpfend Exp $"
 
 /**@file   intervalarith.h
  * @brief  interval arithmetics for provable bounds
@@ -32,68 +32,68 @@
 
 
 /** interval given by infimum and supremum */
-struct Interval
+struct SCIP_Interval
 {
-   Real             inf;                /**< infimum (lower bound) of interval */
-   Real             sup;                /**< supremum (upper bound) of interval */
+   SCIP_Real             inf;                /**< infimum (lower bound) of interval */
+   SCIP_Real             sup;                /**< supremum (upper bound) of interval */
 };
-typedef struct Interval INTERVAL;
+typedef struct SCIP_Interval SCIP_INTERVAL;
 
 
 
 /*
- * Interval arithmetic operations
+ * SCIP_Interval arithmetic operations
  */
 
 /** stores given value as interval */
 extern
 void SCIPintervalSet(
-   INTERVAL*        resultant,          /**< interval to store value into */
-   Real             value               /**< value to store */
+   SCIP_INTERVAL*        resultant,          /**< interval to store value into */
+   SCIP_Real             value               /**< value to store */
    );
 
 /** stores given infimum and supremum as interval */
 extern
 void SCIPintervalSetBounds(
-   INTERVAL*        resultant,          /**< interval to store value into */
-   Real             inf,                /**< value to store as infimum */
-   Real             sup                 /**< value to store as supremum */
+   SCIP_INTERVAL*        resultant,          /**< interval to store value into */
+   SCIP_Real             inf,                /**< value to store as infimum */
+   SCIP_Real             sup                 /**< value to store as supremum */
    );
 
 /** adds operand1 and operand2 and stores result in resultant */
 extern
 void SCIPintervalAdd(
-   INTERVAL*        resultant,          /**< resultant interval of operation */
-   INTERVAL         operand1,           /**< first operand of operation */
-   INTERVAL         operand2            /**< second operand of operation */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_INTERVAL         operand2            /**< second operand of operation */
    );
 
 /** substracts operand2 from operand1 and stores result in resultant */
 extern
 void SCIPintervalSub(
-   INTERVAL*        resultant,          /**< resultant interval of operation */
-   INTERVAL         operand1,           /**< first operand of operation */
-   INTERVAL         operand2            /**< second operand of operation */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_INTERVAL         operand2            /**< second operand of operation */
    );
 
 /** multiplies operand1 with operand2 and stores result in resultant */
 extern
 void SCIPintervalMul(
-   INTERVAL*        resultant,          /**< resultant interval of operation */
-   INTERVAL         operand1,           /**< first operand of operation */
-   INTERVAL         operand2            /**< second operand of operation */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_INTERVAL         operand2            /**< second operand of operation */
    );
 
 /** returns infimum of interval */
 extern
-Real SCIPintervalGetInf(
-   INTERVAL         interval            /**< interval */
+SCIP_Real SCIPintervalGetInf(
+   SCIP_INTERVAL         interval            /**< interval */
    );
 
 /** returns supremum of interval */
 extern
-Real SCIPintervalGetSup(
-   INTERVAL         interval            /**< interval */
+SCIP_Real SCIPintervalGetSup(
+   SCIP_INTERVAL         interval            /**< interval */
    );
 
 

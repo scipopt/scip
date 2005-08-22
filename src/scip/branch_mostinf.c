@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_mostinf.c,v 1.19 2005/07/15 17:20:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_mostinf.c,v 1.20 2005/08/22 18:35:32 bzfpfend Exp $"
 
 /**@file   branch_mostinf.c
  * @brief  most infeasible LP branching rule
@@ -62,18 +62,18 @@
 #define branchExitsolMostinf NULL
 
 
-/** branching execution method for fractional LP solutions */
+/** branching execution method for fractional SCIP_LP solutions */
 static
-DECL_BRANCHEXECLP(branchExeclpMostinf)
+SCIP_DECL_BRANCHEXECLP(branchExeclpMostinf)
 {  /*lint --e{715}*/
-   VAR** lpcands;
-   Real* lpcandsfrac;
+   SCIP_VAR** lpcands;
+   SCIP_Real* lpcandsfrac;
    int nlpcands;
-   Real infeasibility;
-   Real score;
-   Real obj;
-   Real bestscore;
-   Real bestobj;
+   SCIP_Real infeasibility;
+   SCIP_Real score;
+   SCIP_Real obj;
+   SCIP_Real bestscore;
+   SCIP_Real bestobj;
    int bestcand;
    int i;
 
@@ -82,14 +82,14 @@ DECL_BRANCHEXECLP(branchExeclpMostinf)
    assert(scip != NULL);
    assert(result != NULL);
 
-   debugMessage("Execlp method of mostinf branching\n");
+   SCIPdebugMessage("Execlp method of mostinf branching\n");
 
    /* get branching candidates */
-   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, NULL, &nlpcands) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, NULL, &nlpcands) );
    assert(nlpcands > 0);
 
    /* search the most infeasible candidate */
-   bestscore = REAL_MIN;
+   bestscore = SCIP_REAL_MIN;
    bestobj = 0.0;
    bestcand = -1;
    for( i = 0; i < nlpcands; ++i )
@@ -112,12 +112,12 @@ DECL_BRANCHEXECLP(branchExeclpMostinf)
    }
    assert(bestcand >= 0);
 
-   debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (frac=%g, obj=%g, factor=%g, score=%g)\n",
+   SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s> (frac=%g, obj=%g, factor=%g, score=%g)\n",
       nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandsfrac[bestcand], bestobj,
       SCIPvarGetBranchFactor(lpcands[bestcand]), bestscore);
 
    /* perform the branching */
-   CHECK_OKAY( SCIPbranchVar(scip, lpcands[bestcand], SCIP_BRANCHDIR_AUTO) );
+   SCIP_CALL( SCIPbranchVar(scip, lpcands[bestcand], SCIP_BRANCHDIR_AUTO) );
    *result = SCIP_BRANCHED;
 
    return SCIP_OKAY;
@@ -134,18 +134,18 @@ DECL_BRANCHEXECLP(branchExeclpMostinf)
  * branching specific interface methods
  */
 
-/** creates the most infeasible LP braching rule and includes it in SCIP */
-RETCODE SCIPincludeBranchruleMostinf(
-   SCIP*            scip                /**< SCIP data structure */
+/** creates the most infeasible SCIP_LP braching rule and includes it in SCIP */
+SCIP_RETCODE SCIPincludeBranchruleMostinf(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULEDATA* branchruledata;
 
    /* create inference branching rule data */
    branchruledata = NULL;
 
    /* include branching rule */
-   CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
+   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
          branchFreeMostinf, branchInitMostinf, branchExitMostinf, branchInitsolMostinf, branchExitsolMostinf, 
          branchExeclpMostinf, branchExecpsMostinf,

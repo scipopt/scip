@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objnodesel.h,v 1.13 2005/07/15 17:20:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objnodesel.h,v 1.14 2005/08/22 18:35:30 bzfpfend Exp $"
 
 /**@file   objnodesel.h
  * @brief  C++ wrapper for node selectors
@@ -53,15 +53,15 @@ public:
    const int scip_memsavepriority_;
 
    /** does node comparison sorts w.r.t. lower bound as primal criterion? */
-   const Bool scip_lowestboundfirst_;
+   const SCIP_Bool scip_lowestboundfirst_;
 
    /** default constructor */
    ObjNodesel(
-      const char*   name,               /**< name of node selector */
-      const char*   desc,               /**< description of node selector */
-      int           stdpriority,        /**< priority of the node selector in standard mode */
-      int           memsavepriority,    /**< priority of the node selector in memory saving mode */
-      Bool          lowestboundfirst    /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
+      const char*        name,               /**< name of node selector */
+      const char*        desc,               /**< description of node selector */
+      int                stdpriority,        /**< priority of the node selector in standard mode */
+      int                memsavepriority,    /**< priority of the node selector in memory saving mode */
+      SCIP_Bool          lowestboundfirst    /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
       )
       : scip_name_(name),
         scip_desc_(desc),
@@ -77,27 +77,27 @@ public:
    }
 
    /** destructor of node selector to free user data (called when SCIP is exiting) */
-   virtual RETCODE scip_free(
-      SCIP*         scip,               /**< SCIP data structure */
-      NODESEL*      nodesel             /**< the node selector itself */
+   virtual SCIP_RETCODE scip_free(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_NODESEL*      nodesel             /**< the node selector itself */
       )
    {
       return SCIP_OKAY;
    }
    
    /** initialization method of node selector (called after problem was transformed) */
-   virtual RETCODE scip_init(
-      SCIP*         scip,               /**< SCIP data structure */
-      NODESEL*      nodesel             /**< the node selector itself */
+   virtual SCIP_RETCODE scip_init(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_NODESEL*      nodesel             /**< the node selector itself */
       )
    {
       return SCIP_OKAY;
    }
    
    /** deinitialization method of node selector (called before transformed problem is freed) */
-   virtual RETCODE scip_exit(
-      SCIP*         scip,               /**< SCIP data structure */
-      NODESEL*      nodesel             /**< the node selector itself */
+   virtual SCIP_RETCODE scip_exit(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_NODESEL*      nodesel             /**< the node selector itself */
       )
    {
       return SCIP_OKAY;
@@ -109,9 +109,9 @@ public:
     *  The node selector may use this call to initialize its branch and bound specific data.
     *
     */
-   virtual RETCODE scip_initsol(
-      SCIP*         scip,               /**< SCIP data structure */
-      NODESEL*      nodesel             /**< the node selector itself */
+   virtual SCIP_RETCODE scip_initsol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_NODESEL*      nodesel             /**< the node selector itself */
       )
    {
       return SCIP_OKAY;
@@ -122,9 +122,9 @@ public:
     *  This method is called before the branch and bound process is freed.
     *  The node selector should use this call to clean up its branch and bound data.
     */
-   virtual RETCODE scip_exitsol(
-      SCIP*         scip,               /**< SCIP data structure */
-      NODESEL*      nodesel             /**< the node selector itself */
+   virtual SCIP_RETCODE scip_exitsol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_NODESEL*      nodesel             /**< the node selector itself */
       )
    {
       return SCIP_OKAY;
@@ -138,10 +138,10 @@ public:
     *  - NULL    : problem is solved, because tree is empty
     *  - non-NULL: node to be solved next
     */
-   virtual RETCODE scip_select(
-      SCIP*         scip,               /**< SCIP data structure */
-      NODESEL*      nodesel,            /**< the node selector itself */
-      NODE**        selnode             /**< pointer to store the selected node */
+   virtual SCIP_RETCODE scip_select(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_NODESEL*      nodesel,            /**< the node selector itself */
+      SCIP_NODE**        selnode             /**< pointer to store the selected node */
       ) = 0;
    
    /** node comparison method of node selector
@@ -154,10 +154,10 @@ public:
     *  - value > 0: node2 comes after (is worse than) node2
     */
    virtual int scip_comp(
-      SCIP*         scip,               /**< SCIP data structure */
-      NODESEL*      nodesel,            /**< the node selector itself */
-      NODE*         node1,              /**< first node to compare */
-      NODE*         node2               /**< second node to compare */
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_NODESEL*      nodesel,            /**< the node selector itself */
+      SCIP_NODE*         node1,              /**< first node to compare */
+      SCIP_NODE*         node2               /**< second node to compare */
       ) = 0;
 };
 
@@ -170,40 +170,40 @@ public:
  *  The method should be called in one of the following ways:
  *
  *   1. The user is resposible of deleting the object:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MyNodesel* mynodesel = new MyNodesel(...);
- *       CHECK_OKAY( SCIPincludeObjNodesel(scip, &mynodesel, FALSE) );
+ *       SCIP_CALL( SCIPincludeObjNodesel(scip, &mynodesel, FALSE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );
+ *       SCIP_CALL( SCIPfree(&scip) );
  *       delete mynodesel;    // delete nodesel AFTER SCIPfree() !
  *
  *   2. The object pointer is passed to SCIP and deleted by SCIP in the SCIPfree() call:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
- *       CHECK_OKAY( SCIPincludeObjNodesel(scip, new MyNodesel(...), TRUE) );
+ *       SCIP_CALL( SCIPincludeObjNodesel(scip, new MyNodesel(...), TRUE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );  // destructor of MyNodesel is called here
+ *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyNodesel is called here
  */
 extern
-RETCODE SCIPincludeObjNodesel(
-   SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjNodesel* objnodesel,        /**< node selector object */
-   Bool             deleteobject        /**< should the node selector object be deleted when node selector is freed? */
+SCIP_RETCODE SCIPincludeObjNodesel(
+   SCIP*                 scip,               /**< SCIP data structure */
+   scip::ObjNodesel*     objnodesel,         /**< node selector object */
+   SCIP_Bool             deleteobject        /**< should the node selector object be deleted when node selector is freed? */
    );
 
 /** returns the nodesel object of the given name, or NULL if not existing */
 extern
 scip::ObjNodesel* SCIPfindObjNodesel(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< name of node selector */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of node selector */
    );
 
 /** returns the nodesel object for the given node selector */
 extern
 scip::ObjNodesel* SCIPgetObjNodesel(
-   SCIP*            scip,               /**< SCIP data structure */
-   NODESEL*         nodesel             /**< node selector */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESEL*         nodesel             /**< node selector */
    );
 
 #endif

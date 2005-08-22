@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cutpool.h,v 1.8 2005/07/15 17:20:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cutpool.h,v 1.9 2005/08/22 18:35:50 bzfpfend Exp $"
 
 /**@file   struct_cutpool.h
  * @brief  datastructures for storing cuts in a cut pool
@@ -36,28 +36,28 @@
 
 
 /** datastructure for cuts in a cut pool */
-struct Cut
+struct SCIP_Cut
 {
-   ROW*             row;                /**< LP row of this cut */
-   int              age;                /**< age of the cut: number of successive times, the cut was not violated */
-   int              processedlp;        /**< last LP, where this cut was processed */
-   int              pos;                /**< position of cut in the cuts array of the cut pool */
+   SCIP_ROW*             row;                /**< SCIP_LP row of this cut */
+   int                   age;                /**< age of the cut: number of successive times, the cut was not violated */
+   int                   processedlp;        /**< last LP, where this cut was processed */
+   int                   pos;                /**< position of cut in the cuts array of the cut pool */
 };
 
 /** storage for pooled cuts */
-struct Cutpool
+struct SCIP_Cutpool
 {
-   Longint          ncalls;             /**< number of times, the cutpool was separated */
-   Longint          ncutsfound;         /**< total number of cuts that were separated from the pool */
-   CLOCK*           clock;              /**< separation time */
-   HASHTABLE*       hashtable;          /**< hash table to identify already stored cuts */
-   CUT**            cuts;               /**< stored cuts of the pool */
-   int              cutssize;           /**< size of cuts array */
-   int              ncuts;              /**< number of cuts stored in the pool */
-   int              agelimit;           /**< maximum age a cut can reach before it is deleted from the pool */
-   int              processedlp;        /**< last LP that has been processed */
-   int              firstunprocessed;   /**< first cut that has not been processed in the last LP */
-   int              maxncuts;           /**< maximal number of cuts stored in the pool at the same time */
+   SCIP_Longint          ncalls;             /**< number of times, the cutpool was separated */
+   SCIP_Longint          ncutsfound;         /**< total number of cuts that were separated from the pool */
+   SCIP_CLOCK*           poolclock;          /**< separation time */
+   SCIP_HASHTABLE*       hashtable;          /**< hash table to identify already stored cuts */
+   SCIP_CUT**            cuts;               /**< stored cuts of the pool */
+   int                   cutssize;           /**< size of cuts array */
+   int                   ncuts;              /**< number of cuts stored in the pool */
+   int                   agelimit;           /**< maximum age a cut can reach before it is deleted from the pool */
+   int                   processedlp;        /**< last SCIP_LP that has been processed */
+   int                   firstunprocessed;   /**< first cut that has not been processed in the last SCIP_LP */
+   int                   maxncuts;           /**< maximal number of cuts stored in the pool at the same time */
 };
 
 

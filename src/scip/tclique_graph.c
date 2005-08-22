@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.c,v 1.10 2005/08/12 11:06:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_graph.c,v 1.11 2005/08/22 18:35:52 bzfpfend Exp $"
 
 /**@file   tclique_graph.c
  * @brief  graph data part of algorithm for maximum cliques
@@ -38,11 +38,11 @@ typedef struct _HEAD_ADJ{
    int              last;
 } HEAD_ADJ;
 
-struct TcliqueGraph
+struct TCLIQUE_Graph
 {
    int              nnodes;		/**< number of nodes in graph */
    int              nedges;		/**< number of edges in graph */
-   WEIGHT*          weights;	        /**< weight of nodes */
+   TCLIQUE_WEIGHT*  weights;	        /**< weight of nodes */
    int*             degrees;	        /**< degree of nodes */
    int*             adjnodes;	        /**< adjacent nodes of edges */
    HEAD_ADJ*        adjedges;           /**< pointer to first and one after last adjacent edge of nodes */
@@ -173,13 +173,13 @@ TCLIQUE_SELECTADJNODES(tcliqueSelectAdjnodes)
  */
 
 /** creates graph data structure */
-Bool tcliqueCreate(
-   TCLIQUEGRAPH**   tcliquegraph        /**< pointer to store graph data structure */
+TCLIQUE_Bool tcliqueCreate(
+   TCLIQUE_GRAPH**  tcliquegraph        /**< pointer to store graph data structure */
    )
 {
    assert(tcliquegraph != NULL);
 
-   ALLOC_FALSE( allocMemory(tcliquegraph) );
+   ALLOC_FALSE( BMSallocMemory(tcliquegraph) );
 
    (*tcliquegraph)->nnodes = 0;
    (*tcliquegraph)->nedges = 0;
@@ -200,28 +200,28 @@ Bool tcliqueCreate(
 
 /** frees graph data structure */
 void tcliqueFree(
-   TCLIQUEGRAPH**   tcliquegraph        /**< pointer to graph data structure */
+   TCLIQUE_GRAPH**  tcliquegraph        /**< pointer to graph data structure */
    )
 {
    assert(tcliquegraph != NULL);
 
    if( *tcliquegraph != NULL )
    {
-      freeMemoryArray(&(*tcliquegraph)->adjedges);
-      freeMemoryArray(&(*tcliquegraph)->adjnodes);
-      freeMemoryArray(&(*tcliquegraph)->degrees);
-      freeMemoryArray(&(*tcliquegraph)->weights);
-      freeMemoryArrayNull(&(*tcliquegraph)->cacheddegrees);
-      freeMemoryArrayNull(&(*tcliquegraph)->cachedorigs);
-      freeMemoryArrayNull(&(*tcliquegraph)->cacheddests);
-      freeMemory(tcliquegraph);
+      BMSfreeMemoryArray(&(*tcliquegraph)->adjedges);
+      BMSfreeMemoryArray(&(*tcliquegraph)->adjnodes);
+      BMSfreeMemoryArray(&(*tcliquegraph)->degrees);
+      BMSfreeMemoryArray(&(*tcliquegraph)->weights);
+      BMSfreeMemoryArrayNull(&(*tcliquegraph)->cacheddegrees);
+      BMSfreeMemoryArrayNull(&(*tcliquegraph)->cachedorigs);
+      BMSfreeMemoryArrayNull(&(*tcliquegraph)->cacheddests);
+      BMSfreeMemory(tcliquegraph);
    }
 }
 
 /** ensures, that arrays concerning edges in graph data structure can store at least num entries */
 static
-Bool tcliqueEnsureSizeEdges(
-   TCLIQUEGRAPH*    tcliquegraph,       /**< graph data structure */
+TCLIQUE_Bool tcliqueEnsureSizeEdges(
+   TCLIQUE_GRAPH*   tcliquegraph,       /**< graph data structure */
    int              num                 /**< minimum number of entries concerning edges to store */
    )
 {
@@ -235,7 +235,7 @@ Bool tcliqueEnsureSizeEdges(
       if( newsize < num )
          newsize = num;
 
-      ALLOC_FALSE( reallocMemoryArray(&tcliquegraph->adjnodes, newsize) );
+      ALLOC_FALSE( BMSreallocMemoryArray(&tcliquegraph->adjnodes, newsize) );
       tcliquegraph->sizeedges = newsize;
    }
 
@@ -246,8 +246,8 @@ Bool tcliqueEnsureSizeEdges(
 
 /** ensures, that arrays concerning cached edges in graph data structure can store at least num entries */
 static
-Bool tcliqueEnsureSizeCachedEdges(
-   TCLIQUEGRAPH*    tcliquegraph,       /**< graph data structure */
+TCLIQUE_Bool tcliqueEnsureSizeCachedEdges(
+   TCLIQUE_GRAPH*   tcliquegraph,       /**< graph data structure */
    int              num                 /**< minimum number of entries concerning cached edges to store */
    )
 {
@@ -261,8 +261,8 @@ Bool tcliqueEnsureSizeCachedEdges(
       if( newsize < num )
          newsize = num;
 
-      ALLOC_FALSE( reallocMemoryArray(&tcliquegraph->cachedorigs, newsize) );
-      ALLOC_FALSE( reallocMemoryArray(&tcliquegraph->cacheddests, newsize) );
+      ALLOC_FALSE( BMSreallocMemoryArray(&tcliquegraph->cachedorigs, newsize) );
+      ALLOC_FALSE( BMSreallocMemoryArray(&tcliquegraph->cacheddests, newsize) );
       tcliquegraph->sizecachededges = newsize;
    }
 
@@ -273,8 +273,8 @@ Bool tcliqueEnsureSizeCachedEdges(
 
 /** ensures, that arrays concerning nodes in graph data structure can store at least num entries */
 static
-Bool tcliqueEnsureSizeNodes(
-   TCLIQUEGRAPH*    tcliquegraph,       /**< graph data structure */
+TCLIQUE_Bool tcliqueEnsureSizeNodes(
+   TCLIQUE_GRAPH*   tcliquegraph,       /**< graph data structure */
    int              num                 /**< minimum number of entries concerning nodes to store */
    )
 {
@@ -293,9 +293,9 @@ Bool tcliqueEnsureSizeNodes(
       if( newsize < num )
          newsize = num;
 
-      ALLOC_FALSE( reallocMemoryArray(&tcliquegraph->weights, newsize) );
-      ALLOC_FALSE( reallocMemoryArray(&tcliquegraph->degrees, newsize) );
-      ALLOC_FALSE( reallocMemoryArray(&tcliquegraph->adjedges, newsize) );
+      ALLOC_FALSE( BMSreallocMemoryArray(&tcliquegraph->weights, newsize) );
+      ALLOC_FALSE( BMSreallocMemoryArray(&tcliquegraph->degrees, newsize) );
+      ALLOC_FALSE( BMSreallocMemoryArray(&tcliquegraph->adjedges, newsize) );
 
       for( i = tcliquegraph->sizenodes; i < newsize; i++ )
       {
@@ -308,7 +308,7 @@ Bool tcliqueEnsureSizeNodes(
       if( tcliquegraph->ncachededges > 0 )
       {
          assert(tcliquegraph->cacheddegrees != NULL);
-         ALLOC_FALSE( reallocMemoryArray(&tcliquegraph->cacheddegrees, newsize) );
+         ALLOC_FALSE( BMSreallocMemoryArray(&tcliquegraph->cacheddegrees, newsize) );
          for( i = tcliquegraph->sizenodes; i < newsize; i++ )
             tcliquegraph->cacheddegrees[i] = 0;
       }
@@ -322,10 +322,10 @@ Bool tcliqueEnsureSizeNodes(
 
 
 /** adds nodes up to the given node number to graph data structure (intermediate nodes have weight 0) */
-Bool tcliqueAddNode(
-   TCLIQUEGRAPH*    tcliquegraph,       /**< graph data structure */
+TCLIQUE_Bool tcliqueAddNode(
+   TCLIQUE_GRAPH*   tcliquegraph,       /**< graph data structure */
    int              node,               /**< node number to add */
-   WEIGHT           weight              /**< weight of node to add */
+   TCLIQUE_WEIGHT   weight              /**< weight of node to add */
    )
 {
    assert(weight >= 0);
@@ -345,9 +345,9 @@ Bool tcliqueAddNode(
 
 /** changes weight of node in graph data structure */
 void tcliqueChangeWeight(
-   TCLIQUEGRAPH*    tcliquegraph,       /**< graph data structure */
+   TCLIQUE_GRAPH*   tcliquegraph,       /**< graph data structure */
    int              node,               /**< node to set new weight */
-   WEIGHT           weight              /**< new weight of node (allready scaled) */
+   TCLIQUE_WEIGHT   weight              /**< new weight of node (allready scaled) */
    )
 {
    assert(0 <= node && node < tcliqueGetNNodes(tcliquegraph));
@@ -361,8 +361,8 @@ void tcliqueChangeWeight(
  *  new edges are cached, s.t. the graph data structures are not correct until a call to tcliqueFlush();
  *  you have to make sure, that no double edges are inserted
  */
-Bool tcliqueAddEdge(
-   TCLIQUEGRAPH*    tcliquegraph,       /**< graph data structure */
+TCLIQUE_Bool tcliqueAddEdge(
+   TCLIQUE_GRAPH*   tcliquegraph,       /**< graph data structure */
    int              node1,              /**< start node of edge to add */
    int              node2               /**< end node of edge to add */
    )
@@ -379,8 +379,8 @@ Bool tcliqueAddEdge(
    if( tcliquegraph->ncachededges == 0 && tcliquegraph->sizenodes > 0 )
    {
       assert(tcliquegraph->cacheddegrees == NULL);
-      ALLOC_FALSE( allocMemoryArray(&tcliquegraph->cacheddegrees, tcliquegraph->sizenodes) );
-      clearMemoryArray(tcliquegraph->cacheddegrees, tcliquegraph->sizenodes);
+      ALLOC_FALSE( BMSallocMemoryArray(&tcliquegraph->cacheddegrees, tcliquegraph->sizenodes) );
+      BMSclearMemoryArray(tcliquegraph->cacheddegrees, tcliquegraph->sizenodes);
    }
    assert(tcliquegraph->cacheddegrees != NULL);
 
@@ -398,8 +398,8 @@ Bool tcliqueAddEdge(
 }
 
 /** inserts all cached edges into the data structures */
-Bool tcliqueFlush(
-   TCLIQUEGRAPH*    tcliquegraph        /**< graph data structure */
+TCLIQUE_Bool tcliqueFlush(
+   TCLIQUE_GRAPH*   tcliquegraph        /**< graph data structure */
    )
 {
    assert(tcliquegraph != NULL);
@@ -491,9 +491,9 @@ Bool tcliqueFlush(
       tcliquegraph->nedges += tcliquegraph->ncachededges;
 
       /* free the cache */
-      freeMemoryArray(&tcliquegraph->cacheddegrees);
-      freeMemoryArray(&tcliquegraph->cachedorigs);
-      freeMemoryArray(&tcliquegraph->cacheddests);
+      BMSfreeMemoryArray(&tcliquegraph->cacheddegrees);
+      BMSfreeMemoryArray(&tcliquegraph->cachedorigs);
+      BMSfreeMemoryArray(&tcliquegraph->cacheddests);
       tcliquegraph->ncachededges = 0;
       tcliquegraph->sizecachededges = 0;
    }
@@ -533,8 +533,8 @@ Bool tcliqueFlush(
 }
 
 /** loads graph data structure from file */
-Bool tcliqueLoadFile(
-   TCLIQUEGRAPH**   tcliquegraph,       /**< pointer to store graph data structure */
+TCLIQUE_Bool tcliqueLoadFile(
+   TCLIQUE_GRAPH**  tcliquegraph,       /**< pointer to store graph data structure */
    const char*      filename,           /**< name of file with graph data */
    double           scaleval,           /**< value to scale weights (only integral part of scaled weights is considered) */
    char*            probname            /**< buffer to store the name of the problem */
@@ -569,16 +569,16 @@ Bool tcliqueLoadFile(
    fscanf(file, "%d", &(*tcliquegraph)->nedges);
    
    /* set data structures for tclique */
-   ALLOC_FALSE( allocMemoryArray(&(*tcliquegraph)->weights, (*tcliquegraph)->nnodes) );
-   ALLOC_FALSE( allocMemoryArray(&(*tcliquegraph)->degrees, (*tcliquegraph)->nnodes) );
-   ALLOC_FALSE( allocMemoryArray(&(*tcliquegraph)->adjnodes, (*tcliquegraph)->nedges) );
-   ALLOC_FALSE( allocMemoryArray(&(*tcliquegraph)->adjedges, (*tcliquegraph)->nnodes) );
+   ALLOC_FALSE( BMSallocMemoryArray(&(*tcliquegraph)->weights, (*tcliquegraph)->nnodes) );
+   ALLOC_FALSE( BMSallocMemoryArray(&(*tcliquegraph)->degrees, (*tcliquegraph)->nnodes) );
+   ALLOC_FALSE( BMSallocMemoryArray(&(*tcliquegraph)->adjnodes, (*tcliquegraph)->nedges) );
+   ALLOC_FALSE( BMSallocMemoryArray(&(*tcliquegraph)->adjedges, (*tcliquegraph)->nnodes) );
 
    /* set weights of all nodes (scaled!) */
    for( i = 0; i < (*tcliquegraph)->nnodes; i++ )
    {
       fscanf(file, "%lf", &weight);
-      (*tcliquegraph)->weights[i] = (WEIGHT)(weight * scaleval);
+      (*tcliquegraph)->weights[i] = (TCLIQUE_WEIGHT)(weight * scaleval);
       assert((*tcliquegraph)->weights[i] >= 0);
    }
 
@@ -609,8 +609,8 @@ Bool tcliqueLoadFile(
 }
 
 /** saves graph data structure to file */
-Bool tcliqueSaveFile(
-   TCLIQUEGRAPH*    tcliquegraph,       /**< graph data structure */
+TCLIQUE_Bool tcliqueSaveFile(
+   TCLIQUE_GRAPH*   tcliquegraph,       /**< graph data structure */
    const char*      filename,           /**< name of file to create */
    double           scaleval,           /**< value to unscale weights with */
    const char*      probname            /**< name of the problem */
@@ -654,7 +654,7 @@ Bool tcliqueSaveFile(
 
 /** gets number of edges in the graph */
 int tcliqueGetNEdges(
-   TCLIQUEGRAPH*    tcliquegraph        /**< pointer to graph data structure */
+   TCLIQUE_GRAPH*   tcliquegraph        /**< pointer to graph data structure */
    )
 {
    assert(tcliquegraph != NULL);
@@ -664,7 +664,7 @@ int tcliqueGetNEdges(
 
 /** gets degree of nodes in graph */
 int* tcliqueGetDegrees(
-   TCLIQUEGRAPH*    tcliquegraph        /**< pointer to graph data structure */
+   TCLIQUE_GRAPH*   tcliquegraph        /**< pointer to graph data structure */
    )
 {
    assert(tcliquegraph != NULL);
@@ -675,7 +675,7 @@ int* tcliqueGetDegrees(
 
 /** gets adjacent nodes of edges in graph */
 int* tcliqueGetAdjnodes(
-   TCLIQUEGRAPH*    tcliquegraph        /**< pointer to graph data structure */
+   TCLIQUE_GRAPH*   tcliquegraph        /**< pointer to graph data structure */
    )
 {
    assert(tcliquegraph != NULL);
@@ -686,7 +686,7 @@ int* tcliqueGetAdjnodes(
 
 /** gets pointer to first adjacent edge of given node in graph */
 int* tcliqueGetFirstAdjedge(
-   TCLIQUEGRAPH*    tcliquegraph,       /**< pointer to graph data structure */
+   TCLIQUE_GRAPH*   tcliquegraph,       /**< pointer to graph data structure */
    int              node                /**< given node */
    )
 {
@@ -710,7 +710,7 @@ int* tcliqueGetFirstAdjedge(
 
 /** gets pointer to last adjacent edge of given node in graph */
 int* tcliqueGetLastAdjedge(
-   TCLIQUEGRAPH*    tcliquegraph,       /**< pointer to graph data structure */
+   TCLIQUE_GRAPH*   tcliquegraph,       /**< pointer to graph data structure */
    int              node                /**< given node */
    )
 {
@@ -738,7 +738,7 @@ int* tcliqueGetLastAdjedge(
 
 /* prints graph data structure */
 void tcliquePrintGraph(
-   TCLIQUEGRAPH*    tcliquegraph        /**< pointer to graph data structure */
+   TCLIQUE_GRAPH*   tcliquegraph        /**< pointer to graph data structure */
    )
 {
    const int* weights;

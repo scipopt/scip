@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.cpp,v 1.12 2005/05/31 17:20:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpricer.cpp,v 1.13 2005/08/22 18:35:30 bzfpfend Exp $"
 
 /**@file   objpricer.cpp
  * @brief  C++ wrapper for variable pricers
@@ -35,10 +35,10 @@
  */
 
 /** variable pricer data */
-struct PricerData
+struct SCIP_PricerData
 {
-   scip::ObjPricer* objpricer;          /**< variable pricer object */
-   Bool             deleteobject;       /**< should the pricer object be deleted when pricer is freed? */
+   scip::ObjPricer*      objpricer;          /**< variable pricer object */
+   SCIP_Bool             deleteobject;       /**< should the pricer object be deleted when pricer is freed? */
 };
 
 
@@ -50,16 +50,16 @@ struct PricerData
 
 /** destructor of variable pricer to free user data (called when SCIP is exiting) */
 static
-DECL_PRICERFREE(pricerFreeObj)
+SCIP_DECL_PRICERFREE(pricerFreeObj)
 {  /*lint --e{715}*/
-   PRICERDATA* pricerdata;
+   SCIP_PRICERDATA* pricerdata;
 
    pricerdata = SCIPpricerGetData(pricer);
    assert(pricerdata != NULL);
    assert(pricerdata->objpricer != NULL);
 
    /* call virtual method of pricer object */
-   CHECK_OKAY( pricerdata->objpricer->scip_free(scip, pricer) );
+   SCIP_CALL( pricerdata->objpricer->scip_free(scip, pricer) );
 
    /* free pricer object */
    if( pricerdata->deleteobject )
@@ -75,16 +75,16 @@ DECL_PRICERFREE(pricerFreeObj)
 
 /** initialization method of variable pricer (called after problem was transformed) */
 static
-DECL_PRICERINIT(pricerInitObj)
+SCIP_DECL_PRICERINIT(pricerInitObj)
 {  /*lint --e{715}*/
-   PRICERDATA* pricerdata;
+   SCIP_PRICERDATA* pricerdata;
 
    pricerdata = SCIPpricerGetData(pricer);
    assert(pricerdata != NULL);
    assert(pricerdata->objpricer != NULL);
 
    /* call virtual method of pricer object */
-   CHECK_OKAY( pricerdata->objpricer->scip_init(scip, pricer) );
+   SCIP_CALL( pricerdata->objpricer->scip_init(scip, pricer) );
 
    return SCIP_OKAY;
 }
@@ -92,16 +92,16 @@ DECL_PRICERINIT(pricerInitObj)
 
 /** deinitialization method of variable pricer (called before transformed problem is freed) */
 static
-DECL_PRICEREXIT(pricerExitObj)
+SCIP_DECL_PRICEREXIT(pricerExitObj)
 {  /*lint --e{715}*/
-   PRICERDATA* pricerdata;
+   SCIP_PRICERDATA* pricerdata;
 
    pricerdata = SCIPpricerGetData(pricer);
    assert(pricerdata != NULL);
    assert(pricerdata->objpricer != NULL);
 
    /* call virtual method of pricer object */
-   CHECK_OKAY( pricerdata->objpricer->scip_exit(scip, pricer) );
+   SCIP_CALL( pricerdata->objpricer->scip_exit(scip, pricer) );
 
    return SCIP_OKAY;
 }
@@ -109,16 +109,16 @@ DECL_PRICEREXIT(pricerExitObj)
 
 /** solving process initialization method of variable pricer (called when branch and bound process is about to begin) */
 static
-DECL_PRICERINITSOL(pricerInitsolObj)
+SCIP_DECL_PRICERINITSOL(pricerInitsolObj)
 {  /*lint --e{715}*/
-   PRICERDATA* pricerdata;
+   SCIP_PRICERDATA* pricerdata;
 
    pricerdata = SCIPpricerGetData(pricer);
    assert(pricerdata != NULL);
    assert(pricerdata->objpricer != NULL);
 
    /* call virtual method of pricer object */
-   CHECK_OKAY( pricerdata->objpricer->scip_initsol(scip, pricer) );
+   SCIP_CALL( pricerdata->objpricer->scip_initsol(scip, pricer) );
 
    return SCIP_OKAY;
 }
@@ -126,16 +126,16 @@ DECL_PRICERINITSOL(pricerInitsolObj)
 
 /** solving process deinitialization method of variable pricer (called before branch and bound process data is freed) */
 static
-DECL_PRICEREXITSOL(pricerExitsolObj)
+SCIP_DECL_PRICEREXITSOL(pricerExitsolObj)
 {  /*lint --e{715}*/
-   PRICERDATA* pricerdata;
+   SCIP_PRICERDATA* pricerdata;
 
    pricerdata = SCIPpricerGetData(pricer);
    assert(pricerdata != NULL);
    assert(pricerdata->objpricer != NULL);
 
    /* call virtual method of pricer object */
-   CHECK_OKAY( pricerdata->objpricer->scip_exitsol(scip, pricer) );
+   SCIP_CALL( pricerdata->objpricer->scip_exitsol(scip, pricer) );
 
    return SCIP_OKAY;
 }
@@ -143,16 +143,16 @@ DECL_PRICEREXITSOL(pricerExitsolObj)
 
 /** reduced cost pricing method of variable pricer for feasible LPs */
 static
-DECL_PRICERREDCOST(pricerRedcostObj)
+SCIP_DECL_PRICERREDCOST(pricerRedcostObj)
 {  /*lint --e{715}*/
-   PRICERDATA* pricerdata;
+   SCIP_PRICERDATA* pricerdata;
 
    pricerdata = SCIPpricerGetData(pricer);
    assert(pricerdata != NULL);
    assert(pricerdata->objpricer != NULL);
 
    /* call virtual method of pricer object */
-   CHECK_OKAY( pricerdata->objpricer->scip_redcost(scip, pricer) );
+   SCIP_CALL( pricerdata->objpricer->scip_redcost(scip, pricer) );
 
    return SCIP_OKAY;
 }
@@ -160,16 +160,16 @@ DECL_PRICERREDCOST(pricerRedcostObj)
 
 /** farkas pricing method of variable pricer for infeasible LPs */
 static
-DECL_PRICERREDCOST(pricerFarkasObj)
+SCIP_DECL_PRICERREDCOST(pricerFarkasObj)
 {  /*lint --e{715}*/
-   PRICERDATA* pricerdata;
+   SCIP_PRICERDATA* pricerdata;
 
    pricerdata = SCIPpricerGetData(pricer);
    assert(pricerdata != NULL);
    assert(pricerdata->objpricer != NULL);
 
    /* call virtual method of pricer object */
-   CHECK_OKAY( pricerdata->objpricer->scip_farkas(scip, pricer) );
+   SCIP_CALL( pricerdata->objpricer->scip_farkas(scip, pricer) );
 
    return SCIP_OKAY;
 }
@@ -182,21 +182,21 @@ DECL_PRICERREDCOST(pricerFarkasObj)
  */
 
 /** creates the variable pricer for the given variable pricer object and includes it in SCIP */
-RETCODE SCIPincludeObjPricer(
-   SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjPricer* objpricer,          /**< variable pricer object */
-   Bool             deleteobject        /**< should the pricer object be deleted when pricer is freed? */
+SCIP_RETCODE SCIPincludeObjPricer(
+   SCIP*                 scip,               /**< SCIP data structure */
+   scip::ObjPricer*      objpricer,          /**< variable pricer object */
+   SCIP_Bool             deleteobject        /**< should the pricer object be deleted when pricer is freed? */
    )
 {
-   PRICERDATA* pricerdata;
+   SCIP_PRICERDATA* pricerdata;
 
    /* create variable pricer data */
-   pricerdata = new PRICERDATA;
+   pricerdata = new SCIP_PRICERDATA;
    pricerdata->objpricer = objpricer;
    pricerdata->deleteobject = deleteobject;
 
    /* include variable pricer */
-   CHECK_OKAY( SCIPincludePricer(scip, objpricer->scip_name_, objpricer->scip_desc_, objpricer->scip_priority_,
+   SCIP_CALL( SCIPincludePricer(scip, objpricer->scip_name_, objpricer->scip_desc_, objpricer->scip_priority_,
          pricerFreeObj, pricerInitObj, pricerExitObj, 
          pricerInitsolObj, pricerExitsolObj, pricerRedcostObj, pricerFarkasObj,
          pricerdata) );
@@ -206,12 +206,12 @@ RETCODE SCIPincludeObjPricer(
 
 /** returns the variable pricer object of the given name, or NULL if not existing */
 scip::ObjPricer* SCIPfindObjPricer(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< name of variable pricer */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of variable pricer */
    )
 {
-   PRICER* pricer;
-   PRICERDATA* pricerdata;
+   SCIP_PRICER* pricer;
+   SCIP_PRICERDATA* pricerdata;
 
    pricer = SCIPfindPricer(scip, name);
    if( pricer == NULL )
@@ -225,11 +225,11 @@ scip::ObjPricer* SCIPfindObjPricer(
    
 /** returns the variable pricer object for the given pricer */
 scip::ObjPricer* SCIPgetObjPricer(
-   SCIP*            scip,               /**< SCIP data structure */
-   PRICER*          pricer              /**< pricer */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer              /**< pricer */
    )
 {
-   PRICERDATA* pricerdata;
+   SCIP_PRICERDATA* pricerdata;
 
    pricerdata = SCIPpricerGetData(pricer);
    assert(pricerdata != NULL);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.h,v 1.38 2005/07/15 17:20:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.h,v 1.39 2005/08/22 18:35:49 bzfpfend Exp $"
 
 /**@file   stat.h
  * @brief  internal methods for problem statistics
@@ -40,61 +40,61 @@
 
 /** creates problem statistics data */
 extern
-RETCODE SCIPstatCreate(
-   STAT**           stat,               /**< pointer to problem statistics data */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPstatCreate(
+   SCIP_STAT**           stat,               /**< pointer to problem statistics data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** frees problem statistics data */
 extern
-RETCODE SCIPstatFree(
-   STAT**           stat,               /**< pointer to problem statistics data */
-   BLKMEM*          blkmem              /**< block memory */
+SCIP_RETCODE SCIPstatFree(
+   SCIP_STAT**           stat,               /**< pointer to problem statistics data */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** marks statistics to be able to reset them when solving process is freed */
 extern
 void SCIPstatMark(
-   STAT*            stat                /**< problem statistics data */
+   SCIP_STAT*            stat                /**< problem statistics data */
    );
 
 /** reset statistics to the data before solving started */
 extern
 void SCIPstatReset(
-   STAT*            stat                /**< problem statistics data */
+   SCIP_STAT*            stat                /**< problem statistics data */
    );
 
 /** reset implication counter */
 extern
 void SCIPstatResetImplications(
-   STAT*            stat                /**< problem statistics data */
+   SCIP_STAT*            stat                /**< problem statistics data */
    );
 
 /** reset presolving and current run specific statistics */
 extern
 void SCIPstatResetPresolving(
-   STAT*            stat                /**< problem statistics data */
+   SCIP_STAT*            stat                /**< problem statistics data */
    );
 
 /** reset current branch and bound run specific statistics */
 extern
 void SCIPstatResetCurrentRun(
-   STAT*            stat                /**< problem statistics data */
+   SCIP_STAT*            stat                /**< problem statistics data */
    );
 
 /** resets display statistics, such that a new header line is displayed before the next display line */
 extern
 void SCIPstatResetDisplay(
-   STAT*            stat                /**< problem statistics data */
+   SCIP_STAT*            stat                /**< problem statistics data */
    );
 
 /** depending on the current memory usage, switches mode flag to standard or memory saving mode */
 extern
 void SCIPstatUpdateMemsaveMode(
-   STAT*            stat,               /**< problem statistics data */
-   SET*             set,                /**< global SCIP settings */
-   MEM*             mem                 /**< block memory pools */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MEM*             mem                 /**< block memory pools */
    );
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_xxx.c,v 1.13 2005/07/15 17:20:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_xxx.c,v 1.14 2005/08/22 18:35:48 bzfpfend Exp $"
 
 /**@file   sepa_xxx.c
  * @brief  xxx separator
@@ -44,7 +44,7 @@
 /* TODO: fill in the necessary separator data */
 
 /** separator data */
-struct SepaData
+struct SCIP_SepaData
 {
 };
 
@@ -69,9 +69,9 @@ struct SepaData
 /** destructor of separator to free user data (called when SCIP is exiting) */
 #if 0
 static
-DECL_SEPAFREE(sepaFreeXxx)
+SCIP_DECL_SEPAFREE(sepaFreeXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx separator not implemented yet\n");
+   SCIPerrorMessage("method of xxx separator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -84,9 +84,9 @@ DECL_SEPAFREE(sepaFreeXxx)
 /** initialization method of separator (called after problem was transformed) */
 #if 0
 static
-DECL_SEPAINIT(sepaInitXxx)
+SCIP_DECL_SEPAINIT(sepaInitXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx separator not implemented yet\n");
+   SCIPerrorMessage("method of xxx separator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -99,9 +99,9 @@ DECL_SEPAINIT(sepaInitXxx)
 /** deinitialization method of separator (called before transformed problem is freed) */
 #if 0
 static
-DECL_SEPAEXIT(sepaExitXxx)
+SCIP_DECL_SEPAEXIT(sepaExitXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx separator not implemented yet\n");
+   SCIPerrorMessage("method of xxx separator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -114,9 +114,9 @@ DECL_SEPAEXIT(sepaExitXxx)
 /** solving process initialization method of separator (called when branch and bound process is about to begin) */
 #if 0
 static
-DECL_SEPAINITSOL(sepaInitsolXxx)
+SCIP_DECL_SEPAINITSOL(sepaInitsolXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx separator not implemented yet\n");
+   SCIPerrorMessage("method of xxx separator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -129,9 +129,9 @@ DECL_SEPAINITSOL(sepaInitsolXxx)
 /** solving process deinitialization method of separator (called before branch and bound process data is freed) */
 #if 0
 static
-DECL_SEPAEXITSOL(sepaExitsolXxx)
+SCIP_DECL_SEPAEXITSOL(sepaExitsolXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx separator not implemented yet\n");
+   SCIPerrorMessage("method of xxx separator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -143,9 +143,9 @@ DECL_SEPAEXITSOL(sepaExitsolXxx)
 
 /** execution method of separator */
 static
-DECL_SEPAEXEC(sepaExecXxx)
+SCIP_DECL_SEPAEXEC(sepaExecXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx separator not implemented yet\n");
+   SCIPerrorMessage("method of xxx separator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -160,18 +160,18 @@ DECL_SEPAEXEC(sepaExecXxx)
  */
 
 /** creates the xxx separator and includes it in SCIP */
-RETCODE SCIPincludeSepaXxx(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeSepaXxx(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SEPADATA* sepadata;
+   SCIP_SEPADATA* sepadata;
 
    /* create xxx separator data */
    sepadata = NULL;
    /* TODO: (optional) create separator specific data here */
 
    /* include separator */
-   CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
          sepaFreeXxx, sepaInitXxx, sepaExitXxx, 
          sepaInitsolXxx, sepaExitsolXxx, sepaExecXxx,
          sepadata) );

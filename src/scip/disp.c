@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.44 2005/07/15 17:20:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.45 2005/08/22 18:35:37 bzfpfend Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -45,38 +45,38 @@
  */
 
 /** parameter change information method to autoselect display columns again */
-DECL_PARAMCHGD(SCIPparamChgdDispActive)
+SCIP_DECL_PARAMCHGD(SCIPparamChgdDispActive)
 {  /*lint --e{715}*/
    /* automatically select the now active display columns */
-   CHECK_OKAY( SCIPautoselectDisps(scip) );
+   SCIP_CALL( SCIPautoselectDisps(scip) );
 
    return SCIP_OKAY;
 }
 
 /** creates a display column */
-RETCODE SCIPdispCreate(
-   DISP**           disp,               /**< pointer to store display column */
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory for parameter settings */
-   const char*      name,               /**< name of display column */
-   const char*      desc,               /**< description of display column */
-   const char*      header,             /**< head line of display column */
-   DISPSTATUS       dispstatus,         /**< display activation status of display column */
-   DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
-   DECL_DISPINIT    ((*dispinit)),      /**< initialize display column */
-   DECL_DISPEXIT    ((*dispexit)),      /**< deinitialize display column */
-   DECL_DISPINITSOL ((*dispinitsol)),   /**< solving process initialization method of display column */
-   DECL_DISPEXITSOL ((*dispexitsol)),   /**< solving process deinitialization method of display column */
-   DECL_DISPOUTPUT  ((*dispoutput)),    /**< output method */
-   DISPDATA*        dispdata,           /**< display column data */
-   int              width,              /**< width of display column (no. of chars used) */
-   int              priority,           /**< priority of display column */
-   int              position,           /**< relative position of display column */
-   Bool             stripline           /**< should the column be separated with a line from its right neighbour? */
+SCIP_RETCODE SCIPdispCreate(
+   SCIP_DISP**           disp,               /**< pointer to store display column */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of display column */
+   const char*           desc,               /**< description of display column */
+   const char*           header,             /**< head line of display column */
+   SCIP_DISPSTATUS       dispstatus,         /**< display activation status of display column */
+   SCIP_DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
+   SCIP_DECL_DISPINIT    ((*dispinit)),      /**< initialize display column */
+   SCIP_DECL_DISPEXIT    ((*dispexit)),      /**< deinitialize display column */
+   SCIP_DECL_DISPINITSOL ((*dispinitsol)),   /**< solving process initialization method of display column */
+   SCIP_DECL_DISPEXITSOL ((*dispexitsol)),   /**< solving process deinitialization method of display column */
+   SCIP_DECL_DISPOUTPUT  ((*dispoutput)),    /**< output method */
+   SCIP_DISPDATA*        dispdata,           /**< display column data */
+   int                   width,              /**< width of display column (no. of chars used) */
+   int                   priority,           /**< priority of display column */
+   int                   position,           /**< relative position of display column */
+   SCIP_Bool             stripline           /**< should the column be separated with a line from its right neighbour? */
    )
 {
-   char paramname[MAXSTRLEN];
-   char paramdesc[MAXSTRLEN];
+   char paramname[SCIP_MAXSTRLEN];
+   char paramdesc[SCIP_MAXSTRLEN];
 
    assert(disp != NULL);
    assert(name != NULL);
@@ -85,10 +85,10 @@ RETCODE SCIPdispCreate(
    assert(dispoutput != NULL);
    assert(width >= 0);
 
-   ALLOC_OKAY( allocMemory(disp) );
-   ALLOC_OKAY( duplicateMemoryArray(&(*disp)->name, name, strlen(name)+1) );
-   ALLOC_OKAY( duplicateMemoryArray(&(*disp)->desc, desc, strlen(desc)+1) );
-   ALLOC_OKAY( duplicateMemoryArray(&(*disp)->header, header, strlen(header)+1) );
+   SCIP_ALLOC( BMSallocMemory(disp) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*disp)->name, name, strlen(name)+1) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*disp)->desc, desc, strlen(desc)+1) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*disp)->header, header, strlen(header)+1) );
    (*disp)->dispstatus = dispstatus;
    (*disp)->dispfree = dispfree;
    (*disp)->dispinit = dispinit;
@@ -107,16 +107,16 @@ RETCODE SCIPdispCreate(
    /* add parameters */
    sprintf(paramname, "display/%s/active", name);
    sprintf(paramdesc, "display activation status of display column <%s> (0: off, 1: auto, 2:on)", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
+   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   (int*)(&(*disp)->dispstatus), (int)dispstatus, 0, 2, SCIPparamChgdDispActive, NULL) );
 
    return SCIP_OKAY;
 }
    
 /** frees memory of display column */
-RETCODE SCIPdispFree(
-   DISP**           disp,               /**< pointer to display column data structure */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPdispFree(
+   SCIP_DISP**           disp,               /**< pointer to display column data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(disp != NULL);
@@ -127,21 +127,21 @@ RETCODE SCIPdispFree(
    /* call destructor of display column */
    if( (*disp)->dispfree != NULL )
    {
-      CHECK_OKAY( (*disp)->dispfree(set->scip, *disp) );
+      SCIP_CALL( (*disp)->dispfree(set->scip, *disp) );
    }
 
-   freeMemoryArray(&(*disp)->name);
-   freeMemoryArray(&(*disp)->desc);
-   freeMemoryArray(&(*disp)->header);
-   freeMemory(disp);
+   BMSfreeMemoryArray(&(*disp)->name);
+   BMSfreeMemoryArray(&(*disp)->desc);
+   BMSfreeMemoryArray(&(*disp)->header);
+   BMSfreeMemory(disp);
 
    return SCIP_OKAY;
 }
 
 /** initializes display column */
-RETCODE SCIPdispInit(
-   DISP*            disp,               /**< display column */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPdispInit(
+   SCIP_DISP*            disp,               /**< display column */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(disp != NULL);
@@ -149,13 +149,13 @@ RETCODE SCIPdispInit(
 
    if( disp->initialized )
    {
-      errorMessage("display column <%s> already initialized\n", disp->name);
+      SCIPerrorMessage("display column <%s> already initialized\n", disp->name);
       return SCIP_INVALIDCALL;
    }
 
    if( disp->dispinit != NULL )
    {
-      CHECK_OKAY( disp->dispinit(set->scip, disp) );
+      SCIP_CALL( disp->dispinit(set->scip, disp) );
    }
    disp->initialized = TRUE;
 
@@ -163,9 +163,9 @@ RETCODE SCIPdispInit(
 }
 
 /** deinitializes display column */
-RETCODE SCIPdispExit(
-   DISP*            disp,               /**< display column */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPdispExit(
+   SCIP_DISP*            disp,               /**< display column */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(disp != NULL);
@@ -173,13 +173,13 @@ RETCODE SCIPdispExit(
 
    if( !disp->initialized )
    {
-      errorMessage("display column <%s> not initialized\n", disp->name);
+      SCIPerrorMessage("display column <%s> not initialized\n", disp->name);
       return SCIP_INVALIDCALL;
    }
 
    if( disp->dispexit != NULL )
    {
-      CHECK_OKAY( disp->dispexit(set->scip, disp) );
+      SCIP_CALL( disp->dispexit(set->scip, disp) );
    }
    disp->initialized = FALSE;
 
@@ -187,9 +187,9 @@ RETCODE SCIPdispExit(
 }
 
 /** informs display column that the branch and bound process is being started */
-RETCODE SCIPdispInitsol(
-   DISP*            disp,               /**< display column */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPdispInitsol(
+   SCIP_DISP*            disp,               /**< display column */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(disp != NULL);
@@ -198,16 +198,16 @@ RETCODE SCIPdispInitsol(
    /* call solving process initialization method of display column */
    if( disp->dispinitsol != NULL )
    {
-      CHECK_OKAY( disp->dispinitsol(set->scip, disp) );
+      SCIP_CALL( disp->dispinitsol(set->scip, disp) );
    }
 
    return SCIP_OKAY;
 }
 
 /** informs display column that the branch and bound process data is being freed */
-RETCODE SCIPdispExitsol(
-   DISP*            disp,               /**< display column */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPdispExitsol(
+   SCIP_DISP*            disp,               /**< display column */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(disp != NULL);
@@ -216,31 +216,31 @@ RETCODE SCIPdispExitsol(
    /* call solving process deinitialization method of display column */
    if( disp->dispexitsol != NULL )
    {
-      CHECK_OKAY( disp->dispexitsol(set->scip, disp) );
+      SCIP_CALL( disp->dispexitsol(set->scip, disp) );
    }
 
    return SCIP_OKAY;
 }
 
 /** output display column to screen */
-RETCODE SCIPdispOutput(
-   DISP*            disp,               /**< display column */
-   SET*             set,                /**< global SCIP settings */
-   FILE*            file                /**< output file (or NULL for standard output) */
+SCIP_RETCODE SCIPdispOutput(
+   SCIP_DISP*            disp,               /**< display column */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
    assert(disp != NULL);
    assert(disp->dispoutput != NULL);
    assert(set != NULL);
 
-   CHECK_OKAY( disp->dispoutput(set->scip, disp, file) );
+   SCIP_CALL( disp->dispoutput(set->scip, disp, file) );
 
    return SCIP_OKAY;
 }
 
 /** gets user data of display column */
-DISPDATA* SCIPdispGetData(
-   DISP*            disp                /**< display column */
+SCIP_DISPDATA* SCIPdispGetData(
+   SCIP_DISP*            disp                /**< display column */
    )
 {
    assert(disp != NULL);
@@ -250,8 +250,8 @@ DISPDATA* SCIPdispGetData(
 
 /** sets user data of display column; user has to free old data in advance! */
 void SCIPdispSetData(
-   DISP*            disp,               /**< display column */
-   DISPDATA*        dispdata            /**< new display column user data */
+   SCIP_DISP*            disp,               /**< display column */
+   SCIP_DISPDATA*        dispdata            /**< new display column user data */
    )
 {
    assert(disp != NULL);
@@ -261,7 +261,7 @@ void SCIPdispSetData(
 
 /** gets name of display column */
 const char* SCIPdispGetName(
-   DISP*            disp                /**< display column */
+   SCIP_DISP*            disp                /**< display column */
    )
 {
    assert(disp != NULL);
@@ -271,7 +271,7 @@ const char* SCIPdispGetName(
 
 /** gets description of display column */
 const char* SCIPdispGetDesc(
-   DISP*            disp                /**< display column */
+   SCIP_DISP*            disp                /**< display column */
    )
 {
    assert(disp != NULL);
@@ -281,7 +281,7 @@ const char* SCIPdispGetDesc(
 
 /** gets head line of display column */
 const char* SCIPdispGetHeader(
-   DISP*            disp                /**< display column */
+   SCIP_DISP*            disp                /**< display column */
    )
 {
    assert(disp != NULL);
@@ -291,7 +291,7 @@ const char* SCIPdispGetHeader(
 
 /** gets width of display column */
 int SCIPdispGetWidth(
-   DISP*            disp                /**< display column */
+   SCIP_DISP*            disp                /**< display column */
    )
 {
    assert(disp != NULL);
@@ -301,7 +301,7 @@ int SCIPdispGetWidth(
 
 /** gets priority of display column */
 int SCIPdispGetPriority(
-   DISP*            disp                /**< display column */
+   SCIP_DISP*            disp                /**< display column */
    )
 {
    assert(disp != NULL);
@@ -311,7 +311,7 @@ int SCIPdispGetPriority(
 
 /** gets position of display column */
 int SCIPdispGetPosition(
-   DISP*            disp                /**< display column */
+   SCIP_DISP*            disp                /**< display column */
    )
 {
    assert(disp != NULL);
@@ -320,8 +320,8 @@ int SCIPdispGetPosition(
 }
 
 /** gets status of display column */
-DISPSTATUS SCIPdispGetStatus(
-   DISP*            disp                /**< display column */
+SCIP_DISPSTATUS SCIPdispGetStatus(
+   SCIP_DISP*            disp                /**< display column */
    )
 {
    assert(disp != NULL);
@@ -330,8 +330,8 @@ DISPSTATUS SCIPdispGetStatus(
 }
 
 /** is display column initialized? */
-Bool SCIPdispIsInitialized(
-   DISP*            disp                /**< display column */
+SCIP_Bool SCIPdispIsInitialized(
+   SCIP_DISP*            disp                /**< display column */
    )
 {
    assert(disp != NULL);
@@ -340,11 +340,11 @@ Bool SCIPdispIsInitialized(
 }
 
 /** prints one line of output with the active display columns */
-RETCODE SCIPdispPrintLine(
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   FILE*            file,               /**< output file (or NULL for standard output) */
-   Bool             forcedisplay        /**< should the line be printed without regarding frequency? */
+SCIP_RETCODE SCIPdispPrintLine(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             forcedisplay        /**< should the line be printed without regarding frequency? */
    )
 {
    assert(set != NULL);
@@ -352,7 +352,7 @@ RETCODE SCIPdispPrintLine(
    assert(set->disp_headerfreq >= -1);
    assert(stat != NULL);
 
-   if( (VERBLEVEL)set->disp_verblevel < SCIP_VERBLEVEL_NORMAL || set->disp_freq == -1 )
+   if( (SCIP_VERBLEVEL)set->disp_verblevel < SCIP_VERBLEVEL_NORMAL || set->disp_freq == -1 )
       return SCIP_OKAY;
 
    if( forcedisplay
@@ -362,7 +362,7 @@ RETCODE SCIPdispPrintLine(
    {
       int i;
       int j;
-      Bool stripline;
+      SCIP_Bool stripline;
 
       /* display header line */
       if( (set->disp_headerfreq == 0 && stat->ndisplines == 0)
@@ -399,7 +399,7 @@ RETCODE SCIPdispPrintLine(
          {
             if( stripline )
                SCIPmessageFPrintInfo(file, "|");
-            CHECK_OKAY( SCIPdispOutput(set->disps[i], set, file) );
+            SCIP_CALL( SCIPdispOutput(set->disps[i], set, file) );
             stripline = set->disps[i]->stripline;
          }
       }
@@ -415,17 +415,17 @@ RETCODE SCIPdispPrintLine(
 
 /** comparison method for display colums */
 static
-DECL_SORTPTRCOMP(dispComp)
+SCIP_DECL_SORTPTRCOMP(dispComp)
 {  /*lint --e{715}*/
-   return ((DISP*)elem2)->priority - ((DISP*)elem1)->priority;
+   return ((SCIP_DISP*)elem2)->priority - ((SCIP_DISP*)elem1)->priority;
 }
 
 /** activates all display lines fitting in the display w.r. to priority */
-RETCODE SCIPdispAutoActivate(
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPdispAutoActivate(
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
-   DISP** disps;
+   SCIP_DISP** disps;
    int totalwidth;
    int width;
    int i;
@@ -433,7 +433,7 @@ RETCODE SCIPdispAutoActivate(
    assert(set != NULL);
 
    /* sort display columns w.r. to their priority */
-   ALLOC_OKAY( duplicateMemoryArray(&disps, set->disps, set->ndisps) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&disps, set->disps, set->ndisps) );
    SCIPbsortPtr((void**)disps, set->ndisps, dispComp);
 
    totalwidth = 0;
@@ -472,7 +472,7 @@ RETCODE SCIPdispAutoActivate(
    }
 
    /* free temporary memory */
-   freeMemoryArray(&disps);
+   BMSfreeMemoryArray(&disps);
 
    return SCIP_OKAY;
 }
@@ -483,9 +483,9 @@ const char decpowerchar[] = {' ', 'k', 'M', 'G', 'T', 'P', 'E'};
 
 /** displays a long integer in decimal form fitting in a given width */
 void SCIPdispLongint(
-   FILE*            file,               /**< output stream */
-   Longint          val,                /**< value to display */
-   int              width               /**< width to fit into */
+   FILE*                 file,               /**< output stream */
+   SCIP_Longint          val,                /**< value to display */
+   int                   width               /**< width to fit into */
    )
 {
    assert(width >= 1);
@@ -501,8 +501,8 @@ void SCIPdispLongint(
    }
    else
    {
-      char format[MAXSTRLEN];
-      Longint maxval;
+      char format[SCIP_MAXSTRLEN];
+      SCIP_Longint maxval;
       int decpower;
       int i;
 
@@ -528,25 +528,25 @@ void SCIPdispLongint(
 
 /** displays an integer in decimal form fitting in a given width */
 void SCIPdispInt(
-   FILE*            file,               /**< output stream */
-   int              val,                /**< value to display */
-   int              width               /**< width to fit into */
+   FILE*                 file,               /**< output stream */
+   int                   val,                /**< value to display */
+   int                   width               /**< width to fit into */
    )
 {
-   SCIPdispLongint(file, (Longint)val, width);
+   SCIPdispLongint(file, (SCIP_Longint)val, width);
 }
 
 
 static
 const char timepowerchar[] = {'s', 'm', 'h', 'd', 'y'};
-const Real timepowerval[] = {1.0, 60.0, 60.0, 24.0, 365.0};
+const SCIP_Real timepowerval[] = {1.0, 60.0, 60.0, 24.0, 365.0};
 #define MAXTIMEPOWER 4
 
 /** displays a time value fitting in a given width */
 void SCIPdispTime(
-   FILE*            file,               /**< output stream */
-   Real             val,                /**< value in seconds to display */
-   int              width               /**< width to fit into */
+   FILE*                 file,               /**< output stream */
+   SCIP_Real             val,                /**< value in seconds to display */
+   int                   width               /**< width to fit into */
    )
 {
    assert(width >= 1);
@@ -562,8 +562,8 @@ void SCIPdispTime(
    }
    else
    {
-      char format[MAXSTRLEN];
-      Longint maxval;
+      char format[SCIP_MAXSTRLEN];
+      SCIP_Longint maxval;
       int timepower;
       int i;
 

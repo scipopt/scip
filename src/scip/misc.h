@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.h,v 1.22 2005/07/15 17:20:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.h,v 1.23 2005/08/22 18:35:41 bzfpfend Exp $"
 
 /**@file   misc.h
  * @brief  internal miscellaneous methods
@@ -42,276 +42,276 @@
 
 /** creates a dynamic array of real values */
 extern
-RETCODE SCIPrealarrayCreate(
-   REALARRAY**      realarray,          /**< pointer to store the real array */
-   BLKMEM*          blkmem              /**< block memory */
+SCIP_RETCODE SCIPrealarrayCreate(
+   SCIP_REALARRAY**      realarray,          /**< pointer to store the real array */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** creates a copy of a dynamic array of real values */
 extern
-RETCODE SCIPrealarrayCopy(
-   REALARRAY**      realarray,          /**< pointer to store the copied real array */
-   BLKMEM*          blkmem,             /**< block memory */
-   REALARRAY*       sourcerealarray     /**< dynamic real array to copy */
+SCIP_RETCODE SCIPrealarrayCopy(
+   SCIP_REALARRAY**      realarray,          /**< pointer to store the copied real array */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_REALARRAY*       sourcerealarray     /**< dynamic real array to copy */
    );
 
 /** frees a dynamic array of real values */
 extern
-RETCODE SCIPrealarrayFree(
-   REALARRAY**      realarray           /**< pointer to the real array */
+SCIP_RETCODE SCIPrealarrayFree(
+   SCIP_REALARRAY**      realarray           /**< pointer to the real array */
    );
 
 /** extends dynamic array to be able to store indices from minidx to maxidx */
 extern
-RETCODE SCIPrealarrayExtend(
-   REALARRAY*       realarray,          /**< dynamic real array */
-   SET*             set,                /**< global SCIP settings */
-   int              minidx,             /**< smallest index to allocate storage for */
-   int              maxidx              /**< largest index to allocate storage for */
+SCIP_RETCODE SCIPrealarrayExtend(
+   SCIP_REALARRAY*       realarray,          /**< dynamic real array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   minidx,             /**< smallest index to allocate storage for */
+   int                   maxidx              /**< largest index to allocate storage for */
    );
 
 /** clears a dynamic real array */
 extern
-RETCODE SCIPrealarrayClear(
-   REALARRAY*       realarray           /**< dynamic real array */
+SCIP_RETCODE SCIPrealarrayClear(
+   SCIP_REALARRAY*       realarray           /**< dynamic real array */
    );
 
 /** gets value of entry in dynamic array */
 extern
-Real SCIPrealarrayGetVal(
-   REALARRAY*       realarray,          /**< dynamic real array */
-   int              idx                 /**< array index to get value for */
+SCIP_Real SCIPrealarrayGetVal(
+   SCIP_REALARRAY*       realarray,          /**< dynamic real array */
+   int                   idx                 /**< array index to get value for */
    );
 
 /** sets value of entry in dynamic array */
 extern
-RETCODE SCIPrealarraySetVal(
-   REALARRAY*       realarray,          /**< dynamic real array */
-   SET*             set,                /**< global SCIP settings */
-   int              idx,                /**< array index to set value for */
-   Real             val                 /**< value to set array index to */
+SCIP_RETCODE SCIPrealarraySetVal(
+   SCIP_REALARRAY*       realarray,          /**< dynamic real array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   idx,                /**< array index to set value for */
+   SCIP_Real             val                 /**< value to set array index to */
    );
 
 /** increases value of entry in dynamic array */
 extern
-RETCODE SCIPrealarrayIncVal(
-   REALARRAY*       realarray,          /**< dynamic real array */
-   SET*             set,                /**< global SCIP settings */
-   int              idx,                /**< array index to increase value for */
-   Real             incval              /**< value to increase array index */
+SCIP_RETCODE SCIPrealarrayIncVal(
+   SCIP_REALARRAY*       realarray,          /**< dynamic real array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   idx,                /**< array index to increase value for */
+   SCIP_Real             incval              /**< value to increase array index */
    );
 
 /** returns the minimal index of all stored non-zero elements */
 extern
 int SCIPrealarrayGetMinIdx(
-   REALARRAY*       realarray           /**< dynamic real array */
+   SCIP_REALARRAY*       realarray           /**< dynamic real array */
    );
 
 /** returns the maximal index of all stored non-zero elements */
 extern
 int SCIPrealarrayGetMaxIdx(
-   REALARRAY*       realarray           /**< dynamic real array */
+   SCIP_REALARRAY*       realarray           /**< dynamic real array */
    );
 
 /** creates a dynamic array of int values */
 extern
-RETCODE SCIPintarrayCreate(
-   INTARRAY**       intarray,           /**< pointer to store the int array */
-   BLKMEM*          blkmem              /**< block memory */
+SCIP_RETCODE SCIPintarrayCreate(
+   SCIP_INTARRAY**       intarray,           /**< pointer to store the int array */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** creates a copy of a dynamic array of int values */
 extern
-RETCODE SCIPintarrayCopy(
-   INTARRAY**       intarray,           /**< pointer to store the copied int array */
-   BLKMEM*          blkmem,             /**< block memory */
-   INTARRAY*        sourceintarray      /**< dynamic int array to copy */
+SCIP_RETCODE SCIPintarrayCopy(
+   SCIP_INTARRAY**       intarray,           /**< pointer to store the copied int array */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_INTARRAY*        sourceintarray      /**< dynamic int array to copy */
    );
 
 /** frees a dynamic array of int values */
 extern
-RETCODE SCIPintarrayFree(
-   INTARRAY**       intarray            /**< pointer to the int array */
+SCIP_RETCODE SCIPintarrayFree(
+   SCIP_INTARRAY**       intarray            /**< pointer to the int array */
    );
 
 /** extends dynamic array to be able to store indices from minidx to maxidx */
 extern
-RETCODE SCIPintarrayExtend(
-   INTARRAY*        intarray,           /**< dynamic int array */
-   SET*             set,                /**< global SCIP settings */
-   int              minidx,             /**< smallest index to allocate storage for */
-   int              maxidx              /**< largest index to allocate storage for */
+SCIP_RETCODE SCIPintarrayExtend(
+   SCIP_INTARRAY*        intarray,           /**< dynamic int array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   minidx,             /**< smallest index to allocate storage for */
+   int                   maxidx              /**< largest index to allocate storage for */
    );
 
 /** clears a dynamic int array */
 extern
-RETCODE SCIPintarrayClear(
-   INTARRAY*        intarray            /**< dynamic int array */
+SCIP_RETCODE SCIPintarrayClear(
+   SCIP_INTARRAY*        intarray            /**< dynamic int array */
    );
 
 /** gets value of entry in dynamic array */
 extern
 int SCIPintarrayGetVal(
-   INTARRAY*        intarray,           /**< dynamic int array */
-   int              idx                 /**< array index to get value for */
+   SCIP_INTARRAY*        intarray,           /**< dynamic int array */
+   int                   idx                 /**< array index to get value for */
    );
 
 /** sets value of entry in dynamic array */
 extern
-RETCODE SCIPintarraySetVal(
-   INTARRAY*        intarray,           /**< dynamic int array */
-   SET*             set,                /**< global SCIP settings */
-   int              idx,                /**< array index to set value for */
-   int              val                 /**< value to set array index to */
+SCIP_RETCODE SCIPintarraySetVal(
+   SCIP_INTARRAY*        intarray,           /**< dynamic int array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   idx,                /**< array index to set value for */
+   int                   val                 /**< value to set array index to */
    );
 
 /** increases value of entry in dynamic array */
 extern
-RETCODE SCIPintarrayIncVal(
-   INTARRAY*        intarray,           /**< dynamic int array */
-   SET*             set,                /**< global SCIP settings */
-   int              idx,                /**< array index to increase value for */
-   int              incval              /**< value to increase array index */
+SCIP_RETCODE SCIPintarrayIncVal(
+   SCIP_INTARRAY*        intarray,           /**< dynamic int array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   idx,                /**< array index to increase value for */
+   int                   incval              /**< value to increase array index */
    );
 
 /** returns the minimal index of all stored non-zero elements */
 extern
 int SCIPintarrayGetMinIdx(
-   INTARRAY*        intarray            /**< dynamic int array */
+   SCIP_INTARRAY*        intarray            /**< dynamic int array */
    );
 
 /** returns the maximal index of all stored non-zero elements */
 extern
 int SCIPintarrayGetMaxIdx(
-   INTARRAY*        intarray            /**< dynamic int array */
+   SCIP_INTARRAY*        intarray            /**< dynamic int array */
    );
 
 /** creates a dynamic array of bool values */
 extern
-RETCODE SCIPboolarrayCreate(
-   BOOLARRAY**      boolarray,          /**< pointer to store the bool array */
-   BLKMEM*          blkmem              /**< block memory */
+SCIP_RETCODE SCIPboolarrayCreate(
+   SCIP_BOOLARRAY**      boolarray,          /**< pointer to store the bool array */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** creates a copy of a dynamic array of bool values */
 extern
-RETCODE SCIPboolarrayCopy(
-   BOOLARRAY**      boolarray,          /**< pointer to store the copied bool array */
-   BLKMEM*          blkmem,             /**< block memory */
-   BOOLARRAY*       sourceboolarray     /**< dynamic bool array to copy */
+SCIP_RETCODE SCIPboolarrayCopy(
+   SCIP_BOOLARRAY**      boolarray,          /**< pointer to store the copied bool array */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_BOOLARRAY*       sourceboolarray     /**< dynamic bool array to copy */
    );
 
 /** frees a dynamic array of bool values */
 extern
-RETCODE SCIPboolarrayFree(
-   BOOLARRAY**      boolarray           /**< pointer to the bool array */
+SCIP_RETCODE SCIPboolarrayFree(
+   SCIP_BOOLARRAY**      boolarray           /**< pointer to the bool array */
    );
 
 /** extends dynamic array to be able to store indices from minidx to maxidx */
 extern
-RETCODE SCIPboolarrayExtend(
-   BOOLARRAY*       boolarray,          /**< dynamic bool array */
-   SET*             set,                /**< global SCIP settings */
-   int              minidx,             /**< smallest index to allocate storage for */
-   int              maxidx              /**< largest index to allocate storage for */
+SCIP_RETCODE SCIPboolarrayExtend(
+   SCIP_BOOLARRAY*       boolarray,          /**< dynamic bool array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   minidx,             /**< smallest index to allocate storage for */
+   int                   maxidx              /**< largest index to allocate storage for */
    );
 
 /** clears a dynamic bool array */
 extern
-RETCODE SCIPboolarrayClear(
-   BOOLARRAY*       boolarray           /**< dynamic bool array */
+SCIP_RETCODE SCIPboolarrayClear(
+   SCIP_BOOLARRAY*       boolarray           /**< dynamic bool array */
    );
 
 /** gets value of entry in dynamic array */
 extern
-Bool SCIPboolarrayGetVal(
-   BOOLARRAY*       boolarray,          /**< dynamic bool array */
-   int              idx                 /**< array index to get value for */
+SCIP_Bool SCIPboolarrayGetVal(
+   SCIP_BOOLARRAY*       boolarray,          /**< dynamic bool array */
+   int                   idx                 /**< array index to get value for */
    );
 
 /** sets value of entry in dynamic array */
 extern
-RETCODE SCIPboolarraySetVal(
-   BOOLARRAY*       boolarray,          /**< dynamic bool array */
-   SET*             set,                /**< global SCIP settings */
-   int              idx,                /**< array index to set value for */
-   Bool             val                 /**< value to set array index to */
+SCIP_RETCODE SCIPboolarraySetVal(
+   SCIP_BOOLARRAY*       boolarray,          /**< dynamic bool array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   idx,                /**< array index to set value for */
+   SCIP_Bool             val                 /**< value to set array index to */
    );
 
 /** returns the minimal index of all stored non-zero elements */
 extern
 int SCIPboolarrayGetMinIdx(
-   BOOLARRAY*       boolarray           /**< dynamic bool array */
+   SCIP_BOOLARRAY*       boolarray           /**< dynamic bool array */
    );
 
 /** returns the maximal index of all stored non-zero elements */
 extern
 int SCIPboolarrayGetMaxIdx(
-   BOOLARRAY*       boolarray           /**< dynamic bool array */
+   SCIP_BOOLARRAY*       boolarray           /**< dynamic bool array */
    );
 
 /** creates a dynamic array of pointer values */
 extern
-RETCODE SCIPptrarrayCreate(
-   PTRARRAY**       ptrarray,           /**< pointer to store the ptr array */
-   BLKMEM*          blkmem              /**< block memory */
+SCIP_RETCODE SCIPptrarrayCreate(
+   SCIP_PTRARRAY**       ptrarray,           /**< pointer to store the ptr array */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** creates a copy of a dynamic array of pointer values */
 extern
-RETCODE SCIPptrarrayCopy(
-   PTRARRAY**       ptrarray,           /**< pointer to store the copied ptr array */
-   BLKMEM*          blkmem,             /**< block memory */
-   PTRARRAY*        sourceptrarray      /**< dynamic ptr array to copy */
+SCIP_RETCODE SCIPptrarrayCopy(
+   SCIP_PTRARRAY**       ptrarray,           /**< pointer to store the copied ptr array */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_PTRARRAY*        sourceptrarray      /**< dynamic ptr array to copy */
    );
 
 /** frees a dynamic array of pointer values */
 extern
-RETCODE SCIPptrarrayFree(
-   PTRARRAY**       ptrarray            /**< pointer to the ptr array */
+SCIP_RETCODE SCIPptrarrayFree(
+   SCIP_PTRARRAY**       ptrarray            /**< pointer to the ptr array */
    );
 
 /** extends dynamic array to be able to store indices from minidx to maxidx */
 extern
-RETCODE SCIPptrarrayExtend(
-   PTRARRAY*        ptrarray,           /**< dynamic ptr array */
-   SET*             set,                /**< global SCIP settings */
-   int              minidx,             /**< smallest index to allocate storage for */
-   int              maxidx              /**< largest index to allocate storage for */
+SCIP_RETCODE SCIPptrarrayExtend(
+   SCIP_PTRARRAY*        ptrarray,           /**< dynamic ptr array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   minidx,             /**< smallest index to allocate storage for */
+   int                   maxidx              /**< largest index to allocate storage for */
    );
 
 /** clears a dynamic pointer array */
 extern
-RETCODE SCIPptrarrayClear(
-   PTRARRAY*        ptrarray            /**< dynamic ptr array */
+SCIP_RETCODE SCIPptrarrayClear(
+   SCIP_PTRARRAY*        ptrarray            /**< dynamic ptr array */
    );
 
 /** gets value of entry in dynamic array */
 extern
 void* SCIPptrarrayGetVal(
-   PTRARRAY*        ptrarray,           /**< dynamic ptr array */
-   int              idx                 /**< array index to get value for */
+   SCIP_PTRARRAY*        ptrarray,           /**< dynamic ptr array */
+   int                   idx                 /**< array index to get value for */
    );
 
 /** sets value of entry in dynamic array */
 extern
-RETCODE SCIPptrarraySetVal(
-   PTRARRAY*        ptrarray,           /**< dynamic ptr array */
-   SET*             set,                /**< global SCIP settings */
-   int              idx,                /**< array index to set value for */
-   void*            val                 /**< value to set array index to */
+SCIP_RETCODE SCIPptrarraySetVal(
+   SCIP_PTRARRAY*        ptrarray,           /**< dynamic ptr array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   idx,                /**< array index to set value for */
+   void*                 val                 /**< value to set array index to */
    );
 
 /** returns the minimal index of all stored non-zero elements */
 extern
 int SCIPptrarrayGetMinIdx(
-   PTRARRAY*        ptrarray            /**< dynamic ptr array */
+   SCIP_PTRARRAY*        ptrarray            /**< dynamic ptr array */
    );
 
 /** returns the maximal index of all stored non-zero elements */
 extern
 int SCIPptrarrayGetMaxIdx(
-   PTRARRAY*        ptrarray            /**< dynamic ptr array */
+   SCIP_PTRARRAY*        ptrarray            /**< dynamic ptr array */
    );
 
 

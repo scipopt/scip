@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprop.cpp,v 1.7 2005/05/31 17:20:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprop.cpp,v 1.8 2005/08/22 18:35:31 bzfpfend Exp $"
 
 /**@file   objprop.cpp
  * @brief  C++ wrapper for propagators
@@ -35,10 +35,10 @@
  */
 
 /** propagator data */
-struct PropData
+struct SCIP_PropData
 {
-   scip::ObjProp*   objprop;            /**< propagator object */
-   Bool             deleteobject;       /**< should the propagator object be deleted when propagator is freed? */
+   scip::ObjProp*        objprop;            /**< propagator object */
+   SCIP_Bool             deleteobject;       /**< should the propagator object be deleted when propagator is freed? */
 };
 
 
@@ -50,16 +50,16 @@ struct PropData
 
 /** destructor of propagator to free user data (called when SCIP is exiting) */
 static
-DECL_PROPFREE(propFreeObj)
+SCIP_DECL_PROPFREE(propFreeObj)
 {  /*lint --e{715}*/
-   PROPDATA* propdata;
+   SCIP_PROPDATA* propdata;
 
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
    assert(propdata->objprop != NULL);
 
    /* call virtual method of prop object */
-   CHECK_OKAY( propdata->objprop->scip_free(scip, prop) );
+   SCIP_CALL( propdata->objprop->scip_free(scip, prop) );
 
    /* free prop object */
    if( propdata->deleteobject )
@@ -75,16 +75,16 @@ DECL_PROPFREE(propFreeObj)
 
 /** initialization method of propagator (called after problem was transformed) */
 static
-DECL_PROPINIT(propInitObj)
+SCIP_DECL_PROPINIT(propInitObj)
 {  /*lint --e{715}*/
-   PROPDATA* propdata;
+   SCIP_PROPDATA* propdata;
 
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
    assert(propdata->objprop != NULL);
 
    /* call virtual method of prop object */
-   CHECK_OKAY( propdata->objprop->scip_init(scip, prop) );
+   SCIP_CALL( propdata->objprop->scip_init(scip, prop) );
 
    return SCIP_OKAY;
 }
@@ -92,16 +92,16 @@ DECL_PROPINIT(propInitObj)
 
 /** deinitialization method of propagator (called before transformed problem is freed) */
 static
-DECL_PROPEXIT(propExitObj)
+SCIP_DECL_PROPEXIT(propExitObj)
 {  /*lint --e{715}*/
-   PROPDATA* propdata;
+   SCIP_PROPDATA* propdata;
 
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
    assert(propdata->objprop != NULL);
 
    /* call virtual method of prop object */
-   CHECK_OKAY( propdata->objprop->scip_exit(scip, prop) );
+   SCIP_CALL( propdata->objprop->scip_exit(scip, prop) );
 
    return SCIP_OKAY;
 }
@@ -109,16 +109,16 @@ DECL_PROPEXIT(propExitObj)
 
 /** solving process initialization method of propagator (called when branch and bound process is about to begin) */
 static
-DECL_PROPINITSOL(propInitsolObj)
+SCIP_DECL_PROPINITSOL(propInitsolObj)
 {  /*lint --e{715}*/
-   PROPDATA* propdata;
+   SCIP_PROPDATA* propdata;
 
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
    assert(propdata->objprop != NULL);
 
    /* call virtual method of prop object */
-   CHECK_OKAY( propdata->objprop->scip_initsol(scip, prop) );
+   SCIP_CALL( propdata->objprop->scip_initsol(scip, prop) );
 
    return SCIP_OKAY;
 }
@@ -126,16 +126,16 @@ DECL_PROPINITSOL(propInitsolObj)
 
 /** solving process deinitialization method of propagator (called before branch and bound process data is freed) */
 static
-DECL_PROPEXITSOL(propExitsolObj)
+SCIP_DECL_PROPEXITSOL(propExitsolObj)
 {  /*lint --e{715}*/
-   PROPDATA* propdata;
+   SCIP_PROPDATA* propdata;
 
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
    assert(propdata->objprop != NULL);
 
    /* call virtual method of prop object */
-   CHECK_OKAY( propdata->objprop->scip_exitsol(scip, prop) );
+   SCIP_CALL( propdata->objprop->scip_exitsol(scip, prop) );
 
    return SCIP_OKAY;
 }
@@ -143,16 +143,16 @@ DECL_PROPEXITSOL(propExitsolObj)
 
 /** execution method of propagator */
 static
-DECL_PROPEXEC(propExecObj)
+SCIP_DECL_PROPEXEC(propExecObj)
 {  /*lint --e{715}*/
-   PROPDATA* propdata;
+   SCIP_PROPDATA* propdata;
 
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
    assert(propdata->objprop != NULL);
 
    /* call virtual method of prop object */
-   CHECK_OKAY( propdata->objprop->scip_exec(scip, prop, result) );
+   SCIP_CALL( propdata->objprop->scip_exec(scip, prop, result) );
 
    return SCIP_OKAY;
 }
@@ -160,16 +160,16 @@ DECL_PROPEXEC(propExecObj)
 
 /** propagation conflict resolving method of propagator */
 static
-DECL_PROPRESPROP(propRespropObj)
+SCIP_DECL_PROPRESPROP(propRespropObj)
 {  /*lint --e{715}*/
-   PROPDATA* propdata;
+   SCIP_PROPDATA* propdata;
 
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
    assert(propdata->objprop != NULL);
 
    /* call virtual method of prop object */
-   CHECK_OKAY( propdata->objprop->scip_resprop(scip, prop, infervar, inferinfo, boundtype, bdchgidx, result) );
+   SCIP_CALL( propdata->objprop->scip_resprop(scip, prop, infervar, inferinfo, boundtype, bdchgidx, result) );
 
    return SCIP_OKAY;
 }
@@ -182,21 +182,21 @@ DECL_PROPRESPROP(propRespropObj)
  */
 
 /** creates the propagator for the given propagator object and includes it in SCIP */
-RETCODE SCIPincludeObjProp(
-   SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjProp*   objprop,            /**< propagator object */
-   Bool             deleteobject        /**< should the propagator object be deleted when propagator is freed? */
+SCIP_RETCODE SCIPincludeObjProp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   scip::ObjProp*        objprop,            /**< propagator object */
+   SCIP_Bool             deleteobject        /**< should the propagator object be deleted when propagator is freed? */
    )
 {
-   PROPDATA* propdata;
+   SCIP_PROPDATA* propdata;
 
    /* create propagator data */
-   propdata = new PROPDATA;
+   propdata = new SCIP_PROPDATA;
    propdata->objprop = objprop;
    propdata->deleteobject = deleteobject;
 
    /* include propagator */
-   CHECK_OKAY( SCIPincludeProp(scip, objprop->scip_name_, objprop->scip_desc_, 
+   SCIP_CALL( SCIPincludeProp(scip, objprop->scip_name_, objprop->scip_desc_, 
          objprop->scip_priority_, objprop->scip_freq_, objprop->scip_delay_,
          propFreeObj, propInitObj, propExitObj, propExecObj, propRespropObj,
          propdata) );
@@ -206,12 +206,12 @@ RETCODE SCIPincludeObjProp(
 
 /** returns the prop object of the given name, or NULL if not existing */
 scip::ObjProp* SCIPfindObjProp(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< name of propagator */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of propagator */
    )
 {
-   PROP* prop;
-   PROPDATA* propdata;
+   SCIP_PROP* prop;
+   SCIP_PROPDATA* propdata;
 
    prop = SCIPfindProp(scip, name);
    if( prop == NULL )
@@ -225,11 +225,11 @@ scip::ObjProp* SCIPfindObjProp(
    
 /** returns the prop object for the given propagator */
 scip::ObjProp* SCIPgetObjProp(
-   SCIP*            scip,               /**< SCIP data structure */
-   PROP*            prop                /**< propagator */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop                /**< propagator */
    )
 {
-   PROPDATA* propdata;
+   SCIP_PROPDATA* propdata;
 
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_reader.h,v 1.7 2005/07/15 17:20:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_reader.h,v 1.8 2005/08/22 18:35:45 bzfpfend Exp $"
 
 /**@file   pub_reader.h
  * @brief  public methods for input file readers
@@ -34,33 +34,33 @@
 
 /** gets user data of reader */
 extern
-READERDATA* SCIPreaderGetData(
-   READER*          reader              /**< reader */
+SCIP_READERDATA* SCIPreaderGetData(
+   SCIP_READER*          reader              /**< reader */
    );
 
 /** sets user data of reader; user has to free old data in advance! */
 extern
 void SCIPreaderSetData(
-   READER*          reader,             /**< reader */
-   READERDATA*      readerdata          /**< new reader user data */
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_READERDATA*      readerdata          /**< new reader user data */
    );
 
 /** gets name of reader */
 extern
 const char* SCIPreaderGetName(
-   READER*          reader              /**< reader */
+   SCIP_READER*          reader              /**< reader */
    );
 
 /** gets description of reader */
 extern
 const char* SCIPreaderGetDesc(
-   READER*          reader              /**< reader */
+   SCIP_READER*          reader              /**< reader */
    );
 
 /** gets file extension of reader */
 extern
 const char* SCIPreaderGetExtension(
-   READER*          reader              /**< reader */
+   SCIP_READER*          reader              /**< reader */
    );
 
 

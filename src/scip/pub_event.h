@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_event.h,v 1.8 2005/07/15 17:20:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_event.h,v 1.9 2005/08/22 18:35:45 bzfpfend Exp $"
 
 /**@file   pub_event.h
  * @brief  public methods for managing events
@@ -37,86 +37,86 @@
 
 
 /*
- * Event handler methods
+ * SCIP_Event handler methods
  */
 
 /** gets name of event handler */
 extern
 const char* SCIPeventhdlrGetName(
-   EVENTHDLR*       eventhdlr           /**< event handler */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    );
 
 /** gets user data of event handler */
 extern
-EVENTHDLRDATA* SCIPeventhdlrGetData(
-   EVENTHDLR*       eventhdlr           /**< event handler */
+SCIP_EVENTHDLRDATA* SCIPeventhdlrGetData(
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    );
 
 /** sets user data of event handler; user has to free old data in advance! */
 extern
 void SCIPeventhdlrSetData(
-   EVENTHDLR*       eventhdlr,          /**< event handler */
-   EVENTHDLRDATA*   eventhdlrdata       /**< new event handler user data */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< new event handler user data */
    );
 
 /** is event handler initialized? */
 extern
-Bool SCIPeventhdlrIsInitialized(
-   EVENTHDLR*       eventhdlr           /**< event handler */
+SCIP_Bool SCIPeventhdlrIsInitialized(
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    );
 
 
 
 /*
- * Event methods
+ * SCIP_Event methods
  */
 
 /** gets type of event */
 extern
-EVENTTYPE SCIPeventGetType(
-   EVENT*           event               /**< event */
+SCIP_EVENTTYPE SCIPeventGetType(
+   SCIP_EVENT*           event               /**< event */
    );
 
 /** gets variable for a variable event (var added, var deleted, var fixed, objective value or domain change) */
 extern
-VAR* SCIPeventGetVar(
-   EVENT*           event               /**< event */
+SCIP_VAR* SCIPeventGetVar(
+   SCIP_EVENT*           event               /**< event */
    );
 
 /** gets old objective value for an objective value change event */
 extern
-Real SCIPeventGetOldobj(
-   EVENT*           event               /**< event */
+SCIP_Real SCIPeventGetOldobj(
+   SCIP_EVENT*           event               /**< event */
    );
 
 /** gets new objective value for an objective value change event */
 extern
-Real SCIPeventGetNewobj(
-   EVENT*           event               /**< event */
+SCIP_Real SCIPeventGetNewobj(
+   SCIP_EVENT*           event               /**< event */
    );
 
 /** gets old bound for a bound change event */
 extern
-Real SCIPeventGetOldbound(
-   EVENT*           event               /**< event */
+SCIP_Real SCIPeventGetOldbound(
+   SCIP_EVENT*           event               /**< event */
    );
 
 /** gets new bound for a bound change event */
 extern
-Real SCIPeventGetNewbound(
-   EVENT*           event               /**< event */
+SCIP_Real SCIPeventGetNewbound(
+   SCIP_EVENT*           event               /**< event */
    );
 
-/** gets node for a node or LP event */
+/** gets node for a node or SCIP_LP event */
 extern
-NODE* SCIPeventGetNode(
-   EVENT*           event               /**< event */
+SCIP_NODE* SCIPeventGetNode(
+   SCIP_EVENT*           event               /**< event */
    );
 
 /** gets solution for a primal solution event */
 extern
-SOL* SCIPeventGetSol(
-   EVENT*           event               /**< event */
+SCIP_SOL* SCIPeventGetSol(
+   SCIP_EVENT*           event               /**< event */
    );
 
 

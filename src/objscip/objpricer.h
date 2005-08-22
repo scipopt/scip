@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.h,v 1.15 2005/07/15 17:20:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpricer.h,v 1.16 2005/08/22 18:35:30 bzfpfend Exp $"
 
 /**@file   objpricer.h
  * @brief  C++ wrapper for variable pricers
@@ -51,9 +51,9 @@ public:
 
    /** default constructor */
    ObjPricer(
-      const char*   name,               /**< name of variable pricer */
-      const char*   desc,               /**< description of variable pricer */
-      int           priority            /**< priority of the variable pricer */
+      const char*        name,               /**< name of variable pricer */
+      const char*        desc,               /**< description of variable pricer */
+      int                priority            /**< priority of the variable pricer */
       )
       : scip_name_(name),
         scip_desc_(desc),
@@ -67,27 +67,27 @@ public:
    }
 
    /** destructor of variable pricer to free user data (called when SCIP is exiting) */
-   virtual RETCODE scip_free(
-      SCIP*         scip,               /**< SCIP data structure */
-      PRICER*       pricer              /**< the variable pricer itself */
+   virtual SCIP_RETCODE scip_free(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_PRICER*       pricer              /**< the variable pricer itself */
       )
    {
       return SCIP_OKAY;
    }
    
    /** initialization method of variable pricer (called after problem was transformed) */
-   virtual RETCODE scip_init(
-      SCIP*         scip,               /**< SCIP data structure */
-      PRICER*       pricer              /**< the variable pricer itself */
+   virtual SCIP_RETCODE scip_init(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_PRICER*       pricer              /**< the variable pricer itself */
       )
    {
       return SCIP_OKAY;
    }
    
    /** deinitialization method of variable pricer (called before transformed problem is freed) */
-   virtual RETCODE scip_exit(
-      SCIP*         scip,               /**< SCIP data structure */
-      PRICER*       pricer              /**< the variable pricer itself */
+   virtual SCIP_RETCODE scip_exit(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_PRICER*       pricer              /**< the variable pricer itself */
       )
    {
       return SCIP_OKAY;
@@ -99,9 +99,9 @@ public:
     *  The variable pricer may use this call to initialize its branch and bound specific data.
     *
     */
-   virtual RETCODE scip_initsol(
-      SCIP*         scip,               /**< SCIP data structure */
-      PRICER*       pricer              /**< the variable pricer itself */
+   virtual SCIP_RETCODE scip_initsol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_PRICER*       pricer              /**< the variable pricer itself */
       )
    {
       return SCIP_OKAY;
@@ -112,9 +112,9 @@ public:
     *  This method is called before the branch and bound process is freed.
     *  The variable pricer should use this call to clean up its branch and bound data.
     */
-   virtual RETCODE scip_exitsol(
-      SCIP*         scip,               /**< SCIP data structure */
-      PRICER*       pricer              /**< the variable pricer itself */
+   virtual SCIP_RETCODE scip_exitsol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_PRICER*       pricer              /**< the variable pricer itself */
       )
    {
       return SCIP_OKAY;
@@ -127,15 +127,15 @@ public:
     *  reduced costs for non-negative variables, positive reduced costs for non-positive variables,
     *  and non-zero reduced costs for variables that can be negative and positive.
     *
-    *  The method is called in the LP solving loop after an LP was proven to be feasible.
+    *  The method is called in the SCIP_LP solving loop after an SCIP_LP was proven to be feasible.
     *
     *  Whenever the pricer finds a variable with negative feasibility, it should call SCIPcreateVar()
     *  and SCIPaddPricedVar() to add the variable to the problem. Furthermore, it should call the appropriate
     *  methods of the constraint handlers to add the necessary variable entries to the constraints.
     */
-   virtual RETCODE scip_redcost(
-      SCIP*         scip,               /**< SCIP data structure */
-      PRICER*       pricer              /**< the variable pricer itself */
+   virtual SCIP_RETCODE scip_redcost(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_PRICER*       pricer              /**< the variable pricer itself */
       ) = 0;
    
    /** farkas pricing method of variable pricer for infeasible LPs
@@ -143,9 +143,9 @@ public:
     *  Searches for variables that can contribute to the feasibility of the current LP.
     *  In standard branch-and-price, these are variables with positive farkas values:
     *
-    *  The LP was proven infeasible, so we have an infeasibility proof by the dual farkas multipliers y.
+    *  The SCIP_LP was proven infeasible, so we have an infeasibility proof by the dual farkas multipliers y.
     *  With the values of y, an implicit inequality  y^T A x >= y^T b  is associated, with b given
-    *  by the sides of the LP rows and the sign of y:
+    *  by the sides of the SCIP_LP rows and the sign of y:
     *   - if y_i is positive, b_i is the left hand side of the row,
     *   - if y_i is negative, b_i is the right hand side of the row.
     *
@@ -153,17 +153,17 @@ public:
     *  especially by the (for this inequality least infeasible solution) x' defined by 
     *     x'_i := ub_i, if y^T A_i >= 0
     *     x'_i := lb_i, if y^T A_i < 0.
-    *  Pricing in this case means to add variables i with positive farkas value, i.e. y^T A_i x'_i > 0.
+    *  SCIP_Pricing in this case means to add variables i with positive farkas value, i.e. y^T A_i x'_i > 0.
     *
-    *  The method is called in the LP solving loop after an LP was proven to be infeasible.
+    *  The method is called in the SCIP_LP solving loop after an SCIP_LP was proven to be infeasible.
     *
     *  Whenever the pricer finds a variable with positive farkas value, it should call SCIPcreateVar()
     *  and SCIPaddPricedVar() to add the variable to the problem. Furthermore, it should call the appropriate
     *  methods of the constraint handlers to add the necessary variable entries to the constraints.
     */
-   virtual RETCODE scip_farkas(
-      SCIP*         scip,               /**< SCIP data structure */
-      PRICER*       pricer              /**< the variable pricer itself */
+   virtual SCIP_RETCODE scip_farkas(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_PRICER*       pricer              /**< the variable pricer itself */
       )
    {
       return SCIP_OKAY;
@@ -179,40 +179,40 @@ public:
  *  The method should be called in one of the following ways:
  *
  *   1. The user is resposible of deleting the object:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MyPricer* mypricer = new MyPricer(...);
- *       CHECK_OKAY( SCIPincludeObjPricer(scip, &mypricer, FALSE) );
+ *       SCIP_CALL( SCIPincludeObjPricer(scip, &mypricer, FALSE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );
+ *       SCIP_CALL( SCIPfree(&scip) );
  *       delete mypricer;    // delete pricer AFTER SCIPfree() !
  *
  *   2. The object pointer is passed to SCIP and deleted by SCIP in the SCIPfree() call:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
- *       CHECK_OKAY( SCIPincludeObjPricer(scip, new MyPricer(...), TRUE) );
+ *       SCIP_CALL( SCIPincludeObjPricer(scip, new MyPricer(...), TRUE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );  // destructor of MyPricer is called here
+ *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyPricer is called here
  */
 extern
-RETCODE SCIPincludeObjPricer(
-   SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjPricer* objpricer,          /**< variable pricer object */
-   Bool             deleteobject        /**< should the pricer object be deleted when pricer is freed? */
+SCIP_RETCODE SCIPincludeObjPricer(
+   SCIP*                 scip,               /**< SCIP data structure */
+   scip::ObjPricer*      objpricer,          /**< variable pricer object */
+   SCIP_Bool             deleteobject        /**< should the pricer object be deleted when pricer is freed? */
    );
 
 /** returns the variable pricer object of the given name, or NULL if not existing */
 extern
 scip::ObjPricer* SCIPfindObjPricer(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< name of variable pricer */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of variable pricer */
    );
    
 /** returns the variable pricer object for the given pricer */
 extern
 scip::ObjPricer* SCIPgetObjPricer(
-   SCIP*            scip,               /**< SCIP data structure */
-   PRICER*          pricer              /**< pricer */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer              /**< pricer */
    );
 
 #endif

@@ -2,6 +2,9 @@ current version
 ===============
 
 interface:
+- MAJOR CHANGE:
+  preceeded all data types with "SCIP_" - you may use shell script reptypes_scip.sh to rename the SCIP data types in
+  your own source code (But use with care! Create a backup copy of your source first!)
 - additional parameter "validnode" for SCIPaddConsLocal() and SCIPaddConsNode()
 - new method SCIPgetNConflictClausesApplied()
 - new method SCIPdelVar()

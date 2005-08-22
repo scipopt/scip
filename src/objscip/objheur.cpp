@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.cpp,v 1.14 2005/05/31 17:20:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objheur.cpp,v 1.15 2005/08/22 18:35:29 bzfpfend Exp $"
 
 /**@file   objheur.cpp
  * @brief  C++ wrapper for primal heuristics
@@ -35,10 +35,10 @@
  */
 
 /** primal heuristic data */
-struct HeurData
+struct SCIP_HeurData
 {
-   scip::ObjHeur*   objheur;            /**< primal heuristic object */
-   Bool             deleteobject;       /**< should the primal heuristic object be deleted when heuristic is freed? */
+   scip::ObjHeur*        objheur;            /**< primal heuristic object */
+   SCIP_Bool             deleteobject;       /**< should the primal heuristic object be deleted when heuristic is freed? */
 };
 
 
@@ -50,16 +50,16 @@ struct HeurData
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
-DECL_HEURFREE(heurFreeObj)
+SCIP_DECL_HEURFREE(heurFreeObj)
 {  /*lint --e{715}*/
-   HEURDATA* heurdata;
+   SCIP_HEURDATA* heurdata;
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    assert(heurdata->objheur != NULL);
 
    /* call virtual method of heur object */
-   CHECK_OKAY( heurdata->objheur->scip_free(scip, heur) );
+   SCIP_CALL( heurdata->objheur->scip_free(scip, heur) );
 
    /* free heur object */
    if( heurdata->deleteobject )
@@ -75,16 +75,16 @@ DECL_HEURFREE(heurFreeObj)
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
-DECL_HEURINIT(heurInitObj)
+SCIP_DECL_HEURINIT(heurInitObj)
 {  /*lint --e{715}*/
-   HEURDATA* heurdata;
+   SCIP_HEURDATA* heurdata;
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    assert(heurdata->objheur != NULL);
 
    /* call virtual method of heur object */
-   CHECK_OKAY( heurdata->objheur->scip_init(scip, heur) );
+   SCIP_CALL( heurdata->objheur->scip_init(scip, heur) );
 
    return SCIP_OKAY;
 }
@@ -92,16 +92,16 @@ DECL_HEURINIT(heurInitObj)
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
-DECL_HEUREXIT(heurExitObj)
+SCIP_DECL_HEUREXIT(heurExitObj)
 {  /*lint --e{715}*/
-   HEURDATA* heurdata;
+   SCIP_HEURDATA* heurdata;
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    assert(heurdata->objheur != NULL);
 
    /* call virtual method of heur object */
-   CHECK_OKAY( heurdata->objheur->scip_exit(scip, heur) );
+   SCIP_CALL( heurdata->objheur->scip_exit(scip, heur) );
 
    return SCIP_OKAY;
 }
@@ -109,16 +109,16 @@ DECL_HEUREXIT(heurExitObj)
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 static
-DECL_HEURINITSOL(heurInitsolObj)
+SCIP_DECL_HEURINITSOL(heurInitsolObj)
 {  /*lint --e{715}*/
-   HEURDATA* heurdata;
+   SCIP_HEURDATA* heurdata;
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    assert(heurdata->objheur != NULL);
 
    /* call virtual method of heur object */
-   CHECK_OKAY( heurdata->objheur->scip_initsol(scip, heur) );
+   SCIP_CALL( heurdata->objheur->scip_initsol(scip, heur) );
 
    return SCIP_OKAY;
 }
@@ -126,16 +126,16 @@ DECL_HEURINITSOL(heurInitsolObj)
 
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
 static
-DECL_HEUREXITSOL(heurExitsolObj)
+SCIP_DECL_HEUREXITSOL(heurExitsolObj)
 {  /*lint --e{715}*/
-   HEURDATA* heurdata;
+   SCIP_HEURDATA* heurdata;
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    assert(heurdata->objheur != NULL);
 
    /* call virtual method of heur object */
-   CHECK_OKAY( heurdata->objheur->scip_exitsol(scip, heur) );
+   SCIP_CALL( heurdata->objheur->scip_exitsol(scip, heur) );
 
    return SCIP_OKAY;
 }
@@ -143,16 +143,16 @@ DECL_HEUREXITSOL(heurExitsolObj)
 
 /** execution method of primal heuristic */
 static
-DECL_HEUREXEC(heurExecObj)
+SCIP_DECL_HEUREXEC(heurExecObj)
 {  /*lint --e{715}*/
-   HEURDATA* heurdata;
+   SCIP_HEURDATA* heurdata;
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    assert(heurdata->objheur != NULL);
 
    /* call virtual method of heur object */
-   CHECK_OKAY( heurdata->objheur->scip_exec(scip, heur, result) );
+   SCIP_CALL( heurdata->objheur->scip_exec(scip, heur, result) );
 
    return SCIP_OKAY;
 }
@@ -165,21 +165,21 @@ DECL_HEUREXEC(heurExecObj)
  */
 
 /** creates the primal heuristic for the given primal heuristic object and includes it in SCIP */
-RETCODE SCIPincludeObjHeur(
-   SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjHeur*   objheur,            /**< primal heuristic object */
-   Bool             deleteobject        /**< should the primal heuristic object be deleted when heuristic is freed? */
+SCIP_RETCODE SCIPincludeObjHeur(
+   SCIP*                 scip,               /**< SCIP data structure */
+   scip::ObjHeur*        objheur,            /**< primal heuristic object */
+   SCIP_Bool             deleteobject        /**< should the primal heuristic object be deleted when heuristic is freed? */
    )
 {
-   HEURDATA* heurdata;
+   SCIP_HEURDATA* heurdata;
 
    /* create primal heuristic data */
-   heurdata = new HEURDATA;
+   heurdata = new SCIP_HEURDATA;
    heurdata->objheur = objheur;
    heurdata->deleteobject = deleteobject;
 
    /* include primal heuristic */
-   CHECK_OKAY( SCIPincludeHeur(scip, objheur->scip_name_, objheur->scip_desc_, objheur->scip_dispchar_,
+   SCIP_CALL( SCIPincludeHeur(scip, objheur->scip_name_, objheur->scip_desc_, objheur->scip_dispchar_,
          objheur->scip_priority_, objheur->scip_freq_, objheur->scip_freqofs_, objheur->scip_maxdepth_,
          objheur->scip_pseudonodes_, objheur->scip_duringplunging_, objheur->scip_afternode_,
          heurFreeObj, heurInitObj, heurExitObj, 
@@ -191,12 +191,12 @@ RETCODE SCIPincludeObjHeur(
 
 /** returns the heur object of the given name, or NULL if not existing */
 scip::ObjHeur* SCIPfindObjHeur(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< name of primal heuristic */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of primal heuristic */
    )
 {
-   HEUR* heur;
-   HEURDATA* heurdata;
+   SCIP_HEUR* heur;
+   SCIP_HEURDATA* heurdata;
 
    heur = SCIPfindHeur(scip, name);
    if( heur == NULL )
@@ -210,11 +210,11 @@ scip::ObjHeur* SCIPfindObjHeur(
    
 /** returns the heur object for the given primal heuristic */
 scip::ObjHeur* SCIPgetObjHeur(
-   SCIP*            scip,               /**< SCIP data structure */
-   HEUR*            heur                /**< primal heuristic */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur                /**< primal heuristic */
    )
 {
-   HEURDATA* heurdata;
+   SCIP_HEURDATA* heurdata;
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);

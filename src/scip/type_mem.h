@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_mem.h,v 1.6 2005/07/15 17:20:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_mem.h,v 1.7 2005/08/22 18:35:54 bzfpfend Exp $"
 
 /**@file   type_mem.h
  * @brief  type definitions for block memory pools and memory buffers
@@ -27,7 +27,7 @@
 #define __SCIP_TYPE_MEM_H__
 
 
-typedef struct Mem MEM;
+typedef struct SCIP_Mem SCIP_MEM;
 
 
 #endif

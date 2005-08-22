@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objmessagehdlr.h,v 1.1 2005/07/15 17:20:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objmessagehdlr.h,v 1.2 2005/08/22 18:35:30 bzfpfend Exp $"
 
 /**@file   objmessagehdlr.h
  * @brief  C++ wrapper for message handlers
@@ -45,7 +45,7 @@ public:
 
    /** default constructor */
    ObjMessagehdlr(
-      Bool          bufferedoutput      /**< should the output be buffered up to the next newline? */
+      SCIP_Bool          bufferedoutput      /**< should the output be buffered up to the next newline? */
       )
       : scip_bufferedoutput_(bufferedoutput)
    {
@@ -61,9 +61,9 @@ public:
     *  This method is invoked, if SCIP wants to display an error message to the screen or a file
     */
    virtual void scip_error(
-      MESSAGEHDLR*  messagehdlr,        /**< the message handler itself */
-      FILE*         file,               /**< file stream to print into */
-      const char*   msg                 /**< string to output into the file */
+      SCIP_MESSAGEHDLR*  messagehdlr,        /**< the message handler itself */
+      FILE*              file,               /**< file stream to print into */
+      const char*        msg                 /**< string to output into the file */
       ) = 0;
 
    /** warning message print method of message handler
@@ -71,9 +71,9 @@ public:
     *  This method is invoked, if SCIP wants to display a warning message to the screen or a file
     */
    virtual void scip_warning(
-      MESSAGEHDLR*  messagehdlr,        /**< the message handler itself */
-      FILE*         file,               /**< file stream to print into */
-      const char*   msg                 /**< string to output into the file */
+      SCIP_MESSAGEHDLR*  messagehdlr,        /**< the message handler itself */
+      FILE*              file,               /**< file stream to print into */
+      const char*        msg                 /**< string to output into the file */
       ) = 0;
 
    /** dialog message print method of message handler
@@ -81,9 +81,9 @@ public:
     *  This method is invoked, if SCIP wants to display a dialog message to the screen or a file
     */
    virtual void scip_dialog(
-      MESSAGEHDLR*  messagehdlr,        /**< the message handler itself */
-      FILE*         file,               /**< file stream to print into */
-      const char*   msg                 /**< string to output into the file */
+      SCIP_MESSAGEHDLR*  messagehdlr,        /**< the message handler itself */
+      FILE*              file,               /**< file stream to print into */
+      const char*        msg                 /**< string to output into the file */
       ) = 0;
 
    /** info message print method of message handler
@@ -91,9 +91,9 @@ public:
     *  This method is invoked, if SCIP wants to display an information message to the screen or a file
     */
    virtual void scip_info(
-      MESSAGEHDLR*  messagehdlr,        /**< the message handler itself */
-      FILE*         file,               /**< file stream to print into */
-      const char*   msg                 /**< string to output into the file */
+      SCIP_MESSAGEHDLR*  messagehdlr,        /**< the message handler itself */
+      FILE*              file,               /**< file stream to print into */
+      const char*        msg                 /**< string to output into the file */
       ) = 0;
 };
 
@@ -103,24 +103,24 @@ public:
    
 /** creates the message handler for the given message handler object */
 extern
-RETCODE SCIPcreateObjMessagehdlr(
-   MESSAGEHDLR**    messagehdlr,        /**< pointer to store the message handler */
-   scip::ObjMessagehdlr* objmessagehdlr,/**< message handler object */
-   Bool             deleteobject        /**< should the message handler object be deleted when message handler is freed? */
+SCIP_RETCODE SCIPcreateObjMessagehdlr(
+   SCIP_MESSAGEHDLR**    messagehdlr,        /**< pointer to store the message handler */
+   scip::ObjMessagehdlr* objmessagehdlr,     /**< message handler object */
+   SCIP_Bool             deleteobject        /**< should the message handler object be deleted when message handler is freed? */
    );
 
 /** destroys the message handler that was created by SCIPcreateObjMessagehdlr();
  *  if deleteobject was set to TRUE in SCIPcreateObjMessagehdlr(), the message handler object is deleted
  */
 extern
-RETCODE SCIPfreeObjMessagehdlr(
-   MESSAGEHDLR**    messagehdlr         /**< pointer to the message handler */
+SCIP_RETCODE SCIPfreeObjMessagehdlr(
+   SCIP_MESSAGEHDLR**    messagehdlr         /**< pointer to the message handler */
    );
 
 /** returns the message handler object for the given message handler */
 extern
 scip::ObjMessagehdlr* SCIPgetObjMessagehdlr(
-   MESSAGEHDLR*     messagehdlr         /**< message handler */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_message.h,v 1.1 2005/07/15 17:20:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_message.h,v 1.2 2005/08/22 18:35:54 bzfpfend Exp $"
 
 /**@file   type_message.h
  * @brief  type definitions for message output methods
@@ -29,7 +29,7 @@
 
 
 /** verbosity levels of output */
-enum VerbLevel
+enum SCIP_VerbLevel
 {
    SCIP_VERBLEVEL_NONE    = 0,           /**< only error and warning messages are displayed */
    SCIP_VERBLEVEL_DIALOG  = 1,           /**< only interactive dialogs, errors, and warnings are displayed */
@@ -38,10 +38,10 @@ enum VerbLevel
    SCIP_VERBLEVEL_HIGH    = 4,           /**< a lot of information is displayed */
    SCIP_VERBLEVEL_FULL    = 5            /**< all messages are displayed */
 };
-typedef enum VerbLevel VERBLEVEL;
+typedef enum SCIP_VerbLevel SCIP_VERBLEVEL;
 
-typedef struct Messagehdlr MESSAGEHDLR;  /**< message handler */
-typedef struct MessagehdlrData MESSAGEHDLRDATA; /**< message handler data */
+typedef struct SCIP_Messagehdlr SCIP_MESSAGEHDLR;  /**< message handler */
+typedef struct SCIP_MessagehdlrData SCIP_MESSAGEHDLRDATA; /**< message handler data */
 
 /** error message print method of message handler
  *
@@ -52,7 +52,7 @@ typedef struct MessagehdlrData MESSAGEHDLRDATA; /**< message handler data */
  *  - file            : file stream to print into
  *  - msg             : string to output into the file
  */
-#define DECL_MESSAGEERROR(x) void x (MESSAGEHDLR* messagehdlr, FILE* file, const char* msg)
+#define SCIP_DECL_MESSAGEERROR(x) void x (SCIP_MESSAGEHDLR* messagehdlr, FILE* file, const char* msg)
 
 /** warning message print method of message handler
  *
@@ -63,7 +63,7 @@ typedef struct MessagehdlrData MESSAGEHDLRDATA; /**< message handler data */
  *  - file            : file stream to print into
  *  - msg             : string to output into the file
  */
-#define DECL_MESSAGEWARNING(x) void x (MESSAGEHDLR* messagehdlr, FILE* file, const char* msg)
+#define SCIP_DECL_MESSAGEWARNING(x) void x (SCIP_MESSAGEHDLR* messagehdlr, FILE* file, const char* msg)
 
 /** dialog message print method of message handler
  *
@@ -74,7 +74,7 @@ typedef struct MessagehdlrData MESSAGEHDLRDATA; /**< message handler data */
  *  - file            : file stream to print into
  *  - msg             : string to output into the file
  */
-#define DECL_MESSAGEDIALOG(x) void x (MESSAGEHDLR* messagehdlr, FILE* file, const char* msg)
+#define SCIP_DECL_MESSAGEDIALOG(x) void x (SCIP_MESSAGEHDLR* messagehdlr, FILE* file, const char* msg)
 
 /** info message print method of message handler
  *
@@ -85,7 +85,7 @@ typedef struct MessagehdlrData MESSAGEHDLRDATA; /**< message handler data */
  *  - file            : file stream to print into
  *  - msg             : string to output into the file
  */
-#define DECL_MESSAGEINFO(x) void x (MESSAGEHDLR* messagehdlr, FILE* file, const char* msg)
+#define SCIP_DECL_MESSAGEINFO(x) void x (SCIP_MESSAGEHDLR* messagehdlr, FILE* file, const char* msg)
 
 
 

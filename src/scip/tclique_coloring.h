@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_coloring.h,v 1.9 2005/08/08 11:16:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_coloring.h,v 1.10 2005/08/22 18:35:52 bzfpfend Exp $"
 
 /**@file   tclique_coloring.h
  * @brief  coloring part of algorithm for maximum cliques
@@ -54,21 +54,21 @@ typedef struct _NBC{
  *  finds a clique in the graph induced by V, an upper bound and an apriori bound for further branching steps
  */
 extern
-WEIGHT tcliqueColoring( 
+TCLIQUE_WEIGHT tcliqueColoring( 
    TCLIQUE_GETNNODES((*getnnodes)),     /**< user function to get the number of nodes */
    TCLIQUE_GETWEIGHTS((*getweights)),   /**< user function to get the node weights */
    TCLIQUE_SELECTADJNODES((*selectadjnodes)), /**< user function to select adjacent edges */
-   TCLIQUEGRAPH*    tcliquegraph,       /**< pointer to graph data structure */
-   CHKMEM*          mem,                /**< block memory */
+   TCLIQUE_GRAPH*   tcliquegraph,       /**< pointer to graph data structure */
+   BMS_CHKMEM*           mem,                /**< block memory */
    int*             buffer,             /**< buffer of size nnodes */
    int*             V,                  /**< non-zero weighted nodes for branching */
    int              nV,                 /**< number of non-zero weighted nodes for branching */
    NBC*             gsd,                /**< neighbour color information of all nodes */
-   Bool*            iscolored,          /**< coloring status of all nodes */
-   WEIGHT*          apbound,            /**< pointer to store apriori bound of nodes for branching */ 
+   TCLIQUE_Bool*    iscolored,          /**< coloring status of all nodes */
+   TCLIQUE_WEIGHT*  apbound,            /**< pointer to store apriori bound of nodes for branching */ 
    int*             clique,             /**< buffer for storing the clique */
    int*             nclique,            /**< pointer to store number of nodes in the clique */
-   WEIGHT*          weightclique        /**< pointer to store the weight of the clique */
+   TCLIQUE_WEIGHT*  weightclique        /**< pointer to store the weight of the clique */
    );
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_xxx.c,v 1.12 2005/07/15 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_xxx.c,v 1.13 2005/08/22 18:35:46 bzfpfend Exp $"
 
 /**@file   reader_xxx.c
  * @brief  XXX file reader
@@ -42,7 +42,7 @@
 /* TODO: (optional) fill in the necessary reader data */
 
 /** data for xxx reader */
-struct ReaderData
+struct SCIP_ReaderData
 {
 };
 
@@ -66,9 +66,9 @@ struct ReaderData
 /** destructor of reader to free user data (called when SCIP is exiting) */
 #if 0
 static
-DECL_READERFREE(readerFreeXxx)
+SCIP_DECL_READERFREE(readerFreeXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx reader not implemented yet\n");
+   SCIPerrorMessage("method of xxx reader not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -80,9 +80,9 @@ DECL_READERFREE(readerFreeXxx)
 
 /** problem reading method of reader */
 static
-DECL_READERREAD(readerReadXxx)
+SCIP_DECL_READERREAD(readerReadXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx reader not implemented yet\n");
+   SCIPerrorMessage("method of xxx reader not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -96,18 +96,18 @@ DECL_READERREAD(readerReadXxx)
  */
 
 /** includes the xxx file reader in SCIP */
-RETCODE SCIPincludeReaderXxx(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeReaderXxx(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   READERDATA* readerdata;
+   SCIP_READERDATA* readerdata;
 
    /* create xxx reader data */
    readerdata = NULL;
    /* TODO: (optional) create reader specific data here */
    
    /* include xxx reader */
-   CHECK_OKAY( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
+   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
          readerFreeXxx, readerReadXxx, readerdata) );
 
    /* add xxx reader parameters */

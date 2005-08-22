@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.58 2005/07/15 17:20:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.59 2005/08/22 18:35:34 bzfpfend Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -37,7 +37,7 @@
 #define CONSHDLR_SEPAFREQ             1 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
-                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -55,26 +55,26 @@
  */
 
 /** constraint data for and constraints */
-struct ConsData
+struct SCIP_ConsData
 {
-   VAR**            vars;               /**< variables in the and operation */
-   VAR*             resvar;             /**< resultant variable */
-   ROW**            rows;               /**< rows for linear relaxation of and constraint */
-   int              nvars;              /**< number of variables in and operation */
-   int              varssize;           /**< size of vars array */
-   int              rowssize;           /**< size of rows array */
-   int              watchedvar1;        /**< position of first watched operator variable */
-   int              watchedvar2;        /**< position of second watched operator variable */
-   int              filterpos1;         /**< event filter position of first watched operator variable */
-   int              filterpos2;         /**< event filter position of second watched operator variable */
-   unsigned int     propagated:1;       /**< is constraint already preprocessed/propagated? */
-   unsigned int     nofixedzero:1;      /**< is none of the opereator variables fixed to FALSE? */
+   SCIP_VAR**            vars;               /**< variables in the and operation */
+   SCIP_VAR*             resvar;             /**< resultant variable */
+   SCIP_ROW**            rows;               /**< rows for linear relaxation of and constraint */
+   int                   nvars;              /**< number of variables in and operation */
+   int                   varssize;           /**< size of vars array */
+   int                   rowssize;           /**< size of rows array */
+   int                   watchedvar1;        /**< position of first watched operator variable */
+   int                   watchedvar2;        /**< position of second watched operator variable */
+   int                   filterpos1;         /**< event filter position of first watched operator variable */
+   int                   filterpos2;         /**< event filter position of second watched operator variable */
+   unsigned int          propagated:1;       /**< is constraint already preprocessed/propagated? */
+   unsigned int          nofixedzero:1;      /**< is none of the opereator variables fixed to FALSE? */
 };
 
 /** constraint handler data */
-struct ConshdlrData
+struct SCIP_ConshdlrData
 {
-   EVENTHDLR*       eventhdlr;          /**< event handler for bound change events on watched variables */
+   SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events on watched variables */
 };
 
 
@@ -104,14 +104,14 @@ typedef enum Proprule PROPRULE;
 #if 0
 /** installs rounding locks for the given variable in the given and constraint */
 static
-RETCODE lockRounding(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< and constraint */
-   VAR*             var                 /**< variable of constraint entry */
+SCIP_RETCODE lockRounding(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< and constraint */
+   SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
    /* rounding in both directions may violate the constraint */
-   CHECK_OKAY( SCIPlockVarCons(scip, var, cons, TRUE, TRUE) );
+   SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -119,34 +119,34 @@ RETCODE lockRounding(
 
 /** removes rounding locks for the given variable in the given and constraint */
 static
-RETCODE unlockRounding(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< and constraint */
-   VAR*             var                 /**< variable of constraint entry */
+SCIP_RETCODE unlockRounding(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< and constraint */
+   SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
    /* rounding in both directions may violate the constraint */
-   CHECK_OKAY( SCIPunlockVarCons(scip, var, cons, TRUE, TRUE) );
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, TRUE) );
 
    return SCIP_OKAY;
 }
 
 /** creates constaint handler data */
 static
-RETCODE conshdlrdataCreate(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSHDLRDATA**   conshdlrdata        /**< pointer to store the constraint handler data */
+SCIP_RETCODE conshdlrdataCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to store the constraint handler data */
    )
 {
    assert(conshdlrdata != NULL);
 
-   CHECK_OKAY( SCIPallocMemory(scip, conshdlrdata) );
+   SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
 
    /* get event handler for catching bound change events on variables */
    (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    if( (*conshdlrdata)->eventhdlr == NULL )
    {
-      errorMessage("event handler for and constraints not found\n");
+      SCIPerrorMessage("event handler for and constraints not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
    
@@ -155,9 +155,9 @@ RETCODE conshdlrdataCreate(
 
 /** frees constraint handler data */
 static
-RETCODE conshdlrdataFree(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSHDLRDATA**   conshdlrdata        /**< pointer to the constraint handler data */
+SCIP_RETCODE conshdlrdataFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to the constraint handler data */
    )
 {
    assert(conshdlrdata != NULL);
@@ -168,10 +168,10 @@ RETCODE conshdlrdataFree(
    return SCIP_OKAY;
 }
 
-/** gets number of LP rows needed for the LP relaxation of the constraint */
+/** gets number of SCIP_LP rows needed for the SCIP_LP relaxation of the constraint */
 static
 int consdataGetNRows(
-   CONSDATA*        consdata            /**< constraint data */
+   SCIP_CONSDATA*        consdata            /**< constraint data */
    )
 {
    assert(consdata != NULL);
@@ -181,12 +181,12 @@ int consdataGetNRows(
 
 /** catches events for the watched variable at given position */
 static
-RETCODE consdataCatchWatchedEvents(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata,           /**< and constraint data */
-   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   int              pos,                /**< array position of variable to catch bound change events for */
-   int*             filterpos           /**< pointer to store position of event filter entry */
+SCIP_RETCODE consdataCatchWatchedEvents(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< and constraint data */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   int                   pos,                /**< array position of variable to catch bound change events for */
+   int*                  filterpos           /**< pointer to store position of event filter entry */
    )
 {
    assert(consdata != NULL);
@@ -196,8 +196,8 @@ RETCODE consdataCatchWatchedEvents(
    assert(filterpos != NULL);
 
    /* catch tightening events for lower bound and relaxed events for upper bounds on watched variable */
-   CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_LBTIGHTENED | SCIP_EVENTTYPE_UBRELAXED,
-         eventhdlr, (EVENTDATA*)consdata, filterpos) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_LBTIGHTENED | SCIP_EVENTTYPE_UBRELAXED,
+         eventhdlr, (SCIP_EVENTDATA*)consdata, filterpos) );
 
    return SCIP_OKAY;
 }
@@ -205,12 +205,12 @@ RETCODE consdataCatchWatchedEvents(
 
 /** drops events for the watched variable at given position */
 static
-RETCODE consdataDropWatchedEvents(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata,           /**< and constraint data */
-   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   int              pos,                /**< array position of watched variable to drop bound change events for */
-   int              filterpos           /**< position of event filter entry */
+SCIP_RETCODE consdataDropWatchedEvents(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< and constraint data */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   int                   pos,                /**< array position of watched variable to drop bound change events for */
+   int                   filterpos           /**< position of event filter entry */
    )
 {
    assert(consdata != NULL);
@@ -220,18 +220,18 @@ RETCODE consdataDropWatchedEvents(
    assert(filterpos >= 0);
 
    /* drop tightening events for lower bound and relaxed events for upper bounds on watched variable */
-   CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_LBTIGHTENED | SCIP_EVENTTYPE_UBRELAXED,
-         eventhdlr, (EVENTDATA*)consdata, filterpos) );
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_LBTIGHTENED | SCIP_EVENTTYPE_UBRELAXED,
+         eventhdlr, (SCIP_EVENTDATA*)consdata, filterpos) );
 
    return SCIP_OKAY;
 }
 
 /** catches needed events on all variables of constraint, except the special ones for watched variables */
 static
-RETCODE consdataCatchEvents(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata,           /**< and constraint data */
-   EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
+SCIP_RETCODE consdataCatchEvents(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< and constraint data */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
    )
 {
    int i;
@@ -239,14 +239,14 @@ RETCODE consdataCatchEvents(
    assert(consdata != NULL);
 
    /* catch bound change events for both bounds on resultant variable */
-   CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->resvar, SCIP_EVENTTYPE_BOUNDCHANGED, 
-         eventhdlr, (EVENTDATA*)consdata, NULL) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->resvar, SCIP_EVENTTYPE_BOUNDCHANGED, 
+         eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
 
    /* catch tightening events for upper bound and relaxed events for lower bounds on operator variables */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[i], SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED,
-            eventhdlr, (EVENTDATA*)consdata, NULL) );
+      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[i], SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED,
+            eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
    }
 
    return SCIP_OKAY;
@@ -254,10 +254,10 @@ RETCODE consdataCatchEvents(
 
 /** drops events on all variables of constraint, except the special ones for watched variables */
 static
-RETCODE consdataDropEvents(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata,           /**< and constraint data */
-   EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
+SCIP_RETCODE consdataDropEvents(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< and constraint data */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
    )
 {
    int i;
@@ -265,14 +265,14 @@ RETCODE consdataDropEvents(
    assert(consdata != NULL);
 
    /* drop bound change events for both bounds on resultant variable */
-   CHECK_OKAY( SCIPdropVarEvent(scip, consdata->resvar, SCIP_EVENTTYPE_BOUNDCHANGED,
-         eventhdlr, (EVENTDATA*)consdata, -1) );
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->resvar, SCIP_EVENTTYPE_BOUNDCHANGED,
+         eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
 
    /* drop tightening events for upper bound and relaxed events for lower bounds on operator variables */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[i], SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED,
-            eventhdlr, (EVENTDATA*)consdata, -1) );
+      SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[i], SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED,
+            eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
    }
 
    return SCIP_OKAY;
@@ -280,12 +280,12 @@ RETCODE consdataDropEvents(
 
 /** stores the given variable numbers as watched variables, and updates the event processing */
 static
-RETCODE consdataSwitchWatchedvars(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata,           /**< and constraint data */
-   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   int              watchedvar1,        /**< new first watched variable */
-   int              watchedvar2         /**< new second watched variable */
+SCIP_RETCODE consdataSwitchWatchedvars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< and constraint data */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   int                   watchedvar1,        /**< new first watched variable */
+   int                   watchedvar2         /**< new second watched variable */
    )
 {
    assert(consdata != NULL);
@@ -313,22 +313,22 @@ RETCODE consdataSwitchWatchedvars(
    if( consdata->watchedvar1 != -1 && consdata->watchedvar1 != watchedvar1 )
    {
       assert(consdata->filterpos1 != -1);
-      CHECK_OKAY( consdataDropWatchedEvents(scip, consdata, eventhdlr, consdata->watchedvar1, consdata->filterpos1) );
+      SCIP_CALL( consdataDropWatchedEvents(scip, consdata, eventhdlr, consdata->watchedvar1, consdata->filterpos1) );
    }
    if( consdata->watchedvar2 != -1 && consdata->watchedvar2 != watchedvar2 )
    {
       assert(consdata->filterpos2 != -1);
-      CHECK_OKAY( consdataDropWatchedEvents(scip, consdata, eventhdlr, consdata->watchedvar2, consdata->filterpos2) );
+      SCIP_CALL( consdataDropWatchedEvents(scip, consdata, eventhdlr, consdata->watchedvar2, consdata->filterpos2) );
    }
 
    /* catch events on new watched variables */
    if( watchedvar1 != -1 && watchedvar1 != consdata->watchedvar1 )
    {
-      CHECK_OKAY( consdataCatchWatchedEvents(scip, consdata, eventhdlr, watchedvar1, &consdata->filterpos1) );
+      SCIP_CALL( consdataCatchWatchedEvents(scip, consdata, eventhdlr, watchedvar1, &consdata->filterpos1) );
    }
    if( watchedvar2 != -1 && watchedvar2 != consdata->watchedvar2 )
    {
-      CHECK_OKAY( consdataCatchWatchedEvents(scip, consdata, eventhdlr, watchedvar2, &consdata->filterpos2) );
+      SCIP_CALL( consdataCatchWatchedEvents(scip, consdata, eventhdlr, watchedvar2, &consdata->filterpos2) );
    }
 
    /* set the new watched variables */
@@ -340,21 +340,21 @@ RETCODE consdataSwitchWatchedvars(
 
 /** creates constraint data for and constraint */
 static
-RETCODE consdataCreate(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA**       consdata,           /**< pointer to store the constraint data */
-   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   int              nvars,              /**< number of variables in the and operation */
-   VAR**            vars,               /**< variables in and operation */
-   VAR*             resvar              /**< resultant variable */
+SCIP_RETCODE consdataCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA**       consdata,           /**< pointer to store the constraint data */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   int                   nvars,              /**< number of variables in the and operation */
+   SCIP_VAR**            vars,               /**< variables in and operation */
+   SCIP_VAR*             resvar              /**< resultant variable */
    )
 {
    assert(consdata != NULL);
    assert(nvars == 0 || vars != NULL);
    assert(resvar != NULL);
 
-   CHECK_OKAY( SCIPallocBlockMemory(scip, consdata) );
-   CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
    (*consdata)->resvar = resvar;
    (*consdata)->rows = NULL;
    (*consdata)->nvars = nvars;
@@ -370,21 +370,21 @@ RETCODE consdataCreate(
    /* get transformed variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
    {
-      CHECK_OKAY( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
-      CHECK_OKAY( SCIPgetTransformedVar(scip, (*consdata)->resvar, &(*consdata)->resvar) );
+      SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
+      SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->resvar, &(*consdata)->resvar) );
 
       /* catch needed events on variables */
-      CHECK_OKAY( consdataCatchEvents(scip, *consdata, eventhdlr) );
+      SCIP_CALL( consdataCatchEvents(scip, *consdata, eventhdlr) );
    }
 
    return SCIP_OKAY;
 }
 
-/** releases LP rows of constraint data and frees rows array */
+/** releases SCIP_LP rows of constraint data and frees rows array */
 static
-RETCODE consdataFreeRows(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata            /**< constraint data */
+SCIP_RETCODE consdataFreeRows(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata            /**< constraint data */
    )
 {
    int r;
@@ -395,7 +395,7 @@ RETCODE consdataFreeRows(
    {
       for( r = 0; r < consdataGetNRows(consdata); ++r )
       {
-         CHECK_OKAY( SCIPreleaseRow(scip, &consdata->rows[r]) );
+         SCIP_CALL( SCIPreleaseRow(scip, &consdata->rows[r]) );
       }
       SCIPfreeBlockMemoryArray(scip, &consdata->rows, consdata->rowssize);
    }
@@ -405,10 +405,10 @@ RETCODE consdataFreeRows(
 
 /** frees constraint data for and constraint */
 static
-RETCODE consdataFree(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA**       consdata,           /**< pointer to the constraint data */
-   EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
+SCIP_RETCODE consdataFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA**       consdata,           /**< pointer to the constraint data */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
    )
 {
    assert(consdata != NULL);
@@ -417,10 +417,10 @@ RETCODE consdataFree(
    if( SCIPisTransformed(scip) )
    {
       /* drop events for watched variables */
-      CHECK_OKAY( consdataSwitchWatchedvars(scip, *consdata, eventhdlr, -1, -1) );
+      SCIP_CALL( consdataSwitchWatchedvars(scip, *consdata, eventhdlr, -1, -1) );
 
       /* drop all other events on variables */
-      CHECK_OKAY( consdataDropEvents(scip, *consdata, eventhdlr) );
+      SCIP_CALL( consdataDropEvents(scip, *consdata, eventhdlr) );
    }
    else
    {
@@ -429,7 +429,7 @@ RETCODE consdataFree(
    }
 
    /* release and free the rows */
-   CHECK_OKAY( consdataFreeRows(scip, *consdata) );
+   SCIP_CALL( consdataFreeRows(scip, *consdata) );
 
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->varssize);
    SCIPfreeBlockMemory(scip, consdata);
@@ -440,9 +440,9 @@ RETCODE consdataFree(
 /** prints and constraint to file stream */
 static
 void consdataPrint(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata,           /**< and constraint data */
-   FILE*            file                /**< output file (or NULL for standard output) */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< and constraint data */
+   FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
    int v;
@@ -462,14 +462,14 @@ void consdataPrint(
 
 /** deletes coefficient at given position from and constraint data */
 static
-RETCODE delCoefPos(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< and constraint */
-   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   int              pos                 /**< position of coefficient to delete */
+SCIP_RETCODE delCoefPos(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< and constraint */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   int                   pos                 /**< position of coefficient to delete */
    )
 {
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
 
    assert(eventhdlr != NULL);
 
@@ -479,18 +479,18 @@ RETCODE delCoefPos(
    assert(SCIPconsIsTransformed(cons) == SCIPvarIsTransformed(consdata->vars[pos]));
 
    /* remove the rounding locks of the variable */
-   CHECK_OKAY( unlockRounding(scip, cons, consdata->vars[pos]) );
+   SCIP_CALL( unlockRounding(scip, cons, consdata->vars[pos]) );
 
    if( SCIPconsIsTransformed(cons) )
    {
       /* if the position is watched, stop watching the position */
       if( consdata->watchedvar1 == pos )
       {
-         CHECK_OKAY( consdataSwitchWatchedvars(scip, consdata, eventhdlr, consdata->watchedvar2, -1) );
+         SCIP_CALL( consdataSwitchWatchedvars(scip, consdata, eventhdlr, consdata->watchedvar2, -1) );
       }
       if( consdata->watchedvar2 == pos )
       {
-         CHECK_OKAY( consdataSwitchWatchedvars(scip, consdata, eventhdlr, consdata->watchedvar1, -1) );
+         SCIP_CALL( consdataSwitchWatchedvars(scip, consdata, eventhdlr, consdata->watchedvar1, -1) );
       }
    }
    assert(pos != consdata->watchedvar1);
@@ -513,14 +513,14 @@ RETCODE delCoefPos(
 
 /** deletes all one-fixed variables */
 static
-RETCODE applyFixings(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< and constraint */
-   EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
+SCIP_RETCODE applyFixings(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< and constraint */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
    )
 {
-   CONSDATA* consdata;
-   VAR* var;
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR* var;
    int v;
 
    consdata = SCIPconsGetData(cons);
@@ -536,30 +536,30 @@ RETCODE applyFixings(
       if( SCIPvarGetLbGlobal(var) > 0.5 )
       {
          assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
-         CHECK_OKAY( delCoefPos(scip, cons, eventhdlr, v) );
+         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
       }
       else
          ++v;
    }
 
-   debugMessage("after fixings: ");
-   debug(consdataPrint(scip, consdata, NULL));
+   SCIPdebugMessage("after fixings: ");
+   SCIPdebug(consdataPrint(scip, consdata, NULL));
 
    return SCIP_OKAY;
 }
 
-/** creates LP rows corresponding to and constraint:
+/** creates SCIP_LP rows corresponding to and constraint:
  *   - for each operator variable vi:  resvar - vi            <= 0
  *   - one additional row:             resvar - v1 - ... - vn >= n-1
  */
 static 
-RETCODE createRelaxation(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< constraint to check */
+SCIP_RETCODE createRelaxation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint to check */
    )
 {
-   CONSDATA* consdata;
-   char rowname[MAXSTRLEN];
+   SCIP_CONSDATA* consdata;
+   char rowname[SCIP_MAXSTRLEN];
    int nvars;
    int i;
 
@@ -571,37 +571,37 @@ RETCODE createRelaxation(
 
    /* get memory for rows */
    consdata->rowssize = consdataGetNRows(consdata);
-   CHECK_OKAY( SCIPallocBlockMemoryArray(scip, &consdata->rows, consdata->rowssize) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->rows, consdata->rowssize) );
    assert(consdata->rowssize == nvars+1);
 
    /* create operator rows */
    for( i = 0; i < nvars; ++i )
    {
       sprintf(rowname, "%s_%d", SCIPconsGetName(cons), i);
-      CHECK_OKAY( SCIPcreateEmptyRow(scip, &consdata->rows[i], rowname, -SCIPinfinity(scip), 0.0,
+      SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[i], rowname, -SCIPinfinity(scip), 0.0,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
-      CHECK_OKAY( SCIPaddVarToRow(scip, consdata->rows[i], consdata->resvar, 1.0) );
-      CHECK_OKAY( SCIPaddVarToRow(scip, consdata->rows[i], consdata->vars[i], -1.0) );
+      SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[i], consdata->resvar, 1.0) );
+      SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[i], consdata->vars[i], -1.0) );
    }
 
    /* create additional row */
    sprintf(rowname, "%s_add", SCIPconsGetName(cons));
-   CHECK_OKAY( SCIPcreateEmptyRow(scip, &consdata->rows[nvars], rowname, -consdata->nvars + 1.0, SCIPinfinity(scip),
+   SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[nvars], rowname, -consdata->nvars + 1.0, SCIPinfinity(scip),
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
-   CHECK_OKAY( SCIPaddVarToRow(scip, consdata->rows[nvars], consdata->resvar, 1.0) );
-   CHECK_OKAY( SCIPaddVarsToRowSameCoef(scip, consdata->rows[nvars], nvars, consdata->vars, -1.0) );
+   SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[nvars], consdata->resvar, 1.0) );
+   SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[nvars], nvars, consdata->vars, -1.0) );
 
    return SCIP_OKAY;
 }  
 
-/** adds linear relaxation of and constraint to the LP */
+/** adds linear relaxation of and constraint to the SCIP_LP */
 static 
-RETCODE addRelaxation(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< constraint to check */
+SCIP_RETCODE addRelaxation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint to check */
    )
 {
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
    int r;
 
    consdata = SCIPconsGetData(cons);
@@ -609,12 +609,12 @@ RETCODE addRelaxation(
 
    if( consdata->rows == NULL )
    {
-      CHECK_OKAY( createRelaxation(scip, cons) );
+      SCIP_CALL( createRelaxation(scip, cons) );
    }
 
    for( r = 0; r < consdataGetNRows(consdata); ++r )
    {
-      CHECK_OKAY( SCIPaddCut(scip, consdata->rows[r], FALSE) );
+      SCIP_CALL( SCIPaddCut(scip, consdata->rows[r], FALSE) );
    }
 
    return SCIP_OKAY;
@@ -622,16 +622,16 @@ RETCODE addRelaxation(
 
 /** checks and constraint for feasibility of given solution: returns TRUE iff constraint is feasible */
 static
-RETCODE checkCons(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< constraint to check */
-   SOL*             sol,                /**< solution to check, NULL for current solution */
-   Bool             checklprows,        /**< should LP rows be checked? */
-   Bool*            violated            /**< pointer to store whether the constraint is violated */
+SCIP_RETCODE checkCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to check */
+   SCIP_SOL*             sol,                /**< solution to check, NULL for current solution */
+   SCIP_Bool             checklprows,        /**< should SCIP_LP rows be checked? */
+   SCIP_Bool*            violated            /**< pointer to store whether the constraint is violated */
    )
 {
-   CONSDATA* consdata;
-   Bool mustcheck;
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool mustcheck;
    int r;
 
    assert(violated != NULL);
@@ -641,7 +641,7 @@ RETCODE checkCons(
 
    *violated = FALSE;
 
-   /* check, if we can skip this feasibility check, because all rows are in the LP and doesn't have to be checked */
+   /* check, if we can skip this feasibility check, because all rows are in the SCIP_LP and doesn't have to be checked */
    mustcheck = checklprows;
    mustcheck = mustcheck || (consdata->rows == NULL);
    if( !mustcheck )
@@ -658,11 +658,11 @@ RETCODE checkCons(
    /* check feasibility of constraint if necessary */
    if( mustcheck )
    {
-      Real solval;
+      SCIP_Real solval;
       int i;
 
       /* increase age of constraint; age is reset to zero, if a violation was found */
-      CHECK_OKAY( SCIPincConsAge(scip, cons) );
+      SCIP_CALL( SCIPincConsAge(scip, cons) );
 
       /* check, if all operator variables are TRUE */
       for( i = 0; i < consdata->nvars; ++i )
@@ -679,7 +679,7 @@ RETCODE checkCons(
 
       if( (i == consdata->nvars) != (solval > 0.5) )
       {
-         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
          *violated = TRUE;
       }
    }
@@ -687,16 +687,16 @@ RETCODE checkCons(
    return SCIP_OKAY;
 }
 
-/** separates current LP solution */
+/** separates current SCIP_LP solution */
 static
-RETCODE separateCons(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< constraint to check */
-   Bool*            separated           /**< pointer to store whether a cut was found */
+SCIP_RETCODE separateCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to check */
+   SCIP_Bool*            separated           /**< pointer to store whether a cut was found */
    )
 {
-   CONSDATA* consdata;
-   Real feasibility;
+   SCIP_CONSDATA* consdata;
+   SCIP_Real feasibility;
    int r;
 
    assert(separated != NULL);
@@ -709,7 +709,7 @@ RETCODE separateCons(
    /* create all necessary rows for the linear relaxation */
    if( consdata->rows == NULL )
    {
-      CHECK_OKAY( createRelaxation(scip, cons) );
+      SCIP_CALL( createRelaxation(scip, cons) );
    }
    assert(consdata->rows != NULL);
 
@@ -721,7 +721,7 @@ RETCODE separateCons(
          feasibility = SCIPgetRowLPFeasibility(scip, consdata->rows[r]);
          if( SCIPisFeasNegative(scip, feasibility) )
          {
-            CHECK_OKAY( SCIPaddCut(scip, consdata->rows[r], FALSE) );
+            SCIP_CALL( SCIPaddCut(scip, consdata->rows[r], FALSE) );
             *separated = TRUE;
          }
       }            
@@ -732,13 +732,13 @@ RETCODE separateCons(
 
 /** analyzes conflicting TRUE assignment to resultant of given constraint, and adds conflict clause to problem */
 static
-RETCODE analyzeConflictOne(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< and constraint that detected the conflict */
-   int              falsepos            /**< position of operand that is fixed to FALSE */
+SCIP_RETCODE analyzeConflictOne(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< and constraint that detected the conflict */
+   int                   falsepos            /**< position of operand that is fixed to FALSE */
    )
 {
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
 
    /* conflict analysis can only be applied in solving stage */
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
@@ -751,24 +751,24 @@ RETCODE analyzeConflictOne(
    assert(SCIPvarGetUbLocal(consdata->vars[falsepos]) < 0.5);
 
    /* initialize conflict analysis, and add resultant and single operand variable to conflict candidate queue */
-   CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
-   CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->resvar) );
-   CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[falsepos]) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
+   SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[falsepos]) );
 
    /* analyze the conflict */
-   CHECK_OKAY( SCIPanalyzeConflictCons(scip, cons, NULL) );
+   SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 
    return SCIP_OKAY;
 }
 
 /** analyzes conflicting FALSE assignment to resultant of given constraint, and adds conflict clause to problem */
 static
-RETCODE analyzeConflictZero(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< or constraint that detected the conflict */
+SCIP_RETCODE analyzeConflictZero(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< or constraint that detected the conflict */
    )
 {
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
    int v;
 
    assert(!SCIPconsIsModifiable(cons));
@@ -782,16 +782,16 @@ RETCODE analyzeConflictZero(
    assert(SCIPvarGetUbLocal(consdata->resvar) < 0.5);
 
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-   CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
-   CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->resvar) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
    for( v = 0; v < consdata->nvars; ++v )
    {
       assert(SCIPvarGetLbLocal(consdata->vars[v]) > 0.5);
-      CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
    }
 
    /* analyze the conflict */
-   CHECK_OKAY( SCIPanalyzeConflictCons(scip, cons, NULL) );
+   SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 
    return SCIP_OKAY;
 }
@@ -803,23 +803,23 @@ RETCODE analyzeConflictZero(
  *   (4) r   = FALSE, v_i = TRUE for all i except j   =>  v_j = FALSE
  */
 static
-RETCODE propagateCons(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< and constraint to be processed */
-   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
-   int*             nfixedvars          /**< pointer to add up the number of found domain reductions */
+SCIP_RETCODE propagateCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< and constraint to be processed */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
+   int*                  nfixedvars          /**< pointer to add up the number of found domain reductions */
    )
 {
-   CONSDATA* consdata;
-   VAR* resvar;
-   VAR** vars;
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR* resvar;
+   SCIP_VAR** vars;
    int nvars;
    int watchedvar1;
    int watchedvar2;
    int i;
-   Bool infeasible;
-   Bool tightened;
+   SCIP_Bool infeasible;
+   SCIP_Bool tightened;
 
    assert(cutoff != NULL);
    assert(nfixedvars != NULL);
@@ -842,7 +842,7 @@ RETCODE propagateCons(
    }
 
    /* increase age of constraint; age is reset to zero, if a conflict or a propagation was found */
-   CHECK_OKAY( SCIPincConsAge(scip, cons) );
+   SCIP_CALL( SCIPincConsAge(scip, cons) );
 
    /* if one of the operator variables was fixed to FALSE, the resultant can be fixed to FALSE (rule (1)) */
    if( !consdata->nofixedzero )
@@ -851,22 +851,22 @@ RETCODE propagateCons(
       {}
       if( i < nvars )
       {
-         debugMessage("constraint <%s>: operator var <%s> fixed to 0.0 -> fix resultant <%s> to 0.0\n",
+         SCIPdebugMessage("constraint <%s>: operator var <%s> fixed to 0.0 -> fix resultant <%s> to 0.0\n",
             SCIPconsGetName(cons), SCIPvarGetName(vars[i]), SCIPvarGetName(resvar));
-         CHECK_OKAY( SCIPinferBinvarCons(scip, resvar, FALSE, cons, (int)PROPRULE_1, &infeasible, &tightened) );
+         SCIP_CALL( SCIPinferBinvarCons(scip, resvar, FALSE, cons, (int)PROPRULE_1, &infeasible, &tightened) );
          if( infeasible )
          {
             /* use conflict analysis to get a conflict clause out of the conflicting assignment */
-            CHECK_OKAY( analyzeConflictOne(scip, cons, i) );
-            CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+            SCIP_CALL( analyzeConflictOne(scip, cons, i) );
+            SCIP_CALL( SCIPresetConsAge(scip, cons) );
             *cutoff = TRUE;
          }
          else
          {
-            CHECK_OKAY( SCIPdelConsLocal(scip, cons) );
+            SCIP_CALL( SCIPdelConsLocal(scip, cons) );
             if( tightened )
             {
-               CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+               SCIP_CALL( SCIPresetConsAge(scip, cons) );
                (*nfixedvars)++;
             }
          }
@@ -883,26 +883,26 @@ RETCODE propagateCons(
    {
       for( i = 0; i < nvars && !(*cutoff); ++i )
       {
-         debugMessage("constraint <%s>: resultant var <%s> fixed to 1.0 -> fix operator var <%s> to 1.0\n",
+         SCIPdebugMessage("constraint <%s>: resultant var <%s> fixed to 1.0 -> fix operator var <%s> to 1.0\n",
             SCIPconsGetName(cons), SCIPvarGetName(resvar), SCIPvarGetName(vars[i]));
-         CHECK_OKAY( SCIPinferBinvarCons(scip, vars[i], TRUE, cons, (int)PROPRULE_2, &infeasible, &tightened) );
+         SCIP_CALL( SCIPinferBinvarCons(scip, vars[i], TRUE, cons, (int)PROPRULE_2, &infeasible, &tightened) );
          if( infeasible )
          {
             /* use conflict analysis to get a conflict clause out of the conflicting assignment */
-            CHECK_OKAY( analyzeConflictOne(scip, cons, i) );
-            CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+            SCIP_CALL( analyzeConflictOne(scip, cons, i) );
+            SCIP_CALL( SCIPresetConsAge(scip, cons) );
             *cutoff = TRUE;
          }
          else if( tightened )
          {
-            CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+            SCIP_CALL( SCIPresetConsAge(scip, cons) );
             (*nfixedvars)++;
          }
       }
 
       if( !(*cutoff) )
       {
-         CHECK_OKAY( SCIPdelConsLocal(scip, cons) );
+         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
       }
 
       return SCIP_OKAY;
@@ -969,22 +969,22 @@ RETCODE propagateCons(
    {
       assert(watchedvar2 == -1);
       
-      debugMessage("constraint <%s>: all operator vars fixed to 1.0 -> fix resultant <%s> to 1.0\n",
+      SCIPdebugMessage("constraint <%s>: all operator vars fixed to 1.0 -> fix resultant <%s> to 1.0\n",
          SCIPconsGetName(cons), SCIPvarGetName(resvar));
-      CHECK_OKAY( SCIPinferBinvarCons(scip, resvar, TRUE, cons, (int)PROPRULE_3, &infeasible, &tightened) );
+      SCIP_CALL( SCIPinferBinvarCons(scip, resvar, TRUE, cons, (int)PROPRULE_3, &infeasible, &tightened) );
       if( infeasible )
       {
          /* use conflict analysis to get a conflict clause out of the conflicting assignment */
-         CHECK_OKAY( analyzeConflictZero(scip, cons) );
-         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+         SCIP_CALL( analyzeConflictZero(scip, cons) );
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
          *cutoff = TRUE;
       }
       else
       {
-         CHECK_OKAY( SCIPdelConsLocal(scip, cons) );
+         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
          if( tightened )
          {
-            CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+            SCIP_CALL( SCIPresetConsAge(scip, cons) );
             (*nfixedvars)++;
          }
       }
@@ -999,22 +999,22 @@ RETCODE propagateCons(
    {
       assert(watchedvar1 != -1);
       
-      debugMessage("constraint <%s>: resultant <%s> fixed to 0.0, only one unfixed operand -> fix operand <%s> to 0.0\n",
+      SCIPdebugMessage("constraint <%s>: resultant <%s> fixed to 0.0, only one unfixed operand -> fix operand <%s> to 0.0\n",
          SCIPconsGetName(cons), SCIPvarGetName(resvar), SCIPvarGetName(vars[watchedvar1]));
-      CHECK_OKAY( SCIPinferBinvarCons(scip, vars[watchedvar1], FALSE, cons, (int)PROPRULE_4, &infeasible, &tightened) );
+      SCIP_CALL( SCIPinferBinvarCons(scip, vars[watchedvar1], FALSE, cons, (int)PROPRULE_4, &infeasible, &tightened) );
       if( infeasible )
       {
          /* use conflict analysis to get a conflict clause out of the conflicting assignment */
-         CHECK_OKAY( analyzeConflictZero(scip, cons) );
-         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+         SCIP_CALL( analyzeConflictZero(scip, cons) );
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
          *cutoff = TRUE;
       }
       else
       {
-         CHECK_OKAY( SCIPdelConsLocal(scip, cons) );
+         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
          if( tightened )
          {
-            CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+            SCIP_CALL( SCIPresetConsAge(scip, cons) );
             (*nfixedvars)++;
          }
       }
@@ -1023,7 +1023,7 @@ RETCODE propagateCons(
    }
 
    /* switch to the new watched variables */
-   CHECK_OKAY( consdataSwitchWatchedvars(scip, consdata, eventhdlr, watchedvar1, watchedvar2) );
+   SCIP_CALL( consdataSwitchWatchedvars(scip, consdata, eventhdlr, watchedvar1, watchedvar2) );
 
    /* mark the constraint propagated */
    consdata->propagated = TRUE;
@@ -1039,17 +1039,17 @@ RETCODE propagateCons(
  *   (4) r   = FALSE, v_i = TRUE for all i except j   =>  v_j = FALSE
  */
 static
-RETCODE resolvePropagation(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< constraint that inferred the bound change */
-   VAR*             infervar,           /**< variable that was deduced */
+SCIP_RETCODE resolvePropagation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
+   SCIP_VAR*             infervar,           /**< variable that was deduced */
    PROPRULE         proprule,           /**< propagation rule that deduced the value */
-   BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
-   RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
+   SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
 {
-   CONSDATA* consdata;
-   VAR** vars;
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
    int nvars;
    int i;
 
@@ -1070,7 +1070,7 @@ RETCODE resolvePropagation(
       {
          if( SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) < 0.5 )
          {
-            CHECK_OKAY( SCIPaddConflictBinvar(scip, vars[i]) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
             break;
          }
       }
@@ -1082,7 +1082,7 @@ RETCODE resolvePropagation(
       /* the operand variable was infered to TRUE, because the resultant was TRUE */
       assert(SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5);
       assert(SCIPvarGetLbAtIndex(consdata->resvar, bdchgidx, FALSE) > 0.5);
-      CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->resvar) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
       *result = SCIP_SUCCESS;
       break;
 
@@ -1093,7 +1093,7 @@ RETCODE resolvePropagation(
       for( i = 0; i < nvars; ++i )
       {
          assert(SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) > 0.5);
-         CHECK_OKAY( SCIPaddConflictBinvar(scip, vars[i]) );
+         SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
       }
       *result = SCIP_SUCCESS;
       break;
@@ -1102,13 +1102,13 @@ RETCODE resolvePropagation(
       /* the operand variable was infered to FALSE, because the resultant was FALSE and all other operands were TRUE */
       assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5);
       assert(SCIPvarGetUbAtIndex(consdata->resvar, bdchgidx, FALSE) < 0.5);
-      CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->resvar) );
+      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
       for( i = 0; i < nvars; ++i )
       {
          if( vars[i] != infervar )
          {
             assert(SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) > 0.5);
-            CHECK_OKAY( SCIPaddConflictBinvar(scip, vars[i]) );
+            SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i]) );
          }
       }
       *result = SCIP_SUCCESS;
@@ -1116,7 +1116,7 @@ RETCODE resolvePropagation(
 
    case PROPRULE_INVALID:
    default:
-      errorMessage("invalid inference information %d in and constraint <%s>\n", proprule, SCIPconsGetName(cons));
+      SCIPerrorMessage("invalid inference information %d in and constraint <%s>\n", proprule, SCIPconsGetName(cons));
       return SCIP_INVALIDDATA;
    }
 
@@ -1133,15 +1133,15 @@ RETCODE resolvePropagation(
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
-DECL_CONSFREE(consFreeAnd)
+SCIP_DECL_CONSFREE(consFreeAnd)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    /* free constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   CHECK_OKAY( conshdlrdataFree(scip, &conshdlrdata) );
+   SCIP_CALL( conshdlrdataFree(scip, &conshdlrdata) );
 
    SCIPconshdlrSetData(conshdlr, NULL);
 
@@ -1171,16 +1171,16 @@ DECL_CONSFREE(consFreeAnd)
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
-DECL_CONSEXITSOL(consExitsolAnd)
+SCIP_DECL_CONSEXITSOL(consExitsolAnd)
 {  /*lint --e{715}*/
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
    int c;
 
    /* release and free the rows of all constraints */
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);
-      CHECK_OKAY( consdataFreeRows(scip, consdata) );
+      SCIP_CALL( consdataFreeRows(scip, consdata) );
    }
 
    return SCIP_OKAY;
@@ -1189,14 +1189,14 @@ DECL_CONSEXITSOL(consExitsolAnd)
 
 /** frees specific constraint data */
 static
-DECL_CONSDELETE(consDeleteAnd)
+SCIP_DECL_CONSDELETE(consDeleteAnd)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   CHECK_OKAY( consdataFree(scip, consdata, conshdlrdata->eventhdlr) );
+   SCIP_CALL( consdataFree(scip, consdata, conshdlrdata->eventhdlr) );
 
    return SCIP_OKAY;
 }
@@ -1204,11 +1204,11 @@ DECL_CONSDELETE(consDeleteAnd)
 
 /** transforms constraint data into data belonging to the transformed problem */ 
 static
-DECL_CONSTRANS(consTransAnd)
+SCIP_DECL_CONSTRANS(consTransAnd)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
-   CONSDATA* sourcedata;
-   CONSDATA* targetdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* sourcedata;
+   SCIP_CONSDATA* targetdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -1217,11 +1217,11 @@ DECL_CONSTRANS(consTransAnd)
    assert(sourcedata != NULL);
 
    /* create target constraint data */
-   CHECK_OKAY( consdataCreate(scip, &targetdata, conshdlrdata->eventhdlr,
+   SCIP_CALL( consdataCreate(scip, &targetdata, conshdlrdata->eventhdlr,
          sourcedata->nvars, sourcedata->vars, sourcedata->resvar) );
 
    /* create target constraint */
-   CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
+   SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
@@ -1231,9 +1231,9 @@ DECL_CONSTRANS(consTransAnd)
 }
 
 
-/** LP initialization method of constraint handler */
+/** SCIP_LP initialization method of constraint handler */
 static
-DECL_CONSINITLP(consInitlpAnd)
+SCIP_DECL_CONSINITLP(consInitlpAnd)
 {  /*lint --e{715}*/
    int i;
 
@@ -1241,7 +1241,7 @@ DECL_CONSINITLP(consInitlpAnd)
    {
       if( SCIPconsIsInitial(conss[i]) )
       {
-         CHECK_OKAY( addRelaxation(scip, conss[i]) );
+         SCIP_CALL( addRelaxation(scip, conss[i]) );
       }
    }
 
@@ -1251,9 +1251,9 @@ DECL_CONSINITLP(consInitlpAnd)
 
 /** separation method of constraint handler */
 static
-DECL_CONSSEPA(consSepaAnd)
+SCIP_DECL_CONSSEPA(consSepaAnd)
 {  /*lint --e{715}*/
-   Bool separated;
+   SCIP_Bool separated;
    int c;
 
    *result = SCIP_DIDNOTFIND;
@@ -1261,7 +1261,7 @@ DECL_CONSSEPA(consSepaAnd)
    /* separate all useful constraints */
    for( c = 0; c < nusefulconss; ++c )
    {
-      CHECK_OKAY( separateCons(scip, conss[c], &separated) );
+      SCIP_CALL( separateCons(scip, conss[c], &separated) );
       if( separated )
          *result = SCIP_SEPARATED;
    } 
@@ -1273,22 +1273,22 @@ DECL_CONSSEPA(consSepaAnd)
 }
 
 
-/** constraint enforcing method of constraint handler for LP solutions */
+/** constraint enforcing method of constraint handler for SCIP_LP solutions */
 static
-DECL_CONSENFOLP(consEnfolpAnd)
+SCIP_DECL_CONSENFOLP(consEnfolpAnd)
 {  /*lint --e{715}*/
-   Bool violated;
+   SCIP_Bool violated;
    int i;
 
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
-      CHECK_OKAY( checkCons(scip, conss[i], NULL, FALSE, &violated) );
+      SCIP_CALL( checkCons(scip, conss[i], NULL, FALSE, &violated) );
       if( violated )
       {
-         Bool separated;
+         SCIP_Bool separated;
 
-         CHECK_OKAY( separateCons(scip, conss[i], &separated) );
+         SCIP_CALL( separateCons(scip, conss[i], &separated) );
          assert(separated); /* because the solution is integral, the separation always finds a cut */
          *result = SCIP_SEPARATED;
          return SCIP_OKAY;
@@ -1302,15 +1302,15 @@ DECL_CONSENFOLP(consEnfolpAnd)
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
-DECL_CONSENFOPS(consEnfopsAnd)
+SCIP_DECL_CONSENFOPS(consEnfopsAnd)
 {  /*lint --e{715}*/
-   Bool violated;
+   SCIP_Bool violated;
    int i;
 
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
-      CHECK_OKAY( checkCons(scip, conss[i], NULL, TRUE, &violated) );
+      SCIP_CALL( checkCons(scip, conss[i], NULL, TRUE, &violated) );
       if( violated )
       {
          *result = SCIP_INFEASIBLE;
@@ -1325,15 +1325,15 @@ DECL_CONSENFOPS(consEnfopsAnd)
 
 /** feasibility check method of constraint handler for integral solutions */
 static
-DECL_CONSCHECK(consCheckAnd)
+SCIP_DECL_CONSCHECK(consCheckAnd)
 {  /*lint --e{715}*/
-   Bool violated;
+   SCIP_Bool violated;
    int i;
 
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
-      CHECK_OKAY( checkCons(scip, conss[i], sol, checklprows, &violated) );
+      SCIP_CALL( checkCons(scip, conss[i], sol, checklprows, &violated) );
       if( violated )
       {
          *result = SCIP_INFEASIBLE;
@@ -1348,10 +1348,10 @@ DECL_CONSCHECK(consCheckAnd)
 
 /** domain propagation method of constraint handler */
 static
-DECL_CONSPROP(consPropAnd)
+SCIP_DECL_CONSPROP(consPropAnd)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
-   Bool cutoff;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool cutoff;
    int nfixedvars;
    int c;
    
@@ -1364,7 +1364,7 @@ DECL_CONSPROP(consPropAnd)
    /* propagate all useful constraints */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
-      CHECK_OKAY( propagateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &nfixedvars) );
+      SCIP_CALL( propagateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &nfixedvars) );
    }
 
    /* return the correct result */
@@ -1381,14 +1381,14 @@ DECL_CONSPROP(consPropAnd)
 
 /** presolving method of constraint handler */
 static
-DECL_CONSPRESOL(consPresolAnd)
+SCIP_DECL_CONSPRESOL(consPresolAnd)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
-   CONS* cons;
-   CONSDATA* consdata;
-   Bool cutoff;
-   Bool redundant;
-   Bool aggregated;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONS* cons;
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool cutoff;
+   SCIP_Bool redundant;
+   SCIP_Bool aggregated;
    int oldnfixedvars;
    int oldnaggrvars;
    int c;
@@ -1416,10 +1416,10 @@ DECL_CONSPRESOL(consPresolAnd)
          consdata->propagated = FALSE;
 
       /* propagate constraint */
-      CHECK_OKAY( propagateCons(scip, cons, conshdlrdata->eventhdlr, &cutoff, nfixedvars) );
+      SCIP_CALL( propagateCons(scip, cons, conshdlrdata->eventhdlr, &cutoff, nfixedvars) );
 
       /* remove all variables that are fixed to one */
-      CHECK_OKAY( applyFixings(scip, cons, conshdlrdata->eventhdlr) );
+      SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr) );
 
       if( !cutoff && !SCIPconsIsDeleted(cons) && !SCIPconsIsModifiable(cons) )
       {
@@ -1428,21 +1428,21 @@ DECL_CONSPRESOL(consPresolAnd)
          /* if only one variable is left, the resultant has to be equal to this single variable */
          if( consdata->nvars == 1 )
          {
-            debugMessage("and constraint <%s> has only one variable not fixed to 1.0\n", SCIPconsGetName(cons));
+            SCIPdebugMessage("and constraint <%s> has only one variable not fixed to 1.0\n", SCIPconsGetName(cons));
             
             assert(consdata->vars != NULL);
             assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->vars[0]), 0.0));
             assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(consdata->vars[0]), 1.0));
             
             /* aggregate variables: resultant - operand == 0 */
-            CHECK_OKAY( SCIPaggregateVars(scip, consdata->resvar, consdata->vars[0], 1.0, -1.0, 0.0,
+            SCIP_CALL( SCIPaggregateVars(scip, consdata->resvar, consdata->vars[0], 1.0, -1.0, 0.0,
                   &cutoff, &redundant, &aggregated) );
             assert(redundant);
             if( aggregated )
                (*naggrvars)++;
 
             /* delete constraint */
-            CHECK_OKAY( SCIPdelCons(scip, cons) );
+            SCIP_CALL( SCIPdelCons(scip, cons) );
             (*ndelconss)++;
          }
       }
@@ -1462,9 +1462,9 @@ DECL_CONSPRESOL(consPresolAnd)
 
 /** propagation conflict resolving method of constraint handler */
 static
-DECL_CONSRESPROP(consRespropAnd)
+SCIP_DECL_CONSRESPROP(consRespropAnd)
 {  /*lint --e{715}*/
-   CHECK_OKAY( resolvePropagation(scip, cons, infervar, (PROPRULE)inferinfo, bdchgidx, result) );
+   SCIP_CALL( resolvePropagation(scip, cons, infervar, (PROPRULE)inferinfo, bdchgidx, result) );
 
    return SCIP_OKAY;
 }
@@ -1472,21 +1472,21 @@ DECL_CONSRESPROP(consRespropAnd)
 
 /** variable rounding lock method of constraint handler */
 static
-DECL_CONSLOCK(consLockAnd)
+SCIP_DECL_CONSLOCK(consLockAnd)
 {  /*lint --e{715}*/
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
    int i;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    /* resultant variable */
-   CHECK_OKAY( SCIPaddVarLocks(scip, consdata->resvar, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+   SCIP_CALL( SCIPaddVarLocks(scip, consdata->resvar, nlockspos + nlocksneg, nlockspos + nlocksneg) );
 
    /* operand variables */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      CHECK_OKAY( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos + nlocksneg, nlockspos + nlocksneg) );
+      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
    return SCIP_OKAY;
@@ -1511,7 +1511,7 @@ DECL_CONSLOCK(consLockAnd)
 
 /** constraint display method of constraint handler */
 static
-DECL_CONSPRINT(consPrintAnd)
+SCIP_DECL_CONSPRINT(consPrintAnd)
 {  /*lint --e{715}*/
    consdataPrint(scip, SCIPconsGetData(cons), file);
 
@@ -1526,15 +1526,15 @@ DECL_CONSPRINT(consPrintAnd)
  */
 
 static
-DECL_EVENTEXEC(eventExecAnd)
+SCIP_DECL_EVENTEXEC(eventExecAnd)
 {  /*lint --e{715}*/
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
 
    assert(eventhdlr != NULL);
    assert(eventdata != NULL);
    assert(event != NULL);
 
-   consdata = (CONSDATA*)eventdata;
+   consdata = (SCIP_CONSDATA*)eventdata;
    assert(consdata != NULL);
 
    /* check, if the variable was fixed to zero */
@@ -1554,22 +1554,22 @@ DECL_EVENTEXEC(eventExecAnd)
  */
 
 /** creates the handler for and constraints and includes it in SCIP */
-RETCODE SCIPincludeConshdlrAnd(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeConshdlrAnd(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    /* create event handler for events on variables */
-   CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
+   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
          NULL, NULL, NULL, NULL, NULL, NULL, eventExecAnd,
          NULL) );
 
    /* create constraint handler data */
-   CHECK_OKAY( conshdlrdataCreate(scip, &conshdlrdata) );
+   SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler */
-   CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
@@ -1587,33 +1587,33 @@ RETCODE SCIPincludeConshdlrAnd(
 }
 
 /** creates and captures a and constraint */
-RETCODE SCIPcreateConsAnd(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*      name,               /**< name of constraint */
-   VAR*             resvar,             /**< resultant variable of the operation */
-   int              nvars,              /**< number of operator variables in the constraint */
-   VAR**            vars,               /**< array with operator variables of constraint */
-   Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             separate,           /**< should the constraint be separated during LP processing? */
-   Bool             enforce,            /**< should the constraint be enforced during node processing? */
-   Bool             check,              /**< should the constraint be checked for feasibility? */
-   Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
-   Bool             dynamic,            /**< is constraint subject to aging? */
-   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+SCIP_RETCODE SCIPcreateConsAnd(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR*             resvar,             /**< resultant variable of the operation */
+   int                   nvars,              /**< number of operator variables in the constraint */
+   SCIP_VAR**            vars,               /**< array with operator variables of constraint */
+   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   SCIP_Bool             local,              /**< is constraint only valid locally? */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
+   SCIP_Bool             removeable          /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
    )
 {
-   CONSHDLR* conshdlr;
-   CONSHDLRDATA* conshdlrdata;
-   CONSDATA* consdata;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
 
    /* find the and constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      errorMessage("and constraint handler not found\n");
+      SCIPerrorMessage("and constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 
@@ -1621,10 +1621,10 @@ RETCODE SCIPcreateConsAnd(
    assert(conshdlrdata != NULL);
 
    /* create constraint data */
-   CHECK_OKAY( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, nvars, vars, resvar) );
+   SCIP_CALL( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, nvars, vars, resvar) );
 
    /* create constraint */
-   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
+   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removeable) );
 
    return SCIP_OKAY;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_retcode.h,v 1.6 2005/07/15 17:20:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_retcode.h,v 1.7 2005/08/22 18:35:54 bzfpfend Exp $"
 
 /**@file   type_retcode.h
  * @brief  type definitions for return codes for SCIP methods
@@ -28,7 +28,7 @@
 
 
 /** return codes for SCIP methods: non-positive return codes are errors */
-enum Retcode
+enum SCIP_Retcode
 {
    SCIP_OKAY               =  +1,       /**< normal termination */
    SCIP_ERROR              =   0,       /**< unspecified error */
@@ -37,7 +37,7 @@ enum Retcode
    SCIP_WRITEERROR         =  -3,       /**< file write error */
    SCIP_NOFILE             =  -4,       /**< file not found error */
    SCIP_FILECREATEERROR    =  -5,       /**< cannot create file */
-   SCIP_LPERROR            =  -6,       /**< error in LP solver */
+   SCIP_LPERROR            =  -6,       /**< error in SCIP_LP solver */
    SCIP_NOPROBLEM          =  -7,       /**< no problem exists */
    SCIP_INVALIDCALL        =  -8,       /**< method cannot be called at this time in solution process */
    SCIP_INVALIDDATA        =  -9,       /**< error in input data */
@@ -50,7 +50,7 @@ enum Retcode
    SCIP_PARSEERROR         = -16,       /**< invalid input given to the parser */
    SCIP_MAXDEPTHLEVEL      = -17        /**< maximal branching depth level exceeded */
 };
-typedef enum Retcode RETCODE;           /**< return code for SCIP method */
+typedef enum SCIP_Retcode SCIP_RETCODE;           /**< return code for SCIP method */
 
 
 #endif

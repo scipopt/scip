@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_heur.h,v 1.11 2005/07/15 17:20:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_heur.h,v 1.12 2005/08/22 18:35:53 bzfpfend Exp $"
 
 /**@file   type_heur.h
  * @brief  type definitions for primal heuristics
@@ -27,8 +27,8 @@
 #define __SCIP_TYPE_HEUR_H__
 
 
-typedef struct Heur HEUR;               /**< primal heuristic */
-typedef struct HeurData HEURDATA;       /**< locally defined primal heuristic data */
+typedef struct SCIP_Heur SCIP_HEUR;               /**< primal heuristic */
+typedef struct SCIP_HeurData SCIP_HEURDATA;       /**< locally defined primal heuristic data */
 
 
 
@@ -38,7 +38,7 @@ typedef struct HeurData HEURDATA;       /**< locally defined primal heuristic da
  *  - scip            : SCIP main data structure
  *  - heur            : the primal heuristic itself
  */
-#define DECL_HEURFREE(x) RETCODE x (SCIP* scip, HEUR* heur)
+#define SCIP_DECL_HEURFREE(x) SCIP_RETCODE x (SCIP* scip, SCIP_HEUR* heur)
 
 /** initialization method of primal heuristic (called after problem was transformed)
  *
@@ -46,7 +46,7 @@ typedef struct HeurData HEURDATA;       /**< locally defined primal heuristic da
  *  - scip            : SCIP main data structure
  *  - heur            : the primal heuristic itself
  */
-#define DECL_HEURINIT(x) RETCODE x (SCIP* scip, HEUR* heur)
+#define SCIP_DECL_HEURINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_HEUR* heur)
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed)
  *
@@ -54,7 +54,7 @@ typedef struct HeurData HEURDATA;       /**< locally defined primal heuristic da
  *  - scip            : SCIP main data structure
  *  - heur            : the primal heuristic itself
  */
-#define DECL_HEUREXIT(x) RETCODE x (SCIP* scip, HEUR* heur)
+#define SCIP_DECL_HEUREXIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_HEUR* heur)
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin)
  *
@@ -65,7 +65,7 @@ typedef struct HeurData HEURDATA;       /**< locally defined primal heuristic da
  *  - scip            : SCIP main data structure
  *  - heur            : the primal heuristic itself
  */
-#define DECL_HEURINITSOL(x) RETCODE x (SCIP* scip, HEUR* heur)
+#define SCIP_DECL_HEURINITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_HEUR* heur)
 
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed)
  *
@@ -76,7 +76,7 @@ typedef struct HeurData HEURDATA;       /**< locally defined primal heuristic da
  *  - scip            : SCIP main data structure
  *  - heur            : the primal heuristic itself
  */
-#define DECL_HEUREXITSOL(x) RETCODE x (SCIP* scip, HEUR* heur)
+#define SCIP_DECL_HEUREXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_HEUR* heur)
 
 /** execution method of primal heuristic
  *
@@ -94,7 +94,7 @@ typedef struct HeurData HEURDATA;       /**< locally defined primal heuristic da
  *  - SCIP_DELAYED    : the heuristic was skipped, but should be called again as soon as possible, disregarding
  *                      its frequency
  */
-#define DECL_HEUREXEC(x) RETCODE x (SCIP* scip, HEUR* heur, RESULT* result)
+#define SCIP_DECL_HEUREXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
 
 
 

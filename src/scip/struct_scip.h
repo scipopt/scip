@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_scip.h,v 1.17 2005/08/09 16:27:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_scip.h,v 1.18 2005/08/22 18:35:51 bzfpfend Exp $"
 
 /**@file   struct_scip.h
  * @brief  SCIP main data structure
@@ -51,31 +51,31 @@
 struct Scip
 {
    /* INIT */
-   MEM*             mem;                /**< block memory buffers */
-   SET*             set;                /**< global SCIP settings */
-   INTERRUPT*       interrupt;          /**< CTRL-C interrupt data */
-   DIALOGHDLR*      dialoghdlr;         /**< dialog handler for user interface */
-   CLOCK*           totaltime;          /**< total SCIP running time */
+   SCIP_MEM*             mem;                /**< block memory buffers */
+   SCIP_SET*             set;                /**< global SCIP settings */
+   SCIP_INTERRUPT*       interrupt;          /**< CTRL-C interrupt data */
+   SCIP_DIALOGHDLR*      dialoghdlr;         /**< dialog handler for user interface */
+   SCIP_CLOCK*           totaltime;          /**< total SCIP running time */
 
    /* PROBLEM */
-   STAT*            stat;               /**< dynamic problem statistics */
-   PROB*            origprob;           /**< original problem data */
+   SCIP_STAT*            stat;               /**< dynamic problem statistics */
+   SCIP_PROB*            origprob;           /**< original problem data */
 
    /* TRANSFORMED */
-   EVENTFILTER*     eventfilter;        /**< event filter for global (not variable dependent) events */
-   EVENTQUEUE*      eventqueue;         /**< event queue to cache events and process them later (bound change events) */
-   BRANCHCAND*      branchcand;         /**< storage for branching candidates */
-   LP*              lp;                 /**< LP data */
-   PRIMAL*          primal;             /**< primal data and solution storage */
-   TREE*            tree;               /**< branch and bound tree */
-   CONFLICT*        conflict;           /**< conflict analysis data */
-   CLIQUETABLE*     cliquetable;        /**< collection of cliques */
-   PROB*            transprob;          /**< transformed problem after presolve */
+   SCIP_EVENTFILTER*     eventfilter;        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTQUEUE*      eventqueue;         /**< event queue to cache events and process them later (bound change events) */
+   SCIP_BRANCHCAND*      branchcand;         /**< storage for branching candidates */
+   SCIP_LP*              lp;                 /**< SCIP_LP data */
+   SCIP_PRIMAL*          primal;             /**< primal data and solution storage */
+   SCIP_TREE*            tree;               /**< branch and bound tree */
+   SCIP_CONFLICT*        conflict;           /**< conflict analysis data */
+   SCIP_CLIQUETABLE*     cliquetable;        /**< collection of cliques */
+   SCIP_PROB*            transprob;          /**< transformed problem after presolve */
 
    /* SOLVING */
-   PRICESTORE*      pricestore;         /**< storage for priced variables */
-   SEPASTORE*       sepastore;          /**< storage for separated cuts */
-   CUTPOOL*         cutpool;            /**< global cut pool */
+   SCIP_PRICESTORE*      pricestore;         /**< storage for priced variables */
+   SCIP_SEPASTORE*       sepastore;          /**< storage for separated cuts */
+   SCIP_CUTPOOL*         cutpool;            /**< global cut pool */
 };
 
 

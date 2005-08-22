@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.h,v 1.12 2005/07/15 17:20:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprobdata.h,v 1.13 2005/08/22 18:35:31 bzfpfend Exp $"
 
 /**@file   objprobdata.h
  * @brief  C++ wrapper for user problem data
@@ -60,8 +60,8 @@ public:
     *  after the SCIP problem is freed, this method should delete all the problem specific data that is no
     *  longer needed.
     */
-   virtual RETCODE scip_delorig(
-      SCIP*         scip                /**< SCIP data structure */
+   virtual SCIP_RETCODE scip_delorig(
+      SCIP*              scip                /**< SCIP data structure */
       )
    {
       return SCIP_OKAY;
@@ -80,10 +80,10 @@ public:
     *      data object. In this case, he probably wants to set *deleteobject to TRUE, thus letting SCIP call the
     *      destructor of the object if the transformed problem data is no longer needed.
     */
-   virtual RETCODE scip_trans(
-      SCIP*         scip,               /**< SCIP data structure */
-      ObjProbData** objprobdata,        /**< pointer to store the transformed problem data object */
-      Bool*         deleteobject        /**< pointer to store whether SCIP should delete the object after solving */
+   virtual SCIP_RETCODE scip_trans(
+      SCIP*              scip,               /**< SCIP data structure */
+      ObjProbData**      objprobdata,        /**< pointer to store the transformed problem data object */
+      SCIP_Bool*         deleteobject        /**< pointer to store whether SCIP should delete the object after solving */
       )
    {
       assert(objprobdata != NULL);
@@ -106,8 +106,8 @@ public:
     *  after the SCIP problem is freed, this method should delete all the problem specific data that is no
     *  longer needed.
     */
-   virtual RETCODE scip_deltrans(
-      SCIP*         scip                /**< SCIP data structure */
+   virtual SCIP_RETCODE scip_deltrans(
+      SCIP*              scip                /**< SCIP data structure */
       )
    {
       return SCIP_OKAY;
@@ -118,8 +118,8 @@ public:
     *  This method is called before the branch and bound process begins and can be used to initialize user problem
     *  data that depends for example on the number of active problem variables, because these are now fixed.
     */
-   virtual RETCODE scip_initsol(
-      SCIP*         scip                /**< SCIP data structure */
+   virtual SCIP_RETCODE scip_initsol(
+      SCIP*              scip                /**< SCIP data structure */
       )
    {
       return SCIP_OKAY;
@@ -128,11 +128,11 @@ public:
    /** solving process deinitialization method of transformed data (called before the branch and bound data is freed)
     *
     *  This method is called before the branch and bound data is freed and should be used to free all data that
-    *  was allocated in the solving process initialization method. The user has to make sure, that all LP rows associated
+    *  was allocated in the solving process initialization method. The user has to make sure, that all SCIP_LP rows associated
     *  to the transformed user problem data are released.
     */
-   virtual RETCODE scip_exitsol(
-      SCIP*         scip                /**< SCIP data structure */
+   virtual SCIP_RETCODE scip_exitsol(
+      SCIP*              scip                /**< SCIP data structure */
       )
    {
       return SCIP_OKAY;
@@ -150,29 +150,29 @@ public:
  *  The method should be called in one of the following ways:
  *
  *   1. The user is resposible of deleting the object:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MyProbData* myprobdata = new MyProbData(...);
- *       CHECK_OKAY( SCIPcreateObjProb(scip, "probname", &myprobdata, FALSE) );
+ *       SCIP_CALL( SCIPcreateObjProb(scip, "probname", &myprobdata, FALSE) );
  *       ... // solve the problem
- *       CHECK_OKAY( SCIPfreeProb(scip) );
+ *       SCIP_CALL( SCIPfreeProb(scip) );
  *       delete myprobdata;    // delete probdata AFTER SCIPfreeProb() !
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );
+ *       SCIP_CALL( SCIPfree(&scip) );
  *
  *   2. The object pointer is passed to SCIP and deleted by SCIP in the SCIPfreeProb() call:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
- *       CHECK_OKAY( SCIPcreateObjProb(scip, "probname", new MyProbData(...), TRUE) );
+ *       SCIP_CALL( SCIPcreateObjProb(scip, "probname", new MyProbData(...), TRUE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );  // problem is freed and destructor of MyProbData is called here
+ *       SCIP_CALL( SCIPfree(&scip) );  // problem is freed and destructor of MyProbData is called here
  */
 extern
-RETCODE SCIPcreateObjProb(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name,               /**< problem name */
-   scip::ObjProbData* objprobdata,      /**< user problem data object */
-   Bool             deleteobject        /**< should the user problem data object be deleted when problem is freed? */
+SCIP_RETCODE SCIPcreateObjProb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name,               /**< problem name */
+   scip::ObjProbData*    objprobdata,        /**< user problem data object */
+   SCIP_Bool             deleteobject        /**< should the user problem data object be deleted when problem is freed? */
    );
 
 /** gets user problem data object
@@ -181,7 +181,7 @@ RETCODE SCIPcreateObjProb(
  */
 extern
 scip::ObjProbData* SCIPgetObjProbData(
-   SCIP*            scip                /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

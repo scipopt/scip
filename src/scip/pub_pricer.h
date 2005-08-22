@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_pricer.h,v 1.9 2005/07/15 17:20:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_pricer.h,v 1.10 2005/08/22 18:35:45 bzfpfend Exp $"
 
 /**@file   pub_pricer.h
  * @brief  public methods for variable pricers
@@ -35,67 +35,67 @@
 
 /** compares two pricers w. r. to their priority */
 extern
-DECL_SORTPTRCOMP(SCIPpricerComp);
+SCIP_DECL_SORTPTRCOMP(SCIPpricerComp);
 
 /** gets user data of variable pricer */
 extern
-PRICERDATA* SCIPpricerGetData(
-   PRICER*          pricer              /**< variable pricer */
+SCIP_PRICERDATA* SCIPpricerGetData(
+   SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
 /** sets user data of variable pricer; user has to free old data in advance! */
 extern
 void SCIPpricerSetData(
-   PRICER*          pricer,             /**< variable pricer */
-   PRICERDATA*      pricerdata          /**< new variable pricer user data */
+   SCIP_PRICER*          pricer,             /**< variable pricer */
+   SCIP_PRICERDATA*      pricerdata          /**< new variable pricer user data */
    );
 
 /** gets name of variable pricer */
 extern
 const char* SCIPpricerGetName(
-   PRICER*          pricer              /**< variable pricer */
+   SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
 /** gets description of variable pricer */
 extern
 const char* SCIPpricerGetDesc(
-   PRICER*          pricer              /**< variable pricer */
+   SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
 /** gets priority of variable pricer */
 extern
 int SCIPpricerGetPriority(
-   PRICER*          pricer              /**< variable pricer */
+   SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
 /** gets the number of times, the pricer was called and tried to find a variable with negative reduced costs */
 extern
 int SCIPpricerGetNCalls(
-   PRICER*          pricer              /**< variable pricer */
+   SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
 /** gets the number of variables with negative reduced costs found by this pricer */
 extern
 int SCIPpricerGetNVarsFound(
-   PRICER*          pricer              /**< variable pricer */
+   SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
 /** gets time in seconds used in this pricer */
 extern
-Real SCIPpricerGetTime(
-   PRICER*            pricer                /**< variable pricer */
+SCIP_Real SCIPpricerGetTime(
+   SCIP_PRICER*            pricer                /**< variable pricer */
    );
 
 /** returns whether the given pricer is in use in the current problem */
 extern
-Bool SCIPpricerIsActive(
-   PRICER*          pricer              /**< variable pricer */
+SCIP_Bool SCIPpricerIsActive(
+   SCIP_PRICER*          pricer              /**< variable pricer */
    );
 
 /** is variable pricer initialized? */
 extern
-Bool SCIPpricerIsInitialized(
-   PRICER*            pricer                /**< variable pricer */
+SCIP_Bool SCIPpricerIsInitialized(
+   SCIP_PRICER*            pricer                /**< variable pricer */
    );
 
 

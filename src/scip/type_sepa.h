@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_sepa.h,v 1.13 2005/07/15 17:20:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_sepa.h,v 1.14 2005/08/22 18:35:55 bzfpfend Exp $"
 
 /**@file   type_sepa.h
  * @brief  type definitions for separators
@@ -27,8 +27,8 @@
 #define __SCIP_TYPE_SEPA_H__
 
 
-typedef struct Sepa SEPA;               /**< separator */
-typedef struct SepaData SEPADATA;       /**< locally defined separator data */
+typedef struct SCIP_Sepa SCIP_SEPA;               /**< separator */
+typedef struct SCIP_SepaData SCIP_SEPADATA;       /**< locally defined separator data */
 
 
 
@@ -38,7 +38,7 @@ typedef struct SepaData SEPADATA;       /**< locally defined separator data */
  *  - scip            : SCIP main data structure
  *  - sepa            : the separator itself
  */
-#define DECL_SEPAFREE(x) RETCODE x (SCIP* scip, SEPA* sepa)
+#define SCIP_DECL_SEPAFREE(x) SCIP_RETCODE x (SCIP* scip, SCIP_SEPA* sepa)
 
 /** initialization method of separator (called after problem was transformed)
  *
@@ -46,7 +46,7 @@ typedef struct SepaData SEPADATA;       /**< locally defined separator data */
  *  - scip            : SCIP main data structure
  *  - sepa            : the separator itself
  */
-#define DECL_SEPAINIT(x) RETCODE x (SCIP* scip, SEPA* sepa)
+#define SCIP_DECL_SEPAINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_SEPA* sepa)
 
 /** deinitialization method of separator (called before transformed problem is freed)
  *
@@ -54,7 +54,7 @@ typedef struct SepaData SEPADATA;       /**< locally defined separator data */
  *  - scip            : SCIP main data structure
  *  - sepa            : the separator itself
  */
-#define DECL_SEPAEXIT(x) RETCODE x (SCIP* scip, SEPA* sepa)
+#define SCIP_DECL_SEPAEXIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_SEPA* sepa)
 
 /** solving process initialization method of separator (called when branch and bound process is about to begin)
  *
@@ -65,7 +65,7 @@ typedef struct SepaData SEPADATA;       /**< locally defined separator data */
  *  - scip            : SCIP main data structure
  *  - sepa            : the separator itself
  */
-#define DECL_SEPAINITSOL(x) RETCODE x (SCIP* scip, SEPA* sepa)
+#define SCIP_DECL_SEPAINITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_SEPA* sepa)
 
 /** solving process deinitialization method of separator (called before branch and bound process data is freed)
  *
@@ -76,11 +76,11 @@ typedef struct SepaData SEPADATA;       /**< locally defined separator data */
  *  - scip            : SCIP main data structure
  *  - sepa            : the separator itself
  */
-#define DECL_SEPAEXITSOL(x) RETCODE x (SCIP* scip, SEPA* sepa)
+#define SCIP_DECL_SEPAEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_SEPA* sepa)
 
 /** execution method of separator
  *
- *  Searches for cutting planes. The method is called in the LP solving loop.
+ *  Searches for cutting planes. The method is called in the SCIP_LP solving loop.
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -96,7 +96,7 @@ typedef struct SepaData SEPADATA;       /**< locally defined separator data */
  *  - SCIP_DIDNOTRUN  : the separator was skipped
  *  - SCIP_DELAYED    : the separator was skipped, but should be called again
  */
-#define DECL_SEPAEXEC(x) RETCODE x (SCIP* scip, SEPA* sepa, RESULT* result)
+#define SCIP_DECL_SEPAEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_SEPA* sepa, SCIP_RESULT* result)
 
 
 #include "scip/def.h"

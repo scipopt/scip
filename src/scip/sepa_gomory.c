@@ -14,14 +14,14 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.47 2005/05/31 17:20:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.48 2005/08/22 18:35:48 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
  * @author Tobias Achterberg
  */
 
-/**@todo try k-Gomory-cuts (s. Cornuejols: K-Cuts: A Variation of Gomory Mixed Integer Cuts from the LP Tableau) */
+/**@todo try k-Gomory-cuts (s. Cornuejols: K-Cuts: A Variation of Gomory Mixed Integer Cuts from the SCIP_LP Tableau) */
 /**@todo Gomory cuts don't seem to work with SOPLEX, but c-MIR cuts do! */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -42,7 +42,7 @@
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS          50 /**< maximal number of gomory cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of gomory cuts separated per separation round in root node */
-#define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
+#define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the SCIP_LP if they are no longer tight? */
 #define DEFAULT_MAXWEIGHTRANGE    1e+04 /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
 
 #define BOUNDSWITCH              0.9999
@@ -53,14 +53,14 @@
 
 
 /** separator data */
-struct SepaData
+struct SCIP_SepaData
 {
-   Real             maxweightrange;     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
-   int              maxrounds;          /**< maximal number of gomory separation rounds per node (-1: unlimited) */
-   int              maxroundsroot;      /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
-   int              maxsepacuts;        /**< maximal number of gomory cuts separated per separation round */
-   int              maxsepacutsroot;    /**< maximal number of gomory cuts separated per separation round in root node */
-   Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
+   SCIP_Real             maxweightrange;     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
+   int                   maxrounds;          /**< maximal number of gomory separation rounds per node (-1: unlimited) */
+   int                   maxroundsroot;      /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
+   int                   maxsepacuts;        /**< maximal number of gomory cuts separated per separation round */
+   int                   maxsepacutsroot;    /**< maximal number of gomory cuts separated per separation round in root node */
+   SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the SCIP_LP if they are no longer tight? */
 };
 
 
@@ -72,25 +72,25 @@ struct SepaData
 
 /** stores nonzero elements of dense coefficient vector as sparse vector, and calculates activity and norm */
 static
-RETCODE storeCutInArrays(
-   SCIP*            scip,               /**< SCIP data structure */
-   int              nvars,              /**< number of problem variables */
-   VAR**            vars,               /**< problem variables */
-   Real*            cutcoefs,           /**< dense coefficient vector */
-   Real*            varsolvals,         /**< dense variable LP solution vector */
-   char             normtype,           /**< type of norm to use for efficacy norm calculation */
-   VAR**            cutvars,            /**< array to store variables of sparse cut vector */
-   Real*            cutvals,            /**< array to store coefficients of sparse cut vector */
-   int*             cutlen,             /**< pointer to store number of nonzero entries in cut */
-   Real*            cutact,             /**< pointer to store activity of cut */
-   Real*            cutnorm             /**< pointer to store norm of cut vector */
+SCIP_RETCODE storeCutInArrays(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of problem variables */
+   SCIP_VAR**            vars,               /**< problem variables */
+   SCIP_Real*            cutcoefs,           /**< dense coefficient vector */
+   SCIP_Real*            varsolvals,         /**< dense variable SCIP_LP solution vector */
+   char                  normtype,           /**< type of norm to use for efficacy norm calculation */
+   SCIP_VAR**            cutvars,            /**< array to store variables of sparse cut vector */
+   SCIP_Real*            cutvals,            /**< array to store coefficients of sparse cut vector */
+   int*                  cutlen,             /**< pointer to store number of nonzero entries in cut */
+   SCIP_Real*            cutact,             /**< pointer to store activity of cut */
+   SCIP_Real*            cutnorm             /**< pointer to store norm of cut vector */
    )
 {
-   Real val;
-   Real absval;
-   Real cutsqrnorm;
-   Real act;
-   Real norm;
+   SCIP_Real val;
+   SCIP_Real absval;
+   SCIP_Real cutsqrnorm;
+   SCIP_Real act;
+   SCIP_Real norm;
    int len;
    int v;
 
@@ -167,7 +167,7 @@ RETCODE storeCutInArrays(
       }
       break;
    default:
-      errorMessage("invalid efficacy norm parameter '%c'\n", normtype);
+      SCIPerrorMessage("invalid efficacy norm parameter '%c'\n", normtype);
       return SCIP_INVALIDDATA;
    }
 
@@ -187,9 +187,9 @@ RETCODE storeCutInArrays(
 
 /** destructor of separator to free user data (called when SCIP is exiting) */
 static
-DECL_SEPAFREE(sepaFreeGomory)
+SCIP_DECL_SEPAFREE(sepaFreeGomory)
 {  /*lint --e{715}*/
-   SEPADATA* sepadata;
+   SCIP_SEPADATA* sepadata;
 
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
 
@@ -222,19 +222,19 @@ DECL_SEPAFREE(sepaFreeGomory)
 
 /** execution method of separator */
 static
-DECL_SEPAEXEC(sepaExecGomory)
+SCIP_DECL_SEPAEXEC(sepaExecGomory)
 {  /*lint --e{715}*/
-   SEPADATA* sepadata;
-   VAR** vars;
-   COL** cols;
-   ROW** rows;
-   Real* varsolvals;
-   Real* binvrow;
-   Real* cutcoefs;
-   Real cutrhs;
-   Real cutact;
-   Real maxscale;
-   Longint maxdnom;
+   SCIP_SEPADATA* sepadata;
+   SCIP_VAR** vars;
+   SCIP_COL** cols;
+   SCIP_ROW** rows;
+   SCIP_Real* varsolvals;
+   SCIP_Real* binvrow;
+   SCIP_Real* cutcoefs;
+   SCIP_Real cutrhs;
+   SCIP_Real cutact;
+   SCIP_Real maxscale;
+   SCIP_Longint maxdnom;
    int* basisind;
    int nvars;
    int ncols;
@@ -246,8 +246,8 @@ DECL_SEPAEXEC(sepaExecGomory)
    int ncuts;
    int c;
    int i;
-   Bool success;
-   Bool cutislocal;
+   SCIP_Bool success;
+   SCIP_Bool cutislocal;
    char normtype;
 
    assert(sepa != NULL);
@@ -268,25 +268,25 @@ DECL_SEPAEXEC(sepaExecGomory)
       || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
       return SCIP_OKAY;
 
-   /* only call separator, if an optimal LP solution is at hand */
+   /* only call separator, if an optimal SCIP_LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
-   /* only call separator, if the LP solution is basic */
+   /* only call separator, if the SCIP_LP solution is basic */
    if( !SCIPisLPSolBasic(scip) )
       return SCIP_OKAY;
 
    /* get variables data */
-   CHECK_OKAY( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   /* get LP data */
-   CHECK_OKAY( SCIPgetLPColsData(scip, &cols, &ncols) );
-   CHECK_OKAY( SCIPgetLPRowsData(scip, &rows, &nrows) );
+   /* get SCIP_LP data */
+   SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
+   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
    if( ncols == 0 || nrows == 0 )
       return SCIP_OKAY;
 
    /* get the type of norm to use for efficacy calculations */
-   CHECK_OKAY( SCIPgetCharParam(scip, "separating/efficacynorm", &normtype) );
+   SCIP_CALL( SCIPgetCharParam(scip, "separating/efficacynorm", &normtype) );
 
    /* set the maximal denominator in rational representation of gomory cut and the maximal scale factor to
     * scale resulting cut to integral values to avoid numerical instabilities
@@ -317,13 +317,13 @@ DECL_SEPAEXEC(sepaExecGomory)
    *result = SCIP_DIDNOTFIND;
 
    /* allocate temporary memory */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &basisind, nrows) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &binvrow, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &basisind, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &binvrow, nrows) );
    varsolvals = NULL; /* allocate this later, if needed */
 
    /* get basis indices */
-   CHECK_OKAY( SCIPgetLPBasisInd(scip, basisind) );
+   SCIP_CALL( SCIPgetLPBasisInd(scip, basisind) );
 
    /* get the maximal number of cuts allowed in a separation round */
    if( depth == 0 )
@@ -331,7 +331,7 @@ DECL_SEPAEXEC(sepaExecGomory)
    else
       maxsepacuts = sepadata->maxsepacuts;
 
-   debugMessage("searching gomory cuts: %d cols, %d rows, maxdnom=%lld, maxscale=%g, maxcuts=%d\n",
+   SCIPdebugMessage("searching gomory cuts: %d cols, %d rows, maxdnom=%lld, maxscale=%g, maxcuts=%d\n",
       ncols, nrows, maxdnom, maxscale, maxsepacuts);
 
    /* for all basic columns belonging to integer variables, try to generate a gomory cut */
@@ -341,44 +341,44 @@ DECL_SEPAEXEC(sepaExecGomory)
       c = basisind[i];
       if( c >= 0 )
       {
-         VAR* var;
+         SCIP_VAR* var;
 
          assert(c < ncols);
          var = SCIPcolGetVar(cols[c]);
          if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
          {
-            Real primsol;
+            SCIP_Real primsol;
 
             primsol = SCIPcolGetPrimsol(cols[c]);
             assert(SCIPgetVarSol(scip, var) == primsol); /*lint !e777*/
 
             if( SCIPfeasFrac(scip, primsol) >= MINFRAC )
             {
-               debugMessage("trying gomory cut for <%s> [%g]\n", SCIPvarGetName(var), primsol);
+               SCIPdebugMessage("trying gomory cut for <%s> [%g]\n", SCIPvarGetName(var), primsol);
 
                /* get the row of B^-1 for this basic integer variable with fractional solution value */
-               CHECK_OKAY( SCIPgetLPBInvRow(scip, i, binvrow) );
+               SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow) );
 
-               /* create a MIR cut out of the weighted LP rows using the B^-1 row as weights */
-               CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->maxweightrange, MINFRAC,
+               /* create a MIR cut out of the weighted SCIP_LP rows using the B^-1 row as weights */
+               SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->maxweightrange, MINFRAC,
                      binvrow, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
                assert(ALLOWLOCAL || !cutislocal);
-               debugMessage(" -> success=%d: %g <= %g\n", success, cutact, cutrhs);
+               SCIPdebugMessage(" -> success=%d: %g <= %g\n", success, cutact, cutrhs);
 
                /* if successful, convert dense cut into sparse row, and add the row as a cut */
                if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
                {
-                  VAR** cutvars;
-                  Real* cutvals;
-                  Real cutnorm;
+                  SCIP_VAR** cutvars;
+                  SCIP_Real* cutvals;
+                  SCIP_Real cutnorm;
                   int cutlen;
 
-                  /* if this is the first successful cut, get the LP solution for all COLUMN variables */
+                  /* if this is the first successful cut, get the SCIP_LP solution for all COLUMN variables */
                   if( varsolvals == NULL )
                   {
                      int v;
 
-                     CHECK_OKAY( SCIPallocBufferArray(scip, &varsolvals, nvars) );
+                     SCIP_CALL( SCIPallocBufferArray(scip, &varsolvals, nvars) );
                      for( v = 0; v < nvars; ++v )
                      {
                         if( SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN )
@@ -388,53 +388,53 @@ DECL_SEPAEXEC(sepaExecGomory)
                   assert(varsolvals != NULL);
 
                   /* get temporary memory for storing the cut as sparse row */
-                  CHECK_OKAY( SCIPallocBufferArray(scip, &cutvars, nvars) );
-                  CHECK_OKAY( SCIPallocBufferArray(scip, &cutvals, nvars) );
+                  SCIP_CALL( SCIPallocBufferArray(scip, &cutvars, nvars) );
+                  SCIP_CALL( SCIPallocBufferArray(scip, &cutvals, nvars) );
 
                   /* store the cut as sparse row, calculate activity and norm of cut */
-                  CHECK_OKAY( storeCutInArrays(scip, nvars, vars, cutcoefs, varsolvals, normtype,
+                  SCIP_CALL( storeCutInArrays(scip, nvars, vars, cutcoefs, varsolvals, normtype,
                         cutvars, cutvals, &cutlen, &cutact, &cutnorm) );
 
-                  debugMessage(" -> gomory cut for <%s>: act=%f, rhs=%f, norm=%f, eff=%f\n",
+                  SCIPdebugMessage(" -> gomory cut for <%s>: act=%f, rhs=%f, norm=%f, eff=%f\n",
                      SCIPvarGetName(var), cutact, cutrhs, cutnorm, (cutact - cutrhs)/cutnorm);
 
                   if( SCIPisPositive(scip, cutnorm) && SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm) )
                   {
-                     ROW* cut;
-                     char cutname[MAXSTRLEN];
+                     SCIP_ROW* cut;
+                     char cutname[SCIP_MAXSTRLEN];
 
                      /* create the cut */
                      sprintf(cutname, "gom%d_%d", SCIPgetNLPs(scip), c);
-                     CHECK_OKAY( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs, 
+                     SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs, 
                            cutislocal, FALSE, sepadata->dynamiccuts) );
-                     CHECK_OKAY( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
-                     debug(SCIPprintRow(scip, cut, NULL));
+                     SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
+                     SCIPdebug(SCIPprintRow(scip, cut, NULL));
 
                      /* try to scale the cut to integral values */
-                     CHECK_OKAY( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
+                     SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
                            maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
 
                      if( success )
                      {
                         if( !SCIPisCutEfficacious(scip, cut) )
                         {
-                           debugMessage(" -> gomory cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
+                           SCIPdebugMessage(" -> gomory cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
                               cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
                               SCIPgetCutEfficacy(scip, cut));
-                           debug(SCIPprintRow(scip, cut, NULL));
+                           SCIPdebug(SCIPprintRow(scip, cut, NULL));
                            success = FALSE;
                         }
                         else
                         {
-                           debugMessage(" -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
+                           SCIPdebugMessage(" -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
                               cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
                               SCIPgetCutEfficacy(scip, cut), SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                               SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-                           debug(SCIPprintRow(scip, cut, NULL));
-                           CHECK_OKAY( SCIPaddCut(scip, cut, FALSE) );
+                           SCIPdebug(SCIPprintRow(scip, cut, NULL));
+                           SCIP_CALL( SCIPaddCut(scip, cut, FALSE) );
                            if( !cutislocal )
                            {
-                              CHECK_OKAY( SCIPaddPoolCut(scip, cut) );
+                              SCIP_CALL( SCIPaddPoolCut(scip, cut) );
                            }
                            *result = SCIP_SEPARATED;
                            ncuts++;
@@ -442,12 +442,12 @@ DECL_SEPAEXEC(sepaExecGomory)
                      }
                      else
                      {
-                        debugMessage(" -> gomory cut <%s> couldn't be scaled to integral coefficients: act=%f, rhs=%f, norm=%f, eff=%f\n",
+                        SCIPdebugMessage(" -> gomory cut <%s> couldn't be scaled to integral coefficients: act=%f, rhs=%f, norm=%f, eff=%f\n",
                            cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut));
                      }
 
                      /* release the row */
-                     CHECK_OKAY( SCIPreleaseRow(scip, &cut) );
+                     SCIP_CALL( SCIPreleaseRow(scip, &cut) );
                   }
 
                   /* free temporary memory */
@@ -465,7 +465,7 @@ DECL_SEPAEXEC(sepaExecGomory)
    SCIPfreeBufferArray(scip, &basisind);
    SCIPfreeBufferArray(scip, &cutcoefs);
 
-   debugMessage("end searching gomory cuts: found %d cuts\n", ncuts);
+   SCIPdebugMessage("end searching gomory cuts: found %d cuts\n", ncuts);
 
    return SCIP_OKAY;
 }
@@ -478,45 +478,45 @@ DECL_SEPAEXEC(sepaExecGomory)
  */
 
 /** creates the Gomory MIR cut separator and includes it in SCIP */
-RETCODE SCIPincludeSepaGomory(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeSepaGomory(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SEPADATA* sepadata;
+   SCIP_SEPADATA* sepadata;
 
    /* create separator data */
-   CHECK_OKAY( SCIPallocMemory(scip, &sepadata) );
+   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
 
    /* include separator */
-   CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
          sepaFreeGomory, sepaInitGomory, sepaExitGomory,
          sepaInitsolGomory, sepaExitsolGomory, sepaExecGomory,
          sepadata) );
 
    /* add separator parameters */
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "separating/gomory/maxrounds",
          "maximal number of gomory separation rounds per node (-1: unlimited)",
          &sepadata->maxrounds, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "separating/gomory/maxroundsroot",
          "maximal number of gomory separation rounds in the root node (-1: unlimited)",
          &sepadata->maxroundsroot, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "separating/gomory/maxsepacuts",
          "maximal number of gomory cuts separated per separation round",
          &sepadata->maxsepacuts, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "separating/gomory/maxsepacutsroot",
          "maximal number of gomory cuts separated per separation round in the root node",
          &sepadata->maxsepacutsroot, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddRealParam(scip,
+   SCIP_CALL( SCIPaddRealParam(scip,
          "separating/gomory/maxweightrange",
          "maximal valid range max(|weights|)/min(|weights|) of row weights",
-         &sepadata->maxweightrange, DEFAULT_MAXWEIGHTRANGE, 1.0, REAL_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddBoolParam(scip,
+         &sepadata->maxweightrange, DEFAULT_MAXWEIGHTRANGE, 1.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/gomory/dynamiccuts",
-         "should generated cuts be removed from the LP if they are no longer tight?",
+         "should generated cuts be removed from the SCIP_LP if they are no longer tight?",
          &sepadata->dynamiccuts, DEFAULT_DYNAMICCUTS, NULL, NULL) );
 
    return SCIP_OKAY;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_dfs.h,v 1.11 2005/07/15 17:20:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_dfs.h,v 1.12 2005/08/22 18:35:42 bzfpfend Exp $"
 
 /**@file   nodesel_dfs.h
  * @brief  node selector for depth first search
@@ -32,8 +32,8 @@
 
 /** creates the node selector for depth first search and includes it in SCIP */
 extern
-RETCODE SCIPincludeNodeselDfs(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeNodeselDfs(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

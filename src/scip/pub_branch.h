@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_branch.h,v 1.12 2005/07/15 17:20:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_branch.h,v 1.13 2005/08/22 18:35:44 bzfpfend Exp $"
 
 /**@file   pub_branch.h
  * @brief  public methods for branching rules
@@ -34,105 +34,105 @@
 
 /** compares two branching rules w. r. to their priority */
 extern
-DECL_SORTPTRCOMP(SCIPbranchruleComp);
+SCIP_DECL_SORTPTRCOMP(SCIPbranchruleComp);
 
 /** gets user data of branching rule */
 extern
-BRANCHRULEDATA* SCIPbranchruleGetData(
-   BRANCHRULE*      branchrule          /**< branching rule */
+SCIP_BRANCHRULEDATA* SCIPbranchruleGetData(
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
 /** sets user data of branching rule; user has to free old data in advance! */
 extern
 void SCIPbranchruleSetData(
-   BRANCHRULE*      branchrule,         /**< branching rule */
-   BRANCHRULEDATA*  branchruledata      /**< new branching rule user data */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_BRANCHRULEDATA*  branchruledata      /**< new branching rule user data */
    );
 
 /** gets name of branching rule */
 extern
 const char* SCIPbranchruleGetName(
-   BRANCHRULE*      branchrule          /**< branching rule */
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
 /** gets description of branching rule */
 extern
 const char* SCIPbranchruleGetDesc(
-   BRANCHRULE*      branchrule          /**< branching rule */
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
 /** gets priority of branching rule */
 extern
 int SCIPbranchruleGetPriority(
-   BRANCHRULE*      branchrule          /**< branching rule */
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
 /** gets maximal depth level, up to which this branching rule should be used (-1 for no limit) */
 extern
 int SCIPbranchruleGetMaxdepth(
-   BRANCHRULE*      branchrule          /**< branching rule */
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
 /** gets maximal relative distance from current node's dual bound to primal bound for applying branching rule */
 extern
-Real SCIPbranchruleGetMaxbounddist(
-   BRANCHRULE*      branchrule          /**< branching rule */
+SCIP_Real SCIPbranchruleGetMaxbounddist(
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
 /** gets time in seconds used in this branching rule */
 extern
-Real SCIPbranchruleGetTime(
-   BRANCHRULE*      branchrule          /**< branching rule */
+SCIP_Real SCIPbranchruleGetTime(
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
-/** gets the total number of times, the branching rule was called on an LP solution */
+/** gets the total number of times, the branching rule was called on an SCIP_LP solution */
 extern
-Longint SCIPbranchruleGetNLPCalls(
-   BRANCHRULE*      branchrule          /**< branching rule */
+SCIP_Longint SCIPbranchruleGetNLPCalls(
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
 /** gets the total number of times, the branching rule was called on a pseudo solution */
 extern
-Longint SCIPbranchruleGetNPseudoCalls(
-   BRANCHRULE*      branchrule          /**< branching rule */
+SCIP_Longint SCIPbranchruleGetNPseudoCalls(
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
 /** gets the total number of times, the branching rule detected a cutoff */
 extern
-Longint SCIPbranchruleGetNCutoffs(
-   BRANCHRULE*      branchrule          /**< branching rule */
+SCIP_Longint SCIPbranchruleGetNCutoffs(
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
 /** gets the total number of cuts, the branching rule separated */
 extern
-Longint SCIPbranchruleGetNCutsFound(
-   BRANCHRULE*      branchrule          /**< branching rule */
+SCIP_Longint SCIPbranchruleGetNCutsFound(
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
 /** gets the total number of constraints, the branching rule added to the respective local nodes (not counting constraints
  *  that were added to the child nodes as branching decisions)
  */
 extern
-Longint SCIPbranchruleGetNConssFound(
-   BRANCHRULE*      branchrule          /**< branching rule */
+SCIP_Longint SCIPbranchruleGetNConssFound(
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
 /** gets the total number of domain reductions, the branching rule found */
 extern
-Longint SCIPbranchruleGetNDomredsFound(
-   BRANCHRULE*      branchrule          /**< branching rule */
+SCIP_Longint SCIPbranchruleGetNDomredsFound(
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
 /** gets the total number of children, the branching rule created */
 extern
-Longint SCIPbranchruleGetNChildren(
-   BRANCHRULE*      branchrule          /**< branching rule */
+SCIP_Longint SCIPbranchruleGetNChildren(
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
 /** is branching rule initialized? */
 extern
-Bool SCIPbranchruleIsInitialized(
-   BRANCHRULE*      branchrule          /**< branching rule */
+SCIP_Bool SCIPbranchruleIsInitialized(
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
 

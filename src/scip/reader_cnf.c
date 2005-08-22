@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cnf.c,v 1.26 2005/07/15 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_cnf.c,v 1.27 2005/08/22 18:35:46 bzfpfend Exp $"
 
 /**@file   reader_cnf.c
  * @brief  cnf file reader
@@ -43,29 +43,29 @@
 
 static
 void readError(
-   int              linecount,          /**< line number of error */
-   const char*      errormsg            /**< error message */
+   int                   linecount,          /**< line number of error */
+   const char*           errormsg            /**< error message */
    )
 {
-   errorMessage("read error in line <%d>: %s\n", linecount, errormsg);
+   SCIPerrorMessage("read error in line <%d>: %s\n", linecount, errormsg);
 }
 
 static
 void readWarning(
-   int              linecount,          /**< line number of error */
-   const char*      warningmsg          /**< warning message */
+   int                   linecount,          /**< line number of error */
+   const char*           warningmsg          /**< warning message */
    )
 {
-   warningMessage("Line <%d>: %s\n", linecount, warningmsg);
+   SCIPwarningMessage("Line <%d>: %s\n", linecount, warningmsg);
 }
 
 /** reads the next non-empty non-comment line of a cnf file */
 static
-RETCODE readCnfLine(
+SCIP_RETCODE readCnfLine(
    SCIPFILE*        file,               /**< input file */
-   char*            buffer,             /**< buffer for storing the input line */
-   int              size,               /**< size of the buffer */
-   int*             linecount           /**< pointer to the line number counter */
+   char*                 buffer,             /**< buffer for storing the input line */
+   int                   size,               /**< size of the buffer */
+   int*                  linecount           /**< pointer to the line number counter */
    )
 {
    char* line;
@@ -85,7 +85,7 @@ RETCODE readCnfLine(
          linelen = (int)strlen(line);
          if( linelen == size-1 )
          {
-            char s[MAXSTRLEN];
+            char s[SCIP_MAXSTRLEN];
             sprintf(s, "line too long (exceeds %d characters)", size-2);
             readError(*linecount, s);
             return SCIP_PARSEERROR;
@@ -117,25 +117,25 @@ RETCODE readCnfLine(
  *  The method reads all files of CNF format. Other formats (SAT, SATX, SATE) are not supported.
  */  
 static
-RETCODE readCnf(
-   SCIP*            scip,               /**< SCIP data structure */   
+SCIP_RETCODE readCnf(
+   SCIP*                 scip,               /**< SCIP data structure */   
    SCIPFILE*        file                /**< input file */
    )
 {
-   RETCODE retcode;
-   VAR** vars;
-   VAR** clausevars;
-   CONS* cons;
+   SCIP_RETCODE retcode;
+   SCIP_VAR** vars;
+   SCIP_VAR** clausevars;
+   SCIP_CONS* cons;
    int* varsign;
    char* tok;
    char* nexttok;
-   char line[MAXSTRLEN];
-   char format[MAXSTRLEN];
-   char varname[MAXSTRLEN];
-   char s[MAXSTRLEN];
-   Bool dynamicconss;
-   Bool dynamiccols;
-   Bool dynamicrows;
+   char line[SCIP_MAXSTRLEN];
+   char format[SCIP_MAXSTRLEN];
+   char varname[SCIP_MAXSTRLEN];
+   char s[SCIP_MAXSTRLEN];
+   SCIP_Bool dynamicconss;
+   SCIP_Bool dynamiccols;
+   SCIP_Bool dynamicrows;
    int linecount;
    int clauselen;
    int clausenum;
@@ -152,7 +152,7 @@ RETCODE readCnf(
    linecount = 0;
 
    /* read header */
-   CHECK_OKAY( readCnfLine(file, line, sizeof(line), &linecount) );
+   SCIP_CALL( readCnfLine(file, line, sizeof(line), &linecount) );
    if( *line != 'p' )
    {
       readError(linecount, "problem declaration line expected");
@@ -183,22 +183,22 @@ RETCODE readCnf(
    }
 
    /* get parameter values */
-   CHECK_OKAY( SCIPgetBoolParam(scip, "reading/cnfreader/dynamicconss", &dynamicconss) );
-   CHECK_OKAY( SCIPgetBoolParam(scip, "reading/cnfreader/dynamiccols", &dynamiccols) );
-   CHECK_OKAY( SCIPgetBoolParam(scip, "reading/cnfreader/dynamicrows", &dynamicrows) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/cnfreader/dynamicconss", &dynamicconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/cnfreader/dynamiccols", &dynamiccols) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/cnfreader/dynamicrows", &dynamicrows) );
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &vars, nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &clausevars, nvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &varsign, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &clausevars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varsign, nvars) );
 
    /* create the variables */
    for( v = 0; v < nvars; ++v )
    {
       sprintf(varname, "x%d", v+1);
-      CHECK_OKAY( SCIPcreateVar(scip, &vars[v], varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, !dynamiccols, dynamiccols,
+      SCIP_CALL( SCIPcreateVar(scip, &vars[v], varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, !dynamiccols, dynamiccols,
             NULL, NULL, NULL, NULL) );
-      CHECK_OKAY( SCIPaddVar(scip, vars[v]) );
+      SCIP_CALL( SCIPaddVar(scip, vars[v]) );
       varsign[v] = 0;
    }
 
@@ -234,10 +234,10 @@ RETCODE readCnf(
 
                clausenum++;
                sprintf(s, "c%d", clausenum);
-               CHECK_OKAY( SCIPcreateConsLogicor(scip, &cons, s, clauselen, clausevars, 
+               SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, s, clauselen, clausevars, 
                      !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
-               CHECK_OKAY( SCIPaddCons(scip, cons) );
-               CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
+               SCIP_CALL( SCIPaddCons(scip, cons) );
+               SCIP_CALL( SCIPreleaseCons(scip, &cons) );
                clauselen = 0;
             }
             else if( v >= -nvars && v <= nvars )
@@ -253,7 +253,7 @@ RETCODE readCnf(
                varnum = ABS(v)-1;
                if( v < 0 )
                {
-                  CHECK_OKAY( SCIPgetNegatedVar(scip, vars[varnum], &clausevars[clauselen]) );
+                  SCIP_CALL( SCIPgetNegatedVar(scip, vars[varnum], &clausevars[clauselen]) );
                   varsign[varnum]--;
                }
                else
@@ -281,22 +281,22 @@ RETCODE readCnf(
    /* check for additional literals */
    if( clauselen > 0 )
    {
-      warningMessage("found %d additional literals after last clause\n", clauselen);
+      SCIPwarningMessage("found %d additional literals after last clause\n", clauselen);
    }
 
    /* check number of clauses */
    if( clausenum != nclauses )
    {
-      warningMessage("expected %d clauses, but found %d\n", nclauses, clausenum);
+      SCIPwarningMessage("expected %d clauses, but found %d\n", nclauses, clausenum);
    }
 
  TERMINATE:
    /* change objective values and release variables */
-   CHECK_OKAY( SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE) );
+   SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE) );
    for( v = 0; v < nvars; ++v )
    {
-      CHECK_OKAY( SCIPchgVarObj(scip, vars[v], (Real)varsign[v]) );
-      CHECK_OKAY( SCIPreleaseVar(scip, &vars[v]) );
+      SCIP_CALL( SCIPchgVarObj(scip, vars[v], (SCIP_Real)varsign[v]) );
+      SCIP_CALL( SCIPreleaseVar(scip, &vars[v]) );
    }
 
    /* free temporary memory */
@@ -319,10 +319,10 @@ RETCODE readCnf(
 
 /** problem reading method of reader */
 static
-DECL_READERREAD(readerReadCnf)
+SCIP_DECL_READERREAD(readerReadCnf)
 {  /*lint --e{715}*/
    SCIPFILE* f;
-   RETCODE retcode;
+   SCIP_RETCODE retcode;
 
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
@@ -333,13 +333,13 @@ DECL_READERREAD(readerReadCnf)
    f = SCIPfopen(filename, "r");
    if( f == NULL )
    {
-      errorMessage("cannot open file <%s> for reading\n", filename);
+      SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
       perror(filename);
       return SCIP_NOFILE;
    }
 
    /* create problem */
-   CHECK_OKAY( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    /* read cnf file */
    retcode = readCnf(scip, f);
@@ -360,27 +360,27 @@ DECL_READERREAD(readerReadCnf)
  */
 
 /** includes the cnf file reader in SCIP */
-RETCODE SCIPincludeReaderCnf(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeReaderCnf(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   READERDATA* readerdata;
+   SCIP_READERDATA* readerdata;
 
    /* create cnf reader data */
    readerdata = NULL;
 
    /* include cnf reader */
-   CHECK_OKAY( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
+   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
          readerFreeCnf, readerReadCnf, readerdata) );
 
    /* add cnf reader parameters */
-   CHECK_OKAY( SCIPaddBoolParam(scip,
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/cnfreader/dynamicconss", "should model constraints be subject to aging?",
          NULL, TRUE, NULL, NULL) );
-   CHECK_OKAY( SCIPaddBoolParam(scip,
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/cnfreader/dynamiccols", "should columns be added and removed dynamically to the LP?",
          NULL, FALSE, NULL, NULL) );
-   CHECK_OKAY( SCIPaddBoolParam(scip,
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/cnfreader/dynamicrows", "should rows be added and removed dynamically to the LP?",
          NULL, FALSE, NULL, NULL) );
    

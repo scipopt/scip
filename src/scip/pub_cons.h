@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.24 2005/07/15 17:20:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.25 2005/08/22 18:35:44 bzfpfend Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -43,303 +43,303 @@
 
 /** compares two constraint handlers w. r. to their separation priority */
 extern
-DECL_SORTPTRCOMP(SCIPconshdlrCompSepa);
+SCIP_DECL_SORTPTRCOMP(SCIPconshdlrCompSepa);
 
 /** compares two constraint handlers w. r. to their enforcing priority */
 extern
-DECL_SORTPTRCOMP(SCIPconshdlrCompEnfo);
+SCIP_DECL_SORTPTRCOMP(SCIPconshdlrCompEnfo);
 
 /** compares two constraint handlers w. r. to their feasibility check priority */
 extern
-DECL_SORTPTRCOMP(SCIPconshdlrCompCheck);
+SCIP_DECL_SORTPTRCOMP(SCIPconshdlrCompCheck);
 
 /** gets name of constraint handler */
 extern
 const char* SCIPconshdlrGetName(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets description of constraint handler */
 extern
 const char* SCIPconshdlrGetDesc(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets user data of constraint handler */
 extern
-CONSHDLRDATA* SCIPconshdlrGetData(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_CONSHDLRDATA* SCIPconshdlrGetData(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** sets user data of constraint handler; user has to free old data in advance! */
 extern
 void SCIPconshdlrSetData(
-   CONSHDLR*        conshdlr,           /**< constraint handler */
-   CONSHDLRDATA*    conshdlrdata        /**< new constraint handler user data */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< new constraint handler user data */
    );
 
 /** gets array with active constraints of constraint handler */
 extern
-CONS** SCIPconshdlrGetConss(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_CONS** SCIPconshdlrGetConss(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets total number of existing transformed constraints of constraint handler */
 extern
 int SCIPconshdlrGetNConss(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets number of active constraints of constraint handler */
 extern
 int SCIPconshdlrGetNActiveConss(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets number of enabled constraints of constraint handler */
 extern
 int SCIPconshdlrGetNEnabledConss(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets time in seconds used for presolving in this constraint handler */
 extern
-Real SCIPconshdlrGetPresolTime(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Real SCIPconshdlrGetPresolTime(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets time in seconds used for separation in this constraint handler */
 extern
-Real SCIPconshdlrGetSepaTime(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Real SCIPconshdlrGetSepaTime(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** gets time in seconds used for LP enforcement in this constraint handler */
+/** gets time in seconds used for SCIP_LP enforcement in this constraint handler */
 extern
-Real SCIPconshdlrGetEnfoLPTime(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Real SCIPconshdlrGetEnfoLPTime(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets time in seconds used for pseudo enforcement in this constraint handler */
 extern
-Real SCIPconshdlrGetEnfoPSTime(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Real SCIPconshdlrGetEnfoPSTime(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets time in seconds used for propagation in this constraint handler */
 extern
-Real SCIPconshdlrGetPropTime(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Real SCIPconshdlrGetPropTime(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets number of calls to the constraint handler's separation method */
 extern
-Longint SCIPconshdlrGetNSepaCalls(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Longint SCIPconshdlrGetNSepaCalls(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** gets number of calls to the constraint handler's LP enforcing method */
+/** gets number of calls to the constraint handler's SCIP_LP enforcing method */
 extern
-Longint SCIPconshdlrGetNEnfoLPCalls(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Longint SCIPconshdlrGetNEnfoLPCalls(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets number of calls to the constraint handler's pseudo enforcing method */
 extern
-Longint SCIPconshdlrGetNEnfoPSCalls(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Longint SCIPconshdlrGetNEnfoPSCalls(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets number of calls to the constraint handler's propagation method */
 extern
-Longint SCIPconshdlrGetNPropCalls(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Longint SCIPconshdlrGetNPropCalls(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets total number of times, this constraint handler detected a cutoff */
 extern
-Longint SCIPconshdlrGetNCutoffs(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Longint SCIPconshdlrGetNCutoffs(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets total number of cuts found by this constraint handler */
 extern
-Longint SCIPconshdlrGetNCutsFound(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Longint SCIPconshdlrGetNCutsFound(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets total number of additional constraints added by this constraint handler */
 extern
-Longint SCIPconshdlrGetNConssFound(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Longint SCIPconshdlrGetNConssFound(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets total number of domain reductions found by this constraint handler */
 extern
-Longint SCIPconshdlrGetNDomredsFound(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Longint SCIPconshdlrGetNDomredsFound(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets number of children created by this constraint handler */
 extern
-Longint SCIPconshdlrGetNChildren(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Longint SCIPconshdlrGetNChildren(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets maximum number of active constraints of constraint handler existing at the same time */
 extern
 int SCIPconshdlrGetMaxNActiveConss(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets initial number of active constraints of constraint handler */
 extern
 int SCIPconshdlrGetStartNActiveConss(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets number of variables fixed in presolving method of constraint handler */
 extern
 int SCIPconshdlrGetNFixedVars(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets number of variables aggregated in presolving method of constraint handler */
 extern
 int SCIPconshdlrGetNAggrVars(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets number of variable types changed in presolving method of constraint handler */
 extern
 int SCIPconshdlrGetNVarTypes(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets number of bounds changed in presolving method of constraint handler */
 extern
 int SCIPconshdlrGetNChgBds(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets number of holes added to domains of variables in presolving method of constraint handler */
 extern
 int SCIPconshdlrGetNAddHoles(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets number of constraints deleted in presolving method of constraint handler */
 extern
 int SCIPconshdlrGetNDelConss(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets number of constraints upgraded in presolving method of constraint handler */
 extern
 int SCIPconshdlrGetNUpgdConss(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets number of coefficients changed in presolving method of constraint handler */
 extern
 int SCIPconshdlrGetNChgCoefs(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets number of constraint sides changed in presolving method of constraint handler */
 extern
 int SCIPconshdlrGetNChgSides(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets separation priority of constraint handler */
 extern
 int SCIPconshdlrGetSepaPriority(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets enforcing priority of constraint handler */
 extern
 int SCIPconshdlrGetEnfoPriority(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets checking priority of constraint handler */
 extern
 int SCIPconshdlrGetCheckPriority(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets separation frequency of constraint handler */
 extern
 int SCIPconshdlrGetSepaFreq(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets propagation frequency of constraint handler */
 extern
 int SCIPconshdlrGetPropFreq(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets frequency of constraint handler for eager evaluations in separation, propagation and enforcement */
 extern
 int SCIPconshdlrGetEagerFreq(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** needs constraint handler a constraint to be called? */
 extern
-Bool SCIPconshdlrNeedsCons(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Bool SCIPconshdlrNeedsCons(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** does the constraint handler perform presolving? */
 extern
-Bool SCIPconshdlrDoesPresolve(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Bool SCIPconshdlrDoesPresolve(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** should separation method be delayed, if other separators found cuts? */
 extern
-Bool SCIPconshdlrIsSeparationDelayed(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Bool SCIPconshdlrIsSeparationDelayed(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** should propagation method be delayed, if other propagators found reductions? */
 extern
-Bool SCIPconshdlrIsPropagationDelayed(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Bool SCIPconshdlrIsPropagationDelayed(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** should presolving method be delayed, if other presolvers found reductions? */
 extern
-Bool SCIPconshdlrIsPresolvingDelayed(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Bool SCIPconshdlrIsPresolvingDelayed(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** was separation method delayed at the last call? */
 extern
-Bool SCIPconshdlrWasSeparationDelayed(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Bool SCIPconshdlrWasSeparationDelayed(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** was propagation method delayed at the last call? */
 extern
-Bool SCIPconshdlrWasPropagationDelayed(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Bool SCIPconshdlrWasPropagationDelayed(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** was presolving method delayed at the last call? */
 extern
-Bool SCIPconshdlrWasPresolvingDelayed(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Bool SCIPconshdlrWasPresolvingDelayed(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** is constraint handler initialized? */
 extern
-Bool SCIPconshdlrIsInitialized(
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_Bool SCIPconshdlrIsInitialized(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 
@@ -351,38 +351,38 @@ Bool SCIPconshdlrIsInitialized(
 
 #ifndef NDEBUG
 
-/* In debug mode, the following methods are implemented as function calls to ensure
+/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
 
 /** returns the name of the constraint */
 extern
 const char* SCIPconsGetName(
-   CONS*            cons                /**< constraint */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns the constraint handler of the constraint */
 extern
-CONSHDLR* SCIPconsGetHdlr(
-   CONS*            cons                /**< constraint */
+SCIP_CONSHDLR* SCIPconsGetHdlr(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns the constraint data field of the constraint */
 extern
-CONSDATA* SCIPconsGetData(
-   CONS*            cons                /**< constraint */
+SCIP_CONSDATA* SCIPconsGetData(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** gets number of times, the constraint is currently captured */
 extern
 int SCIPconsGetNUses(
-   CONS*            cons                /**< constraint */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** for an active constraint, returns the depth in the tree at which the constraint was activated */
 extern
 int SCIPconsGetActiveDepth(
-   CONS*            cons                /**< constraint */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns the depth in the tree at which the constraint is valid; returns INT_MAX, if the constraint is local
@@ -390,145 +390,145 @@ int SCIPconsGetActiveDepth(
  */
 extern
 int SCIPconsGetValidDepth(
-   CONS*            cons                /**< constraint */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns TRUE iff constraint is active in the current node */
 extern
-Bool SCIPconsIsActive(
-   CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsActive(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns TRUE iff constraint is enabled in the current node */
 extern
-Bool SCIPconsIsEnabled(
-   CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsEnabled(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns TRUE iff constraint's separation is enabled in the current node */
 extern
-Bool SCIPconsIsSeparationEnabled(
-   CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsSeparationEnabled(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns TRUE iff constraint's propagation is enabled in the current node */
 extern
-Bool SCIPconsIsPropagationEnabled(
-   CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsPropagationEnabled(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns TRUE iff constraint is deleted or marked to be deleted */
 extern
-Bool SCIPconsIsDeleted(
-   CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsDeleted(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns TRUE iff constraint is marked obsolete */
 extern
-Bool SCIPconsIsObsolete(
-   CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsObsolete(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** gets age of constraint */
 extern
-Real SCIPconsGetAge(
-   CONS*            cons                /**< constraint */
+SCIP_Real SCIPconsGetAge(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
-/** returns TRUE iff the LP relaxation of constraint should be in the initial LP */
+/** returns TRUE iff the SCIP_LP relaxation of constraint should be in the initial SCIP_LP */
 extern
-Bool SCIPconsIsInitial(
-   CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsInitial(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
-/** returns TRUE iff constraint should be separated during LP processing */
+/** returns TRUE iff constraint should be separated during SCIP_LP processing */
 extern
-Bool SCIPconsIsSeparated(
-   CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsSeparated(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns TRUE iff constraint should be enforced during node processing */
 extern
-Bool SCIPconsIsEnforced(
-   CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsEnforced(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns TRUE iff constraint should be checked for feasibility */
 extern
-Bool SCIPconsIsChecked(
-   CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsChecked(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns TRUE iff constraint should be propagated during node processing */
 extern
-Bool SCIPconsIsPropagated(
-   CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsPropagated(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns TRUE iff constraint is globally valid */
 extern
-Bool SCIPconsIsGlobal(
-   CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsGlobal(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns TRUE iff constraint is only locally valid or not added to any (sub)problem */
 extern
-Bool SCIPconsIsLocal(
-   CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsLocal(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns TRUE iff constraint is modifiable (subject to column generation) */
 extern
-Bool SCIPconsIsModifiable(
-   CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsModifiable(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns TRUE iff constraint is subject to aging */
 extern
-Bool SCIPconsIsDynamic(
-   CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsDynamic(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
-/** returns TRUE iff constraint's relaxation should be removed from the LP due to aging or cleanup */
+/** returns TRUE iff constraint's relaxation should be removed from the SCIP_LP due to aging or cleanup */
 extern
-Bool SCIPconsIsRemoveable(
-   CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsRemoveable(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns TRUE iff constraint belongs to the global problem */
 extern
-Bool SCIPconsIsInProb(
-   CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsInProb(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns TRUE iff constraint is belonging to original space */
 extern
-Bool SCIPconsIsOriginal(
-   CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsOriginal(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns TRUE iff constraint is belonging to transformed space */
 extern
-Bool SCIPconsIsTransformed(
-   CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsTransformed(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns TRUE iff roundings for variables in constraint are locked */
 extern
-Bool SCIPconsIsLockedPos(
-   CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsLockedPos(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns TRUE iff roundings for variables in constraint's negation are locked */
 extern
-Bool SCIPconsIsLockedNeg(
-   CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsLockedNeg(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns TRUE iff roundings for variables in constraint or in constraint's negation are locked */
 extern
-Bool SCIPconsIsLocked(
-   CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsLocked(
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 #else

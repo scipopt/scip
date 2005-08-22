@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.30 2005/07/15 17:20:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.31 2005/08/22 18:35:53 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -27,11 +27,11 @@
 #define __SCIP_TYPE_CONS_H__
 
 
-typedef struct Conshdlr CONSHDLR;       /**< constraint handler for a specific constraint type */
-typedef struct Cons CONS;               /**< constraint data structure */
-typedef struct ConshdlrData CONSHDLRDATA; /**< constraint handler data */
-typedef struct ConsData CONSDATA;       /**< locally defined constraint type specific data */
-typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of the set of active constraints */
+typedef struct SCIP_Conshdlr SCIP_CONSHDLR;       /**< constraint handler for a specific constraint type */
+typedef struct SCIP_Cons SCIP_CONS;               /**< constraint data structure */
+typedef struct SCIP_ConshdlrData SCIP_CONSHDLRDATA; /**< constraint handler data */
+typedef struct SCIP_ConsData SCIP_CONSDATA;       /**< locally defined constraint type specific data */
+typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and removals of the set of active constraints */
 
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting)
@@ -40,7 +40,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
  */
-#define DECL_CONSFREE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr)
+#define SCIP_DECL_CONSFREE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr)
 
 /** initialization method of constraint handler (called after problem was transformed)
  *
@@ -50,7 +50,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - conss           : array of constraints in transformed problem
  *  - nconss          : number of constraints in transformed problem
  */
-#define DECL_CONSINIT(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss)
+#define SCIP_DECL_CONSINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss)
 
 /** deinitialization method of constraint handler (called before transformed problem is freed)
  *
@@ -60,7 +60,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - conss           : array of constraints in transformed problem
  *  - nconss          : number of constraints in transformed problem
  */
-#define DECL_CONSEXIT(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss)
+#define SCIP_DECL_CONSEXIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss)
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin)
  *
@@ -84,7 +84,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
  *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
  */
-#define DECL_CONSINITPRE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, RESULT* result)
+#define SCIP_DECL_CONSINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_RESULT* result)
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished)
  *
@@ -109,7 +109,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
  *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
  */
-#define DECL_CONSEXITPRE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, RESULT* result)
+#define SCIP_DECL_CONSEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_RESULT* result)
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin)
  *
@@ -122,13 +122,13 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - conss           : array of constraints of the constraint handler
  *  - nconss          : number of constraints of the constraint handler
  */
-#define DECL_CONSINITSOL(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss)
+#define SCIP_DECL_CONSINITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss)
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed)
  *
  *  This method is called before the branch and bound process is freed.
  *  The constraint handler should use this call to clean up its branch and bound data, in particular to release
- *  all LP rows that he has created or captured.
+ *  all SCIP_LP rows that he has created or captured.
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -136,7 +136,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - conss           : array of constraints of the constraint handler
  *  - nconss          : number of constraints of the constraint handler
  */
-#define DECL_CONSEXITSOL(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss)
+#define SCIP_DECL_CONSEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss)
 
 /** frees specific constraint data
  *
@@ -149,7 +149,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *    cons            : the constraint belonging to the constraint data
  *    consdata        : pointer to the constraint data to free
  */
-#define DECL_CONSDELETE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons, CONSDATA** consdata)
+#define SCIP_DECL_CONSDELETE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, SCIP_CONSDATA** consdata)
 
 /** transforms constraint data into data belonging to the transformed problem
  *
@@ -159,13 +159,13 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - sourcecons      : source constraint to transform
  *  - targetcons      : pointer to store created target constraint
  */ 
-#define DECL_CONSTRANS(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* sourcecons, CONS** targetcons)
+#define SCIP_DECL_CONSTRANS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* sourcecons, SCIP_CONS** targetcons)
 
-/** LP initialization method of constraint handler
+/** SCIP_LP initialization method of constraint handler
  *
- *  Puts the LP relaxations of all "initial" constraints into the LP. The method should scan the constraints
- *  array for constraints that are marked initial via calls to SCIPconsIsInitial() and put the LP relaxation
- *  of all initial constraints to the LP with calls to SCIPaddCut().
+ *  Puts the SCIP_LP relaxations of all "initial" constraints into the LP. The method should scan the constraints
+ *  array for constraints that are marked initial via calls to SCIPconsIsInitial() and put the SCIP_LP relaxation
+ *  of all initial constraints to the SCIP_LP with calls to SCIPaddCut().
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -173,12 +173,12 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - conss           : array of constraints to process
  *  - nconss          : number of constraints to process
  */
-#define DECL_CONSINITLP(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss)
+#define SCIP_DECL_CONSINITLP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss)
 
 /** separation method of constraint handler
  *
- *  Separates all constraints of the constraint handler. The method is called in the LP solution loop,
- *  which means that a valid LP solution exists.
+ *  Separates all constraints of the constraint handler. The method is called in the SCIP_LP solution loop,
+ *  which means that a valid SCIP_LP solution exists.
  *
  *  The first nusefulconss constraints are the ones, that are identified to likely be violated. The separation
  *  method should process only the useful constraints in most runs, and only occasionally the remaining
@@ -201,13 +201,13 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - SCIP_DIDNOTRUN  : the separator was skipped
  *  - SCIP_DELAYED    : the separator was skipped, but should be called again
  */
-#define DECL_CONSSEPA(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
-      RESULT* result)
+#define SCIP_DECL_CONSSEPA(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, \
+      SCIP_RESULT* result)
 
-/** constraint enforcing method of constraint handler for LP solutions
+/** constraint enforcing method of constraint handler for SCIP_LP solutions
  *
- *  The method is called at the end of the node processing loop for a node where the LP was solved.
- *  The LP solution has to be checked for feasibility. If possible, an infeasibility should be resolved by
+ *  The method is called at the end of the node processing loop for a node where the SCIP_LP was solved.
+ *  The SCIP_LP solution has to be checked for feasibility. If possible, an infeasibility should be resolved by
  *  branching, reducing a variable's domain to exclude the solution or separating the solution with a valid
  *  cutting plane.
  *
@@ -242,18 +242,18 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
-#define DECL_CONSENFOLP(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
-      RESULT* result)
+#define SCIP_DECL_CONSENFOLP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, \
+      SCIP_RESULT* result)
 
 /** constraint enforcing method of constraint handler for pseudo solutions
  *
- *  The method is called at the end of the node processing loop for a node where the LP was not solved.
+ *  The method is called at the end of the node processing loop for a node where the SCIP_LP was not solved.
  *  The pseudo solution has to be checked for feasibility. If possible, an infeasibility should be resolved by
  *  branching, reducing a variable's domain to exclude the solution or adding an additional constraint.
- *  Separation is not possible, since the LP is not processed at the current node. All LP informations like
- *  LP solution, slack values, or reduced costs are invalid and must not be accessed.
+ *  Separation is not possible, since the SCIP_LP is not processed at the current node. All SCIP_LP informations like
+ *  SCIP_LP solution, slack values, or reduced costs are invalid and must not be accessed.
  *
- *  Like in the enforcing method for LP solutions, the enforcing methods of the active constraint handlers are
+ *  Like in the enforcing method for SCIP_LP solutions, the enforcing methods of the active constraint handlers are
  *  called in decreasing order of their enforcing priorities until the first constraint handler returned with
  *  the value SCIP_CUTOFF, SCIP_REDUCEDDOM, SCIP_CONSADDED, SCIP_BRANCHED, or SCIP_SOLVELP.
  *
@@ -279,13 +279,13 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - SCIP_CONSADDED  : an additional constraint was generated
  *  - SCIP_REDUCEDDOM : a variable's domain was reduced
  *  - SCIP_BRANCHED   : no changes were made to the problem, but a branching was applied to resolve an infeasibility
- *  - SCIP_SOLVELP    : at least one constraint is infeasible, and this can only be resolved by solving the LP
+ *  - SCIP_SOLVELP    : at least one constraint is infeasible, and this can only be resolved by solving the SCIP_LP
  *  - SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
  *  - SCIP_DIDNOTRUN  : the enforcement was skipped (only possible, if objinfeasible is true)
  */
-#define DECL_CONSENFOPS(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
-      Bool objinfeasible, RESULT* result)
+#define SCIP_DECL_CONSENFOPS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, \
+      SCIP_Bool objinfeasible, SCIP_RESULT* result)
 
 /** feasibility check method of constraint handler for integral solutions
  *
@@ -300,7 +300,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  check priority greater than zero (e.g. if the check is much faster than testing all variables for
  *  integrality).
  *
- *  In some cases, integrality conditions or rows of the current LP don't have to be checked, because their
+ *  In some cases, integrality conditions or rows of the current SCIP_LP don't have to be checked, because their
  *  feasibility is already checked or implicitly given. In these cases, 'checkintegrality' or
  *  'checklprows' is FALSE.
  *
@@ -311,15 +311,15 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - nconss          : number of constraints to process
  *  - sol             : the solution to check feasibility for
  *  - checkintegrality: has integrality to be checked?
- *  - checklprows     : have current LP rows to be checked?
+ *  - checklprows     : have current SCIP_LP rows to be checked?
  *  - result          : pointer to store the result of the feasibility checking call
  *
  *  possible return values for *result:
  *  - SCIP_INFEASIBLE : at least one constraint of the handler is infeasible
  *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
-#define DECL_CONSCHECK(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, SOL* sol, \
-      Bool checkintegrality, Bool checklprows, RESULT* result)
+#define SCIP_DECL_CONSCHECK(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_SOL* sol, \
+      SCIP_Bool checkintegrality, SCIP_Bool checklprows, SCIP_RESULT* result)
 
 /** domain propagation method of constraint handler
  *
@@ -342,8 +342,8 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - SCIP_DIDNOTRUN  : the propagator was skipped
  *  - SCIP_DELAYED    : the propagator was skipped, but should be called again
  */
-#define DECL_CONSPROP(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
-      RESULT* result)
+#define SCIP_DECL_CONSPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, \
+      SCIP_RESULT* result)
 
 /** presolving method of constraint handler
  *
@@ -388,11 +388,11 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - SCIP_DIDNOTRUN  : the presolver was skipped
  *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
  */
-#define DECL_CONSPRESOL(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nrounds, \
+#define SCIP_DECL_CONSPRESOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nrounds, \
       int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \
       int nnewdelconss, int nnewupgdconss, int nnewchgcoefs, int nnewchgsides, \
       int* nfixedvars, int* naggrvars, int* nchgvartypes, int* nchgbds, int* naddholes, \
-      int* ndelconss, int* nupgdconss, int* nchgcoefs, int* nchgsides, RESULT* result)
+      int* ndelconss, int* nupgdconss, int* nchgcoefs, int* nchgsides, SCIP_RESULT* result)
 
 /** propagation conflict resolving method of constraint handler
  *
@@ -434,8 +434,8 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - SCIP_SUCCESS    : the conflicting bound change has been successfully resolved by adding all reason bounds
  *  - SCIP_DIDNOTFIND : the conflicting bound change could not be resolved and has to be put into the conflict set
  */
-#define DECL_CONSRESPROP(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons, VAR* infervar, int inferinfo, \
-      BOUNDTYPE boundtype, BDCHGIDX* bdchgidx, RESULT* result)
+#define SCIP_DECL_CONSRESPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, SCIP_VAR* infervar, int inferinfo, \
+      SCIP_BOUNDTYPE boundtype, SCIP_BDCHGIDX* bdchgidx, SCIP_RESULT* result)
 
 /** variable rounding lock method of constraint handler
  *
@@ -494,7 +494,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - nlockspos       : number of times, the roundings should be locked for the constraint (may be negative)
  *  - nlocksneg       : number of times, the roundings should be locked for the constraint's negation (may be negative)
  */
-#define DECL_CONSLOCK(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons, int nlockspos, int nlocksneg)
+#define SCIP_DECL_CONSLOCK(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, int nlockspos, int nlocksneg)
 
 /** constraint activation notification method of constraint handler
  *
@@ -509,7 +509,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - conshdlr        : the constraint handler itself
  *  - cons            : the constraint that has been activated
  */
-#define DECL_CONSACTIVE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons)
+#define SCIP_DECL_CONSACTIVE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons)
 
 /** constraint deactivation notification method of constraint handler
  *
@@ -524,7 +524,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - conshdlr        : the constraint handler itself
  *  - cons            : the constraint that will be deactivated
  */
-#define DECL_CONSDEACTIVE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons)
+#define SCIP_DECL_CONSDEACTIVE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons)
 
 /** constraint enabling notification method of constraint handler
  *
@@ -539,7 +539,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - conshdlr        : the constraint handler itself
  *  - cons            : the constraint that has been enabled
  */
-#define DECL_CONSENABLE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons)
+#define SCIP_DECL_CONSENABLE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons)
 
 /** constraint disabling notification method of constraint handler
  *
@@ -554,7 +554,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - conshdlr        : the constraint handler itself
  *  - cons            : the constraint that will be disabled
  */
-#define DECL_CONSDISABLE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons)
+#define SCIP_DECL_CONSDISABLE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons)
 
 /** constraint display method of constraint handler
  *
@@ -566,7 +566,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - cons            : the constraint that should be displayed
  *  - file            : the text file to store the information into
  */
-#define DECL_CONSPRINT(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons, FILE* file)
+#define SCIP_DECL_CONSPRINT(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, FILE* file)
 
 
 #include "scip/def.h"

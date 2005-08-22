@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.h,v 1.14 2005/07/15 17:20:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.h,v 1.15 2005/08/22 18:35:37 bzfpfend Exp $"
 
 /**@file   dialog.h
  * @brief  internal methods for user interface dialog
@@ -42,28 +42,28 @@
 
 /** creates a dialog handler */
 extern
-RETCODE SCIPdialoghdlrCreate(
-   DIALOGHDLR**     dialoghdlr          /**< pointer to store dialog handler */
+SCIP_RETCODE SCIPdialoghdlrCreate(
+   SCIP_DIALOGHDLR**     dialoghdlr          /**< pointer to store dialog handler */
    );
 
 /** frees a dialog handler and it's dialog tree */
 extern
-RETCODE SCIPdialoghdlrFree(
-   DIALOGHDLR**     dialoghdlr          /**< pointer to dialog handler */
+SCIP_RETCODE SCIPdialoghdlrFree(
+   SCIP_DIALOGHDLR**     dialoghdlr          /**< pointer to dialog handler */
    );
 
 /** executes the root dialog of the dialog handler */
 extern
-RETCODE SCIPdialoghdlrExec(
-   DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPdialoghdlrExec(
+   SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** makes given dialog the root dialog of dialog handler; captures dialog and releases former root dialog */
 extern
-RETCODE SCIPdialoghdlrSetRoot(
-   DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
-   DIALOG*          dialog              /**< dialog to be the root */
+SCIP_RETCODE SCIPdialoghdlrSetRoot(
+   SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
+   SCIP_DIALOG*          dialog              /**< dialog to be the root */
    );
 
 
@@ -75,43 +75,43 @@ RETCODE SCIPdialoghdlrSetRoot(
 
 /** creates and captures a user interface dialog */
 extern
-RETCODE SCIPdialogCreate(
-   DIALOG**         dialog,             /**< pointer to store the dialog */
-   DECL_DIALOGEXEC  ((*dialogexec)),    /**< execution method of dialog */
-   DECL_DIALOGDESC  ((*dialogdesc)),    /**< description output method of dialog, or NULL */
-   const char*      name,               /**< name of dialog: command name appearing in parent's dialog menu */
-   const char*      desc,               /**< description of dialog used if description output method is NULL */
-   Bool             issubmenu,          /**< is the dialog a submenu? */
-   DIALOGDATA*      dialogdata          /**< user defined dialog data */
+SCIP_RETCODE SCIPdialogCreate(
+   SCIP_DIALOG**         dialog,             /**< pointer to store the dialog */
+   SCIP_DECL_DIALOGEXEC  ((*dialogexec)),    /**< execution method of dialog */
+   SCIP_DECL_DIALOGDESC  ((*dialogdesc)),    /**< description output method of dialog, or NULL */
+   const char*           name,               /**< name of dialog: command name appearing in parent's dialog menu */
+   const char*           desc,               /**< description of dialog used if description output method is NULL */
+   SCIP_Bool             issubmenu,          /**< is the dialog a submenu? */
+   SCIP_DIALOGDATA*      dialogdata          /**< user defined dialog data */
    );
 
 /** captures a dialog */
 extern
 void SCIPdialogCapture(
-   DIALOG*          dialog              /**< dialog */
+   SCIP_DIALOG*          dialog              /**< dialog */
    );
 
 /** releases a dialog */
 extern
-RETCODE SCIPdialogRelease(
-   DIALOG**         dialog              /**< pointer to dialog */
+SCIP_RETCODE SCIPdialogRelease(
+   SCIP_DIALOG**         dialog              /**< pointer to dialog */
    );
 
 /** executes dialog */
 extern
-RETCODE SCIPdialogExec(
-   DIALOG*          dialog,             /**< dialog */
-   SET*             set,                /**< global SCIP settings */
-   DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
-   DIALOG**         nextdialog          /**< pointer to store the next dialog to process */
+SCIP_RETCODE SCIPdialogExec(
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
+   SCIP_DIALOG**         nextdialog          /**< pointer to store the next dialog to process */
    );
 
 /** adds a sub dialog to the given dialog as menu entry and captures the sub dialog */
 extern
-RETCODE SCIPdialogAddEntry(
-   DIALOG*          dialog,             /**< dialog */
-   SET*             set,                /**< global SCIP settings */
-   DIALOG*          subdialog           /**< subdialog to add as menu entry in dialog */
+SCIP_RETCODE SCIPdialogAddEntry(
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_DIALOG*          subdialog           /**< subdialog to add as menu entry in dialog */
    );
 
 

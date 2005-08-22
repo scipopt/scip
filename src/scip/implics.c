@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.7 2005/08/17 14:25:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.8 2005/08/22 18:35:39 bzfpfend Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -48,14 +48,14 @@
 
 /** creates a variable bounds data structure */
 static
-RETCODE vboundsCreate(
-   VBOUNDS**        vbounds,            /**< pointer to store variable bounds data structure */
-   BLKMEM*          blkmem              /**< block memory */
+SCIP_RETCODE vboundsCreate(
+   SCIP_VBOUNDS**        vbounds,            /**< pointer to store variable bounds data structure */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(vbounds != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(blkmem, vbounds) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, vbounds) );
    (*vbounds)->vars = NULL;
    (*vbounds)->coefs = NULL;
    (*vbounds)->constants = NULL;
@@ -67,28 +67,28 @@ RETCODE vboundsCreate(
 
 /** frees a variable bounds data structure */
 void SCIPvboundsFree(
-   VBOUNDS**        vbounds,            /**< pointer to store variable bounds data structure */
-   BLKMEM*          blkmem              /**< block memory */
+   SCIP_VBOUNDS**        vbounds,            /**< pointer to store variable bounds data structure */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(vbounds != NULL);
 
    if( *vbounds != NULL )
    {
-      freeBlockMemoryArrayNull(blkmem, &(*vbounds)->vars, (*vbounds)->size);
-      freeBlockMemoryArrayNull(blkmem, &(*vbounds)->coefs, (*vbounds)->size);
-      freeBlockMemoryArrayNull(blkmem, &(*vbounds)->constants, (*vbounds)->size);
-      freeBlockMemory(blkmem, vbounds);
+      BMSfreeBlockMemoryArrayNull(blkmem, &(*vbounds)->vars, (*vbounds)->size);
+      BMSfreeBlockMemoryArrayNull(blkmem, &(*vbounds)->coefs, (*vbounds)->size);
+      BMSfreeBlockMemoryArrayNull(blkmem, &(*vbounds)->constants, (*vbounds)->size);
+      BMSfreeBlockMemory(blkmem, vbounds);
    }
 }
 
 /** ensures, that variable bounds arrays can store at least num entries */
 static
-RETCODE vboundsEnsureSize(
-   VBOUNDS**        vbounds,            /**< pointer to variable bounds data structure */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   int              num                 /**< minimum number of entries to store */
+SCIP_RETCODE vboundsEnsureSize(
+   SCIP_VBOUNDS**        vbounds,            /**< pointer to variable bounds data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
    )
 {
    assert(vbounds != NULL);
@@ -96,7 +96,7 @@ RETCODE vboundsEnsureSize(
    /* create variable bounds data structure, if not yet existing */
    if( *vbounds == NULL )
    {
-      CHECK_OKAY( vboundsCreate(vbounds, blkmem) );
+      SCIP_CALL( vboundsCreate(vbounds, blkmem) );
    }
    assert(*vbounds != NULL);
    assert((*vbounds)->len <= (*vbounds)->size);
@@ -106,9 +106,9 @@ RETCODE vboundsEnsureSize(
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*vbounds)->vars, (*vbounds)->size, newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*vbounds)->coefs, (*vbounds)->size, newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*vbounds)->constants, (*vbounds)->size, newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*vbounds)->vars, (*vbounds)->size, newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*vbounds)->coefs, (*vbounds)->size, newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*vbounds)->constants, (*vbounds)->size, newsize) );
       (*vbounds)->size = newsize;
    }
    assert(num <= (*vbounds)->size);
@@ -118,11 +118,11 @@ RETCODE vboundsEnsureSize(
 
 /** binary searches the insertion position of the given variable in the vbounds data structure */
 static
-RETCODE vboundsSearchPos(
-   VBOUNDS*         vbounds,            /**< variable bounds data structure, or NULL */
-   VAR*             var,                /**< variable to search in vbounds data structure */
-   int*             insertpos,          /**< pointer to store position where to insert new entry */
-   Bool*            found               /**< pointer to store whether the same variable was found at the returned pos */
+SCIP_RETCODE vboundsSearchPos(
+   SCIP_VBOUNDS*         vbounds,            /**< variable bounds data structure, or NULL */
+   SCIP_VAR*             var,                /**< variable to search in vbounds data structure */
+   int*                  insertpos,          /**< pointer to store position where to insert new entry */
+   SCIP_Bool*            found               /**< pointer to store whether the same variable was found at the returned pos */
    )
 {
    int varidx;
@@ -174,19 +174,19 @@ RETCODE vboundsSearchPos(
 }
 
 /** adds a variable bound to the variable bounds data structure */
-RETCODE SCIPvboundsAdd(
-   VBOUNDS**        vbounds,            /**< pointer to variable bounds data structure */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   BOUNDTYPE        vboundtype,         /**< type of variable bound (LOWER or UPPER) */
-   VAR*             var,                /**< variable z    in x <= b*z + d  or  x >= b*z + d */
-   Real             coef,               /**< coefficient b in x <= b*z + d  or  x >= b*z + d */
-   Real             constant,           /**< constant d    in x <= b*z + d  or  x >= b*z + d */
-   Bool*            added               /**< pointer to store whether the variable bound was added */
+SCIP_RETCODE SCIPvboundsAdd(
+   SCIP_VBOUNDS**        vbounds,            /**< pointer to variable bounds data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BOUNDTYPE        vboundtype,         /**< type of variable bound (LOWER or UPPER) */
+   SCIP_VAR*             var,                /**< variable z    in x <= b*z + d  or  x >= b*z + d */
+   SCIP_Real             coef,               /**< coefficient b in x <= b*z + d  or  x >= b*z + d */
+   SCIP_Real             constant,           /**< constant d    in x <= b*z + d  or  x >= b*z + d */
+   SCIP_Bool*            added               /**< pointer to store whether the variable bound was added */
    )
 {
    int insertpos;
-   Bool found;
+   SCIP_Bool found;
 
    assert(vbounds != NULL);
    assert(var != NULL);
@@ -197,7 +197,7 @@ RETCODE SCIPvboundsAdd(
    *added = FALSE;
 
    /* identify insertion position of variable */
-   CHECK_OKAY( vboundsSearchPos(*vbounds, var, &insertpos, &found) );
+   SCIP_CALL( vboundsSearchPos(*vbounds, var, &insertpos, &found) );
    if( found )
    {
       /* the same variable already exists in the vbounds data structure: use the better vbound */
@@ -229,7 +229,7 @@ RETCODE SCIPvboundsAdd(
       int i;
 
       /* the given variable does not yet exist in the vbounds */
-      CHECK_OKAY( vboundsEnsureSize(vbounds, blkmem, set, *vbounds != NULL ? (*vbounds)->len+1 : 1) );
+      SCIP_CALL( vboundsEnsureSize(vbounds, blkmem, set, *vbounds != NULL ? (*vbounds)->len+1 : 1) );
       assert(*vbounds != NULL);
       assert(0 <= insertpos && insertpos <= (*vbounds)->len);
       assert(0 <= insertpos && insertpos < (*vbounds)->size);
@@ -252,13 +252,13 @@ RETCODE SCIPvboundsAdd(
 }
 
 /** removes from variable x a variable bound x >=/<= b*z + d with binary or integer z */
-RETCODE SCIPvboundsDel(
-   VBOUNDS**        vbounds,            /**< pointer to variable bounds data structure */
-   BLKMEM*          blkmem,             /**< block memory */
-   VAR*             vbdvar              /**< variable z    in x >=/<= b*z + d */
+SCIP_RETCODE SCIPvboundsDel(
+   SCIP_VBOUNDS**        vbounds,            /**< pointer to variable bounds data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             vbdvar              /**< variable z    in x >=/<= b*z + d */
    )
 {
-   Bool found;
+   SCIP_Bool found;
    int pos;
    int i;
 
@@ -266,7 +266,7 @@ RETCODE SCIPvboundsDel(
    assert(*vbounds != NULL);
 
    /* searches for variable z in variable bounds of x */
-   CHECK_OKAY( vboundsSearchPos(*vbounds, vbdvar, &pos, &found) );
+   SCIP_CALL( vboundsSearchPos(*vbounds, vbdvar, &pos, &found) );
    if( !found )
       return SCIP_OKAY;
 
@@ -283,7 +283,7 @@ RETCODE SCIPvboundsDel(
    (*vbounds)->len--;
 
 #ifndef NDEBUG
-   CHECK_OKAY( vboundsSearchPos(*vbounds, vbdvar, &pos, &found) );
+   SCIP_CALL( vboundsSearchPos(*vbounds, vbdvar, &pos, &found) );
    assert(!found);
 #endif
 
@@ -296,9 +296,9 @@ RETCODE SCIPvboundsDel(
 
 /** reduces the number of variable bounds stored in the given variable bounds data structure */
 void SCIPvboundsShrink(
-   VBOUNDS**        vbounds,            /**< pointer to variable bounds data structure */
-   BLKMEM*          blkmem,             /**< block memory */
-   int              newnvbds            /**< new number of variable bounds */
+   SCIP_VBOUNDS**        vbounds,            /**< pointer to variable bounds data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   int                   newnvbds            /**< new number of variable bounds */
    )
 {
    assert(vbounds != NULL);
@@ -321,17 +321,17 @@ void SCIPvboundsShrink(
 #ifndef NDEBUG
 /** comparator function for implication variables in the implication data structure */
 static
-DECL_SORTPTRCOMP(compVars)
+SCIP_DECL_SORTPTRCOMP(compVars)
 {  /*lint --e{715}*/
-   VAR* var1;
-   VAR* var2;
-   VARTYPE var1type;
-   VARTYPE var2type;
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+   SCIP_VARTYPE var1type;
+   SCIP_VARTYPE var2type;
    int var1idx;
    int var2idx;
 
-   var1 = (VAR*)elem1;
-   var2 = (VAR*)elem2;
+   var1 = (SCIP_VAR*)elem1;
+   var2 = (SCIP_VAR*)elem2;
    assert(var1 != NULL);
    assert(var2 != NULL);
    var1type = SCIPvarGetType(var1);
@@ -369,11 +369,11 @@ DECL_SORTPTRCOMP(compVars)
 /** performs integrity check on implications data structure */
 static
 void checkImplics(
-   IMPLICS*         implics,            /**< implications data structure */
-   SET*             set                 /**< global SCIP settings */
+   SCIP_IMPLICS*         implics,            /**< implications data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
-   Bool varfixing;
+   SCIP_Bool varfixing;
 
    if( implics == NULL )
       return;
@@ -381,9 +381,9 @@ void checkImplics(
    varfixing = FALSE;
    do
    {
-      VAR** vars;
-      BOUNDTYPE* types;
-      Real* bounds;
+      SCIP_VAR** vars;
+      SCIP_BOUNDTYPE* types;
+      SCIP_Real* bounds;
       int nimpls;
       int nbinimpls;
       int i;
@@ -441,14 +441,14 @@ void checkImplics(
 
 /** creates an implications data structure */
 static
-RETCODE implicsCreate(
-   IMPLICS**        implics,            /**< pointer to store implications data structure */
-   BLKMEM*          blkmem              /**< block memory */
+SCIP_RETCODE implicsCreate(
+   SCIP_IMPLICS**        implics,            /**< pointer to store implications data structure */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(implics != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(blkmem, implics) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, implics) );
 
    (*implics)->vars[0] = NULL;
    (*implics)->types[0] = NULL;
@@ -471,34 +471,34 @@ RETCODE implicsCreate(
 
 /** frees an implications data structure */
 void SCIPimplicsFree(
-   IMPLICS**        implics,            /**< pointer of implications data structure to free */
-   BLKMEM*          blkmem              /**< block memory */
+   SCIP_IMPLICS**        implics,            /**< pointer of implications data structure to free */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(implics != NULL);
 
    if( *implics != NULL )
    {
-      freeBlockMemoryArrayNull(blkmem, &(*implics)->vars[0], (*implics)->size[0]);
-      freeBlockMemoryArrayNull(blkmem, &(*implics)->types[0], (*implics)->size[0]);
-      freeBlockMemoryArrayNull(blkmem, &(*implics)->bounds[0], (*implics)->size[0]);
-      freeBlockMemoryArrayNull(blkmem, &(*implics)->ids[0], (*implics)->size[0]);
-      freeBlockMemoryArrayNull(blkmem, &(*implics)->vars[1], (*implics)->size[1]);
-      freeBlockMemoryArrayNull(blkmem, &(*implics)->types[1], (*implics)->size[1]);
-      freeBlockMemoryArrayNull(blkmem, &(*implics)->bounds[1], (*implics)->size[1]);
-      freeBlockMemoryArrayNull(blkmem, &(*implics)->ids[1], (*implics)->size[1]);
-      freeBlockMemory(blkmem, implics);
+      BMSfreeBlockMemoryArrayNull(blkmem, &(*implics)->vars[0], (*implics)->size[0]);
+      BMSfreeBlockMemoryArrayNull(blkmem, &(*implics)->types[0], (*implics)->size[0]);
+      BMSfreeBlockMemoryArrayNull(blkmem, &(*implics)->bounds[0], (*implics)->size[0]);
+      BMSfreeBlockMemoryArrayNull(blkmem, &(*implics)->ids[0], (*implics)->size[0]);
+      BMSfreeBlockMemoryArrayNull(blkmem, &(*implics)->vars[1], (*implics)->size[1]);
+      BMSfreeBlockMemoryArrayNull(blkmem, &(*implics)->types[1], (*implics)->size[1]);
+      BMSfreeBlockMemoryArrayNull(blkmem, &(*implics)->bounds[1], (*implics)->size[1]);
+      BMSfreeBlockMemoryArrayNull(blkmem, &(*implics)->ids[1], (*implics)->size[1]);
+      BMSfreeBlockMemory(blkmem, implics);
    }
 }
 
 /** ensures, that arrays for x == 0 or x == 1 in implications data structure can store at least num entries */
 static
-RETCODE implicsEnsureSize(
-   IMPLICS**        implics,            /**< pointer to implications data structure */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   Bool             varfixing,          /**< FALSE if size of arrays for x == 0 has to be ensured, TRUE for x == 1 */
-   int              num                 /**< minimum number of entries to store */
+SCIP_RETCODE implicsEnsureSize(
+   SCIP_IMPLICS**        implics,            /**< pointer to implications data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             varfixing,          /**< FALSE if size of arrays for x == 0 has to be ensured, TRUE for x == 1 */
+   int                   num                 /**< minimum number of entries to store */
    )
 {
    assert(implics != NULL);
@@ -506,7 +506,7 @@ RETCODE implicsEnsureSize(
    /* create implications data structure, if not yet existing */
    if( *implics == NULL )
    {
-      CHECK_OKAY( implicsCreate(implics, blkmem) );
+      SCIP_CALL( implicsCreate(implics, blkmem) );
    }
    assert(*implics != NULL);
    assert((*implics)->nimpls[varfixing] <= (*implics)->size[varfixing]);
@@ -516,13 +516,13 @@ RETCODE implicsEnsureSize(
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*implics)->vars[varfixing], (*implics)->size[varfixing],
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->vars[varfixing], (*implics)->size[varfixing],
             newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*implics)->types[varfixing], (*implics)->size[varfixing], 
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->types[varfixing], (*implics)->size[varfixing], 
             newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*implics)->bounds[varfixing], (*implics)->size[varfixing],
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->bounds[varfixing], (*implics)->size[varfixing],
             newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*implics)->ids[varfixing], (*implics)->size[varfixing],
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*implics)->ids[varfixing], (*implics)->size[varfixing],
             newsize) );
       (*implics)->size[varfixing] = newsize;
    }
@@ -535,21 +535,21 @@ RETCODE implicsEnsureSize(
  *  y can be contained in structure with y >= b (y_lower) and y <= b (y_upper) 
  */
 static
-Bool implicsSearchVar(
-   IMPLICS*         implics,            /**< implications data structure */
-   Bool             varfixing,          /**< FALSE if y is searched in implications for x == 0, TRUE for x == 1 */
-   VAR*             implvar,            /**< variable y to search for */
-   BOUNDTYPE        impltype,           /**< type of implication y <=/>= b to search for */
-   int*             poslower,           /**< pointer to store position of y_lower (inf if not found) */
-   int*             posupper,           /**< pointer to store position of y_upper (inf if not found) */
-   int*             posadd              /**< pointer to store correct position (with respect to impltype) to add y */
+SCIP_Bool implicsSearchVar(
+   SCIP_IMPLICS*         implics,            /**< implications data structure */
+   SCIP_Bool             varfixing,          /**< FALSE if y is searched in implications for x == 0, TRUE for x == 1 */
+   SCIP_VAR*             implvar,            /**< variable y to search for */
+   SCIP_BOUNDTYPE        impltype,           /**< type of implication y <=/>= b to search for */
+   int*                  poslower,           /**< pointer to store position of y_lower (inf if not found) */
+   int*                  posupper,           /**< pointer to store position of y_upper (inf if not found) */
+   int*                  posadd              /**< pointer to store correct position (with respect to impltype) to add y */
    )
 {
    int implvaridx;
    int left;
    int right;
    int middle;
-   Bool found;
+   SCIP_Bool found;
 
    assert(implics != NULL);
    assert(poslower != NULL);
@@ -684,23 +684,23 @@ Bool implicsSearchVar(
 /** adds an implication x == 0/1 -> y <= b or y >= b to the implications data structure;
  *  the implication must be non-redundant
  */
-RETCODE SCIPimplicsAdd(
-   IMPLICS**        implics,            /**< pointer to implications data structure */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   Bool             varfixing,          /**< FALSE if implication for x == 0 has to be added, TRUE for x == 1 */
-   VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
-   BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
-   Real             implbound,          /**< bound b    in implication y <= b or y >= b */
-   Bool*            conflict,           /**< pointer to store whether implication causes a conflict for variable x */
-   Bool*            added               /**< pointer to store whether the implication was added */
+SCIP_RETCODE SCIPimplicsAdd(
+   SCIP_IMPLICS**        implics,            /**< pointer to implications data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Bool             varfixing,          /**< FALSE if implication for x == 0 has to be added, TRUE for x == 1 */
+   SCIP_VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
+   SCIP_BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
+   SCIP_Real             implbound,          /**< bound b    in implication y <= b or y >= b */
+   SCIP_Bool*            conflict,           /**< pointer to store whether implication causes a conflict for variable x */
+   SCIP_Bool*            added               /**< pointer to store whether the implication was added */
    )
 {
    int poslower;
    int posupper;
    int posadd;
-   Bool found;
+   SCIP_Bool found;
    int k;
 
    assert(implics != NULL);
@@ -713,7 +713,7 @@ RETCODE SCIPimplicsAdd(
    assert(conflict != NULL);
    assert(added != NULL);
 
-   debugMessage("adding implication to implics %p [%d]: <%s> %s %g\n",
+   SCIPdebugMessage("adding implication to implics %p [%d]: <%s> %s %g\n",
       *implics, varfixing, SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", implbound);
 
    checkImplics(*implics, set);
@@ -748,7 +748,7 @@ RETCODE SCIPimplicsAdd(
       /* check if y >= b is redundant */
       if( poslower < INT_MAX && SCIPsetIsFeasLE(set, implbound, (*implics)->bounds[varfixing][poslower]) )
       {
-         debugMessage(" -> implication is redundant to <%s> >= %g\n", 
+         SCIPdebugMessage(" -> implication is redundant to <%s> >= %g\n", 
             SCIPvarGetName(implvar), (*implics)->bounds[varfixing][poslower]);
          return SCIP_OKAY;
       }
@@ -756,7 +756,7 @@ RETCODE SCIPimplicsAdd(
       /* check if y >= b causes conflict for x (i.e. y <= a (with a < b) is also valid) */
       if( posupper < INT_MAX && SCIPsetIsFeasGT(set, implbound, (*implics)->bounds[varfixing][posupper]) )
       {      
-         debugMessage(" -> implication is conflicting to <%s> <= %g\n", 
+         SCIPdebugMessage(" -> implication is conflicting to <%s> <= %g\n", 
             SCIPvarGetName(implvar), (*implics)->bounds[varfixing][posupper]);
          *conflict = TRUE;
          return SCIP_OKAY;
@@ -777,7 +777,7 @@ RETCODE SCIPimplicsAdd(
          /* add y >= b by creating a new entry on posadd */
          assert(poslower == INT_MAX);
 
-         CHECK_OKAY( implicsEnsureSize(implics, blkmem, set, varfixing,
+         SCIP_CALL( implicsEnsureSize(implics, blkmem, set, varfixing,
                *implics != NULL ? (*implics)->nimpls[varfixing]+1 : 1) );
          assert(*implics != NULL);
       
@@ -811,7 +811,7 @@ RETCODE SCIPimplicsAdd(
       /* check if y <= b is redundant */
       if( posupper < INT_MAX && SCIPsetIsFeasGE(set, implbound, (*implics)->bounds[varfixing][posupper]) )
       {
-         debugMessage(" -> implication is redundant to <%s> <= %g\n", 
+         SCIPdebugMessage(" -> implication is redundant to <%s> <= %g\n", 
             SCIPvarGetName(implvar), (*implics)->bounds[varfixing][posupper]);
          return SCIP_OKAY;
       }
@@ -819,7 +819,7 @@ RETCODE SCIPimplicsAdd(
       /* check if y <= b causes conflict for x (i.e. y >= a (with a > b) is also valid) */
       if( poslower < INT_MAX && SCIPsetIsFeasLT(set, implbound, (*implics)->bounds[varfixing][poslower]) )
       {      
-         debugMessage(" -> implication is conflicting to <%s> >= %g\n", 
+         SCIPdebugMessage(" -> implication is conflicting to <%s> >= %g\n", 
             SCIPvarGetName(implvar), (*implics)->bounds[varfixing][poslower]);
          *conflict = TRUE;
          return SCIP_OKAY;
@@ -840,7 +840,7 @@ RETCODE SCIPimplicsAdd(
          /* add y <= b by creating a new entry on posadd */
          assert(posupper == INT_MAX);
 
-         CHECK_OKAY( implicsEnsureSize(implics, blkmem, set, varfixing,
+         SCIP_CALL( implicsEnsureSize(implics, blkmem, set, varfixing,
                *implics != NULL ? (*implics)->nimpls[varfixing]+1 : 1) );
          assert(*implics != NULL);
       
@@ -874,26 +874,26 @@ RETCODE SCIPimplicsAdd(
 }
 
 /** removes the implication  x <= 0 or x >= 1  ==>  y <= b  or  y >= b  from the implications data structure */
-RETCODE SCIPimplicsDel(
-   IMPLICS**        implics,            /**< pointer to implications data structure */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   Bool             varfixing,          /**< FALSE if y should be removed from implications for x <= 0, TRUE for x >= 1 */
-   VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
-   BOUNDTYPE        impltype            /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
+SCIP_RETCODE SCIPimplicsDel(
+   SCIP_IMPLICS**        implics,            /**< pointer to implications data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             varfixing,          /**< FALSE if y should be removed from implications for x <= 0, TRUE for x >= 1 */
+   SCIP_VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
+   SCIP_BOUNDTYPE        impltype            /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
    )
 {
    int i;
    int poslower;
    int posupper; 
    int posadd;
-   Bool found;
+   SCIP_Bool found;
 
    assert(implics != NULL);
    assert(*implics != NULL);
    assert(implvar != NULL);
 
-   debugMessage("deleting implication from implics %p [%d]: <%s> %s x\n",
+   SCIPdebugMessage("deleting implication from implics %p [%d]: <%s> %s x\n",
       *implics, varfixing, SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=");
 
    checkImplics(*implics, set);
@@ -902,7 +902,7 @@ RETCODE SCIPimplicsDel(
    found = implicsSearchVar(*implics, varfixing, implvar, impltype, &poslower, &posupper, &posadd);
    if( !found )
    {
-      debugMessage(" -> implication was not found\n");
+      SCIPdebugMessage(" -> implication was not found\n");
       return SCIP_OKAY;
    }
 
@@ -937,11 +937,11 @@ RETCODE SCIPimplicsDel(
 }
 
 /** returns whether an implication y <= b or y >= b is contained in implications for x == 0 or x == 1 */
-Bool SCIPimplicsContainsImpl(
-   IMPLICS*         implics,            /**< implications data structure */
-   Bool             varfixing,          /**< FALSE if y should be searched in implications for x == 0, TRUE for x == 1 */
-   VAR*             implvar,            /**< variable y to search for */
-   BOUNDTYPE        impltype            /**< type of implication y <=/>= b to search for */
+SCIP_Bool SCIPimplicsContainsImpl(
+   SCIP_IMPLICS*         implics,            /**< implications data structure */
+   SCIP_Bool             varfixing,          /**< FALSE if y should be searched in implications for x == 0, TRUE for x == 1 */
+   SCIP_VAR*             implvar,            /**< variable y to search for */
+   SCIP_BOUNDTYPE        impltype            /**< type of implication y <=/>= b to search for */
    )
 {
    int poslower;
@@ -960,20 +960,20 @@ Bool SCIPimplicsContainsImpl(
 
 /** creates a clique data structure */
 static
-RETCODE cliqueCreate(
-   CLIQUE**         clique,             /**< pointer to store clique data structure */
-   BLKMEM*          blkmem,             /**< block memory */
-   int              size,               /**< initial size of clique */
-   int              id                  /**< unique identifier of the clique */
+SCIP_RETCODE cliqueCreate(
+   SCIP_CLIQUE**         clique,             /**< pointer to store clique data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   int                   size,               /**< initial size of clique */
+   int                   id                  /**< unique identifier of the clique */
    )
 {
    assert(clique != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(blkmem, clique) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, clique) );
    if( size > 0 )
    {
-      ALLOC_OKAY( allocBlockMemoryArray(blkmem, &(*clique)->vars, size) );
-      ALLOC_OKAY( allocBlockMemoryArray(blkmem, &(*clique)->values, size) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*clique)->vars, size) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*clique)->values, size) );
    }
    else
    {
@@ -990,27 +990,27 @@ RETCODE cliqueCreate(
 /** frees a clique data structure */
 static
 void cliqueFree(
-   CLIQUE**         clique,             /**< pointer to store clique data structure */
-   BLKMEM*          blkmem              /**< block memory */
+   SCIP_CLIQUE**         clique,             /**< pointer to store clique data structure */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(clique != NULL);
 
    if( *clique != NULL )
    {
-      freeBlockMemoryArrayNull(blkmem, &(*clique)->vars, (*clique)->size);
-      freeBlockMemoryArrayNull(blkmem, &(*clique)->values, (*clique)->size);
-      freeBlockMemory(blkmem, clique);
+      BMSfreeBlockMemoryArrayNull(blkmem, &(*clique)->vars, (*clique)->size);
+      BMSfreeBlockMemoryArrayNull(blkmem, &(*clique)->values, (*clique)->size);
+      BMSfreeBlockMemory(blkmem, clique);
    }
 }
 
 /** ensures, that clique arrays can store at least num entries */
 static
-RETCODE cliqueEnsureSize(
-   CLIQUE*          clique,             /**< clique data structure */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   int              num                 /**< minimum number of entries to store */
+SCIP_RETCODE cliqueEnsureSize(
+   SCIP_CLIQUE*          clique,             /**< clique data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
    )
 {
    assert(clique != NULL);
@@ -1020,8 +1020,8 @@ RETCODE cliqueEnsureSize(
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &clique->vars, clique->size, newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &clique->values, clique->size, newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &clique->vars, clique->size, newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &clique->values, clique->size, newsize) );
       clique->size = newsize;
    }
    assert(num <= clique->size);
@@ -1033,9 +1033,9 @@ RETCODE cliqueEnsureSize(
  *  of the clique
  */
 int SCIPcliqueSearchVar(
-   CLIQUE*          clique,             /**< clique data structure */
-   VAR*             var,                /**< variable to search for */
-   Bool             value               /**< value of the variable in the clique */
+   SCIP_CLIQUE*          clique,             /**< clique data structure */
+   SCIP_VAR*             var,                /**< variable to search for */
+   SCIP_Bool             value               /**< value of the variable in the clique */
    )
 {
    int varidx;
@@ -1091,24 +1091,24 @@ int SCIPcliqueSearchVar(
 }
 
 /** returns whether the given variable/value pair is member of the given clique */
-Bool SCIPcliqueHasVar(
-   CLIQUE*          clique,             /**< clique data structure */
-   VAR*             var,                /**< variable to remove from the clique */
-   Bool             value               /**< value of the variable in the clique */
+SCIP_Bool SCIPcliqueHasVar(
+   SCIP_CLIQUE*          clique,             /**< clique data structure */
+   SCIP_VAR*             var,                /**< variable to remove from the clique */
+   SCIP_Bool             value               /**< value of the variable in the clique */
    )
 {
    return (SCIPcliqueSearchVar(clique, var, value) >= 0);
 }
 
 /** adds a single variable to the given clique */
-RETCODE SCIPcliqueAddVar(
-   CLIQUE*          clique,             /**< clique data structure */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   VAR*             var,                /**< variable to add to the clique */
-   Bool             value,              /**< value of the variable in the clique */
-   Bool*            doubleentry,        /**< pointer to store whether the variable and value occurs twice in the clique */
-   Bool*            oppositeentry       /**< pointer to store whether the variable with opposite value is in the clique */
+SCIP_RETCODE SCIPcliqueAddVar(
+   SCIP_CLIQUE*          clique,             /**< clique data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< variable to add to the clique */
+   SCIP_Bool             value,              /**< value of the variable in the clique */
+   SCIP_Bool*            doubleentry,        /**< pointer to store whether the variable and value occurs twice in the clique */
+   SCIP_Bool*            oppositeentry       /**< pointer to store whether the variable with opposite value is in the clique */
    )
 {
    int varidx;
@@ -1120,13 +1120,13 @@ RETCODE SCIPcliqueAddVar(
    assert(doubleentry != NULL);
    assert(oppositeentry != NULL);
 
-   debugMessage("adding variable <%s> == %d to clique %d\n", SCIPvarGetName(var), value, clique->id);
+   SCIPdebugMessage("adding variable <%s> == %d to clique %d\n", SCIPvarGetName(var), value, clique->id);
 
    *doubleentry = FALSE;
    *oppositeentry = FALSE;
 
    /* allocate memory */
-   CHECK_OKAY( cliqueEnsureSize(clique, blkmem, set, clique->nvars+1) );
+   SCIP_CALL( cliqueEnsureSize(clique, blkmem, set, clique->nvars+1) );
 
    /* store variable in clique, sorted by index and values */
    varidx = SCIPvarGetIndex(var);
@@ -1153,10 +1153,10 @@ RETCODE SCIPcliqueAddVar(
 }
 
 /** removes a single variable from the given clique */
-RETCODE SCIPcliqueDelVar(
-   CLIQUE*          clique,             /**< clique data structure */
-   VAR*             var,                /**< variable to remove from the clique */
-   Bool             value               /**< value of the variable in the clique */
+SCIP_RETCODE SCIPcliqueDelVar(
+   SCIP_CLIQUE*          clique,             /**< clique data structure */
+   SCIP_VAR*             var,                /**< variable to remove from the clique */
+   SCIP_Bool             value               /**< value of the variable in the clique */
    )
 {
    int pos;
@@ -1165,7 +1165,7 @@ RETCODE SCIPcliqueDelVar(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
 
-   debugMessage("deleting variable <%s> == %d from clique %d\n", SCIPvarGetName(var), value, clique->id);
+   SCIPdebugMessage("deleting variable <%s> == %d from clique %d\n", SCIPvarGetName(var), value, clique->id);
 
    /* find variable in clique */
    pos = SCIPcliqueSearchVar(clique, var, value);
@@ -1187,9 +1187,9 @@ RETCODE SCIPcliqueDelVar(
 /** gets the position of the given clique in the cliques array; returns -1 if clique is not member of cliques array */
 static
 int cliquesSearchClique(
-   CLIQUE**         cliques,            /**< array of cliques */
-   int              ncliques,           /**< number of cliques in the cliques array */
-   CLIQUE*          clique              /**< clique to search for */
+   SCIP_CLIQUE**         cliques,            /**< array of cliques */
+   int                   ncliques,           /**< number of cliques in the cliques array */
+   SCIP_CLIQUE*          clique              /**< clique to search for */
    )
 {
    int cliqueid;
@@ -1229,7 +1229,7 @@ int cliquesSearchClique(
 /** checks whether clique appears in all clique lists of the involved variables */
 static
 void cliqueCheck(
-   CLIQUE*          clique              /**< clique data structure */
+   SCIP_CLIQUE*          clique              /**< clique data structure */
    )
 {
    int i;
@@ -1238,7 +1238,7 @@ void cliqueCheck(
 
    for( i = 0; i < clique->nvars; ++i )
    {
-      CLIQUE** cliques;
+      SCIP_CLIQUE** cliques;
       int ncliques;
       int pos;
 
@@ -1257,14 +1257,14 @@ void cliqueCheck(
 
 /** creates a clique list data structure */
 static
-RETCODE cliquelistCreate(
-   CLIQUELIST**     cliquelist,         /**< pointer to store clique list data structure */
-   BLKMEM*          blkmem              /**< block memory */
+SCIP_RETCODE cliquelistCreate(
+   SCIP_CLIQUELIST**     cliquelist,         /**< pointer to store clique list data structure */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(cliquelist != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(blkmem, cliquelist) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, cliquelist) );
    (*cliquelist)->cliques[0] = NULL;
    (*cliquelist)->cliques[1] = NULL;
    (*cliquelist)->ncliques[0] = 0;
@@ -1277,28 +1277,28 @@ RETCODE cliquelistCreate(
 
 /** frees a clique list data structure */
 void SCIPcliquelistFree(
-   CLIQUELIST**     cliquelist,         /**< pointer to the clique list data structure */
-   BLKMEM*          blkmem              /**< block memory */
+   SCIP_CLIQUELIST**     cliquelist,         /**< pointer to the clique list data structure */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(cliquelist != NULL);
 
    if( *cliquelist != NULL )
    {
-      freeBlockMemoryArrayNull(blkmem, &(*cliquelist)->cliques[0], (*cliquelist)->size[0]);
-      freeBlockMemoryArrayNull(blkmem, &(*cliquelist)->cliques[1], (*cliquelist)->size[1]);
-      freeBlockMemory(blkmem, cliquelist);
+      BMSfreeBlockMemoryArrayNull(blkmem, &(*cliquelist)->cliques[0], (*cliquelist)->size[0]);
+      BMSfreeBlockMemoryArrayNull(blkmem, &(*cliquelist)->cliques[1], (*cliquelist)->size[1]);
+      BMSfreeBlockMemory(blkmem, cliquelist);
    }
 }
 
 /** ensures, that clique list arrays can store at least num entries */
 static
-RETCODE cliquelistEnsureSize(
-   CLIQUELIST*      cliquelist,         /**< clique list data structure */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   Bool             value,              /**< value of the variable for which the clique list should be extended */
-   int              num                 /**< minimum number of entries to store */
+SCIP_RETCODE cliquelistEnsureSize(
+   SCIP_CLIQUELIST*      cliquelist,         /**< clique list data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             value,              /**< value of the variable for which the clique list should be extended */
+   int                   num                 /**< minimum number of entries to store */
    )
 {
    assert(cliquelist != NULL);
@@ -1308,7 +1308,7 @@ RETCODE cliquelistEnsureSize(
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &cliquelist->cliques[value], cliquelist->size[value], newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &cliquelist->cliques[value], cliquelist->size[value], newsize) );
       cliquelist->size[value] = newsize;
    }
    assert(num <= cliquelist->size[value]);
@@ -1317,12 +1317,12 @@ RETCODE cliquelistEnsureSize(
 }
 
 /** adds a clique to the clique list */
-RETCODE SCIPcliquelistAdd(
-   CLIQUELIST**     cliquelist,         /**< pointer to the clique list data structure */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   Bool             value,              /**< value of the variable for which the clique list should be extended */
-   CLIQUE*          clique              /**< clique that should be added to the clique list */
+SCIP_RETCODE SCIPcliquelistAdd(
+   SCIP_CLIQUELIST**     cliquelist,         /**< pointer to the clique list data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             value,              /**< value of the variable for which the clique list should be extended */
+   SCIP_CLIQUE*          clique              /**< clique that should be added to the clique list */
    )
 {
    int id;
@@ -1333,13 +1333,13 @@ RETCODE SCIPcliquelistAdd(
    /* allocate memory */
    if( *cliquelist == NULL )
    {
-      CHECK_OKAY( cliquelistCreate(cliquelist, blkmem) );
+      SCIP_CALL( cliquelistCreate(cliquelist, blkmem) );
    }
    assert(*cliquelist != NULL);
-   CHECK_OKAY( cliquelistEnsureSize(*cliquelist, blkmem, set, value, (*cliquelist)->ncliques[value]+1) );
+   SCIP_CALL( cliquelistEnsureSize(*cliquelist, blkmem, set, value, (*cliquelist)->ncliques[value]+1) );
    assert((*cliquelist)->cliques[value] != NULL);
 
-   debugMessage("adding clique %d to cliquelist %p value %d (length: %d)\n", 
+   SCIPdebugMessage("adding clique %d to cliquelist %p value %d (length: %d)\n", 
       clique->id, *cliquelist, value, (*cliquelist)->ncliques[value]);
    
    /* insert clique into list, sorted by clique id */
@@ -1354,11 +1354,11 @@ RETCODE SCIPcliquelistAdd(
 }
 
 /** removes a clique from the clique list */
-RETCODE SCIPcliquelistDel(
-   CLIQUELIST**     cliquelist,         /**< pointer to the clique list data structure */
-   BLKMEM*          blkmem,             /**< block memory */
-   Bool             value,              /**< value of the variable for which the clique list should be reduced */
-   CLIQUE*          clique              /**< clique that should be deleted from the clique list */
+SCIP_RETCODE SCIPcliquelistDel(
+   SCIP_CLIQUELIST**     cliquelist,         /**< pointer to the clique list data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_Bool             value,              /**< value of the variable for which the clique list should be reduced */
+   SCIP_CLIQUE*          clique              /**< clique that should be deleted from the clique list */
    )
 {
    int pos;
@@ -1366,7 +1366,7 @@ RETCODE SCIPcliquelistDel(
    assert(cliquelist != NULL);
    assert(*cliquelist != NULL);
 
-   debugMessage("deleting clique %d from cliquelist %p value %d (length: %d)\n", 
+   SCIPdebugMessage("deleting clique %d from cliquelist %p value %d (length: %d)\n", 
       clique->id, *cliquelist, value, (*cliquelist)->ncliques[value]);
    
    pos = cliquesSearchClique((*cliquelist)->cliques[value], (*cliquelist)->ncliques[value], clique);
@@ -1388,15 +1388,15 @@ RETCODE SCIPcliquelistDel(
 /** returns whether the given clique lists have a non-empty intersection, i.e. whether there is a clique that appears
  *  in both lists
  */
-Bool SCIPcliquelistsHaveCommonClique(
-   CLIQUELIST*      cliquelist1,        /**< first clique list data structure */
-   Bool             value1,             /**< value of first variable */
-   CLIQUELIST*      cliquelist2,        /**< second clique list data structure */
-   Bool             value2              /**< value of second variable */
+SCIP_Bool SCIPcliquelistsHaveCommonClique(
+   SCIP_CLIQUELIST*      cliquelist1,        /**< first clique list data structure */
+   SCIP_Bool             value1,             /**< value of first variable */
+   SCIP_CLIQUELIST*      cliquelist2,        /**< second clique list data structure */
+   SCIP_Bool             value2              /**< value of second variable */
    )
 {
-   CLIQUE** cliques1;
-   CLIQUE** cliques2;
+   SCIP_CLIQUE** cliques1;
+   SCIP_CLIQUE** cliques2;
    int ncliques1;
    int ncliques2;
    int i1;
@@ -1436,8 +1436,8 @@ Bool SCIPcliquelistsHaveCommonClique(
 
 /** removes all listed entries from the cliques */
 void SCIPcliquelistRemoveFromCliques(
-   CLIQUELIST*      cliquelist,         /**< clique list data structure */
-   VAR*             var                 /**< active problem variable the clique list belongs to */
+   SCIP_CLIQUELIST*      cliquelist,         /**< clique list data structure */
+   SCIP_VAR*             var                 /**< active problem variable the clique list belongs to */
    )
 {
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
@@ -1446,31 +1446,31 @@ void SCIPcliquelistRemoveFromCliques(
    {
       int value;
 
-      debugMessage("removing variable <%s> from cliques (%d with value 0, %d with value 1)\n",
+      SCIPdebugMessage("removing variable <%s> from cliques (%d with value 0, %d with value 1)\n",
          SCIPvarGetName(var), cliquelist->ncliques[0], cliquelist->ncliques[1]);
 
       for( value = 0; value < 2; ++value )
       {
          int i;
 
-         assert(SCIPvarGetCliques(var, (Bool)value) == cliquelist->cliques[value]);
-         assert(SCIPvarGetNCliques(var, (Bool)value) == cliquelist->ncliques[value]);
+         assert(SCIPvarGetCliques(var, (SCIP_Bool)value) == cliquelist->cliques[value]);
+         assert(SCIPvarGetNCliques(var, (SCIP_Bool)value) == cliquelist->ncliques[value]);
          for( i = 0; i < cliquelist->ncliques[value]; ++i )
          {
-            CLIQUE* clique;
+            SCIP_CLIQUE* clique;
             int pos;
 
             clique = cliquelist->cliques[value][i];
             assert(clique != NULL);
 
-            debugMessage(" -> removing variable <%s> == %d from clique %d (size %d)\n",
+            SCIPdebugMessage(" -> removing variable <%s> == %d from clique %d (size %d)\n",
                SCIPvarGetName(var), value, clique->id, clique->nvars);
 
             /* binary search the position of the variable in the clique */
-            pos = SCIPcliqueSearchVar(clique, var, (Bool)value);
+            pos = SCIPcliqueSearchVar(clique, var, (SCIP_Bool)value);
             assert(0 <= pos && pos < clique->nvars);
             assert(clique->vars[pos] == var);
-            assert(clique->values[pos] == (Bool)value);
+            assert(clique->values[pos] == (SCIP_Bool)value);
 
             /* remove the entry from the clique */
             for( ; pos < clique->nvars-1; ++pos )
@@ -1487,13 +1487,13 @@ void SCIPcliquelistRemoveFromCliques(
 }
 
 /** creates a clique table data structure */
-RETCODE SCIPcliquetableCreate(
-   CLIQUETABLE**    cliquetable         /**< pointer to store clique table data structure */
+SCIP_RETCODE SCIPcliquetableCreate(
+   SCIP_CLIQUETABLE**    cliquetable         /**< pointer to store clique table data structure */
    )
 {
    assert(cliquetable != NULL);
 
-   ALLOC_OKAY( allocMemory(cliquetable) );
+   SCIP_ALLOC( BMSallocMemory(cliquetable) );
    (*cliquetable)->cliques = NULL;
    (*cliquetable)->ncliques = 0;
    (*cliquetable)->size = 0;
@@ -1503,9 +1503,9 @@ RETCODE SCIPcliquetableCreate(
 }
 
 /** frees a clique table data structure */
-RETCODE SCIPcliquetableFree(
-   CLIQUETABLE**    cliquetable,        /**< pointer to store clique table data structure */
-   BLKMEM*          blkmem              /**< block memory */
+SCIP_RETCODE SCIPcliquetableFree(
+   SCIP_CLIQUETABLE**    cliquetable,        /**< pointer to store clique table data structure */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    int i;
@@ -1520,18 +1520,18 @@ RETCODE SCIPcliquetableFree(
    }
 
    /* free clique table data */
-   freeMemoryArrayNull(&(*cliquetable)->cliques);
-   freeMemory(cliquetable);
+   BMSfreeMemoryArrayNull(&(*cliquetable)->cliques);
+   BMSfreeMemory(cliquetable);
 
    return SCIP_OKAY;
 }
 
 /** ensures, that clique table arrays can store at least num entries */
 static
-RETCODE cliquetableEnsureSize(
-   CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   SET*             set,                /**< global SCIP settings */
-   int              num                 /**< minimum number of entries to store */
+SCIP_RETCODE cliquetableEnsureSize(
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
    )
 {
    assert(cliquetable != NULL);
@@ -1541,7 +1541,7 @@ RETCODE cliquetableEnsureSize(
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(&cliquetable->cliques, newsize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&cliquetable->cliques, newsize) );
       cliquetable->size = newsize;
    }
    assert(num <= cliquetable->size);
@@ -1552,35 +1552,35 @@ RETCODE cliquetableEnsureSize(
 /** adds a clique to the clique table, using the given values for the given variables;
  *  performs implications if the clique contains the same variable twice
  */
-RETCODE SCIPcliquetableAdd(
-   CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< current LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   EVENTQUEUE*      eventqueue,         /**< event queue */
-   VAR**            vars,               /**< binary variables in the clique: at most one can be set to the given value */
-   Bool*            values,             /**< values of the variables in the clique; NULL to use TRUE for all vars */
-   int              nvars,              /**< number of variables in the clique */
-   Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
-   int*             nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
+SCIP_RETCODE SCIPcliquetableAdd(
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_VAR**            vars,               /**< binary variables in the clique: at most one can be set to the given value */
+   SCIP_Bool*            values,             /**< values of the variables in the clique; NULL to use TRUE for all vars */
+   int                   nvars,              /**< number of variables in the clique */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*                  nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
    )
 {
-   CLIQUE* clique;
+   SCIP_CLIQUE* clique;
    int i;
 
    assert(cliquetable != NULL);
    assert(vars != NULL);
 
-   debugMessage("adding clique %d with %d vars to clique table\n", cliquetable->ncliques, nvars);
+   SCIPdebugMessage("adding clique %d with %d vars to clique table\n", cliquetable->ncliques, nvars);
 
    /* create the clique data structure */
-   CHECK_OKAY( cliqueCreate(&clique, blkmem, nvars, cliquetable->ncreatedcliques) );
+   SCIP_CALL( cliqueCreate(&clique, blkmem, nvars, cliquetable->ncreatedcliques) );
    cliquetable->ncreatedcliques++;
 
    /* add clique to clique table */
-   CHECK_OKAY( cliquetableEnsureSize(cliquetable, set, cliquetable->ncliques+1) );
+   SCIP_CALL( cliquetableEnsureSize(cliquetable, set, cliquetable->ncliques+1) );
    cliquetable->cliques[cliquetable->ncliques] = clique;
    cliquetable->ncliques++;
 
@@ -1588,7 +1588,7 @@ RETCODE SCIPcliquetableAdd(
    for( i = 0; i < nvars; ++i )
    {
       /* put the clique into the sorted clique table of the variable */
-      CHECK_OKAY( SCIPvarAddClique(vars[i], blkmem, set, stat, lp, branchcand, eventqueue,
+      SCIP_CALL( SCIPvarAddClique(vars[i], blkmem, set, stat, lp, branchcand, eventqueue,
             values != NULL ? values[i] : TRUE, clique, infeasible, nbdchgs) );
    }
 
@@ -1599,21 +1599,21 @@ RETCODE SCIPcliquetableAdd(
 
 /** gets the key of the given element */
 static
-DECL_HASHGETKEY(hashgetkeyClique)
+SCIP_DECL_HASHGETKEY(hashgetkeyClique)
 {
    return elem;
 }
 
 /** returns TRUE iff both keys are equal */
 static
-DECL_HASHKEYEQ(hashkeyeqClique)
+SCIP_DECL_HASHKEYEQ(hashkeyeqClique)
 {
-   CLIQUE* clique1;
-   CLIQUE* clique2;
+   SCIP_CLIQUE* clique1;
+   SCIP_CLIQUE* clique2;
    int i;
 
-   clique1 = (CLIQUE*)key1;
-   clique2 = (CLIQUE*)key2;
+   clique1 = (SCIP_CLIQUE*)key1;
+   clique2 = (SCIP_CLIQUE*)key2;
    assert(clique1 != NULL);
    assert(clique2 != NULL);
 
@@ -1632,13 +1632,13 @@ DECL_HASHKEYEQ(hashkeyeqClique)
 
 /** returns the hash value of the key */
 static
-DECL_HASHKEYVAL(hashkeyvalClique)
+SCIP_DECL_HASHKEYVAL(hashkeyvalClique)
 {
-   CLIQUE* clique;
+   SCIP_CLIQUE* clique;
    unsigned int hashval;
    int i;
 
-   clique = (CLIQUE*)key;
+   clique = (SCIP_CLIQUE*)key;
    hashval = 0;
    for( i = 0; i < clique->nvars; ++i )
    {
@@ -1652,18 +1652,18 @@ DECL_HASHKEYVAL(hashkeyvalClique)
 /** removes all empty and single variable cliques from the clique table, and converts all two variable cliques
  *  into implications; removes double entries from the clique table
  */
-RETCODE SCIPcliquetableCleanup(
-   CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< current LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   EVENTQUEUE*      eventqueue,         /**< event queue */
-   Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
+SCIP_RETCODE SCIPcliquetableCleanup(
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    )
 {
-   HASHTABLE* hashtable;
+   SCIP_HASHTABLE* hashtable;
    int i;
 
    assert(cliquetable != NULL);
@@ -1672,21 +1672,21 @@ RETCODE SCIPcliquetableCleanup(
    *infeasible = FALSE;
 
    /* create hash table to test for multiple cliques */
-   CHECK_OKAY( SCIPhashtableCreate(&hashtable, blkmem, SCIP_HASHSIZE_CLIQUES, 
+   SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, SCIP_HASHSIZE_CLIQUES, 
          hashgetkeyClique, hashkeyeqClique, hashkeyvalClique) );
 
    i = 0;
    while( i < cliquetable->ncliques && !(*infeasible) )
    {
-      CLIQUE* clique;
+      SCIP_CLIQUE* clique;
 
       clique = cliquetable->cliques[i];
       if( clique->nvars == 2 )
       {
          /* add the 2-clique as implication (don't use transitive closure; otherwise new cliques can be generated) */
-         CHECK_OKAY( SCIPvarAddImplic(clique->vars[0], blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
+         SCIP_CALL( SCIPvarAddImplic(clique->vars[0], blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
                clique->values[0], clique->vars[1], clique->values[1] ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
-               (Real)(!clique->values[1]), FALSE, infeasible, NULL) );
+               (SCIP_Real)(!clique->values[1]), FALSE, infeasible, NULL) );
       }
       
       /* check if the clique is already contained in the clique table, or if it is redundant (too small) */
@@ -1697,7 +1697,7 @@ RETCODE SCIPcliquetableCleanup(
          /* delete the clique from the variables' clique lists */
          for( j = 0; j < clique->nvars; ++j )
          {
-            CHECK_OKAY( SCIPvarDelCliqueFromList(clique->vars[j], blkmem, clique->values[j], clique) );
+            SCIP_CALL( SCIPvarDelCliqueFromList(clique->vars[j], blkmem, clique->values[j], clique) );
          }
 
          /* free clique and remove it from clique table */
@@ -1707,7 +1707,7 @@ RETCODE SCIPcliquetableCleanup(
       }
       else
       {
-         CHECK_OKAY( SCIPhashtableInsert(hashtable, (void*)clique) );
+         SCIP_CALL( SCIPhashtableInsert(hashtable, (void*)clique) );
          i++;
       }
    }
@@ -1723,7 +1723,7 @@ RETCODE SCIPcliquetableCleanup(
  * simple functions implemented as defines
  */
 
-/* In debug mode, the following methods are implemented as function calls to ensure
+/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
  * type validity.
  * In optimized mode, the methods are implemented as defines to improve performance.
  * However, we want to have them in the library anyways, so we have to undef the defines.
@@ -1751,31 +1751,31 @@ RETCODE SCIPcliquetableCleanup(
 
 /** gets number of variable bounds contained in given variable bounds data structure */
 int SCIPvboundsGetNVbds(
-   VBOUNDS*         vbounds             /**< variable bounds data structure */
+   SCIP_VBOUNDS*         vbounds             /**< variable bounds data structure */
    )
 {
    return vbounds != NULL ? vbounds->len : 0;
 }
 
 /** gets array of variables contained in given variable bounds data structure */
-VAR** SCIPvboundsGetVars(
-   VBOUNDS*         vbounds             /**< variable bounds data structure */
+SCIP_VAR** SCIPvboundsGetVars(
+   SCIP_VBOUNDS*         vbounds             /**< variable bounds data structure */
    )
 {
    return vbounds != NULL ? vbounds->vars : NULL;
 }
 
 /** gets array of coefficients contained in given variable bounds data structure */
-Real* SCIPvboundsGetCoefs(
-   VBOUNDS*         vbounds             /**< variable bounds data structure */
+SCIP_Real* SCIPvboundsGetCoefs(
+   SCIP_VBOUNDS*         vbounds             /**< variable bounds data structure */
    )
 {
    return vbounds != NULL ? vbounds->coefs : NULL;
 }
 
 /** gets array of constants contained in given variable bounds data structure */
-Real* SCIPvboundsGetConstants(
-   VBOUNDS*         vbounds             /**< variable bounds data structure */
+SCIP_Real* SCIPvboundsGetConstants(
+   SCIP_VBOUNDS*         vbounds             /**< variable bounds data structure */
    )
 {
    return vbounds != NULL ? vbounds->constants : NULL;
@@ -1783,8 +1783,8 @@ Real* SCIPvboundsGetConstants(
 
 /** gets number of implications for a given binary variable fixing */
 int SCIPimplicsGetNImpls(
-   IMPLICS*         implics,            /**< implication data */
-   Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
+   SCIP_IMPLICS*         implics,            /**< implication data */
+   SCIP_Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
    )
 {
    return implics != NULL ? implics->nimpls[varfixing] : 0;
@@ -1792,35 +1792,35 @@ int SCIPimplicsGetNImpls(
 
 /** gets number of implications on binary variables for a given binary variable fixing */
 int SCIPimplicsGetNBinImpls(
-   IMPLICS*         implics,            /**< implication data */
-   Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
+   SCIP_IMPLICS*         implics,            /**< implication data */
+   SCIP_Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
    )
 {
    return implics != NULL ? implics->nbinimpls[varfixing] : 0;
 }
 
 /** gets array with implied variables for a given binary variable fixing */
-VAR** SCIPimplicsGetVars(
-   IMPLICS*         implics,            /**< implication data */
-   Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
+SCIP_VAR** SCIPimplicsGetVars(
+   SCIP_IMPLICS*         implics,            /**< implication data */
+   SCIP_Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
    )
 {
    return implics != NULL ? implics->vars[varfixing] : NULL;
 }
 
 /** gets array with implication types for a given binary variable fixing */
-BOUNDTYPE* SCIPimplicsGetTypes(
-   IMPLICS*         implics,            /**< implication data */
-   Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
+SCIP_BOUNDTYPE* SCIPimplicsGetTypes(
+   SCIP_IMPLICS*         implics,            /**< implication data */
+   SCIP_Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
    )
 {
    return implics != NULL ? implics->types[varfixing] : NULL;
 }
 
 /** gets array with implication bounds for a given binary variable fixing */
-Real* SCIPimplicsGetBounds(
-   IMPLICS*         implics,            /**< implication data */
-   Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
+SCIP_Real* SCIPimplicsGetBounds(
+   SCIP_IMPLICS*         implics,            /**< implication data */
+   SCIP_Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
    )
 {
    return implics != NULL ? implics->bounds[varfixing] : NULL;
@@ -1828,8 +1828,8 @@ Real* SCIPimplicsGetBounds(
 
 /** gets array with unique implication identifiers for a given binary variable fixing */
 int* SCIPimplicsGetIds(
-   IMPLICS*         implics,            /**< implication data */
-   Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
+   SCIP_IMPLICS*         implics,            /**< implication data */
+   SCIP_Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
    )
 {
    return implics != NULL ? implics->ids[varfixing] : NULL;
@@ -1837,7 +1837,7 @@ int* SCIPimplicsGetIds(
 
 /** gets number of variables in the cliques */
 int SCIPcliqueGetNVars(
-   CLIQUE*          clique              /**< clique data structure */
+   SCIP_CLIQUE*          clique              /**< clique data structure */
    )
 {
    assert(clique != NULL);
@@ -1846,8 +1846,8 @@ int SCIPcliqueGetNVars(
 }
 
 /** gets array of active problem variables in the cliques */
-VAR** SCIPcliqueGetVars(
-   CLIQUE*          clique              /**< clique data structure */
+SCIP_VAR** SCIPcliqueGetVars(
+   SCIP_CLIQUE*          clique              /**< clique data structure */
    )
 {
    assert(clique != NULL);
@@ -1858,8 +1858,8 @@ VAR** SCIPcliqueGetVars(
 /** gets array of values of active problem variables in the cliques, i.e. whether the variable is fixed to FALSE or
  *  to TRUE in the clique
  */
-Bool* SCIPcliqueGetValues(
-   CLIQUE*          clique              /**< clique data structure */
+SCIP_Bool* SCIPcliqueGetValues(
+   SCIP_CLIQUE*          clique              /**< clique data structure */
    )
 {
    assert(clique != NULL);
@@ -1869,7 +1869,7 @@ Bool* SCIPcliqueGetValues(
 
 /** gets unique identifier of the clique */
 int SCIPcliqueGetId(
-   CLIQUE*          clique              /**< clique data structure */
+   SCIP_CLIQUE*          clique              /**< clique data structure */
    )
 {
    assert(clique != NULL);
@@ -1879,17 +1879,17 @@ int SCIPcliqueGetId(
    
 /** returns the number of cliques stored in the clique list */
 int SCIPcliquelistGetNCliques(
-   CLIQUELIST*      cliquelist,         /**< clique list data structure */
-   Bool             value               /**< value of the variable for which the cliques should be returned */
+   SCIP_CLIQUELIST*      cliquelist,         /**< clique list data structure */
+   SCIP_Bool             value               /**< value of the variable for which the cliques should be returned */
    )
 {
    return cliquelist != NULL ? cliquelist->ncliques[value] : 0;
 }
 
 /** returns the cliques stored in the clique list, or NULL if the clique list is empty */
-CLIQUE** SCIPcliquelistGetCliques(
-   CLIQUELIST*      cliquelist,         /**< clique list data structure */
-   Bool             value               /**< value of the variable for which the cliques should be returned */
+SCIP_CLIQUE** SCIPcliquelistGetCliques(
+   SCIP_CLIQUELIST*      cliquelist,         /**< clique list data structure */
+   SCIP_Bool             value               /**< value of the variable for which the cliques should be returned */
    )
 {
    return cliquelist != NULL ? cliquelist->cliques[value] : NULL;
@@ -1897,8 +1897,8 @@ CLIQUE** SCIPcliquelistGetCliques(
 
 /** checks whether variable is contained in all cliques of the cliquelist */
 void SCIPcliquelistCheck(
-   CLIQUELIST*      cliquelist,         /**< clique list data structure */
-   VAR*             var                 /**< variable, the clique list belongs to */
+   SCIP_CLIQUELIST*      cliquelist,         /**< clique list data structure */
+   SCIP_VAR*             var                 /**< variable, the clique list belongs to */
    )
 {
    int value;
@@ -1910,30 +1910,30 @@ void SCIPcliquelistCheck(
 
    for( value = 0; value < 2; ++value )
    {
-      CLIQUE** cliques;
+      SCIP_CLIQUE** cliques;
       int ncliques;
       int i;
       
-      ncliques = SCIPcliquelistGetNCliques(cliquelist, (Bool)value);
-      cliques = SCIPcliquelistGetCliques(cliquelist, (Bool)value);
+      ncliques = SCIPcliquelistGetNCliques(cliquelist, (SCIP_Bool)value);
+      cliques = SCIPcliquelistGetCliques(cliquelist, (SCIP_Bool)value);
       for( i = 0; i < ncliques; ++i )
       {
-         CLIQUE* clique;
+         SCIP_CLIQUE* clique;
          int pos;
 
          clique = cliques[i];
          assert(clique != NULL);
-         pos = SCIPcliqueSearchVar(clique, var, (Bool)value);
+         pos = SCIPcliqueSearchVar(clique, var, (SCIP_Bool)value);
          assert(0 <= pos && pos < clique->nvars);
          assert(clique->vars[pos] == var);
-         assert(clique->values[pos] == (Bool)value);
+         assert(clique->values[pos] == (SCIP_Bool)value);
       }
    }
 }
 
 /** gets the number of cliques stored in the clique table */
 int SCIPcliquetableGetNCliques(
-   CLIQUETABLE*     cliquetable         /**< clique table data structure */
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    )
 {
    assert(cliquetable != NULL);

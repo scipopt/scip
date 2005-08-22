@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_pricer.h,v 1.11 2005/07/15 17:20:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_pricer.h,v 1.12 2005/08/22 18:35:51 bzfpfend Exp $"
 
 /**@file   struct_pricer.h
  * @brief  datastructures for variable pricers
@@ -33,24 +33,24 @@
 
 
 /** variable pricers data */
-struct Pricer
+struct SCIP_Pricer
 {
-   char*            name;               /**< name of variable pricer */
-   char*            desc;               /**< description of variable pricer */
-   DECL_PRICERFREE  ((*pricerfree));    /**< destructor of variable pricer */
-   DECL_PRICERINIT  ((*pricerinit));    /**< initialize variable pricer */
-   DECL_PRICEREXIT  ((*pricerexit));    /**< deinitialize variable pricer */
-   DECL_PRICERINITSOL((*pricerinitsol));/**< solving process initialization method of variable pricer */
-   DECL_PRICEREXITSOL((*pricerexitsol));/**< solving process deinitialization method of variable pricer */
-   DECL_PRICERREDCOST((*pricerredcost));/**< reduced cost pricing method of variable pricer for feasible LPs */
-   DECL_PRICERFARKAS((*pricerfarkas));  /**< farkas pricing method of variable pricer for infeasible LPs */
-   PRICERDATA*      pricerdata;         /**< variable pricers local data */
-   CLOCK*           clock;              /**< pricer execution time */
-   int              priority;           /**< priority of the variable pricer */
-   int              ncalls;             /**< number of times, this pricer was called */
-   int              nvarsfound;         /**< number of variables priced in found so far by this pricer */
-   Bool             active;             /**< is variable pricer in use for the current problem? */
-   Bool             initialized;        /**< is variable pricer initialized? */
+   char*                 name;               /**< name of variable pricer */
+   char*                 desc;               /**< description of variable pricer */
+   SCIP_DECL_PRICERFREE  ((*pricerfree));    /**< destructor of variable pricer */
+   SCIP_DECL_PRICERINIT  ((*pricerinit));    /**< initialize variable pricer */
+   SCIP_DECL_PRICEREXIT  ((*pricerexit));    /**< deinitialize variable pricer */
+   SCIP_DECL_PRICERINITSOL((*pricerinitsol));/**< solving process initialization method of variable pricer */
+   SCIP_DECL_PRICEREXITSOL((*pricerexitsol));/**< solving process deinitialization method of variable pricer */
+   SCIP_DECL_PRICERREDCOST((*pricerredcost));/**< reduced cost pricing method of variable pricer for feasible LPs */
+   SCIP_DECL_PRICERFARKAS((*pricerfarkas));  /**< farkas pricing method of variable pricer for infeasible LPs */
+   SCIP_PRICERDATA*      pricerdata;         /**< variable pricers local data */
+   SCIP_CLOCK*           pricerclock;        /**< pricer execution time */
+   int                   priority;           /**< priority of the variable pricer */
+   int                   ncalls;             /**< number of times, this pricer was called */
+   int                   nvarsfound;         /**< number of variables priced in found so far by this pricer */
+   SCIP_Bool             active;             /**< is variable pricer in use for the current problem? */
+   SCIP_Bool             initialized;        /**< is variable pricer initialized? */
 };
 
 

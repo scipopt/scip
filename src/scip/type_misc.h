@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_misc.h,v 1.9 2005/07/15 17:20:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_misc.h,v 1.10 2005/08/22 18:35:54 bzfpfend Exp $"
 
 /**@file   type_misc.h
  * @brief  type definitions for miscellaneous datastructures
@@ -27,15 +27,15 @@
 #define __SCIP_TYPE_MISC_H__
 
 
-typedef struct PQueue PQUEUE;           /**< priority queue */
-typedef struct HashTable HASHTABLE;     /**< hash table */
-typedef struct HashTableList HASHTABLELIST; /**< element list to store single elements of a hash table */
-typedef struct HashMap HASHMAP;         /**< hash map to map pointers to pointers */
-typedef struct HashMapList HASHMAPLIST; /**< element list to store single mappings of a hash map */
-typedef struct RealArray REALARRAY;     /**< dynamic array for storing Real values */
-typedef struct IntArray INTARRAY;       /**< dynamic array for storing int values */
-typedef struct BoolArray BOOLARRAY;     /**< dynamic array for storing Bool values */
-typedef struct PtrArray PTRARRAY;       /**< dynamic array for storing pointers */
+typedef struct SCIP_PQueue SCIP_PQUEUE;           /**< priority queue */
+typedef struct SCIP_HashTable SCIP_HASHTABLE;     /**< hash table */
+typedef struct SCIP_HashTableList SCIP_HASHTABLELIST; /**< element list to store single elements of a hash table */
+typedef struct SCIP_HashMap SCIP_HASHMAP;         /**< hash map to map pointers to pointers */
+typedef struct SCIP_HashMapList SCIP_HASHMAPLIST; /**< element list to store single mappings of a hash map */
+typedef struct SCIP_RealArray SCIP_REALARRAY;     /**< dynamic array for storing SCIP_Real values */
+typedef struct SCIP_IntArray SCIP_INTARRAY;       /**< dynamic array for storing int values */
+typedef struct SCIP_BoolArray SCIP_BOOLARRAY;     /**< dynamic array for storing SCIP_Bool values */
+typedef struct SCIP_PtrArray SCIP_PTRARRAY;       /**< dynamic array for storing pointers */
 
 
 
@@ -45,7 +45,7 @@ typedef struct PtrArray PTRARRAY;       /**< dynamic array for storing pointers 
  *    = 0: both indices have the same value
  *    > 0: ind2 comes after (is worse than) ind2
  */
-#define DECL_SORTINDCOMP(x) int x (void* dataptr, int ind1, int ind2)
+#define SCIP_DECL_SORTINDCOMP(x) int x (void* dataptr, int ind1, int ind2)
 
 /** compares two data element pointers
  *  result:
@@ -53,16 +53,16 @@ typedef struct PtrArray PTRARRAY;       /**< dynamic array for storing pointers 
  *    = 0: both elements have the same value
  *    > 0: elem2 comes after (is worse than) elem2
  */
-#define DECL_SORTPTRCOMP(x) int x (void* elem1, void* elem2)
+#define SCIP_DECL_SORTPTRCOMP(x) int x (void* elem1, void* elem2)
 
 /** gets the key of the given element */
-#define DECL_HASHGETKEY(x) void* x (void* elem)
+#define SCIP_DECL_HASHGETKEY(x) void* x (void* elem)
 
 /** returns TRUE iff both keys are equal */
-#define DECL_HASHKEYEQ(x) Bool x (void* key1, void* key2)
+#define SCIP_DECL_HASHKEYEQ(x) SCIP_Bool x (void* key1, void* key2)
 
 /** returns the hash value of the key */
-#define DECL_HASHKEYVAL(x) unsigned int x (void* key)
+#define SCIP_DECL_HASHKEYVAL(x) unsigned int x (void* key)
 
 
 

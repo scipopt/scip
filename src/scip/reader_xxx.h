@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_xxx.h,v 1.8 2005/07/15 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_xxx.h,v 1.9 2005/08/22 18:35:46 bzfpfend Exp $"
 
 /**@file   reader_xxx.h
  * @brief  xxx file reader
@@ -32,8 +32,8 @@
 
 /** includes the xxx file reader into SCIP */
 extern
-RETCODE SCIPincludeReaderXxx(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeReaderXxx(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

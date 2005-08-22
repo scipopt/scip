@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_dualfix.c,v 1.22 2005/07/15 17:20:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_dualfix.c,v 1.23 2005/08/22 18:35:42 bzfpfend Exp $"
 
 /**@file   presol_dualfix.c
  * @brief  fixing roundable variables to best bound
@@ -64,13 +64,13 @@
 
 /** execution method of presolver */
 static
-DECL_PRESOLEXEC(presolExecDualfix)
+SCIP_DECL_PRESOLEXEC(presolExecDualfix)
 {  /*lint --e{715}*/
-   VAR** vars;
-   Real bound;
-   Real obj;
-   Bool infeasible;
-   Bool fixed;
+   SCIP_VAR** vars;
+   SCIP_Real bound;
+   SCIP_Real obj;
+   SCIP_Bool infeasible;
+   SCIP_Bool fixed;
    int nvars;
    int v;
 
@@ -101,13 +101,13 @@ DECL_PRESOLEXEC(presolExecDualfix)
       if( SCIPvarMayRoundDown(vars[v]) && !SCIPisNegative(scip, obj) )
       {
          bound = SCIPvarGetLbGlobal(vars[v]);
-         debugMessage("variable <%s> with objective %g fixed to lower bound %g\n",
+         SCIPdebugMessage("variable <%s> with objective %g fixed to lower bound %g\n",
             SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), bound);
       }
       else if( SCIPvarMayRoundUp(vars[v]) && !SCIPisPositive(scip, obj) )
       {
          bound = SCIPvarGetUbGlobal(vars[v]);
-         debugMessage("variable <%s> with objective %g fixed to upper bound %g\n",
+         SCIPdebugMessage("variable <%s> with objective %g fixed to upper bound %g\n",
             SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), bound);
       }
       else
@@ -116,17 +116,17 @@ DECL_PRESOLEXEC(presolExecDualfix)
       /* apply the fixing */
       if( SCIPisInfinity(scip, REALABS(bound)) && !SCIPisZero(scip, obj) )
       {
-         debugMessage(" -> unbounded fixing\n");
+         SCIPdebugMessage(" -> unbounded fixing\n");
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
             "problem infeasible or unbounded: variable <%s> with objective %g can be made infinitely %s\n",
             SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), bound < 0.0 ? "small" : "large");
          *result = SCIP_UNBOUNDED;
          return SCIP_OKAY;
       }
-      CHECK_OKAY( SCIPfixVar(scip, vars[v], bound, &infeasible, &fixed) );
+      SCIP_CALL( SCIPfixVar(scip, vars[v], bound, &infeasible, &fixed) );
       if( infeasible )
       {
-         debugMessage(" -> infeasible fixing\n");
+         SCIPdebugMessage(" -> infeasible fixing\n");
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
@@ -147,17 +147,17 @@ DECL_PRESOLEXEC(presolExecDualfix)
  */
 
 /** creates the dual fixing presolver and includes it in SCIP */
-RETCODE SCIPincludePresolDualfix(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludePresolDualfix(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   PRESOLDATA* presoldata;
+   SCIP_PRESOLDATA* presoldata;
 
    /* create dualfix presolver data */
    presoldata = NULL;
 
    /* include presolver */
-   CHECK_OKAY( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+   SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
          presolFreeDualfix, presolInitDualfix, presolExitDualfix, 
          presolInitpreDualfix, presolExitpreDualfix, presolExecDualfix,
          presoldata) );

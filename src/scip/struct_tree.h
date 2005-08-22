@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.25 2005/07/15 17:20:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.26 2005/08/22 18:35:52 bzfpfend Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -38,119 +38,119 @@
 
 
 /** child information (should not exceed the size of a pointer) */
-struct Child
+struct SCIP_Child
 {
-   int              arraypos;           /**< position of node in the children array */
+   int                   arraypos;           /**< position of node in the children array */
 };
 
 /** sibling information (should not exceed the size of a pointer) */
-struct Sibling
+struct SCIP_Sibling
 {
-   int              arraypos;           /**< position of node in the siblings array */
+   int                   arraypos;           /**< position of node in the siblings array */
 };
 
 /** leaf information (should not exceed the size of a pointer) */
-struct Leaf
+struct SCIP_Leaf
 {
-   NODE*            lpfork;             /**< fork/subroot node defining the LP state of the leaf */
+   SCIP_NODE*            lpfork;             /**< fork/subroot node defining the SCIP_LP state of the leaf */
 };
 
-/** fork without LP solution, where only bounds and constraints have been changed */
-struct Junction
+/** fork without SCIP_LP solution, where only bounds and constraints have been changed */
+struct SCIP_Junction
 {
-   int              nchildren;          /**< number of children of this parent node */
+   int                   nchildren;          /**< number of children of this parent node */
 };
 
 /** fork with solved LP, where bounds and constraints have been changed, and rows and columns were added */
-struct Fork
+struct SCIP_Fork
 {
-   COL**            addedcols;          /**< array with pointers to new columns added at this node into the LP */
-   ROW**            addedrows;          /**< array with pointers to new rows added at this node into the LP */
-   LPISTATE*        lpistate;           /**< LP state information */
-   int              naddedcols;         /**< number of columns added at this node */
-   int              naddedrows;         /**< number of rows added at this node */
-   int              nchildren;          /**< number of children of this parent node */
-   int              nlpistateref;       /**< number of times, the LP state is needed */   
+   SCIP_COL**            addedcols;          /**< array with pointers to new columns added at this node into the SCIP_LP */
+   SCIP_ROW**            addedrows;          /**< array with pointers to new rows added at this node into the SCIP_LP */
+   SCIP_LPISTATE*        lpistate;           /**< SCIP_LP state information */
+   int                   naddedcols;         /**< number of columns added at this node */
+   int                   naddedrows;         /**< number of rows added at this node */
+   int                   nchildren;          /**< number of children of this parent node */
+   int                   nlpistateref;       /**< number of times, the SCIP_LP state is needed */   
 };
 
 /** fork with solved LP, where bounds and constraints have been changed, and rows and columns were removed and added */
-struct Subroot
+struct SCIP_Subroot
 {
-   COL**            cols;               /**< array with pointers to the columns in the same order as in the LP */
-   ROW**            rows;               /**< array with pointers to the rows in the same order as in the LP */
-   LPISTATE*        lpistate;           /**< LP state information */
-   int              ncols;              /**< number of columns in the LP */
-   int              nrows;              /**< number of rows in the LP */
-   int              nchildren;          /**< number of children of this parent node */
-   int              nlpistateref;       /**< number of times, the LP state is needed */   
+   SCIP_COL**            cols;               /**< array with pointers to the columns in the same order as in the SCIP_LP */
+   SCIP_ROW**            rows;               /**< array with pointers to the rows in the same order as in the SCIP_LP */
+   SCIP_LPISTATE*        lpistate;           /**< SCIP_LP state information */
+   int                   ncols;              /**< number of columns in the SCIP_LP */
+   int                   nrows;              /**< number of rows in the SCIP_LP */
+   int                   nchildren;          /**< number of children of this parent node */
+   int                   nlpistateref;       /**< number of times, the SCIP_LP state is needed */   
 };
 
 /** node data structure */
-struct Node
+struct SCIP_Node
 {
-   Longint          number;             /**< successively assigned number of the node */
-   Real             lowerbound;         /**< lower (dual) LP bound of subtree */
-   Real             priority;           /**< node selection priority assigned by the branching rule */
+   SCIP_Longint          number;             /**< successively assigned number of the node */
+   SCIP_Real             lowerbound;         /**< lower (dual) SCIP_LP bound of subtree */
+   SCIP_Real             priority;           /**< node selection priority assigned by the branching rule */
    union
    {
-      SIBLING       sibling;            /**< data for sibling nodes */
-      CHILD         child;              /**< data for child nodes */
-      LEAF          leaf;               /**< data for leaf nodes */
-      JUNCTION      junction;           /**< data for junction nodes */
-      FORK*         fork;               /**< data for fork nodes */
-      SUBROOT*      subroot;            /**< data for subroot nodes */
+      SCIP_SIBLING       sibling;            /**< data for sibling nodes */
+      SCIP_CHILD         child;              /**< data for child nodes */
+      SCIP_LEAF          leaf;               /**< data for leaf nodes */
+      SCIP_JUNCTION      junction;           /**< data for junction nodes */
+      SCIP_FORK*         fork;               /**< data for fork nodes */
+      SCIP_SUBROOT*      subroot;            /**< data for subroot nodes */
    } data;
-   NODE*            parent;             /**< parent node in the tree */
-   CONSSETCHG*      conssetchg;         /**< constraint set changes at this node or NULL */
-   DOMCHG*          domchg;             /**< domain changes at this node or NULL */
-   unsigned int     depth:16;           /**< depth in the tree */
-   unsigned int     nodetype:4;         /**< type of node */
-   unsigned int     active:1;           /**< is node in the path to the current node? */
-   unsigned int     cutoff:1;           /**< should the node and all sub nodes be cut off from the tree? */
-   unsigned int     reprop:1;           /**< should propagation be applied again, if the node is on the active path? */
-   unsigned int     repropsubtreemark:9;/**< subtree repropagation marker for subtree repropagation */
+   SCIP_NODE*            parent;             /**< parent node in the tree */
+   SCIP_CONSSETCHG*      conssetchg;         /**< constraint set changes at this node or NULL */
+   SCIP_DOMCHG*          domchg;             /**< domain changes at this node or NULL */
+   unsigned int          depth:16;           /**< depth in the tree */
+   unsigned int          nodetype:4;         /**< type of node */
+   unsigned int          active:1;           /**< is node in the path to the current node? */
+   unsigned int          cutoff:1;           /**< should the node and all sub nodes be cut off from the tree? */
+   unsigned int          reprop:1;           /**< should propagation be applied again, if the node is on the active path? */
+   unsigned int          repropsubtreemark:9;/**< subtree repropagation marker for subtree repropagation */
 };
 
 /** branch and bound tree */
-struct Tree
+struct SCIP_Tree
 {
-   NODE*            root;               /**< root node of the tree */
-   NODEPQ*          leaves;             /**< leaves of the tree */
-   NODE**           path;               /**< array of nodes storing the active path from root to current node, which
-                                         *   is usually the focus or a probing node; in case of a cut off, the path
-                                         *   may already end earlier */
-   NODE*            focusnode;          /**< focus node: the node that is stored together with its children and
-                                         *   siblings in the tree data structure; the focus node is the currently
-                                         *   processed node; it doesn't need to be active all the time, because it
-                                         *   may be cut off and the active path stops at the cut off node */
-   NODE*            focuslpfork;        /**< LP defining fork/subroot of the focus node */
-   NODE*            focussubroot;       /**< subroot of the focus node's sub tree */
-   NODE*            probingroot;        /**< root node of the current probing path, or NULL */
-   NODE**           children;           /**< array with children of the focus node */
-   NODE**           siblings;           /**< array with siblings of the focus node */
-   Real*            childrenprio;       /**< array with node selection priorities of children */
-   Real*            siblingsprio;       /**< array with node selection priorities of children */
-   int*             pathnlpcols;        /**< array with number of LP columns for each problem in active path (except
-                                         *   newly added columns of the focus node) */
-   int*             pathnlprows;        /**< array with number of LP rows for each problem in active path (except
-                                         *   newly added rows of the focus node) */
-   LPISTATE*        probinglpistate;    /**< LP state information before probing started */
-   int              focuslpforklpcount; /**< LP number of last solved LP in current LP fork, or -1 if unknown */
-   int              childrensize;       /**< available slots in children vector */
-   int              nchildren;          /**< number of children of focus node (number of used slots in children vector) */
-   int              siblingssize;       /**< available slots in siblings vector */
-   int              nsiblings;          /**< number of siblings of focus node (number of used slots in siblings vector) */
-   int              pathlen;            /**< length of the current path */
-   int              pathsize;           /**< number of available slots in path arrays */
-   int              correctlpdepth;     /**< depth to which current LP data corresponds to LP data of active path */
-   int              cutoffdepth;        /**< depth of first node in active path that is marked being cutoff */
-   int              repropdepth;        /**< depth of first node in active path that has to be propagated again */
-   int              repropsubtreecount; /**< cyclicly increased counter to create markers for subtree repropagation */
-   Bool             focusnodehaslp;     /**< is LP being processed in the focus node? */
-   Bool             probingnodehaslp;   /**< was the LP solved (at least once) in the current probing node? */
-   Bool             cutoffdelayed;      /**< the treeCutoff() call was delayed because of diving and has to be executed */
-   Bool             probinglpwasflushed;/**< was the LP flushed before we entered the probing mode? */
-   Bool             probinglpwassolved; /**< was the LP solved before we entered the probing mode? */
+   SCIP_NODE*            root;               /**< root node of the tree */
+   SCIP_NODEPQ*          leaves;             /**< leaves of the tree */
+   SCIP_NODE**           path;               /**< array of nodes storing the active path from root to current node, which
+                                              *   is usually the focus or a probing node; in case of a cut off, the path
+                                              *   may already end earlier */
+   SCIP_NODE*            focusnode;          /**< focus node: the node that is stored together with its children and
+                                              *   siblings in the tree data structure; the focus node is the currently
+                                              *   processed node; it doesn't need to be active all the time, because it
+                                              *   may be cut off and the active path stops at the cut off node */
+   SCIP_NODE*            focuslpfork;        /**< SCIP_LP defining fork/subroot of the focus node */
+   SCIP_NODE*            focussubroot;       /**< subroot of the focus node's sub tree */
+   SCIP_NODE*            probingroot;        /**< root node of the current probing path, or NULL */
+   SCIP_NODE**           children;           /**< array with children of the focus node */
+   SCIP_NODE**           siblings;           /**< array with siblings of the focus node */
+   SCIP_Real*            childrenprio;       /**< array with node selection priorities of children */
+   SCIP_Real*            siblingsprio;       /**< array with node selection priorities of children */
+   int*                  pathnlpcols;        /**< array with number of SCIP_LP columns for each problem in active path (except
+                                              *   newly added columns of the focus node) */
+   int*                  pathnlprows;        /**< array with number of SCIP_LP rows for each problem in active path (except
+                                              *   newly added rows of the focus node) */
+   SCIP_LPISTATE*        probinglpistate;    /**< SCIP_LP state information before probing started */
+   int                   focuslpforklpcount; /**< SCIP_LP number of last solved SCIP_LP in current SCIP_LP fork, or -1 if unknown */
+   int                   childrensize;       /**< available slots in children vector */
+   int                   nchildren;          /**< number of children of focus node (number of used slots in children vector) */
+   int                   siblingssize;       /**< available slots in siblings vector */
+   int                   nsiblings;          /**< number of siblings of focus node (number of used slots in siblings vector) */
+   int                   pathlen;            /**< length of the current path */
+   int                   pathsize;           /**< number of available slots in path arrays */
+   int                   correctlpdepth;     /**< depth to which current SCIP_LP data corresponds to SCIP_LP data of active path */
+   int                   cutoffdepth;        /**< depth of first node in active path that is marked being cutoff */
+   int                   repropdepth;        /**< depth of first node in active path that has to be propagated again */
+   int                   repropsubtreecount; /**< cyclicly increased counter to create markers for subtree repropagation */
+   SCIP_Bool             focusnodehaslp;     /**< is SCIP_LP being processed in the focus node? */
+   SCIP_Bool             probingnodehaslp;   /**< was the SCIP_LP solved (at least once) in the current probing node? */
+   SCIP_Bool             cutoffdelayed;      /**< the treeCutoff() call was delayed because of diving and has to be executed */
+   SCIP_Bool             probinglpwasflushed;/**< was the SCIP_LP flushed before we entered the probing mode? */
+   SCIP_Bool             probinglpwassolved; /**< was the SCIP_LP solved before we entered the probing mode? */
 };
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_presol.h,v 1.12 2005/07/15 17:20:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_presol.h,v 1.13 2005/08/22 18:35:51 bzfpfend Exp $"
 
 /**@file   struct_presol.h
  * @brief  datastructures for presolvers
@@ -33,41 +33,41 @@
 
 
 /** presolver */
-struct Presol
+struct SCIP_Presol
 {
-   char*            name;               /**< name of presolver */
-   char*            desc;               /**< description of presolver */
-   DECL_PRESOLFREE  ((*presolfree));    /**< destructor of presolver to free user data (called when SCIP is exiting) */
-   DECL_PRESOLINIT  ((*presolinit));    /**< initialization method of presolver (called after problem was transformed) */
-   DECL_PRESOLEXIT  ((*presolexit));    /**< deinitialization method of presolver (called before transformed problem is freed) */
-   DECL_PRESOLINITPRE((*presolinitpre));/**< presolving initialization method of presolver (called when presolving is about to begin) */
-   DECL_PRESOLEXITPRE((*presolexitpre));/**< presolving deinitialization method of presolver (called after presolving has been finished) */
-   DECL_PRESOLEXEC  ((*presolexec));    /**< execution method of presolver */
-   PRESOLDATA*      presoldata;         /**< presolver data */
-   CLOCK*           clock;              /**< presolving time */
-   int              priority;           /**< priority of the presolver */
-   int              maxrounds;          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-   int              lastnfixedvars;     /**< number of variables fixed before the last call to the presolver */
-   int              lastnaggrvars;      /**< number of variables aggregated before the last call to the presolver */
-   int              lastnchgvartypes;   /**< number of variable type changes before the last call to the presolver */
-   int              lastnchgbds;        /**< number of variable bounds tightend before the last call to the presolver */
-   int              lastnaddholes;      /**< number of domain holes added before the last call to the presolver */
-   int              lastndelconss;      /**< number of deleted constraints before the last call to the presolver */
-   int              lastnupgdconss;     /**< number of upgraded constraints before the last call to the presolver */
-   int              lastnchgcoefs;      /**< number of changed coefficients before the last call to the presolver */
-   int              lastnchgsides;      /**< number of changed left or right hand sides before the last call */
-   int              nfixedvars;         /**< total number of variables fixed by this presolver */
-   int              naggrvars;          /**< total number of variables aggregated by this presolver */
-   int              nchgvartypes;       /**< total number of variable type changes by this presolver */
-   int              nchgbds;            /**< total number of variable bounds tightend by this presolver */
-   int              naddholes;          /**< total number of domain holes added by this presolver */
-   int              ndelconss;          /**< total number of deleted constraints by this presolver */
-   int              nupgdconss;         /**< total number of upgraded constraints by this presolver */
-   int              nchgcoefs;          /**< total number of changed coefficients by this presolver */
-   int              nchgsides;          /**< total number of changed left or right hand sides by this presolver */
-   Bool             delay;              /**< should presolver be delayed, if other presolvers found reductions? */
-   Bool             wasdelayed;         /**< was the presolver delayed at the last call? */
-   Bool             initialized;        /**< is presolver initialized? */
+   char*                 name;               /**< name of presolver */
+   char*                 desc;               /**< description of presolver */
+   SCIP_DECL_PRESOLFREE  ((*presolfree));    /**< destructor of presolver to free user data (called when SCIP is exiting) */
+   SCIP_DECL_PRESOLINIT  ((*presolinit));    /**< initialization method of presolver (called after problem was transformed) */
+   SCIP_DECL_PRESOLEXIT  ((*presolexit));    /**< deinitialization method of presolver (called before transformed problem is freed) */
+   SCIP_DECL_PRESOLINITPRE((*presolinitpre));/**< presolving initialization method of presolver (called when presolving is about to begin) */
+   SCIP_DECL_PRESOLEXITPRE((*presolexitpre));/**< presolving deinitialization method of presolver (called after presolving has been finished) */
+   SCIP_DECL_PRESOLEXEC  ((*presolexec));    /**< execution method of presolver */
+   SCIP_PRESOLDATA*      presoldata;         /**< presolver data */
+   SCIP_CLOCK*           presolclock;        /**< presolving time */
+   int                   priority;           /**< priority of the presolver */
+   int                   maxrounds;          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+   int                   lastnfixedvars;     /**< number of variables fixed before the last call to the presolver */
+   int                   lastnaggrvars;      /**< number of variables aggregated before the last call to the presolver */
+   int                   lastnchgvartypes;   /**< number of variable type changes before the last call to the presolver */
+   int                   lastnchgbds;        /**< number of variable bounds tightend before the last call to the presolver */
+   int                   lastnaddholes;      /**< number of domain holes added before the last call to the presolver */
+   int                   lastndelconss;      /**< number of deleted constraints before the last call to the presolver */
+   int                   lastnupgdconss;     /**< number of upgraded constraints before the last call to the presolver */
+   int                   lastnchgcoefs;      /**< number of changed coefficients before the last call to the presolver */
+   int                   lastnchgsides;      /**< number of changed left or right hand sides before the last call */
+   int                   nfixedvars;         /**< total number of variables fixed by this presolver */
+   int                   naggrvars;          /**< total number of variables aggregated by this presolver */
+   int                   nchgvartypes;       /**< total number of variable type changes by this presolver */
+   int                   nchgbds;            /**< total number of variable bounds tightend by this presolver */
+   int                   naddholes;          /**< total number of domain holes added by this presolver */
+   int                   ndelconss;          /**< total number of deleted constraints by this presolver */
+   int                   nupgdconss;         /**< total number of upgraded constraints by this presolver */
+   int                   nchgcoefs;          /**< total number of changed coefficients by this presolver */
+   int                   nchgsides;          /**< total number of changed left or right hand sides by this presolver */
+   SCIP_Bool             delay;              /**< should presolver be delayed, if other presolvers found reductions? */
+   SCIP_Bool             wasdelayed;         /**< was the presolver delayed at the last call? */
+   SCIP_Bool             initialized;        /**< is presolver initialized? */
 };
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.h,v 1.15 2005/07/15 17:20:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpresol.h,v 1.16 2005/08/22 18:35:30 bzfpfend Exp $"
 
 /**@file   objpresol.h
  * @brief  C++ wrapper for presolvers
@@ -53,15 +53,15 @@ public:
    const int scip_maxrounds_;
 
    /** should presolver be delayed, if other presolvers found reductions? */
-   const Bool scip_delay_;
+   const SCIP_Bool scip_delay_;
 
    /** default constructor */
    ObjPresol(
-      const char*   name,               /**< name of presolver */
-      const char*   desc,               /**< description of presolver */
-      int           priority,           /**< priority of the presolver */
-      int           maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-      Bool          delay               /**< should presolver be delayed, if other presolvers found reductions? */
+      const char*        name,               /**< name of presolver */
+      const char*        desc,               /**< description of presolver */
+      int                priority,           /**< priority of the presolver */
+      int                maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+      SCIP_Bool          delay               /**< should presolver be delayed, if other presolvers found reductions? */
       )
       : scip_name_(name),
         scip_desc_(desc),
@@ -77,27 +77,27 @@ public:
    }
 
    /** destructor of presolver to free user data (called when SCIP is exiting) */
-   virtual RETCODE scip_free(
-      SCIP*         scip,               /**< SCIP data structure */
-      PRESOL*       presol              /**< the presolver itself */
+   virtual SCIP_RETCODE scip_free(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_PRESOL*       presol              /**< the presolver itself */
       )
    {
       return SCIP_OKAY;
    }
    
    /** initialization method of presolver (called after problem was transformed) */
-   virtual RETCODE scip_init(
-      SCIP*         scip,               /**< SCIP data structure */
-      PRESOL*       presol              /**< the presolver itself */
+   virtual SCIP_RETCODE scip_init(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_PRESOL*       presol              /**< the presolver itself */
       )
    {
       return SCIP_OKAY;
    }
    
    /** deinitialization method of presolver (called before transformed problem is freed) */
-   virtual RETCODE scip_exit(
-      SCIP*         scip,               /**< SCIP data structure */
-      PRESOL*       presol              /**< the presolver itself */
+   virtual SCIP_RETCODE scip_exit(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_PRESOL*       presol              /**< the presolver itself */
       )
    {
       return SCIP_OKAY;
@@ -110,10 +110,10 @@ public:
     *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
     *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
     */
-   virtual RETCODE scip_initpre(
-      SCIP*         scip,               /**< SCIP data structure */   
-      PRESOL*       presol,             /**< presolver */
-      RESULT*       result              /**< pointer to store the result of the callback method */
+   virtual SCIP_RETCODE scip_initpre(
+      SCIP*              scip,               /**< SCIP data structure */   
+      SCIP_PRESOL*       presol,             /**< presolver */
+      SCIP_RESULT*       result              /**< pointer to store the result of the callback method */
       )
    {
       assert(result != NULL);
@@ -130,10 +130,10 @@ public:
     *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
     *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
     */
-   virtual RETCODE scip_exitpre(
-      SCIP*         scip,               /**< SCIP data structure */   
-      PRESOL*       presol,             /**< presolver */
-      RESULT*       result              /**< pointer to store the result of the callback method */
+   virtual SCIP_RETCODE scip_exitpre(
+      SCIP*              scip,               /**< SCIP data structure */   
+      SCIP_PRESOL*       presol,             /**< presolver */
+      SCIP_RESULT*       result              /**< pointer to store the result of the callback method */
       )
    {
       assert(result != NULL);
@@ -156,29 +156,29 @@ public:
     *  - SCIP_DIDNOTRUN  : the presolver was skipped
     *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
     */
-   virtual RETCODE scip_exec(
-      SCIP*         scip,               /**< SCIP data structure */
-      PRESOL*       presol,             /**< the presolver itself */
-      int           nrounds,            /**< no. of presolving rounds already done */
-      int           nnewfixedvars,      /**< no. of variables fixed since last call to presolver */
-      int           nnewaggrvars,       /**< no. of variables aggregated since last call to presolver */
-      int           nnewchgvartypes,    /**< no. of variable type changes since last call to presolver */
-      int           nnewchgbds,         /**< no. of variable bounds tightend since last call to presolver */
-      int           nnewholes,          /**< no. of domain holes added since last call to presolver */
-      int           nnewdelconss,       /**< no. of deleted constraints since last call to presolver */
-      int           nnewupgdconss,      /**< no. of upgraded constraints since last call to presolver */
-      int           nnewchgcoefs,       /**< no. of changed coefficients since last call to presolver */
-      int           nnewchgsides,       /**< no. of changed left or right hand sides since last call to presolver */
-      int*          nfixedvars,         /**< pointer to count total number of variables fixed of all presolvers */
-      int*          naggrvars,          /**< pointer to count total number of variables aggregated of all presolvers */
-      int*          nchgvartypes,       /**< pointer to count total number of variable type changes of all presolvers */
-      int*          nchgbds,            /**< pointer to count total number of variable bounds tightend of all presolvers */
-      int*          naddholes,          /**< pointer to count total number of domain holes added of all presolvers */
-      int*          ndelconss,          /**< pointer to count total number of deleted constraints of all presolvers */
-      int*          nupgdconss,         /**< pointer to count total number of upgraded constraints of all presolvers */
-      int*          nchgcoefs,          /**< pointer to count total number of changed coefficients of all presolvers */
-      int*          nchgsides,          /**< pointer to count total number of changed sides of all presolvers */
-      RESULT*       result              /**< pointer to store the result of the presolving call */
+   virtual SCIP_RETCODE scip_exec(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_PRESOL*       presol,             /**< the presolver itself */
+      int                nrounds,            /**< no. of presolving rounds already done */
+      int                nnewfixedvars,      /**< no. of variables fixed since last call to presolver */
+      int                nnewaggrvars,       /**< no. of variables aggregated since last call to presolver */
+      int                nnewchgvartypes,    /**< no. of variable type changes since last call to presolver */
+      int                nnewchgbds,         /**< no. of variable bounds tightend since last call to presolver */
+      int                nnewholes,          /**< no. of domain holes added since last call to presolver */
+      int                nnewdelconss,       /**< no. of deleted constraints since last call to presolver */
+      int                nnewupgdconss,      /**< no. of upgraded constraints since last call to presolver */
+      int                nnewchgcoefs,       /**< no. of changed coefficients since last call to presolver */
+      int                nnewchgsides,       /**< no. of changed left or right hand sides since last call to presolver */
+      int*               nfixedvars,         /**< pointer to count total number of variables fixed of all presolvers */
+      int*               naggrvars,          /**< pointer to count total number of variables aggregated of all presolvers */
+      int*               nchgvartypes,       /**< pointer to count total number of variable type changes of all presolvers */
+      int*               nchgbds,            /**< pointer to count total number of variable bounds tightend of all presolvers */
+      int*               naddholes,          /**< pointer to count total number of domain holes added of all presolvers */
+      int*               ndelconss,          /**< pointer to count total number of deleted constraints of all presolvers */
+      int*               nupgdconss,         /**< pointer to count total number of upgraded constraints of all presolvers */
+      int*               nchgcoefs,          /**< pointer to count total number of changed coefficients of all presolvers */
+      int*               nchgsides,          /**< pointer to count total number of changed sides of all presolvers */
+      SCIP_RESULT*       result              /**< pointer to store the result of the presolving call */
       ) = 0;
 };
 
@@ -191,40 +191,40 @@ public:
  *  The method should be called in one of the following ways:
  *
  *   1. The user is resposible of deleting the object:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MyPresol* mypresol = new MyPresol(...);
- *       CHECK_OKAY( SCIPincludeObjPresol(scip, &mypresol, FALSE) );
+ *       SCIP_CALL( SCIPincludeObjPresol(scip, &mypresol, FALSE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );
+ *       SCIP_CALL( SCIPfree(&scip) );
  *       delete mypresol;    // delete presol AFTER SCIPfree() !
  *
  *   2. The object pointer is passed to SCIP and deleted by SCIP in the SCIPfree() call:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
- *       CHECK_OKAY( SCIPincludeObjPresol(scip, new MyPresol(...), TRUE) );
+ *       SCIP_CALL( SCIPincludeObjPresol(scip, new MyPresol(...), TRUE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );  // destructor of MyPresol is called here
+ *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyPresol is called here
  */
 extern
-RETCODE SCIPincludeObjPresol(
-   SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjPresol* objpresol,          /**< presolver object */
-   Bool             deleteobject        /**< should the presolver object be deleted when presolver is freed? */
+SCIP_RETCODE SCIPincludeObjPresol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   scip::ObjPresol*      objpresol,          /**< presolver object */
+   SCIP_Bool             deleteobject        /**< should the presolver object be deleted when presolver is freed? */
    );
 
 /** returns the presol object of the given name, or NULL if not existing */
 extern
 scip::ObjPresol* SCIPfindObjPresol(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< name of presolver */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of presolver */
    );
 
 /** returns the presol object for the given presolver */
 extern
 scip::ObjPresol* SCIPgetObjPresol(
-   SCIP*            scip,               /**< SCIP data structure */
-   PRESOL*          presol              /**< presolver */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL*          presol              /**< presolver */
    );
 
 #endif

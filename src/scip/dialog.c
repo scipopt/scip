@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.22 2005/07/15 17:20:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.23 2005/08/22 18:35:36 bzfpfend Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -52,9 +52,9 @@
 
 /** reads a line of input from stdin */
 static
-RETCODE readLine(
-   DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
-   const char*      prompt              /**< prompt to display */
+SCIP_RETCODE readLine(
+   SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
+   const char*           prompt              /**< prompt to display */
    )
 {
    char* s;
@@ -69,8 +69,8 @@ RETCODE readLine(
 
 /** puts the given string on the command history */
 static
-RETCODE addHistory(
-   const char*      s                   /**< string to add to the command history */
+SCIP_RETCODE addHistory(
+   const char*           s                   /**< string to add to the command history */
    )
 {
    add_history(s);
@@ -89,8 +89,8 @@ int getHistoryLength(
 
 /** removes a single element from the history list */
 static
-RETCODE removeHistory(
-   int              pos                 /**< list position of history entry to remove */
+SCIP_RETCODE removeHistory(
+   int                   pos                 /**< list position of history entry to remove */
    )
 {
    HIST_ENTRY* entry;
@@ -108,9 +108,9 @@ RETCODE removeHistory(
 
 /** reads a line of input from stdin */
 static
-RETCODE readLine(
-   DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
-   const char*      prompt              /**< prompt to display */
+SCIP_RETCODE readLine(
+   SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
+   const char*           prompt              /**< prompt to display */
    )
 {
    char* s;
@@ -136,8 +136,8 @@ RETCODE readLine(
 
 /** puts the given string on the command history */
 static
-RETCODE addHistory(
-   const char*      s                   /**< string to add to the command history */
+SCIP_RETCODE addHistory(
+   const char*           s                   /**< string to add to the command history */
    )
 {  /*lint --e{715}*/
    /* nothing to do here */
@@ -155,8 +155,8 @@ int getHistoryLength(
 
 /** removes a single element from the history list */
 static
-RETCODE removeHistory(
-   int              pos                 /**< list position of history entry to remove */
+SCIP_RETCODE removeHistory(
+   int                   pos                 /**< list position of history entry to remove */
    )
 {  /*lint --e{715}*/
    /* nothing to do here */
@@ -173,17 +173,17 @@ RETCODE removeHistory(
  */
 
 /** creates a dialog handler */
-RETCODE SCIPdialoghdlrCreate(
-   DIALOGHDLR**     dialoghdlr          /**< pointer to store dialog handler */
+SCIP_RETCODE SCIPdialoghdlrCreate(
+   SCIP_DIALOGHDLR**     dialoghdlr          /**< pointer to store dialog handler */
    )
 {
    assert(dialoghdlr != NULL);
    
-   ALLOC_OKAY( allocMemory(dialoghdlr) );
+   SCIP_ALLOC( BMSallocMemory(dialoghdlr) );
    (*dialoghdlr)->rootdialog = NULL;
-   (*dialoghdlr)->buffersize = MAXSTRLEN;
+   (*dialoghdlr)->buffersize = SCIP_MAXSTRLEN;
    (*dialoghdlr)->nprotectedhistelems = -1;
-   ALLOC_OKAY( allocMemoryArray(&(*dialoghdlr)->buffer, (*dialoghdlr)->buffersize) );
+   SCIP_ALLOC( BMSallocMemoryArray(&(*dialoghdlr)->buffer, (*dialoghdlr)->buffersize) );
 
    SCIPdialoghdlrClearBuffer(*dialoghdlr);
 
@@ -191,26 +191,26 @@ RETCODE SCIPdialoghdlrCreate(
 }
 
 /** frees a dialog handler and it's dialog tree */
-RETCODE SCIPdialoghdlrFree(
-   DIALOGHDLR**     dialoghdlr          /**< pointer to dialog handler */
+SCIP_RETCODE SCIPdialoghdlrFree(
+   SCIP_DIALOGHDLR**     dialoghdlr          /**< pointer to dialog handler */
    )
 {
    assert(dialoghdlr != NULL);
    
-   CHECK_OKAY( SCIPdialoghdlrSetRoot(*dialoghdlr, NULL) );
-   freeMemoryArray(&(*dialoghdlr)->buffer);
-   freeMemory(dialoghdlr);
+   SCIP_CALL( SCIPdialoghdlrSetRoot(*dialoghdlr, NULL) );
+   BMSfreeMemoryArray(&(*dialoghdlr)->buffer);
+   BMSfreeMemory(dialoghdlr);
 
    return SCIP_OKAY;
 }
 
 /** executes the root dialog of the dialog handler */
-RETCODE SCIPdialoghdlrExec(
-   DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPdialoghdlrExec(
+   SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
-   DIALOG* dialog;
+   SCIP_DIALOG* dialog;
 
    assert(dialoghdlr != NULL);
    assert(dialoghdlr->buffer != NULL);
@@ -222,7 +222,7 @@ RETCODE SCIPdialoghdlrExec(
    /* execute dialogs until a NULL is returned as nextdialog */
    while( dialog != NULL )
    {
-      CHECK_OKAY( SCIPdialogExec(dialog, set, dialoghdlr, &dialog) );
+      SCIP_CALL( SCIPdialogExec(dialog, set, dialoghdlr, &dialog) );
       
       /* reset buffer, it is was consumed completely */
       if( dialoghdlr->buffer[dialoghdlr->bufferpos] == '\0' )
@@ -233,16 +233,16 @@ RETCODE SCIPdialoghdlrExec(
 }
 
 /** makes given dialog the root dialog of dialog handler; captures dialog and releases former root dialog */
-RETCODE SCIPdialoghdlrSetRoot(
-   DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
-   DIALOG*          dialog              /**< dialog to be the root */
+SCIP_RETCODE SCIPdialoghdlrSetRoot(
+   SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
+   SCIP_DIALOG*          dialog              /**< dialog to be the root */
    )
 {
    assert(dialoghdlr != NULL);
 
    if( dialoghdlr->rootdialog != NULL )
    {
-      CHECK_OKAY( SCIPdialogRelease(&dialoghdlr->rootdialog) );
+      SCIP_CALL( SCIPdialogRelease(&dialoghdlr->rootdialog) );
    }
    assert(dialoghdlr->rootdialog == NULL);
 
@@ -255,8 +255,8 @@ RETCODE SCIPdialoghdlrSetRoot(
 }
 
 /** returns the root dialog of the dialog handler */
-DIALOG* SCIPdialoghdlrGetRoot(
-   DIALOGHDLR*      dialoghdlr          /**< dialog handler */
+SCIP_DIALOG* SCIPdialoghdlrGetRoot(
+   SCIP_DIALOGHDLR*      dialoghdlr          /**< dialog handler */
    )
 {
    assert(dialoghdlr != NULL);
@@ -266,7 +266,7 @@ DIALOG* SCIPdialoghdlrGetRoot(
 
 /** clears the input command buffer of the dialog handler */
 void SCIPdialoghdlrClearBuffer(
-   DIALOGHDLR*      dialoghdlr          /**< dialog handler */
+   SCIP_DIALOGHDLR*      dialoghdlr          /**< dialog handler */
    )
 {
    assert(dialoghdlr != NULL);
@@ -276,8 +276,8 @@ void SCIPdialoghdlrClearBuffer(
 }
 
 /** returns TRUE iff input command buffer is empty */
-Bool SCIPdialoghdlrIsBufferEmpty(
-   DIALOGHDLR*      dialoghdlr          /**< dialog handler */
+SCIP_Bool SCIPdialoghdlrIsBufferEmpty(
+   SCIP_DIALOGHDLR*      dialoghdlr          /**< dialog handler */
    )
 {
    assert(dialoghdlr != NULL);
@@ -290,13 +290,13 @@ Bool SCIPdialoghdlrIsBufferEmpty(
  *  current dialog's path and asks the user for further input; the user must not free or modify the returned string
  */
 const char* SCIPdialoghdlrGetWord(
-   DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
-   DIALOG*          dialog,             /**< current dialog */
-   const char*      prompt              /**< prompt to display, or NULL to display the current dialog's path */
+   SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
+   SCIP_DIALOG*          dialog,             /**< current dialog */
+   const char*           prompt              /**< prompt to display, or NULL to display the current dialog's path */
    )
 {
-   char path[MAXSTRLEN];
-   char p[MAXSTRLEN];
+   char path[SCIP_MAXSTRLEN];
+   char p[SCIP_MAXSTRLEN];
    char* firstword;
 
    assert(dialoghdlr != NULL);
@@ -315,13 +315,13 @@ const char* SCIPdialoghdlrGetWord(
       {
          /* use current dialog's path as prompt */
          SCIPdialogGetPath(dialog, '/', path);
-         snprintf(p, MAXSTRLEN, "%s> ", path);
-         p[MAXSTRLEN-1] = '\0';
+         snprintf(p, SCIP_MAXSTRLEN, "%s> ", path);
+         p[SCIP_MAXSTRLEN-1] = '\0';
          prompt = p;
       }
 
       /* read command line from stdin */
-      CHECK_ABORT( readLine(dialoghdlr, prompt) );
+      SCIP_CALL_ABORT( readLine(dialoghdlr, prompt) );
 
       /* strip trailing spaces */
       len = (int)strlen(&dialoghdlr->buffer[dialoghdlr->bufferpos]);
@@ -334,7 +334,7 @@ const char* SCIPdialoghdlrGetWord(
       /* insert command in command history */
       if( dialoghdlr->buffer[dialoghdlr->bufferpos] != '\0' )
       {
-         CHECK_ABORT( SCIPdialoghdlrAddHistory(dialoghdlr, NULL, &dialoghdlr->buffer[dialoghdlr->bufferpos]) );
+         SCIP_CALL_ABORT( SCIPdialoghdlrAddHistory(dialoghdlr, NULL, &dialoghdlr->buffer[dialoghdlr->bufferpos]) );
       }
    }
 
@@ -367,15 +367,15 @@ const char* SCIPdialoghdlrGetWord(
 /** adds a command to the command history of the dialog handler; if a dialog is given, the command is preceeded
  *  by the dialog's command path; if no command is given, only the path to the dialog is added to the command history
  */
-RETCODE SCIPdialoghdlrAddHistory(
-   DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
-   DIALOG*          dialog,             /**< current dialog, or NULL */
-   const char*      command             /**< command string to add to the command history, or NULL */
+SCIP_RETCODE SCIPdialoghdlrAddHistory(
+   SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
+   SCIP_DIALOG*          dialog,             /**< current dialog, or NULL */
+   const char*           command             /**< command string to add to the command history, or NULL */
    )
 {
-   char s[MAXSTRLEN];
-   char h[MAXSTRLEN];
-   Bool cleanuphistory;
+   char s[SCIP_MAXSTRLEN];
+   char h[SCIP_MAXSTRLEN];
+   SCIP_Bool cleanuphistory;
 
    assert(dialoghdlr != NULL);
 
@@ -383,22 +383,22 @@ RETCODE SCIPdialoghdlrAddHistory(
    cleanuphistory = (dialog != NULL);
 
    /* generate the string to add to the history */
-   s[MAXSTRLEN-1] = '\0';
-   h[MAXSTRLEN-1] = '\0';
+   s[SCIP_MAXSTRLEN-1] = '\0';
+   h[SCIP_MAXSTRLEN-1] = '\0';
 
    if( command != NULL )
-      strncpy(h, command, MAXSTRLEN-1);
+      strncpy(h, command, SCIP_MAXSTRLEN-1);
    else
       h[0] = '\0';
 
    while( dialog != NULL && dialog != dialoghdlr->rootdialog )
    {
       if( h[0] == '\0' )
-         strncpy(h, dialog->name, MAXSTRLEN-1);
+         strncpy(h, dialog->name, SCIP_MAXSTRLEN-1);
       else
       {
-         snprintf(s, MAXSTRLEN-1, "%s %s", dialog->name, h);
-         (void)strncpy(h, s, MAXSTRLEN-1);
+         snprintf(s, SCIP_MAXSTRLEN-1, "%s %s", dialog->name, h);
+         (void)strncpy(h, s, SCIP_MAXSTRLEN-1);
       }
       dialog = dialog->parent;
    }
@@ -410,14 +410,14 @@ RETCODE SCIPdialoghdlrAddHistory(
 
       for( i = getHistoryLength()-1; i >= dialoghdlr->nprotectedhistelems; --i )
       {
-         CHECK_OKAY( removeHistory(i) );
+         SCIP_CALL( removeHistory(i) );
       }
    }
 
    /* add command to history */
    if( h[0] != '\0' )
    {
-      CHECK_OKAY( addHistory(h) );
+      SCIP_CALL( addHistory(h) );
    }
 
    /* if the history string was a full command line, protect the history entry from future cleanups */
@@ -438,10 +438,10 @@ RETCODE SCIPdialoghdlrAddHistory(
 
 /** ensures, that subdialogs array can store at least the given number of sub dialogs */
 static
-RETCODE ensureSubdialogMem(
-   DIALOG*          dialog,             /**< dialog */
-   SET*             set,                /**< global SCIP settings */
-   int              num                 /**< minimal storage size for sub dialogs */
+SCIP_RETCODE ensureSubdialogMem(
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimal storage size for sub dialogs */
    )
 {
    assert(dialog != NULL);
@@ -451,7 +451,7 @@ RETCODE ensureSubdialogMem(
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(&(dialog->subdialogs), newsize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&(dialog->subdialogs), newsize) );
       dialog->subdialogssize = newsize;
    }
    assert(num <= dialog->subdialogssize);
@@ -460,27 +460,27 @@ RETCODE ensureSubdialogMem(
 }
 
 /** creates and captures a user interface dialog */
-RETCODE SCIPdialogCreate(
-   DIALOG**         dialog,             /**< pointer to store the dialog */
-   DECL_DIALOGEXEC  ((*dialogexec)),    /**< execution method of dialog */
-   DECL_DIALOGDESC  ((*dialogdesc)),    /**< description output method of dialog, or NULL */
-   const char*      name,               /**< name of dialog: command name appearing in parent's dialog menu */
-   const char*      desc,               /**< description of dialog used if description output method is NULL */
-   Bool             issubmenu,          /**< is the dialog a submenu? */
-   DIALOGDATA*      dialogdata          /**< user defined dialog data */
+SCIP_RETCODE SCIPdialogCreate(
+   SCIP_DIALOG**         dialog,             /**< pointer to store the dialog */
+   SCIP_DECL_DIALOGEXEC  ((*dialogexec)),    /**< execution method of dialog */
+   SCIP_DECL_DIALOGDESC  ((*dialogdesc)),    /**< description output method of dialog, or NULL */
+   const char*           name,               /**< name of dialog: command name appearing in parent's dialog menu */
+   const char*           desc,               /**< description of dialog used if description output method is NULL */
+   SCIP_Bool             issubmenu,          /**< is the dialog a submenu? */
+   SCIP_DIALOGDATA*      dialogdata          /**< user defined dialog data */
    )
 {
    assert(dialog != NULL);
    assert(name != NULL);
 
-   ALLOC_OKAY( allocMemory(dialog) );
+   SCIP_ALLOC( BMSallocMemory(dialog) );
    (*dialog)->dialogexec = dialogexec;
    (*dialog)->dialogdesc = dialogdesc;
 
-   ALLOC_OKAY( duplicateMemoryArray(&(*dialog)->name, name, strlen(name)+1) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*dialog)->name, name, strlen(name)+1) );
    if( desc != NULL )
    {
-      ALLOC_OKAY( duplicateMemoryArray(&(*dialog)->desc, desc, strlen(desc)+1) );
+      SCIP_ALLOC( BMSduplicateMemoryArray(&(*dialog)->desc, desc, strlen(desc)+1) );
    }
    else
       (*dialog)->desc = NULL;
@@ -501,8 +501,8 @@ RETCODE SCIPdialogCreate(
 
 /** frees dialog and all of its sub dialogs */
 static
-RETCODE dialogFree(
-   DIALOG**         dialog              /**< pointer to dialog */
+SCIP_RETCODE dialogFree(
+   SCIP_DIALOG**         dialog              /**< pointer to dialog */
    )
 {
    int i;
@@ -514,20 +514,20 @@ RETCODE dialogFree(
    /** release sub dialogs */
    for( i = 0; i < (*dialog)->nsubdialogs; ++i )
    {
-      CHECK_OKAY( SCIPdialogRelease(&(*dialog)->subdialogs[i]) );
+      SCIP_CALL( SCIPdialogRelease(&(*dialog)->subdialogs[i]) );
    }
-   freeMemoryArrayNull(&(*dialog)->subdialogs);
+   BMSfreeMemoryArrayNull(&(*dialog)->subdialogs);
 
-   freeMemoryArrayNull(&(*dialog)->name);
-   freeMemoryArrayNull(&(*dialog)->desc);
-   freeMemory(dialog);
+   BMSfreeMemoryArrayNull(&(*dialog)->name);
+   BMSfreeMemoryArrayNull(&(*dialog)->desc);
+   BMSfreeMemory(dialog);
 
    return SCIP_OKAY;
 }
 
 /** captures a dialog */
 void SCIPdialogCapture(
-   DIALOG*          dialog              /**< dialog */
+   SCIP_DIALOG*          dialog              /**< dialog */
    )
 {
    assert(dialog != NULL);
@@ -536,8 +536,8 @@ void SCIPdialogCapture(
 }
 
 /** releases a dialog */
-RETCODE SCIPdialogRelease(
-   DIALOG**         dialog              /**< pointer to dialog */
+SCIP_RETCODE SCIPdialogRelease(
+   SCIP_DIALOG**         dialog              /**< pointer to dialog */
    )
 {
    assert(dialog != NULL);
@@ -545,18 +545,18 @@ RETCODE SCIPdialogRelease(
    (*dialog)->nuses--;
    if( (*dialog)->nuses == 0 )
    {
-      CHECK_OKAY( dialogFree(dialog) );
+      SCIP_CALL( dialogFree(dialog) );
    }
    
    return SCIP_OKAY;
 }
 
 /** executes dialog */
-RETCODE SCIPdialogExec(
-   DIALOG*          dialog,             /**< dialog */
-   SET*             set,                /**< global SCIP settings */
-   DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
-   DIALOG**         nextdialog          /**< pointer to store the next dialog to process */
+SCIP_RETCODE SCIPdialogExec(
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
+   SCIP_DIALOG**         nextdialog          /**< pointer to store the next dialog to process */
    )
 {
    assert(dialog != NULL);
@@ -564,16 +564,16 @@ RETCODE SCIPdialogExec(
    assert(set != NULL);
    assert(nextdialog != NULL);
 
-   CHECK_OKAY( dialog->dialogexec(set->scip, dialog, dialoghdlr, nextdialog) );
+   SCIP_CALL( dialog->dialogexec(set->scip, dialog, dialoghdlr, nextdialog) );
 
    return SCIP_OKAY;
 }
 
 /** adds a sub dialog to the given dialog as menu entry and captures the sub dialog */
-RETCODE SCIPdialogAddEntry(
-   DIALOG*          dialog,             /**< dialog */
-   SET*             set,                /**< global SCIP settings */
-   DIALOG*          subdialog           /**< subdialog to add as menu entry in dialog */
+SCIP_RETCODE SCIPdialogAddEntry(
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_DIALOG*          subdialog           /**< subdialog to add as menu entry in dialog */
    )
 {
    assert(dialog != NULL);
@@ -582,13 +582,13 @@ RETCODE SCIPdialogAddEntry(
    /* check, if subdialog already exists */
    if( SCIPdialogHasEntry(dialog, SCIPdialogGetName(subdialog)) )
    {
-      errorMessage("dialog entry with name <%s> already exists in dialog <%s>\n",
+      SCIPerrorMessage("dialog entry with name <%s> already exists in dialog <%s>\n",
          SCIPdialogGetName(subdialog), SCIPdialogGetName(dialog));
       return SCIP_INVALIDDATA;
    }
 
    /* resize the subdialogs array */
-   CHECK_OKAY( ensureSubdialogMem(dialog, set, dialog->nsubdialogs+1) );
+   SCIP_CALL( ensureSubdialogMem(dialog, set, dialog->nsubdialogs+1) );
 
    /* link the dialogs as parent-child pair */
    dialog->subdialogs[dialog->nsubdialogs] = subdialog;
@@ -602,12 +602,12 @@ RETCODE SCIPdialogAddEntry(
 }
 
 /** returns TRUE iff a dialog entry matching exactly the given name is existing in the given dialog */
-Bool SCIPdialogHasEntry(
-   DIALOG*          dialog,             /**< dialog */
-   const char*      entryname           /**< name of the dialog entry to find */
+SCIP_Bool SCIPdialogHasEntry(
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   const char*           entryname           /**< name of the dialog entry to find */
    )
 {
-   DIALOG** subdialogs;
+   SCIP_DIALOG** subdialogs;
    int nsubdialogs;
    int i;
 
@@ -636,12 +636,12 @@ Bool SCIPdialogHasEntry(
  *  "subdialog" is set to NULL.
  */
 int SCIPdialogFindEntry(
-   DIALOG*          dialog,             /**< dialog */
-   const char*      entryname,          /**< name of the dialog entry to find */
-   DIALOG**         subdialog           /**< pointer to store the found dialog entry */
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   const char*           entryname,          /**< name of the dialog entry to find */
+   SCIP_DIALOG**         subdialog           /**< pointer to store the found dialog entry */
    )
 {
-   DIALOG** subdialogs;
+   SCIP_DIALOG** subdialogs;
    unsigned int namelen;
    int nsubdialogs;
    int nfound;
@@ -679,9 +679,9 @@ int SCIPdialogFindEntry(
 }
 
 /** displays the dialog's menu */
-RETCODE SCIPdialogDisplayMenu(
-   DIALOG*          dialog,             /**< dialog */
-   SCIP*            scip                /**< SCIP data structure */   
+SCIP_RETCODE SCIPdialogDisplayMenu(
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   SCIP*                 scip                /**< SCIP data structure */   
    )
 {
    int i;
@@ -693,7 +693,7 @@ RETCODE SCIPdialogDisplayMenu(
    {
       if( SCIPdialogIsSubmenu(dialog->subdialogs[i]) )
       {
-         CHECK_OKAY( SCIPdialogDisplayMenuEntry(dialog->subdialogs[i], scip) );
+         SCIP_CALL( SCIPdialogDisplayMenuEntry(dialog->subdialogs[i], scip) );
       }
    }
 
@@ -702,7 +702,7 @@ RETCODE SCIPdialogDisplayMenu(
    {
       if( !SCIPdialogIsSubmenu(dialog->subdialogs[i]) )
       {
-         CHECK_OKAY( SCIPdialogDisplayMenuEntry(dialog->subdialogs[i], scip) );
+         SCIP_CALL( SCIPdialogDisplayMenuEntry(dialog->subdialogs[i], scip) );
       }
    }
 
@@ -713,12 +713,12 @@ RETCODE SCIPdialogDisplayMenu(
 }
 
 /** displays the entry for the dialog in it's parent's menu */
-RETCODE SCIPdialogDisplayMenuEntry(
-   DIALOG*          dialog,             /**< dialog */
-   SCIP*            scip                /**< SCIP data structure */   
+SCIP_RETCODE SCIPdialogDisplayMenuEntry(
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   SCIP*                 scip                /**< SCIP data structure */   
    )
 {
-   char name[MAXSTRLEN];
+   char name[SCIP_MAXSTRLEN];
 
    assert(dialog != NULL);
 
@@ -737,7 +737,7 @@ RETCODE SCIPdialogDisplayMenuEntry(
    /* display the dialog's description */
    if( dialog->dialogdesc != NULL )
    {
-      CHECK_OKAY( dialog->dialogdesc(scip, dialog) );
+      SCIP_CALL( dialog->dialogdesc(scip, dialog) );
    }
    else
       SCIPmessagePrintDialog(dialog->desc);
@@ -747,13 +747,13 @@ RETCODE SCIPdialogDisplayMenuEntry(
 }
 
 /** displays all dialog entries with names starting with the given "entryname" */
-RETCODE SCIPdialogDisplayCompletions(
-   DIALOG*          dialog,             /**< dialog */
-   SCIP*            scip,               /**< SCIP data structure */   
-   const char*      entryname           /**< name of the dialog entry to find */
+SCIP_RETCODE SCIPdialogDisplayCompletions(
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   SCIP*                 scip,               /**< SCIP data structure */   
+   const char*           entryname           /**< name of the dialog entry to find */
    )
 {
-   DIALOG** subdialogs;
+   SCIP_DIALOG** subdialogs;
    unsigned int namelen;
    int nsubdialogs;
    int i;
@@ -770,7 +770,7 @@ RETCODE SCIPdialogDisplayCompletions(
       /* check, if the beginning of the sub dialog's name matches entryname */
       if( strncmp(entryname, SCIPdialogGetName(subdialogs[i]), namelen) == 0 )
       {
-         CHECK_OKAY( SCIPdialogDisplayMenuEntry(subdialogs[i], scip) );
+         SCIP_CALL( SCIPdialogDisplayMenuEntry(subdialogs[i], scip) );
       }
    }
 
@@ -779,12 +779,12 @@ RETCODE SCIPdialogDisplayCompletions(
 
 /** gets the name of the current path in the dialog tree, separated by the given character */
 void SCIPdialogGetPath(
-   DIALOG*          dialog,             /**< dialog */
-   const char       sepchar,            /**< separation character to insert in path */
-   char*            path                /**< string buffer to store the path */
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   const char            sepchar,            /**< separation character to insert in path */
+   char*                 path                /**< string buffer to store the path */
    )
 {
-   char s[MAXSTRLEN];
+   char s[SCIP_MAXSTRLEN];
 
    assert(dialog != NULL);
 
@@ -792,8 +792,8 @@ void SCIPdialogGetPath(
    dialog = dialog->parent;
    while( dialog != NULL )
    {
-      snprintf(s, MAXSTRLEN, "%s%c%s", dialog->name, sepchar, path);
-      s[MAXSTRLEN-1] = '\0';
+      snprintf(s, SCIP_MAXSTRLEN, "%s%c%s", dialog->name, sepchar, path);
+      s[SCIP_MAXSTRLEN-1] = '\0';
       (void)strcpy(path, s);
       dialog = dialog->parent;
    }
@@ -801,7 +801,7 @@ void SCIPdialogGetPath(
 
 /** gets the command name of the dialog */
 const char* SCIPdialogGetName(
-   DIALOG*          dialog              /**< dialog */
+   SCIP_DIALOG*          dialog              /**< dialog */
    )
 {
    assert(dialog != NULL);
@@ -811,7 +811,7 @@ const char* SCIPdialogGetName(
 
 /** gets the description of the dialog */
 const char* SCIPdialogGetDesc(
-   DIALOG*          dialog              /**< dialog */
+   SCIP_DIALOG*          dialog              /**< dialog */
    )
 {
    assert(dialog != NULL);
@@ -820,8 +820,8 @@ const char* SCIPdialogGetDesc(
 }
 
 /** returns whether the dialog is a sub menu */
-Bool SCIPdialogIsSubmenu(
-   DIALOG*          dialog              /**< dialog */
+SCIP_Bool SCIPdialogIsSubmenu(
+   SCIP_DIALOG*          dialog              /**< dialog */
    )
 {
    assert(dialog != NULL);
@@ -830,8 +830,8 @@ Bool SCIPdialogIsSubmenu(
 }
 
 /** gets the parent dialog of the given dialog */
-DIALOG* SCIPdialogGetParent(
-   DIALOG*          dialog              /**< dialog */
+SCIP_DIALOG* SCIPdialogGetParent(
+   SCIP_DIALOG*          dialog              /**< dialog */
    )
 {
    assert(dialog != NULL);
@@ -840,8 +840,8 @@ DIALOG* SCIPdialogGetParent(
 }
 
 /** gets the array of subdialogs associated with the given dialog */
-DIALOG** SCIPdialogGetSubdialogs(
-   DIALOG*          dialog              /**< dialog */
+SCIP_DIALOG** SCIPdialogGetSubdialogs(
+   SCIP_DIALOG*          dialog              /**< dialog */
    )
 {
    assert(dialog != NULL);
@@ -851,7 +851,7 @@ DIALOG** SCIPdialogGetSubdialogs(
 
 /** gets the number of subdialogs associated with the given dialog */
 int SCIPdialogGetNSubdialogs(
-   DIALOG*          dialog              /**< dialog */
+   SCIP_DIALOG*          dialog              /**< dialog */
    )
 {
    assert(dialog != NULL);
@@ -860,8 +860,8 @@ int SCIPdialogGetNSubdialogs(
 }
 
 /** gets the user defined data associated with the given dialog */
-DIALOGDATA* SCIPdialogGetData(
-   DIALOG*          dialog              /**< dialog */
+SCIP_DIALOGDATA* SCIPdialogGetData(
+   SCIP_DIALOG*          dialog              /**< dialog */
    )
 {
    assert(dialog != NULL);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_conflict.h,v 1.14 2005/07/15 17:20:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_conflict.h,v 1.15 2005/08/22 18:35:53 bzfpfend Exp $"
 
 /**@file   type_conflict.h
  * @brief  type definitions for conflict analysis
@@ -27,10 +27,10 @@
 #define __SCIP_TYPE_CONFLICT_H__
 
 
-typedef struct Conflicthdlr CONFLICTHDLR; /**< conflict handler to process conflict sets */
-typedef struct ConflicthdlrData CONFLICTHDLRDATA; /**< conflict handler data */
-typedef struct Clause CLAUSE;           /**< conflict clause */
-typedef struct Conflict CONFLICT;       /**< conflict analysis data structure */
+typedef struct SCIP_Conflicthdlr SCIP_CONFLICTHDLR; /**< conflict handler to process conflict sets */
+typedef struct SCIP_ConflicthdlrData SCIP_CONFLICTHDLRDATA; /**< conflict handler data */
+typedef struct SCIP_Clause SCIP_CLAUSE;           /**< conflict clause */
+typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data structure */
 
 
 
@@ -40,7 +40,7 @@ typedef struct Conflict CONFLICT;       /**< conflict analysis data structure */
  *  - scip            : SCIP main data structure
  *  - conflicthdlr    : the conflict handler itself
  */
-#define DECL_CONFLICTFREE(x) RETCODE x (SCIP* scip, CONFLICTHDLR* conflicthdlr)
+#define SCIP_DECL_CONFLICTFREE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONFLICTHDLR* conflicthdlr)
 
 /** initialization method of conflict handler (called after problem was transformed)
  *
@@ -48,7 +48,7 @@ typedef struct Conflict CONFLICT;       /**< conflict analysis data structure */
  *  - scip            : SCIP main data structure
  *  - conflicthdlr    : the conflict handler itself
  */
-#define DECL_CONFLICTINIT(x) RETCODE x (SCIP* scip, CONFLICTHDLR* conflicthdlr)
+#define SCIP_DECL_CONFLICTINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONFLICTHDLR* conflicthdlr)
 
 /** deinitialization method of conflict handler (called before transformed problem is freed)
  *
@@ -56,7 +56,7 @@ typedef struct Conflict CONFLICT;       /**< conflict analysis data structure */
  *  - scip            : SCIP main data structure
  *  - conflicthdlr    : the conflict handler itself
  */
-#define DECL_CONFLICTEXIT(x) RETCODE x (SCIP* scip, CONFLICTHDLR* conflicthdlr)
+#define SCIP_DECL_CONFLICTEXIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONFLICTHDLR* conflicthdlr)
 
 /** solving process initialization method of conflict handler (called when branch and bound process is about to begin)
  *
@@ -67,7 +67,7 @@ typedef struct Conflict CONFLICT;       /**< conflict analysis data structure */
  *  - scip            : SCIP main data structure
  *  - conflicthdlr    : the conflict handler itself
  */
-#define DECL_CONFLICTINITSOL(x) RETCODE x (SCIP* scip, CONFLICTHDLR* conflicthdlr)
+#define SCIP_DECL_CONFLICTINITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONFLICTHDLR* conflicthdlr)
 
 /** solving process deinitialization method of conflict handler (called before branch and bound process data is freed)
  *
@@ -78,7 +78,7 @@ typedef struct Conflict CONFLICT;       /**< conflict analysis data structure */
  *  - scip            : SCIP main data structure
  *  - conflicthdlr    : the conflict handler itself
  */
-#define DECL_CONFLICTEXITSOL(x) RETCODE x (SCIP* scip, CONFLICTHDLR* conflicthdlr)
+#define SCIP_DECL_CONFLICTEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONFLICTHDLR* conflicthdlr)
 
 /** conflict processing method of conflict handler (called when conflict was found)
  *
@@ -102,7 +102,7 @@ typedef struct Conflict CONFLICT;       /**< conflict analysis data structure */
  *  - nconflictvars   : number of binary variables in the conflict set
  *  - local           : is the conflict set only valid locally, i.e. should the constraint created as local constraint?
  *  - dynamic         : should the conflict constraint be made subject to aging?
- *  - removeable      : should the conflict's relaxation be made subject to LP aging and cleanup?
+ *  - removeable      : should the conflict's relaxation be made subject to SCIP_LP aging and cleanup?
  *  - resolved        : is the conflict set already used to create a constraint?
  *  - result          : pointer to store the result of the conflict processing call
  *
@@ -111,8 +111,8 @@ typedef struct Conflict CONFLICT;       /**< conflict analysis data structure */
  *  - SCIP_DIDNOTFIND : the conflict handler could not create a constraint out of the conflict set
  *  - SCIP_DIDNOTRUN  : the conflict handler was skipped
  */
-#define DECL_CONFLICTEXEC(x) RETCODE x (SCIP* scip, CONFLICTHDLR* conflicthdlr, NODE* node, NODE* validnode, \
-      VAR** conflictvars, int nconflictvars, Bool local, Bool dynamic, Bool removeable, Bool resolved, RESULT* result)
+#define SCIP_DECL_CONFLICTEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONFLICTHDLR* conflicthdlr, SCIP_NODE* node, SCIP_NODE* validnode, \
+      SCIP_VAR** conflictvars, int nconflictvars, SCIP_Bool local, SCIP_Bool dynamic, SCIP_Bool removeable, SCIP_Bool resolved, SCIP_RESULT* result)
 
 
 

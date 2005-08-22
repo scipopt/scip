@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objvardata.h,v 1.6 2005/07/15 17:20:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objvardata.h,v 1.7 2005/08/22 18:35:31 bzfpfend Exp $"
 
 /**@file   objvardata.h
  * @brief  C++ wrapper for user variable data
@@ -60,9 +60,9 @@ public:
     *  after the SCIP variable is freed, this method should delete all the variable specific data that is no
     *  longer needed.
     */
-   virtual RETCODE scip_delorig(
-      SCIP*         scip,               /**< SCIP data structure */
-      VAR*          var                 /**< original variable, the data to free is belonging to */
+   virtual SCIP_RETCODE scip_delorig(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_VAR*          var                 /**< original variable, the data to free is belonging to */
       )
    {
       return SCIP_OKAY;
@@ -81,11 +81,11 @@ public:
     *      data object. In this case, he probably wants to set *deleteobject to TRUE, thus letting SCIP call the
     *      destructor of the object if the transformed variable data is no longer needed.
     */
-   virtual RETCODE scip_trans(
-      SCIP*         scip,               /**< SCIP data structure */
-      VAR*          var,                /**< transformed variable, the data to create is belonging to */
-      ObjVardata**  objvardata,         /**< pointer to store the transformed variable data object */
-      Bool*         deleteobject        /**< pointer to store whether SCIP should delete the object after solving */
+   virtual SCIP_RETCODE scip_trans(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_VAR*          var,                /**< transformed variable, the data to create is belonging to */
+      ObjVardata**       objvardata,         /**< pointer to store the transformed variable data object */
+      SCIP_Bool*         deleteobject        /**< pointer to store whether SCIP should delete the object after solving */
       )
    {
       assert(objvardata != NULL);
@@ -108,9 +108,9 @@ public:
     *  after the SCIP variable is freed, this method should delete all the variable specific data that is no
     *  longer needed.
     */
-   virtual RETCODE scip_deltrans(
-      SCIP*         scip,               /**< SCIP data structure */
-      VAR*          var                 /**< transformed variable, the data to free is belonging to */
+   virtual SCIP_RETCODE scip_deltrans(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_VAR*          var                 /**< transformed variable, the data to free is belonging to */
       )
    {
       return SCIP_OKAY;
@@ -126,18 +126,18 @@ public:
  *  if variable is of integral type, fractional bounds are automatically rounded
  */
 extern
-RETCODE SCIPcreateObjVar(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR**            var,                /**< pointer to variable object */
-   const char*      name,               /**< name of variable, or NULL for automatic name creation */
-   Real             lb,                 /**< lower bound of variable */
-   Real             ub,                 /**< upper bound of variable */
-   Real             obj,                /**< objective function value */
-   VARTYPE          vartype,            /**< type of variable */
-   Bool             initial,            /**< should var's column be present in the initial root LP? */
-   Bool             removeable,         /**< is var's column removeable from the LP (due to aging or cleanup)? */
-   scip::ObjVardata* objvardata,        /**< user variable data object */
-   Bool             deleteobject        /**< should the user variable data object be deleted when variable is freed? */
+SCIP_RETCODE SCIPcreateObjVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            var,                /**< pointer to variable object */
+   const char*           name,               /**< name of variable, or NULL for automatic name creation */
+   SCIP_Real             lb,                 /**< lower bound of variable */
+   SCIP_Real             ub,                 /**< upper bound of variable */
+   SCIP_Real             obj,                /**< objective function value */
+   SCIP_VARTYPE          vartype,            /**< type of variable */
+   SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
+   SCIP_Bool             removeable,         /**< is var's column removeable from the SCIP_LP (due to aging or cleanup)? */
+   scip::ObjVardata*     objvardata,         /**< user variable data object */
+   SCIP_Bool             deleteobject        /**< should the user variable data object be deleted when variable is freed? */
    );
 
 /** gets user variable data object for given problem variable
@@ -146,8 +146,8 @@ RETCODE SCIPcreateObjVar(
  */
 extern
 scip::ObjVardata* SCIPgetObjVardata(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var                 /**< problem variable */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
    );
 
 #endif

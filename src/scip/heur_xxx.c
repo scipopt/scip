@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_xxx.c,v 1.15 2005/07/15 17:20:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_xxx.c,v 1.16 2005/08/22 18:35:39 bzfpfend Exp $"
 
 /**@file   heur_xxx.c
  * @brief  xxx primal heuristic
@@ -49,7 +49,7 @@
 /* TODO: fill in the necessary primal heuristic data */
 
 /** primal heuristic data */
-struct HeurData
+struct SCIP_HeurData
 {
 };
 
@@ -74,9 +74,9 @@ struct HeurData
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 #if 0
 static
-DECL_HEURFREE(heurFreeXxx)
+SCIP_DECL_HEURFREE(heurFreeXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx primal heuristic not implemented yet\n");
+   SCIPerrorMessage("method of xxx primal heuristic not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -89,9 +89,9 @@ DECL_HEURFREE(heurFreeXxx)
 /** initialization method of primal heuristic (called after problem was transformed) */
 #if 0
 static
-DECL_HEURINIT(heurInitXxx)
+SCIP_DECL_HEURINIT(heurInitXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx primal heuristic not implemented yet\n");
+   SCIPerrorMessage("method of xxx primal heuristic not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -104,9 +104,9 @@ DECL_HEURINIT(heurInitXxx)
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 #if 0
 static
-DECL_HEUREXIT(heurExitXxx)
+SCIP_DECL_HEUREXIT(heurExitXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx primal heuristic not implemented yet\n");
+   SCIPerrorMessage("method of xxx primal heuristic not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -119,9 +119,9 @@ DECL_HEUREXIT(heurExitXxx)
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 #if 0
 static
-DECL_HEURINITSOL(heurInitsolXxx)
+SCIP_DECL_HEURINITSOL(heurInitsolXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx primal heuristic not implemented yet\n");
+   SCIPerrorMessage("method of xxx primal heuristic not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -134,9 +134,9 @@ DECL_HEURINITSOL(heurInitsolXxx)
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
 #if 0
 static
-DECL_HEUREXITSOL(heurExitsolXxx)
+SCIP_DECL_HEUREXITSOL(heurExitsolXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx primal heuristic not implemented yet\n");
+   SCIPerrorMessage("method of xxx primal heuristic not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -148,9 +148,9 @@ DECL_HEUREXITSOL(heurExitsolXxx)
 
 /** execution method of primal heuristic */
 static
-DECL_HEUREXEC(heurExecXxx)
+SCIP_DECL_HEUREXEC(heurExecXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx primal heuristic not implemented yet\n");
+   SCIPerrorMessage("method of xxx primal heuristic not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -165,18 +165,18 @@ DECL_HEUREXEC(heurExecXxx)
  */
 
 /** creates the xxx primal heuristic and includes it in SCIP */
-RETCODE SCIPincludeHeurXxx(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeHeurXxx(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   HEURDATA* heurdata;
+   SCIP_HEURDATA* heurdata;
 
    /* create xxx primal heuristic data */
    heurdata = NULL;
    /* TODO: (optional) create primal heuristic specific data here */
 
    /* include primal heuristic */
-   CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING, HEUR_AFTERNODE,
          heurFreeXxx, heurInitXxx, heurExitXxx, 
          heurInitsolXxx, heurExitsolXxx, heurExecXxx,

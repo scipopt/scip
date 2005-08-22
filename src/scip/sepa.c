@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.47 2005/05/31 17:20:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.48 2005/08/22 18:35:47 bzfpfend Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -41,47 +41,47 @@
 
 
 /** compares two separators w. r. to their priority */
-DECL_SORTPTRCOMP(SCIPsepaComp)
+SCIP_DECL_SORTPTRCOMP(SCIPsepaComp)
 {  /*lint --e{715}*/
-   return ((SEPA*)elem2)->priority - ((SEPA*)elem1)->priority;
+   return ((SCIP_SEPA*)elem2)->priority - ((SCIP_SEPA*)elem1)->priority;
 }
 
 /** method to call, when the priority of a separator was changed */
 static
-DECL_PARAMCHGD(paramChgdSepaPriority)
+SCIP_DECL_PARAMCHGD(paramChgdSepaPriority)
 {  /*lint --e{715}*/
-   PARAMDATA* paramdata;
+   SCIP_PARAMDATA* paramdata;
 
    paramdata = SCIPparamGetData(param);
    assert(paramdata != NULL);
 
    /* use SCIPsetSepaPriority() to mark the sepas unsorted */
-   CHECK_OKAY( SCIPsetSepaPriority(scip, (SEPA*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
+   SCIP_CALL( SCIPsetSepaPriority(scip, (SCIP_SEPA*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
 
 /** creates a separator */
-RETCODE SCIPsepaCreate(
-   SEPA**           sepa,               /**< pointer to separator data structure */
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory for parameter settings */
-   const char*      name,               /**< name of separator */
-   const char*      desc,               /**< description of separator */
-   int              priority,           /**< priority of separator (>= 0: before, < 0: after constraint handlers) */
-   int              freq,               /**< frequency for calling separator */
-   Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
-   DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
-   DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
-   DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
-   DECL_SEPAINITSOL ((*sepainitsol)),   /**< solving process initialization method of separator */
-   DECL_SEPAEXITSOL ((*sepaexitsol)),   /**< solving process deinitialization method of separator */
-   DECL_SEPAEXEC    ((*sepaexec)),      /**< execution method of separator */
-   SEPADATA*        sepadata            /**< separator data */
+SCIP_RETCODE SCIPsepaCreate(
+   SCIP_SEPA**           sepa,               /**< pointer to separator data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of separator */
+   const char*           desc,               /**< description of separator */
+   int                   priority,           /**< priority of separator (>= 0: before, < 0: after constraint handlers) */
+   int                   freq,               /**< frequency for calling separator */
+   SCIP_Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
+   SCIP_DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
+   SCIP_DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
+   SCIP_DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
+   SCIP_DECL_SEPAINITSOL ((*sepainitsol)),   /**< solving process initialization method of separator */
+   SCIP_DECL_SEPAEXITSOL ((*sepaexitsol)),   /**< solving process deinitialization method of separator */
+   SCIP_DECL_SEPAEXEC    ((*sepaexec)),      /**< execution method of separator */
+   SCIP_SEPADATA*        sepadata            /**< separator data */
    )
 {
-   char paramname[MAXSTRLEN];
-   char paramdesc[MAXSTRLEN];
+   char paramname[SCIP_MAXSTRLEN];
+   char paramdesc[SCIP_MAXSTRLEN];
 
    assert(sepa != NULL);
    assert(name != NULL);
@@ -89,9 +89,9 @@ RETCODE SCIPsepaCreate(
    assert(freq >= -1);
    assert(sepaexec != NULL);
 
-   ALLOC_OKAY( allocMemory(sepa) );
-   ALLOC_OKAY( duplicateMemoryArray(&(*sepa)->name, name, strlen(name)+1) );
-   ALLOC_OKAY( duplicateMemoryArray(&(*sepa)->desc, desc, strlen(desc)+1) );
+   SCIP_ALLOC( BMSallocMemory(sepa) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*sepa)->name, name, strlen(name)+1) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*sepa)->desc, desc, strlen(desc)+1) );
    (*sepa)->priority = priority;
    (*sepa)->freq = freq;
    (*sepa)->sepafree = sepafree;
@@ -101,7 +101,7 @@ RETCODE SCIPsepaCreate(
    (*sepa)->sepaexitsol = sepaexitsol;
    (*sepa)->sepaexec = sepaexec;
    (*sepa)->sepadata = sepadata;
-   CHECK_OKAY( SCIPclockCreate(&(*sepa)->clock, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*sepa)->sepaclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*sepa)->lastsepanode = -1;
    (*sepa)->ncalls = 0;
    (*sepa)->ncutsfound = 0;
@@ -113,17 +113,17 @@ RETCODE SCIPsepaCreate(
    /* add parameters */
    sprintf(paramname, "separating/%s/priority", name);
    sprintf(paramdesc, "priority of separator <%s>", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
+   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*sepa)->priority, priority, INT_MIN, INT_MAX, 
-         paramChgdSepaPriority, (PARAMDATA*)(*sepa)) ); /*lint !e740*/
+         paramChgdSepaPriority, (SCIP_PARAMDATA*)(*sepa)) ); /*lint !e740*/
 
    sprintf(paramname, "separating/%s/freq", name);
    sprintf(paramdesc, "frequency for calling separator <%s> (-1: never, 0: only in root node)", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
+   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*sepa)->freq, freq, -1, INT_MAX, NULL, NULL) );
 
    sprintf(paramname, "separating/%s/delay", name);
-   CHECK_OKAY( SCIPsetAddBoolParam(set, blkmem, paramname,
+   SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
          "should separator be delayed, if other separators found cuts?",
          &(*sepa)->delay, delay, NULL, NULL) ); /*lint !e740*/
 
@@ -131,9 +131,9 @@ RETCODE SCIPsepaCreate(
 }
 
 /** calls destructor and frees memory of separator */
-RETCODE SCIPsepaFree(
-   SEPA**           sepa,               /**< pointer to separator data structure */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPsepaFree(
+   SCIP_SEPA**           sepa,               /**< pointer to separator data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(sepa != NULL);
@@ -144,21 +144,21 @@ RETCODE SCIPsepaFree(
    /* call destructor of separator */
    if( (*sepa)->sepafree != NULL )
    {
-      CHECK_OKAY( (*sepa)->sepafree(set->scip, *sepa) );
+      SCIP_CALL( (*sepa)->sepafree(set->scip, *sepa) );
    }
 
-   SCIPclockFree(&(*sepa)->clock);
-   freeMemoryArray(&(*sepa)->name);
-   freeMemoryArray(&(*sepa)->desc);
-   freeMemory(sepa);
+   SCIPclockFree(&(*sepa)->sepaclock);
+   BMSfreeMemoryArray(&(*sepa)->name);
+   BMSfreeMemoryArray(&(*sepa)->desc);
+   BMSfreeMemory(sepa);
 
    return SCIP_OKAY;
 }
 
 /** initializes separator */
-RETCODE SCIPsepaInit(
-   SEPA*            sepa,               /**< separator */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPsepaInit(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(sepa != NULL);
@@ -166,11 +166,11 @@ RETCODE SCIPsepaInit(
 
    if( sepa->initialized )
    {
-      errorMessage("separator <%s> already initialized\n", sepa->name);
+      SCIPerrorMessage("separator <%s> already initialized\n", sepa->name);
       return SCIP_INVALIDCALL;
    }
 
-   SCIPclockReset(sepa->clock);
+   SCIPclockReset(sepa->sepaclock);
 
    sepa->lastsepanode = -1;
    sepa->ncalls = 0;
@@ -180,7 +180,7 @@ RETCODE SCIPsepaInit(
 
    if( sepa->sepainit != NULL )
    {
-      CHECK_OKAY( sepa->sepainit(set->scip, sepa) );
+      SCIP_CALL( sepa->sepainit(set->scip, sepa) );
    }
    sepa->initialized = TRUE;
 
@@ -188,9 +188,9 @@ RETCODE SCIPsepaInit(
 }
 
 /** calls exit method of separator */
-RETCODE SCIPsepaExit(
-   SEPA*            sepa,               /**< separator */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPsepaExit(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(sepa != NULL);
@@ -198,13 +198,13 @@ RETCODE SCIPsepaExit(
 
    if( !sepa->initialized )
    {
-      errorMessage("separator <%s> not initialized\n", sepa->name);
+      SCIPerrorMessage("separator <%s> not initialized\n", sepa->name);
       return SCIP_INVALIDCALL;
    }
 
    if( sepa->sepaexit != NULL )
    {
-      CHECK_OKAY( sepa->sepaexit(set->scip, sepa) );
+      SCIP_CALL( sepa->sepaexit(set->scip, sepa) );
    }
    sepa->initialized = FALSE;
 
@@ -212,9 +212,9 @@ RETCODE SCIPsepaExit(
 }
 
 /** informs separator that the branch and bound process is being started */
-RETCODE SCIPsepaInitsol(
-   SEPA*            sepa,               /**< separator */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPsepaInitsol(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(sepa != NULL);
@@ -223,16 +223,16 @@ RETCODE SCIPsepaInitsol(
    /* call solving process initialization method of separator */
    if( sepa->sepainitsol != NULL )
    {
-      CHECK_OKAY( sepa->sepainitsol(set->scip, sepa) );
+      SCIP_CALL( sepa->sepainitsol(set->scip, sepa) );
    }
 
    return SCIP_OKAY;
 }
 
 /** informs separator that the branch and bound process data is being freed */
-RETCODE SCIPsepaExitsol(
-   SEPA*            sepa,               /**< separator */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPsepaExitsol(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(sepa != NULL);
@@ -241,21 +241,21 @@ RETCODE SCIPsepaExitsol(
    /* call solving process deinitialization method of separator */
    if( sepa->sepaexitsol != NULL )
    {
-      CHECK_OKAY( sepa->sepaexitsol(set->scip, sepa) );
+      SCIP_CALL( sepa->sepaexitsol(set->scip, sepa) );
    }
 
    return SCIP_OKAY;
 }
 
 /** calls execution method of separator */
-RETCODE SCIPsepaExec(
-   SEPA*            sepa,               /**< separator */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   SEPASTORE*       sepastore,          /**< separation storage */
-   int              depth,              /**< depth of current node */
-   Bool             execdelayed,        /**< execute separator even if it is marked to be delayed */
-   RESULT*          result              /**< pointer to store the result of the callback method */
+SCIP_RETCODE SCIPsepaExec(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   int                   depth,              /**< depth of current node */
+   SCIP_Bool             execdelayed,        /**< execute separator even if it is marked to be delayed */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    assert(sepa != NULL);
@@ -274,7 +274,7 @@ RETCODE SCIPsepaExec(
          int oldncutsstored;
          int ncutsfound;
 
-         debugMessage("executing separator <%s>\n", sepa->name);
+         SCIPdebugMessage("executing separator <%s>\n", sepa->name);
 
          oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
 
@@ -286,13 +286,13 @@ RETCODE SCIPsepaExec(
          }
 
          /* start timing */
-         SCIPclockStart(sepa->clock, set);
+         SCIPclockStart(sepa->sepaclock, set);
 
          /* call external separation method */
-         CHECK_OKAY( sepa->sepaexec(set->scip, sepa, result) );
+         SCIP_CALL( sepa->sepaexec(set->scip, sepa, result) );
 
          /* stop timing */
-         SCIPclockStop(sepa->clock, set);
+         SCIPclockStop(sepa->sepaclock, set);
 
          /* update statistics */
          if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
@@ -314,14 +314,14 @@ RETCODE SCIPsepaExec(
             && *result != SCIP_DIDNOTRUN
             && *result != SCIP_DELAYED )
          {
-            errorMessage("execution method of separator <%s> returned invalid result <%d>\n", 
+            SCIPerrorMessage("execution method of separator <%s> returned invalid result <%d>\n", 
                sepa->name, *result);
             return SCIP_INVALIDRESULT;
          }
       }
       else
       {
-         debugMessage("separator <%s> was delayed\n", sepa->name);
+         SCIPdebugMessage("separator <%s> was delayed\n", sepa->name);
          *result = SCIP_DELAYED;
       }
 
@@ -335,8 +335,8 @@ RETCODE SCIPsepaExec(
 }
 
 /** gets user data of separator */
-SEPADATA* SCIPsepaGetData(
-   SEPA*            sepa                /**< separator */
+SCIP_SEPADATA* SCIPsepaGetData(
+   SCIP_SEPA*            sepa                /**< separator */
    )
 {
    assert(sepa != NULL);
@@ -346,8 +346,8 @@ SEPADATA* SCIPsepaGetData(
 
 /** sets user data of separator; user has to free old data in advance! */
 void SCIPsepaSetData(
-   SEPA*            sepa,               /**< separator */
-   SEPADATA*        sepadata            /**< new separator user data */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SEPADATA*        sepadata            /**< new separator user data */
    )
 {
    assert(sepa != NULL);
@@ -357,7 +357,7 @@ void SCIPsepaSetData(
 
 /** gets name of separator */
 const char* SCIPsepaGetName(
-   SEPA*            sepa                /**< separator */
+   SCIP_SEPA*            sepa                /**< separator */
    )
 {
    assert(sepa != NULL);
@@ -367,7 +367,7 @@ const char* SCIPsepaGetName(
 
 /** gets description of separator */
 const char* SCIPsepaGetDesc(
-   SEPA*            sepa                /**< separator */
+   SCIP_SEPA*            sepa                /**< separator */
    )
 {
    assert(sepa != NULL);
@@ -377,7 +377,7 @@ const char* SCIPsepaGetDesc(
 
 /** gets priority of separator */
 int SCIPsepaGetPriority(
-   SEPA*            sepa                /**< separator */
+   SCIP_SEPA*            sepa                /**< separator */
    )
 {
    assert(sepa != NULL);
@@ -387,9 +387,9 @@ int SCIPsepaGetPriority(
 
 /** sets priority of separator */
 void SCIPsepaSetPriority(
-   SEPA*            sepa,               /**< separator */
-   SET*             set,                /**< global SCIP settings */
-   int              priority            /**< new priority of the separator */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   priority            /**< new priority of the separator */
    )
 {
    assert(sepa != NULL);
@@ -401,7 +401,7 @@ void SCIPsepaSetPriority(
 
 /** gets frequency of separator */
 int SCIPsepaGetFreq(
-   SEPA*            sepa                /**< separator */
+   SCIP_SEPA*            sepa                /**< separator */
    )
 {
    assert(sepa != NULL);
@@ -410,18 +410,18 @@ int SCIPsepaGetFreq(
 }
 
 /** gets time in seconds used in this separator */
-Real SCIPsepaGetTime(
-   SEPA*            sepa                /**< separator */
+SCIP_Real SCIPsepaGetTime(
+   SCIP_SEPA*            sepa                /**< separator */
    )
 {
    assert(sepa != NULL);
 
-   return SCIPclockGetTime(sepa->clock);
+   return SCIPclockGetTime(sepa->sepaclock);
 }
 
 /** gets the total number of times, the separator was called */
-Longint SCIPsepaGetNCalls(
-   SEPA*            sepa                /**< separator */
+SCIP_Longint SCIPsepaGetNCalls(
+   SCIP_SEPA*            sepa                /**< separator */
    )
 {
    assert(sepa != NULL);
@@ -431,7 +431,7 @@ Longint SCIPsepaGetNCalls(
 
 /** gets the number of times, the separator was called at the current node */
 int SCIPsepaGetNCallsAtNode(
-   SEPA*            sepa                /**< separator */
+   SCIP_SEPA*            sepa                /**< separator */
    )
 {
    assert(sepa != NULL);
@@ -440,8 +440,8 @@ int SCIPsepaGetNCallsAtNode(
 }
 
 /** gets the total number of cutting planes found by this separator */
-Longint SCIPsepaGetNCutsFound(
-   SEPA*            sepa                /**< separator */
+SCIP_Longint SCIPsepaGetNCutsFound(
+   SCIP_SEPA*            sepa                /**< separator */
    )
 {
    assert(sepa != NULL);
@@ -450,8 +450,8 @@ Longint SCIPsepaGetNCutsFound(
 }
 
 /** gets the number of cutting planes found by this separator at the current node */
-Longint SCIPsepaGetNCutsFoundAtNode(
-   SEPA*            sepa                /**< separator */
+SCIP_Longint SCIPsepaGetNCutsFoundAtNode(
+   SCIP_SEPA*            sepa                /**< separator */
    )
 {
    assert(sepa != NULL);
@@ -460,8 +460,8 @@ Longint SCIPsepaGetNCutsFoundAtNode(
 }
 
 /** should separator be delayed, if other separators found cuts? */
-Bool SCIPsepaIsDelayed(
-   SEPA*            sepa                /**< separator */
+SCIP_Bool SCIPsepaIsDelayed(
+   SCIP_SEPA*            sepa                /**< separator */
    )
 {
    assert(sepa != NULL);
@@ -470,8 +470,8 @@ Bool SCIPsepaIsDelayed(
 }
 
 /** was separator delayed at the last call? */
-Bool SCIPsepaWasDelayed(
-   SEPA*            sepa                /**< separator */
+SCIP_Bool SCIPsepaWasDelayed(
+   SCIP_SEPA*            sepa                /**< separator */
    )
 {
    assert(sepa != NULL);
@@ -480,8 +480,8 @@ Bool SCIPsepaWasDelayed(
 }
 
 /** is separator initialized? */
-Bool SCIPsepaIsInitialized(
-   SEPA*            sepa                /**< separator */
+SCIP_Bool SCIPsepaIsInitialized(
+   SCIP_SEPA*            sepa                /**< separator */
    )
 {
    assert(sepa != NULL);

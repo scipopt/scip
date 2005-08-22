@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_implics.h,v 1.2 2005/08/17 14:25:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_implics.h,v 1.3 2005/08/22 18:35:45 bzfpfend Exp $"
 
 /**@file   implics.h
  * @brief  public methods for implications, variable bounds, and cliques
@@ -47,49 +47,49 @@
  */
 extern
 int SCIPcliqueSearchVar(
-   CLIQUE*          clique,             /**< clique data structure */
-   VAR*             var,                /**< variable to search for */
-   Bool             value               /**< value of the variable in the clique */
+   SCIP_CLIQUE*          clique,             /**< clique data structure */
+   SCIP_VAR*             var,                /**< variable to search for */
+   SCIP_Bool             value               /**< value of the variable in the clique */
    );
 
 /** returns whether the given variable/value pair is member of the given clique */
 extern
-Bool SCIPcliqueHasVar(
-   CLIQUE*          clique,             /**< clique data structure */
-   VAR*             var,                /**< variable to remove from the clique */
-   Bool             value               /**< value of the variable in the clique */
+SCIP_Bool SCIPcliqueHasVar(
+   SCIP_CLIQUE*          clique,             /**< clique data structure */
+   SCIP_VAR*             var,                /**< variable to remove from the clique */
+   SCIP_Bool             value               /**< value of the variable in the clique */
    );
 
 #ifndef NDEBUG
 
-/* In debug mode, the following methods are implemented as function calls to ensure
+/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
 
 /** gets number of variables in the cliques */
 extern
 int SCIPcliqueGetNVars(
-   CLIQUE*          clique              /**< clique data structure */
+   SCIP_CLIQUE*          clique              /**< clique data structure */
    );
 
 /** gets array of active problem variables in the cliques */
 extern
-VAR** SCIPcliqueGetVars(
-   CLIQUE*          clique              /**< clique data structure */
+SCIP_VAR** SCIPcliqueGetVars(
+   SCIP_CLIQUE*          clique              /**< clique data structure */
    );
 
 /** gets array of values of active problem variables in the cliques, i.e. whether the variable is fixed to FALSE or
  *  to TRUE in the clique
  */
 extern
-Bool* SCIPcliqueGetValues(
-   CLIQUE*          clique              /**< clique data structure */
+SCIP_Bool* SCIPcliqueGetValues(
+   SCIP_CLIQUE*          clique              /**< clique data structure */
    );
 
 /** gets unique identifier of the clique */
 extern
 int SCIPcliqueGetId(
-   CLIQUE*          clique              /**< clique data structure */
+   SCIP_CLIQUE*          clique              /**< clique data structure */
    );
 
 #else

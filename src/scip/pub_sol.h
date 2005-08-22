@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_sol.h,v 1.9 2005/07/15 17:20:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_sol.h,v 1.10 2005/08/22 18:35:45 bzfpfend Exp $"
 
 /**@file   pub_sol.h
  * @brief  public methods for primal CIP solutions
@@ -38,44 +38,44 @@
 
 #ifndef NDEBUG
 
-/* In debug mode, the following methods are implemented as function calls to ensure
+/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
 
 /** gets origin of solution */
 extern
-SOLORIGIN SCIPsolGetOrigin(
-   SOL*             sol                 /**< primal CIP solution */
+SCIP_SOLORIGIN SCIPsolGetOrigin(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** gets clock time, when this solution was found */
 extern
-Real SCIPsolGetTime(
-   SOL*             sol                 /**< primal CIP solution */
+SCIP_Real SCIPsolGetTime(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** gets branch and bound run number, where this solution was found */
 extern
 int SCIPsolGetRunnum(
-   SOL*             sol                 /**< primal CIP solution */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** gets node number of the specific branch and bound run, where this solution was found */
 extern
-Longint SCIPsolGetNodenum(
-   SOL*             sol                 /**< primal CIP solution */
+SCIP_Longint SCIPsolGetNodenum(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** gets node's depth, where this solution was found */
 extern
 int SCIPsolGetDepth(
-   SOL*             sol                 /**< primal CIP solution */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** gets heuristic, that found this solution (or NULL if it's from the tree) */
 extern
-HEUR* SCIPsolGetHeur(
-   SOL*             sol                 /**< primal CIP solution */
+SCIP_HEUR* SCIPsolGetHeur(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 #else

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_prop.h,v 1.8 2005/07/15 17:20:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_prop.h,v 1.9 2005/08/22 18:35:51 bzfpfend Exp $"
 
 /**@file   struct_prop.h
  * @brief  datastructures for propagators
@@ -33,27 +33,27 @@
 
 
 /** propagators data */
-struct Prop
+struct SCIP_Prop
 {
-   Longint          ncalls;             /**< number of times, this propagator was called */
-   Longint          ncutoffs;           /**< number of cutoffs found so far by this constraint handler */
-   Longint          ndomredsfound;      /**< number of domain reductions found so far by this constraint handler */
-   char*            name;               /**< name of propagator */
-   char*            desc;               /**< description of propagator */
-   DECL_PROPFREE    ((*propfree));      /**< destructor of propagator */
-   DECL_PROPINIT    ((*propinit));      /**< initialize propagator */
-   DECL_PROPEXIT    ((*propexit));      /**< deinitialize propagator */
-   DECL_PROPINITSOL ((*propinitsol));   /**< solving process initialization method of propagator */
-   DECL_PROPEXITSOL ((*propexitsol));   /**< solving process deinitialization method of propagator */
-   DECL_PROPEXEC    ((*propexec));      /**< execution method of propagator */
-   DECL_PROPRESPROP ((*propresprop));   /**< propagation conflict resolving method */
-   PROPDATA*        propdata;           /**< propagators local data */
-   CLOCK*           clock;              /**< propagation time */
-   int              priority;           /**< priority of the propagator */
-   int              freq;               /**< frequency for calling propagator */
-   Bool             delay;              /**< should propagator be delayed, if other propagators found reductions? */
-   Bool             wasdelayed;         /**< was the propagator delayed at the last call? */
-   Bool             initialized;        /**< is propagator initialized? */
+   SCIP_Longint          ncalls;             /**< number of times, this propagator was called */
+   SCIP_Longint          ncutoffs;           /**< number of cutoffs found so far by this constraint handler */
+   SCIP_Longint          ndomredsfound;      /**< number of domain reductions found so far by this constraint handler */
+   char*                 name;               /**< name of propagator */
+   char*                 desc;               /**< description of propagator */
+   SCIP_DECL_PROPFREE    ((*propfree));      /**< destructor of propagator */
+   SCIP_DECL_PROPINIT    ((*propinit));      /**< initialize propagator */
+   SCIP_DECL_PROPEXIT    ((*propexit));      /**< deinitialize propagator */
+   SCIP_DECL_PROPINITSOL ((*propinitsol));   /**< solving process initialization method of propagator */
+   SCIP_DECL_PROPEXITSOL ((*propexitsol));   /**< solving process deinitialization method of propagator */
+   SCIP_DECL_PROPEXEC    ((*propexec));      /**< execution method of propagator */
+   SCIP_DECL_PROPRESPROP ((*propresprop));   /**< propagation conflict resolving method */
+   SCIP_PROPDATA*        propdata;           /**< propagators local data */
+   SCIP_CLOCK*           propclock;          /**< propagation time */
+   int                   priority;           /**< priority of the propagator */
+   int                   freq;               /**< frequency for calling propagator */
+   SCIP_Bool             delay;              /**< should propagator be delayed, if other propagators found reductions? */
+   SCIP_Bool             wasdelayed;         /**< was the propagator delayed at the last call? */
+   SCIP_Bool             initialized;        /**< is propagator initialized? */
 };
 
 

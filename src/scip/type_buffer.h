@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_buffer.h,v 1.6 2005/07/15 17:20:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_buffer.h,v 1.7 2005/08/22 18:35:53 bzfpfend Exp $"
 
 /**@file   type_buffer.h
  * @brief  type definitions for memory buffers for temporary objects
@@ -27,7 +27,7 @@
 #define __SCIP_TYPE_BUFFER_H__
 
 
-typedef struct Buffer BUFFER;
+typedef struct SCIP_Buffer SCIP_BUFFER;
 
 
 #endif

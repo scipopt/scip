@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.20 2005/07/15 17:20:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.21 2005/08/22 18:35:34 bzfpfend Exp $"
 
 /**@file   cons_conjunction.c
  * @brief  constraint handler for conjunction constraints
@@ -39,7 +39,7 @@
 #define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ            -1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
-                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -54,11 +54,11 @@
  */
 
 /** constraint data for conjunction constraints */
-struct ConsData
+struct SCIP_ConsData
 {
-   CONS**           conss;              /**< constraints in conjunction */
-   int              consssize;          /**< size of conss array */
-   int              nconss;             /**< number of constraints in conjunction */
+   SCIP_CONS**           conss;              /**< constraints in conjunction */
+   int                   consssize;          /**< size of conss array */
+   int                   nconss;             /**< number of constraints in conjunction */
 };
 
 
@@ -70,31 +70,31 @@ struct ConsData
 
 /** creates conjunction constraint data, captures initial constraints of conjunction */
 static
-RETCODE consdataCreate(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA**       consdata,           /**< pointer to constraint data */
-   CONS**           conss,              /**< initial constraint in conjunction */
-   int              nconss              /**< number of initial constraints in conjunction */
+SCIP_RETCODE consdataCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA**       consdata,           /**< pointer to constraint data */
+   SCIP_CONS**           conss,              /**< initial constraint in conjunction */
+   int                   nconss              /**< number of initial constraints in conjunction */
    )
 {
    assert(consdata != NULL);
    
-   CHECK_OKAY( SCIPallocBlockMemory(scip, consdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
    if( nconss > 0 )
    {
       int c;
 
-      CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->conss, conss, nconss) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->conss, conss, nconss) );
       (*consdata)->consssize = nconss;
       (*consdata)->nconss = nconss;
       for( c = 0; c < nconss; ++c )
       {
          if( SCIPconsIsInitial(conss[c]) || SCIPconsIsChecked(conss[c]) )
          {
-            errorMessage("constraints in a conjunction must not be initial or checked\n");
+            SCIPerrorMessage("constraints in a conjunction must not be initial or checked\n");
             return SCIP_INVALIDDATA;
          }
-         CHECK_OKAY( SCIPcaptureCons(scip, conss[c]) );
+         SCIP_CALL( SCIPcaptureCons(scip, conss[c]) );
       }
    }
    else
@@ -109,9 +109,9 @@ RETCODE consdataCreate(
 
 /** frees constraint data and releases all constraints in conjunction */
 static
-RETCODE consdataFree(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA**       consdata            /**< pointer to constraint data */
+SCIP_RETCODE consdataFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA**       consdata            /**< pointer to constraint data */
    )
 {
    int c;
@@ -122,7 +122,7 @@ RETCODE consdataFree(
    /* release constraints */
    for( c = 0; c < (*consdata)->nconss; ++c )
    {
-      CHECK_OKAY( SCIPreleaseCons(scip, &(*consdata)->conss[c]) );
+      SCIP_CALL( SCIPreleaseCons(scip, &(*consdata)->conss[c]) );
    }
 
    /* free memory */
@@ -134,22 +134,22 @@ RETCODE consdataFree(
 
 /** adds constraint to conjunction */
 static
-RETCODE consdataAddCons(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata,           /**< constraint data */
-   CONS*            cons                /**< constraint to add to the conjunction */
+SCIP_RETCODE consdataAddCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint to add to the conjunction */
    )
 {
    assert(consdata != NULL);
 
    if( SCIPconsIsInitial(cons) || SCIPconsIsChecked(cons) )
    {
-      errorMessage("constraints in a conjunction must not be initial or checked\n");
+      SCIPerrorMessage("constraints in a conjunction must not be initial or checked\n");
       return SCIP_INVALIDDATA;
    }
 
    /* get memory for additional constraint */
-   CHECK_OKAY( SCIPensureBlockMemoryArray(scip, &consdata->conss, &consdata->consssize, consdata->nconss+1) );
+   SCIP_CALL( SCIPensureBlockMemoryArray(scip, &consdata->conss, &consdata->consssize, consdata->nconss+1) );
    assert(consdata->conss != NULL);
    assert(consdata->nconss < consdata->consssize);
 
@@ -158,21 +158,21 @@ RETCODE consdataAddCons(
    consdata->nconss++;
 
    /* capture constraint */
-   CHECK_OKAY( SCIPcaptureCons(scip, cons) );
+   SCIP_CALL( SCIPcaptureCons(scip, cons) );
 
    return SCIP_OKAY;
 }
 
 /** adds all constraints in conjunction constraints to the problem; disables unmodifiable conjunction constraints */
 static
-RETCODE addAllConss(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS**           conss,              /**< active conjunction constraints */
-   int              nconss,             /**< number of active conjunction constraints */
-   RESULT*          result              /**< pointer to store the result */
+SCIP_RETCODE addAllConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< active conjunction constraints */
+   int                   nconss,             /**< number of active conjunction constraints */
+   SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
    int c;
    int i;
 
@@ -188,9 +188,9 @@ RETCODE addAllConss(
       {
          if( !SCIPconsIsActive(consdata->conss[i]) )
          {
-            debugMessage("adding constraint <%s> from add conjunction <%s>\n",
+            SCIPdebugMessage("adding constraint <%s> from add conjunction <%s>\n",
                SCIPconsGetName(consdata->conss[i]), SCIPconsGetName(conss[c]));
-            CHECK_OKAY( SCIPaddConsLocal(scip, consdata->conss[i], NULL) );
+            SCIP_CALL( SCIPaddConsLocal(scip, consdata->conss[i], NULL) );
             *result = SCIP_CONSADDED;
          }
       }
@@ -198,7 +198,7 @@ RETCODE addAllConss(
       /* disable conjunction constraint, if it is unmodifiable */
       if( !SCIPconsIsModifiable(conss[c]) )
       {
-         CHECK_OKAY( SCIPdelConsLocal(scip, conss[c]) );
+         SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
       }
    }
 
@@ -207,17 +207,17 @@ RETCODE addAllConss(
 
 /** checks all constraints in conjunction constraints for feasibility */
 static
-RETCODE checkAllConss(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS**           conss,              /**< active conjunction constraints */
-   int              nconss,             /**< number of active conjunction constraints */
-   SOL*             sol,                /**< solution to check */
-   Bool             checkintegrality,   /**< has integrality to be checked? */
-   Bool             checklprows,        /**< have current LP rows to be checked? */
-   RESULT*          result              /**< pointer to store the result */
+SCIP_RETCODE checkAllConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< active conjunction constraints */
+   int                   nconss,             /**< number of active conjunction constraints */
+   SCIP_SOL*             sol,                /**< solution to check */
+   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< have current SCIP_LP rows to be checked? */
+   SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
    int c;
    int i;
 
@@ -231,13 +231,13 @@ RETCODE checkAllConss(
       /* check all constraints */
       for( i = 0; i < consdata->nconss && *result == SCIP_FEASIBLE; ++i )
       {
-         CHECK_OKAY( SCIPcheckCons(scip, consdata->conss[i], sol, checkintegrality, checklprows, result) );
+         SCIP_CALL( SCIPcheckCons(scip, consdata->conss[i], sol, checkintegrality, checklprows, result) );
       }
 
       /* disable conjunction constraint, if it is unmodifiable */
       if( !SCIPconsIsModifiable(conss[c]) )
       {
-         CHECK_OKAY( SCIPdelConsLocal(scip, conss[c]) );
+         SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
       }
    }
 
@@ -281,9 +281,9 @@ RETCODE checkAllConss(
 
 /** frees specific constraint data */
 static
-DECL_CONSDELETE(consDeleteConjunction)
+SCIP_DECL_CONSDELETE(consDeleteConjunction)
 {  /*lint --e{715}*/
-   CHECK_OKAY( consdataFree(scip, consdata) );
+   SCIP_CALL( consdataFree(scip, consdata) );
    
    return SCIP_OKAY;
 }
@@ -291,25 +291,25 @@ DECL_CONSDELETE(consDeleteConjunction)
 
 /** transforms constraint data into data belonging to the transformed problem */ 
 static
-DECL_CONSTRANS(consTransConjunction)
+SCIP_DECL_CONSTRANS(consTransConjunction)
 {  /*lint --e{715}*/
-   CONSDATA* sourcedata;
-   CONSDATA* targetdata;
+   SCIP_CONSDATA* sourcedata;
+   SCIP_CONSDATA* targetdata;
    int c;
 
    /* get constraint data of source constraint */
    sourcedata = SCIPconsGetData(sourcecons);
 
    /* create constraint data for target constraint */
-   CHECK_OKAY( SCIPallocBlockMemory(scip, &targetdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &targetdata) );
    if( sourcedata->nconss > 0 )
    {
       targetdata->consssize = sourcedata->nconss;
       targetdata->nconss = sourcedata->nconss;
-      CHECK_OKAY( SCIPallocBlockMemoryArray(scip, &targetdata->conss, targetdata->consssize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &targetdata->conss, targetdata->consssize) );
       for( c = 0; c < sourcedata->nconss; ++c )
       {
-         CHECK_OKAY( SCIPtransformCons(scip, sourcedata->conss[c], &targetdata->conss[c]) );
+         SCIP_CALL( SCIPtransformCons(scip, sourcedata->conss[c], &targetdata->conss[c]) );
       }
    }
    else
@@ -320,7 +320,7 @@ DECL_CONSTRANS(consTransConjunction)
    }
 
    /* create target constraint */
-   CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
+   SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
@@ -330,7 +330,7 @@ DECL_CONSTRANS(consTransConjunction)
 }
 
 
-/** LP initialization method of constraint handler */
+/** SCIP_LP initialization method of constraint handler */
 #define consInitlpConjunction NULL
 
 
@@ -338,14 +338,14 @@ DECL_CONSTRANS(consTransConjunction)
 #define consSepaConjunction NULL
 
 
-/** constraint enforcing method of constraint handler for LP solutions */
+/** constraint enforcing method of constraint handler for SCIP_LP solutions */
 static
-DECL_CONSENFOLP(consEnfolpConjunction)
+SCIP_DECL_CONSENFOLP(consEnfolpConjunction)
 {  /*lint --e{715}*/
    *result = SCIP_FEASIBLE;
 
    /* add all constraints to the current node */
-   CHECK_OKAY( addAllConss(scip, conss, nconss, result) );
+   SCIP_CALL( addAllConss(scip, conss, nconss, result) );
 
    return SCIP_OKAY;
 }
@@ -353,12 +353,12 @@ DECL_CONSENFOLP(consEnfolpConjunction)
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
-DECL_CONSENFOPS(consEnfopsConjunction)
+SCIP_DECL_CONSENFOPS(consEnfopsConjunction)
 {  /*lint --e{715}*/
    *result = SCIP_FEASIBLE;
 
    /* add all constraints to the current node */
-   CHECK_OKAY( addAllConss(scip, conss, nconss, result) );
+   SCIP_CALL( addAllConss(scip, conss, nconss, result) );
 
    return SCIP_OKAY;
 }
@@ -366,12 +366,12 @@ DECL_CONSENFOPS(consEnfopsConjunction)
 
 /** feasibility check method of constraint handler for integral solutions */
 static
-DECL_CONSCHECK(consCheckConjunction)
+SCIP_DECL_CONSCHECK(consCheckConjunction)
 {  /*lint --e{715}*/
    *result = SCIP_FEASIBLE;
 
    /* check all constraints of the conjunction */
-   CHECK_OKAY( checkAllConss(scip, conss, nconss, sol, checkintegrality, checklprows, result) );
+   SCIP_CALL( checkAllConss(scip, conss, nconss, sol, checkintegrality, checklprows, result) );
 
    return SCIP_OKAY;
 }
@@ -383,9 +383,9 @@ DECL_CONSCHECK(consCheckConjunction)
 
 /** presolving method of constraint handler */
 static
-DECL_CONSPRESOL(consPresolConjunction)
+SCIP_DECL_CONSPRESOL(consPresolConjunction)
 {  /*lint --e{715}*/
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
    int c;
    int i;
 
@@ -406,19 +406,19 @@ DECL_CONSPRESOL(consPresolConjunction)
       for( i = 0; i < consdata->nconss; ++i )
       {
          /* make sure, the constraint is checked for feasibility */
-         CHECK_OKAY( SCIPsetConsChecked(scip, consdata->conss[i]) );
+         SCIP_CALL( SCIPsetConsChecked(scip, consdata->conss[i]) );
 
          /* add constraint, if it is not active yet */
          if( !SCIPconsIsActive(consdata->conss[i]) )
          {
-            debugMessage("adding constraint <%s> from add conjunction <%s>\n",
+            SCIPdebugMessage("adding constraint <%s> from add conjunction <%s>\n",
                SCIPconsGetName(consdata->conss[i]), SCIPconsGetName(conss[c]));
-            CHECK_OKAY( SCIPaddCons(scip, consdata->conss[i]) );
+            SCIP_CALL( SCIPaddCons(scip, consdata->conss[i]) );
             *result = SCIP_SUCCESS;
          }
          
          /* release constraint from the conjunction constraint */
-         CHECK_OKAY( SCIPreleaseCons(scip, &consdata->conss[i]) );
+         SCIP_CALL( SCIPreleaseCons(scip, &consdata->conss[i]) );
       }
 
       /* now, the conjunction constraint is empty, since all constraints are added directly to the problem */
@@ -427,7 +427,7 @@ DECL_CONSPRESOL(consPresolConjunction)
       /* delete conjunction constraint, if it is unmodifiable */
       if( !SCIPconsIsModifiable(conss[c]) )
       {
-         CHECK_OKAY( SCIPdelCons(scip, conss[c]) );
+         SCIP_CALL( SCIPdelCons(scip, conss[c]) );
       }
    }
 
@@ -441,9 +441,9 @@ DECL_CONSPRESOL(consPresolConjunction)
 
 /** variable rounding lock method of constraint handler */
 static
-DECL_CONSLOCK(consLockConjunction)
+SCIP_DECL_CONSLOCK(consLockConjunction)
 {  /*lint --e{715}*/
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
    int c;
 
    consdata = SCIPconsGetData(cons);
@@ -452,7 +452,7 @@ DECL_CONSLOCK(consLockConjunction)
    /* lock sub constraints */
    for( c = 0; c < consdata->nconss; ++c )
    {
-      CHECK_OKAY( SCIPaddConsLocks(scip, consdata->conss[c], nlockspos, nlocksneg) );
+      SCIP_CALL( SCIPaddConsLocks(scip, consdata->conss[c], nlockspos, nlocksneg) );
    }
 
    return SCIP_OKAY;
@@ -476,9 +476,9 @@ DECL_CONSLOCK(consLockConjunction)
 
 /** constraint display method of constraint handler */
 static
-DECL_CONSPRINT(consPrintConjunction)
+SCIP_DECL_CONSPRINT(consPrintConjunction)
 {  /*lint --e{715}*/
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
    int i;
 
    consdata = SCIPconsGetData(cons);
@@ -504,17 +504,17 @@ DECL_CONSPRINT(consPrintConjunction)
  */
 
 /** creates the handler for conjunction constraints and includes it in SCIP */
-RETCODE SCIPincludeConshdlrConjunction(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeConshdlrConjunction(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    /* create conjunction constraint handler data */
    conshdlrdata = NULL;
 
    /* include constraint handler */
-   CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
@@ -532,62 +532,62 @@ RETCODE SCIPincludeConshdlrConjunction(
 }
 
 /** creates and captures a conjunction constraint */
-RETCODE SCIPcreateConsConjunction(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*      name,               /**< name of constraint */
-   int              nconss,             /**< number of initial constraints in conjunction */
-   CONS**           conss,              /**< initial constraint in conjunction */
-   Bool             enforce,            /**< should the constraint be enforced during node processing? */
-   Bool             check,              /**< should the constraint be checked for feasibility? */
-   Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
-   Bool             dynamic             /**< is constraint subject to aging? */
+SCIP_RETCODE SCIPcreateConsConjunction(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nconss,             /**< number of initial constraints in conjunction */
+   SCIP_CONS**           conss,              /**< initial constraint in conjunction */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
+   SCIP_Bool             local,              /**< is constraint only valid locally? */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   SCIP_Bool             dynamic             /**< is constraint subject to aging? */
    )
 {
-   CONSHDLR* conshdlr;
-   CONSDATA* consdata;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
 
    /* find the conjunction constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      errorMessage("conjunction constraint handler not found\n");
+      SCIPerrorMessage("conjunction constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 
    /* create constraint data */
-   CHECK_OKAY( consdataCreate(scip, &consdata, conss, nconss) );
+   SCIP_CALL( consdataCreate(scip, &consdata, conss, nconss) );
 
    /* create constraint */
-   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, FALSE, FALSE, enforce, check, FALSE,
+   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, FALSE, FALSE, enforce, check, FALSE,
          local, modifiable, dynamic, FALSE) );
 
    return SCIP_OKAY;
 }
 
 /** adds constraint to the conjunction of constraints */
-RETCODE SCIPaddConsElemConjunction(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< conjunction constraint */
-   CONS*            addcons             /**< additional constraint in conjunction */
+SCIP_RETCODE SCIPaddConsElemConjunction(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< conjunction constraint */
+   SCIP_CONS*            addcons             /**< additional constraint in conjunction */
    )
 {
-   CONSDATA* consdata;
+   SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
    assert(addcons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      errorMessage("constraint is not a conjunction constraint\n");
+      SCIPerrorMessage("constraint is not a conjunction constraint\n");
       return SCIP_INVALIDDATA;
    }
    
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   CHECK_OKAY( consdataAddCons(scip, consdata, addcons) );
+   SCIP_CALL( consdataAddCons(scip, consdata, addcons) );
 
    return SCIP_OKAY;
    

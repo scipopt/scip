@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.h,v 1.28 2005/07/15 17:20:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.h,v 1.29 2005/08/22 18:35:41 bzfpfend Exp $"
 
 /**@file   memory.h
  * @brief  memory allocation routines
@@ -35,124 +35,124 @@
 /*************************************************************************************
  * Standard Memory Management
  *
- * In debug mode, these methods extend malloc() and free() by logging all currently
+ * In SCIPdebug mode, these methods extend malloc() and free() by logging all currently
  * allocated memory elements in an allocation list. This can be used as a simple leak
  * detection.
  *************************************************************************************/
 
-#define allocMemory(ptr)                   (*(void**)(ptr) = allocMemory_call( sizeof(**(ptr)), __FILE__, __LINE__ ))
-#define allocMemoryArray(ptr,num)          (*(void**)(ptr) = allocMemory_call( (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
-#define allocMemorySize(ptr,size)          (*(void**)(ptr) = allocMemory_call( (size_t)(size), __FILE__, __LINE__ ))
-#define allocMemoryCPP(size)               allocMemory_call( (size_t)(size), __FILE__, __LINE__ )
-#define allocMemoryArrayCPP(num,size)      allocMemory_call( (size_t)((num)*(size)), __FILE__, __LINE__ )
-#define reallocMemoryArray(ptr,num)        (*(void**)(ptr) = reallocMemory_call( *(ptr), (num)*sizeof(**(ptr)), \
-                                           __FILE__, __LINE__ ))
-#define reallocMemorySize(ptr,size)        (*(void**)(ptr) = reallocMemory_call( *(ptr), (size_t)(size), \
-                                           __FILE__, __LINE__ ))
-#define clearMemory(ptr)                   clearMemory_call( (void*)(ptr), sizeof(*(ptr)) )
-#define clearMemoryArray(ptr, num)         clearMemory_call( (void*)(ptr), (num)*sizeof(*(ptr)) )
-#define clearMemorySize(ptr, size)         clearMemory_call( (void*)(ptr), (size_t)(size) )
-#define copyMemory(ptr, source)            copyMemory_call( (void*)(ptr), (const void*)(source), sizeof(*(ptr)) )
-#define copyMemoryArray(ptr, source, num)  copyMemory_call( (void*)(ptr), (const void*)(source), (num)*sizeof(*(ptr)) )
-#define copyMemorySize(ptr, source, size)  copyMemory_call( (void*)(ptr), (const void*)(source), (size_t)(size) )
-#define duplicateMemory(ptr, source)       (*(void**)(ptr) = duplicateMemory_call( (const void*)(source), sizeof(**(ptr)), \
-                                           __FILE__, __LINE__ ))
-#define duplicateMemoryArray(ptr, source, num) \
-                                           (*(void**)(ptr) = duplicateMemory_call( (const void*)(source), \
-                                           (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
-#define duplicateMemorySize(ptr, source, size) \
-                                           (*(void**)(ptr) = duplicateMemory_call( (const void*)(source), (size_t)(size), \
-                                           __FILE__, __LINE__ ))
-#define freeMemory(ptr)                    { freeMemory_call( (void**)(ptr), __FILE__, __LINE__ ); \
-                                             assert(*(ptr) == NULL); }
-#define freeMemoryNull(ptr)                { if( *(ptr) != NULL ) freeMemory( (ptr) ); }
-#define freeMemoryArray(ptr)               { freeMemory_call( (void**)(ptr), __FILE__, __LINE__ ); \
-                                             assert(*(ptr) == NULL); }
-#define freeMemoryArrayNull(ptr)           { if( *(ptr) != NULL ) freeMemoryArray( (ptr) ); }
+#define BMSallocMemory(ptr)                   (*(void**)(ptr) = BMSallocMemory_call( sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define BMSallocMemoryArray(ptr,num)          (*(void**)(ptr) = BMSallocMemory_call( (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define BMSallocMemorySize(ptr,size)          (*(void**)(ptr) = BMSallocMemory_call( (size_t)(size), __FILE__, __LINE__ ))
+#define BMSallocMemoryCPP(size)               BMSallocMemory_call( (size_t)(size), __FILE__, __LINE__ )
+#define BMSallocMemoryArrayCPP(num,size)      BMSallocMemory_call( (size_t)((num)*(size)), __FILE__, __LINE__ )
+#define BMSreallocMemoryArray(ptr,num)        (*(void**)(ptr) = BMSreallocMemory_call( *(ptr), (num)*sizeof(**(ptr)), \
+                                                __FILE__, __LINE__ ))
+#define BMSreallocMemorySize(ptr,size)        (*(void**)(ptr) = BMSreallocMemory_call( *(ptr), (size_t)(size), \
+                                                __FILE__, __LINE__ ))
+#define BMSclearMemory(ptr)                   BMSclearMemory_call( (void*)(ptr), sizeof(*(ptr)) )
+#define BMSclearMemoryArray(ptr, num)         BMSclearMemory_call( (void*)(ptr), (num)*sizeof(*(ptr)) )
+#define BMSclearMemorySize(ptr, size)         BMSclearMemory_call( (void*)(ptr), (size_t)(size) )
+#define BMScopyMemory(ptr, source)            BMScopyMemory_call( (void*)(ptr), (const void*)(source), sizeof(*(ptr)) )
+#define BMScopyMemoryArray(ptr, source, num)  BMScopyMemory_call( (void*)(ptr), (const void*)(source), (num)*sizeof(*(ptr)) )
+#define BMScopyMemorySize(ptr, source, size)  BMScopyMemory_call( (void*)(ptr), (const void*)(source), (size_t)(size) )
+#define BMSduplicateMemory(ptr, source)       (*(void**)(ptr) = BMSduplicateMemory_call( (const void*)(source), sizeof(**(ptr)), \
+                                                __FILE__, __LINE__ ))
+#define BMSduplicateMemoryArray(ptr, source, num) \
+                                                (*(void**)(ptr) = BMSduplicateMemory_call( (const void*)(source), \
+                                                (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define BMSduplicateMemorySize(ptr, source, size) \
+                                                (*(void**)(ptr) = BMSduplicateMemory_call( (const void*)(source), (size_t)(size), \
+                                                __FILE__, __LINE__ ))
+#define BMSfreeMemory(ptr)                    { BMSfreeMemory_call( (void**)(ptr), __FILE__, __LINE__ ); \
+                                                  assert(*(ptr) == NULL); }
+#define BMSfreeMemoryNull(ptr)                { if( *(ptr) != NULL ) BMSfreeMemory( (ptr) ); }
+#define BMSfreeMemoryArray(ptr)               { BMSfreeMemory_call( (void**)(ptr), __FILE__, __LINE__ ); \
+                                                  assert(*(ptr) == NULL); }
+#define BMSfreeMemoryArrayNull(ptr)           { if( *(ptr) != NULL ) BMSfreeMemoryArray( (ptr) ); }
 
 #ifndef NDEBUG
-#define getPointerSize(ptr)                getPointerSize_call(ptr)
-#define displayMemory()                    displayMemory_call()
-#define checkEmptyMemory()                 checkEmptyMemory_call()
-#define getMemoryUsed()                    getMemoryUsed_call()
+#define BMSgetPointerSize(ptr)                BMSgetPointerSize_call(ptr)
+#define BMSdisplayMemory()                    BMSdisplayMemory_call()
+#define BMScheckEmptyMemory()                 BMScheckEmptyMemory_call()
+#define BMSgetMemoryUsed()                    BMSgetMemoryUsed_call()
 #else
-#define getPointerSize(ptr)                0
-#define displayMemory()                    /**/
-#define checkEmptyMemory()                 /**/
-#define getMemoryUsed()                    0LL
+#define BMSgetPointerSize(ptr)                0
+#define BMSdisplayMemory()                    /**/
+#define BMScheckEmptyMemory()                 /**/
+#define BMSgetMemoryUsed()                    0LL
 #endif
 
 
 /** allocates memory; returns NULL if memory allocation failed */
 extern
-void* allocMemory_call(
-   size_t           size,               /**< size of memory element to allocate */
-   const char*      filename,           /**< source file where the allocation is performed */
-   int              line                /**< line number in source file where the allocation is performed */
+void* BMSallocMemory_call(
+   size_t                size,               /**< size of memory element to allocate */
+   const char*           filename,           /**< source file where the allocation is performed */
+   int                   line                /**< line number in source file where the allocation is performed */
    );
 
 /** allocates memory; returns NULL if memory allocation failed */
 extern
-void* reallocMemory_call(
-   void*            ptr,                /**< pointer to memory to reallocate */
-   size_t           size,               /**< new size of memory element */
-   const char*      filename,           /**< source file where the reallocation is performed */
-   int              line                /**< line number in source file where the reallocation is performed */
+void* BMSreallocMemory_call(
+   void*                 ptr,                /**< pointer to memory to reallocate */
+   size_t                size,               /**< new size of memory element */
+   const char*           filename,           /**< source file where the reallocation is performed */
+   int                   line                /**< line number in source file where the reallocation is performed */
    );
 
 /** clears a memory element (i.e. fills it with zeros) */
 extern
-void clearMemory_call(
-   void*            ptr,                /**< pointer to memory element */
-   size_t           size                /**< size of memory element */
+void BMSclearMemory_call(
+   void*                 ptr,                /**< pointer to memory element */
+   size_t                size                /**< size of memory element */
    );
 
 /** copies the contents of one memory element into another memory element */
 extern
-void copyMemory_call(
-   void*            ptr,                /**< pointer to target memory element */
-   const void*      source,             /**< pointer to source memory element */
-   size_t           size                /**< size of memory element to copy */
+void BMScopyMemory_call(
+   void*                 ptr,                /**< pointer to target memory element */
+   const void*           source,             /**< pointer to source memory element */
+   size_t                size                /**< size of memory element to copy */
    );
 
 /** allocates memory and copies the contents of the given memory element into the new memory element */
 extern
-void* duplicateMemory_call(
-   const void*      source,             /**< pointer to source memory element */
-   size_t           size,               /**< size of memory element to copy */
-   const char*      filename,           /**< source file where the duplication is performed */
-   int              line                /**< line number in source file where the duplication is performed */
+void* BMSduplicateMemory_call(
+   const void*           source,             /**< pointer to source memory element */
+   size_t                size,               /**< size of memory element to copy */
+   const char*           filename,           /**< source file where the duplication is performed */
+   int                   line                /**< line number in source file where the duplication is performed */
    );
 
 /** frees an allocated memory element */
 extern
-void freeMemory_call(
-   void**           ptr,                /**< address of pointer to memory element */
-   const char*      filename,           /**< source file where the deallocation is performed */
-   int              line                /**< line number in source file where the deallocation is performed */
+void BMSfreeMemory_call(
+   void**                ptr,                /**< address of pointer to memory element */
+   const char*           filename,           /**< source file where the deallocation is performed */
+   int                   line                /**< line number in source file where the deallocation is performed */
    );
 
 /** returns the size of an allocated memory element */
 extern
-size_t getPointerSize_call(
-   const void*      ptr                 /**< pointer to allocated memory */
+size_t BMSgetPointerSize_call(
+   const void*           ptr                 /**< pointer to allocated memory */
    );
 
 /** outputs information about currently allocated memory to the screen */
 extern
-void displayMemory_call(
+void BMSdisplayMemory_call(
    void
    );
 
 /** displays a warning message on the screen, if allocated memory exists */
 extern
-void checkEmptyMemory_call(
+void BMScheckEmptyMemory_call(
    void
    );
 
 /** returns total number of allocated bytes */
 extern
-long long getMemoryUsed_call(
+long long BMSgetMemoryUsed_call(
    void
    );
 
@@ -165,126 +165,126 @@ long long getMemoryUsed_call(
  * Efficient memory management for multiple objects of the same size
  ********************************************************************/
 
-typedef struct ChkMem CHKMEM;           /**< collection of memory chunks of the same element size */
+typedef struct BMS_ChkMem BMS_CHKMEM;           /**< collection of memory chunks of the same element size */
 
 
-#ifndef NOBLOCKMEM
+#ifndef BMS_NOBLOCKMEM
 
-#define createChunkMemory(sz,isz,gbf)      createChunkMemory_call( (sz), (isz), (gbf), __FILE__, __LINE__ )
-#define clearChunkMemory(mem)              clearChunkMemory_call( (mem), __FILE__, __LINE__ )
-#define clearChunkMemoryNull(mem)          { if( (mem) != NULL ) clearChunkMemory( (mem) ); }
-#define destroyChunkMemory(mem)            destroyChunkMemory_call( (mem), __FILE__, __LINE__ )
-#define destroyChunkMemoryNull(mem)        { if( *(mem) != NULL ) destroyChunkMemory( (mem) ); }
+#define BMScreateChunkMemory(sz,isz,gbf)      BMScreateChunkMemory_call( (sz), (isz), (gbf), __FILE__, __LINE__ )
+#define BMSclearChunkMemory(mem)              BMSclearChunkMemory_call( (mem), __FILE__, __LINE__ )
+#define BMSclearChunkMemoryNull(mem)          { if( (mem) != NULL ) BMSclearChunkMemory( (mem) ); }
+#define BMSdestroyChunkMemory(mem)            BMSdestroyChunkMemory_call( (mem), __FILE__, __LINE__ )
+#define BMSdestroyChunkMemoryNull(mem)        { if( *(mem) != NULL ) BMSdestroyChunkMemory( (mem) ); }
 
-#define allocChunkMemory(mem,ptr)          (*(void**)(ptr) = allocChunkMemory_call((mem), sizeof(**(ptr)), \
-                                           __FILE__, __LINE__))
-#define duplicateChunkMemory(mem, ptr, source) \
-                                           (*(void**)(ptr) = duplicateChunkMemory_call((mem), (const void*)(source), \
-                                           sizeof(**(ptr)), __FILE__, __LINE__ ))
-#define freeChunkMemory(mem,ptr)           { freeChunkMemory_call( (mem), (void**)(ptr), sizeof(**(ptr)), \
-                                             __FILE__, __LINE__ ); \
-                                             assert(*(ptr) == NULL); }
-#define freeChunkMemoryNull(mem,ptr)       { if( *(ptr) != NULL ) freeChunkMemory( (mem), (ptr) ); }
-#define garbagecollectChunkMemory(mem)     garbagecollectChunkMemory_call(mem)
-#define getChunkMemoryUsed(mem)            getChunkMemoryUsed_call(mem)
+#define BMSallocChunkMemory(mem,ptr)          (*(void**)(ptr) = BMSallocChunkMemory_call((mem), sizeof(**(ptr)), \
+                                                __FILE__, __LINE__))
+#define BMSduplicateChunkMemory(mem, ptr, source) \
+                                                (*(void**)(ptr) = BMSduplicateChunkMemory_call((mem), (const void*)(source), \
+                                                sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define BMSfreeChunkMemory(mem,ptr)           { BMSfreeChunkMemory_call( (mem), (void**)(ptr), sizeof(**(ptr)), \
+                                                  __FILE__, __LINE__ ); \
+                                                  assert(*(ptr) == NULL); }
+#define BMSfreeChunkMemoryNull(mem,ptr)       { if( *(ptr) != NULL ) BMSfreeChunkMemory( (mem), (ptr) ); }
+#define BMSgarbagecollectChunkMemory(mem)     BMSgarbagecollectChunkMemory_call(mem)
+#define BMSgetChunkMemoryUsed(mem)            BMSgetChunkMemoryUsed_call(mem)
 
 #else
 
 /* block memory management mapped to standard memory management */
 
-#define createChunkMemory(sz,isz,gbf)           (void*)(0x01) /* dummy to not return a NULL pointer */
-#define clearChunkMemory(mem)                   /**/
-#define clearChunkMemoryNull(mem)               /**/
-#define destroyChunkMemory(mem)                 /**/
-#define destroyChunkMemoryNull(mem)             /**/
-#define allocChunkMemory(mem,ptr)               allocMemory(ptr)
-#define duplicateChunkMemory(mem, ptr, source)  duplicateMemory(ptr,source)
-#define freeChunkMemory(mem,ptr)                freeMemory(ptr)
-#define freeChunkMemoryNull(mem,ptr)            freeMemoryNull(ptr)
-#define garbagecollectChunkMemory(mem)          /**/
-#define getChunkMemoryUsed(mem)                 0LL
+#define BMScreateChunkMemory(sz,isz,gbf)           (void*)(0x01) /* dummy to not return a NULL pointer */
+#define BMSclearChunkMemory(mem)                   /**/
+#define BMSclearChunkMemoryNull(mem)               /**/
+#define BMSdestroyChunkMemory(mem)                 /**/
+#define BMSdestroyChunkMemoryNull(mem)             /**/
+#define BMSallocChunkMemory(mem,ptr)               BMSallocMemory(ptr)
+#define BMSduplicateChunkMemory(mem, ptr, source)  BMSduplicateMemory(ptr,source)
+#define BMSfreeChunkMemory(mem,ptr)                BMSfreeMemory(ptr)
+#define BMSfreeChunkMemoryNull(mem,ptr)            BMSfreeMemoryNull(ptr)
+#define BMSgarbagecollectChunkMemory(mem)          /**/
+#define BMSgetChunkMemoryUsed(mem)                 0LL
 
 #endif
 
 
 /** aligns the given byte size corresponding to the minimal alignment for chunk and block memory */
 extern
-void alignMemsize(
-   size_t*          size                /**< pointer to the size to align */
+void BMSalignMemsize(
+   size_t*               size                /**< pointer to the size to align */
    );
 
 /** checks whether the given size meets the alignment conditions for chunk and block memory  */
 extern
-int isAligned(
-   size_t           size                /**< size to check for alignment */
+int BMSisAligned(
+   size_t                size                /**< size to check for alignment */
    );
 
 /** creates a new chunk block data structure */
 extern
-CHKMEM* createChunkMemory_call(
-   int              size,               /**< element size of the chunk block */
-   int              initchunksize,      /**< number of elements in the first chunk of the chunk block */
-   int              garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
-                                         *   elements are free (-1: disable garbage collection) */
-   const char*      filename,           /**< source file of the function call */
-   int              line                /**< line number in source file of the function call */
+BMS_CHKMEM* BMScreateChunkMemory_call(
+   int                   size,               /**< element size of the chunk block */
+   int                   initchunksize,      /**< number of elements in the first chunk of the chunk block */
+   int                   garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
+                                              *   elements are free (-1: disable garbage collection) */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
    );
 
 /** clears a chunk block data structure */
 extern
-void clearChunkMemory_call(
-   CHKMEM*          chkmem,             /**< chunk block */
-   const char*      filename,           /**< source file of the function call */
-   int              line                /**< line number in source file of the function call */
+void BMSclearChunkMemory_call(
+   BMS_CHKMEM*           chkmem,             /**< chunk block */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
    );
 
 /** destroys and frees a chunk block data structure */
 extern
-void destroyChunkMemory_call(
-   CHKMEM**         chkmem,             /**< pointer to chunk block */
-   const char*      filename,           /**< source file of the function call */
-   int              line                /**< line number in source file of the function call */
+void BMSdestroyChunkMemory_call(
+   BMS_CHKMEM**          chkmem,             /**< pointer to chunk block */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
    );
 
 /** allocates a memory element of the given chunk block */
 extern
-void* allocChunkMemory_call(
-   CHKMEM*          chkmem,             /**< chunk block */
-   size_t           size,               /**< size of memory element to allocate (only needed for sanity check) */
-   const char*      filename,           /**< source file of the function call */
-   int              line                /**< line number in source file of the function call */
+void* BMSallocChunkMemory_call(
+   BMS_CHKMEM*           chkmem,             /**< chunk block */
+   size_t                size,               /**< size of memory element to allocate (only needed for sanity check) */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
    );
 
 /** duplicates a given memory element by allocating a new element of the same chunk block and copying the data */
 extern
-void* duplicateChunkMemory_call(
-   CHKMEM*          chkmem,             /**< chunk block */
-   const void*      source,             /**< source memory element */
-   size_t           size,               /**< size of memory element to allocate (only needed for sanity check) */
-   const char*      filename,           /**< source file of the function call */
-   int              line                /**< line number in source file of the function call */
+void* BMSduplicateChunkMemory_call(
+   BMS_CHKMEM*           chkmem,             /**< chunk block */
+   const void*           source,             /**< source memory element */
+   size_t                size,               /**< size of memory element to allocate (only needed for sanity check) */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
    );
 
 /** frees a memory element of the given chunk block */
 extern
-void freeChunkMemory_call(
-   CHKMEM*          chkmem,             /**< chunk block */
-   void**           ptr,                /**< pointer to memory element to free */
-   size_t           size,               /**< size of memory element to allocate (only needed for sanity check) */
-   const char*      filename,           /**< source file of the function call */
-   int              line                /**< line number in source file of the function call */
+void BMSfreeChunkMemory_call(
+   BMS_CHKMEM*           chkmem,             /**< chunk block */
+   void**                ptr,                /**< pointer to memory element to free */
+   size_t                size,               /**< size of memory element to allocate (only needed for sanity check) */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
    );
 
 /** calls garbage collection of chunk block and frees chunks without allocated memory elements */
 extern
-void garbagecollectChunkMemory_call(
-   CHKMEM*          chkmem              /**< chunk block */
+void BMSgarbagecollectChunkMemory_call(
+   BMS_CHKMEM*           chkmem              /**< chunk block */
    );
 
 /** returns the number of allocated bytes in the chunk block */
 extern
-long long getChunkMemoryUsed_call(
-   const CHKMEM*    chkmem              /**< chunk block */
+long long BMSgetChunkMemoryUsed_call(
+   const BMS_CHKMEM*     chkmem              /**< chunk block */
    );
 
 
@@ -296,182 +296,182 @@ long long getChunkMemoryUsed_call(
  * Efficient memory management for objects of varying sizes
  ***********************************************************/
 
-typedef struct BlkMem BLKMEM;           /**< block memory: collection of chunk blocks */
+typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of chunk blocks */
 
 
-#ifndef NOBLOCKMEM
+#ifndef BMS_NOBLOCKMEM
 
 /* block memory methods for faster memory access */
 
-#define createBlockMemory(csz,gbf)         createBlockMemory_call( (csz), (gbf), __FILE__, __LINE__ )
-#define clearBlockMemory(mem)              clearBlockMemory_call( (mem), __FILE__, __LINE__ )
-#define clearBlockMemoryNull(mem)          { if( (mem) != NULL ) clearBlockMemory( (mem) ); }
-#define destroyBlockMemory(mem)            destroyBlockMemory_call( (mem), __FILE__, __LINE__ )
-#define destroyBlockMemoryNull(mem)        { if( *(mem) != NULL ) destroyBlockMemory( (mem) ); }
+#define BMScreateBlockMemory(csz,gbf)         BMScreateBlockMemory_call( (csz), (gbf), __FILE__, __LINE__ )
+#define BMSclearBlockMemory(mem)              BMSclearBlockMemory_call( (mem), __FILE__, __LINE__ )
+#define BMSclearBlockMemoryNull(mem)          { if( (mem) != NULL ) BMSclearBlockMemory( (mem) ); }
+#define BMSdestroyBlockMemory(mem)            BMSdestroyBlockMemory_call( (mem), __FILE__, __LINE__ )
+#define BMSdestroyBlockMemoryNull(mem)        { if( *(mem) != NULL ) BMSdestroyBlockMemory( (mem) ); }
 
-#define allocBlockMemory(mem,ptr)          (*(void**)(ptr) = allocBlockMemory_call((mem), sizeof(**(ptr)), \
-                                           __FILE__, __LINE__))
-#define allocBlockMemoryArray(mem,ptr,num) (*(void**)(ptr) = allocBlockMemory_call((mem), (num)*sizeof(**(ptr)), \
-                                           __FILE__, __LINE__))
-#define allocBlockMemorySize(mem,ptr,size) (*(void**)(ptr) = allocBlockMemory_call((mem), (size_t)(size), \
-                                           __FILE__, __LINE__))
-#define reallocBlockMemoryArray(mem,ptr,oldnum,newnum) \
-                                           (*(void**)(ptr) = reallocBlockMemory_call((mem), *(void**)(ptr), \
-                                           (oldnum)*sizeof(**(ptr)), (newnum)*sizeof(**(ptr)), __FILE__, __LINE__))
-#define reallocBlockMemorySize(mem,ptr,oldsize,newsize) \
-                                           (*(void**)(ptr) = reallocBlockMemory_call((mem), *(void**)(ptr), \
-                                           (size_t)(oldsize), (size_t)(newsize), __FILE__, __LINE__))
-#define duplicateBlockMemory(mem, ptr, source) \
-                                           (*(void**)(ptr) = duplicateBlockMemory_call((mem), (const void*)(source), \
-                                           sizeof(**(ptr)), __FILE__, __LINE__ ))
-#define duplicateBlockMemoryArray(mem, ptr, source, num) \
-                                           (*(void**)(ptr) = duplicateBlockMemory_call( (mem), (const void*)(source), \
-                                           (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
-#define freeBlockMemory(mem,ptr)           { freeBlockMemory_call( (mem), (void**)(ptr), sizeof(**(ptr)), \
-                                             __FILE__, __LINE__ ); \
-                                             assert(*(ptr) == NULL); }
-#define freeBlockMemoryNull(mem,ptr)       { if( *(ptr) != NULL ) freeBlockMemory( (mem), (ptr) ); }
-#define freeBlockMemoryArray(mem,ptr,num)  { freeBlockMemory_call( (mem), (void**)(ptr), (num)*sizeof(**(ptr)), \
-                                             __FILE__, __LINE__ ); \
-                                             assert(*(ptr) == NULL); }
-#define freeBlockMemoryArrayNull(mem,ptr,num)  { if( *(ptr) != NULL ) freeBlockMemoryArray( (mem), (ptr), (num) ); }
-#define freeBlockMemorySize(mem,ptr,size)  { freeBlockMemory_call( (mem), (void**)(ptr), (size_t)(size), \
-                                             __FILE__, __LINE__ ); \
-                                             assert(*(ptr) == NULL); }
-#define freeBlockMemorySizeNull(mem,ptr,size)  { if( *(ptr) != NULL ) freeBlockMemorySize( (mem), (ptr), (size) ); }
-#define garbagecollectBlockMemory(mem)     garbagecollectBlockMemory_call(mem)
-#define getBlockMemoryUsed(mem)            getBlockMemoryUsed_call(mem)
-#define getBlockPointerSize(mem,ptr)       getBlockPointerSize_call((mem), (ptr))
-#define displayBlockMemory(mem)            displayBlockMemory_call(mem)
-#define blockMemoryCheckEmpty(mem)         checkEmptyBlockMemory_call(mem)
+#define BMSallocBlockMemory(mem,ptr)          (*(void**)(ptr) = BMSallocBlockMemory_call((mem), sizeof(**(ptr)), \
+                                                __FILE__, __LINE__))
+#define BMSallocBlockMemoryArray(mem,ptr,num) (*(void**)(ptr) = BMSallocBlockMemory_call((mem), (num)*sizeof(**(ptr)), \
+                                                __FILE__, __LINE__))
+#define BMSallocBlockMemorySize(mem,ptr,size) (*(void**)(ptr) = BMSallocBlockMemory_call((mem), (size_t)(size), \
+                                                __FILE__, __LINE__))
+#define BMSreallocBlockMemoryArray(mem,ptr,oldnum,newnum) \
+                                                (*(void**)(ptr) = BMSreallocBlockMemory_call((mem), *(void**)(ptr), \
+                                                (oldnum)*sizeof(**(ptr)), (newnum)*sizeof(**(ptr)), __FILE__, __LINE__))
+#define BMSreallocBlockMemorySize(mem,ptr,oldsize,newsize) \
+                                                (*(void**)(ptr) = BMSreallocBlockMemory_call((mem), *(void**)(ptr), \
+                                                (size_t)(oldsize), (size_t)(newsize), __FILE__, __LINE__))
+#define BMSduplicateBlockMemory(mem, ptr, source) \
+                                                (*(void**)(ptr) = BMSduplicateBlockMemory_call((mem), (const void*)(source), \
+                                                sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define BMSduplicateBlockMemoryArray(mem, ptr, source, num) \
+                                                (*(void**)(ptr) = BMSduplicateBlockMemory_call( (mem), (const void*)(source), \
+                                                (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define BMSfreeBlockMemory(mem,ptr)           { BMSfreeBlockMemory_call( (mem), (void**)(ptr), sizeof(**(ptr)), \
+                                                  __FILE__, __LINE__ ); \
+                                                  assert(*(ptr) == NULL); }
+#define BMSfreeBlockMemoryNull(mem,ptr)       { if( *(ptr) != NULL ) BMSfreeBlockMemory( (mem), (ptr) ); }
+#define BMSfreeBlockMemoryArray(mem,ptr,num)  { BMSfreeBlockMemory_call( (mem), (void**)(ptr), (num)*sizeof(**(ptr)), \
+                                                  __FILE__, __LINE__ ); \
+                                                  assert(*(ptr) == NULL); }
+#define BMSfreeBlockMemoryArrayNull(mem,ptr,num)  { if( *(ptr) != NULL ) BMSfreeBlockMemoryArray( (mem), (ptr), (num) ); }
+#define BMSfreeBlockMemorySize(mem,ptr,size)  { BMSfreeBlockMemory_call( (mem), (void**)(ptr), (size_t)(size), \
+                                                  __FILE__, __LINE__ ); \
+                                                  assert(*(ptr) == NULL); }
+#define BMSfreeBlockMemorySizeNull(mem,ptr,size)  { if( *(ptr) != NULL ) BMSfreeBlockMemorySize( (mem), (ptr), (size) ); }
+#define BMSgarbagecollectBlockMemory(mem)     BMSgarbagecollectBlockMemory_call(mem)
+#define BMSgetBlockMemoryUsed(mem)            BMSgetBlockMemoryUsed_call(mem)
+#define BMSgetBlockPointerSize(mem,ptr)       BMSgetBlockPointerSize_call((mem), (ptr))
+#define BMSdisplayBlockMemory(mem)            BMSdisplayBlockMemory_call(mem)
+#define BMSblockMemoryCheckEmpty(mem)         BMScheckEmptyBlockMemory_call(mem)
 
 #else
 
 /* block memory management mapped to standard memory management */
 
-#define createBlockMemory(csz,gbf)                        (void*)(0x01) /* dummy to not return a NULL pointer */
-#define clearBlockMemory(mem)                             /**/
-#define clearBlockMemoryNull(mem)                         /**/
-#define destroyBlockMemory(mem)                           /**/
-#define destroyBlockMemoryNull(mem)                       /**/
-#define allocBlockMemory(mem,ptr)                         allocMemory(ptr)
-#define allocBlockMemoryArray(mem,ptr,num)                allocMemoryArray(ptr,num)
-#define allocBlockMemorySize(mem,ptr,size)                allocMemorySize(ptr,size)
-#define reallocBlockMemoryArray(mem,ptr,oldnum,newnum)    reallocMemoryArray(ptr,newnum)
-#define reallocBlockMemorySize(mem,ptr,oldsize,newsize)   reallocMemorySize(ptr,newsize)
-#define duplicateBlockMemory(mem, ptr, source)            duplicateMemory(ptr,source)
-#define duplicateBlockMemoryArray(mem, ptr, source, num)  duplicateMemoryArray(ptr,source,num)
-#define freeBlockMemory(mem,ptr)                          freeMemory(ptr)
-#define freeBlockMemoryNull(mem,ptr)                      freeMemoryNull(ptr)
-#define freeBlockMemoryArray(mem,ptr,num)                 freeMemoryArray(ptr)
-#define freeBlockMemoryArrayNull(mem,ptr,num)             freeMemoryArrayNull(ptr)
-#define freeBlockMemorySize(mem,ptr,size)                 freeMemory(ptr)
-#define freeBlockMemorySizeNull(mem,ptr,size)             freeMemoryNull(ptr)
-#define garbagecollectBlockMemory(mem)                    /**/
-#define getBlockMemoryUsed(mem)                           0LL
-#define getBlockPointerSize(mem,ptr)                      0
-#define displayBlockMemory(mem)                           /**/
-#define blockMemoryCheckEmpty(mem)                        /**/
+#define BMScreateBlockMemory(csz,gbf)                        (void*)(0x01) /* dummy to not return a NULL pointer */
+#define BMSclearBlockMemory(mem)                             /**/
+#define BMSclearBlockMemoryNull(mem)                         /**/
+#define BMSdestroyBlockMemory(mem)                           /**/
+#define BMSdestroyBlockMemoryNull(mem)                       /**/
+#define BMSallocBlockMemory(mem,ptr)                         BMSallocMemory(ptr)
+#define BMSallocBlockMemoryArray(mem,ptr,num)                BMSallocMemoryArray(ptr,num)
+#define BMSallocBlockMemorySize(mem,ptr,size)                BMSallocMemorySize(ptr,size)
+#define BMSreallocBlockMemoryArray(mem,ptr,oldnum,newnum)    BMSreallocMemoryArray(ptr,newnum)
+#define BMSreallocBlockMemorySize(mem,ptr,oldsize,newsize)   BMSreallocMemorySize(ptr,newsize)
+#define BMSduplicateBlockMemory(mem, ptr, source)            BMSduplicateMemory(ptr,source)
+#define BMSduplicateBlockMemoryArray(mem, ptr, source, num)  BMSduplicateMemoryArray(ptr,source,num)
+#define BMSfreeBlockMemory(mem,ptr)                          BMSfreeMemory(ptr)
+#define BMSfreeBlockMemoryNull(mem,ptr)                      BMSfreeMemoryNull(ptr)
+#define BMSfreeBlockMemoryArray(mem,ptr,num)                 BMSfreeMemoryArray(ptr)
+#define BMSfreeBlockMemoryArrayNull(mem,ptr,num)             BMSfreeMemoryArrayNull(ptr)
+#define BMSfreeBlockMemorySize(mem,ptr,size)                 BMSfreeMemory(ptr)
+#define BMSfreeBlockMemorySizeNull(mem,ptr,size)             BMSfreeMemoryNull(ptr)
+#define BMSgarbagecollectBlockMemory(mem)                    /**/
+#define BMSgetBlockMemoryUsed(mem)                           0LL
+#define BMSgetBlockPointerSize(mem,ptr)                      0
+#define BMSdisplayBlockMemory(mem)                           /**/
+#define BMSblockMemoryCheckEmpty(mem)                        /**/
 
 #endif
 
 
 /** creates a block memory allocation data structure */
 extern
-BLKMEM* createBlockMemory_call(
-   int              initchunksize,      /**< number of elements in the first chunk of each chunk block */
-   int              garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
-                                         *   elements are free (-1: disable garbage collection) */
-   const char*      filename,           /**< source file of the function call */
-   int              line                /**< line number in source file of the function call */
+BMS_BLKMEM* BMScreateBlockMemory_call(
+   int                   initchunksize,      /**< number of elements in the first chunk of each chunk block */
+   int                   garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
+                                              *   elements are free (-1: disable garbage collection) */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
    );
 
 /** frees all chunk blocks in the block memory */
 extern
-void clearBlockMemory_call(
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      filename,           /**< source file of the function call */
-   int              line                /**< line number in source file of the function call */
+void BMSclearBlockMemory_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
    );
 
 /** clears and deletes block memory */
 extern
-void destroyBlockMemory_call(
-   BLKMEM**         blkmem,             /**< pointer to block memory */
-   const char*      filename,           /**< source file of the function call */
-   int              line                /**< line number in source file of the function call */
+void BMSdestroyBlockMemory_call(
+   BMS_BLKMEM**          blkmem,             /**< pointer to block memory */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
    );
 
 /** allocates memory in the block memory pool */
-void* allocBlockMemory_call(
-   BLKMEM*          blkmem,             /**< block memory */
-   size_t           size,               /**< size of memory element to allocate */
-   const char*      filename,           /**< source file of the function call */
-   int              line                /**< line number in source file of the function call */
+void* BMSallocBlockMemory_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   size_t                size,               /**< size of memory element to allocate */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
    );
 
 /** resizes memory element in the block memory pool, and copies the data */
 extern
-void* reallocBlockMemory_call(
-   BLKMEM*          blkmem,             /**< block memory */
-   void*            ptr,                /**< memory element to reallocated */
-   size_t           oldsize,            /**< old size of memory element */
-   size_t           newsize,            /**< new size of memory element */
-   const char*      filename,           /**< source file of the function call */
-   int              line                /**< line number in source file of the function call */
+void* BMSreallocBlockMemory_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   void*                 ptr,                /**< memory element to reallocated */
+   size_t                oldsize,            /**< old size of memory element */
+   size_t                newsize,            /**< new size of memory element */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
    );
 
 /** duplicates memory element in the block memory pool, and copies the data */
 extern
-void* duplicateBlockMemory_call(
-   BLKMEM*          blkmem,             /**< block memory */
-   const void*      source,             /**< memory element to duplicate */
-   size_t           size,               /**< size of memory elements */
-   const char*      filename,           /**< source file of the function call */
-   int              line                /**< line number in source file of the function call */
+void* BMSduplicateBlockMemory_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const void*           source,             /**< memory element to duplicate */
+   size_t                size,               /**< size of memory elements */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
    );
 
 /** frees memory element in the block memory pool */
 extern
-void freeBlockMemory_call(
-   BLKMEM*          blkmem,             /**< block memory */
-   void**           ptr,                /**< pointer to memory element to free */
-   size_t           size,               /**< size of memory element */
-   const char*      filename,           /**< source file of the function call */
-   int              line                /**< line number in source file of the function call */
+void BMSfreeBlockMemory_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   void**                ptr,                /**< pointer to memory element to free */
+   size_t                size,               /**< size of memory element */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
    );
 
 /** calls garbage collection of block memory, frees chunks without allocated memory elements, and frees
  *  chunk blocks without any chunks
  */
 extern
-void garbagecollectBlockMemory_call(
-   BLKMEM*          blkmem              /**< block memory */
+void BMSgarbagecollectBlockMemory_call(
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** returns the number of allocated bytes in the block memory */
 extern
-long long getBlockMemoryUsed_call(
-   const BLKMEM*    blkmem              /**< block memory */
+long long BMSgetBlockMemoryUsed_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
    );
 
 /** returns the size of the given memory element; returns 0, if the element is not member of the block memory */
 extern
-size_t getBlockPointerSize_call(
-   const BLKMEM*    blkmem,             /**< block memory */
-   const void*      ptr                 /**< memory element */
+size_t BMSgetBlockPointerSize_call(
+   const BMS_BLKMEM*     blkmem,             /**< block memory */
+   const void*           ptr                 /**< memory element */
    );
 
 /** outputs allocation diagnostics of block memory */
 extern
-void displayBlockMemory_call(
-   const BLKMEM*    blkmem              /**< block memory */
+void BMSdisplayBlockMemory_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
    );
 
 /** outputs warning messages, if there are allocated elements in the block memory */
 extern
-void checkEmptyBlockMemory_call(
-   const BLKMEM*    blkmem              /**< block memory */
+void BMScheckEmptyBlockMemory_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
    );
 
 

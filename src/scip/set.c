@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.154 2005/08/09 16:37:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.155 2005/08/22 18:35:49 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -60,41 +60,41 @@
 
 #define SCIP_DEFAULT_BRANCH_SCOREFUNC       'p' /**< branching score function ('s'um, 'p'roduct) */
 #define SCIP_DEFAULT_BRANCH_SCOREFAC      0.167 /**< branching score factor to weigh downward and upward gain prediction
-                                                 *   in sum score function */
+                                                      *   in sum score function */
 #define SCIP_DEFAULT_BRANCH_PREFERBINARY  FALSE /**< should branching on binary variables be preferred? */
 
 
-/* Conflict Analysis */
+/* SCIP_Conflict Analysis */
 
 #define SCIP_DEFAULT_CONF_MAXVARSFAC       0.02 /**< maximal fraction of binary variables involved in a conflict clause */
 #define SCIP_DEFAULT_CONF_MINMAXVARS         30 /**< minimal absolute maximum of variables involved in a conflict clause */
 #define SCIP_DEFAULT_CONF_MAXUNFIXED         -1 /**< maximal number of unfixed variables at insertion depth of conflict
-                                                 *   clause (-1: no limit) */
-#define SCIP_DEFAULT_CONF_MAXLPLOOPS        100 /**< maximal number of LP resolving loops during conflict analysis */
+                                                      *   clause (-1: no limit) */
+#define SCIP_DEFAULT_CONF_MAXLPLOOPS        100 /**< maximal number of SCIP_LP resolving loops during conflict analysis */
 #define SCIP_DEFAULT_CONF_FUIPLEVELS         -1 /**< number of depth levels up to which first UIP's are used in conflict
-                                                 *   analysis (-1: use All-FirstUIP rule) */
+                                                      *   analysis (-1: use All-FirstUIP rule) */
 #define SCIP_DEFAULT_CONF_INTERCLAUSES        1 /**< maximal number of intermediate conflict clauses generated in conflict
-                                                 *   graph (-1: use every intermediate clause) */
+                                                      *   graph (-1: use every intermediate clause) */
 #define SCIP_DEFAULT_CONF_MAXCLAUSES         10 /**< maximal number of conflict clauses accepted at an infeasible node
-                                                 *   (-1: use all generated conflict clauses) */
+                                                      *   (-1: use all generated conflict clauses) */
 #define SCIP_DEFAULT_CONF_RECONVCLAUSES    TRUE /**< should reconvergence clauses be created for UIPs of last depth level? */
 #define SCIP_DEFAULT_CONF_USEPROP          TRUE /**< should propagation conflict analysis be used? */
-#define SCIP_DEFAULT_CONF_USELP           FALSE /**< should infeasible LP conflict analysis be used? */
+#define SCIP_DEFAULT_CONF_USELP           FALSE /**< should infeasible SCIP_LP conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USESB           FALSE /**< should infeasible strong branching conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USEPSEUDO        TRUE /**< should pseudo solution conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_ALLOWLOCAL       TRUE /**< should conflict clauses be generated that are only valid locally? */
 #define SCIP_DEFAULT_CONF_REPROPAGATE      TRUE /**< should earlier nodes be repropagated in order to replace branching
-                                                 *   decisions by deductions */
+                                                      *   decisions by deductions */
 #define SCIP_DEFAULT_CONF_DYNAMIC          TRUE /**< should the conflict constraints be subject to aging? */
-#define SCIP_DEFAULT_CONF_REMOVEABLE       TRUE /**< should the conflict's relaxations be subject to LP aging and cleanup? */
+#define SCIP_DEFAULT_CONF_REMOVEABLE       TRUE /**< should the conflict's relaxations be subject to SCIP_LP aging and cleanup? */
 
 
 /* Constraints */
 
 #define SCIP_DEFAULT_CONS_AGELIMIT            0 /**< maximum age an unnecessary constraint can reach before it is deleted
-                                                 *   (0: dynamic adjustment, -1: constraints are never deleted) */
+                                                      *   (0: dynamic adjustment, -1: constraints are never deleted) */
 #define SCIP_DEFAULT_CONS_OBSOLETEAGE         0 /**< age of a constraint after which it is marked obsolete
-                                                 *   (0: dynamic adjustment, -1: constraints are never marked obsolete) */
+                                                      *   (0: dynamic adjustment, -1: constraints are never marked obsolete) */
 
 
 /* Display */
@@ -103,7 +103,7 @@
 #define SCIP_DEFAULT_DISP_WIDTH             139 /**< maximal number of characters in a node information line */
 #define SCIP_DEFAULT_DISP_FREQ              100 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISP_HEADERFREQ         15 /**< frequency for displaying header lines (every n'th node info line) */
-#define SCIP_DEFAULT_DISP_LPINFO          FALSE /**< should the LP solver display status messages? */
+#define SCIP_DEFAULT_DISP_LPINFO          FALSE /**< should the SCIP_LP solver display status messages? */
 
 
 /* Limits */
@@ -114,34 +114,34 @@
 #define SCIP_DEFAULT_LIMIT_NODES           -1LL /**< maximal number of nodes to process (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_SOLUTIONS         -1 /**< solving stops, if given number of sols were found (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_BESTSOL           -1 /**< solving stops, if given number of solution improvements were found
-                                                 *   (-1: no limit) */
+                                                      *   (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_MAXSOL           100 /**< maximal number of solutions to store in the solution storage */
 
 
-/* LP */
+/* SCIP_LP */
 
-#define SCIP_DEFAULT_LP_SOLVEFREQ             1 /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
+#define SCIP_DEFAULT_LP_SOLVEFREQ             1 /**< frequency for solving SCIP_LP at the nodes; -1: never; 0: only root SCIP_LP */
 #define SCIP_DEFAULT_LP_SOLVEDEPTH           -1 /**< maximal depth for solving LPs (-1: no depth limit) */
-#define SCIP_DEFAULT_LP_INITALGORITHM       's' /**< LP algorithm for solving initial LP relaxations ('s'implex, 'b'arrier,
-                                                 *   barrier with 'c'rossover) */
-#define SCIP_DEFAULT_LP_RESOLVEALGORITHM    's' /**< LP algorithm for resolving LP relaxations if a starting basis exists
-                                                 *   ('s'implex, 'b'arrier, barrier with 'c'rossover) */
-#define SCIP_DEFAULT_LP_PRICING             's' /**< LP pricing strategy ('a'uto, 'f'ull pricing, 'p'artial,
-                                                 *   's'teepest edge pricing, 'q'uickstart steepest edge pricing,
-                                                 *   'd'evex pricing) */
-#define SCIP_DEFAULT_LP_COLAGELIMIT          10 /**< maximum age a dynamic column can reach before it is deleted from LP
-                                                 *   (-1: don't delete columns due to aging) */
-#define SCIP_DEFAULT_LP_ROWAGELIMIT          10 /**< maximum age a dynamic row can reach before it is deleted from LP
-                                                 *   (-1: don't delete rows due to aging) */
-#define SCIP_DEFAULT_LP_CLEANUPCOLS       FALSE /**< should new non-basic columns be removed after LP solving? */
-#define SCIP_DEFAULT_LP_CLEANUPCOLSROOT   FALSE /**< should new non-basic columns be removed after root LP solving? */
-#define SCIP_DEFAULT_LP_CLEANUPROWS        TRUE /**< should new basic rows be removed after LP solving? */
-#define SCIP_DEFAULT_LP_CLEANUPROWSROOT    TRUE /**< should new basic rows be removed after root LP solving? */
-#define SCIP_DEFAULT_LP_CHECKSTABILITY     TRUE /**< should LP solver's return status be checked for stability? */
-#define SCIP_DEFAULT_LP_CHECKFEAS          TRUE /**< should LP solutions be checked to resolve LP at numerical troubles? */
-#define SCIP_DEFAULT_LP_FASTMIP            TRUE /**< should FASTMIP setting of LP solver be used? */
-#define SCIP_DEFAULT_LP_SCALING            TRUE /**< should scaling of LP solver be used? */
-#define SCIP_DEFAULT_LP_PRESOLVING         TRUE /**< should presolving of LP solver be used? */
+#define SCIP_DEFAULT_LP_INITALGORITHM       's' /**< SCIP_LP algorithm for solving initial SCIP_LP relaxations ('s'implex, 'b'arrier,
+                                                      *   barrier with 'c'rossover) */
+#define SCIP_DEFAULT_LP_RESOLVEALGORITHM    's' /**< SCIP_LP algorithm for resolving SCIP_LP relaxations if a starting basis exists
+                                                      *   ('s'implex, 'b'arrier, barrier with 'c'rossover) */
+#define SCIP_DEFAULT_LP_PRICING             's' /**< SCIP_LP pricing strategy ('a'uto, 'f'ull pricing, 'p'artial,
+                                                      *   's'teepest edge pricing, 'q'uickstart steepest edge pricing,
+                                                      *   'd'evex pricing) */
+#define SCIP_DEFAULT_LP_COLAGELIMIT          10 /**< maximum age a dynamic column can reach before it is deleted from SCIP_LP
+                                                      *   (-1: don't delete columns due to aging) */
+#define SCIP_DEFAULT_LP_ROWAGELIMIT          10 /**< maximum age a dynamic row can reach before it is deleted from SCIP_LP
+                                                      *   (-1: don't delete rows due to aging) */
+#define SCIP_DEFAULT_LP_CLEANUPCOLS       FALSE /**< should new non-basic columns be removed after SCIP_LP solving? */
+#define SCIP_DEFAULT_LP_CLEANUPCOLSROOT   FALSE /**< should new non-basic columns be removed after root SCIP_LP solving? */
+#define SCIP_DEFAULT_LP_CLEANUPROWS        TRUE /**< should new basic rows be removed after SCIP_LP solving? */
+#define SCIP_DEFAULT_LP_CLEANUPROWSROOT    TRUE /**< should new basic rows be removed after root SCIP_LP solving? */
+#define SCIP_DEFAULT_LP_CHECKSTABILITY     TRUE /**< should SCIP_LP solver's return status be checked for stability? */
+#define SCIP_DEFAULT_LP_CHECKFEAS          TRUE /**< should SCIP_LP solutions be checked to resolve SCIP_LP at numerical troubles? */
+#define SCIP_DEFAULT_LP_FASTMIP            TRUE /**< should FASTMIP setting of SCIP_LP solver be used? */
+#define SCIP_DEFAULT_LP_SCALING            TRUE /**< should scaling of SCIP_LP solver be used? */
+#define SCIP_DEFAULT_LP_PRESOLVING         TRUE /**< should presolving of SCIP_LP solver be used? */
 
 
 /* Memory */
@@ -164,17 +164,17 @@
 /* Presolving */
 
 #define SCIP_DEFAULT_PRESOL_ABORTFAC      1e-04 /**< abort presolve, if at most this fraction of the problem was changed
-                                                 *   in last presolve round */
+                                                      *   in last presolve round */
 #define SCIP_DEFAULT_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds (-1: unlimited) */
 #define SCIP_DEFAULT_PRESOL_MAXRESTARTS      -1 /**< maximal number of restarts (-1: unlimited) */
 #define SCIP_DEFAULT_PRESOL_RESTARTFAC      0.0 /**< fraction of bounds that changed in the root node triggering a restart with
-                                                 *   preprocessing (0.0: restart only after complete root node evaluation) */
+                                                      *   preprocessing (0.0: restart only after complete root node evaluation) */
 
 
-/* Pricing */
+/* SCIP_Pricing */
 
 #define SCIP_DEFAULT_PRICE_ABORTFAC         2.0 /**< pricing is aborted, if fac * price_maxvars pricing candidates were
-                                                 *   found */
+                                                      *   found */
 #define SCIP_DEFAULT_PRICE_MAXVARS          100 /**< maximal number of variables priced in per pricing round */
 #define SCIP_DEFAULT_PRICE_MAXVARSROOT     2000 /**< maximal number of priced variables at the root node */
 
@@ -183,32 +183,32 @@
 
 #define SCIP_DEFAULT_PROP_MAXROUNDS         100 /**< maximal number of propagation rounds per node (-1: unlimited) */
 #define SCIP_DEFAULT_PROP_MAXROUNDSROOT    1000 /**< maximal number of propagation rounds in root node (-1: unlimited) */
-#define SCIP_DEFAULT_PROP_REDCOSTFREQ         1 /**< frequency for reduced cost fixing (-1: never; 0: only root LP) */
+#define SCIP_DEFAULT_PROP_REDCOSTFREQ         1 /**< frequency for reduced cost fixing (-1: never; 0: only root SCIP_LP) */
 
 
 /* Separation */
 
 #define SCIP_DEFAULT_SEPA_MAXBOUNDDIST      0.2 /**< maximal relative distance from current node's dual bound to primal 
-                                                 *   bound compared to best node's dual bound for applying separation
-                                                 *   (0.0: only on current best node, 1.0: on all nodes) */
-#define SCIP_DEFAULT_SEPA_MINEFFICACY      0.05 /**< minimal efficacy for a cut to enter the LP */
-#define SCIP_DEFAULT_SEPA_MINEFFICACYROOT  0.01 /**< minimal efficacy for a cut to enter the LP in the root node */
-#define SCIP_DEFAULT_SEPA_MINORTHO         0.50 /**< minimal orthogonality for a cut to enter the LP */
-#define SCIP_DEFAULT_SEPA_MINORTHOROOT     0.50 /**< minimal orthogonality for a cut to enter the LP in the root node */
+                                                      *   bound compared to best node's dual bound for applying separation
+                                                      *   (0.0: only on current best node, 1.0: on all nodes) */
+#define SCIP_DEFAULT_SEPA_MINEFFICACY      0.05 /**< minimal efficacy for a cut to enter the SCIP_LP */
+#define SCIP_DEFAULT_SEPA_MINEFFICACYROOT  0.01 /**< minimal efficacy for a cut to enter the SCIP_LP in the root node */
+#define SCIP_DEFAULT_SEPA_MINORTHO         0.50 /**< minimal orthogonality for a cut to enter the SCIP_LP */
+#define SCIP_DEFAULT_SEPA_MINORTHOROOT     0.50 /**< minimal orthogonality for a cut to enter the SCIP_LP in the root node */
 #define SCIP_DEFAULT_SEPA_OBJPARALFAC      0.20 /**< factor to scale objective parallelism of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_ORTHOFAC         1.00 /**< factor to scale orthogonality of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_EFFICACYNORM      'e' /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum,
-                                                 *   's'um, 'd'iscrete) */
+                                                      *   's'um, 'd'iscrete) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDS           5 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDSROOT      -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXADDROUNDS        1 /**< maximal additional number of separation rounds in subsequent
-                                                 *   price-and-cut loops (-1: no additional restriction) */
+                                                      *   price-and-cut loops (-1: no additional restriction) */
 #define SCIP_DEFAULT_SEPA_MAXSTALLROUNDS    100 /**< maximal number of consecutive separation rounds without objective
-                                                 *   improvement (-1: no additional restriction) */
+                                                      *   improvement (-1: no additional restriction) */
 #define SCIP_DEFAULT_SEPA_MAXCUTS           100 /**< maximal number of cuts separated per separation round */
 #define SCIP_DEFAULT_SEPA_MAXCUTSROOT      2000 /**< maximal separated cuts at the root node */
 #define SCIP_DEFAULT_SEPA_CUTAGELIMIT       100 /**< maximum age a cut can reach before it is deleted from global cut pool
-                                                 *   (-1: cuts are never deleted from the global cut pool) */
+                                                      *   (-1: cuts are never deleted from the global cut pool) */
 #define SCIP_DEFAULT_SEPA_POOLFREQ            5 /**< separation frequency for the global cut pool */
 
 
@@ -218,11 +218,11 @@
 #define SCIP_DEFAULT_TIME_ENABLED          TRUE /**< is timing enabled? */
 
 
-/* VBC Tool output */
-#define SCIP_DEFAULT_VBC_FILENAME           "-" /**< name of the VBC Tool output file, or "-" if no output should be
-                                                 *   created */
+/* SCIP_VBC Tool output */
+#define SCIP_DEFAULT_VBC_FILENAME           "-" /**< name of the SCIP_VBC Tool output file, or "-" if no output should be
+                                                      *   created */
 #define SCIP_DEFAULT_VBC_REALTIME          TRUE /**< should the real solving time be used instead of a time step counter
-                                                 *   in VBC output? */
+                                                      *   in SCIP_VBC output? */
 
 
 
@@ -230,9 +230,9 @@
 /** calculate memory size for dynamically allocated arrays */
 static
 int calcGrowSize(
-   int              initsize,           /**< initial size of array */
-   Real             growfac,            /**< growing factor of array */
-   int              num                 /**< minimum number of entries to store */
+   int                   initsize,           /**< initial size of array */
+   SCIP_Real             growfac,            /**< growing factor of array */
+   int                   num                 /**< minimum number of entries to store */
    )
 {
    int size;
@@ -256,73 +256,73 @@ int calcGrowSize(
 
 /** information method for a parameter change of feastol */
 static
-DECL_PARAMCHGD(paramChgdFeastol)
+SCIP_DECL_PARAMCHGD(paramChgdFeastol)
 {  /*lint --e{715}*/
-   Real newfeastol;
+   SCIP_Real newfeastol;
 
    newfeastol = SCIPparamGetReal(param);
    
-   /* change the feastol through the SCIP call in order to mark the LP unsolved */
-   CHECK_OKAY( SCIPchgFeastol(scip, newfeastol) );
+   /* change the feastol through the SCIP call in order to mark the SCIP_LP unsolved */
+   SCIP_CALL( SCIPchgFeastol(scip, newfeastol) );
 
    return SCIP_OKAY;
 }
 
 /** information method for a parameter change of dualfeastol */
 static
-DECL_PARAMCHGD(paramChgdDualfeastol)
+SCIP_DECL_PARAMCHGD(paramChgdDualfeastol)
 {  /*lint --e{715}*/
-   Real newdualfeastol;
+   SCIP_Real newdualfeastol;
 
    newdualfeastol = SCIPparamGetReal(param);
    
-   /* change the dualfeastol through the SCIP call in order to mark the LP unsolved */
-   CHECK_OKAY( SCIPchgDualfeastol(scip, newdualfeastol) );
+   /* change the dualfeastol through the SCIP call in order to mark the SCIP_LP unsolved */
+   SCIP_CALL( SCIPchgDualfeastol(scip, newdualfeastol) );
 
    return SCIP_OKAY;
 }
 
 /** information method for a parameter change of barrierconvtol */
 static
-DECL_PARAMCHGD(paramChgdBarrierconvtol)
+SCIP_DECL_PARAMCHGD(paramChgdBarrierconvtol)
 {  /*lint --e{715}*/
-   Real newbarrierconvtol;
+   SCIP_Real newbarrierconvtol;
 
    newbarrierconvtol = SCIPparamGetReal(param);
    
-   /* change the barrierconvtol through the SCIP call in order to mark the LP unsolved */
-   CHECK_OKAY( SCIPchgBarrierconvtol(scip, newbarrierconvtol) );
+   /* change the barrierconvtol through the SCIP call in order to mark the SCIP_LP unsolved */
+   SCIP_CALL( SCIPchgBarrierconvtol(scip, newbarrierconvtol) );
 
    return SCIP_OKAY;
 }
 
 /** parameter change information method to autoselect display columns again */
 static
-DECL_PARAMCHGD(SCIPparamChgdDispWidth)
+SCIP_DECL_PARAMCHGD(SCIPparamChgdDispWidth)
 {  /*lint --e{715}*/
    /* automatically select the now active display columns */
-   CHECK_OKAY( SCIPautoselectDisps(scip) );
+   SCIP_CALL( SCIPautoselectDisps(scip) );
 
    return SCIP_OKAY;
 }
 
 /** creates global SCIP settings */
-RETCODE SCIPsetCreate(
-   SET**            set,                /**< pointer to SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   SCIP*            scip                /**< SCIP data structure */   
+SCIP_RETCODE SCIPsetCreate(
+   SCIP_SET**            set,                /**< pointer to SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP*                 scip                /**< SCIP data structure */   
    )
 {
    assert(set != NULL);
    assert(scip != NULL);
 
-   ALLOC_OKAY( allocMemory(set) );
+   SCIP_ALLOC( BMSallocMemory(set) );
 
    (*set)->stage = SCIP_STAGE_INIT;
    (*set)->scip = scip;
 
-   CHECK_OKAY( SCIPparamsetCreate(&(*set)->paramset, blkmem) );
-   CHECK_OKAY( SCIPbufferCreate(&(*set)->buffer) );
+   SCIP_CALL( SCIPparamsetCreate(&(*set)->paramset, blkmem) );
+   SCIP_CALL( SCIPbufferCreate(&(*set)->buffer) );
 
    (*set)->readers = NULL;
    (*set)->nreaders = 0;
@@ -376,310 +376,310 @@ RETCODE SCIPsetCreate(
    (*set)->vbc_filename = NULL;
 
    /* branching parameters */
-   CHECK_OKAY( SCIPsetAddCharParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "branching/scorefunc",
          "branching score function ('s'um, 'p'roduct)",
          &(*set)->branch_scorefunc, SCIP_DEFAULT_BRANCH_SCOREFUNC, "sp",
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem, 
          "branching/scorefac",
          "branching score factor to weigh downward and upward gain prediction in sum score function",
          &(*set)->branch_scorefac, SCIP_DEFAULT_BRANCH_SCOREFAC, 0.0, 1.0,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "branching/preferbinary",
          "should branching on binary variables be preferred?",
          &(*set)->branch_preferbinary, SCIP_DEFAULT_BRANCH_PREFERBINARY,
          NULL, NULL) );
 
    /* conflict analysis parameters */
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/useprop",
          "should propagation conflict analysis be used?",
          &(*set)->conf_useprop, SCIP_DEFAULT_CONF_USEPROP,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/uselp",
-         "should infeasible LP conflict analysis be used?",
+         "should infeasible SCIP_LP conflict analysis be used?",
          &(*set)->conf_uselp, SCIP_DEFAULT_CONF_USELP,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/usesb",
          "should infeasible strong branching conflict analysis be used?",
          &(*set)->conf_usesb, SCIP_DEFAULT_CONF_USESB,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/usepseudo",
          "should pseudo solution conflict analysis be used?",
          &(*set)->conf_usepseudo, SCIP_DEFAULT_CONF_USEPSEUDO,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "conflict/maxvarsfac",
          "maximal fraction of binary variables involved in a conflict clause",
-         &(*set)->conf_maxvarsfac, SCIP_DEFAULT_CONF_MAXVARSFAC, 0.0, REAL_MAX,
+         &(*set)->conf_maxvarsfac, SCIP_DEFAULT_CONF_MAXVARSFAC, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "conflict/minmaxvars",
          "minimal absolute maximum of variables involved in a conflict clause",
          &(*set)->conf_minmaxvars, SCIP_DEFAULT_CONF_MINMAXVARS, 0, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "conflict/maxunfixed",
          "maximal number of unfixed variables at insertion depth of conflict clause (-1: no limit)",
          &(*set)->conf_maxunfixed, SCIP_DEFAULT_CONF_MAXUNFIXED, -1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "conflict/maxlploops",
-         "maximal number of LP resolving loops during conflict analysis",
+         "maximal number of SCIP_LP resolving loops during conflict analysis",
          &(*set)->conf_maxlploops, SCIP_DEFAULT_CONF_MAXLPLOOPS, 0, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "conflict/fuiplevels",
          "number of depth levels up to which first UIP's are used in conflict analysis (-1: use All-FirstUIP rule)",
          &(*set)->conf_fuiplevels, SCIP_DEFAULT_CONF_FUIPLEVELS, -1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "conflict/interclauses",
          "maximal number of intermediate conflict clauses generated in conflict graph (-1: use every intermediate clause)",
          &(*set)->conf_interclauses, SCIP_DEFAULT_CONF_INTERCLAUSES, -1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "conflict/maxclauses",
          "maximal number of conflict clauses accepted at an infeasible node (-1: use all generated conflict clauses)",
          &(*set)->conf_maxclauses, SCIP_DEFAULT_CONF_MAXCLAUSES, -1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/allowlocal",
          "should conflict clauses be generated that are only valid locally?",
          &(*set)->conf_allowlocal, SCIP_DEFAULT_CONF_ALLOWLOCAL,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/repropagate",
          "should earlier nodes be repropagated in order to replace branching decisions by deductions",
          &(*set)->conf_repropagate, SCIP_DEFAULT_CONF_REPROPAGATE,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/reconvclauses",
          "should reconvergence clauses be created for UIPs of last depth level?",
          &(*set)->conf_reconvclauses, SCIP_DEFAULT_CONF_RECONVCLAUSES,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/dynamic",
          "should the conflict constraints be subject to aging?",
          &(*set)->conf_dynamic, SCIP_DEFAULT_CONF_DYNAMIC,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/removeable",
-         "should the conflict's relaxations be subject to LP aging and cleanup?",
+         "should the conflict's relaxations be subject to SCIP_LP aging and cleanup?",
          &(*set)->conf_removeable, SCIP_DEFAULT_CONF_REMOVEABLE,
          NULL, NULL) );
    
    /* constraint parameters */
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "constraints/agelimit",
          "maximum age an unnecessary constraint can reach before it is deleted (0: dynamic, -1: keep all constraints)",
          &(*set)->cons_agelimit, SCIP_DEFAULT_CONS_AGELIMIT, -1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "constraints/obsoleteage",
          "age of a constraint after which it is marked obsolete (0: dynamic, -1 do not mark constraints obsolete)",
          &(*set)->cons_obsoleteage, SCIP_DEFAULT_CONS_OBSOLETEAGE, -1, INT_MAX,
          NULL, NULL) );
 
    /* display parameters */
-   assert(sizeof(int) == sizeof(VERBLEVEL));
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   assert(sizeof(int) == sizeof(SCIP_VERBLEVEL));
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "display/verblevel",
          "verbosity level of output",
          (int*)&(*set)->disp_verblevel, (int)SCIP_DEFAULT_DISP_VERBLEVEL,
          (int)SCIP_VERBLEVEL_NONE, (int)SCIP_VERBLEVEL_FULL,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem, 
          "display/width",
          "maximal number of characters in a node information line",
          &(*set)->disp_width, SCIP_DEFAULT_DISP_WIDTH, 0, INT_MAX,
          SCIPparamChgdDispWidth, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem, 
          "display/freq",
          "frequency for displaying node information lines",
          &(*set)->disp_freq, SCIP_DEFAULT_DISP_FREQ, -1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem, 
          "display/headerfreq",
          "frequency for displaying header lines (every n'th node information line)",
          &(*set)->disp_headerfreq, SCIP_DEFAULT_DISP_HEADERFREQ, -1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "display/lpinfo",
-         "should the LP solver display status messages?",
+         "should the SCIP_LP solver display status messages?",
          &(*set)->disp_lpinfo, SCIP_DEFAULT_DISP_LPINFO,
          NULL, NULL) );
 
    /* limit parameters */
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "limits/time",
          "maximal time in seconds to run",
-         &(*set)->limit_time, SCIP_DEFAULT_LIMIT_TIME, 0.0, REAL_MAX,
+         &(*set)->limit_time, SCIP_DEFAULT_LIMIT_TIME, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddLongintParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddLongintParam(*set, blkmem,
          "limits/nodes",
          "maximal number of nodes to process (-1: no limit)",
-         &(*set)->limit_nodes, SCIP_DEFAULT_LIMIT_NODES, -1LL, LONGINT_MAX,
+         &(*set)->limit_nodes, SCIP_DEFAULT_LIMIT_NODES, -1LL, SCIP_LONGINT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "limits/memory",
          "maximal memory usage in MB; reported memory usage is lower than real memory usage!",
-         &(*set)->limit_memory, SCIP_DEFAULT_LIMIT_MEMORY, 0.0, REAL_MAX,
+         &(*set)->limit_memory, SCIP_DEFAULT_LIMIT_MEMORY, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "limits/gap",
          "solving stops, if the gap = |(primalbound - dualbound)/dualbound| is below the given value",
-         &(*set)->limit_gap, SCIP_DEFAULT_LIMIT_GAP, 0.0, REAL_MAX,
+         &(*set)->limit_gap, SCIP_DEFAULT_LIMIT_GAP, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "limits/solutions",
          "solving stops, if the given number of solutions were found (-1: no limit)",
          &(*set)->limit_solutions, SCIP_DEFAULT_LIMIT_SOLUTIONS, -1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "limits/bestsol",
          "solving stops, if the given number of solution improvements were found (-1: no limit)",
          &(*set)->limit_bestsol, SCIP_DEFAULT_LIMIT_BESTSOL, -1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "limits/maxsol",
          "maximal number of solutions to store in the solution storage",
          &(*set)->limit_maxsol, SCIP_DEFAULT_LIMIT_MAXSOL, 1, INT_MAX,
          NULL, NULL) );
 
-   /* LP parameters */
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   /* SCIP_LP parameters */
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "lp/solvefreq",
-         "frequency for solving LP at the nodes (-1: never; 0: only root LP)",
+         "frequency for solving SCIP_LP at the nodes (-1: never; 0: only root SCIP_LP)",
          &(*set)->lp_solvefreq, SCIP_DEFAULT_LP_SOLVEFREQ, -1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "lp/solvedepth",
-         "maximal depth for solving LP at the nodes (-1: no depth limit)",
+         "maximal depth for solving SCIP_LP at the nodes (-1: no depth limit)",
          &(*set)->lp_solvedepth, SCIP_DEFAULT_LP_SOLVEDEPTH, -1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddCharParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "lp/initalgorithm",
-         "LP algorithm for solving initial LP relaxations ('s'implex, 'b'arrier, barrier with 'c'rossover)",
+         "LP algorithm for solving initial SCIP_LP relaxations ('s'implex, 'b'arrier, barrier with 'c'rossover)",
          &(*set)->lp_initalgorithm, SCIP_DEFAULT_LP_INITALGORITHM, "sbc",
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddCharParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "lp/resolvealgorithm",
-         "LP algorithm for resolving LP relaxations if a starting basis exists ('s'implex, 'b'arrier, barrier with 'c'rossover)",
+         "LP algorithm for resolving SCIP_LP relaxations if a starting basis exists ('s'implex, 'b'arrier, barrier with 'c'rossover)",
          &(*set)->lp_resolvealgorithm, SCIP_DEFAULT_LP_RESOLVEALGORITHM, "sbc",
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddCharParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "lp/pricing",
          "LP pricing strategy ('a'uto, 'f'ull pricing, 'p'artial, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)",
          &(*set)->lp_pricing, SCIP_DEFAULT_LP_PRICING, "afpsqd",
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "lp/colagelimit",
-         "maximum age a dynamic column can reach before it is deleted from the LP (-1: don't delete columns due to aging)",
+         "maximum age a dynamic column can reach before it is deleted from the SCIP_LP (-1: don't delete columns due to aging)",
          &(*set)->lp_colagelimit, SCIP_DEFAULT_LP_COLAGELIMIT, -1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "lp/rowagelimit",
-         "maximum age a dynamic row can reach before it is deleted from the LP (-1: don't delete rows due to aging)",
+         "maximum age a dynamic row can reach before it is deleted from the SCIP_LP (-1: don't delete rows due to aging)",
          &(*set)->lp_rowagelimit, SCIP_DEFAULT_LP_ROWAGELIMIT, -1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/cleanupcols",
-         "should new non-basic columns be removed after LP solving?",
+         "should new non-basic columns be removed after SCIP_LP solving?",
          &(*set)->lp_cleanupcols, SCIP_DEFAULT_LP_CLEANUPCOLS,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/cleanupcolsroot",
-         "should new non-basic columns be removed after root LP solving?",
+         "should new non-basic columns be removed after root SCIP_LP solving?",
          &(*set)->lp_cleanupcolsroot, SCIP_DEFAULT_LP_CLEANUPCOLSROOT,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/cleanuprows",
-         "should new basic rows be removed after LP solving?",
+         "should new basic rows be removed after SCIP_LP solving?",
          &(*set)->lp_cleanuprows, SCIP_DEFAULT_LP_CLEANUPROWS,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/cleanuprowsroot",
-         "should new basic rows be removed after root LP solving?",
+         "should new basic rows be removed after root SCIP_LP solving?",
          &(*set)->lp_cleanuprowsroot, SCIP_DEFAULT_LP_CLEANUPROWSROOT,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/checkstability",
-         "should LP solver's return status be checked for stability?",
+         "should SCIP_LP solver's return status be checked for stability?",
          &(*set)->lp_checkstability, SCIP_DEFAULT_LP_CHECKSTABILITY,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/checkfeas",
-         "should LP solutions be checked, resolving LP when numerical troubles occur?",
+         "should SCIP_LP solutions be checked, resolving SCIP_LP when numerical troubles occur?",
          &(*set)->lp_checkfeas, SCIP_DEFAULT_LP_CHECKFEAS,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/fastmip",
-         "should FASTMIP setting of LP solver be used?",
+         "should FASTMIP setting of SCIP_LP solver be used?",
          &(*set)->lp_fastmip, SCIP_DEFAULT_LP_FASTMIP,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/scaling",
-         "should scaling of LP solver be used?",
+         "should scaling of SCIP_LP solver be used?",
          &(*set)->lp_scaling, SCIP_DEFAULT_LP_SCALING,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/presolving",
-         "should presolving of LP solver be used?",
+         "should presolving of SCIP_LP solver be used?",
          &(*set)->lp_presolving, SCIP_DEFAULT_LP_PRESOLVING,
          NULL, NULL) );
 
    /* memory parameters */
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem, 
          "memory/savefac",
          "fraction of maximal memory usage resulting in switch to memory saving mode",
          &(*set)->mem_savefac, SCIP_DEFAULT_MEM_SAVEFAC, 0.0, 1.0,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "memory/arraygrowfac",
          "memory growing factor for dynamically allocated arrays",
          &(*set)->mem_arraygrowfac, SCIP_DEFAULT_MEM_ARRAYGROWFAC, 1.0, 10.0,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "memory/arraygrowinit",
          "initial size of dynamically allocated arrays",
          &(*set)->mem_arraygrowinit, SCIP_DEFAULT_MEM_ARRAYGROWINIT, 0, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "memory/treegrowfac",
          "memory growing factor for tree array",
          &(*set)->mem_treegrowfac, SCIP_DEFAULT_MEM_TREEGROWFAC, 1.0, 10.0,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "memory/treegrowinit",
          "initial size of tree array",
          &(*set)->mem_treegrowinit, SCIP_DEFAULT_MEM_TREEGROWINIT, 0, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem, 
          "memory/pathgrowfac",
          "memory growing factor for path array",
          &(*set)->mem_pathgrowfac, SCIP_DEFAULT_MEM_PATHGROWFAC, 1.0, 10.0,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "memory/pathgrowinit",
          "initial size of path array",
          &(*set)->mem_pathgrowinit, SCIP_DEFAULT_MEM_PATHGROWINIT, 0, INT_MAX,
          NULL, NULL) );
 
    /* miscellaneous parameters */
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "misc/catchctrlc",
          "should the CTRL-C interrupt be caught by SCIP?",
          &(*set)->misc_catchctrlc, SCIP_DEFAULT_MISC_CATCHCTRLC,
          NULL, NULL) );
    /**@todo activate exactsolve parameter and finish implementation of solving MIPs exactly */
 #if 0
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "misc/exactsolve",
          "should the problem be solved exactly (with proven dual bounds)?",
          &(*set)->misc_exactsolve, SCIP_DEFAULT_MISC_EXACTSOLVE,
@@ -689,212 +689,212 @@ RETCODE SCIPsetCreate(
 #endif
 
    /* numerical parameters */
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/infinity",
          "values larger than this are considered infinity",
          &(*set)->num_infinity, SCIP_DEFAULT_INFINITY, 1e+10, SCIP_INVALID/10.0,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/epsilon",
          "absolute values smaller than this are considered zero",
          &(*set)->num_epsilon, SCIP_DEFAULT_EPSILON, SCIP_MINEPSILON, SCIP_MAXEPSILON,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/sumepsilon",
          "absolute values of sums smaller than this are considered zero",
          &(*set)->num_sumepsilon, SCIP_DEFAULT_SUMEPSILON, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/feastol",
          "LP feasibility tolerance for constraints",
          &(*set)->num_feastol, SCIP_DEFAULT_FEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
          paramChgdFeastol, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/dualfeastol",
          "LP feasibility tolerance for reduced costs",
          &(*set)->num_dualfeastol, SCIP_DEFAULT_DUALFEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
          paramChgdDualfeastol, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/barrierconvtol",
          "LP convergence tolerance used in barrier algorithm",
          &(*set)->num_barrierconvtol, SCIP_DEFAULT_BARRIERCONVTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
          paramChgdBarrierconvtol, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/boundstreps",
          "minimal improve for strengthening bounds",
          &(*set)->num_boundstreps, SCIP_DEFAULT_BOUNDSTREPS, SCIP_MINEPSILON*1e+03, SCIP_INVALID/10.0,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/pseudocosteps",
          "minimal variable distance value to use for branching pseudo cost updates",
          &(*set)->num_pseudocosteps, SCIP_DEFAULT_PSEUDOCOSTEPS, SCIP_MINEPSILON*1e+03, 1.0,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/pseudocostdelta",
          "minimal objective distance value to use for branching pseudo cost updates",
-         &(*set)->num_pseudocostdelta, SCIP_DEFAULT_PSEUDOCOSTDELTA, 0.0, REAL_MAX,
+         &(*set)->num_pseudocostdelta, SCIP_DEFAULT_PSEUDOCOSTDELTA, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
 
    /* presolving parameters */
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem, 
          "presolving/maxrounds",
          "maximal number of presolving rounds (-1: unlimited)",
          &(*set)->presol_maxrounds, SCIP_DEFAULT_PRESOL_MAXROUNDS, -1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem, 
          "presolving/abortfac",
          "abort presolve, if at most this fraction of the problem was changed in last presolve round",
          &(*set)->presol_abortfac, SCIP_DEFAULT_PRESOL_ABORTFAC, 0.0, 1.0,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem, 
          "presolving/maxrestarts",
          "maximal number of restarts (-1: unlimited)",
          &(*set)->presol_maxrestarts, SCIP_DEFAULT_PRESOL_MAXRESTARTS, -1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem, 
          "presolving/restartfac",
          "fraction of bounds that changed in the root node triggering a restart with preprocessing (0.0: restart only after complete root node evaluation)",
          &(*set)->presol_restartfac, SCIP_DEFAULT_PRESOL_RESTARTFAC, 0.0, 1.0,
          NULL, NULL) );
 
    /* pricing parameters */
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem, 
          "pricing/maxvars",
          "maximal number of variables priced in per pricing round",
          &(*set)->price_maxvars, SCIP_DEFAULT_PRICE_MAXVARS, 1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "pricing/maxvarsroot",
          "maximal number of priced variables at the root node",
          &(*set)->price_maxvarsroot, SCIP_DEFAULT_PRICE_MAXVARSROOT, 1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "pricing/abortfac",
          "pricing is aborted, if fac * pricing/maxvars pricing candidates were found",
-         &(*set)->price_abortfac, SCIP_DEFAULT_PRICE_ABORTFAC, 1.0, REAL_MAX,
+         &(*set)->price_abortfac, SCIP_DEFAULT_PRICE_ABORTFAC, 1.0, SCIP_REAL_MAX,
          NULL, NULL) );
 
    /* propagation parameters */
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem, 
          "propagating/maxrounds",
          "maximal number of propagation rounds per node (-1: unlimited)",
          &(*set)->prop_maxrounds, SCIP_DEFAULT_PROP_MAXROUNDS, -1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem, 
          "propagating/maxroundsroot",
          "maximal number of propagation rounds in the root node (-1: unlimited)",
          &(*set)->prop_maxroundsroot, SCIP_DEFAULT_PROP_MAXROUNDSROOT, -1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "propagating/redcostfreq",
-         "frequency for applying reduced cost fixing (-1: never; 0: only root LP)",
+         "frequency for applying reduced cost fixing (-1: never; 0: only root SCIP_LP)",
          &(*set)->prop_redcostfreq, SCIP_DEFAULT_PROP_REDCOSTFREQ, -1, INT_MAX,
          NULL, NULL) );
 
    /* separation parameters */
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "separating/maxbounddist",
          "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separation (0.0: only on current best node, 1.0: on all nodes)",
          &(*set)->sepa_maxbounddist, SCIP_DEFAULT_SEPA_MAXBOUNDDIST, 0.0, 1.0,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "separating/minefficacy",
          "minimal efficacy for a cut to enter the LP",
          &(*set)->sepa_minefficacy, SCIP_DEFAULT_SEPA_MINEFFICACY, 0.0, SCIP_INVALID/10.0,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "separating/minefficacyroot",
-         "minimal efficacy for a cut to enter the LP in the root node",
+         "minimal efficacy for a cut to enter the SCIP_LP in the root node",
          &(*set)->sepa_minefficacyroot, SCIP_DEFAULT_SEPA_MINEFFICACYROOT, 0.0, SCIP_INVALID/10.0,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "separating/minortho",
          "minimal orthogonality for a cut to enter the LP",
          &(*set)->sepa_minortho, SCIP_DEFAULT_SEPA_MINORTHO, 0.0, 1.0,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "separating/minorthoroot",
-         "minimal orthogonality for a cut to enter the LP in the root node",
+         "minimal orthogonality for a cut to enter the SCIP_LP in the root node",
          &(*set)->sepa_minorthoroot, SCIP_DEFAULT_SEPA_MINORTHOROOT, 0.0, 1.0,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "separating/objparalfac",
          "factor to scale objective parallelism of cut in separation score calculation",
          &(*set)->sepa_objparalfac, SCIP_DEFAULT_SEPA_OBJPARALFAC, 0.0, SCIP_INVALID/10.0,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "separating/orthofac",
          "factor to scale orthogonality of cut in separation score calculation (0.0 to disable orthogonality calculation)",
          &(*set)->sepa_orthofac, SCIP_DEFAULT_SEPA_ORTHOFAC, 0.0, SCIP_INVALID/10.0,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddCharParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "separating/efficacynorm",
          "row norm to use for efficacy calculation ('e'uclidean, 'm'aximum, 's'um, 'd'iscrete)",
          &(*set)->sepa_efficacynorm, SCIP_DEFAULT_SEPA_EFFICACYNORM, "emsd",
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "separating/maxrounds",
          "maximal number of separation rounds per node (-1: unlimited)",
          &(*set)->sepa_maxrounds, SCIP_DEFAULT_SEPA_MAXROUNDS, -1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "separating/maxroundsroot",
          "maximal number of separation rounds in the root node (-1: unlimited)",
          &(*set)->sepa_maxroundsroot, SCIP_DEFAULT_SEPA_MAXROUNDSROOT, -1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "separating/maxaddrounds",
          "maximal additional number of separation rounds in subsequent price-and-cut loops (-1: no additional restriction)",
          &(*set)->sepa_maxaddrounds, SCIP_DEFAULT_SEPA_MAXADDROUNDS, -1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "separating/maxstallrounds",
          "maximal number of consecutive separation rounds without objective improvement (-1: no additional restriction)",
          &(*set)->sepa_maxstallrounds, SCIP_DEFAULT_SEPA_MAXSTALLROUNDS, -1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "separating/maxcuts",
          "maximal number of cuts separated per separation round (0: disable local separation)",
          &(*set)->sepa_maxcuts, SCIP_DEFAULT_SEPA_MAXCUTS, 0, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "separating/maxcutsroot",
          "maximal number of separated cuts at the root node (0: disable root node separation)",
          &(*set)->sepa_maxcutsroot, SCIP_DEFAULT_SEPA_MAXCUTSROOT, 0, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "separating/cutagelimit",
          "maximum age a cut can reach before it is deleted from the global cut pool, or -1 to keep all cuts",
          &(*set)->sepa_cutagelimit, SCIP_DEFAULT_SEPA_CUTAGELIMIT, -1, INT_MAX,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "separating/poolfreq",
          "separation frequency for the global cut pool (-1: disable global cut pool, 0: only separate pool at the root)",
          &(*set)->sepa_poolfreq, SCIP_DEFAULT_SEPA_POOLFREQ, -1, INT_MAX,
          NULL, NULL) );
 
    /* timing parameters */
-   assert(sizeof(int) == sizeof(CLOCKTYPE));
-   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+   assert(sizeof(int) == sizeof(SCIP_CLOCKTYPE));
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "timing/clocktype",
          "default clock type (1: CPU user seconds, 2: wall clock time)",
          (int*)&(*set)->time_clocktype, (int)SCIP_DEFAULT_TIME_CLOCKTYPE, 1, 2,
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "timing/enabled",
          "is timing enabled?",
          &(*set)->time_enabled, SCIP_DEFAULT_TIME_ENABLED,
          NULL, NULL) );
 
-   /* VBC tool parameters */
-   CHECK_OKAY( SCIPsetAddStringParam(*set, blkmem,
+   /* SCIP_VBC tool parameters */
+   SCIP_CALL( SCIPsetAddStringParam(*set, blkmem,
          "vbc/filename",
-         "name of the VBC Tool output file, or - if no VBC Tool output should be created",
+         "name of the SCIP_VBC Tool output file, or - if no SCIP_VBC Tool output should be created",
          &(*set)->vbc_filename, SCIP_DEFAULT_VBC_FILENAME, 
          NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "vbc/realtime",
-         "should the real solving time be used instead of a time step counter in VBC output?",
+         "should the real solving time be used instead of a time step counter in SCIP_VBC output?",
          &(*set)->vbc_realtime, SCIP_DEFAULT_VBC_REALTIME,
          NULL, NULL) );
 
@@ -902,9 +902,9 @@ RETCODE SCIPsetCreate(
 }
 
 /** frees global SCIP settings */
-RETCODE SCIPsetFree(
-   SET**            set,                /**< pointer to SCIP settings */
-   BLKMEM*          blkmem              /**< block memory */
+SCIP_RETCODE SCIPsetFree(
+   SCIP_SET**            set,                /**< pointer to SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    int i;
@@ -920,423 +920,423 @@ RETCODE SCIPsetFree(
    /* free file readers */
    for( i = 0; i < (*set)->nreaders; ++i )
    {
-      CHECK_OKAY( SCIPreaderFree(&(*set)->readers[i], *set) );
+      SCIP_CALL( SCIPreaderFree(&(*set)->readers[i], *set) );
    }
-   freeMemoryArrayNull(&(*set)->readers);
+   BMSfreeMemoryArrayNull(&(*set)->readers);
 
    /* free variable pricers */
    for( i = 0; i < (*set)->npricers; ++i )
    {
-      CHECK_OKAY( SCIPpricerFree(&(*set)->pricers[i], *set) );
+      SCIP_CALL( SCIPpricerFree(&(*set)->pricers[i], *set) );
    }
-   freeMemoryArrayNull(&(*set)->pricers);
+   BMSfreeMemoryArrayNull(&(*set)->pricers);
 
    /* free constraint handlers */
    for( i = 0; i < (*set)->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrFree(&(*set)->conshdlrs[i], *set) );
+      SCIP_CALL( SCIPconshdlrFree(&(*set)->conshdlrs[i], *set) );
    }
-   freeMemoryArrayNull(&(*set)->conshdlrs);
+   BMSfreeMemoryArrayNull(&(*set)->conshdlrs);
 
    /* free conflict handlers */
    for( i = 0; i < (*set)->nconflicthdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconflicthdlrFree(&(*set)->conflicthdlrs[i], *set) );
+      SCIP_CALL( SCIPconflicthdlrFree(&(*set)->conflicthdlrs[i], *set) );
    }
-   freeMemoryArrayNull(&(*set)->conflicthdlrs);
+   BMSfreeMemoryArrayNull(&(*set)->conflicthdlrs);
 
    /* free presolvers */
    for( i = 0; i < (*set)->npresols; ++i )
    {
-      CHECK_OKAY( SCIPpresolFree(&(*set)->presols[i], *set) );
+      SCIP_CALL( SCIPpresolFree(&(*set)->presols[i], *set) );
    }
-   freeMemoryArrayNull(&(*set)->presols);
+   BMSfreeMemoryArrayNull(&(*set)->presols);
 
    /* free relaxators */
    for( i = 0; i < (*set)->nrelaxs; ++i )
    {
-      CHECK_OKAY( SCIPrelaxFree(&(*set)->relaxs[i], *set) );
+      SCIP_CALL( SCIPrelaxFree(&(*set)->relaxs[i], *set) );
    }
-   freeMemoryArrayNull(&(*set)->relaxs);
+   BMSfreeMemoryArrayNull(&(*set)->relaxs);
 
    /* free separators */
    for( i = 0; i < (*set)->nsepas; ++i )
    {
-      CHECK_OKAY( SCIPsepaFree(&(*set)->sepas[i], *set) );
+      SCIP_CALL( SCIPsepaFree(&(*set)->sepas[i], *set) );
    }
-   freeMemoryArrayNull(&(*set)->sepas);
+   BMSfreeMemoryArrayNull(&(*set)->sepas);
 
    /* free propagators */
    for( i = 0; i < (*set)->nprops; ++i )
    {
-      CHECK_OKAY( SCIPpropFree(&(*set)->props[i], *set) );
+      SCIP_CALL( SCIPpropFree(&(*set)->props[i], *set) );
    }
-   freeMemoryArrayNull(&(*set)->props);
+   BMSfreeMemoryArrayNull(&(*set)->props);
 
    /* free primal heuristics */
    for( i = 0; i < (*set)->nheurs; ++i )
    {
-      CHECK_OKAY( SCIPheurFree(&(*set)->heurs[i], *set) );
+      SCIP_CALL( SCIPheurFree(&(*set)->heurs[i], *set) );
    }
-   freeMemoryArrayNull(&(*set)->heurs);
+   BMSfreeMemoryArrayNull(&(*set)->heurs);
 
    /* free event handlers */
    for( i = 0; i < (*set)->neventhdlrs; ++i )
    {
-      CHECK_OKAY( SCIPeventhdlrFree(&(*set)->eventhdlrs[i], *set) );
+      SCIP_CALL( SCIPeventhdlrFree(&(*set)->eventhdlrs[i], *set) );
    }
-   freeMemoryArrayNull(&(*set)->eventhdlrs);
+   BMSfreeMemoryArrayNull(&(*set)->eventhdlrs);
 
    /* free node selectors */
    for( i = 0; i < (*set)->nnodesels; ++i )
    {
-      CHECK_OKAY( SCIPnodeselFree(&(*set)->nodesels[i], *set) );
+      SCIP_CALL( SCIPnodeselFree(&(*set)->nodesels[i], *set) );
    }
-   freeMemoryArrayNull(&(*set)->nodesels);
+   BMSfreeMemoryArrayNull(&(*set)->nodesels);
 
    /* free branching methods */
    for( i = 0; i < (*set)->nbranchrules; ++i )
    {
-      CHECK_OKAY( SCIPbranchruleFree(&(*set)->branchrules[i], *set) );
+      SCIP_CALL( SCIPbranchruleFree(&(*set)->branchrules[i], *set) );
    }
-   freeMemoryArrayNull(&(*set)->branchrules);
+   BMSfreeMemoryArrayNull(&(*set)->branchrules);
 
    /* free display columns */
    for( i = 0; i < (*set)->ndisps; ++i )
    {
-      CHECK_OKAY( SCIPdispFree(&(*set)->disps[i], *set) );
+      SCIP_CALL( SCIPdispFree(&(*set)->disps[i], *set) );
    }
-   freeMemoryArrayNull(&(*set)->disps);
+   BMSfreeMemoryArrayNull(&(*set)->disps);
 
-   freeMemory(set);
+   BMSfreeMemory(set);
 
    return SCIP_OKAY;
 }
 
-/** creates a Bool parameter, sets it to its default value, and adds it to the parameter set */
-RETCODE SCIPsetAddBoolParam(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
-   Bool             defaultvalue,       /**< default value of the parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+/** creates a SCIP_Bool parameter, sets it to its default value, and adds it to the parameter set */
+SCIP_RETCODE SCIPsetAddBoolParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   SCIP_Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             defaultvalue,       /**< default value of the parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetAddBool(set->paramset, blkmem, name, desc, valueptr, defaultvalue, paramchgd, paramdata) );
+   SCIP_CALL( SCIPparamsetAddBool(set->paramset, blkmem, name, desc, valueptr, defaultvalue, paramchgd, paramdata) );
    
    return SCIP_OKAY;
 }
 
 /** creates a int parameter, sets it to its default value, and adds it to the parameter set */
-RETCODE SCIPsetAddIntParam(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   int*             valueptr,           /**< pointer to store the current parameter value, or NULL */
-   int              defaultvalue,       /**< default value of the parameter */
-   int              minvalue,           /**< minimum value for parameter */
-   int              maxvalue,           /**< maximum value for parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE SCIPsetAddIntParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   int*                  valueptr,           /**< pointer to store the current parameter value, or NULL */
+   int                   defaultvalue,       /**< default value of the parameter */
+   int                   minvalue,           /**< minimum value for parameter */
+   int                   maxvalue,           /**< maximum value for parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetAddInt(set->paramset, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
+   SCIP_CALL( SCIPparamsetAddInt(set->paramset, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
          paramchgd, paramdata) );
    
    return SCIP_OKAY;
 }
 
-/** creates a Longint parameter, sets it to its default value, and adds it to the parameter set */
-RETCODE SCIPsetAddLongintParam(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
-   Longint          defaultvalue,       /**< default value of the parameter */
-   Longint          minvalue,           /**< minimum value for parameter */
-   Longint          maxvalue,           /**< maximum value for parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+/** creates a SCIP_Longint parameter, sets it to its default value, and adds it to the parameter set */
+SCIP_RETCODE SCIPsetAddLongintParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   SCIP_Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Longint          defaultvalue,       /**< default value of the parameter */
+   SCIP_Longint          minvalue,           /**< minimum value for parameter */
+   SCIP_Longint          maxvalue,           /**< maximum value for parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetAddLongint(set->paramset, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
+   SCIP_CALL( SCIPparamsetAddLongint(set->paramset, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
          paramchgd, paramdata) );
    
    return SCIP_OKAY;
 }
 
-/** creates a Real parameter, sets it to its default value, and adds it to the parameter set */
-RETCODE SCIPsetAddRealParam(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
-   Real             defaultvalue,       /**< default value of the parameter */
-   Real             minvalue,           /**< minimum value for parameter */
-   Real             maxvalue,           /**< maximum value for parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+/** creates a SCIP_Real parameter, sets it to its default value, and adds it to the parameter set */
+SCIP_RETCODE SCIPsetAddRealParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   SCIP_Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Real             defaultvalue,       /**< default value of the parameter */
+   SCIP_Real             minvalue,           /**< minimum value for parameter */
+   SCIP_Real             maxvalue,           /**< maximum value for parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetAddReal(set->paramset, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
+   SCIP_CALL( SCIPparamsetAddReal(set->paramset, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
          paramchgd, paramdata) );
    
    return SCIP_OKAY;
 }
 
 /** creates a char parameter, sets it to its default value, and adds it to the parameter set */
-RETCODE SCIPsetAddCharParam(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   char*            valueptr,           /**< pointer to store the current parameter value, or NULL */
-   char             defaultvalue,       /**< default value of the parameter */
-   const char*      allowedvalues,      /**< array with possible parameter values, or NULL if not restricted */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE SCIPsetAddCharParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   char*                 valueptr,           /**< pointer to store the current parameter value, or NULL */
+   char                  defaultvalue,       /**< default value of the parameter */
+   const char*           allowedvalues,      /**< array with possible parameter values, or NULL if not restricted */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetAddChar(set->paramset, blkmem, name, desc, valueptr, defaultvalue, allowedvalues, 
+   SCIP_CALL( SCIPparamsetAddChar(set->paramset, blkmem, name, desc, valueptr, defaultvalue, allowedvalues, 
          paramchgd, paramdata) );
    
    return SCIP_OKAY;
 }
 
 /** creates a string parameter, sets it to its default value, and adds it to the parameter set */
-RETCODE SCIPsetAddStringParam(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   char**           valueptr,           /**< pointer to store the current parameter value, or NULL */
-   const char*      defaultvalue,       /**< default value of the parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE SCIPsetAddStringParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   char**                valueptr,           /**< pointer to store the current parameter value, or NULL */
+   const char*           defaultvalue,       /**< default value of the parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetAddString(set->paramset, blkmem, name, desc, valueptr, defaultvalue, paramchgd, paramdata) );
+   SCIP_CALL( SCIPparamsetAddString(set->paramset, blkmem, name, desc, valueptr, defaultvalue, paramchgd, paramdata) );
    
    return SCIP_OKAY;
 }
 
-/** gets the value of an existing Bool parameter */
-RETCODE SCIPsetGetBoolParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   Bool*            value               /**< pointer to store the parameter */
+/** gets the value of an existing SCIP_Bool parameter */
+SCIP_RETCODE SCIPsetGetBoolParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool*            value               /**< pointer to store the parameter */
    )
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetGetBool(set->paramset, name, value) );
+   SCIP_CALL( SCIPparamsetGetBool(set->paramset, name, value) );
    
    return SCIP_OKAY;
 }
 
 /** gets the value of an existing Int parameter */
-RETCODE SCIPsetGetIntParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   int*             value               /**< pointer to store the parameter */
+SCIP_RETCODE SCIPsetGetIntParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   int*                  value               /**< pointer to store the parameter */
    )
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetGetInt(set->paramset, name, value) );
+   SCIP_CALL( SCIPparamsetGetInt(set->paramset, name, value) );
    
    return SCIP_OKAY;
 }
 
-/** gets the value of an existing Longint parameter */
-RETCODE SCIPsetGetLongintParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   Longint*         value               /**< pointer to store the parameter */
+/** gets the value of an existing SCIP_Longint parameter */
+SCIP_RETCODE SCIPsetGetLongintParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Longint*         value               /**< pointer to store the parameter */
    )
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetGetLongint(set->paramset, name, value) );
+   SCIP_CALL( SCIPparamsetGetLongint(set->paramset, name, value) );
    
    return SCIP_OKAY;
 }
 
-/** gets the value of an existing Real parameter */
-RETCODE SCIPsetGetRealParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   Real*            value               /**< pointer to store the parameter */
+/** gets the value of an existing SCIP_Real parameter */
+SCIP_RETCODE SCIPsetGetRealParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Real*            value               /**< pointer to store the parameter */
    )
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetGetReal(set->paramset, name, value) );
+   SCIP_CALL( SCIPparamsetGetReal(set->paramset, name, value) );
    
    return SCIP_OKAY;
 }
 
 /** gets the value of an existing Char parameter */
-RETCODE SCIPsetGetCharParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   char*            value               /**< pointer to store the parameter */
+SCIP_RETCODE SCIPsetGetCharParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   char*                 value               /**< pointer to store the parameter */
    )
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetGetChar(set->paramset, name, value) );
+   SCIP_CALL( SCIPparamsetGetChar(set->paramset, name, value) );
    
    return SCIP_OKAY;
 }
 
 /** gets the value of an existing String parameter */
-RETCODE SCIPsetGetStringParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   char**           value               /**< pointer to store the parameter */
+SCIP_RETCODE SCIPsetGetStringParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   char**                value               /**< pointer to store the parameter */
    )
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetGetString(set->paramset, name, value) );
+   SCIP_CALL( SCIPparamsetGetString(set->paramset, name, value) );
    
    return SCIP_OKAY;
 }
 
-/** changes the value of an existing Bool parameter */
-RETCODE SCIPsetSetBoolParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   Bool             value               /**< new value of the parameter */
+/** changes the value of an existing SCIP_Bool parameter */
+SCIP_RETCODE SCIPsetSetBoolParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool             value               /**< new value of the parameter */
    )
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetSetBool(set->paramset, set, name, value) );
+   SCIP_CALL( SCIPparamsetSetBool(set->paramset, set, name, value) );
    
    return SCIP_OKAY;
 }
 
 /** changes the value of an existing Int parameter */
-RETCODE SCIPsetSetIntParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   int              value               /**< new value of the parameter */
+SCIP_RETCODE SCIPsetSetIntParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   int                   value               /**< new value of the parameter */
    )
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetSetInt(set->paramset, set, name, value) );
+   SCIP_CALL( SCIPparamsetSetInt(set->paramset, set, name, value) );
    
    return SCIP_OKAY;
 }
 
-/** changes the value of an existing Longint parameter */
-RETCODE SCIPsetSetLongintParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   Longint          value               /**< new value of the parameter */
+/** changes the value of an existing SCIP_Longint parameter */
+SCIP_RETCODE SCIPsetSetLongintParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Longint          value               /**< new value of the parameter */
    )
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetSetLongint(set->paramset, set, name, value) );
+   SCIP_CALL( SCIPparamsetSetLongint(set->paramset, set, name, value) );
    
    return SCIP_OKAY;
 }
 
-/** changes the value of an existing Real parameter */
-RETCODE SCIPsetSetRealParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   Real             value               /**< new value of the parameter */
+/** changes the value of an existing SCIP_Real parameter */
+SCIP_RETCODE SCIPsetSetRealParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Real             value               /**< new value of the parameter */
    )
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetSetReal(set->paramset, set, name, value) );
+   SCIP_CALL( SCIPparamsetSetReal(set->paramset, set, name, value) );
    
    return SCIP_OKAY;
 }
 
 /** changes the value of an existing Char parameter */
-RETCODE SCIPsetSetCharParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   char             value               /**< new value of the parameter */
+SCIP_RETCODE SCIPsetSetCharParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   char                  value               /**< new value of the parameter */
    )
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetSetChar(set->paramset, set, name, value) );
+   SCIP_CALL( SCIPparamsetSetChar(set->paramset, set, name, value) );
    
    return SCIP_OKAY;
 }
 
 /** changes the value of an existing String parameter */
-RETCODE SCIPsetSetStringParam(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   const char*      value               /**< new value of the parameter */
+SCIP_RETCODE SCIPsetSetStringParam(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   const char*           value               /**< new value of the parameter */
    )
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetSetString(set->paramset, set, name, value) );
+   SCIP_CALL( SCIPparamsetSetString(set->paramset, set, name, value) );
    
    return SCIP_OKAY;
 }
 
 /** reads parameters from a file */
-RETCODE SCIPsetReadParams(
-   SET*             set,                /**< global SCIP settings */
-   const char*      filename            /**< file name */
+SCIP_RETCODE SCIPsetReadParams(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           filename            /**< file name */
    )
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetRead(set->paramset, set, filename) );
+   SCIP_CALL( SCIPparamsetRead(set->paramset, set, filename) );
 
    return SCIP_OKAY;
 }
 
 /** writes all parameters in the parameter set to a file */
-RETCODE SCIPsetWriteParams(
-   SET*             set,                /**< global SCIP settings */
-   const char*      filename,           /**< file name, or NULL for stdout */
-   Bool             comments,           /**< should parameter descriptions be written as comments? */
-   Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
+SCIP_RETCODE SCIPsetWriteParams(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           filename,           /**< file name, or NULL for stdout */
+   SCIP_Bool             comments,           /**< should parameter descriptions be written as comments? */
+   SCIP_Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
    )
 {
    assert(set != NULL);
 
-   CHECK_OKAY( SCIPparamsetWrite(set->paramset, filename, comments, onlychanged) );
+   SCIP_CALL( SCIPparamsetWrite(set->paramset, filename, comments, onlychanged) );
 
    return SCIP_OKAY;
 }
 
 /** returns the array of all available SCIP parameters */
-PARAM** SCIPsetGetParams(
-   SET*             set                 /**< global SCIP settings */
+SCIP_PARAM** SCIPsetGetParams(
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(set != NULL);
@@ -1346,7 +1346,7 @@ PARAM** SCIPsetGetParams(
 
 /** returns the total number of all available SCIP parameters */
 int SCIPsetGetNParams(
-   SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(set != NULL);
@@ -1355,9 +1355,9 @@ int SCIPsetGetNParams(
 }
 
 /** inserts file reader in file reader list */
-RETCODE SCIPsetIncludeReader(
-   SET*             set,                /**< global SCIP settings */
-   READER*          reader              /**< file reader */
+SCIP_RETCODE SCIPsetIncludeReader(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_READER*          reader              /**< file reader */
    )
 {
    assert(set != NULL);
@@ -1366,7 +1366,7 @@ RETCODE SCIPsetIncludeReader(
    if( set->nreaders >= set->readerssize )
    {
       set->readerssize = SCIPsetCalcMemGrowSize(set, set->nreaders+1);
-      ALLOC_OKAY( reallocMemoryArray(&set->readers, set->readerssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->readers, set->readerssize) );
    }
    assert(set->nreaders < set->readerssize);
    
@@ -1377,9 +1377,9 @@ RETCODE SCIPsetIncludeReader(
 }   
 
 /** returns the file reader of the given name, or NULL if not existing */
-READER* SCIPsetFindReader(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of file reader */
+SCIP_READER* SCIPsetFindReader(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of file reader */
    )
 {
    int i;
@@ -1397,9 +1397,9 @@ READER* SCIPsetFindReader(
 }
 
 /** inserts variable pricer in variable pricer list */
-RETCODE SCIPsetIncludePricer(
-   SET*             set,                /**< global SCIP settings */
-   PRICER*          pricer              /**< variable pricer */
+SCIP_RETCODE SCIPsetIncludePricer(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PRICER*          pricer              /**< variable pricer */
    )
 {
    assert(set != NULL);
@@ -1408,7 +1408,7 @@ RETCODE SCIPsetIncludePricer(
    if( set->npricers >= set->pricerssize )
    {
       set->pricerssize = SCIPsetCalcMemGrowSize(set, set->npricers+1);
-      ALLOC_OKAY( reallocMemoryArray(&set->pricers, set->pricerssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->pricers, set->pricerssize) );
    }
    assert(set->npricers < set->pricerssize);
    
@@ -1420,9 +1420,9 @@ RETCODE SCIPsetIncludePricer(
 }   
 
 /** returns the variable pricer of the given name, or NULL if not existing */
-PRICER* SCIPsetFindPricer(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of variable pricer */
+SCIP_PRICER* SCIPsetFindPricer(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of variable pricer */
    )
 {
    int i;
@@ -1441,7 +1441,7 @@ PRICER* SCIPsetFindPricer(
 
 /** sorts pricers by priorities */
 void SCIPsetSortPricers(
-   SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(set != NULL);
@@ -1454,9 +1454,9 @@ void SCIPsetSortPricers(
 }
 
 /** inserts constraint handler in constraint handler list */
-RETCODE SCIPsetIncludeConshdlr(
-   SET*             set,                /**< global SCIP settings */
-   CONSHDLR*        conshdlr            /**< constraint handler */
+SCIP_RETCODE SCIPsetIncludeConshdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {
    int checkpriority;
@@ -1469,7 +1469,7 @@ RETCODE SCIPsetIncludeConshdlr(
    if( set->nconshdlrs >= set->conshdlrssize )
    {
       set->conshdlrssize = SCIPsetCalcMemGrowSize(set, set->nconshdlrs+1);
-      ALLOC_OKAY( reallocMemoryArray(&set->conshdlrs, set->conshdlrssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->conshdlrs, set->conshdlrssize) );
    }
    assert(set->nconshdlrs < set->conshdlrssize);
 
@@ -1486,9 +1486,9 @@ RETCODE SCIPsetIncludeConshdlr(
 }   
 
 /** returns the constraint handler of the given name, or NULL if not existing */
-CONSHDLR* SCIPsetFindConshdlr(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of constraint handler */
+SCIP_CONSHDLR* SCIPsetFindConshdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of constraint handler */
    )
 {
    int i;
@@ -1506,9 +1506,9 @@ CONSHDLR* SCIPsetFindConshdlr(
 }
 
 /** inserts conflict handler in conflict handler list */
-RETCODE SCIPsetIncludeConflicthdlr(
-   SET*             set,                /**< global SCIP settings */
-   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+SCIP_RETCODE SCIPsetIncludeConflicthdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    )
 {
    assert(set != NULL);
@@ -1518,7 +1518,7 @@ RETCODE SCIPsetIncludeConflicthdlr(
    if( set->nconflicthdlrs >= set->conflicthdlrssize )
    {
       set->conflicthdlrssize = SCIPsetCalcMemGrowSize(set, set->nconflicthdlrs+1);
-      ALLOC_OKAY( reallocMemoryArray(&set->conflicthdlrs, set->conflicthdlrssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->conflicthdlrs, set->conflicthdlrssize) );
    }
    assert(set->nconflicthdlrs < set->conflicthdlrssize);
 
@@ -1530,9 +1530,9 @@ RETCODE SCIPsetIncludeConflicthdlr(
 }
 
 /** returns the conflict handler of the given name, or NULL if not existing */
-CONFLICTHDLR* SCIPsetFindConflicthdlr(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of conflict handler */
+SCIP_CONFLICTHDLR* SCIPsetFindConflicthdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of conflict handler */
    )
 {
    int i;
@@ -1551,7 +1551,7 @@ CONFLICTHDLR* SCIPsetFindConflicthdlr(
 
 /** sorts conflict handlers by priorities */
 void SCIPsetSortConflicthdlrs(
-   SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(set != NULL);
@@ -1564,9 +1564,9 @@ void SCIPsetSortConflicthdlrs(
 }
 
 /** inserts presolver in presolver list */
-RETCODE SCIPsetIncludePresol(
-   SET*             set,                /**< global SCIP settings */
-   PRESOL*          presol              /**< presolver */
+SCIP_RETCODE SCIPsetIncludePresol(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PRESOL*          presol              /**< presolver */
    )
 {
    assert(set != NULL);
@@ -1575,7 +1575,7 @@ RETCODE SCIPsetIncludePresol(
    if( set->npresols >= set->presolssize )
    {
       set->presolssize = SCIPsetCalcMemGrowSize(set, set->npresols+1);
-      ALLOC_OKAY( reallocMemoryArray(&set->presols, set->presolssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->presols, set->presolssize) );
    }
    assert(set->npresols < set->presolssize);
    
@@ -1587,9 +1587,9 @@ RETCODE SCIPsetIncludePresol(
 }   
 
 /** returns the presolver of the given name, or NULL if not existing */
-PRESOL* SCIPsetFindPresol(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of presolver */
+SCIP_PRESOL* SCIPsetFindPresol(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of presolver */
    )
 {
    int i;
@@ -1608,7 +1608,7 @@ PRESOL* SCIPsetFindPresol(
 
 /** sorts presolvers by priorities */
 void SCIPsetSortPresols(
-   SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(set != NULL);
@@ -1621,9 +1621,9 @@ void SCIPsetSortPresols(
 }
 
 /** inserts relaxator in relaxator list */
-RETCODE SCIPsetIncludeRelax(
-   SET*             set,                /**< global SCIP settings */
-   RELAX*           relax               /**< relaxator */
+SCIP_RETCODE SCIPsetIncludeRelax(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RELAX*           relax               /**< relaxator */
    )
 {
    assert(set != NULL);
@@ -1633,7 +1633,7 @@ RETCODE SCIPsetIncludeRelax(
    if( set->nrelaxs >= set->relaxssize )
    {
       set->relaxssize = SCIPsetCalcMemGrowSize(set, set->nrelaxs+1);
-      ALLOC_OKAY( reallocMemoryArray(&set->relaxs, set->relaxssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->relaxs, set->relaxssize) );
    }
    assert(set->nrelaxs < set->relaxssize);
    
@@ -1645,9 +1645,9 @@ RETCODE SCIPsetIncludeRelax(
 }   
 
 /** returns the relaxator of the given name, or NULL if not existing */
-RELAX* SCIPsetFindRelax(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of relaxator */
+SCIP_RELAX* SCIPsetFindRelax(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of relaxator */
    )
 {
    int i;
@@ -1666,7 +1666,7 @@ RELAX* SCIPsetFindRelax(
 
 /** sorts relaxators by priorities */
 void SCIPsetSortRelaxs(
-   SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(set != NULL);
@@ -1679,9 +1679,9 @@ void SCIPsetSortRelaxs(
 }
 
 /** inserts separator in separator list */
-RETCODE SCIPsetIncludeSepa(
-   SET*             set,                /**< global SCIP settings */
-   SEPA*            sepa                /**< separator */
+SCIP_RETCODE SCIPsetIncludeSepa(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SEPA*            sepa                /**< separator */
    )
 {
    assert(set != NULL);
@@ -1691,7 +1691,7 @@ RETCODE SCIPsetIncludeSepa(
    if( set->nsepas >= set->sepassize )
    {
       set->sepassize = SCIPsetCalcMemGrowSize(set, set->nsepas+1);
-      ALLOC_OKAY( reallocMemoryArray(&set->sepas, set->sepassize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->sepas, set->sepassize) );
    }
    assert(set->nsepas < set->sepassize);
    
@@ -1703,9 +1703,9 @@ RETCODE SCIPsetIncludeSepa(
 }   
 
 /** returns the separator of the given name, or NULL if not existing */
-SEPA* SCIPsetFindSepa(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of separator */
+SCIP_SEPA* SCIPsetFindSepa(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of separator */
    )
 {
    int i;
@@ -1724,7 +1724,7 @@ SEPA* SCIPsetFindSepa(
 
 /** sorts separators by priorities */
 void SCIPsetSortSepas(
-   SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(set != NULL);
@@ -1737,9 +1737,9 @@ void SCIPsetSortSepas(
 }
 
 /** inserts propagator in propagator list */
-RETCODE SCIPsetIncludeProp(
-   SET*             set,                /**< global SCIP settings */
-   PROP*            prop                /**< propagator */
+SCIP_RETCODE SCIPsetIncludeProp(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROP*            prop                /**< propagator */
    )
 {
    assert(set != NULL);
@@ -1749,7 +1749,7 @@ RETCODE SCIPsetIncludeProp(
    if( set->nprops >= set->propssize )
    {
       set->propssize = SCIPsetCalcMemGrowSize(set, set->nprops+1);
-      ALLOC_OKAY( reallocMemoryArray(&set->props, set->propssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->props, set->propssize) );
    }
    assert(set->nprops < set->propssize);
    
@@ -1761,9 +1761,9 @@ RETCODE SCIPsetIncludeProp(
 }   
 
 /** returns the propagator of the given name, or NULL if not existing */
-PROP* SCIPsetFindProp(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of propagator */
+SCIP_PROP* SCIPsetFindProp(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of propagator */
    )
 {
    int i;
@@ -1782,7 +1782,7 @@ PROP* SCIPsetFindProp(
 
 /** sorts propagators by priorities */
 void SCIPsetSortProps(
-   SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(set != NULL);
@@ -1795,9 +1795,9 @@ void SCIPsetSortProps(
 }
 
 /** inserts primal heuristic in primal heuristic list */
-RETCODE SCIPsetIncludeHeur(
-   SET*             set,                /**< global SCIP settings */
-   HEUR*            heur                /**< primal heuristic */
+SCIP_RETCODE SCIPsetIncludeHeur(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_HEUR*            heur                /**< primal heuristic */
    )
 {
    assert(set != NULL);
@@ -1807,7 +1807,7 @@ RETCODE SCIPsetIncludeHeur(
    if( set->nheurs >= set->heurssize )
    {
       set->heurssize = SCIPsetCalcMemGrowSize(set, set->nheurs+1);
-      ALLOC_OKAY( reallocMemoryArray(&set->heurs, set->heurssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->heurs, set->heurssize) );
    }
    assert(set->nheurs < set->heurssize);
    
@@ -1819,9 +1819,9 @@ RETCODE SCIPsetIncludeHeur(
 }   
 
 /** returns the primal heuristic of the given name, or NULL if not existing */
-HEUR* SCIPsetFindHeur(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of primal heuristic */
+SCIP_HEUR* SCIPsetFindHeur(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of primal heuristic */
    )
 {
    int i;
@@ -1840,7 +1840,7 @@ HEUR* SCIPsetFindHeur(
 
 /** sorts heuristics by priorities */
 void SCIPsetSortHeurs(
-   SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(set != NULL);
@@ -1853,9 +1853,9 @@ void SCIPsetSortHeurs(
 }
 
 /** inserts event handler in event handler list */
-RETCODE SCIPsetIncludeEventhdlr(
-   SET*             set,                /**< global SCIP settings */
-   EVENTHDLR*       eventhdlr           /**< event handler */
+SCIP_RETCODE SCIPsetIncludeEventhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    )
 {
    assert(set != NULL);
@@ -1865,7 +1865,7 @@ RETCODE SCIPsetIncludeEventhdlr(
    if( set->neventhdlrs >= set->eventhdlrssize )
    {
       set->eventhdlrssize = SCIPsetCalcMemGrowSize(set, set->neventhdlrs+1);
-      ALLOC_OKAY( reallocMemoryArray(&set->eventhdlrs, set->eventhdlrssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->eventhdlrs, set->eventhdlrssize) );
    }
    assert(set->neventhdlrs < set->eventhdlrssize);
    
@@ -1876,9 +1876,9 @@ RETCODE SCIPsetIncludeEventhdlr(
 }   
 
 /** returns the event handler of the given name, or NULL if not existing */
-EVENTHDLR* SCIPsetFindEventhdlr(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of event handler */
+SCIP_EVENTHDLR* SCIPsetFindEventhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of event handler */
    )
 {
    int i;
@@ -1896,9 +1896,9 @@ EVENTHDLR* SCIPsetFindEventhdlr(
 }
 
 /** inserts node selector in node selector list */
-RETCODE SCIPsetIncludeNodesel(
-   SET*             set,                /**< global SCIP settings */
-   NODESEL*         nodesel             /**< node selector */
+SCIP_RETCODE SCIPsetIncludeNodesel(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODESEL*         nodesel             /**< node selector */
    )
 {
    int i;
@@ -1910,7 +1910,7 @@ RETCODE SCIPsetIncludeNodesel(
    if( set->nnodesels >= set->nodeselssize )
    {
       set->nodeselssize = SCIPsetCalcMemGrowSize(set, set->nnodesels+1);
-      ALLOC_OKAY( reallocMemoryArray(&set->nodesels, set->nodeselssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->nodesels, set->nodeselssize) );
    }
    assert(set->nnodesels < set->nodeselssize);
    
@@ -1926,9 +1926,9 @@ RETCODE SCIPsetIncludeNodesel(
 }   
 
 /** returns the node selector of the given name, or NULL if not existing */
-NODESEL* SCIPsetFindNodesel(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of event handler */
+SCIP_NODESEL* SCIPsetFindNodesel(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of event handler */
    )
 {
    int i;
@@ -1946,9 +1946,9 @@ NODESEL* SCIPsetFindNodesel(
 }
 
 /** returns node selector with highest priority in the current mode */
-NODESEL* SCIPsetGetNodesel(
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat                /**< dynamic problem statistics */
+SCIP_NODESEL* SCIPsetGetNodesel(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    )
 {
    assert(set != NULL);
@@ -1984,9 +1984,9 @@ NODESEL* SCIPsetGetNodesel(
 }
 
 /** inserts branching rule in branching rule list */
-RETCODE SCIPsetIncludeBranchrule(
-   SET*             set,                /**< global SCIP settings */
-   BRANCHRULE*      branchrule          /**< branching rule */
+SCIP_RETCODE SCIPsetIncludeBranchrule(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    )
 {
    assert(set != NULL);
@@ -1996,7 +1996,7 @@ RETCODE SCIPsetIncludeBranchrule(
    if( set->nbranchrules >= set->branchrulessize )
    {
       set->branchrulessize = SCIPsetCalcMemGrowSize(set, set->nbranchrules+1);
-      ALLOC_OKAY( reallocMemoryArray(&set->branchrules, set->branchrulessize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->branchrules, set->branchrulessize) );
    }
    assert(set->nbranchrules < set->branchrulessize);
 
@@ -2008,9 +2008,9 @@ RETCODE SCIPsetIncludeBranchrule(
 }   
 
 /** returns the branching rule of the given name, or NULL if not existing */
-BRANCHRULE* SCIPsetFindBranchrule(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of event handler */
+SCIP_BRANCHRULE* SCIPsetFindBranchrule(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of event handler */
    )
 {
    int i;
@@ -2029,7 +2029,7 @@ BRANCHRULE* SCIPsetFindBranchrule(
 
 /** sorts branching rules by priorities */
 void SCIPsetSortBranchrules(
-   SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(set != NULL);
@@ -2042,9 +2042,9 @@ void SCIPsetSortBranchrules(
 }
 
 /** inserts display column in display column list */
-RETCODE SCIPsetIncludeDisp(
-   SET*             set,                /**< global SCIP settings */
-   DISP*            disp                /**< display column */
+SCIP_RETCODE SCIPsetIncludeDisp(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_DISP*            disp                /**< display column */
    )
 {
    int i;
@@ -2056,7 +2056,7 @@ RETCODE SCIPsetIncludeDisp(
    if( set->ndisps >= set->dispssize )
    {
       set->dispssize = SCIPsetCalcMemGrowSize(set, set->ndisps+1);
-      ALLOC_OKAY( reallocMemoryArray(&set->disps, set->dispssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->disps, set->dispssize) );
    }
    assert(set->ndisps < set->dispssize);
 
@@ -2071,9 +2071,9 @@ RETCODE SCIPsetIncludeDisp(
 }   
 
 /** returns the display column of the given name, or NULL if not existing */
-DISP* SCIPsetFindDisp(
-   SET*             set,                /**< global SCIP settings */
-   const char*      name                /**< name of event handler */
+SCIP_DISP* SCIPsetFindDisp(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of event handler */
    )
 {
    int i;
@@ -2091,10 +2091,10 @@ DISP* SCIPsetFindDisp(
 }
 
 /** calls init methods of all plugins */
-RETCODE SCIPsetInitPlugins(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   STAT*            stat                /**< dynamic problem statistics */
+SCIP_RETCODE SCIPsetInitPlugins(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    )
 {
    int i;
@@ -2105,84 +2105,84 @@ RETCODE SCIPsetInitPlugins(
    SCIPsetSortPricers(set);
    for( i = 0; i < set->nactivepricers; ++i )
    {
-      CHECK_OKAY( SCIPpricerInit(set->pricers[i], set) );
+      SCIP_CALL( SCIPpricerInit(set->pricers[i], set) );
    }
 
    /* constraint handlers */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrInit(set->conshdlrs[i], blkmem, set, stat) );
+      SCIP_CALL( SCIPconshdlrInit(set->conshdlrs[i], blkmem, set, stat) );
    }
 
    /* conflict handlers */
    for( i = 0; i < set->nconflicthdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconflicthdlrInit(set->conflicthdlrs[i], set) );
+      SCIP_CALL( SCIPconflicthdlrInit(set->conflicthdlrs[i], set) );
    }
 
    /* presolvers */
    for( i = 0; i < set->npresols; ++i )
    {
-      CHECK_OKAY( SCIPpresolInit(set->presols[i], set) );
+      SCIP_CALL( SCIPpresolInit(set->presols[i], set) );
    }
 
    /* relaxators */
    for( i = 0; i < set->nrelaxs; ++i )
    {
-      CHECK_OKAY( SCIPrelaxInit(set->relaxs[i], set) );
+      SCIP_CALL( SCIPrelaxInit(set->relaxs[i], set) );
    }
 
    /* separators */
    for( i = 0; i < set->nsepas; ++i )
    {
-      CHECK_OKAY( SCIPsepaInit(set->sepas[i], set) );
+      SCIP_CALL( SCIPsepaInit(set->sepas[i], set) );
    }
 
    /* propagators */
    for( i = 0; i < set->nprops; ++i )
    {
-      CHECK_OKAY( SCIPpropInit(set->props[i], set) );
+      SCIP_CALL( SCIPpropInit(set->props[i], set) );
    }
 
    /* primal heuristics */
    for( i = 0; i < set->nheurs; ++i )
    {
-      CHECK_OKAY( SCIPheurInit(set->heurs[i], set) );
+      SCIP_CALL( SCIPheurInit(set->heurs[i], set) );
    }
 
    /* event handlers */
    for( i = 0; i < set->neventhdlrs; ++i )
    {
-      CHECK_OKAY( SCIPeventhdlrInit(set->eventhdlrs[i], set) );
+      SCIP_CALL( SCIPeventhdlrInit(set->eventhdlrs[i], set) );
    }
 
    /* node selectors */
    for( i = 0; i < set->nnodesels; ++i )
    {
-      CHECK_OKAY( SCIPnodeselInit(set->nodesels[i], set) );
+      SCIP_CALL( SCIPnodeselInit(set->nodesels[i], set) );
    }
 
    /* branching rules */
    for( i = 0; i < set->nbranchrules; ++i )
    {
-      CHECK_OKAY( SCIPbranchruleInit(set->branchrules[i], set) );
+      SCIP_CALL( SCIPbranchruleInit(set->branchrules[i], set) );
    }
 
    /* display columns */
    for( i = 0; i < set->ndisps; ++i )
    {
-      CHECK_OKAY( SCIPdispInit(set->disps[i], set) );
+      SCIP_CALL( SCIPdispInit(set->disps[i], set) );
    }
-   CHECK_OKAY( SCIPdispAutoActivate(set) );
+   SCIP_CALL( SCIPdispAutoActivate(set) );
 
    return SCIP_OKAY;
 }
 
 /** calls exit methods of all plugins */
-RETCODE SCIPsetExitPlugins(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   STAT*            stat                /**< dynamic problem statistics */
+SCIP_RETCODE SCIPsetExitPlugins(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    )
 {
    int i;
@@ -2193,88 +2193,88 @@ RETCODE SCIPsetExitPlugins(
    SCIPsetSortPricers(set);
    for( i = 0; i < set->nactivepricers; ++i )
    {
-      CHECK_OKAY( SCIPpricerExit(set->pricers[i], set) );
+      SCIP_CALL( SCIPpricerExit(set->pricers[i], set) );
    }
 
    /* constraint handlers */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrExit(set->conshdlrs[i], blkmem, set, stat) );
+      SCIP_CALL( SCIPconshdlrExit(set->conshdlrs[i], blkmem, set, stat) );
    }
 
    /* conflict handlers */
    for( i = 0; i < set->nconflicthdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconflicthdlrExit(set->conflicthdlrs[i], set) );
+      SCIP_CALL( SCIPconflicthdlrExit(set->conflicthdlrs[i], set) );
    }
 
    /* presolvers */
    for( i = 0; i < set->npresols; ++i )
    {
-      CHECK_OKAY( SCIPpresolExit(set->presols[i], set) );
+      SCIP_CALL( SCIPpresolExit(set->presols[i], set) );
    }
 
    /* relaxators */
    for( i = 0; i < set->nrelaxs; ++i )
    {
-      CHECK_OKAY( SCIPrelaxExit(set->relaxs[i], set) );
+      SCIP_CALL( SCIPrelaxExit(set->relaxs[i], set) );
    }
 
    /* separators */
    for( i = 0; i < set->nsepas; ++i )
    {
-      CHECK_OKAY( SCIPsepaExit(set->sepas[i], set) );
+      SCIP_CALL( SCIPsepaExit(set->sepas[i], set) );
    }
 
    /* propagators */
    for( i = 0; i < set->nprops; ++i )
    {
-      CHECK_OKAY( SCIPpropExit(set->props[i], set) );
+      SCIP_CALL( SCIPpropExit(set->props[i], set) );
    }
 
    /* primal heuristics */
    for( i = 0; i < set->nheurs; ++i )
    {
-      CHECK_OKAY( SCIPheurExit(set->heurs[i], set) );
+      SCIP_CALL( SCIPheurExit(set->heurs[i], set) );
    }
 
    /* event handlers */
    for( i = 0; i < set->neventhdlrs; ++i )
    {
-      CHECK_OKAY( SCIPeventhdlrExit(set->eventhdlrs[i], set) );
+      SCIP_CALL( SCIPeventhdlrExit(set->eventhdlrs[i], set) );
    }
 
    /* node selectors */
    for( i = 0; i < set->nnodesels; ++i )
    {
-      CHECK_OKAY( SCIPnodeselExit(set->nodesels[i], set) );
+      SCIP_CALL( SCIPnodeselExit(set->nodesels[i], set) );
    }
 
    /* branching rules */
    for( i = 0; i < set->nbranchrules; ++i )
    {
-      CHECK_OKAY( SCIPbranchruleExit(set->branchrules[i], set) );
+      SCIP_CALL( SCIPbranchruleExit(set->branchrules[i], set) );
    }
 
    /* display columns */
    for( i = 0; i < set->ndisps; ++i )
    {
-      CHECK_OKAY( SCIPdispExit(set->disps[i], set) );
+      SCIP_CALL( SCIPdispExit(set->disps[i], set) );
    }
 
    return SCIP_OKAY;
 }
 
 /** calls initpre methods of all plugins */
-RETCODE SCIPsetInitprePlugins(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   STAT*            stat,               /**< dynamic problem statistics */
-   Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
-   Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
+SCIP_RETCODE SCIPsetInitprePlugins(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
+   SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
    )
 {
-   RESULT result;
+   SCIP_RESULT result;
    int i;
 
    assert(set != NULL);
@@ -2284,7 +2284,7 @@ RETCODE SCIPsetInitprePlugins(
    /* inform presolvers that the presolving is abound to begin */
    for( i = 0; i < set->npresols; ++i )
    {
-      CHECK_OKAY( SCIPpresolInitpre(set->presols[i], set, &result) );
+      SCIP_CALL( SCIPpresolInitpre(set->presols[i], set, &result) );
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -2302,7 +2302,7 @@ RETCODE SCIPsetInitprePlugins(
    /* inform constraint handlers that the presolving is abound to begin */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrInitpre(set->conshdlrs[i], blkmem, set, stat, &result) );
+      SCIP_CALL( SCIPconshdlrInitpre(set->conshdlrs[i], blkmem, set, stat, &result) );
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -2322,15 +2322,15 @@ RETCODE SCIPsetInitprePlugins(
 }
 
 /** calls exitpre methods of all plugins */
-RETCODE SCIPsetExitprePlugins(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   STAT*            stat,               /**< dynamic problem statistics */
-   Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
-   Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
+SCIP_RETCODE SCIPsetExitprePlugins(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
+   SCIP_Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
    )
 {
-   RESULT result;
+   SCIP_RESULT result;
    int i;
 
    assert(set != NULL);
@@ -2340,7 +2340,7 @@ RETCODE SCIPsetExitprePlugins(
    /* inform presolvers that the presolving is abound to begin */
    for( i = 0; i < set->npresols; ++i )
    {
-      CHECK_OKAY( SCIPpresolExitpre(set->presols[i], set, &result) );
+      SCIP_CALL( SCIPpresolExitpre(set->presols[i], set, &result) );
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -2358,7 +2358,7 @@ RETCODE SCIPsetExitprePlugins(
    /* inform constraint handlers that the presolving is abound to begin */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrExitpre(set->conshdlrs[i], blkmem, set, stat, &result) );
+      SCIP_CALL( SCIPconshdlrExitpre(set->conshdlrs[i], blkmem, set, stat, &result) );
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -2378,10 +2378,10 @@ RETCODE SCIPsetExitprePlugins(
 }
 
 /** calls initsol methods of all plugins */
-RETCODE SCIPsetInitsolPlugins(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   STAT*            stat                /**< dynamic problem statistics */
+SCIP_RETCODE SCIPsetInitsolPlugins(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    )
 {
    int i;
@@ -2392,77 +2392,77 @@ RETCODE SCIPsetInitsolPlugins(
    SCIPsetSortPricers(set);
    for( i = 0; i < set->nactivepricers; ++i )
    {
-      CHECK_OKAY( SCIPpricerInitsol(set->pricers[i], set) );
+      SCIP_CALL( SCIPpricerInitsol(set->pricers[i], set) );
    }
 
    /* constraint handlers */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrInitsol(set->conshdlrs[i], blkmem, set, stat) );
+      SCIP_CALL( SCIPconshdlrInitsol(set->conshdlrs[i], blkmem, set, stat) );
    }
    
    /* conflict handlers */
    for( i = 0; i < set->nconflicthdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconflicthdlrInitsol(set->conflicthdlrs[i], set) );
+      SCIP_CALL( SCIPconflicthdlrInitsol(set->conflicthdlrs[i], set) );
    }
 
    /* relaxators */
    for( i = 0; i < set->nrelaxs; ++i )
    {
-      CHECK_OKAY( SCIPrelaxInitsol(set->relaxs[i], set) );
+      SCIP_CALL( SCIPrelaxInitsol(set->relaxs[i], set) );
    }
 
    /* separators */
    for( i = 0; i < set->nsepas; ++i )
    {
-      CHECK_OKAY( SCIPsepaInitsol(set->sepas[i], set) );
+      SCIP_CALL( SCIPsepaInitsol(set->sepas[i], set) );
    }
 
    /* propagators */
    for( i = 0; i < set->nprops; ++i )
    {
-      CHECK_OKAY( SCIPpropInitsol(set->props[i], set) );
+      SCIP_CALL( SCIPpropInitsol(set->props[i], set) );
    }
 
    /* primal heuristics */
    for( i = 0; i < set->nheurs; ++i )
    {
-      CHECK_OKAY( SCIPheurInitsol(set->heurs[i], set) );
+      SCIP_CALL( SCIPheurInitsol(set->heurs[i], set) );
    }
 
    /* event handlers */
    for( i = 0; i < set->neventhdlrs; ++i )
    {
-      CHECK_OKAY( SCIPeventhdlrInitsol(set->eventhdlrs[i], set) );
+      SCIP_CALL( SCIPeventhdlrInitsol(set->eventhdlrs[i], set) );
    }
 
    /* node selectors */
    for( i = 0; i < set->nnodesels; ++i )
    {
-      CHECK_OKAY( SCIPnodeselInitsol(set->nodesels[i], set) );
+      SCIP_CALL( SCIPnodeselInitsol(set->nodesels[i], set) );
    }
 
    /* branching rules */
    for( i = 0; i < set->nbranchrules; ++i )
    {
-      CHECK_OKAY( SCIPbranchruleInitsol(set->branchrules[i], set) );
+      SCIP_CALL( SCIPbranchruleInitsol(set->branchrules[i], set) );
    }
    
    /* display columns */
    for( i = 0; i < set->ndisps; ++i )
    {
-      CHECK_OKAY( SCIPdispInitsol(set->disps[i], set) );
+      SCIP_CALL( SCIPdispInitsol(set->disps[i], set) );
    }
 
    return SCIP_OKAY;
 }
 
 /** calls exitsol methods of all plugins */
-RETCODE SCIPsetExitsolPlugins(
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory */
-   STAT*            stat                /**< dynamic problem statistics */
+SCIP_RETCODE SCIPsetExitsolPlugins(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    )
 {
    int i;
@@ -2473,67 +2473,67 @@ RETCODE SCIPsetExitsolPlugins(
    SCIPsetSortPricers(set);
    for( i = 0; i < set->nactivepricers; ++i )
    {
-      CHECK_OKAY( SCIPpricerExitsol(set->pricers[i], set) );
+      SCIP_CALL( SCIPpricerExitsol(set->pricers[i], set) );
    }
 
    /* constraint handlers */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrExitsol(set->conshdlrs[i], blkmem, set, stat) );
+      SCIP_CALL( SCIPconshdlrExitsol(set->conshdlrs[i], blkmem, set, stat) );
    }
    
    /* conflict handlers */
    for( i = 0; i < set->nconflicthdlrs; ++i )
    {
-      CHECK_OKAY( SCIPconflicthdlrExitsol(set->conflicthdlrs[i], set) );
+      SCIP_CALL( SCIPconflicthdlrExitsol(set->conflicthdlrs[i], set) );
    }
 
    /* relaxators */
    for( i = 0; i < set->nrelaxs; ++i )
    {
-      CHECK_OKAY( SCIPrelaxExitsol(set->relaxs[i], set) );
+      SCIP_CALL( SCIPrelaxExitsol(set->relaxs[i], set) );
    }
 
    /* separators */
    for( i = 0; i < set->nsepas; ++i )
    {
-      CHECK_OKAY( SCIPsepaExitsol(set->sepas[i], set) );
+      SCIP_CALL( SCIPsepaExitsol(set->sepas[i], set) );
    }
 
    /* propagators */
    for( i = 0; i < set->nprops; ++i )
    {
-      CHECK_OKAY( SCIPpropExitsol(set->props[i], set) );
+      SCIP_CALL( SCIPpropExitsol(set->props[i], set) );
    }
 
    /* primal heuristics */
    for( i = 0; i < set->nheurs; ++i )
    {
-      CHECK_OKAY( SCIPheurExitsol(set->heurs[i], set) );
+      SCIP_CALL( SCIPheurExitsol(set->heurs[i], set) );
    }
 
    /* event handlers */
    for( i = 0; i < set->neventhdlrs; ++i )
    {
-      CHECK_OKAY( SCIPeventhdlrExitsol(set->eventhdlrs[i], set) );
+      SCIP_CALL( SCIPeventhdlrExitsol(set->eventhdlrs[i], set) );
    }
 
    /* node selectors */
    for( i = 0; i < set->nnodesels; ++i )
    {
-      CHECK_OKAY( SCIPnodeselExitsol(set->nodesels[i], set) );
+      SCIP_CALL( SCIPnodeselExitsol(set->nodesels[i], set) );
    }
 
    /* branching rules */
    for( i = 0; i < set->nbranchrules; ++i )
    {
-      CHECK_OKAY( SCIPbranchruleExitsol(set->branchrules[i], set) );
+      SCIP_CALL( SCIPbranchruleExitsol(set->branchrules[i], set) );
    }
    
    /* display columns */
    for( i = 0; i < set->ndisps; ++i )
    {
-      CHECK_OKAY( SCIPdispExitsol(set->disps[i], set) );
+      SCIP_CALL( SCIPdispExitsol(set->disps[i], set) );
    }
 
    return SCIP_OKAY;
@@ -2541,8 +2541,8 @@ RETCODE SCIPsetExitsolPlugins(
 
 /** calculate memory size for dynamically allocated arrays */
 int SCIPsetCalcMemGrowSize(
-   SET*             set,                /**< global SCIP settings */
-   int              num                 /**< minimum number of entries to store */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
    )
 {
    return calcGrowSize(set->mem_arraygrowinit, set->mem_arraygrowfac, num);
@@ -2550,8 +2550,8 @@ int SCIPsetCalcMemGrowSize(
 
 /** calculate memory size for tree array */
 int SCIPsetCalcTreeGrowSize(
-   SET*             set,                /**< global SCIP settings */
-   int              num                 /**< minimum number of entries to store */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
    )
 {
    return calcGrowSize(set->mem_treegrowinit, set->mem_treegrowfac, num);
@@ -2559,24 +2559,24 @@ int SCIPsetCalcTreeGrowSize(
 
 /** calculate memory size for path array */
 int SCIPsetCalcPathGrowSize(
-   SET*             set,                /**< global SCIP settings */
-   int              num                 /**< minimum number of entries to store */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
    )
 {
    return calcGrowSize(set->mem_pathgrowinit, set->mem_pathgrowfac, num);
 }
 
 /** sets verbosity level for message output */
-RETCODE SCIPsetSetVerbLevel(
-   SET*             set,                /**< global SCIP settings */
-   VERBLEVEL        verblevel           /**< verbosity level for message output */
+SCIP_RETCODE SCIPsetSetVerbLevel(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VERBLEVEL        verblevel           /**< verbosity level for message output */
    )
 {
    assert(set != NULL);
 
    if( verblevel > SCIP_VERBLEVEL_FULL )
    {
-      errorMessage("invalid verbosity level <%d>, maximum is <%d>\n", verblevel, SCIP_VERBLEVEL_FULL);
+      SCIPerrorMessage("invalid verbosity level <%d>, maximum is <%d>\n", verblevel, SCIP_VERBLEVEL_FULL);
       return SCIP_INVALIDCALL;
    }
    
@@ -2585,10 +2585,10 @@ RETCODE SCIPsetSetVerbLevel(
    return SCIP_OKAY;
 }
 
-/** sets LP feasibility tolerance */
-RETCODE SCIPsetSetFeastol(
-   SET*             set,                /**< global SCIP settings */
-   Real             feastol             /**< new feasibility tolerance */
+/** sets SCIP_LP feasibility tolerance */
+SCIP_RETCODE SCIPsetSetFeastol(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             feastol             /**< new feasibility tolerance */
    )
 {
    assert(set != NULL);
@@ -2598,10 +2598,10 @@ RETCODE SCIPsetSetFeastol(
    return SCIP_OKAY;
 }
 
-/** sets LP feasibility tolerance for reduced costs */
-RETCODE SCIPsetSetDualfeastol(
-   SET*             set,                /**< global SCIP settings */
-   Real             dualfeastol         /**< new reduced costs feasibility tolerance */
+/** sets SCIP_LP feasibility tolerance for reduced costs */
+SCIP_RETCODE SCIPsetSetDualfeastol(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             dualfeastol         /**< new reduced costs feasibility tolerance */
    )
 {
    assert(set != NULL);
@@ -2611,10 +2611,10 @@ RETCODE SCIPsetSetDualfeastol(
    return SCIP_OKAY;
 }
 
-/** sets LP convergence tolerance used in barrier algorithm */
-RETCODE SCIPsetSetBarrierconvtol(
-   SET*             set,                /**< global SCIP settings */
-   Real             barrierconvtol      /**< new convergence tolerance used in barrier algorithm */
+/** sets SCIP_LP convergence tolerance used in barrier algorithm */
+SCIP_RETCODE SCIPsetSetBarrierconvtol(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             barrierconvtol      /**< new convergence tolerance used in barrier algorithm */
    )
 {
    assert(set != NULL);
@@ -2624,10 +2624,10 @@ RETCODE SCIPsetSetBarrierconvtol(
    return SCIP_OKAY;
 }
 
-/** returns the maximal number of variables priced into the LP per round */
+/** returns the maximal number of variables priced into the SCIP_LP per round */
 int SCIPsetGetPriceMaxvars(
-   SET*             set,                /**< global SCIP settings */
-   Bool             root                /**< are we at the root node? */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             root                /**< are we at the root node? */
    )
 {
    assert(set != NULL);
@@ -2640,8 +2640,8 @@ int SCIPsetGetPriceMaxvars(
 
 /** returns the maximal number of cuts separated per round */
 int SCIPsetGetSepaMaxcuts(
-   SET*             set,                /**< global SCIP settings */
-   Bool             root                /**< are we at the root node? */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             root                /**< are we at the root node? */
    )
 {
    assert(set != NULL);
@@ -2658,7 +2658,7 @@ int SCIPsetGetSepaMaxcuts(
  * simple functions implemented as defines
  */
 
-/* In debug mode, the following methods are implemented as function calls to ensure
+/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
  * type validity.
  * In optimized mode, the methods are implemented as defines to improve performance.
  * However, we want to have them in the library anyways, so we have to undef the defines.
@@ -2723,8 +2723,8 @@ int SCIPsetGetSepaMaxcuts(
 #undef SCIPsetIsSumRelGE
 
 /** returns value treated as zero */
-Real SCIPsetEpsilon(
-   SET*             set                 /**< global SCIP settings */
+SCIP_Real SCIPsetEpsilon(
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(set != NULL);
@@ -2733,8 +2733,8 @@ Real SCIPsetEpsilon(
 }
 
 /** returns value treated as zero for sums of floating point values */
-Real SCIPsetSumepsilon(
-   SET*             set                 /**< global SCIP settings */
+SCIP_Real SCIPsetSumepsilon(
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(set != NULL);
@@ -2743,8 +2743,8 @@ Real SCIPsetSumepsilon(
 }
 
 /** returns feasibility tolerance for constraints */
-Real SCIPsetFeastol(
-   SET*             set                 /**< global SCIP settings */
+SCIP_Real SCIPsetFeastol(
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(set != NULL);
@@ -2753,8 +2753,8 @@ Real SCIPsetFeastol(
 }
 
 /** returns feasibility tolerance for reduced costs */
-Real SCIPsetDualfeastol(
-   SET*             set                 /**< global SCIP settings */
+SCIP_Real SCIPsetDualfeastol(
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(set != NULL);
@@ -2763,8 +2763,8 @@ Real SCIPsetDualfeastol(
 }
 
 /** returns convergence tolerance used in barrier algorithm */
-Real SCIPsetBarrierconvtol(
-   SET*             set                 /**< global SCIP settings */
+SCIP_Real SCIPsetBarrierconvtol(
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(set != NULL);
@@ -2773,8 +2773,8 @@ Real SCIPsetBarrierconvtol(
 }
 
 /** returns minimal variable distance value to use for pseudo cost updates */
-Real SCIPsetPseudocosteps(
-   SET*             set                 /**< global SCIP settings */
+SCIP_Real SCIPsetPseudocosteps(
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(set != NULL);
@@ -2783,8 +2783,8 @@ Real SCIPsetPseudocosteps(
 }
 
 /** returns minimal minimal objective distance value to use for pseudo cost updates */
-Real SCIPsetPseudocostdelta(
-   SET*             set                 /**< global SCIP settings */
+SCIP_Real SCIPsetPseudocostdelta(
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(set != NULL);
@@ -2793,9 +2793,9 @@ Real SCIPsetPseudocostdelta(
 }
 
 /** checks, if value is (positive) infinite */
-Bool SCIPsetIsInfinity(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against infinity */
+SCIP_Bool SCIPsetIsInfinity(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against infinity */
    )
 {
    assert(set != NULL);
@@ -2804,10 +2804,10 @@ Bool SCIPsetIsInfinity(
 }
 
 /** checks, if values are in range of epsilon */
-Bool SCIPsetIsEQ(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsEQ(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
    assert(set != NULL);
@@ -2816,10 +2816,10 @@ Bool SCIPsetIsEQ(
 }
 
 /** checks, if val1 is (more than epsilon) lower than val2 */
-Bool SCIPsetIsLT(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsLT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
    assert(set != NULL);
@@ -2828,10 +2828,10 @@ Bool SCIPsetIsLT(
 }
 
 /** checks, if val1 is not (more than epsilon) greater than val2 */
-Bool SCIPsetIsLE(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsLE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
    assert(set != NULL);
@@ -2840,10 +2840,10 @@ Bool SCIPsetIsLE(
 }
 
 /** checks, if val1 is (more than epsilon) greater than val2 */
-Bool SCIPsetIsGT(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsGT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
    assert(set != NULL);
@@ -2852,10 +2852,10 @@ Bool SCIPsetIsGT(
 }
 
 /** checks, if val1 is not (more than epsilon) lower than val2 */
-Bool SCIPsetIsGE(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsGE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
    assert(set != NULL);
@@ -2864,8 +2864,8 @@ Bool SCIPsetIsGE(
 }
 
 /** returns value treated as infinity */
-Real SCIPsetInfinity(
-   SET*             set                 /**< global SCIP settings */
+SCIP_Real SCIPsetInfinity(
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(set != NULL);
@@ -2874,9 +2874,9 @@ Real SCIPsetInfinity(
 }
 
 /** checks, if value is in range epsilon of 0.0 */
-Bool SCIPsetIsZero(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to process */
+SCIP_Bool SCIPsetIsZero(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2885,9 +2885,9 @@ Bool SCIPsetIsZero(
 }
 
 /** checks, if value is greater than epsilon */
-Bool SCIPsetIsPositive(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to process */
+SCIP_Bool SCIPsetIsPositive(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2896,9 +2896,9 @@ Bool SCIPsetIsPositive(
 }
 
 /** checks, if value is lower than -epsilon */
-Bool SCIPsetIsNegative(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to process */
+SCIP_Bool SCIPsetIsNegative(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2907,9 +2907,9 @@ Bool SCIPsetIsNegative(
 }
 
 /** checks, if value is integral within epsilon */
-Bool SCIPsetIsIntegral(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to process */
+SCIP_Bool SCIPsetIsIntegral(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2918,13 +2918,13 @@ Bool SCIPsetIsIntegral(
 }
 
 /** checks whether the product val * scalar is integral in epsilon scaled by scalar */
-Bool SCIPsetIsScalingIntegral(
-   SET*             set,                /**< global SCIP settings */
-   Real             val,                /**< unscaled value to check for scaled integrality */
-   Real             scalar              /**< value to scale val with for checking for integrality */
+SCIP_Bool SCIPsetIsScalingIntegral(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val,                /**< unscaled value to check for scaled integrality */
+   SCIP_Real             scalar              /**< value to scale val with for checking for integrality */
    )
 {
-   Real scaledeps;
+   SCIP_Real scaledeps;
    
    assert(set != NULL);
    
@@ -2936,9 +2936,9 @@ Bool SCIPsetIsScalingIntegral(
 }
 
 /** checks, if given fractional part is smaller than epsilon */
-Bool SCIPsetIsFracIntegral(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to process */
+SCIP_Bool SCIPsetIsFracIntegral(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2949,9 +2949,9 @@ Bool SCIPsetIsFracIntegral(
 }
 
 /** rounds value + feasibility tolerance down to the next integer in epsilon tolerance */
-Real SCIPsetFloor(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to process */
+SCIP_Real SCIPsetFloor(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2960,9 +2960,9 @@ Real SCIPsetFloor(
 }
 
 /** rounds value - feasibility tolerance up to the next integer in epsilon tolerance */
-Real SCIPsetCeil(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to process */
+SCIP_Real SCIPsetCeil(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2971,9 +2971,9 @@ Real SCIPsetCeil(
 }
 
 /** returns fractional part of value, i.e. x - floor(x) in epsilon tolerance */
-Real SCIPsetFrac(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to return fractional part for */
+SCIP_Real SCIPsetFrac(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to return fractional part for */
    )
 {
    assert(set != NULL);
@@ -2982,10 +2982,10 @@ Real SCIPsetFrac(
 }
 
 /** checks, if values are in range of sumepsilon */
-Bool SCIPsetIsSumEQ(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsSumEQ(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
    assert(set != NULL);
@@ -2994,10 +2994,10 @@ Bool SCIPsetIsSumEQ(
 }
 
 /** checks, if val1 is (more than sumepsilon) lower than val2 */
-Bool SCIPsetIsSumLT(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsSumLT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
    assert(set != NULL);
@@ -3006,10 +3006,10 @@ Bool SCIPsetIsSumLT(
 }
 
 /** checks, if val1 is not (more than sumepsilon) greater than val2 */
-Bool SCIPsetIsSumLE(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsSumLE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
    assert(set != NULL);
@@ -3018,10 +3018,10 @@ Bool SCIPsetIsSumLE(
 }
 
 /** checks, if val1 is (more than sumepsilon) greater than val2 */
-Bool SCIPsetIsSumGT(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsSumGT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
    assert(set != NULL);
@@ -3030,10 +3030,10 @@ Bool SCIPsetIsSumGT(
 }
 
 /** checks, if val1 is not (more than sumepsilon) lower than val2 */
-Bool SCIPsetIsSumGE(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsSumGE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
    assert(set != NULL);
@@ -3042,9 +3042,9 @@ Bool SCIPsetIsSumGE(
 }
 
 /** checks, if value is in range sumepsilon of 0.0 */
-Bool SCIPsetIsSumZero(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to process */
+SCIP_Bool SCIPsetIsSumZero(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -3053,9 +3053,9 @@ Bool SCIPsetIsSumZero(
 }
 
 /** checks, if value is greater than sumepsilon */
-Bool SCIPsetIsSumPositive(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to process */
+SCIP_Bool SCIPsetIsSumPositive(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -3064,9 +3064,9 @@ Bool SCIPsetIsSumPositive(
 }
 
 /** checks, if value is lower than -sumepsilon */
-Bool SCIPsetIsSumNegative(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to process */
+SCIP_Bool SCIPsetIsSumNegative(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -3075,13 +3075,13 @@ Bool SCIPsetIsSumNegative(
 }
 
 /** checks, if relative difference of values is in range of feastol */
-Bool SCIPsetIsFeasEQ(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsFeasEQ(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
-   Real diff;
+   SCIP_Real diff;
 
    assert(set != NULL);
 
@@ -3091,13 +3091,13 @@ Bool SCIPsetIsFeasEQ(
 }
 
 /** checks, if relative difference of val1 and val2 is lower than feastol */
-Bool SCIPsetIsFeasLT(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsFeasLT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
-   Real diff;
+   SCIP_Real diff;
 
    assert(set != NULL);
 
@@ -3107,13 +3107,13 @@ Bool SCIPsetIsFeasLT(
 }
 
 /** checks, if relative difference of val1 and val2 is not greater than feastol */
-Bool SCIPsetIsFeasLE(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsFeasLE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
-   Real diff;
+   SCIP_Real diff;
 
    assert(set != NULL);
 
@@ -3123,13 +3123,13 @@ Bool SCIPsetIsFeasLE(
 }
 
 /** checks, if relative difference of val1 and val2 is greater than feastol */
-Bool SCIPsetIsFeasGT(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsFeasGT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
-   Real diff;
+   SCIP_Real diff;
 
    assert(set != NULL);
 
@@ -3139,13 +3139,13 @@ Bool SCIPsetIsFeasGT(
 }
 
 /** checks, if relative difference of val1 and val2 is not lower than -feastol */
-Bool SCIPsetIsFeasGE(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsFeasGE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
-   Real diff;
+   SCIP_Real diff;
 
    assert(set != NULL);
 
@@ -3155,9 +3155,9 @@ Bool SCIPsetIsFeasGE(
 }
 
 /** checks, if value is in range feasibility tolerance of 0.0 */
-Bool SCIPsetIsFeasZero(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to process */
+SCIP_Bool SCIPsetIsFeasZero(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -3166,9 +3166,9 @@ Bool SCIPsetIsFeasZero(
 }
 
 /** checks, if value is greater than feasibility tolerance */
-Bool SCIPsetIsFeasPositive(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to process */
+SCIP_Bool SCIPsetIsFeasPositive(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -3177,9 +3177,9 @@ Bool SCIPsetIsFeasPositive(
 }
 
 /** checks, if value is lower than -feasibility tolerance */
-Bool SCIPsetIsFeasNegative(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to process */
+SCIP_Bool SCIPsetIsFeasNegative(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -3187,10 +3187,10 @@ Bool SCIPsetIsFeasNegative(
    return EPSN(val, set->num_feastol);
 }
 
-/** checks, if value is integral within the LP feasibility bounds */
-Bool SCIPsetIsFeasIntegral(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to process */
+/** checks, if value is integral within the SCIP_LP feasibility bounds */
+SCIP_Bool SCIPsetIsFeasIntegral(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -3199,9 +3199,9 @@ Bool SCIPsetIsFeasIntegral(
 }
 
 /** checks, if given fractional part is smaller than feastol */
-Bool SCIPsetIsFeasFracIntegral(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to process */
+SCIP_Bool SCIPsetIsFeasFracIntegral(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -3212,9 +3212,9 @@ Bool SCIPsetIsFeasFracIntegral(
 }
 
 /** rounds value + feasibility tolerance down to the next integer in feasibility tolerance */
-Real SCIPsetFeasFloor(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to process */
+SCIP_Real SCIPsetFeasFloor(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -3223,9 +3223,9 @@ Real SCIPsetFeasFloor(
 }
 
 /** rounds value - feasibility tolerance up to the next integer in feasibility tolerance */
-Real SCIPsetFeasCeil(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to process */
+SCIP_Real SCIPsetFeasCeil(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -3234,9 +3234,9 @@ Real SCIPsetFeasCeil(
 }
 
 /** returns fractional part of value, i.e. x - floor(x) in feasibility tolerance */
-Real SCIPsetFeasFrac(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to process */
+SCIP_Real SCIPsetFeasFrac(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -3245,10 +3245,10 @@ Real SCIPsetFeasFrac(
 }
 
 /** checks, if the first given lower bound is tighter (w.r.t. bound strengthening epsilon) than the second one */
-Bool SCIPsetIsLbBetter(
-   SET*             set,                /**< global SCIP settings */
-   Real             lb1,                /**< first lower bound to compare */
-   Real             lb2                 /**< second lower bound to compare */
+SCIP_Bool SCIPsetIsLbBetter(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             lb1,                /**< first lower bound to compare */
+   SCIP_Real             lb2                 /**< second lower bound to compare */
    )
 {
    assert(set != NULL);
@@ -3257,10 +3257,10 @@ Bool SCIPsetIsLbBetter(
 }
 
 /** checks, if the first given upper bound is tighter (w.r.t. bound strengthening epsilon) than the second one */
-Bool SCIPsetIsUbBetter(
-   SET*             set,                /**< global SCIP settings */
-   Real             ub1,                /**< first upper bound to compare */
-   Real             ub2                 /**< second upper bound to compare */
+SCIP_Bool SCIPsetIsUbBetter(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             ub1,                /**< first upper bound to compare */
+   SCIP_Real             ub2                 /**< second upper bound to compare */
    )
 {
    assert(set != NULL);
@@ -3269,10 +3269,10 @@ Bool SCIPsetIsUbBetter(
 }
 
 /** checks, if the given cut's efficacy is larger than the minimal cut efficacy */
-Bool SCIPsetIsEfficacious(
-   SET*             set,                /**< global SCIP settings */
-   Bool             root,               /**< should the root's minimal cut efficacy be used? */
-   Real             efficacy            /**< efficacy of the cut */
+SCIP_Bool SCIPsetIsEfficacious(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             root,               /**< should the root's minimal cut efficacy be used? */
+   SCIP_Real             efficacy            /**< efficacy of the cut */
    )
 {
    assert(set != NULL);
@@ -3284,13 +3284,13 @@ Bool SCIPsetIsEfficacious(
 }
 
 /** checks, if relative difference of values is in range of epsilon */
-Bool SCIPsetIsRelEQ(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsRelEQ(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
-   Real diff;
+   SCIP_Real diff;
 
    assert(set != NULL);
 
@@ -3300,13 +3300,13 @@ Bool SCIPsetIsRelEQ(
 }
 
 /** checks, if relative difference of val1 and val2 is lower than epsilon */
-Bool SCIPsetIsRelLT(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsRelLT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
-   Real diff;
+   SCIP_Real diff;
 
    assert(set != NULL);
 
@@ -3316,13 +3316,13 @@ Bool SCIPsetIsRelLT(
 }
 
 /** checks, if relative difference of val1 and val2 is not greater than epsilon */
-Bool SCIPsetIsRelLE(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsRelLE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
-   Real diff;
+   SCIP_Real diff;
 
    assert(set != NULL);
 
@@ -3332,13 +3332,13 @@ Bool SCIPsetIsRelLE(
 }
 
 /** checks, if relative difference of val1 and val2 is greater than epsilon */
-Bool SCIPsetIsRelGT(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsRelGT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
-   Real diff;
+   SCIP_Real diff;
 
    assert(set != NULL);
 
@@ -3348,13 +3348,13 @@ Bool SCIPsetIsRelGT(
 }
 
 /** checks, if relative difference of val1 and val2 is not lower than -epsilon */
-Bool SCIPsetIsRelGE(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsRelGE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
-   Real diff;
+   SCIP_Real diff;
 
    assert(set != NULL);
 
@@ -3364,13 +3364,13 @@ Bool SCIPsetIsRelGE(
 }
 
 /** checks, if relative difference of values is in range of sumepsilon */
-Bool SCIPsetIsSumRelEQ(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsSumRelEQ(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
-   Real diff;
+   SCIP_Real diff;
 
    assert(set != NULL);
 
@@ -3380,13 +3380,13 @@ Bool SCIPsetIsSumRelEQ(
 }
 
 /** checks, if relative difference of val1 and val2 is lower than sumepsilon */
-Bool SCIPsetIsSumRelLT(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsSumRelLT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
-   Real diff;
+   SCIP_Real diff;
 
    assert(set != NULL);
 
@@ -3396,13 +3396,13 @@ Bool SCIPsetIsSumRelLT(
 }
 
 /** checks, if relative difference of val1 and val2 is not greater than sumepsilon */
-Bool SCIPsetIsSumRelLE(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsSumRelLE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
-   Real diff;
+   SCIP_Real diff;
 
    assert(set != NULL);
 
@@ -3412,13 +3412,13 @@ Bool SCIPsetIsSumRelLE(
 }
 
 /** checks, if relative difference of val1 and val2 is greater than sumepsilon */
-Bool SCIPsetIsSumRelGT(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsSumRelGT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
-   Real diff;
+   SCIP_Real diff;
 
    assert(set != NULL);
 
@@ -3428,13 +3428,13 @@ Bool SCIPsetIsSumRelGT(
 }
 
 /** checks, if relative difference of val1 and val2 is not lower than -sumepsilon */
-Bool SCIPsetIsSumRelGE(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Bool SCIPsetIsSumRelGE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
-   Real diff;
+   SCIP_Real diff;
 
    assert(set != NULL);
 

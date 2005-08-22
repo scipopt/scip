@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: mem.c,v 1.19 2005/05/31 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: mem.c,v 1.20 2005/08/22 18:35:40 bzfpfend Exp $"
 
 /**@file   mem.c
  * @brief  block memory pools and memory buffers
@@ -32,47 +32,47 @@
 
 
 /** creates block memory structures */
-RETCODE SCIPmemCreate(
-   MEM**            mem                 /**< pointer to block memory structure */
+SCIP_RETCODE SCIPmemCreate(
+   SCIP_MEM**            mem                 /**< pointer to block memory structure */
    )
 {
    assert(mem != NULL);
 
-   ALLOC_OKAY( allocMemory(mem) );
+   SCIP_ALLOC( BMSallocMemory(mem) );
 
-   ALLOC_OKAY( (*mem)->setmem = createBlockMemory(1, 10) );
-   ALLOC_OKAY( (*mem)->probmem = createBlockMemory(1, 10) );
-   ALLOC_OKAY( (*mem)->solvemem = createBlockMemory(1, 10) );
+   SCIP_ALLOC( (*mem)->setmem = BMScreateBlockMemory(1, 10) );
+   SCIP_ALLOC( (*mem)->probmem = BMScreateBlockMemory(1, 10) );
+   SCIP_ALLOC( (*mem)->solvemem = BMScreateBlockMemory(1, 10) );
 
-   debugMessage("created setmem   block memory at <%p>\n", (*mem)->setmem);
-   debugMessage("created probmem  block memory at <%p>\n", (*mem)->probmem);
-   debugMessage("created solvemem block memory at <%p>\n", (*mem)->solvemem);
+   SCIPdebugMessage("created setmem   block memory at <%p>\n", (*mem)->setmem);
+   SCIPdebugMessage("created probmem  block memory at <%p>\n", (*mem)->probmem);
+   SCIPdebugMessage("created solvemem block memory at <%p>\n", (*mem)->solvemem);
 
    return SCIP_OKAY;
 }
 
 /** frees block memory structures */
-RETCODE SCIPmemFree(
-   MEM**            mem                 /**< pointer to block memory structure */
+SCIP_RETCODE SCIPmemFree(
+   SCIP_MEM**            mem                 /**< pointer to block memory structure */
    )
 {
    assert(mem != NULL);
 
-   destroyBlockMemory(&(*mem)->solvemem);
-   destroyBlockMemory(&(*mem)->probmem);
-   destroyBlockMemory(&(*mem)->setmem);
+   BMSdestroyBlockMemory(&(*mem)->solvemem);
+   BMSdestroyBlockMemory(&(*mem)->probmem);
+   BMSdestroyBlockMemory(&(*mem)->setmem);
 
-   freeMemory(mem);
+   BMSfreeMemory(mem);
 
    return SCIP_OKAY;
 }
 
 /** returns the total number of bytes used in block memory */
-Longint SCIPmemGetUsed(
-   MEM*             mem                 /**< pointer to block memory structure */
+SCIP_Longint SCIPmemGetUsed(
+   SCIP_MEM*             mem                 /**< pointer to block memory structure */
    )
 {
    assert(mem != NULL);
 
-   return getBlockMemoryUsed(mem->setmem) + getBlockMemoryUsed(mem->probmem) + getBlockMemoryUsed(mem->solvemem);
+   return BMSgetBlockMemoryUsed(mem->setmem) + BMSgetBlockMemoryUsed(mem->probmem) + BMSgetBlockMemoryUsed(mem->solvemem);
 }

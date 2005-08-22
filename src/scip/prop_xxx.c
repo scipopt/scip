@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_xxx.c,v 1.8 2005/07/15 17:20:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_xxx.c,v 1.9 2005/08/22 18:35:44 bzfpfend Exp $"
 
 /**@file   prop_xxx.c
  * @brief  xxx propagator
@@ -44,7 +44,7 @@
 /* TODO: fill in the necessary propagator data */
 
 /** propagator data */
-struct PropData
+struct SCIP_PropData
 {
 };
 
@@ -69,9 +69,9 @@ struct PropData
 /** destructor of propagator to free user data (called when SCIP is exiting) */
 #if 0
 static
-DECL_PROPFREE(propFreeXxx)
+SCIP_DECL_PROPFREE(propFreeXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx propagator not implemented yet\n");
+   SCIPerrorMessage("method of xxx propagator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -84,9 +84,9 @@ DECL_PROPFREE(propFreeXxx)
 /** initialization method of propagator (called after problem was transformed) */
 #if 0
 static
-DECL_PROPINIT(propInitXxx)
+SCIP_DECL_PROPINIT(propInitXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx propagator not implemented yet\n");
+   SCIPerrorMessage("method of xxx propagator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -99,9 +99,9 @@ DECL_PROPINIT(propInitXxx)
 /** deinitialization method of propagator (called before transformed problem is freed) */
 #if 0
 static
-DECL_PROPEXIT(propExitXxx)
+SCIP_DECL_PROPEXIT(propExitXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx propagator not implemented yet\n");
+   SCIPerrorMessage("method of xxx propagator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -114,9 +114,9 @@ DECL_PROPEXIT(propExitXxx)
 /** solving process initialization method of propagator (called when branch and bound process is about to begin) */
 #if 0
 static
-DECL_PROPINITSOL(propInitsolXxx)
+SCIP_DECL_PROPINITSOL(propInitsolXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx propagator not implemented yet\n");
+   SCIPerrorMessage("method of xxx propagator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -129,9 +129,9 @@ DECL_PROPINITSOL(propInitsolXxx)
 /** solving process deinitialization method of propagator (called before branch and bound process data is freed) */
 #if 0
 static
-DECL_PROPEXITSOL(propExitsolXxx)
+SCIP_DECL_PROPEXITSOL(propExitsolXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx propagator not implemented yet\n");
+   SCIPerrorMessage("method of xxx propagator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -143,9 +143,9 @@ DECL_PROPEXITSOL(propExitsolXxx)
 
 /** execution method of propagator */
 static
-DECL_PROPEXEC(propExecXxx)
+SCIP_DECL_PROPEXEC(propExecXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx propagator not implemented yet\n");
+   SCIPerrorMessage("method of xxx propagator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -154,9 +154,9 @@ DECL_PROPEXEC(propExecXxx)
 
 /** propagation conflict resolving method of propagator */
 static
-DECL_PROPRESPROP(propRespropXxx)
+SCIP_DECL_PROPRESPROP(propRespropXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx propagator not implemented yet\n");
+   SCIPerrorMessage("method of xxx propagator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -170,18 +170,18 @@ DECL_PROPRESPROP(propRespropXxx)
  */
 
 /** creates the xxx propagator and includes it in SCIP */
-RETCODE SCIPincludePropXxx(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludePropXxx(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   PROPDATA* propdata;
+   SCIP_PROPDATA* propdata;
 
    /* create xxx propagator data */
    propdata = NULL;
    /* TODO: (optional) create propagator specific data here */
 
    /* include propagator */
-   CHECK_OKAY( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY,
+   SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY,
          propFreeXxx, propInitXxx, propExitXxx, 
          propInitsolXxx, propExitsolXxx, propExecXxx, propRespropXxx,
          propdata) );

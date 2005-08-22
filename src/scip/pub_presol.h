@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_presol.h,v 1.10 2005/07/15 17:20:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_presol.h,v 1.11 2005/08/22 18:35:45 bzfpfend Exp $"
 
 /**@file   pub_presol.h
  * @brief  public methods for presolvers
@@ -35,115 +35,115 @@
 
 /** compares two presolvers w. r. to their priority */
 extern
-DECL_SORTPTRCOMP(SCIPpresolComp);
+SCIP_DECL_SORTPTRCOMP(SCIPpresolComp);
 
 /** gets user data of presolver */
 extern
-PRESOLDATA* SCIPpresolGetData(
-   PRESOL*          presol              /**< presolver */
+SCIP_PRESOLDATA* SCIPpresolGetData(
+   SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** sets user data of presolver; user has to free old data in advance! */
 extern
 void SCIPpresolSetData(
-   PRESOL*          presol,             /**< presolver */
-   PRESOLDATA*      presoldata          /**< new presolver user data */
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_PRESOLDATA*      presoldata          /**< new presolver user data */
    );
 
 /** gets name of presolver */
 extern
 const char* SCIPpresolGetName(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets description of presolver */
 extern
 const char* SCIPpresolGetDesc(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets priority of presolver */
 extern
 int SCIPpresolGetPriority(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** should presolver be delayed, if other presolvers found reductions? */
 extern
-Bool SCIPpresolIsDelayed(
-   PRESOL*          presol              /**< presolver */
+SCIP_Bool SCIPpresolIsDelayed(
+   SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** was presolver delayed at the last call? */
 extern
-Bool SCIPpresolWasDelayed(
-   PRESOL*          presol              /**< presolver */
+SCIP_Bool SCIPpresolWasDelayed(
+   SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** is presolver initialized? */
 extern
-Bool SCIPpresolIsInitialized(
-   PRESOL*          presol              /**< presolver */
+SCIP_Bool SCIPpresolIsInitialized(
+   SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets time in seconds used in this presolver */
 extern
-Real SCIPpresolGetTime(
-   PRESOL*          presol              /**< presolver */
+SCIP_Real SCIPpresolGetTime(
+   SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets number of variables fixed in presolver */
 extern
 int SCIPpresolGetNFixedVars(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets number of variables aggregated in presolver */
 extern
 int SCIPpresolGetNAggrVars(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets number of variable types changed in presolver */
 extern
 int SCIPpresolGetNVarTypes(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets number of bounds changed in presolver */
 extern
 int SCIPpresolGetNChgBds(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets number of holes added to domains of variables in presolver */
 extern
 int SCIPpresolGetNAddHoles(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets number of constraints deleted in presolver */
 extern
 int SCIPpresolGetNDelConss(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets number of constraints upgraded in presolver */
 extern
 int SCIPpresolGetNUpgdConss(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets number of coefficients changed in presolver */
 extern
 int SCIPpresolGetNChgCoefs(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** gets number of constraint sides changed in presolver */
 extern
 int SCIPpresolGetNChgSides(
-   PRESOL*          presol              /**< presolver */
+   SCIP_PRESOL*          presol              /**< presolver */
    );
 
 

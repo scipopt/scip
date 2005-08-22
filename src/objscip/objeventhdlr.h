@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objeventhdlr.h,v 1.3 2005/07/15 17:20:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objeventhdlr.h,v 1.4 2005/08/22 18:35:29 bzfpfend Exp $"
 
 /**@file   objeventhdlr.h
  * @brief  C++ wrapper for event handlers
@@ -48,8 +48,8 @@ public:
    
    /** default constructor */
    ObjEventhdlr(
-      const char*   name,               /**< name of event handler */
-      const char*   desc                /**< description of event handler */
+      const char*        name,               /**< name of event handler */
+      const char*        desc                /**< description of event handler */
       )
       : scip_name_(name),
         scip_desc_(desc)
@@ -62,27 +62,27 @@ public:
    }
 
    /** destructor of event handler to free user data (called when SCIP is exiting) */
-   virtual RETCODE scip_free(
-      SCIP*         scip,               /**< SCIP data structure */
-      EVENTHDLR*    eventhdlr           /**< the event handler itself */
+   virtual SCIP_RETCODE scip_free(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
       )
    {
       return SCIP_OKAY;
    }
    
    /** initialization method of event handler (called after problem was transformed) */
-   virtual RETCODE scip_init(
-      SCIP*         scip,               /**< SCIP data structure */
-      EVENTHDLR*    eventhdlr           /**< the event handler itself */
+   virtual SCIP_RETCODE scip_init(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
       )
    {
       return SCIP_OKAY;
    }
    
    /** deinitialization method of event handler (called before transformed problem is freed) */
-   virtual RETCODE scip_exit(
-      SCIP*         scip,               /**< SCIP data structure */
-      EVENTHDLR*    eventhdlr           /**< the event handler itself */
+   virtual SCIP_RETCODE scip_exit(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
       )
    {
       return SCIP_OKAY;
@@ -94,9 +94,9 @@ public:
     *  The event handler may use this call to initialize its branch and bound specific data.
     *
     */
-   virtual RETCODE scip_initsol(
-      SCIP*         scip,               /**< SCIP data structure */
-      EVENTHDLR*    eventhdlr           /**< the event handler itself */
+   virtual SCIP_RETCODE scip_initsol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
       )
    {
       return SCIP_OKAY;
@@ -107,19 +107,19 @@ public:
     *  This method is called before the branch and bound process is freed.
     *  The event handler should use this call to clean up its branch and bound data.
     */
-   virtual RETCODE scip_exitsol(
-      SCIP*         scip,               /**< SCIP data structure */
-      EVENTHDLR*    eventhdlr           /**< the event handler itself */
+   virtual SCIP_RETCODE scip_exitsol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
       )
    {
       return SCIP_OKAY;
    }
    
    /** frees specific constraint data */
-   virtual RETCODE scip_delete(
-      SCIP*         scip,               /**< SCIP data structure */
-      EVENTHDLR*    eventhdlr,          /**< the event handler itself */
-      EVENTDATA**   eventdata           /**< pointer to the event data to free */
+   virtual SCIP_RETCODE scip_delete(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_EVENTHDLR*    eventhdlr,          /**< the event handler itself */
+      SCIP_EVENTDATA**   eventdata           /**< pointer to the event data to free */
       )
    {
       return SCIP_OKAY;
@@ -128,15 +128,15 @@ public:
    /** execution method of event handler
     *
     *  Processes the event. The method is called every time an event occurs, for which the event handler
-    *  is responsible. Event handlers may declare themselves resposible for events by calling the
+    *  is responsible. SCIP_Event handlers may declare themselves resposible for events by calling the
     *  corresponding SCIPcatch...() method. This method creates an event filter object to point to the
     *  given event handler and event data.
     */
-   virtual RETCODE scip_exec(
-      SCIP*         scip,               /**< SCIP data structure */
-      EVENTHDLR*    eventhdlr,          /**< the event handler itself */
-      EVENT*        event,              /**< event to process */
-      EVENTDATA*    eventdata           /**< user data for the event */
+   virtual SCIP_RETCODE scip_exec(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_EVENTHDLR*    eventhdlr,          /**< the event handler itself */
+      SCIP_EVENT*        event,              /**< event to process */
+      SCIP_EVENTDATA*    eventdata           /**< user data for the event */
       ) = 0;
 };
 
@@ -149,40 +149,40 @@ public:
  *  The method should be called in one of the following ways:
  *
  *   1. The user is resposible of deleting the object:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MyEventhdlr* myeventhdlr = new MyEventhdlr(...);
- *       CHECK_OKAY( SCIPincludeObjEventhdlr(scip, &myeventhdlr, FALSE) );
+ *       SCIP_CALL( SCIPincludeObjEventhdlr(scip, &myeventhdlr, FALSE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );
+ *       SCIP_CALL( SCIPfree(&scip) );
  *       delete myeventhdlr;    // delete eventhdlr AFTER SCIPfree() !
  *
  *   2. The object pointer is passed to SCIP and deleted by SCIP in the SCIPfree() call:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
- *       CHECK_OKAY( SCIPincludeObjEventhdlr(scip, new MyEventhdlr(...), TRUE) );
+ *       SCIP_CALL( SCIPincludeObjEventhdlr(scip, new MyEventhdlr(...), TRUE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );  // destructor of MyEventhdlr is called here
+ *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyEventhdlr is called here
  */
 extern
-RETCODE SCIPincludeObjEventhdlr(
-   SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjEventhdlr* objeventhdlr,    /**< event handler object */
-   Bool             deleteobject        /**< should the event handler object be deleted when eventhdlristic is freed? */
+SCIP_RETCODE SCIPincludeObjEventhdlr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   scip::ObjEventhdlr*   objeventhdlr,       /**< event handler object */
+   SCIP_Bool             deleteobject        /**< should the event handler object be deleted when eventhdlristic is freed? */
    );
 
 /** returns the eventhdlr object of the given name, or NULL if not existing */
 extern
 scip::ObjEventhdlr* SCIPfindObjEventhdlr(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< name of event handler */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of event handler */
    );
 
 /** returns the eventhdlr object for the given event handler */
 extern
 scip::ObjEventhdlr* SCIPgetObjEventhdlr(
-   SCIP*            scip,               /**< SCIP data structure */
-   EVENTHDLR*       eventhdlr           /**< event handler */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    );
 
 #endif

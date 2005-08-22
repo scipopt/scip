@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.28 2005/07/15 17:20:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.29 2005/08/22 18:35:42 bzfpfend Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -43,11 +43,11 @@
 
 /** hash key retrieval function for parameters */
 static
-DECL_HASHGETKEY(hashGetKeyParam)
+SCIP_DECL_HASHGETKEY(hashGetKeyParam)
 {  /*lint --e{715}*/
-   PARAM* param;
+   SCIP_PARAM* param;
 
-   param = (PARAM*)elem;
+   param = (SCIP_PARAM*)elem;
    assert(param != NULL);
 
    return param->name;
@@ -55,9 +55,9 @@ DECL_HASHGETKEY(hashGetKeyParam)
 
 /** checks parameter value according to the given feasible domain; issues a warning message if value was invalid */
 static
-RETCODE paramCheckBool(
-   PARAM*           param,              /**< parameter */
-   Bool             value               /**< value to check */
+SCIP_RETCODE paramCheckBool(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Bool             value               /**< value to check */
    )
 {
    assert(param != NULL);
@@ -65,7 +65,7 @@ RETCODE paramCheckBool(
 
    if( value != TRUE && value != FALSE )
    {
-      warningMessage("Invalid value <%d> for bool parameter <%s>. Must be <0> (FALSE) or <1> (TRUE).\n",
+      SCIPwarningMessage("Invalid value <%d> for bool parameter <%s>. Must be <0> (FALSE) or <1> (TRUE).\n",
          value, param->name);
       return SCIP_PARAMETERWRONGVAL;
    }
@@ -75,9 +75,9 @@ RETCODE paramCheckBool(
 
 /** checks parameter value according to the given feasible domain; issues a warning message if value was invalid */
 static
-RETCODE paramCheckInt(
-   PARAM*           param,              /**< parameter */
-   int              value               /**< value to check */
+SCIP_RETCODE paramCheckInt(
+   SCIP_PARAM*           param,              /**< parameter */
+   int                   value               /**< value to check */
    )
 {
    assert(param != NULL);
@@ -85,7 +85,7 @@ RETCODE paramCheckInt(
 
    if( value < param->data.intparam.minvalue || value > param->data.intparam.maxvalue )
    {
-      warningMessage("Invalid value <%d> for int parameter <%s>. Must be in range [%d,%d].\n",
+      SCIPwarningMessage("Invalid value <%d> for int parameter <%s>. Must be in range [%d,%d].\n",
          value, param->name, param->data.intparam.minvalue, param->data.intparam.maxvalue);
       return SCIP_PARAMETERWRONGVAL;
    }
@@ -95,9 +95,9 @@ RETCODE paramCheckInt(
 
 /** checks parameter value according to the given feasible domain; issues a warning message if value was invalid */
 static
-RETCODE paramCheckLongint(
-   PARAM*           param,              /**< parameter */
-   Longint          value               /**< value to check */
+SCIP_RETCODE paramCheckLongint(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Longint          value               /**< value to check */
    )
 {
    assert(param != NULL);
@@ -105,7 +105,7 @@ RETCODE paramCheckLongint(
 
    if( value < param->data.longintparam.minvalue || value > param->data.longintparam.maxvalue )
    {
-      warningMessage("Invalid value <%lld> for longint parameter <%s>. Must be in range [%lld,%lld].\n",
+      SCIPwarningMessage("Invalid value <%lld> for longint parameter <%s>. Must be in range [%lld,%lld].\n",
          value, param->name, param->data.longintparam.minvalue, param->data.longintparam.maxvalue);
       return SCIP_PARAMETERWRONGVAL;
    }
@@ -115,9 +115,9 @@ RETCODE paramCheckLongint(
 
 /** checks parameter value according to the given feasible domain; issues a warning message if value was invalid */
 static
-RETCODE paramCheckReal(
-   PARAM*           param,              /**< parameter */
-   Real             value               /**< value to check */
+SCIP_RETCODE paramCheckReal(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Real             value               /**< value to check */
    )
 {
    assert(param != NULL);
@@ -125,7 +125,7 @@ RETCODE paramCheckReal(
 
    if( !(value >= param->data.realparam.minvalue && value <= param->data.realparam.maxvalue) )
    {
-      warningMessage("Invalid real parameter value <%g>. Must be in range [%g,%g].\n",
+      SCIPwarningMessage("Invalid real parameter value <%g>. Must be in range [%g,%g].\n",
          value, param->data.realparam.minvalue, param->data.realparam.maxvalue);
       return SCIP_PARAMETERWRONGVAL;
    }
@@ -135,9 +135,9 @@ RETCODE paramCheckReal(
 
 /** checks parameter value according to the given feasible domain; issues a warning message if value was invalid */
 static
-RETCODE paramCheckChar(
-   PARAM*           param,              /**< parameter */
-   char             value               /**< value to check */
+SCIP_RETCODE paramCheckChar(
+   SCIP_PARAM*           param,              /**< parameter */
+   char                  value               /**< value to check */
    )
 {
    assert(param != NULL);
@@ -145,7 +145,7 @@ RETCODE paramCheckChar(
 
    if( value == '\b' || value == '\f' || value == '\n' || value == '\r' || value == '\v' )
    {
-      warningMessage("Invalid char parameter value <%x>.\n", (int)value);
+      SCIPwarningMessage("Invalid char parameter value <%x>.\n", (int)value);
       return SCIP_PARAMETERWRONGVAL;
    }
 
@@ -159,7 +159,7 @@ RETCODE paramCheckChar(
 
       if( *c != value )
       {
-         warningMessage("Invalid char parameter value <%c>. Must be in set {%s}.\n",
+         SCIPwarningMessage("Invalid char parameter value <%c>. Must be in set {%s}.\n",
             value, param->data.charparam.allowedvalues);
          return SCIP_PARAMETERWRONGVAL;
       }
@@ -170,9 +170,9 @@ RETCODE paramCheckChar(
 
 /** checks parameter value according to the given feasible domain; issues a warning message if value was invalid */
 static
-RETCODE paramCheckString(
-   PARAM*           param,              /**< parameter */
-   const char*      value               /**< value to check */
+SCIP_RETCODE paramCheckString(
+   SCIP_PARAM*           param,              /**< parameter */
+   const char*           value               /**< value to check */
    )
 {
    unsigned int i;
@@ -182,7 +182,7 @@ RETCODE paramCheckString(
 
    if( value == NULL )
    {
-      warningMessage("Cannot assign a NULL string to a string parameter.\n");
+      SCIPwarningMessage("Cannot assign a NULL string to a string parameter.\n");
       return SCIP_PARAMETERWRONGVAL;
    }
 
@@ -190,7 +190,7 @@ RETCODE paramCheckString(
    {
       if( value[i] == '\b' || value[i] == '\f' || value[i] == '\n' || value[i] == '\r' || value[i] == '\v' )
       {
-         warningMessage("Invalid character <%x> in string parameter at position %d.\n", (int)value[i], i);
+         SCIPwarningMessage("Invalid character <%x> in string parameter at position %d.\n", (int)value[i], i);
          return SCIP_PARAMETERWRONGVAL;
       }
    }
@@ -199,8 +199,8 @@ RETCODE paramCheckString(
 }
 
 /** returns type of parameter */
-PARAMTYPE SCIPparamGetType(
-   PARAM*           param               /**< parameter */
+SCIP_PARAMTYPE SCIPparamGetType(
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -210,7 +210,7 @@ PARAMTYPE SCIPparamGetType(
 
 /** returns name of parameter */
 const char* SCIPparamGetName(
-   PARAM*           param               /**< parameter */
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -220,7 +220,7 @@ const char* SCIPparamGetName(
 
 /** returns description of parameter */
 const char* SCIPparamGetDesc(
-   PARAM*           param               /**< parameter */
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -229,8 +229,8 @@ const char* SCIPparamGetDesc(
 }
 
 /** returns locally defined parameter specific data */
-PARAMDATA* SCIPparamGetData(
-   PARAM*           param               /**< parameter */
+SCIP_PARAMDATA* SCIPparamGetData(
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -238,9 +238,9 @@ PARAMDATA* SCIPparamGetData(
    return param->paramdata;
 }
 
-/** returns value of Bool parameter */
-Bool SCIPparamGetBool(
-   PARAM*           param               /**< parameter */
+/** returns value of SCIP_Bool parameter */
+SCIP_Bool SCIPparamGetBool(
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -252,9 +252,9 @@ Bool SCIPparamGetBool(
       return param->data.boolparam.curvalue;
 }
 
-/** returns default value of Bool parameter */
-Bool SCIPparamGetBoolDefault(
-   PARAM*           param               /**< parameter */
+/** returns default value of SCIP_Bool parameter */
+SCIP_Bool SCIPparamGetBoolDefault(
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -265,7 +265,7 @@ Bool SCIPparamGetBoolDefault(
 
 /** returns value of int parameter */
 int SCIPparamGetInt(
-   PARAM*           param               /**< parameter */
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -279,7 +279,7 @@ int SCIPparamGetInt(
 
 /** returns minimal value of int parameter */
 int SCIPparamGetIntMin(
-   PARAM*           param               /**< parameter */
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -290,7 +290,7 @@ int SCIPparamGetIntMin(
 
 /** returns maximal value of int parameter */
 int SCIPparamGetIntMax(
-   PARAM*           param               /**< parameter */
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -301,7 +301,7 @@ int SCIPparamGetIntMax(
 
 /** returns default value of int parameter */
 int SCIPparamGetIntDefault(
-   PARAM*           param               /**< parameter */
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -310,9 +310,9 @@ int SCIPparamGetIntDefault(
    return param->data.intparam.defaultvalue;
 }
 
-/** returns value of Longint parameter */
-Longint SCIPparamGetLongint(
-   PARAM*           param               /**< parameter */
+/** returns value of SCIP_Longint parameter */
+SCIP_Longint SCIPparamGetLongint(
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -325,8 +325,8 @@ Longint SCIPparamGetLongint(
 }
 
 /** returns minimal value of longint parameter */
-Longint SCIPparamGetLongintMin(
-   PARAM*           param               /**< parameter */
+SCIP_Longint SCIPparamGetLongintMin(
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -336,8 +336,8 @@ Longint SCIPparamGetLongintMin(
 }
 
 /** returns maximal value of longint parameter */
-Longint SCIPparamGetLongintMax(
-   PARAM*           param               /**< parameter */
+SCIP_Longint SCIPparamGetLongintMax(
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -346,9 +346,9 @@ Longint SCIPparamGetLongintMax(
    return param->data.longintparam.maxvalue;
 }
 
-/** returns default value of Longint parameter */
-Longint SCIPparamGetLongintDefault(
-   PARAM*           param               /**< parameter */
+/** returns default value of SCIP_Longint parameter */
+SCIP_Longint SCIPparamGetLongintDefault(
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -357,9 +357,9 @@ Longint SCIPparamGetLongintDefault(
    return param->data.longintparam.defaultvalue;
 }
 
-/** returns value of Real parameter */
-Real SCIPparamGetReal(
-   PARAM*           param               /**< parameter */
+/** returns value of SCIP_Real parameter */
+SCIP_Real SCIPparamGetReal(
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -372,8 +372,8 @@ Real SCIPparamGetReal(
 }
 
 /** returns minimal value of real parameter */
-Real SCIPparamGetRealMin(
-   PARAM*           param               /**< parameter */
+SCIP_Real SCIPparamGetRealMin(
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -383,8 +383,8 @@ Real SCIPparamGetRealMin(
 }
 
 /** returns maximal value of real parameter */
-Real SCIPparamGetRealMax(
-   PARAM*           param               /**< parameter */
+SCIP_Real SCIPparamGetRealMax(
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -393,9 +393,9 @@ Real SCIPparamGetRealMax(
    return param->data.realparam.maxvalue;
 }
 
-/** returns default value of Real parameter */
-Real SCIPparamGetRealDefault(
-   PARAM*           param               /**< parameter */
+/** returns default value of SCIP_Real parameter */
+SCIP_Real SCIPparamGetRealDefault(
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -406,7 +406,7 @@ Real SCIPparamGetRealDefault(
 
 /** returns value of char parameter */
 char SCIPparamGetChar(
-   PARAM*           param               /**< parameter */
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -420,7 +420,7 @@ char SCIPparamGetChar(
 
 /** returns default value of char parameter */
 char SCIPparamGetCharDefault(
-   PARAM*           param               /**< parameter */
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -431,7 +431,7 @@ char SCIPparamGetCharDefault(
 
 /** returns value of string parameter */
 char* SCIPparamGetString(
-   PARAM*           param               /**< parameter */
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -445,7 +445,7 @@ char* SCIPparamGetString(
 
 /** returns default value of String parameter */
 char* SCIPparamGetStringDefault(
-   PARAM*           param               /**< parameter */
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -454,17 +454,17 @@ char* SCIPparamGetStringDefault(
    return param->data.stringparam.defaultvalue;
 }
 
-/** sets value of Bool parameter */
-RETCODE SCIPparamSetBool(
-   PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   Bool             value               /**< new value of the parameter */
+/** sets value of SCIP_Bool parameter */
+SCIP_RETCODE SCIPparamSetBool(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   SCIP_Bool             value               /**< new value of the parameter */
    )
 {
    assert(param != NULL);
 
    /* check, if value is possible for the parameter */
-   CHECK_OKAY_QUIET( paramCheckBool(param, value) );
+   SCIP_CALL_QUIET( paramCheckBool(param, value) );
 
    /* set the parameter's current value */
    if( param->data.boolparam.valueptr != NULL )
@@ -475,23 +475,23 @@ RETCODE SCIPparamSetBool(
    /* call the parameter's change information method */
    if( param->paramchgd != NULL && scip != NULL )
    {
-      CHECK_OKAY( param->paramchgd(scip, param) );
+      SCIP_CALL( param->paramchgd(scip, param) );
    }
 
    return SCIP_OKAY;
 }
 
 /** sets value of int parameter */
-RETCODE SCIPparamSetInt(
-   PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   int              value               /**< new value of the parameter */
+SCIP_RETCODE SCIPparamSetInt(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   int                   value               /**< new value of the parameter */
    )
 {
    assert(param != NULL);
 
    /* check, if value is possible for the parameter */
-   CHECK_OKAY_QUIET( paramCheckInt(param, value) );
+   SCIP_CALL_QUIET( paramCheckInt(param, value) );
 
    /* set the parameter's current value */
    if( param->data.intparam.valueptr != NULL )
@@ -502,23 +502,23 @@ RETCODE SCIPparamSetInt(
    /* call the parameter's change information method */
    if( param->paramchgd != NULL && scip != NULL )
    {
-      CHECK_OKAY( param->paramchgd(scip, param) );
+      SCIP_CALL( param->paramchgd(scip, param) );
    }
 
    return SCIP_OKAY;
 }
 
-/** sets value of Longint parameter */
-RETCODE SCIPparamSetLongint(
-   PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   Longint          value               /**< new value of the parameter */
+/** sets value of SCIP_Longint parameter */
+SCIP_RETCODE SCIPparamSetLongint(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   SCIP_Longint          value               /**< new value of the parameter */
    )
 {
    assert(param != NULL);
 
    /* check, if value is possible for the parameter */
-   CHECK_OKAY_QUIET( paramCheckLongint(param, value) );
+   SCIP_CALL_QUIET( paramCheckLongint(param, value) );
 
    /* set the parameter's current value */
    if( param->data.longintparam.valueptr != NULL )
@@ -529,23 +529,23 @@ RETCODE SCIPparamSetLongint(
    /* call the parameter's change information method */
    if( param->paramchgd != NULL && scip != NULL )
    {
-      CHECK_OKAY( param->paramchgd(scip, param) );
+      SCIP_CALL( param->paramchgd(scip, param) );
    }
 
    return SCIP_OKAY;
 }
 
-/** sets value of Real parameter */
-RETCODE SCIPparamSetReal(
-   PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   Real             value               /**< new value of the parameter */
+/** sets value of SCIP_Real parameter */
+SCIP_RETCODE SCIPparamSetReal(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   SCIP_Real             value               /**< new value of the parameter */
    )
 {
    assert(param != NULL);
 
    /* check, if value is possible for the parameter */
-   CHECK_OKAY_QUIET( paramCheckReal(param, value) );
+   SCIP_CALL_QUIET( paramCheckReal(param, value) );
 
    /* set the parameter's current value */
    if( param->data.realparam.valueptr != NULL )
@@ -556,23 +556,23 @@ RETCODE SCIPparamSetReal(
    /* call the parameter's change information method */
    if( param->paramchgd != NULL && scip != NULL )
    {
-      CHECK_OKAY( param->paramchgd(scip, param) );
+      SCIP_CALL( param->paramchgd(scip, param) );
    }
 
    return SCIP_OKAY;
 }
 
 /** sets value of char parameter */
-RETCODE SCIPparamSetChar(
-   PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   char             value               /**< new value of the parameter */
+SCIP_RETCODE SCIPparamSetChar(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   char                  value               /**< new value of the parameter */
    )
 {
    assert(param != NULL);
 
    /* check, if value is possible for the parameter */
-   CHECK_OKAY_QUIET( paramCheckChar(param, value) );
+   SCIP_CALL_QUIET( paramCheckChar(param, value) );
 
    /* set the parameter's current value */
    if( param->data.charparam.valueptr != NULL )
@@ -583,48 +583,48 @@ RETCODE SCIPparamSetChar(
    /* call the parameter's change information method */
    if( param->paramchgd != NULL && scip != NULL )
    {
-      CHECK_OKAY( param->paramchgd(scip, param) );
+      SCIP_CALL( param->paramchgd(scip, param) );
    }
 
    return SCIP_OKAY;
 }
 
 /** sets value of string parameter */
-RETCODE SCIPparamSetString(
-   PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   const char*      value               /**< new value of the parameter */
+SCIP_RETCODE SCIPparamSetString(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP*                 scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   const char*           value               /**< new value of the parameter */
    )
 {
    assert(param != NULL);
 
    /* check, if value is possible for the parameter */
-   CHECK_OKAY_QUIET( paramCheckString(param, value) );
+   SCIP_CALL_QUIET( paramCheckString(param, value) );
 
    /* set the parameter's current value */
    if( param->data.stringparam.valueptr != NULL )
    {
-      freeMemoryArrayNull(param->data.stringparam.valueptr);
-      duplicateMemoryArray(param->data.stringparam.valueptr, value, strlen(value)+1);
+      BMSfreeMemoryArrayNull(param->data.stringparam.valueptr);
+      BMSduplicateMemoryArray(param->data.stringparam.valueptr, value, strlen(value)+1);
    }
    else
    {
-      freeMemoryArrayNull(&param->data.stringparam.curvalue);
-      duplicateMemoryArray(&param->data.stringparam.curvalue, value, strlen(value)+1);
+      BMSfreeMemoryArrayNull(&param->data.stringparam.curvalue);
+      BMSduplicateMemoryArray(&param->data.stringparam.curvalue, value, strlen(value)+1);
    }
 
    /* call the parameter's change information method */
    if( param->paramchgd != NULL && scip != NULL )
    {
-      CHECK_OKAY( param->paramchgd(scip, param) );
+      SCIP_CALL( param->paramchgd(scip, param) );
    }
 
    return SCIP_OKAY;
 }
 
 /** returns whether the parameter is on its default setting */
-Bool SCIPparamIsDefault(
-   PARAM*           param               /**< parameter */
+SCIP_Bool SCIPparamIsDefault(
+   SCIP_PARAM*           param               /**< parameter */
    )
 {
    assert(param != NULL);
@@ -650,16 +650,16 @@ Bool SCIPparamIsDefault(
       return (strcmp(SCIPparamGetString(param), SCIPparamGetStringDefault(param)) == 0);
       
    default:
-      errorMessage("unknown parameter type\n");
+      SCIPerrorMessage("unknown parameter type\n");
       SCIPABORT();
       return FALSE;
    }
 }
 
 /** sets the parameter to its default setting */
-RETCODE SCIPparamSetToDefault(
-   PARAM*           param,              /**< parameter */
-   SCIP*            scip                /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+SCIP_RETCODE SCIPparamSetToDefault(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP*                 scip                /**< SCIP data structure, or NULL if paramchgd method should not be called */   
    )
 {
    assert(param != NULL);
@@ -667,31 +667,31 @@ RETCODE SCIPparamSetToDefault(
    switch( param->paramtype )
    {
    case SCIP_PARAMTYPE_BOOL:
-      CHECK_OKAY( SCIPparamSetBool(param, scip, SCIPparamGetBoolDefault(param)) );
+      SCIP_CALL( SCIPparamSetBool(param, scip, SCIPparamGetBoolDefault(param)) );
       break;
 
    case SCIP_PARAMTYPE_INT:
-      CHECK_OKAY( SCIPparamSetInt(param, scip, SCIPparamGetIntDefault(param)) );
+      SCIP_CALL( SCIPparamSetInt(param, scip, SCIPparamGetIntDefault(param)) );
       break;
 
    case SCIP_PARAMTYPE_LONGINT:
-      CHECK_OKAY( SCIPparamSetLongint(param, scip, SCIPparamGetLongintDefault(param)) );
+      SCIP_CALL( SCIPparamSetLongint(param, scip, SCIPparamGetLongintDefault(param)) );
       break;
 
    case SCIP_PARAMTYPE_REAL:
-      CHECK_OKAY( SCIPparamSetReal(param, scip, SCIPparamGetRealDefault(param)) );
+      SCIP_CALL( SCIPparamSetReal(param, scip, SCIPparamGetRealDefault(param)) );
       break;
 
    case SCIP_PARAMTYPE_CHAR:
-      CHECK_OKAY( SCIPparamSetChar(param, scip, SCIPparamGetCharDefault(param)) );
+      SCIP_CALL( SCIPparamSetChar(param, scip, SCIPparamGetCharDefault(param)) );
       break;
 
    case SCIP_PARAMTYPE_STRING:
-      CHECK_OKAY( SCIPparamSetString(param, scip, SCIPparamGetStringDefault(param)) );
+      SCIP_CALL( SCIPparamSetString(param, scip, SCIPparamGetStringDefault(param)) );
       break;
       
    default:
-      errorMessage("unknown parameter type\n");
+      SCIPerrorMessage("unknown parameter type\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -700,23 +700,23 @@ RETCODE SCIPparamSetToDefault(
 
 /** creates a parameter with name and description, does not set the type specific parameter values themselves */
 static
-RETCODE paramCreate(
-   PARAM**          param,              /**< pointer to the parameter */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE paramCreate(
+   SCIP_PARAM**          param,              /**< pointer to the parameter */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
    assert(param != NULL);
    assert(name != NULL);
    assert(desc != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(blkmem, param) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, param) );
    
-   ALLOC_OKAY( duplicateMemoryArray(&(*param)->name, name, strlen(name)+1) );
-   ALLOC_OKAY( duplicateMemoryArray(&(*param)->desc, desc, strlen(desc)+1) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*param)->name, name, strlen(name)+1) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*param)->desc, desc, strlen(desc)+1) );
 
    (*param)->paramchgd = paramchgd;
    (*param)->paramdata = paramdata;
@@ -724,52 +724,52 @@ RETCODE paramCreate(
    return SCIP_OKAY;
 }
 
-/** creates a Bool parameter, and sets its value to default */
+/** creates a SCIP_Bool parameter, and sets its value to default */
 static
-RETCODE paramCreateBool(
-   PARAM**          param,              /**< pointer to the parameter */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
-   Bool             defaultvalue,       /**< default value of the parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE paramCreateBool(
+   SCIP_PARAM**          param,              /**< pointer to the parameter */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   SCIP_Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             defaultvalue,       /**< default value of the parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
    assert(param != NULL);
    assert(name != NULL);
 
-   CHECK_OKAY( paramCreate(param, blkmem, name, desc, paramchgd, paramdata) );
+   SCIP_CALL( paramCreate(param, blkmem, name, desc, paramchgd, paramdata) );
 
    (*param)->paramtype = SCIP_PARAMTYPE_BOOL;
    (*param)->data.boolparam.valueptr = valueptr;
    (*param)->data.boolparam.defaultvalue = defaultvalue;
 
-   CHECK_OKAY( SCIPparamSetBool(*param, NULL, defaultvalue) );
+   SCIP_CALL( SCIPparamSetBool(*param, NULL, defaultvalue) );
 
    return SCIP_OKAY;
 }
 
 /** creates a int parameter, and sets its value to default */
 static
-RETCODE paramCreateInt(
-   PARAM**          param,              /**< pointer to the parameter */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   int*             valueptr,           /**< pointer to store the current parameter value, or NULL */
-   int              defaultvalue,       /**< default value of the parameter */
-   int              minvalue,           /**< minimum value for parameter */
-   int              maxvalue,           /**< maximum value for parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE paramCreateInt(
+   SCIP_PARAM**          param,              /**< pointer to the parameter */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   int*                  valueptr,           /**< pointer to store the current parameter value, or NULL */
+   int                   defaultvalue,       /**< default value of the parameter */
+   int                   minvalue,           /**< minimum value for parameter */
+   int                   maxvalue,           /**< maximum value for parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
    assert(param != NULL);
    assert(name != NULL);
 
-   CHECK_OKAY( paramCreate(param, blkmem, name, desc, paramchgd, paramdata) );
+   SCIP_CALL( paramCreate(param, blkmem, name, desc, paramchgd, paramdata) );
 
    (*param)->paramtype = SCIP_PARAMTYPE_INT;
    (*param)->data.intparam.valueptr = valueptr;
@@ -777,30 +777,30 @@ RETCODE paramCreateInt(
    (*param)->data.intparam.minvalue = minvalue;
    (*param)->data.intparam.maxvalue = maxvalue;
 
-   CHECK_OKAY( SCIPparamSetInt(*param, NULL, defaultvalue) );
+   SCIP_CALL( SCIPparamSetInt(*param, NULL, defaultvalue) );
 
    return SCIP_OKAY;
 }
 
-/** creates a Longint parameter, and sets its value to default */
+/** creates a SCIP_Longint parameter, and sets its value to default */
 static
-RETCODE paramCreateLongint(
-   PARAM**          param,              /**< pointer to the parameter */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
-   Longint          defaultvalue,       /**< default value of the parameter */
-   Longint          minvalue,           /**< minimum value for parameter */
-   Longint          maxvalue,           /**< maximum value for parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE paramCreateLongint(
+   SCIP_PARAM**          param,              /**< pointer to the parameter */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   SCIP_Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Longint          defaultvalue,       /**< default value of the parameter */
+   SCIP_Longint          minvalue,           /**< minimum value for parameter */
+   SCIP_Longint          maxvalue,           /**< maximum value for parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
    assert(param != NULL);
    assert(name != NULL);
 
-   CHECK_OKAY( paramCreate(param, blkmem, name, desc, paramchgd, paramdata) );
+   SCIP_CALL( paramCreate(param, blkmem, name, desc, paramchgd, paramdata) );
 
    (*param)->paramtype = SCIP_PARAMTYPE_LONGINT;
    (*param)->data.longintparam.valueptr = valueptr;
@@ -808,30 +808,30 @@ RETCODE paramCreateLongint(
    (*param)->data.longintparam.minvalue = minvalue;
    (*param)->data.longintparam.maxvalue = maxvalue;
 
-   CHECK_OKAY( SCIPparamSetLongint(*param, NULL, defaultvalue) );
+   SCIP_CALL( SCIPparamSetLongint(*param, NULL, defaultvalue) );
 
    return SCIP_OKAY;
 }
 
-/** creates a Real parameter, and sets its value to default */
+/** creates a SCIP_Real parameter, and sets its value to default */
 static
-RETCODE paramCreateReal(
-   PARAM**          param,              /**< pointer to the parameter */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
-   Real             defaultvalue,       /**< default value of the parameter */
-   Real             minvalue,           /**< minimum value for parameter */
-   Real             maxvalue,           /**< maximum value for parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE paramCreateReal(
+   SCIP_PARAM**          param,              /**< pointer to the parameter */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   SCIP_Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Real             defaultvalue,       /**< default value of the parameter */
+   SCIP_Real             minvalue,           /**< minimum value for parameter */
+   SCIP_Real             maxvalue,           /**< maximum value for parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
    assert(param != NULL);
    assert(name != NULL);
 
-   CHECK_OKAY( paramCreate(param, blkmem, name, desc, paramchgd, paramdata) );
+   SCIP_CALL( paramCreate(param, blkmem, name, desc, paramchgd, paramdata) );
 
    (*param)->paramtype = SCIP_PARAMTYPE_REAL;
    (*param)->data.realparam.valueptr = valueptr;
@@ -839,56 +839,56 @@ RETCODE paramCreateReal(
    (*param)->data.realparam.minvalue = minvalue;
    (*param)->data.realparam.maxvalue = maxvalue;
 
-   CHECK_OKAY( SCIPparamSetReal(*param, NULL, defaultvalue) );
+   SCIP_CALL( SCIPparamSetReal(*param, NULL, defaultvalue) );
 
    return SCIP_OKAY;
 }
 
 /** creates a char parameter, and sets its value to default */
 static
-RETCODE paramCreateChar(
-   PARAM**          param,              /**< pointer to the parameter */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   char*            valueptr,           /**< pointer to store the current parameter value, or NULL */
-   char             defaultvalue,       /**< default value of the parameter */
-   const char*      allowedvalues,      /**< array with possible parameter values, or NULL if not restricted */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE paramCreateChar(
+   SCIP_PARAM**          param,              /**< pointer to the parameter */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   char*                 valueptr,           /**< pointer to store the current parameter value, or NULL */
+   char                  defaultvalue,       /**< default value of the parameter */
+   const char*           allowedvalues,      /**< array with possible parameter values, or NULL if not restricted */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
    assert(param != NULL);
    assert(name != NULL);
 
-   CHECK_OKAY( paramCreate(param, blkmem, name, desc, paramchgd, paramdata) );
+   SCIP_CALL( paramCreate(param, blkmem, name, desc, paramchgd, paramdata) );
 
    (*param)->paramtype = SCIP_PARAMTYPE_CHAR;
    (*param)->data.charparam.valueptr = valueptr;
    (*param)->data.charparam.defaultvalue = defaultvalue;
    if( allowedvalues != NULL )
    {
-      ALLOC_OKAY( duplicateMemoryArray(&(*param)->data.charparam.allowedvalues, allowedvalues, strlen(allowedvalues)+1) );
+      SCIP_ALLOC( BMSduplicateMemoryArray(&(*param)->data.charparam.allowedvalues, allowedvalues, strlen(allowedvalues)+1) );
    }
    else
       (*param)->data.charparam.allowedvalues = NULL;
 
-   CHECK_OKAY( SCIPparamSetChar(*param, NULL, defaultvalue) );
+   SCIP_CALL( SCIPparamSetChar(*param, NULL, defaultvalue) );
 
    return SCIP_OKAY;
 }
 
 /** creates a string parameter, and sets its value to default */
 static
-RETCODE paramCreateString(
-   PARAM**          param,              /**< pointer to the parameter */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   char**           valueptr,           /**< pointer to store the current parameter value, or NULL */
-   const char*      defaultvalue,       /**< default value of the parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE paramCreateString(
+   SCIP_PARAM**          param,              /**< pointer to the parameter */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   char**                valueptr,           /**< pointer to store the current parameter value, or NULL */
+   const char*           defaultvalue,       /**< default value of the parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
    assert(param != NULL);
@@ -896,14 +896,14 @@ RETCODE paramCreateString(
    assert(valueptr == NULL || *valueptr == NULL);
    assert(defaultvalue != NULL);
 
-   CHECK_OKAY( paramCreate(param, blkmem, name, desc, paramchgd, paramdata) );
+   SCIP_CALL( paramCreate(param, blkmem, name, desc, paramchgd, paramdata) );
 
    (*param)->paramtype = SCIP_PARAMTYPE_STRING;
    (*param)->data.stringparam.valueptr = valueptr;
-   ALLOC_OKAY( duplicateMemoryArray(&(*param)->data.stringparam.defaultvalue, defaultvalue, strlen(defaultvalue)+1) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*param)->data.stringparam.defaultvalue, defaultvalue, strlen(defaultvalue)+1) );
    (*param)->data.stringparam.curvalue = NULL;
 
-   CHECK_OKAY( SCIPparamSetString(*param, NULL, defaultvalue) );
+   SCIP_CALL( SCIPparamSetString(*param, NULL, defaultvalue) );
 
    return SCIP_OKAY;
 }
@@ -911,8 +911,8 @@ RETCODE paramCreateString(
 /** frees a single parameter */
 static
 void paramFree(
-   PARAM**          param,              /**< pointer to the parameter */
-   BLKMEM*          blkmem              /**< block memory */
+   SCIP_PARAM**          param,              /**< pointer to the parameter */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(param != NULL);
@@ -926,35 +926,35 @@ void paramFree(
    case SCIP_PARAMTYPE_REAL:
       break;
    case SCIP_PARAMTYPE_CHAR:
-      freeMemoryArrayNull(&(*param)->data.charparam.allowedvalues);
+      BMSfreeMemoryArrayNull(&(*param)->data.charparam.allowedvalues);
       break;
    case SCIP_PARAMTYPE_STRING:
-      freeMemoryArray(&(*param)->data.stringparam.defaultvalue);
+      BMSfreeMemoryArray(&(*param)->data.stringparam.defaultvalue);
       if( (*param)->data.stringparam.valueptr == NULL )
       {
-         freeMemoryArray(&(*param)->data.stringparam.curvalue);
+         BMSfreeMemoryArray(&(*param)->data.stringparam.curvalue);
       }
       else
       {
-         freeMemoryArray((*param)->data.stringparam.valueptr);
+         BMSfreeMemoryArray((*param)->data.stringparam.valueptr);
       }
       break;
    default:
-      errorMessage("invalid parameter type\n");
+      SCIPerrorMessage("invalid parameter type\n");
       SCIPABORT();
    }
 
-   freeMemoryArray(&(*param)->name);
-   freeMemoryArray(&(*param)->desc);
-   freeBlockMemory(blkmem, param);
+   BMSfreeMemoryArray(&(*param)->name);
+   BMSfreeMemoryArray(&(*param)->desc);
+   BMSfreeBlockMemory(blkmem, param);
 }
 
-/** sets Bool parameter according to the value of the given string */
+/** sets SCIP_Bool parameter according to the value of the given string */
 static
-RETCODE paramParseBool(
-   PARAM*           param,              /**< parameter */
-   SET*             set,                /**< global SCIP settings */
-   char*            valuestr            /**< value in string format (may be modified during parse) */
+SCIP_RETCODE paramParseBool(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   char*                 valuestr            /**< value in string format (may be modified during parse) */
    )
 {
    assert(param != NULL);
@@ -964,15 +964,15 @@ RETCODE paramParseBool(
 
    if( strcasecmp(valuestr, "TRUE") == 0 )
    {
-      CHECK_OKAY( SCIPparamSetBool(param, set->scip, TRUE) );
+      SCIP_CALL( SCIPparamSetBool(param, set->scip, TRUE) );
    }
    else if( strcasecmp(valuestr, "FALSE") == 0 )
    {
-      CHECK_OKAY( SCIPparamSetBool(param, set->scip, FALSE) );
+      SCIP_CALL( SCIPparamSetBool(param, set->scip, FALSE) );
    }
    else
    {
-      errorMessage("invalid parameter value <%s> for Bool parameter <%s>\n", valuestr, param->name);
+      SCIPerrorMessage("invalid parameter value <%s> for SCIP_Bool parameter <%s>\n", valuestr, param->name);
       return SCIP_PARSEERROR;
    }
    
@@ -981,10 +981,10 @@ RETCODE paramParseBool(
 
 /** sets int parameter according to the value of the given string */
 static
-RETCODE paramParseInt(
-   PARAM*           param,              /**< parameter */
-   SET*             set,                /**< global SCIP settings */
-   char*            valuestr            /**< value in string format (may be modified during parse) */
+SCIP_RETCODE paramParseInt(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   char*                 valuestr            /**< value in string format (may be modified during parse) */
    )
 {
    int value;
@@ -996,67 +996,67 @@ RETCODE paramParseInt(
 
    if( sscanf(valuestr, "%d", &value) == 1 )
    {
-      CHECK_OKAY( SCIPparamSetInt(param, set->scip, value) );
+      SCIP_CALL( SCIPparamSetInt(param, set->scip, value) );
    }
    else
    {
-      errorMessage("invalid parameter value <%s> for int parameter <%s>\n", valuestr, param->name);
+      SCIPerrorMessage("invalid parameter value <%s> for int parameter <%s>\n", valuestr, param->name);
       return SCIP_PARSEERROR;
    }
    
    return SCIP_OKAY;
 }
 
-/** sets Longint parameter according to the value of the given string */
+/** sets SCIP_Longint parameter according to the value of the given string */
 static
-RETCODE paramParseLongint(
-   PARAM*           param,              /**< parameter */
-   SET*             set,                /**< global SCIP settings */
-   char*            valuestr            /**< value in string format (may be modified during parse) */
+SCIP_RETCODE paramParseLongint(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   char*                 valuestr            /**< value in string format (may be modified during parse) */
    )
 {
-   Longint value;
+   SCIP_Longint value;
 
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_LONGINT);
    assert(set != NULL);
    assert(valuestr != NULL);
 
-   if( sscanf(valuestr, LONGINT_FORMAT, &value) == 1 )
+   if( sscanf(valuestr, SCIP_LONGINT_FORMAT, &value) == 1 )
    {
-      CHECK_OKAY( SCIPparamSetLongint(param, set->scip, value) );
+      SCIP_CALL( SCIPparamSetLongint(param, set->scip, value) );
    }
    else
    {
-      errorMessage("invalid parameter value <%s> for Longint parameter <%s>\n", valuestr, param->name);
+      SCIPerrorMessage("invalid parameter value <%s> for SCIP_Longint parameter <%s>\n", valuestr, param->name);
       return SCIP_PARSEERROR;
    }
    
    return SCIP_OKAY;
 }
 
-/** sets Real parameter according to the value of the given string */
+/** sets SCIP_Real parameter according to the value of the given string */
 static
-RETCODE paramParseReal(
-   PARAM*           param,              /**< parameter */
-   SET*             set,                /**< global SCIP settings */
-   char*            valuestr            /**< value in string format (may be modified during parse) */
+SCIP_RETCODE paramParseReal(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   char*                 valuestr            /**< value in string format (may be modified during parse) */
    )
 {
-   Real value;
+   SCIP_Real value;
 
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_REAL);
    assert(set != NULL);
    assert(valuestr != NULL);
 
-   if( sscanf(valuestr, REAL_FORMAT, &value) == 1 )
+   if( sscanf(valuestr, SCIP_REAL_FORMAT, &value) == 1 )
    {
-      CHECK_OKAY( SCIPparamSetReal(param, set->scip, value) );
+      SCIP_CALL( SCIPparamSetReal(param, set->scip, value) );
    }
    else
    {
-      errorMessage("invalid parameter value <%s> for Real parameter <%s>\n", valuestr, param->name);
+      SCIPerrorMessage("invalid parameter value <%s> for SCIP_Real parameter <%s>\n", valuestr, param->name);
       return SCIP_PARSEERROR;
    }
    
@@ -1065,10 +1065,10 @@ RETCODE paramParseReal(
 
 /** sets Char parameter according to the value of the given string */
 static
-RETCODE paramParseChar(
-   PARAM*           param,              /**< parameter */
-   SET*             set,                /**< global SCIP settings */
-   char*            valuestr            /**< value in string format (may be modified during parse) */
+SCIP_RETCODE paramParseChar(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   char*                 valuestr            /**< value in string format (may be modified during parse) */
    )
 {
    char value;
@@ -1080,11 +1080,11 @@ RETCODE paramParseChar(
 
    if( sscanf(valuestr, "%c", &value) == 1 )
    {
-      CHECK_OKAY( SCIPparamSetChar(param, set->scip, value) );
+      SCIP_CALL( SCIPparamSetChar(param, set->scip, value) );
    }
    else
    {
-      errorMessage("invalid parameter value <%s> for char parameter <%s>\n", valuestr, param->name);
+      SCIPerrorMessage("invalid parameter value <%s> for char parameter <%s>\n", valuestr, param->name);
       return SCIP_PARSEERROR;
    }
    
@@ -1093,10 +1093,10 @@ RETCODE paramParseChar(
 
 /** sets String parameter according to the value of the given string */
 static
-RETCODE paramParseString(
-   PARAM*           param,              /**< parameter */
-   SET*             set,                /**< global SCIP settings */
-   char*            valuestr            /**< value in string format (may be modified during parse) */
+SCIP_RETCODE paramParseString(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   char*                 valuestr            /**< value in string format (may be modified during parse) */
    )
 {
    unsigned int len;
@@ -1110,7 +1110,7 @@ RETCODE paramParseString(
    len = strlen(valuestr);
    if( len <= 1 || valuestr[0] != '"' || valuestr[len-1] != '"' )
    {
-      errorMessage("invalid parameter value <%s> for string parameter <%s> (string has to be in double quotes)\n",
+      SCIPerrorMessage("invalid parameter value <%s> for string parameter <%s> (string has to be in double quotes)\n",
          valuestr, param->name);
       return SCIP_PARSEERROR;
    }
@@ -1118,18 +1118,18 @@ RETCODE paramParseString(
    /* remove the quotes */
    valuestr[len-1] = '\0';
    valuestr++;
-   CHECK_OKAY( SCIPparamSetString(param, set->scip, valuestr) );
+   SCIP_CALL( SCIPparamSetString(param, set->scip, valuestr) );
    
    return SCIP_OKAY;
 }
 
 /** writes the parameter to a file */
 static
-RETCODE paramWrite(
-   PARAM*           param,              /**< parameter */
-   FILE*            file,               /**< file to write parameter to */
-   Bool             comments,           /**< should parameter descriptions be written as comments? */
-   Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
+SCIP_RETCODE paramWrite(
+   SCIP_PARAM*           param,              /**< parameter */
+   FILE*                 file,               /**< file to write parameter to */
+   SCIP_Bool             comments,           /**< should parameter descriptions be written as comments? */
+   SCIP_Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
    )
 {
    assert(param != NULL);
@@ -1170,7 +1170,7 @@ RETCODE paramWrite(
          SCIPmessageFPrintInfo(file, "# [type: string, default: \"%s\"]\n", param->data.stringparam.defaultvalue);
          break;
       default:
-         errorMessage("unknown parameter type\n");
+         SCIPerrorMessage("unknown parameter type\n");
          return SCIP_INVALIDDATA;
       }
    }
@@ -1198,7 +1198,7 @@ RETCODE paramWrite(
       SCIPmessageFPrintInfo(file, "\"%s\"\n", SCIPparamGetString(param));
       break;
    default:
-      errorMessage("unknown parameter type\n");
+      SCIPerrorMessage("unknown parameter type\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -1216,16 +1216,16 @@ RETCODE paramWrite(
  */
 
 /** creates parameter set */
-RETCODE SCIPparamsetCreate(
-   PARAMSET**       paramset,           /**< pointer to store the parameter set */
-   BLKMEM*          blkmem              /**< block memory */
+SCIP_RETCODE SCIPparamsetCreate(
+   SCIP_PARAMSET**       paramset,           /**< pointer to store the parameter set */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(paramset != NULL);
 
-   ALLOC_OKAY( allocMemory(paramset) );
+   SCIP_ALLOC( BMSallocMemory(paramset) );
 
-   CHECK_OKAY( SCIPhashtableCreate(&(*paramset)->hashtable, blkmem, SCIP_HASHSIZE_PARAMS,
+   SCIP_CALL( SCIPhashtableCreate(&(*paramset)->hashtable, blkmem, SCIP_HASHSIZE_PARAMS,
                   hashGetKeyParam, SCIPhashKeyEqString, SCIPhashKeyValString) );
 
    (*paramset)->params = NULL;
@@ -1237,8 +1237,8 @@ RETCODE SCIPparamsetCreate(
 
 /** frees parameter set */
 void SCIPparamsetFree(
-   PARAMSET**       paramset,           /**< pointer to the parameter set */
-   BLKMEM*          blkmem              /**< block memory */
+   SCIP_PARAMSET**       paramset,           /**< pointer to the parameter set */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    int i;
@@ -1255,29 +1255,29 @@ void SCIPparamsetFree(
 
    SCIPhashtableFree(&(*paramset)->hashtable);
 
-   freeMemoryArrayNull(&(*paramset)->params);
-   freeMemory(paramset);
+   BMSfreeMemoryArrayNull(&(*paramset)->params);
+   BMSfreeMemory(paramset);
 }
 
 /** adds parameter to the parameter set */
 static
-RETCODE paramsetAdd(
-   PARAMSET*        paramset,           /**< parameter set */
-   PARAM*           param               /**< parameter to add */
+SCIP_RETCODE paramsetAdd(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_PARAM*           param               /**< parameter to add */
    )
 {
    assert(paramset != NULL);
    assert(param != NULL);
 
    /* insert the parameter name to the hash table */
-   CHECK_OKAY( SCIPhashtableSafeInsert(paramset->hashtable, (void*)param) );
+   SCIP_CALL( SCIPhashtableSafeInsert(paramset->hashtable, (void*)param) );
 
    /* ensure, that there is enough space in the params array */
    if( paramset->nparams >= paramset->paramssize )
    {
       paramset->paramssize *= 2;
       paramset->paramssize = MAX(paramset->paramssize, paramset->nparams+1);
-      ALLOC_OKAY( reallocMemoryArray(&paramset->params, paramset->paramssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&paramset->params, paramset->paramssize) );
    }
    assert(paramset->nparams < paramset->paramssize);
    
@@ -1288,180 +1288,180 @@ RETCODE paramsetAdd(
    return SCIP_OKAY;
 }
 
-/** creates a Bool parameter, sets it to its default value, and adds it to the parameter set */
-RETCODE SCIPparamsetAddBool(
-   PARAMSET*        paramset,           /**< parameter set */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
-   Bool             defaultvalue,       /**< default value of the parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+/** creates a SCIP_Bool parameter, sets it to its default value, and adds it to the parameter set */
+SCIP_RETCODE SCIPparamsetAddBool(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   SCIP_Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             defaultvalue,       /**< default value of the parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
-   PARAM* param;
+   SCIP_PARAM* param;
 
    assert(paramset != NULL);
 
    /* create the parameter */
-   CHECK_OKAY( paramCreateBool(&param, blkmem, name, desc, valueptr, defaultvalue, paramchgd, paramdata) );
+   SCIP_CALL( paramCreateBool(&param, blkmem, name, desc, valueptr, defaultvalue, paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
-   CHECK_OKAY( paramsetAdd(paramset, param) );
+   SCIP_CALL( paramsetAdd(paramset, param) );
    
    return SCIP_OKAY;
 }
 
 /** creates a int parameter, sets it to its default value, and adds it to the parameter set */
-RETCODE SCIPparamsetAddInt(
-   PARAMSET*        paramset,           /**< parameter set */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   int*             valueptr,           /**< pointer to store the current parameter value, or NULL */
-   int              defaultvalue,       /**< default value of the parameter */
-   int              minvalue,           /**< minimum value for parameter */
-   int              maxvalue,           /**< maximum value for parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE SCIPparamsetAddInt(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   int*                  valueptr,           /**< pointer to store the current parameter value, or NULL */
+   int                   defaultvalue,       /**< default value of the parameter */
+   int                   minvalue,           /**< minimum value for parameter */
+   int                   maxvalue,           /**< maximum value for parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
-   PARAM* param;
+   SCIP_PARAM* param;
 
    assert(paramset != NULL);
 
    /* create the parameter */
-   CHECK_OKAY( paramCreateInt(&param, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
+   SCIP_CALL( paramCreateInt(&param, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
                   paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
-   CHECK_OKAY( paramsetAdd(paramset, param) );
+   SCIP_CALL( paramsetAdd(paramset, param) );
    
    return SCIP_OKAY;
 }
 
-/** creates a Longint parameter, sets it to its default value, and adds it to the parameter set */
-RETCODE SCIPparamsetAddLongint(
-   PARAMSET*        paramset,           /**< parameter set */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
-   Longint          defaultvalue,       /**< default value of the parameter */
-   Longint          minvalue,           /**< minimum value for parameter */
-   Longint          maxvalue,           /**< maximum value for parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+/** creates a SCIP_Longint parameter, sets it to its default value, and adds it to the parameter set */
+SCIP_RETCODE SCIPparamsetAddLongint(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   SCIP_Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Longint          defaultvalue,       /**< default value of the parameter */
+   SCIP_Longint          minvalue,           /**< minimum value for parameter */
+   SCIP_Longint          maxvalue,           /**< maximum value for parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
-   PARAM* param;
+   SCIP_PARAM* param;
 
    assert(paramset != NULL);
 
    /* create the parameter */
-   CHECK_OKAY( paramCreateLongint(&param, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
+   SCIP_CALL( paramCreateLongint(&param, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
                   paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
-   CHECK_OKAY( paramsetAdd(paramset, param) );
+   SCIP_CALL( paramsetAdd(paramset, param) );
    
    return SCIP_OKAY;
 }
 
-/** creates a Real parameter, sets it to its default value, and adds it to the parameter set */
-RETCODE SCIPparamsetAddReal(
-   PARAMSET*        paramset,           /**< parameter set */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
-   Real             defaultvalue,       /**< default value of the parameter */
-   Real             minvalue,           /**< minimum value for parameter */
-   Real             maxvalue,           /**< maximum value for parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+/** creates a SCIP_Real parameter, sets it to its default value, and adds it to the parameter set */
+SCIP_RETCODE SCIPparamsetAddReal(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   SCIP_Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Real             defaultvalue,       /**< default value of the parameter */
+   SCIP_Real             minvalue,           /**< minimum value for parameter */
+   SCIP_Real             maxvalue,           /**< maximum value for parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
-   PARAM* param;
+   SCIP_PARAM* param;
 
    assert(paramset != NULL);
 
    /* create the parameter */
-   CHECK_OKAY( paramCreateReal(&param, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
+   SCIP_CALL( paramCreateReal(&param, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
                   paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
-   CHECK_OKAY( paramsetAdd(paramset, param) );
+   SCIP_CALL( paramsetAdd(paramset, param) );
    
    return SCIP_OKAY;
 }
 
 /** creates a char parameter, sets it to its default value, and adds it to the parameter set */
-RETCODE SCIPparamsetAddChar(
-   PARAMSET*        paramset,           /**< parameter set */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   char*            valueptr,           /**< pointer to store the current parameter value, or NULL */
-   char             defaultvalue,       /**< default value of the parameter */
-   const char*      allowedvalues,      /**< array with possible parameter values, or NULL if not restricted */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE SCIPparamsetAddChar(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   char*                 valueptr,           /**< pointer to store the current parameter value, or NULL */
+   char                  defaultvalue,       /**< default value of the parameter */
+   const char*           allowedvalues,      /**< array with possible parameter values, or NULL if not restricted */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
-   PARAM* param;
+   SCIP_PARAM* param;
 
    assert(paramset != NULL);
 
    /* create the parameter */
-   CHECK_OKAY( paramCreateChar(&param, blkmem, name, desc, valueptr, defaultvalue, allowedvalues, paramchgd, paramdata) );
+   SCIP_CALL( paramCreateChar(&param, blkmem, name, desc, valueptr, defaultvalue, allowedvalues, paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
-   CHECK_OKAY( paramsetAdd(paramset, param) );
+   SCIP_CALL( paramsetAdd(paramset, param) );
    
    return SCIP_OKAY;
 }
 
 /** creates a string parameter, sets it to its default value, and adds it to the parameter set */
-RETCODE SCIPparamsetAddString(
-   PARAMSET*        paramset,           /**< parameter set */
-   BLKMEM*          blkmem,             /**< block memory */
-   const char*      name,               /**< name of the parameter */
-   const char*      desc,               /**< description of the parameter */
-   char**           valueptr,           /**< pointer to store the current parameter value, or NULL */
-   const char*      defaultvalue,       /**< default value of the parameter */
-   DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
-   PARAMDATA*       paramdata           /**< locally defined parameter specific data */
+SCIP_RETCODE SCIPparamsetAddString(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           name,               /**< name of the parameter */
+   const char*           desc,               /**< description of the parameter */
+   char**                valueptr,           /**< pointer to store the current parameter value, or NULL */
+   const char*           defaultvalue,       /**< default value of the parameter */
+   SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
+   SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
    )
 {
-   PARAM* param;
+   SCIP_PARAM* param;
 
    assert(paramset != NULL);
 
    /* create the parameter */
-   CHECK_OKAY( paramCreateString(&param, blkmem, name, desc, valueptr, defaultvalue, paramchgd, paramdata) );
+   SCIP_CALL( paramCreateString(&param, blkmem, name, desc, valueptr, defaultvalue, paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
-   CHECK_OKAY( paramsetAdd(paramset, param) );
+   SCIP_CALL( paramsetAdd(paramset, param) );
    
    return SCIP_OKAY;
 }
 
-/** gets the value of an existing Bool parameter */
-RETCODE SCIPparamsetGetBool(
-   PARAMSET*        paramset,           /**< parameter set */
-   const char*      name,               /**< name of the parameter */
-   Bool*            value               /**< pointer to store the parameter */
+/** gets the value of an existing SCIP_Bool parameter */
+SCIP_RETCODE SCIPparamsetGetBool(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool*            value               /**< pointer to store the parameter */
    )
 {
-   PARAM* param;
+   SCIP_PARAM* param;
 
    assert(paramset != NULL);
    assert(value != NULL);
 
    /* retrieve parameter from hash table */
-   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_BOOL )
@@ -1474,19 +1474,19 @@ RETCODE SCIPparamsetGetBool(
 }
 
 /** gets the value of an existing int parameter */
-RETCODE SCIPparamsetGetInt(
-   PARAMSET*        paramset,           /**< parameter set */
-   const char*      name,               /**< name of the parameter */
-   int*             value               /**< pointer to store the parameter */
+SCIP_RETCODE SCIPparamsetGetInt(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   int*                  value               /**< pointer to store the parameter */
    )
 {
-   PARAM* param;
+   SCIP_PARAM* param;
 
    assert(paramset != NULL);
    assert(value != NULL);
 
    /* retrieve parameter from hash table */
-   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_INT )
@@ -1498,20 +1498,20 @@ RETCODE SCIPparamsetGetInt(
    return SCIP_OKAY;
 }
 
-/** gets the value of an existing Longint parameter */
-RETCODE SCIPparamsetGetLongint(
-   PARAMSET*        paramset,           /**< parameter set */
-   const char*      name,               /**< name of the parameter */
-   Longint*         value               /**< pointer to store the parameter */
+/** gets the value of an existing SCIP_Longint parameter */
+SCIP_RETCODE SCIPparamsetGetLongint(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Longint*         value               /**< pointer to store the parameter */
    )
 {
-   PARAM* param;
+   SCIP_PARAM* param;
 
    assert(paramset != NULL);
    assert(value != NULL);
 
    /* retrieve parameter from hash table */
-   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_LONGINT )
@@ -1523,20 +1523,20 @@ RETCODE SCIPparamsetGetLongint(
    return SCIP_OKAY;
 }
 
-/** gets the value of an existing Real parameter */
-RETCODE SCIPparamsetGetReal(
-   PARAMSET*        paramset,           /**< parameter set */
-   const char*      name,               /**< name of the parameter */
-   Real*            value               /**< pointer to store the parameter */
+/** gets the value of an existing SCIP_Real parameter */
+SCIP_RETCODE SCIPparamsetGetReal(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Real*            value               /**< pointer to store the parameter */
    )
 {
-   PARAM* param;
+   SCIP_PARAM* param;
 
    assert(paramset != NULL);
    assert(value != NULL);
 
    /* retrieve parameter from hash table */
-   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_REAL )
@@ -1549,19 +1549,19 @@ RETCODE SCIPparamsetGetReal(
 }
 
 /** gets the value of an existing char parameter */
-RETCODE SCIPparamsetGetChar(
-   PARAMSET*        paramset,           /**< parameter set */
-   const char*      name,               /**< name of the parameter */
-   char*            value               /**< pointer to store the parameter */
+SCIP_RETCODE SCIPparamsetGetChar(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   char*                 value               /**< pointer to store the parameter */
    )
 {
-   PARAM* param;
+   SCIP_PARAM* param;
 
    assert(paramset != NULL);
    assert(value != NULL);
 
    /* retrieve parameter from hash table */
-   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_CHAR )
@@ -1574,19 +1574,19 @@ RETCODE SCIPparamsetGetChar(
 }
 
 /** gets the value of an existing string parameter */
-RETCODE SCIPparamsetGetString(
-   PARAMSET*        paramset,           /**< parameter set */
-   const char*      name,               /**< name of the parameter */
-   char**           value               /**< pointer to store the parameter */
+SCIP_RETCODE SCIPparamsetGetString(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   char**                value               /**< pointer to store the parameter */
    )
 {
-   PARAM* param;
+   SCIP_PARAM* param;
 
    assert(paramset != NULL);
    assert(value != NULL);
 
    /* retrieve parameter from hash table */
-   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_STRING )
@@ -1598,175 +1598,175 @@ RETCODE SCIPparamsetGetString(
    return SCIP_OKAY;
 }
 
-/** changes the value of an existing Bool parameter */
-RETCODE SCIPparamsetSetBool(
-   PARAMSET*        paramset,           /**< parameter set */
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   Bool             value               /**< new value of the parameter */
+/** changes the value of an existing SCIP_Bool parameter */
+SCIP_RETCODE SCIPparamsetSetBool(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool             value               /**< new value of the parameter */
    )
 {
-   PARAM* param;
+   SCIP_PARAM* param;
 
    assert(paramset != NULL);
    assert(set != NULL);
 
    /* retrieve parameter from hash table */
-   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_BOOL )
       return SCIP_PARAMETERWRONGTYPE;
 
    /* set the parameter's current value */
-   CHECK_OKAY( SCIPparamSetBool(param, set->scip, value) );
+   SCIP_CALL( SCIPparamSetBool(param, set->scip, value) );
    
    return SCIP_OKAY;
 }
 
 /** changes the value of an existing int parameter */
-RETCODE SCIPparamsetSetInt(
-   PARAMSET*        paramset,           /**< parameter set */
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   int              value               /**< new value of the parameter */
+SCIP_RETCODE SCIPparamsetSetInt(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   int                   value               /**< new value of the parameter */
    )
 {
-   PARAM* param;
+   SCIP_PARAM* param;
 
    assert(paramset != NULL);
    assert(set != NULL);
 
    /* retrieve parameter from hash table */
-   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_INT )
       return SCIP_PARAMETERWRONGTYPE;
 
    /* set the parameter's current value */
-   CHECK_OKAY( SCIPparamSetInt(param, set->scip, value) );
+   SCIP_CALL( SCIPparamSetInt(param, set->scip, value) );
 
    return SCIP_OKAY;
 }
 
-/** changes the value of an existing Longint parameter */
-RETCODE SCIPparamsetSetLongint(
-   PARAMSET*        paramset,           /**< parameter set */
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   Longint          value               /**< new value of the parameter */
+/** changes the value of an existing SCIP_Longint parameter */
+SCIP_RETCODE SCIPparamsetSetLongint(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Longint          value               /**< new value of the parameter */
    )
 {
-   PARAM* param;
+   SCIP_PARAM* param;
 
    assert(paramset != NULL);
    assert(set != NULL);
 
    /* retrieve parameter from hash table */
-   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_LONGINT )
       return SCIP_PARAMETERWRONGTYPE;
 
    /* set the parameter's current value */
-   CHECK_OKAY( SCIPparamSetLongint(param, set->scip, value) );
+   SCIP_CALL( SCIPparamSetLongint(param, set->scip, value) );
 
    return SCIP_OKAY;
 }
 
-/** changes the value of an existing Real parameter */
-RETCODE SCIPparamsetSetReal(
-   PARAMSET*        paramset,           /**< parameter set */
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   Real             value               /**< new value of the parameter */
+/** changes the value of an existing SCIP_Real parameter */
+SCIP_RETCODE SCIPparamsetSetReal(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Real             value               /**< new value of the parameter */
    )
 {
-   PARAM* param;
+   SCIP_PARAM* param;
 
    assert(paramset != NULL);
    assert(set != NULL);
 
    /* retrieve parameter from hash table */
-   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_REAL )
       return SCIP_PARAMETERWRONGTYPE;
 
    /* set the parameter's current value */
-   CHECK_OKAY( SCIPparamSetReal(param, set->scip, value) );
+   SCIP_CALL( SCIPparamSetReal(param, set->scip, value) );
 
    return SCIP_OKAY;
 }
 
 /** changes the value of an existing char parameter */
-RETCODE SCIPparamsetSetChar(
-   PARAMSET*        paramset,           /**< parameter set */
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   char             value               /**< new value of the parameter */
+SCIP_RETCODE SCIPparamsetSetChar(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   char                  value               /**< new value of the parameter */
    )
 {
-   PARAM* param;
+   SCIP_PARAM* param;
 
    assert(paramset != NULL);
    assert(set != NULL);
 
    /* retrieve parameter from hash table */
-   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_CHAR )
       return SCIP_PARAMETERWRONGTYPE;
 
    /* set the parameter's current value */
-   CHECK_OKAY( SCIPparamSetChar(param, set->scip, value) );
+   SCIP_CALL( SCIPparamSetChar(param, set->scip, value) );
 
    return SCIP_OKAY;
 }
 
 /** changes the value of an existing string parameter */
-RETCODE SCIPparamsetSetString(
-   PARAMSET*        paramset,           /**< parameter set */
-   SET*             set,                /**< global SCIP settings */
-   const char*      name,               /**< name of the parameter */
-   const char*      value               /**< new value of the parameter */
+SCIP_RETCODE SCIPparamsetSetString(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name,               /**< name of the parameter */
+   const char*           value               /**< new value of the parameter */
    )
 {
-   PARAM* param;
+   SCIP_PARAM* param;
 
    assert(paramset != NULL);
    assert(set != NULL);
 
    /* retrieve parameter from hash table */
-   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
       return SCIP_PARAMETERUNKNOWN;
    if( param->paramtype != SCIP_PARAMTYPE_STRING )
       return SCIP_PARAMETERWRONGTYPE;
 
    /* set the parameter's current value */
-   CHECK_OKAY( SCIPparamSetString(param, set->scip, value) );
+   SCIP_CALL( SCIPparamSetString(param, set->scip, value) );
 
    return SCIP_OKAY;
 }
 
 /** parses a parameter file line "paramname = paramvalue" and sets parameter accordingly */
 static
-RETCODE paramsetParse(
-   PARAMSET*        paramset,           /**< parameter set */
-   SET*             set,                /**< global SCIP settings */
-   char*            line                /**< line to parse (is modified during parse, but not freed) */
+SCIP_RETCODE paramsetParse(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   char*                 line                /**< line to parse (is modified during parse, but not freed) */
    )
 {
-   PARAM* param;
+   SCIP_PARAM* param;
    char* paramname;
    char* paramvaluestr;
    char* lastquote;
-   Bool quoted;
+   SCIP_Bool quoted;
 
    assert(paramset != NULL);
    assert(line != NULL);
@@ -1799,7 +1799,7 @@ RETCODE paramsetParse(
          line++;
       if( *line != '=' )
       {
-         errorMessage("character '=' was expected after the parameter name\n");
+         SCIPerrorMessage("character '=' was expected after the parameter name\n");
          return SCIP_PARSEERROR;
       }
       line++;
@@ -1810,7 +1810,7 @@ RETCODE paramsetParse(
       line++;
    if( *line == '\0' || *line == '\n' || *line == '#' )
    {
-      errorMessage("parameter value is missing\n");
+      SCIPerrorMessage("parameter value is missing\n");
       return SCIP_PARSEERROR;
    }
    paramvaluestr = line;
@@ -1837,16 +1837,16 @@ RETCODE paramsetParse(
          line++;
       if( *line != '\0' && *line != '\n' && *line != '#' )
       {
-         errorMessage("additional characters after parameter value\n");
+         SCIPerrorMessage("additional characters after parameter value\n");
          return SCIP_PARSEERROR;
       }
    }
 
    /* retrieve parameter from hash table */
-   param = (PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
    if( param == NULL )
    {
-      warningMessage("unknown parameter <%s>\n", paramname);
+      SCIPwarningMessage("unknown parameter <%s>\n", paramname);
       return SCIP_OKAY;
    }
 
@@ -1854,25 +1854,25 @@ RETCODE paramsetParse(
    switch( param->paramtype )
    {
    case SCIP_PARAMTYPE_BOOL:
-      CHECK_OKAY( paramParseBool(param, set, paramvaluestr) );
+      SCIP_CALL( paramParseBool(param, set, paramvaluestr) );
       break;
    case SCIP_PARAMTYPE_INT:
-      CHECK_OKAY( paramParseInt(param, set, paramvaluestr) );
+      SCIP_CALL( paramParseInt(param, set, paramvaluestr) );
       break;
    case SCIP_PARAMTYPE_LONGINT:
-      CHECK_OKAY( paramParseLongint(param, set, paramvaluestr) );
+      SCIP_CALL( paramParseLongint(param, set, paramvaluestr) );
       break;
    case SCIP_PARAMTYPE_REAL:
-      CHECK_OKAY( paramParseReal(param, set, paramvaluestr) );
+      SCIP_CALL( paramParseReal(param, set, paramvaluestr) );
       break;
    case SCIP_PARAMTYPE_CHAR:
-      CHECK_OKAY( paramParseChar(param, set, paramvaluestr) );
+      SCIP_CALL( paramParseChar(param, set, paramvaluestr) );
       break;
    case SCIP_PARAMTYPE_STRING:
-      CHECK_OKAY( paramParseString(param, set, paramvaluestr) );
+      SCIP_CALL( paramParseString(param, set, paramvaluestr) );
       break;
    default:
-      errorMessage("unknown parameter type\n");
+      SCIPerrorMessage("unknown parameter type\n");
       return SCIP_INVALIDDATA;
    }
    
@@ -1880,13 +1880,13 @@ RETCODE paramsetParse(
 }
 
 /** reads parameters from a file */
-RETCODE SCIPparamsetRead(
-   PARAMSET*        paramset,           /**< parameter set */
-   SET*             set,                /**< global SCIP settings */
-   const char*      filename            /**< file name */
+SCIP_RETCODE SCIPparamsetRead(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           filename            /**< file name */
    )
 {
-   RETCODE retcode;
+   SCIP_RETCODE retcode;
    FILE* file;
    char line[1024];
    int lineno;
@@ -1898,7 +1898,7 @@ RETCODE SCIPparamsetRead(
    file = fopen(filename, "r");
    if( file == NULL )
    {
-      errorMessage("cannot open file <%s> for reading\n", filename);
+      SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
       perror(filename);
       return SCIP_NOFILE;
    }
@@ -1911,9 +1911,9 @@ RETCODE SCIPparamsetRead(
       retcode = paramsetParse(paramset, set, line);
       if( retcode == SCIP_PARSEERROR )
       {
-         errorMessage("input error in file <%s> line %d\n", filename, lineno);
+         SCIPerrorMessage("input error in file <%s> line %d\n", filename, lineno);
       }
-      CHECK_OKAY( retcode );
+      SCIP_CALL( retcode );
    }
 
    /* close input file */
@@ -1924,11 +1924,11 @@ RETCODE SCIPparamsetRead(
 }
 
 /** writes all parameters in the parameter set to a file */
-RETCODE SCIPparamsetWrite(
-   PARAMSET*        paramset,           /**< parameter set */
-   const char*      filename,           /**< file name, or NULL for stdout */
-   Bool             comments,           /**< should parameter descriptions be written as comments? */
-   Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
+SCIP_RETCODE SCIPparamsetWrite(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           filename,           /**< file name, or NULL for stdout */
+   SCIP_Bool             comments,           /**< should parameter descriptions be written as comments? */
+   SCIP_Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
    )
 {
    FILE* file;
@@ -1942,7 +1942,7 @@ RETCODE SCIPparamsetWrite(
       file = fopen(filename, "w");
       if( file == NULL )
       {
-         errorMessage("cannot open file <%s> for writing\n", filename);
+         SCIPerrorMessage("cannot open file <%s> for writing\n", filename);
          perror(filename);
          return SCIP_FILECREATEERROR;
       }
@@ -1953,7 +1953,7 @@ RETCODE SCIPparamsetWrite(
    /* write the parameters to the file */
    for( i = 0; i < paramset->nparams; ++i )
    {
-      CHECK_OKAY( paramWrite(paramset->params[i], file, comments, onlychanged) );
+      SCIP_CALL( paramWrite(paramset->params[i], file, comments, onlychanged) );
    }
 
    /* close output file */
@@ -1964,8 +1964,8 @@ RETCODE SCIPparamsetWrite(
 }
 
 /** returns the array of parameters */
-PARAM** SCIPparamsetGetParams(
-   PARAMSET*        paramset            /**< parameter set */
+SCIP_PARAM** SCIPparamsetGetParams(
+   SCIP_PARAMSET*        paramset            /**< parameter set */
    )
 {
    assert(paramset != NULL);
@@ -1975,7 +1975,7 @@ PARAM** SCIPparamsetGetParams(
 
 /** returns the number of parameters in the parameter set */
 int SCIPparamsetGetNParams(
-   PARAMSET*        paramset            /**< parameter set */
+   SCIP_PARAMSET*        paramset            /**< parameter set */
    )
 {
    assert(paramset != NULL);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objeventhdlr.cpp,v 1.2 2005/05/31 17:20:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objeventhdlr.cpp,v 1.3 2005/08/22 18:35:29 bzfpfend Exp $"
 
 /**@file   objeventhdlr.cpp
  * @brief  C++ wrapper for event handlers
@@ -35,10 +35,10 @@
  */
 
 /** event handler data */
-struct EventhdlrData
+struct SCIP_EventhdlrData
 {
-   scip::ObjEventhdlr* objeventhdlr;    /**< event handler object */
-   Bool             deleteobject;       /**< should the event handler object be deleted when eventhdlristic is freed? */
+   scip::ObjEventhdlr*   objeventhdlr;       /**< event handler object */
+   SCIP_Bool             deleteobject;       /**< should the event handler object be deleted when eventhdlristic is freed? */
 };
 
 
@@ -50,16 +50,16 @@ struct EventhdlrData
 
 /** destructor of event handler to free user data (called when SCIP is exiting) */
 static
-DECL_EVENTFREE(eventhdlrFreeObj)
+SCIP_DECL_EVENTFREE(eventhdlrFreeObj)
 {  /*lint --e{715}*/
-   EVENTHDLRDATA* eventhdlrdata;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
    assert(eventhdlrdata->objeventhdlr != NULL);
 
    /* call virtual method of eventhdlr object */
-   CHECK_OKAY( eventhdlrdata->objeventhdlr->scip_free(scip, eventhdlr) );
+   SCIP_CALL( eventhdlrdata->objeventhdlr->scip_free(scip, eventhdlr) );
 
    /* free eventhdlr object */
    if( eventhdlrdata->deleteobject )
@@ -75,16 +75,16 @@ DECL_EVENTFREE(eventhdlrFreeObj)
 
 /** initialization method of event handler (called after problem was transformed) */
 static
-DECL_EVENTINIT(eventhdlrInitObj)
+SCIP_DECL_EVENTINIT(eventhdlrInitObj)
 {  /*lint --e{715}*/
-   EVENTHDLRDATA* eventhdlrdata;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
    assert(eventhdlrdata->objeventhdlr != NULL);
 
    /* call virtual method of eventhdlr object */
-   CHECK_OKAY( eventhdlrdata->objeventhdlr->scip_init(scip, eventhdlr) );
+   SCIP_CALL( eventhdlrdata->objeventhdlr->scip_init(scip, eventhdlr) );
 
    return SCIP_OKAY;
 }
@@ -92,16 +92,16 @@ DECL_EVENTINIT(eventhdlrInitObj)
 
 /** deinitialization method of event handler (called before transformed problem is freed) */
 static
-DECL_EVENTEXIT(eventhdlrExitObj)
+SCIP_DECL_EVENTEXIT(eventhdlrExitObj)
 {  /*lint --e{715}*/
-   EVENTHDLRDATA* eventhdlrdata;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
    assert(eventhdlrdata->objeventhdlr != NULL);
 
    /* call virtual method of eventhdlr object */
-   CHECK_OKAY( eventhdlrdata->objeventhdlr->scip_exit(scip, eventhdlr) );
+   SCIP_CALL( eventhdlrdata->objeventhdlr->scip_exit(scip, eventhdlr) );
 
    return SCIP_OKAY;
 }
@@ -109,16 +109,16 @@ DECL_EVENTEXIT(eventhdlrExitObj)
 
 /** solving process initialization method of event handler (called when branch and bound process is about to begin) */
 static
-DECL_EVENTINITSOL(eventhdlrInitsolObj)
+SCIP_DECL_EVENTINITSOL(eventhdlrInitsolObj)
 {  /*lint --e{715}*/
-   EVENTHDLRDATA* eventhdlrdata;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
    assert(eventhdlrdata->objeventhdlr != NULL);
 
    /* call virtual method of eventhdlr object */
-   CHECK_OKAY( eventhdlrdata->objeventhdlr->scip_initsol(scip, eventhdlr) );
+   SCIP_CALL( eventhdlrdata->objeventhdlr->scip_initsol(scip, eventhdlr) );
 
    return SCIP_OKAY;
 }
@@ -126,16 +126,16 @@ DECL_EVENTINITSOL(eventhdlrInitsolObj)
 
 /** solving process deinitialization method of event handler (called before branch and bound process data is freed) */
 static
-DECL_EVENTEXITSOL(eventhdlrExitsolObj)
+SCIP_DECL_EVENTEXITSOL(eventhdlrExitsolObj)
 {  /*lint --e{715}*/
-   EVENTHDLRDATA* eventhdlrdata;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
    assert(eventhdlrdata->objeventhdlr != NULL);
 
    /* call virtual method of eventhdlr object */
-   CHECK_OKAY( eventhdlrdata->objeventhdlr->scip_exitsol(scip, eventhdlr) );
+   SCIP_CALL( eventhdlrdata->objeventhdlr->scip_exitsol(scip, eventhdlr) );
 
    return SCIP_OKAY;
 }
@@ -143,16 +143,16 @@ DECL_EVENTEXITSOL(eventhdlrExitsolObj)
 
 /** frees specific constraint data */
 static
-DECL_EVENTDELETE(eventhdlrDeleteObj)
+SCIP_DECL_EVENTDELETE(eventhdlrDeleteObj)
 {  /*lint --e{715}*/
-   EVENTHDLRDATA* eventhdlrdata;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
    assert(eventhdlrdata->objeventhdlr != NULL);
 
    /* call virtual method of eventhdlr object */
-   CHECK_OKAY( eventhdlrdata->objeventhdlr->scip_delete(scip, eventhdlr, eventdata) );
+   SCIP_CALL( eventhdlrdata->objeventhdlr->scip_delete(scip, eventhdlr, eventdata) );
 
    return SCIP_OKAY;
 }
@@ -160,16 +160,16 @@ DECL_EVENTDELETE(eventhdlrDeleteObj)
 
 /** execution method of event handler */
 static
-DECL_EVENTEXEC(eventhdlrExecObj)
+SCIP_DECL_EVENTEXEC(eventhdlrExecObj)
 {  /*lint --e{715}*/
-   EVENTHDLRDATA* eventhdlrdata;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
    assert(eventhdlrdata->objeventhdlr != NULL);
 
    /* call virtual method of eventhdlr object */
-   CHECK_OKAY( eventhdlrdata->objeventhdlr->scip_exec(scip, eventhdlr, event, eventdata) );
+   SCIP_CALL( eventhdlrdata->objeventhdlr->scip_exec(scip, eventhdlr, event, eventdata) );
 
    return SCIP_OKAY;
 }
@@ -182,21 +182,21 @@ DECL_EVENTEXEC(eventhdlrExecObj)
  */
 
 /** creates the event handler for the given event handler object and includes it in SCIP */
-RETCODE SCIPincludeObjEventhdlr(
-   SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjEventhdlr*   objeventhdlr,            /**< event handler object */
-   Bool             deleteobject        /**< should the event handler object be deleted when eventhdlristic is freed? */
+SCIP_RETCODE SCIPincludeObjEventhdlr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   scip::ObjEventhdlr*   objeventhdlr,       /**< event handler object */
+   SCIP_Bool             deleteobject        /**< should the event handler object be deleted when eventhdlristic is freed? */
    )
 {
-   EVENTHDLRDATA* eventhdlrdata;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
 
    /* create event handler data */
-   eventhdlrdata = new EVENTHDLRDATA;
+   eventhdlrdata = new SCIP_EVENTHDLRDATA;
    eventhdlrdata->objeventhdlr = objeventhdlr;
    eventhdlrdata->deleteobject = deleteobject;
 
    /* include event handler */
-   CHECK_OKAY( SCIPincludeEventhdlr(scip, objeventhdlr->scip_name_, objeventhdlr->scip_desc_,
+   SCIP_CALL( SCIPincludeEventhdlr(scip, objeventhdlr->scip_name_, objeventhdlr->scip_desc_,
          eventhdlrFreeObj, eventhdlrInitObj, eventhdlrExitObj, 
          eventhdlrInitsolObj, eventhdlrExitsolObj, eventhdlrDeleteObj, eventhdlrExecObj,
          eventhdlrdata) );
@@ -206,12 +206,12 @@ RETCODE SCIPincludeObjEventhdlr(
 
 /** returns the eventhdlr object of the given name, or NULL if not existing */
 scip::ObjEventhdlr* SCIPfindObjEventhdlr(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< name of event handler */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of event handler */
    )
 {
-   EVENTHDLR* eventhdlr;
-   EVENTHDLRDATA* eventhdlrdata;
+   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
 
    eventhdlr = SCIPfindEventhdlr(scip, name);
    if( eventhdlr == NULL )
@@ -225,11 +225,11 @@ scip::ObjEventhdlr* SCIPfindObjEventhdlr(
    
 /** returns the eventhdlr object for the given event handler */
 scip::ObjEventhdlr* SCIPgetObjEventhdlr(
-   SCIP*            scip,               /**< SCIP data structure */
-   EVENTHDLR*       eventhdlr           /**< event handler */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    )
 {
-   EVENTHDLRDATA* eventhdlrdata;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_xxx.c,v 1.10 2005/07/15 17:20:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer_xxx.c,v 1.11 2005/08/22 18:35:43 bzfpfend Exp $"
 
 /**@file   pricer_xxx.c
  * @brief  xxx variable pricer
@@ -42,7 +42,7 @@
 /* TODO: fill in the necessary variable pricer data */
 
 /** variable pricer data */
-struct PricerData
+struct SCIP_PricerData
 {
 };
 
@@ -67,9 +67,9 @@ struct PricerData
 /** destructor of variable pricer to free user data (called when SCIP is exiting) */
 #if 0
 static
-DECL_PRICERFREE(pricerFreeXxx)
+SCIP_DECL_PRICERFREE(pricerFreeXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx variable pricer not implemented yet\n");
+   SCIPerrorMessage("method of xxx variable pricer not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -82,9 +82,9 @@ DECL_PRICERFREE(pricerFreeXxx)
 /** initialization method of variable pricer (called after problem was transformed) */
 #if 0
 static
-DECL_PRICERINIT(pricerInitXxx)
+SCIP_DECL_PRICERINIT(pricerInitXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx variable pricer not implemented yet\n");
+   SCIPerrorMessage("method of xxx variable pricer not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -97,9 +97,9 @@ DECL_PRICERINIT(pricerInitXxx)
 /** deinitialization method of variable pricer (called before transformed problem is freed) */
 #if 0
 static
-DECL_PRICEREXIT(pricerExitXxx)
+SCIP_DECL_PRICEREXIT(pricerExitXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx variable pricer not implemented yet\n");
+   SCIPerrorMessage("method of xxx variable pricer not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -112,9 +112,9 @@ DECL_PRICEREXIT(pricerExitXxx)
 /** solving process initialization method of variable pricer (called when branch and bound process is about to begin) */
 #if 0
 static
-DECL_PRICERINITSOL(pricerInitsolXxx)
+SCIP_DECL_PRICERINITSOL(pricerInitsolXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx variable pricer not implemented yet\n");
+   SCIPerrorMessage("method of xxx variable pricer not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -127,9 +127,9 @@ DECL_PRICERINITSOL(pricerInitsolXxx)
 /** solving process deinitialization method of variable pricer (called before branch and bound process data is freed) */
 #if 0
 static
-DECL_PRICEREXITSOL(pricerExitsolXxx)
+SCIP_DECL_PRICEREXITSOL(pricerExitsolXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx variable pricer not implemented yet\n");
+   SCIPerrorMessage("method of xxx variable pricer not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -141,9 +141,9 @@ DECL_PRICEREXITSOL(pricerExitsolXxx)
 
 /** reduced cost pricing method of variable pricer for feasible LPs */
 static
-DECL_PRICERREDCOST(pricerRedcostXxx)
+SCIP_DECL_PRICERREDCOST(pricerRedcostXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx variable pricer not implemented yet\n");
+   SCIPerrorMessage("method of xxx variable pricer not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -153,9 +153,9 @@ DECL_PRICERREDCOST(pricerRedcostXxx)
 #if 0
 /** farkas pricing method of variable pricer for infeasible LPs */
 static
-DECL_PRICERREDCOST(pricerFarkasXxx)
+SCIP_DECL_PRICERREDCOST(pricerFarkasXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx variable pricer not implemented yet\n");
+   SCIPerrorMessage("method of xxx variable pricer not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -172,18 +172,18 @@ DECL_PRICERREDCOST(pricerFarkasXxx)
  */
 
 /** creates the xxx variable pricer and includes it in SCIP */
-RETCODE SCIPincludePricerXxx(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludePricerXxx(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   PRICERDATA* pricerdata;
+   SCIP_PRICERDATA* pricerdata;
 
    /* create xxx variable pricer data */
    pricerdata = NULL;
    /* TODO: (optional) create variable pricer specific data here */
 
    /* include variable pricer */
-   CHECK_OKAY( SCIPincludePricer(scip, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY,
+   SCIP_CALL( SCIPincludePricer(scip, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY,
          pricerFreeXxx, pricerInitXxx, pricerExitXxx, 
          pricerInitsolXxx, pricerExitsolXxx, pricerRedcostXxx, pricerFarkasXxx,
          pricerdata) );

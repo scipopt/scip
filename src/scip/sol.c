@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.62 2005/07/20 16:35:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.63 2005/08/22 18:35:49 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -47,25 +47,25 @@
 
 /** clears solution arrays of primal CIP solution */
 static
-RETCODE solClearArrays(
-   SOL*             sol                 /**< primal CIP solution */
+SCIP_RETCODE solClearArrays(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
    assert(sol != NULL);
 
-   CHECK_OKAY( SCIPrealarrayClear(sol->vals) );
-   CHECK_OKAY( SCIPboolarrayClear(sol->valid) );
+   SCIP_CALL( SCIPrealarrayClear(sol->vals) );
+   SCIP_CALL( SCIPboolarrayClear(sol->valid) );
 
    return SCIP_OKAY;
 }
 
 /** sets value of variable in the solution's array */
 static
-RETCODE solSetArrayVal(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   VAR*             var,                /**< problem variable */
-   Real             val                 /**< value to set variable to */
+SCIP_RETCODE solSetArrayVal(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             val                 /**< value to set variable to */
    )
 {
    int idx;
@@ -75,21 +75,21 @@ RETCODE solSetArrayVal(
    idx = SCIPvarGetIndex(var);
 
    /* mark the variable valid */
-   CHECK_OKAY( SCIPboolarraySetVal(sol->valid, set, idx, TRUE) );
+   SCIP_CALL( SCIPboolarraySetVal(sol->valid, set, idx, TRUE) );
 
    /* set the value in the solution array */
-   CHECK_OKAY( SCIPrealarraySetVal(sol->vals, set, idx, val) );
+   SCIP_CALL( SCIPrealarraySetVal(sol->vals, set, idx, val) );
 
    return SCIP_OKAY;
 }
 
 /** increases value of variable in the solution's array */
 static
-RETCODE solIncArrayVal(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   VAR*             var,                /**< problem variable */
-   Real             incval              /**< increase of variable's solution value */
+SCIP_RETCODE solIncArrayVal(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             incval              /**< increase of variable's solution value */
    )
 {
    int idx;
@@ -99,19 +99,19 @@ RETCODE solIncArrayVal(
    idx = SCIPvarGetIndex(var);
 
    /* mark the variable valid */
-   CHECK_OKAY( SCIPboolarraySetVal(sol->valid, set, idx, TRUE) );
+   SCIP_CALL( SCIPboolarraySetVal(sol->valid, set, idx, TRUE) );
 
    /* increase the value in the solution array */
-   CHECK_OKAY( SCIPrealarrayIncVal(sol->vals, set, idx, incval) );
+   SCIP_CALL( SCIPrealarrayIncVal(sol->vals, set, idx, incval) );
 
    return SCIP_OKAY;
 }
 
 /** returns the value of the variable in the given solution */
 static
-Real solGetArrayVal(
-   SOL*             sol,                /**< primal CIP solution */
-   VAR*             var                 /**< problem variable */
+SCIP_Real solGetArrayVal(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_VAR*             var                 /**< problem variable */
    )
 {
    int idx;
@@ -143,7 +143,7 @@ Real solGetArrayVal(
          return SCIPvarGetPseudoSol(var);
 
       default:
-         errorMessage("unknown solution origin <%d>\n", sol->solorigin);
+         SCIPerrorMessage("unknown solution origin <%d>\n", sol->solorigin);
          SCIPABORT();
          return 0.0;
       }
@@ -152,13 +152,13 @@ Real solGetArrayVal(
 
 /** stores solution value of variable in solution's own array */
 static
-RETCODE solUnlinkVar(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   VAR*             var                 /**< problem variable */
+SCIP_RETCODE solUnlinkVar(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var                 /**< problem variable */
    )
 {
-   Real solval;
+   SCIP_Real solval;
 
    assert(sol != NULL);
    assert(var != NULL);
@@ -171,13 +171,13 @@ RETCODE solUnlinkVar(
 
    assert(SCIPrealarrayGetVal(sol->vals, SCIPvarGetIndex(var)) == 0.0);
 
-   debugMessage("unlinking solution value of variable <%s>\n", SCIPvarGetName(var));
+   SCIPdebugMessage("unlinking solution value of variable <%s>\n", SCIPvarGetName(var));
 
    /* store the correct solution value into the solution array */
    switch( sol->solorigin )
    {
    case SCIP_SOLORIGIN_ORIGINAL:
-      errorMessage("cannot unlink solutions of original problem space\n");
+      SCIPerrorMessage("cannot unlink solutions of original problem space\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_SOLORIGIN_ZERO:
@@ -187,7 +187,7 @@ RETCODE solUnlinkVar(
       solval = SCIPvarGetLPSol(var);
       if( !SCIPsetIsZero(set, solval) )
       {
-         CHECK_OKAY( solSetArrayVal(sol, set, var, solval) );
+         SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
       }
       return SCIP_OKAY;
 
@@ -195,12 +195,12 @@ RETCODE solUnlinkVar(
       solval = SCIPvarGetPseudoSol(var);
       if( !SCIPsetIsZero(set, solval) )
       {
-         CHECK_OKAY( solSetArrayVal(sol, set, var, solval) );
+         SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
       }
       return SCIP_OKAY;
 
    default:
-      errorMessage("unknown solution origin <%d>\n", sol->solorigin);
+      SCIPerrorMessage("unknown solution origin <%d>\n", sol->solorigin);
       return SCIP_INVALIDDATA;
    }
 }
@@ -208,9 +208,9 @@ RETCODE solUnlinkVar(
 /** sets the solution time, nodenum, runnum, and depth stamp to the current values */
 static
 void solStamp(
-   SOL*             sol,                /**< primal CIP solution */
-   STAT*            stat,               /**< problem statistics data */
-   TREE*            tree                /**< branch and bound tree */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree                /**< branch and bound tree */
    )
 {
    assert(sol != NULL);
@@ -223,78 +223,78 @@ void solStamp(
 }
 
 /** creates primal CIP solution, initialized to zero */
-RETCODE SCIPsolCreate(
-   SOL**            sol,                /**< pointer to primal CIP solution */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   PRIMAL*          primal,             /**< primal data */
-   TREE*            tree,               /**< branch and bound tree */
-   HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+SCIP_RETCODE SCIPsolCreate(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
    assert(sol != NULL);
    assert(blkmem != NULL);
    assert(stat != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(blkmem, sol) );   
-   CHECK_OKAY( SCIPrealarrayCreate(&(*sol)->vals, blkmem) );
-   CHECK_OKAY( SCIPboolarrayCreate(&(*sol)->valid, blkmem) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );   
+   SCIP_CALL( SCIPrealarrayCreate(&(*sol)->vals, blkmem) );
+   SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valid, blkmem) );
    (*sol)->heur = heur;
    (*sol)->solorigin = SCIP_SOLORIGIN_ZERO;
    (*sol)->obj = 0.0;
    (*sol)->primalindex = -1;
    solStamp(*sol, stat, tree);
 
-   CHECK_OKAY( SCIPprimalSolCreated(primal, set, *sol) );
+   SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
    return SCIP_OKAY;
 }
 
 /** creates primal CIP solution in original problem space, initialized to zero */
-RETCODE SCIPsolCreateOriginal(
-   SOL**            sol,                /**< pointer to primal CIP solution */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   PRIMAL*          primal,             /**< primal data */
-   TREE*            tree,               /**< branch and bound tree */
-   HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+SCIP_RETCODE SCIPsolCreateOriginal(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
    assert(sol != NULL);
    assert(blkmem != NULL);
    assert(stat != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(blkmem, sol) );   
-   CHECK_OKAY( SCIPrealarrayCreate(&(*sol)->vals, blkmem) );
-   CHECK_OKAY( SCIPboolarrayCreate(&(*sol)->valid, blkmem) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );   
+   SCIP_CALL( SCIPrealarrayCreate(&(*sol)->vals, blkmem) );
+   SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valid, blkmem) );
    (*sol)->heur = heur;
    (*sol)->solorigin = SCIP_SOLORIGIN_ORIGINAL;
    (*sol)->obj = 0.0;
    (*sol)->primalindex = -1;
    solStamp(*sol, stat, tree);
 
-   CHECK_OKAY( SCIPprimalSolCreated(primal, set, *sol) );
+   SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
    return SCIP_OKAY;
 }
 
 /** creates a copy of a primal CIP solution */
-RETCODE SCIPsolCopy(
-   SOL**            sol,                /**< pointer to store the copy of the primal CIP solution */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   PRIMAL*          primal,             /**< primal data */
-   SOL*             sourcesol           /**< primal CIP solution to copy */
+SCIP_RETCODE SCIPsolCopy(
+   SCIP_SOL**            sol,                /**< pointer to store the copy of the primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_SOL*             sourcesol           /**< primal CIP solution to copy */
    )
 {
    assert(sol != NULL);
    assert(sourcesol != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(blkmem, sol) );   
-   CHECK_OKAY( SCIPrealarrayCopy(&(*sol)->vals, blkmem, sourcesol->vals) );
-   CHECK_OKAY( SCIPboolarrayCopy(&(*sol)->valid, blkmem, sourcesol->valid) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );   
+   SCIP_CALL( SCIPrealarrayCopy(&(*sol)->vals, blkmem, sourcesol->vals) );
+   SCIP_CALL( SCIPboolarrayCopy(&(*sol)->valid, blkmem, sourcesol->valid) );
    (*sol)->heur = sourcesol->heur;
    (*sol)->obj = sourcesol->obj;
    (*sol)->primalindex = -1;
@@ -304,84 +304,84 @@ RETCODE SCIPsolCopy(
    (*sol)->runnum = sourcesol->runnum;
    (*sol)->depth = sourcesol->depth;
 
-   CHECK_OKAY( SCIPprimalSolCreated(primal, set, *sol) );
+   SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
    return SCIP_OKAY;
 }
 
-/** creates primal CIP solution, initialized to the current LP solution */
-RETCODE SCIPsolCreateLPSol(
-   SOL**            sol,                /**< pointer to primal CIP solution */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   PRIMAL*          primal,             /**< primal data */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< current LP data */
-   HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+/** creates primal CIP solution, initialized to the current SCIP_LP solution */
+SCIP_RETCODE SCIPsolCreateLPSol(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
    assert(sol != NULL);
    assert(lp != NULL);
    assert(lp->solved);
 
-   CHECK_OKAY( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
-   CHECK_OKAY( SCIPsolLinkLPSol(*sol, set, stat, tree, lp) );
+   SCIP_CALL( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
+   SCIP_CALL( SCIPsolLinkLPSol(*sol, set, stat, tree, lp) );
 
    return SCIP_OKAY;
 }
 
 /** creates primal CIP solution, initialized to the current pseudo solution */
-RETCODE SCIPsolCreatePseudoSol(
-   SOL**            sol,                /**< pointer to primal CIP solution */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   PRIMAL*          primal,             /**< primal data */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< current LP data */
-   HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+SCIP_RETCODE SCIPsolCreatePseudoSol(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
    assert(sol != NULL);
 
-   CHECK_OKAY( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
-   CHECK_OKAY( SCIPsolLinkPseudoSol(*sol, set, stat, tree, lp) );
+   SCIP_CALL( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
+   SCIP_CALL( SCIPsolLinkPseudoSol(*sol, set, stat, tree, lp) );
 
    return SCIP_OKAY;
 }
 
 /** creates primal CIP solution, initialized to the current solution */
-RETCODE SCIPsolCreateCurrentSol(
-   SOL**            sol,                /**< pointer to primal CIP solution */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   PRIMAL*          primal,             /**< primal data */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< current LP data */
-   HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+SCIP_RETCODE SCIPsolCreateCurrentSol(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
    assert(tree != NULL);
 
    if( SCIPtreeHasCurrentNodeLP(tree) )
    {
-      CHECK_OKAY( SCIPsolCreateLPSol(sol, blkmem, set, stat, primal, tree, lp, heur) );
+      SCIP_CALL( SCIPsolCreateLPSol(sol, blkmem, set, stat, primal, tree, lp, heur) );
    }
    else
    {
-      CHECK_OKAY( SCIPsolCreatePseudoSol(sol, blkmem, set, stat, primal, tree, lp, heur) );
+      SCIP_CALL( SCIPsolCreatePseudoSol(sol, blkmem, set, stat, primal, tree, lp, heur) );
    }
 
    return SCIP_OKAY;
 }
 
 /** frees primal CIP solution */
-RETCODE SCIPsolFree(
-   SOL**            sol,                /**< pointer to primal CIP solution */
-   BLKMEM*          blkmem,             /**< block memory */
-   PRIMAL*          primal              /**< primal data */
+SCIP_RETCODE SCIPsolFree(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_PRIMAL*          primal              /**< primal data */
    )
 {
    assert(sol != NULL);
@@ -389,18 +389,18 @@ RETCODE SCIPsolFree(
 
    SCIPprimalSolFreed(primal, *sol);
 
-   CHECK_OKAY( solClearArrays(*sol) );
-   CHECK_OKAY( SCIPrealarrayFree(&(*sol)->vals) );
-   CHECK_OKAY( SCIPboolarrayFree(&(*sol)->valid) );
-   freeBlockMemory(blkmem, sol);
+   SCIP_CALL( solClearArrays(*sol) );
+   SCIP_CALL( SCIPrealarrayFree(&(*sol)->vals) );
+   SCIP_CALL( SCIPboolarrayFree(&(*sol)->valid) );
+   BMSfreeBlockMemory(blkmem, sol);
 
    return SCIP_OKAY;
 }
 
 /** informs the solution that it now belongs to the given primal heuristic */
 void SCIPsolSetHeur(
-   SOL*             sol,                /**< primal CIP solution */
-   HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
    assert(sol != NULL);
@@ -408,13 +408,13 @@ void SCIPsolSetHeur(
    sol->heur = heur;
 }
 
-/** copies current LP solution into CIP solution by linking */
-RETCODE SCIPsolLinkLPSol(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp                  /**< current LP data */
+/** copies current SCIP_LP solution into CIP solution by linking */
+SCIP_RETCODE SCIPsolLinkLPSol(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp                  /**< current SCIP_LP data */
    )
 {
    assert(sol != NULL);
@@ -424,12 +424,12 @@ RETCODE SCIPsolLinkLPSol(
    assert(lp->solved);
    assert(SCIPlpDiving(lp) || !SCIPlpDivingObjChanged(lp));
 
-   debugMessage("linking solution to LP\n");
+   SCIPdebugMessage("linking solution to LP\n");
 
    /* clear the old solution arrays */
-   CHECK_OKAY( solClearArrays(sol) );
+   SCIP_CALL( solClearArrays(sol) );
 
-   /* link solution to LP solution */
+   /* link solution to SCIP_LP solution */
    if( SCIPlpDivingObjChanged(lp) )
    {
       /* the objective value has to be calculated manually, because the LP's value is invalid;
@@ -438,8 +438,8 @@ RETCODE SCIPsolLinkLPSol(
       sol->obj = SCIPlpGetLooseObjval(lp, set);
       if( !SCIPsetIsInfinity(set, -sol->obj) )
       {
-         VAR* var;
-         COL** cols;
+         SCIP_VAR* var;
+         SCIP_COL** cols;
          int ncols;
          int c;
          
@@ -460,74 +460,74 @@ RETCODE SCIPsolLinkLPSol(
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
    solStamp(sol, stat, tree);
 
-   debugMessage(" -> objective value: %g\n", sol->obj);
+   SCIPdebugMessage(" -> objective value: %g\n", sol->obj);
 
    return SCIP_OKAY;
 }
 
 /** copies current pseudo solution into CIP solution by linking */
-RETCODE SCIPsolLinkPseudoSol(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp                  /**< current LP data */
+SCIP_RETCODE SCIPsolLinkPseudoSol(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp                  /**< current SCIP_LP data */
    )
 {
    assert(sol != NULL);
    assert(stat != NULL);
    assert(tree != NULL);
 
-   debugMessage("linking solution to pseudo solution\n");
+   SCIPdebugMessage("linking solution to pseudo solution\n");
 
    /* clear the old solution arrays */
-   CHECK_OKAY( solClearArrays(sol) );
+   SCIP_CALL( solClearArrays(sol) );
 
    /* link solution to pseudo solution */
    sol->obj = SCIPlpGetPseudoObjval(lp, set);
    sol->solorigin = SCIP_SOLORIGIN_PSEUDOSOL;
    solStamp(sol, stat, tree);
 
-   debugMessage(" -> objective value: %g\n", sol->obj);
+   SCIPdebugMessage(" -> objective value: %g\n", sol->obj);
 
    return SCIP_OKAY;
 }
 
-/** copies current solution (LP or pseudo solution) into CIP solution by linking */
-RETCODE SCIPsolLinkCurrentSol(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp                  /**< current LP data */
+/** copies current solution (SCIP_LP or pseudo solution) into CIP solution by linking */
+SCIP_RETCODE SCIPsolLinkCurrentSol(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp                  /**< current SCIP_LP data */
    )
 {
    assert(tree != NULL);
 
-   debugMessage("linking solution to current solution\n");
+   SCIPdebugMessage("linking solution to current solution\n");
 
    if( SCIPtreeHasCurrentNodeLP(tree) )
    {
-      CHECK_OKAY( SCIPsolLinkLPSol(sol, set, stat, tree, lp) );
+      SCIP_CALL( SCIPsolLinkLPSol(sol, set, stat, tree, lp) );
    }
    else
    {
-      CHECK_OKAY( SCIPsolLinkPseudoSol(sol, set, stat, tree, lp) );
+      SCIP_CALL( SCIPsolLinkPseudoSol(sol, set, stat, tree, lp) );
    }
 
    return SCIP_OKAY;
 }
 
 /** clears primal CIP solution */
-RETCODE SCIPsolClear(
-   SOL*             sol,                /**< primal CIP solution */
-   STAT*            stat,               /**< problem statistics data */
-   TREE*            tree                /**< branch and bound tree */
+SCIP_RETCODE SCIPsolClear(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree                /**< branch and bound tree */
    )
 {
    assert(sol != NULL);
 
-   CHECK_OKAY( solClearArrays(sol) );
+   SCIP_CALL( solClearArrays(sol) );
    sol->solorigin = SCIP_SOLORIGIN_ZERO;
    sol->obj = 0.0;
    solStamp(sol, stat, tree);
@@ -536,10 +536,10 @@ RETCODE SCIPsolClear(
 }
 
 /** stores solution values of variables in solution's own array */
-RETCODE SCIPsolUnlink(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   PROB*            prob                /**< transformed problem data */
+SCIP_RETCODE SCIPsolUnlink(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< transformed problem data */
    )
 {
    int v;
@@ -550,11 +550,11 @@ RETCODE SCIPsolUnlink(
 
    if( sol->solorigin != SCIP_SOLORIGIN_ORIGINAL && sol->solorigin != SCIP_SOLORIGIN_ZERO )
    {
-      debugMessage("completing solution %p\n", sol);
+      SCIPdebugMessage("completing solution %p\n", sol);
 
       for( v = 0; v < prob->nvars; ++v )
       {
-         CHECK_OKAY( solUnlinkVar(sol, set, prob->vars[v]) );
+         SCIP_CALL( solUnlinkVar(sol, set, prob->vars[v]) );
       }
       
       sol->solorigin = SCIP_SOLORIGIN_ZERO;
@@ -564,16 +564,16 @@ RETCODE SCIPsolUnlink(
 }
 
 /** sets value of variable in primal CIP solution */
-RETCODE SCIPsolSetVal(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch and bound tree */
-   VAR*             var,                /**< variable to add to solution */
-   Real             val                 /**< solution value of variable */
+SCIP_RETCODE SCIPsolSetVal(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_VAR*             var,                /**< variable to add to solution */
+   SCIP_Real             val                 /**< solution value of variable */
    )
 {
-   Real oldval;
+   SCIP_Real oldval;
 
    assert(sol != NULL);
    assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL || sol->solorigin == SCIP_SOLORIGIN_ZERO
@@ -581,7 +581,7 @@ RETCODE SCIPsolSetVal(
    assert(stat != NULL);
    assert(var != NULL);
 
-   debugMessage("setting value of <%s> in solution %p to %g\n", SCIPvarGetName(var), sol, val);
+   SCIPdebugMessage("setting value of <%s> in solution %p to %g\n", SCIPvarGetName(var), sol, val);
 
    /* we want to store only values for non fixed variables (LOOSE or COLUMN); others have to be transformed */
    switch( SCIPvarGetStatus(var) )
@@ -592,7 +592,7 @@ RETCODE SCIPsolSetVal(
          oldval = solGetArrayVal(sol, var);
          if( !SCIPsetIsEQ(set, val, oldval) )
          {
-            CHECK_OKAY( solSetArrayVal(sol, set, var, val) );
+            SCIP_CALL( solSetArrayVal(sol, set, var, val) );
             sol->obj += SCIPvarGetObj(var) * (val - oldval);
             solStamp(sol, stat, tree);
          }
@@ -607,7 +607,7 @@ RETCODE SCIPsolSetVal(
       oldval = solGetArrayVal(sol, var);
       if( !SCIPsetIsEQ(set, val, oldval) )
       {
-         CHECK_OKAY( solSetArrayVal(sol, set, var, val) );
+         SCIP_CALL( solSetArrayVal(sol, set, var, val) );
          sol->obj += SCIPvarGetObj(var) * (val - oldval);
          solStamp(sol, stat, tree);
       }
@@ -618,7 +618,7 @@ RETCODE SCIPsolSetVal(
       oldval = SCIPvarGetLbGlobal(var);
       if( !SCIPsetIsEQ(set, val, oldval) )
       {
-         errorMessage("cannot set solution value for variable <%s> fixed to %g to different value %g\n",
+         SCIPerrorMessage("cannot set solution value for variable <%s> fixed to %g to different value %g\n",
             SCIPvarGetName(var), oldval, val);
          return SCIP_INVALIDDATA;
       }
@@ -630,26 +630,26 @@ RETCODE SCIPsolSetVal(
          (val - SCIPvarGetAggrConstant(var))/SCIPvarGetAggrScalar(var));
 
    case SCIP_VARSTATUS_MULTAGGR:
-      errorMessage("cannot set solution value for multiple aggregated variable\n");
+      SCIPerrorMessage("cannot set solution value for multiple aggregated variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED:
       return SCIPsolSetVal(sol, set, stat, tree, SCIPvarGetNegationVar(var), SCIPvarGetNegationConstant(var) - val);
       
    default:
-      errorMessage("unknown variable status\n");
+      SCIPerrorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
 }
 
 /** increases value of variable in primal CIP solution */
-RETCODE SCIPsolIncVal(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   TREE*            tree,               /**< branch and bound tree */
-   VAR*             var,                /**< variable to increase solution value for */
-   Real             incval              /**< increment for solution value of variable */
+SCIP_RETCODE SCIPsolIncVal(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_VAR*             var,                /**< variable to increase solution value for */
+   SCIP_Real             incval              /**< increment for solution value of variable */
    )
 {
    assert(sol != NULL);
@@ -658,7 +658,7 @@ RETCODE SCIPsolIncVal(
    assert(stat != NULL);
    assert(var != NULL);
 
-   debugMessage("increasing value of <%s> in solution %p by %g\n", SCIPvarGetName(var), sol, incval);
+   SCIPdebugMessage("increasing value of <%s> in solution %p by %g\n", SCIPvarGetName(var), sol, incval);
 
    if( SCIPsetIsZero(set, incval) )
       return SCIP_OKAY;
@@ -671,7 +671,7 @@ RETCODE SCIPsolIncVal(
       {
          if( !SCIPsetIsZero(set, incval) )
          {
-            CHECK_OKAY( solIncArrayVal(sol, set, var, incval) );
+            SCIP_CALL( solIncArrayVal(sol, set, var, incval) );
             sol->obj += SCIPvarGetObj(var) * incval;
             solStamp(sol, stat, tree);
          }
@@ -685,14 +685,14 @@ RETCODE SCIPsolIncVal(
       assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
       if( !SCIPsetIsZero(set, incval) )
       {
-         CHECK_OKAY( solIncArrayVal(sol, set, var, incval) );
+         SCIP_CALL( solIncArrayVal(sol, set, var, incval) );
          sol->obj += SCIPvarGetObj(var) * incval;
          solStamp(sol, stat, tree);
       }
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
-      errorMessage("cannot increase solution value for fixed variable\n");
+      SCIPerrorMessage("cannot increase solution value for fixed variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
@@ -700,30 +700,30 @@ RETCODE SCIPsolIncVal(
       return SCIPsolIncVal(sol, set, stat, tree, SCIPvarGetAggrVar(var), incval/SCIPvarGetAggrScalar(var));
 
    case SCIP_VARSTATUS_MULTAGGR:
-      errorMessage("cannot increase solution value for multiple aggregated variable\n");
+      SCIPerrorMessage("cannot increase solution value for multiple aggregated variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED:
       return SCIPsolIncVal(sol, set, stat, tree, SCIPvarGetNegationVar(var), -incval);
 
    default:
-      errorMessage("unknown variable status\n");
+      SCIPerrorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
 }
 
 /** returns value of variable in primal CIP solution */
-Real SCIPsolGetVal(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   VAR*             var                 /**< variable to get value for */
+SCIP_Real SCIPsolGetVal(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_VAR*             var                 /**< variable to get value for */
    )
 {
-   VAR** vars;
-   Real* scalars;
-   Real solval;
-   Real solvalsum;
+   SCIP_VAR** vars;
+   SCIP_Real* scalars;
+   SCIP_Real solval;
+   SCIP_Real solvalsum;
    int nvars;
    int i;
 
@@ -792,17 +792,17 @@ Real SCIPsolGetVal(
       return SCIPvarGetNegationConstant(var) - solval;
 
    default:
-      errorMessage("unknown variable status\n");
+      SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
       return 0.0;
    }
 }
 
 /** gets objective value of primal CIP solution in transformed problem */
-Real SCIPsolGetObj(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   PROB*            prob                /**< transformed problem data */
+SCIP_Real SCIPsolGetObj(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< transformed problem data */
    )
 {
    assert(sol != NULL);
@@ -816,13 +816,13 @@ Real SCIPsolGetObj(
 
 /** updates primal solutions after a change in a variable's objective value */
 void SCIPsolUpdateVarObj(
-   SOL*             sol,                /**< primal CIP solution */
-   VAR*             var,                /**< problem variable */
-   Real             oldobj,             /**< old objective value */
-   Real             newobj              /**< new objective value */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             oldobj,             /**< old objective value */
+   SCIP_Real             newobj              /**< new objective value */
    )
 {
-   Real solval;
+   SCIP_Real solval;
 
    assert(sol != NULL);
    assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
@@ -833,19 +833,19 @@ void SCIPsolUpdateVarObj(
 }
 
 /** checks primal CIP solution for feasibility */
-RETCODE SCIPsolCheck(
-   SOL*             sol,                /**< primal CIP solution */
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   PROB*            prob,               /**< transformed problem data */
-   Bool             checkbounds,        /**< should the bounds of the variables be checked? */
-   Bool             checkintegrality,   /**< has integrality to be checked? */
-   Bool             checklprows,        /**< have current LP rows to be checked? */
-   Bool*            feasible            /**< stores whether solution is feasible */
+SCIP_RETCODE SCIPsolCheck(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< have current SCIP_LP rows to be checked? */
+   SCIP_Bool*            feasible            /**< stores whether solution is feasible */
    )
 {
-   RESULT result;
+   SCIP_RESULT result;
    int h;
 
    assert(sol != NULL);
@@ -854,7 +854,7 @@ RETCODE SCIPsolCheck(
    assert(prob != NULL);
    assert(feasible != NULL);
 
-   debugMessage("checking solution with objective value %g (nodenum=%lld, origin=%d)\n", 
+   SCIPdebugMessage("checking solution with objective value %g (nodenum=%lld, origin=%d)\n", 
       sol->obj, sol->nodenum, sol->solorigin);
 
    *feasible = TRUE;
@@ -865,10 +865,10 @@ RETCODE SCIPsolCheck(
 
       for( v = 0; v < prob->nvars && *feasible; ++v )
       {
-         VAR* var;
-         Real solval;
-         Real lb;
-         Real ub;
+         SCIP_VAR* var;
+         SCIP_Real solval;
+         SCIP_Real lb;
+         SCIP_Real ub;
 
          var = prob->vars[v];
          solval = SCIPsolGetVal(sol, set, stat, var);
@@ -876,22 +876,22 @@ RETCODE SCIPsolCheck(
          ub = SCIPvarGetUbGlobal(var);
          *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb) && SCIPsetIsFeasLE(set, solval, ub);
 
-#ifdef DEBUG
+#ifdef SCIP_DEBUG
          if( !(*feasible) )
-            debugPrintf("  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var), lb, ub);
+            SCIPdebugPrintf("  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var), lb, ub);
 #endif
       }
    }
 
    for( h = 0; h < set->nconshdlrs && *feasible; ++h )
    {
-      CHECK_OKAY( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol, 
+      SCIP_CALL( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol, 
             checkintegrality, checklprows, &result) );
       *feasible = *feasible && (result == SCIP_FEASIBLE);
 
-#ifdef DEBUG
+#ifdef SCIP_DEBUG
       if( !(*feasible) )
-         debugPrintf("  -> infeasibility detected in constraint handler <%s>\n", SCIPconshdlrGetName(set->conshdlrs[h])); 
+         SCIPdebugPrintf("  -> infeasibility detected in constraint handler <%s>\n", SCIPconshdlrGetName(set->conshdlrs[h])); 
 #endif
    }
 
@@ -899,13 +899,13 @@ RETCODE SCIPsolCheck(
 }
 
 /** try to round given solution */
-RETCODE SCIPsolRound(
-   SOL*             sol,                /**< primal solution */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   PROB*            prob,               /**< transformed problem data */
-   TREE*            tree,               /**< branch and bound tree */
-   Bool*            success             /**< pointer to store whether rounding was successful */
+SCIP_RETCODE SCIPsolRound(
+   SCIP_SOL*             sol,                /**< primal solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_Bool*            success             /**< pointer to store whether rounding was successful */
    )
 {
    int nvars;
@@ -921,10 +921,10 @@ RETCODE SCIPsolRound(
    nvars = prob->nbinvars + prob->nintvars;
    for( v = 0; v < nvars; ++v )
    {
-      VAR* var;
-      Real solval;
-      Bool mayrounddown;
-      Bool mayroundup;
+      SCIP_VAR* var;
+      SCIP_Real solval;
+      SCIP_Bool mayrounddown;
+      SCIP_Bool mayroundup;
 
       var = prob->vars[v];
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
@@ -955,7 +955,7 @@ RETCODE SCIPsolRound(
          break;
 
       /* store new solution value */
-      CHECK_OKAY( SCIPsolSetVal(sol, set, stat, tree, var, solval) );
+      SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, var, solval) );
    }
 
    /* check, if rounding was successful */
@@ -966,14 +966,14 @@ RETCODE SCIPsolRound(
 
 /** updates the solution value sums in variables by adding the value in the given solution */
 void SCIPsolUpdateVarsum(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   PROB*            prob,               /**< transformed problem data */
-   Real             weight              /**< weight of solution in weighted average */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_Real             weight              /**< weight of solution in weighted average */
    )
 {
-   Real solval;
+   SCIP_Real solval;
    int v;
 
    assert(sol != NULL);
@@ -990,15 +990,15 @@ void SCIPsolUpdateVarsum(
 }
 
 /** retransforms solution to original problem space */
-RETCODE SCIPsolRetransform(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   PROB*            origprob            /**< original problem */
+SCIP_RETCODE SCIPsolRetransform(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob            /**< original problem */
    )
 {
-   VAR** vars;
-   Real* solvals;
+   SCIP_VAR** vars;
+   SCIP_Real* solvals;
    int nvars;
    int v;
 
@@ -1011,14 +1011,14 @@ RETCODE SCIPsolRetransform(
    nvars = origprob->nvars;
 
    /* allocate temporary memory for storing the original solution values */
-   CHECK_OKAY( SCIPsetAllocBufferArray(set, &solvals, origprob->nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &solvals, origprob->nvars) );
 
    /* get the solution in original problem variables */
    for( v = 0; v < nvars; ++v )
       solvals[v] = SCIPsolGetVal(sol, set, stat, vars[v]);
 
    /* clear the solution and convert it into original space */
-   CHECK_OKAY( solClearArrays(sol) );
+   SCIP_CALL( solClearArrays(sol) );
    sol->solorigin = SCIP_SOLORIGIN_ORIGINAL;
    sol->obj = 0.0;
 
@@ -1027,7 +1027,7 @@ RETCODE SCIPsolRetransform(
    {
       if( !SCIPsetIsZero(set, solvals[v]) )
       {
-         CHECK_OKAY( solSetArrayVal(sol, set, vars[v], solvals[v]) );
+         SCIP_CALL( solSetArrayVal(sol, set, vars[v], solvals[v]) );
          sol->obj += SCIPvarGetObj(vars[v]) * solvals[v];
       }
    }
@@ -1039,16 +1039,16 @@ RETCODE SCIPsolRetransform(
 }
 
 /** outputs non-zero elements of solution to file stream */
-RETCODE SCIPsolPrint(
-   SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   PROB*            prob,               /**< problem data (original or transformed) */
-   PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
-   FILE*            file                /**< output file (or NULL for standard output) */
+SCIP_RETCODE SCIPsolPrint(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< problem data (original or transformed) */
+   SCIP_PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
+   FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
-   Real solval;
+   SCIP_Real solval;
    int v;
 
    assert(sol != NULL);
@@ -1143,7 +1143,7 @@ RETCODE SCIPsolPrint(
  * simple functions implemented as defines
  */
 
-/* In debug mode, the following methods are implemented as function calls to ensure
+/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
  * type validity.
  * In optimized mode, the methods are implemented as defines to improve performance.
  * However, we want to have them in the library anyways, so we have to undef the defines.
@@ -1159,8 +1159,8 @@ RETCODE SCIPsolPrint(
 #undef SCIPsolSetPrimalIndex
 
 /** gets origin of solution */
-SOLORIGIN SCIPsolGetOrigin(
-   SOL*             sol                 /**< primal CIP solution */
+SCIP_SOLORIGIN SCIPsolGetOrigin(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
    assert(sol != NULL);
@@ -1169,8 +1169,8 @@ SOLORIGIN SCIPsolGetOrigin(
 }
 
 /** gets clock time, when this solution was found */
-Real SCIPsolGetTime(
-   SOL*             sol                 /**< primal CIP solution */
+SCIP_Real SCIPsolGetTime(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
    assert(sol != NULL);
@@ -1180,7 +1180,7 @@ Real SCIPsolGetTime(
 
 /** gets branch and bound run number, where this solution was found */
 int SCIPsolGetRunnum(
-   SOL*             sol                 /**< primal CIP solution */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
    assert(sol != NULL);
@@ -1189,8 +1189,8 @@ int SCIPsolGetRunnum(
 }
 
 /** gets node number, where this solution was found */
-Longint SCIPsolGetNodenum(
-   SOL*             sol                 /**< primal CIP solution */
+SCIP_Longint SCIPsolGetNodenum(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
    assert(sol != NULL);
@@ -1200,7 +1200,7 @@ Longint SCIPsolGetNodenum(
 
 /** gets node's depth, where this solution was found */
 int SCIPsolGetDepth(
-   SOL*             sol                 /**< primal CIP solution */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
    assert(sol != NULL);
@@ -1209,8 +1209,8 @@ int SCIPsolGetDepth(
 }
 
 /** gets heuristic, that found this solution (or NULL if it's from the tree) */
-HEUR* SCIPsolGetHeur(
-   SOL*             sol                 /**< primal CIP solution */
+SCIP_HEUR* SCIPsolGetHeur(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
    assert(sol != NULL);
@@ -1220,7 +1220,7 @@ HEUR* SCIPsolGetHeur(
 
 /** gets current position of solution in array of existing solutions of primal data */
 int SCIPsolGetPrimalIndex(
-   SOL*             sol                 /**< primal CIP solution */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
    assert(sol != NULL);
@@ -1230,8 +1230,8 @@ int SCIPsolGetPrimalIndex(
 
 /** sets current position of solution in array of existing solutions of primal data */
 void SCIPsolSetPrimalIndex(
-   SOL*             sol,                /**< primal CIP solution */
-   int              primalindex         /**< new primal index of solution */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   int                   primalindex         /**< new primal index of solution */
    )
 {
    assert(sol != NULL);

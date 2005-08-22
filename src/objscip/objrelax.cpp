@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.cpp,v 1.6 2005/05/31 17:20:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objrelax.cpp,v 1.7 2005/08/22 18:35:31 bzfpfend Exp $"
 
 /**@file   objrelax.cpp
  * @brief  C++ wrapper for relaxators
@@ -35,10 +35,10 @@
  */
 
 /** relaxator data */
-struct RelaxData
+struct SCIP_RelaxData
 {
-   scip::ObjRelax*  objrelax;           /**< relaxator object */
-   Bool             deleteobject;       /**< should the relaxator object be deleted when relaxator is freed? */
+   scip::ObjRelax*       objrelax;           /**< relaxator object */
+   SCIP_Bool             deleteobject;       /**< should the relaxator object be deleted when relaxator is freed? */
 };
 
 
@@ -50,16 +50,16 @@ struct RelaxData
 
 /** destructor of relaxator to free user data (called when SCIP is exiting) */
 static
-DECL_RELAXFREE(relaxFreeObj)
+SCIP_DECL_RELAXFREE(relaxFreeObj)
 {  /*lint --e{715}*/
-   RELAXDATA* relaxdata;
+   SCIP_RELAXDATA* relaxdata;
 
    relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata != NULL);
    assert(relaxdata->objrelax != NULL);
 
    /* call virtual method of relax object */
-   CHECK_OKAY( relaxdata->objrelax->scip_free(scip, relax) );
+   SCIP_CALL( relaxdata->objrelax->scip_free(scip, relax) );
 
    /* free relax object */
    if( relaxdata->deleteobject )
@@ -75,16 +75,16 @@ DECL_RELAXFREE(relaxFreeObj)
 
 /** initialization method of relaxator (called after problem was transformed) */
 static
-DECL_RELAXINIT(relaxInitObj)
+SCIP_DECL_RELAXINIT(relaxInitObj)
 {  /*lint --e{715}*/
-   RELAXDATA* relaxdata;
+   SCIP_RELAXDATA* relaxdata;
 
    relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata != NULL);
    assert(relaxdata->objrelax != NULL);
 
    /* call virtual method of relax object */
-   CHECK_OKAY( relaxdata->objrelax->scip_init(scip, relax) );
+   SCIP_CALL( relaxdata->objrelax->scip_init(scip, relax) );
 
    return SCIP_OKAY;
 }
@@ -92,16 +92,16 @@ DECL_RELAXINIT(relaxInitObj)
 
 /** deinitialization method of relaxator (called before transformed problem is freed) */
 static
-DECL_RELAXEXIT(relaxExitObj)
+SCIP_DECL_RELAXEXIT(relaxExitObj)
 {  /*lint --e{715}*/
-   RELAXDATA* relaxdata;
+   SCIP_RELAXDATA* relaxdata;
 
    relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata != NULL);
    assert(relaxdata->objrelax != NULL);
 
    /* call virtual method of relax object */
-   CHECK_OKAY( relaxdata->objrelax->scip_exit(scip, relax) );
+   SCIP_CALL( relaxdata->objrelax->scip_exit(scip, relax) );
 
    return SCIP_OKAY;
 }
@@ -109,16 +109,16 @@ DECL_RELAXEXIT(relaxExitObj)
 
 /** solving process initialization method of relaxator (called when branch and bound process is about to begin) */
 static
-DECL_RELAXINITSOL(relaxInitsolObj)
+SCIP_DECL_RELAXINITSOL(relaxInitsolObj)
 {  /*lint --e{715}*/
-   RELAXDATA* relaxdata;
+   SCIP_RELAXDATA* relaxdata;
 
    relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata != NULL);
    assert(relaxdata->objrelax != NULL);
 
    /* call virtual method of relax object */
-   CHECK_OKAY( relaxdata->objrelax->scip_initsol(scip, relax) );
+   SCIP_CALL( relaxdata->objrelax->scip_initsol(scip, relax) );
 
    return SCIP_OKAY;
 }
@@ -126,16 +126,16 @@ DECL_RELAXINITSOL(relaxInitsolObj)
 
 /** solving process deinitialization method of relaxator (called before branch and bound process data is freed) */
 static
-DECL_RELAXEXITSOL(relaxExitsolObj)
+SCIP_DECL_RELAXEXITSOL(relaxExitsolObj)
 {  /*lint --e{715}*/
-   RELAXDATA* relaxdata;
+   SCIP_RELAXDATA* relaxdata;
 
    relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata != NULL);
    assert(relaxdata->objrelax != NULL);
 
    /* call virtual method of relax object */
-   CHECK_OKAY( relaxdata->objrelax->scip_exitsol(scip, relax) );
+   SCIP_CALL( relaxdata->objrelax->scip_exitsol(scip, relax) );
 
    return SCIP_OKAY;
 }
@@ -143,16 +143,16 @@ DECL_RELAXEXITSOL(relaxExitsolObj)
 
 /** execution method of relaxator */
 static
-DECL_RELAXEXEC(relaxExecObj)
+SCIP_DECL_RELAXEXEC(relaxExecObj)
 {  /*lint --e{715}*/
-   RELAXDATA* relaxdata;
+   SCIP_RELAXDATA* relaxdata;
 
    relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata != NULL);
    assert(relaxdata->objrelax != NULL);
 
    /* call virtual method of relax object */
-   CHECK_OKAY( relaxdata->objrelax->scip_exec(scip, relax, result) );
+   SCIP_CALL( relaxdata->objrelax->scip_exec(scip, relax, result) );
 
    return SCIP_OKAY;
 }
@@ -165,21 +165,21 @@ DECL_RELAXEXEC(relaxExecObj)
  */
 
 /** creates the relaxator for the given relaxator object and includes it in SCIP */
-RETCODE SCIPincludeObjRelax(
-   SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjRelax*  objrelax,           /**< relaxator object */
-   Bool             deleteobject        /**< should the relaxator object be deleted when relaxator is freed? */
+SCIP_RETCODE SCIPincludeObjRelax(
+   SCIP*                 scip,               /**< SCIP data structure */
+   scip::ObjRelax*       objrelax,           /**< relaxator object */
+   SCIP_Bool             deleteobject        /**< should the relaxator object be deleted when relaxator is freed? */
    )
 {
-   RELAXDATA* relaxdata;
+   SCIP_RELAXDATA* relaxdata;
 
    /* create relaxator data */
-   relaxdata = new RELAXDATA;
+   relaxdata = new SCIP_RELAXDATA;
    relaxdata->objrelax = objrelax;
    relaxdata->deleteobject = deleteobject;
 
    /* include relaxator */
-   CHECK_OKAY( SCIPincludeRelax(scip, objrelax->scip_name_, objrelax->scip_desc_, 
+   SCIP_CALL( SCIPincludeRelax(scip, objrelax->scip_name_, objrelax->scip_desc_, 
          objrelax->scip_priority_, objrelax->scip_freq_,
          relaxFreeObj, relaxInitObj, relaxExitObj, 
          relaxInitsolObj, relaxExitsolObj, relaxExecObj,
@@ -190,12 +190,12 @@ RETCODE SCIPincludeObjRelax(
 
 /** returns the relax object of the given name, or NULL if not existing */
 scip::ObjRelax* SCIPfindObjRelax(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< name of relaxator */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of relaxator */
    )
 {
-   RELAX* relax;
-   RELAXDATA* relaxdata;
+   SCIP_RELAX* relax;
+   SCIP_RELAXDATA* relaxdata;
 
    relax = SCIPfindRelax(scip, name);
    if( relax == NULL )
@@ -209,11 +209,11 @@ scip::ObjRelax* SCIPfindObjRelax(
    
 /** returns the relax object for the given relaxator */
 scip::ObjRelax* SCIPgetObjRelax(
-   SCIP*            scip,               /**< SCIP data structure */
-   RELAX*           relax               /**< relaxator */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RELAX*           relax               /**< relaxator */
    )
 {
-   RELAXDATA* relaxdata;
+   SCIP_RELAXDATA* relaxdata;
 
    relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata != NULL);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_clock.h,v 1.8 2005/07/15 17:20:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_clock.h,v 1.9 2005/08/22 18:35:50 bzfpfend Exp $"
 
 /**@file   struct_clock.h
  * @brief  datastructures for clocks and timing issues
@@ -35,30 +35,30 @@
 
 
 /** CPU clock counter */
-struct CPUClock
+struct SCIP_CPUClock
 {
    clock_t          user;               /**< clock ticks for user CPU time */
 };
 
 /** wall clock counter */
-struct WallClock
+struct SCIP_WallClock
 {
-   long             sec;                /**< seconds counter */
-   long             usec;               /**< microseconds counter */
+   long                  sec;                /**< seconds counter */
+   long                  usec;               /**< microseconds counter */
 };
 
 /** clock timer */
-struct Clock
+struct SCIP_Clock
 {
    union
    {
-      CPUCLOCK      cpuclock;           /**< CPU clock counter */
-      WALLCLOCK     wallclock;          /**< wall clock counter */
+      SCIP_CPUCLOCK      cpuclock;           /**< CPU clock counter */
+      SCIP_WALLCLOCK     wallclock;          /**< wall clock counter */
    } data;
-   int              nruns;              /**< number of SCIPclockStart() calls without SCIPclockStop() calls */
-   CLOCKTYPE        clocktype;          /**< current type of clock used */
-   Bool             usedefault;         /**< should the clock's type be overruled by the default clock type? */
-   Bool             enabled;            /**< should the clock be used? */
+   int                   nruns;              /**< number of SCIPclockStart() calls without SCIPclockStop() calls */
+   SCIP_CLOCKTYPE        clocktype;          /**< current type of clock used */
+   SCIP_Bool             usedefault;         /**< should the clock's type be overruled by the default clock type? */
+   SCIP_Bool             enabled;            /**< should the clock be used? */
 };
 
 

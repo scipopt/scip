@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_invarknapsack.c,v 1.29 2005/07/15 17:20:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_invarknapsack.c,v 1.30 2005/08/22 18:35:34 bzfpfend Exp $"
 
 /**@file   cons_invarknapsack.c
  * @brief  constraint handler for invarknapsack constraints
@@ -40,7 +40,7 @@
 #define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ            -1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
-                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -70,9 +70,9 @@
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 #if 0
 static
-DECL_CONSFREE(consFreeInvarknapsack)
+SCIP_DECL_CONSFREE(consFreeInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -85,9 +85,9 @@ DECL_CONSFREE(consFreeInvarknapsack)
 /** initialization method of constraint handler (called after problem was transformed) */
 #if 0
 static
-DECL_CONSINIT(consInitInvarknapsack)
+SCIP_DECL_CONSINIT(consInitInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -100,9 +100,9 @@ DECL_CONSINIT(consInitInvarknapsack)
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
 #if 0
 static
-DECL_CONSEXIT(consExitInvarknapsack)
+SCIP_DECL_CONSEXIT(consExitInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -115,9 +115,9 @@ DECL_CONSEXIT(consExitInvarknapsack)
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 #if 0
 static
-DECL_CONSINITPRE(consInitpreInvarknapsack)
+SCIP_DECL_CONSINITPRE(consInitpreInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -130,9 +130,9 @@ DECL_CONSINITPRE(consInitpreInvarknapsack)
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 #if 0
 static
-DECL_CONSEXITPRE(consExitpreInvarknapsack)
+SCIP_DECL_CONSEXITPRE(consExitpreInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -145,9 +145,9 @@ DECL_CONSEXITPRE(consExitpreInvarknapsack)
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 #if 0
 static
-DECL_CONSINITSOL(consInitsolInvarknapsack)
+SCIP_DECL_CONSINITSOL(consInitsolInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -160,9 +160,9 @@ DECL_CONSINITSOL(consInitsolInvarknapsack)
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 #if 0
 static
-DECL_CONSEXITSOL(consExitsolInvarknapsack)
+SCIP_DECL_CONSEXITSOL(consExitsolInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -175,9 +175,9 @@ DECL_CONSEXITSOL(consExitsolInvarknapsack)
 /** frees specific constraint data */
 #if 0
 static
-DECL_CONSDELETE(consDeleteInvarknapsack)
+SCIP_DECL_CONSDELETE(consDeleteInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -190,9 +190,9 @@ DECL_CONSDELETE(consDeleteInvarknapsack)
 /** transforms constraint data into data belonging to the transformed problem */ 
 #if 0
 static
-DECL_CONSTRANS(consTransInvarknapsack)
+SCIP_DECL_CONSTRANS(consTransInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -202,12 +202,12 @@ DECL_CONSTRANS(consTransInvarknapsack)
 #endif
 
 
-/** LP initialization method of constraint handler */
+/** SCIP_LP initialization method of constraint handler */
 #if 0
 static
-DECL_CONSINITLP(consInitlpInvarknapsack)
+SCIP_DECL_CONSINITLP(consInitlpInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -220,9 +220,9 @@ DECL_CONSINITLP(consInitlpInvarknapsack)
 /** separation method of constraint handler */
 #if 0
 static
-DECL_CONSSEPA(consSepaInvarknapsack)
+SCIP_DECL_CONSSEPA(consSepaInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -232,11 +232,11 @@ DECL_CONSSEPA(consSepaInvarknapsack)
 #endif
 
 
-/** constraint enforcing method of constraint handler for LP solutions */
+/** constraint enforcing method of constraint handler for SCIP_LP solutions */
 static
-DECL_CONSENFOLP(consEnfolpInvarknapsack)
+SCIP_DECL_CONSENFOLP(consEnfolpInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -245,9 +245,9 @@ DECL_CONSENFOLP(consEnfolpInvarknapsack)
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
-DECL_CONSENFOPS(consEnfopsInvarknapsack)
+SCIP_DECL_CONSENFOPS(consEnfopsInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -256,9 +256,9 @@ DECL_CONSENFOPS(consEnfopsInvarknapsack)
 
 /** feasibility check method of constraint handler for integral solutions */
 static
-DECL_CONSCHECK(consCheckInvarknapsack)
+SCIP_DECL_CONSCHECK(consCheckInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -268,9 +268,9 @@ DECL_CONSCHECK(consCheckInvarknapsack)
 /** domain propagation method of constraint handler */
 #if 0
 static
-DECL_CONSPROP(consPropInvarknapsack)
+SCIP_DECL_CONSPROP(consPropInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -283,9 +283,9 @@ DECL_CONSPROP(consPropInvarknapsack)
 /** presolving method of constraint handler */
 #if 0
 static
-DECL_CONSPRESOL(consPresolInvarknapsack)
+SCIP_DECL_CONSPRESOL(consPresolInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -298,9 +298,9 @@ DECL_CONSPRESOL(consPresolInvarknapsack)
 /** propagation conflict resolving method of constraint handler */
 #if 0
 static
-DECL_CONSRESPROP(consRespropInvarknapsack)
+SCIP_DECL_CONSRESPROP(consRespropInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -312,9 +312,9 @@ DECL_CONSRESPROP(consRespropInvarknapsack)
 
 /** variable rounding lock method of constraint handler */
 static
-DECL_CONSLOCK(consLockInvarknapsack)
+SCIP_DECL_CONSLOCK(consLockInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -324,9 +324,9 @@ DECL_CONSLOCK(consLockInvarknapsack)
 /** constraint activation notification method of constraint handler */
 #if 0
 static
-DECL_CONSACTIVE(consActiveInvarknapsack)
+SCIP_DECL_CONSACTIVE(consActiveInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -339,9 +339,9 @@ DECL_CONSACTIVE(consActiveInvarknapsack)
 /** constraint deactivation notification method of constraint handler */
 #if 0
 static
-DECL_CONSDEACTIVE(consDeactiveInvarknapsack)
+SCIP_DECL_CONSDEACTIVE(consDeactiveInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -354,9 +354,9 @@ DECL_CONSDEACTIVE(consDeactiveInvarknapsack)
 /** constraint enabling notification method of constraint handler */
 #if 0
 static
-DECL_CONSENABLE(consEnableInvarknapsack)
+SCIP_DECL_CONSENABLE(consEnableInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -369,9 +369,9 @@ DECL_CONSENABLE(consEnableInvarknapsack)
 /** constraint disabling notification method of constraint handler */
 #if 0
 static
-DECL_CONSDISABLE(consDisableInvarknapsack)
+SCIP_DECL_CONSDISABLE(consDisableInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -383,9 +383,9 @@ DECL_CONSDISABLE(consDisableInvarknapsack)
 /** constraint display method of constraint handler */
 #if 0
 static
-DECL_CONSPRINT(consPrintInvarknapsack)
+SCIP_DECL_CONSPRINT(consPrintInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -403,9 +403,9 @@ DECL_CONSPRINT(consPrintInvarknapsack)
 
 #ifdef LINCONSUPGD_PRIORITY
 static
-DECL_LINCONSUPGD(linconsUpgdInvarknapsack)
+SCIP_DECL_LINCONSUPGD(linconsUpgdInvarknapsack)
 {  /*lint --e{715}*/
-   Bool upgrade;
+   SCIP_Bool upgrade;
 
    assert(upgdcons != NULL);
    
@@ -420,11 +420,11 @@ DECL_LINCONSUPGD(linconsUpgdInvarknapsack)
 
    if( upgrade )
    {
-      debugMessage("upgrading constraint <%s> to invarknapsack constraint\n", SCIPconsGetName(cons));
+      SCIPdebugMessage("upgrading constraint <%s> to invarknapsack constraint\n", SCIPconsGetName(cons));
       
       /* create the bin Invarknapsack constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));
-      CHECK_OKAY( SCIPcreateConsInvarknapsack(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, lhs, rhs,
+      SCIP_CALL( SCIPcreateConsInvarknapsack(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, lhs, rhs,
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
@@ -443,18 +443,18 @@ DECL_LINCONSUPGD(linconsUpgdInvarknapsack)
  */
 
 /** creates the handler for invarknapsack constraints and includes it in SCIP */
-RETCODE SCIPincludeConshdlrInvarknapsack(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeConshdlrInvarknapsack(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    /* create invarknapsack constraint handler data */
    conshdlrdata = NULL;
    /* TODO: (optional) create constraint handler specific data here */
 
    /* include constraint handler */
-   CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
@@ -470,7 +470,7 @@ RETCODE SCIPincludeConshdlrInvarknapsack(
 
 #ifdef LINCONSUPGD_PRIORITY
    /* include the linear constraint upgrade in the linear constraint handler */
-   CHECK_OKAY( SCIPincludeLinconsUpgrade(scip, linconsUpgdInvarknapsack, LINCONSUPGD_PRIORITY) );
+   SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdInvarknapsack, LINCONSUPGD_PRIORITY) );
 #endif
 
    /* add invarknapsack constraint handler parameters */
@@ -480,36 +480,36 @@ RETCODE SCIPincludeConshdlrInvarknapsack(
 }
 
 /** creates and captures a invarknapsack constraint */
-RETCODE SCIPcreateConsInvarknapsack(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*      name,               /**< name of constraint */
-   int              len,                /**< number of nonzeros in the constraint */
-   VAR**            vars,               /**< array with variables of constraint entries */
-   Real             lhs,                /**< left hand side of constraint */
-   Real             rhs,                /**< right hand side of constraint */
-   Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             separate,           /**< should the constraint be separated during LP processing? */
-   Bool             enforce,            /**< should the constraint be enforced during node processing? */
-   Bool             check,              /**< should the constraint be checked for feasibility? */
-   Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
-   Bool             dynamic,            /**< is constraint subject to aging? */
-   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+SCIP_RETCODE SCIPcreateConsInvarknapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   len,                /**< number of nonzeros in the constraint */
+   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs,                /**< right hand side of constraint */
+   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   SCIP_Bool             local,              /**< is constraint only valid locally? */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
+   SCIP_Bool             removeable          /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
    )
 {
-   CONSHDLR* conshdlr;
-   CONSDATA* consdata;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
 
-   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527} --e{715}*/
 
    /* find the invarknapsack constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      errorMessage("invarknapsack constraint handler not found\n");
+      SCIPerrorMessage("invarknapsack constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 
@@ -518,7 +518,7 @@ RETCODE SCIPcreateConsInvarknapsack(
    /* TODO: create and store constraint specific data here */
 
    /* create constraint */
-   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
+   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removeable) );
 
    return SCIP_OKAY;

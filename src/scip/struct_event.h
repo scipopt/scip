@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_event.h,v 1.17 2005/08/17 14:25:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_event.h,v 1.18 2005/08/22 18:35:50 bzfpfend Exp $"
 
 /**@file   struct_event.h
  * @brief  datastructures for managing events
@@ -36,108 +36,108 @@
 
 
 /** data for variable addition events */
-struct EventVarAdded
+struct SCIP_EventVarAdded
 {
-   VAR*             var;                /**< variable that was added to the problem */
+   SCIP_VAR*             var;                /**< variable that was added to the problem */
 };
 
 /** data for variable deletion events */
-struct EventVarDeleted
+struct SCIP_EventVarDeleted
 {
-   VAR*             var;                /**< variable that will be deleted from the problem */
+   SCIP_VAR*             var;                /**< variable that will be deleted from the problem */
 };
 
 /** data for variable fixing events */
-struct EventVarFixed
+struct SCIP_EventVarFixed
 {
-   VAR*             var;                /**< variable that was fixed */
+   SCIP_VAR*             var;                /**< variable that was fixed */
 };
 
 /** data for locks change events */
-struct EventLocksChg
+struct SCIP_EventLocksChg
 {
-   VAR*             var;                /**< variable for which the lock numbers were changed */
+   SCIP_VAR*             var;                /**< variable for which the lock numbers were changed */
 };
 
 /** data for objective value change events */
-struct EventObjChg
+struct SCIP_EventObjChg
 {
-   Real             oldobj;             /**< old objective value before value changed */
-   Real             newobj;             /**< new objective value after value changed */
-   VAR*             var;                /**< variable whose objective value changed */
+   SCIP_Real             oldobj;             /**< old objective value before value changed */
+   SCIP_Real             newobj;             /**< new objective value after value changed */
+   SCIP_VAR*             var;                /**< variable whose objective value changed */
 };
 
 /** data for bound change events */
-struct EventBdChg
+struct SCIP_EventBdChg
 {
-   Real             oldbound;           /**< old bound before bound changed */
-   Real             newbound;           /**< new bound after bound changed */
-   VAR*             var;                /**< variable whose bound changed */
+   SCIP_Real             oldbound;           /**< old bound before bound changed */
+   SCIP_Real             newbound;           /**< new bound after bound changed */
+   SCIP_VAR*             var;                /**< variable whose bound changed */
 };
 
 /** data for implication added events */
-struct EventImplAdd
+struct SCIP_EventImplAdd
 {
-   VAR*             var;                /**< variable for which the lock numbers were changed */
+   SCIP_VAR*             var;                /**< variable for which the lock numbers were changed */
 };
 
 /** event data structure */
-struct Event
+struct SCIP_Event
 {
    union
    {
-      EVENTVARADDED eventvaradded;      /**< data for variable addition events */
-      EVENTVARDELETED eventvardeleted;  /**< data for variable deletion events */
-      EVENTVARFIXED eventvarfixed;      /**< data for variable fixing events */
-      EVENTLOCKSCHG eventlockschg;      /**< data for locks change events */
-      EVENTOBJCHG   eventobjchg;        /**< data for objective value change events */
-      EVENTBDCHG    eventbdchg;         /**< data for bound change events */
-      EVENTIMPLADD  eventimpladd;       /**< data for implication added events */
-      NODE*         node;               /**< data for node and LP events */
-      SOL*          sol;                /**< data for primal solution events */
+      SCIP_EVENTVARADDED eventvaradded;      /**< data for variable addition events */
+      SCIP_EVENTVARDELETED eventvardeleted;  /**< data for variable deletion events */
+      SCIP_EVENTVARFIXED eventvarfixed;      /**< data for variable fixing events */
+      SCIP_EVENTLOCKSCHG eventlockschg;      /**< data for locks change events */
+      SCIP_EVENTOBJCHG   eventobjchg;        /**< data for objective value change events */
+      SCIP_EVENTBDCHG    eventbdchg;         /**< data for bound change events */
+      SCIP_EVENTIMPLADD  eventimpladd;       /**< data for implication added events */
+      SCIP_NODE*         node;               /**< data for node and SCIP_LP events */
+      SCIP_SOL*          sol;                /**< data for primal solution events */
    } data;
-   EVENTTYPE        eventtype;          /**< type of event */
+   SCIP_EVENTTYPE        eventtype;          /**< type of event */
 };
 
 /** event filter to select events to be processed by an event handler */
-struct EventFilter
+struct SCIP_EventFilter
 {
-   EVENTTYPE*       eventtypes;         /**< array with types of event to process; 0 marks a deleted event catch entry */
-   EVENTHDLR**      eventhdlrs;         /**< array with event handlers to process the event */
-   EVENTDATA**      eventdatas;         /**< array with user data for the issued event */
-   int*             nextpos;            /**< linked lists for free, delayed added and delayed deleted slot positions */
-   int              size;               /**< size of filter arrays (available slots in arrays) */
-   int              len;                /**< number entries in filter arrays (used and deleted) */
-   int              firstfreepos;       /**< first deleted slot; remaining slots are in poslist */
-   int              firstdeletedpos;    /**< first delayed deleted slot; remaining slots are in poslist */
-   unsigned int     eventmask;          /**< mask for events that are handled by any event handler in the filter */
-   unsigned int     delayedeventmask;   /**< mask for delayed added events */
-   Bool             delayupdates;       /**< should additions and deletions to the filter be delayed? */
+   SCIP_EVENTTYPE*       eventtypes;         /**< array with types of event to process; 0 marks a deleted event catch entry */
+   SCIP_EVENTHDLR**      eventhdlrs;         /**< array with event handlers to process the event */
+   SCIP_EVENTDATA**      eventdatas;         /**< array with user data for the issued event */
+   int*                  nextpos;            /**< linked lists for free, delayed added and delayed deleted slot positions */
+   int                   size;               /**< size of filter arrays (available slots in arrays) */
+   int                   len;                /**< number entries in filter arrays (used and deleted) */
+   int                   firstfreepos;       /**< first deleted slot; remaining slots are in poslist */
+   int                   firstdeletedpos;    /**< first delayed deleted slot; remaining slots are in poslist */
+   unsigned int          eventmask;          /**< mask for events that are handled by any event handler in the filter */
+   unsigned int          delayedeventmask;   /**< mask for delayed added events */
+   SCIP_Bool             delayupdates;       /**< should additions and deletions to the filter be delayed? */
 };
 
 /** event handler */
-struct Eventhdlr
+struct SCIP_Eventhdlr
 {
-   char*            name;               /**< name of event handler */
-   char*            desc;               /**< description of event handler */
-   DECL_EVENTFREE   ((*eventfree));     /**< destructor of event handler */
-   DECL_EVENTINIT   ((*eventinit));     /**< initialize event handler */
-   DECL_EVENTEXIT   ((*eventexit));     /**< deinitialize event handler */
-   DECL_EVENTINITSOL((*eventinitsol));  /**< solving process initialization method of event handler */
-   DECL_EVENTEXITSOL((*eventexitsol));  /**< solving process deinitialization method of event handler */
-   DECL_EVENTDELETE ((*eventdelete));   /**< free specific event data */
-   DECL_EVENTEXEC   ((*eventexec));     /**< execute event handler */
-   EVENTHDLRDATA*   eventhdlrdata;      /**< event handler data */
-   Bool             initialized;        /**< is event handler initialized? */
+   char*                 name;               /**< name of event handler */
+   char*                 desc;               /**< description of event handler */
+   SCIP_DECL_EVENTFREE   ((*eventfree));     /**< destructor of event handler */
+   SCIP_DECL_EVENTINIT   ((*eventinit));     /**< initialize event handler */
+   SCIP_DECL_EVENTEXIT   ((*eventexit));     /**< deinitialize event handler */
+   SCIP_DECL_EVENTINITSOL((*eventinitsol));  /**< solving process initialization method of event handler */
+   SCIP_DECL_EVENTEXITSOL((*eventexitsol));  /**< solving process deinitialization method of event handler */
+   SCIP_DECL_EVENTDELETE ((*eventdelete));   /**< free specific event data */
+   SCIP_DECL_EVENTEXEC   ((*eventexec));     /**< execute event handler */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata;      /**< event handler data */
+   SCIP_Bool             initialized;        /**< is event handler initialized? */
 };
 
 /** event queue to cache events and process them later */
-struct EventQueue
+struct SCIP_EventQueue
 {
-   EVENT**          events;             /**< array with queued events */
-   int              eventssize;         /**< number of available slots in events array */
-   int              nevents;            /**< number of events in queue (used slots if events array) */
-   Bool             delayevents;        /**< should the events be delayed and processed later? */
+   SCIP_EVENT**          events;             /**< array with queued events */
+   int                   eventssize;         /**< number of available slots in events array */
+   int                   nevents;            /**< number of events in queue (used slots if events array) */
+   SCIP_Bool             delayevents;        /**< should the events be delayed and processed later? */
 };
 
 #endif

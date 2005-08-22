@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.13 2005/05/31 17:20:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.14 2005/08/22 18:35:38 bzfpfend Exp $"
 
 /**@file   heur_fixandinfer.c
  * @brief  fix-and-infer primal heuristic
@@ -59,10 +59,10 @@
  */
 
 /** primal heuristic data */
-struct HeurData
+struct SCIP_HeurData
 {
-   int              proprounds;         /**< maximal number of propagation rounds in probing subproblems */
-   int              minfixings;         /**< minimal number of fixings to apply before dive may be aborted */
+   int                   proprounds;         /**< maximal number of propagation rounds in probing subproblems */
+   int                   minfixings;         /**< minimal number of fixings to apply before dive may be aborted */
 };
 
 
@@ -74,16 +74,16 @@ struct HeurData
 
 /** selects a variable and fixes it to its current pseudo solution value */
 static
-RETCODE fixVariable(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR**            pseudocands,        /**< array of unfixed variables */
-   int              npseudocands        /**< number of unfixed variables */
+SCIP_RETCODE fixVariable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            pseudocands,        /**< array of unfixed variables */
+   int                   npseudocands        /**< number of unfixed variables */
    )
 {
-   VAR* var;
-   Real bestscore;
-   Real score;
-   Real solval;
+   SCIP_VAR* var;
+   SCIP_Real bestscore;
+   SCIP_Real score;
+   SCIP_Real solval;
    int bestcand;
    int ncands;
    int c;
@@ -116,9 +116,9 @@ RETCODE fixVariable(
    var = pseudocands[bestcand];
    solval = SCIPgetVarSol(scip, var);
    assert(SCIPisFeasIntegral(scip, solval)); /* in probing, we always have the pseudo solution */
-   debugMessage(" -> fixed variable <%s>[%g,%g] = %g (%d candidates left)\n", 
+   SCIPdebugMessage(" -> fixed variable <%s>[%g,%g] = %g (%d candidates left)\n", 
       SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), solval, npseudocands - 1);
-   CHECK_OKAY( SCIPfixVarProbing(scip, var, solval) );
+   SCIP_CALL( SCIPfixVarProbing(scip, var, solval) );
 
    return SCIP_OKAY;
 }
@@ -132,9 +132,9 @@ RETCODE fixVariable(
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
-DECL_HEURFREE(heurFreeFixandinfer) /*lint --e{715}*/
+SCIP_DECL_HEURFREE(heurFreeFixandinfer) /*lint --e{715}*/
 {  /*lint --e{715}*/
-   HEURDATA* heurdata;
+   SCIP_HEURDATA* heurdata;
 
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -164,14 +164,14 @@ DECL_HEURFREE(heurFreeFixandinfer) /*lint --e{715}*/
 
 /** execution method of primal heuristic */
 static
-DECL_HEUREXEC(heurExecFixandinfer)
+SCIP_DECL_HEUREXEC(heurExecFixandinfer)
 {  /*lint --e{715}*/
-   HEURDATA* heurdata;
-   VAR** cands;
+   SCIP_HEURDATA* heurdata;
+   SCIP_VAR** cands;
    int ncands;
    int startncands;
    int divedepth;
-   Bool cutoff;
+   SCIP_Bool cutoff;
 
    *result = SCIP_DIDNOTRUN;
 
@@ -180,11 +180,11 @@ DECL_HEUREXEC(heurExecFixandinfer)
       return SCIP_OKAY;
 
    /* get unfixed variables */
-   CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &cands, &ncands, NULL) );
+   SCIP_CALL( SCIPgetPseudoBranchCands(scip, &cands, &ncands, NULL) );
    if( ncands == 0 )
       return SCIP_OKAY;
 
-   debugMessage("starting fix-and-infer heuristic with %d unfixed integral variables\n", ncands);
+   SCIPdebugMessage("starting fix-and-infer heuristic with %d unfixed integral variables\n", ncands);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -193,7 +193,7 @@ DECL_HEUREXEC(heurExecFixandinfer)
    assert(heurdata != NULL);
 
    /* start probing */
-   CHECK_OKAY( SCIPstartProbing(scip) );
+   SCIP_CALL( SCIPstartProbing(scip) );
 
    /* fix variables and propagate inferences as long as the problem is still feasible and there are 
     * unfixed integral variables
@@ -207,52 +207,52 @@ DECL_HEUREXEC(heurExecFixandinfer)
       divedepth++;
 
       /* create next probing node */
-      CHECK_OKAY( SCIPnewProbingNode(scip) );
+      SCIP_CALL( SCIPnewProbingNode(scip) );
 
       /* fix next variable */
-      CHECK_OKAY( fixVariable(scip, cands, ncands) );
+      SCIP_CALL( fixVariable(scip, cands, ncands) );
 
       /* propagate the fixing */
-      CHECK_OKAY( SCIPpropagateProbing(scip, heurdata->proprounds, &cutoff) );
+      SCIP_CALL( SCIPpropagateProbing(scip, heurdata->proprounds, &cutoff) );
 
       /* get remaining unfixed variables */
       if( !cutoff )
       {
-         CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &cands, &ncands, NULL) );
+         SCIP_CALL( SCIPgetPseudoBranchCands(scip, &cands, &ncands, NULL) );
       }
    }
 
    /* check, if we are still feasible */
    if( cutoff )
    {
-      debugMessage("propagation detected a cutoff\n");
+      SCIPdebugMessage("propagation detected a cutoff\n");
    }
    else if( ncands == 0 )
    {
-      Bool success;
+      SCIP_Bool success;
 
       success = FALSE;
 
       /* try to add solution to SCIP */
-      CHECK_OKAY( SCIPtryCurrentSol(scip, heur, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPtryCurrentSol(scip, heur, FALSE, TRUE, &success) );
 
       if( success )
       {
-         debugMessage("found primal feasible solution\n");
+         SCIPdebugMessage("found primal feasible solution\n");
          *result = SCIP_FOUNDSOL;
       }
       else
       {
-         debugMessage("primal solution was rejected\n");
+         SCIPdebugMessage("primal solution was rejected\n");
       }
    }
    else
    {
-      debugMessage("probing was aborted (probing depth: %d, fixed: %d/%d)", divedepth, startncands - ncands, startncands);
+      SCIPdebugMessage("probing was aborted (probing depth: %d, fixed: %d/%d)", divedepth, startncands - ncands, startncands);
    }
 
    /* end probing */
-   CHECK_OKAY( SCIPendProbing(scip) );
+   SCIP_CALL( SCIPendProbing(scip) );
 
    return SCIP_OKAY;
 }
@@ -266,28 +266,28 @@ DECL_HEUREXEC(heurExecFixandinfer)
  */
 
 /** creates the fix-and-infer primal heuristic and includes it in SCIP */
-RETCODE SCIPincludeHeurFixandinfer(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeHeurFixandinfer(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   HEURDATA* heurdata;
+   SCIP_HEURDATA* heurdata;
 
    /* create fixandinfer primal heuristic data */
-   CHECK_OKAY( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
    /* include primal heuristic */
-   CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING, HEUR_AFTERNODE,
          heurFreeFixandinfer, heurInitFixandinfer, heurExitFixandinfer, 
          heurInitsolFixandinfer, heurExitsolFixandinfer, heurExecFixandinfer,
          heurdata) );
 
    /* fixandinfer heuristic parameters */
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/fixandinfer/proprounds", 
          "maximal number of propagation rounds in probing subproblems (-1: no limit, 0: auto)",
          &heurdata->proprounds, DEFAULT_PROPROUNDS, -1, INT_MAX, NULL, NULL) );
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/fixandinfer/minfixings", 
          "minimal number of fixings to apply before dive may be aborted",
          &heurdata->minfixings, DEFAULT_MINFIXINGS, 0, INT_MAX, NULL, NULL) );

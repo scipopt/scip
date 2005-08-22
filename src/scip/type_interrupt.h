@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_interrupt.h,v 1.6 2005/07/15 17:20:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_interrupt.h,v 1.7 2005/08/22 18:35:53 bzfpfend Exp $"
 
 /**@file   type_interrupt.h
  * @brief  type definitions for catching the user CTRL-C interrupt
@@ -27,7 +27,7 @@
 #define __SCIP_TYPE_INTERRUPT_H__
 
 
-typedef struct Interrupt INTERRUPT;     /**< CTRL-C interrupt data */
+typedef struct SCIP_Interrupt SCIP_INTERRUPT;     /**< CTRL-C interrupt data */
 
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_prob.h,v 1.9 2005/07/15 17:20:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_prob.h,v 1.10 2005/08/22 18:35:54 bzfpfend Exp $"
 
 /**@file   type_prob.h
  * @brief  type definitions for storing and manipulating the main problem
@@ -28,15 +28,15 @@
 
 
 /** objective sense: minimization or maximization */
-enum Objsense
+enum SCIP_Objsense
 {
    SCIP_OBJSENSE_MAXIMIZE = -1,         /**< maximization of objective function */
    SCIP_OBJSENSE_MINIMIZE = +1          /**< minimization of objective function (the default) */
 };
-typedef enum Objsense OBJSENSE;
+typedef enum SCIP_Objsense SCIP_OBJSENSE;
 
-typedef struct Prob PROB;               /**< main problem to solve */
-typedef struct ProbData PROBDATA;       /**< user problem data set by the reader */
+typedef struct SCIP_Prob SCIP_PROB;               /**< main problem to solve */
+typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by the reader */
 
 
 /** frees user data of original problem (called when the original problem is freed)
@@ -47,7 +47,7 @@ typedef struct ProbData PROBDATA;       /**< user problem data set by the reader
  *    scip            : SCIP main data structure
  *    probdata        : pointer to the user problem data to free
  */
-#define DECL_PROBDELORIG(x) RETCODE x (SCIP* scip, PROBDATA** probdata)
+#define SCIP_DECL_PROBDELORIG(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROBDATA** probdata)
 
 /** creates user data of transformed problem by transforming the original user problem data
  *  (called after problem was transformed)
@@ -66,7 +66,7 @@ typedef struct ProbData PROBDATA;       /**< user problem data set by the reader
  *    sourcedata      : source problem data to transform
  *    targetdata      : pointer to store created transformed problem data
  */
-#define DECL_PROBTRANS(x) RETCODE x (SCIP* scip, PROBDATA* sourcedata, PROBDATA** targetdata)
+#define SCIP_DECL_PROBTRANS(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROBDATA* sourcedata, SCIP_PROBDATA** targetdata)
 
 /** frees user data of transformed problem (called when the transformed problem is freed)
  *
@@ -78,7 +78,7 @@ typedef struct ProbData PROBDATA;       /**< user problem data set by the reader
  *    scip            : SCIP main data structure
  *    probdata        : pointer to the user problem data to free
  */
-#define DECL_PROBDELTRANS(x) RETCODE x (SCIP* scip, PROBDATA** probdata)
+#define SCIP_DECL_PROBDELTRANS(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROBDATA** probdata)
 
 /** solving process initialization method of transformed data (called before the branch and bound process begins)
  *
@@ -89,19 +89,19 @@ typedef struct ProbData PROBDATA;       /**< user problem data set by the reader
  *    scip            : SCIP main data structure
  *    probdata        : user problem data
  */
-#define DECL_PROBINITSOL(x) RETCODE x (SCIP* scip, PROBDATA* probdata)
+#define SCIP_DECL_PROBINITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROBDATA* probdata)
 
 /** solving process deinitialization method of transformed data (called before the branch and bound data is freed)
  *
  *  This method is called before the branch and bound data is freed and should be used to free all data that
- *  was allocated in the solving process initialization method. The user has to make sure, that all LP rows associated
+ *  was allocated in the solving process initialization method. The user has to make sure, that all SCIP_LP rows associated
  *  to the transformed user problem data are released.
  *
  *  input:
  *    scip            : SCIP main data structure
  *    probdata        : user problem data
  */
-#define DECL_PROBEXITSOL(x) RETCODE x (SCIP* scip, PROBDATA* probdata)
+#define SCIP_DECL_PROBEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROBDATA* probdata)
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.33 2005/07/15 17:20:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.34 2005/08/22 18:35:36 bzfpfend Exp $"
 
 /**@file   cons_xxx.c
  * @brief  constraint handler for xxx constraints
@@ -37,7 +37,7 @@
 #define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ            -1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
-                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -61,12 +61,12 @@
 /* TODO: fill in the necessary constraint data */
 
 /** constraint data for xxx constraints */
-struct ConsData
+struct SCIP_ConsData
 {
 };
 
 /** constraint handler data */
-struct ConshdlrData
+struct SCIP_ConshdlrData
 {
 };
 
@@ -91,9 +91,9 @@ struct ConshdlrData
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 #if 0
 static
-DECL_CONSFREE(consFreeXxx)
+SCIP_DECL_CONSFREE(consFreeXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -106,9 +106,9 @@ DECL_CONSFREE(consFreeXxx)
 /** initialization method of constraint handler (called after problem was transformed) */
 #if 0
 static
-DECL_CONSINIT(consInitXxx)
+SCIP_DECL_CONSINIT(consInitXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -121,9 +121,9 @@ DECL_CONSINIT(consInitXxx)
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
 #if 0
 static
-DECL_CONSEXIT(consExitXxx)
+SCIP_DECL_CONSEXIT(consExitXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -136,9 +136,9 @@ DECL_CONSEXIT(consExitXxx)
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 #if 0
 static
-DECL_CONSINITPRE(consInitpreXxx)
+SCIP_DECL_CONSINITPRE(consInitpreXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -151,9 +151,9 @@ DECL_CONSINITPRE(consInitpreXxx)
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 #if 0
 static
-DECL_CONSEXITPRE(consExitpreXxx)
+SCIP_DECL_CONSEXITPRE(consExitpreXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -166,9 +166,9 @@ DECL_CONSEXITPRE(consExitpreXxx)
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 #if 0
 static
-DECL_CONSINITSOL(consInitsolXxx)
+SCIP_DECL_CONSINITSOL(consInitsolXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -181,9 +181,9 @@ DECL_CONSINITSOL(consInitsolXxx)
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 #if 0
 static
-DECL_CONSEXITSOL(consExitsolXxx)
+SCIP_DECL_CONSEXITSOL(consExitsolXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -196,9 +196,9 @@ DECL_CONSEXITSOL(consExitsolXxx)
 /** frees specific constraint data */
 #if 0
 static
-DECL_CONSDELETE(consDeleteXxx)
+SCIP_DECL_CONSDELETE(consDeleteXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -211,9 +211,9 @@ DECL_CONSDELETE(consDeleteXxx)
 /** transforms constraint data into data belonging to the transformed problem */ 
 #if 0
 static
-DECL_CONSTRANS(consTransXxx)
+SCIP_DECL_CONSTRANS(consTransXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -223,12 +223,12 @@ DECL_CONSTRANS(consTransXxx)
 #endif
 
 
-/** LP initialization method of constraint handler */
+/** SCIP_LP initialization method of constraint handler */
 #if 0
 static
-DECL_CONSINITLP(consInitlpXxx)
+SCIP_DECL_CONSINITLP(consInitlpXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -241,9 +241,9 @@ DECL_CONSINITLP(consInitlpXxx)
 /** separation method of constraint handler */
 #if 0
 static
-DECL_CONSSEPA(consSepaXxx)
+SCIP_DECL_CONSSEPA(consSepaXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -253,11 +253,11 @@ DECL_CONSSEPA(consSepaXxx)
 #endif
 
 
-/** constraint enforcing method of constraint handler for LP solutions */
+/** constraint enforcing method of constraint handler for SCIP_LP solutions */
 static
-DECL_CONSENFOLP(consEnfolpXxx)
+SCIP_DECL_CONSENFOLP(consEnfolpXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -266,9 +266,9 @@ DECL_CONSENFOLP(consEnfolpXxx)
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
-DECL_CONSENFOPS(consEnfopsXxx)
+SCIP_DECL_CONSENFOPS(consEnfopsXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -277,9 +277,9 @@ DECL_CONSENFOPS(consEnfopsXxx)
 
 /** feasibility check method of constraint handler for integral solutions */
 static
-DECL_CONSCHECK(consCheckXxx)
+SCIP_DECL_CONSCHECK(consCheckXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -289,9 +289,9 @@ DECL_CONSCHECK(consCheckXxx)
 /** domain propagation method of constraint handler */
 #if 0
 static
-DECL_CONSPROP(consPropXxx)
+SCIP_DECL_CONSPROP(consPropXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -304,9 +304,9 @@ DECL_CONSPROP(consPropXxx)
 /** presolving method of constraint handler */
 #if 0
 static
-DECL_CONSPRESOL(consPresolXxx)
+SCIP_DECL_CONSPRESOL(consPresolXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -319,9 +319,9 @@ DECL_CONSPRESOL(consPresolXxx)
 /** propagation conflict resolving method of constraint handler */
 #if 0
 static
-DECL_CONSRESPROP(consRespropXxx)
+SCIP_DECL_CONSRESPROP(consRespropXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -333,9 +333,9 @@ DECL_CONSRESPROP(consRespropXxx)
 
 /** variable rounding lock method of constraint handler */
 static
-DECL_CONSLOCK(consLockXxx)
+SCIP_DECL_CONSLOCK(consLockXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -345,9 +345,9 @@ DECL_CONSLOCK(consLockXxx)
 /** constraint activation notification method of constraint handler */
 #if 0
 static
-DECL_CONSACTIVE(consActiveXxx)
+SCIP_DECL_CONSACTIVE(consActiveXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -360,9 +360,9 @@ DECL_CONSACTIVE(consActiveXxx)
 /** constraint deactivation notification method of constraint handler */
 #if 0
 static
-DECL_CONSDEACTIVE(consDeactiveXxx)
+SCIP_DECL_CONSDEACTIVE(consDeactiveXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -375,9 +375,9 @@ DECL_CONSDEACTIVE(consDeactiveXxx)
 /** constraint enabling notification method of constraint handler */
 #if 0
 static
-DECL_CONSENABLE(consEnableXxx)
+SCIP_DECL_CONSENABLE(consEnableXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -390,9 +390,9 @@ DECL_CONSENABLE(consEnableXxx)
 /** constraint disabling notification method of constraint handler */
 #if 0
 static
-DECL_CONSDISABLE(consDisableXxx)
+SCIP_DECL_CONSDISABLE(consDisableXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -405,9 +405,9 @@ DECL_CONSDISABLE(consDisableXxx)
 /** constraint display method of constraint handler */
 #if 0
 static
-DECL_CONSPRINT(consPrintXxx)
+SCIP_DECL_CONSPRINT(consPrintXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -426,9 +426,9 @@ DECL_CONSPRINT(consPrintXxx)
 #ifdef LINCONSUPGD_PRIORITY
 /** tries to upgrade a linear constraint into a xxx constraint */
 static
-DECL_LINCONSUPGD(linconsUpgdXxx)
+SCIP_DECL_LINCONSUPGD(linconsUpgdXxx)
 {  /*lint --e{715}*/
-   Bool upgrade;
+   SCIP_Bool upgrade;
 
    assert(upgdcons != NULL);
    
@@ -438,11 +438,11 @@ DECL_LINCONSUPGD(linconsUpgdXxx)
 
    if( upgrade )
    {
-      debugMessage("upgrading constraint <%s> to xxx constraint\n", SCIPconsGetName(cons));
+      SCIPdebugMessage("upgrading constraint <%s> to xxx constraint\n", SCIPconsGetName(cons));
       
       /* create the bin Xxx constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));
-      CHECK_OKAY( SCIPcreateConsXxx(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, lhs, rhs,
+      SCIP_CALL( SCIPcreateConsXxx(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, lhs, rhs,
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
@@ -461,18 +461,18 @@ DECL_LINCONSUPGD(linconsUpgdXxx)
  */
 
 /** creates the handler for xxx constraints and includes it in SCIP */
-RETCODE SCIPincludeConshdlrXxx(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeConshdlrXxx(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    /* create xxx constraint handler data */
    conshdlrdata = NULL;
    /* TODO: (optional) create constraint handler specific data here */
 
    /* include constraint handler */
-   CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
@@ -488,7 +488,7 @@ RETCODE SCIPincludeConshdlrXxx(
 
 #ifdef LINCONSUPGD_PRIORITY
    /* include the linear constraint upgrade in the linear constraint handler */
-   CHECK_OKAY( SCIPincludeLinconsUpgrade(scip, linconsUpgdXxx, LINCONSUPGD_PRIORITY) );
+   SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdXxx, LINCONSUPGD_PRIORITY) );
 #endif
 
    /* add xxx constraint handler parameters */
@@ -498,39 +498,39 @@ RETCODE SCIPincludeConshdlrXxx(
 }
 
 /** creates and captures a xxx constraint */
-RETCODE SCIPcreateConsXxx(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*      name,               /**< name of constraint */
-   int              nvars,              /**< number of variables in the constraint */
-   VAR**            vars,               /**< array with variables of constraint entries */
-   Real*            coefs,              /**< array with coefficients of constraint entries */
-   Real             lhs,                /**< left hand side of constraint */
-   Real             rhs,                /**< right hand side of constraint */
-   Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             separate,           /**< should the constraint be separated during LP processing? */
-   Bool             enforce,            /**< should the constraint be enforced during node processing? */
-   Bool             check,              /**< should the constraint be checked for feasibility? */
-   Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
-   Bool             dynamic,            /**< is constraint subject to aging? */
-   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+SCIP_RETCODE SCIPcreateConsXxx(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
+   SCIP_Real*            coefs,              /**< array with coefficients of constraint entries */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs,                /**< right hand side of constraint */
+   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   SCIP_Bool             local,              /**< is constraint only valid locally? */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
+   SCIP_Bool             removeable          /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
    )
 {
    /* TODO: (optional) modify the definition of the SCIPcreateConsXxx() call, if you don't need all the information */
 
-   CONSHDLR* conshdlr;
-   CONSDATA* consdata;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
 
-   errorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527} --e{715}*/
 
    /* find the xxx constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      errorMessage("xxx constraint handler not found\n");
+      SCIPerrorMessage("xxx constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 
@@ -539,7 +539,7 @@ RETCODE SCIPcreateConsXxx(
    /* TODO: create and store constraint specific data here */
 
    /* create constraint */
-   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
+   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removeable) );
 
    return SCIP_OKAY;

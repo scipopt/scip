@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: mem.h,v 1.19 2005/07/15 17:20:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: mem.h,v 1.20 2005/08/22 18:35:40 bzfpfend Exp $"
 
 /**@file   mem.h
  * @brief  methods for block memory pools and memory buffers
@@ -35,20 +35,20 @@
 
 /** creates block memory structures */
 extern
-RETCODE SCIPmemCreate(
-   MEM**            mem                 /**< pointer to block memory structure */
+SCIP_RETCODE SCIPmemCreate(
+   SCIP_MEM**            mem                 /**< pointer to block memory structure */
    );
 
 /** frees block memory structures */
 extern
-RETCODE SCIPmemFree(
-   MEM**            mem                 /**< pointer to block memory structure */
+SCIP_RETCODE SCIPmemFree(
+   SCIP_MEM**            mem                 /**< pointer to block memory structure */
    );
 
 /** returns the total number of bytes used in block memory */
 extern
-Longint SCIPmemGetUsed(
-   MEM*             mem                 /**< pointer to block memory structure */
+SCIP_Longint SCIPmemGetUsed(
+   SCIP_MEM*             mem                 /**< pointer to block memory structure */
    );
 
 

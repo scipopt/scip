@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.27 2005/07/15 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.28 2005/08/22 18:35:46 bzfpfend Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -38,14 +38,14 @@
 
 
 /** creates a reader */
-RETCODE SCIPreaderCreate(
-   READER**         reader,             /**< pointer to store reader */
-   const char*      name,               /**< name of reader */
-   const char*      desc,               /**< description of reader */
-   const char*      extension,          /**< file extension that reader processes */
-   DECL_READERFREE  ((*readerfree)),    /**< destructor of reader */
-   DECL_READERREAD  ((*readerread)),    /**< read method */
-   READERDATA*      readerdata          /**< reader data */
+SCIP_RETCODE SCIPreaderCreate(
+   SCIP_READER**         reader,             /**< pointer to store reader */
+   const char*           name,               /**< name of reader */
+   const char*           desc,               /**< description of reader */
+   const char*           extension,          /**< file extension that reader processes */
+   SCIP_DECL_READERFREE  ((*readerfree)),    /**< destructor of reader */
+   SCIP_DECL_READERREAD  ((*readerread)),    /**< read method */
+   SCIP_READERDATA*      readerdata          /**< reader data */
    )
 {
    assert(reader != NULL);
@@ -54,10 +54,10 @@ RETCODE SCIPreaderCreate(
    assert(extension != NULL);
    assert(readerread != NULL);
 
-   ALLOC_OKAY( allocMemory(reader) );
-   ALLOC_OKAY( duplicateMemoryArray(&(*reader)->name, name, strlen(name)+1) );
-   ALLOC_OKAY( duplicateMemoryArray(&(*reader)->desc, desc, strlen(desc)+1) );
-   ALLOC_OKAY( duplicateMemoryArray(&(*reader)->extension, extension, strlen(extension)+1) );
+   SCIP_ALLOC( BMSallocMemory(reader) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*reader)->name, name, strlen(name)+1) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*reader)->desc, desc, strlen(desc)+1) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*reader)->extension, extension, strlen(extension)+1) );
    (*reader)->readerfree = readerfree;
    (*reader)->readerread = readerread;
    (*reader)->readerdata = readerdata;
@@ -66,9 +66,9 @@ RETCODE SCIPreaderCreate(
 }
 
 /** frees memory of reader */
-RETCODE SCIPreaderFree(
-   READER**         reader,             /**< pointer to reader data structure */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPreaderFree(
+   SCIP_READER**         reader,             /**< pointer to reader data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(reader != NULL);
@@ -78,22 +78,22 @@ RETCODE SCIPreaderFree(
    /* call destructor of reader */
    if( (*reader)->readerfree != NULL )
    {
-      CHECK_OKAY( (*reader)->readerfree(set->scip, *reader) );
+      SCIP_CALL( (*reader)->readerfree(set->scip, *reader) );
    }
 
-   freeMemoryArray(&(*reader)->name);
-   freeMemoryArray(&(*reader)->desc);
-   freeMemoryArray(&(*reader)->extension);
-   freeMemory(reader);
+   BMSfreeMemoryArray(&(*reader)->name);
+   BMSfreeMemoryArray(&(*reader)->desc);
+   BMSfreeMemoryArray(&(*reader)->extension);
+   BMSfreeMemory(reader);
 
    return SCIP_OKAY;
 }
 
 /** returns TRUE, if reader is responsible for files with the given extension */
 static
-Bool readerIsApplicable(
-   READER*          reader,             /**< reader */
-   const char*      extension           /**< extension of the input file name */
+SCIP_Bool readerIsApplicable(
+   SCIP_READER*          reader,             /**< reader */
+   const char*           extension           /**< extension of the input file name */
    )
 {
    assert(reader != NULL);
@@ -104,11 +104,11 @@ Bool readerIsApplicable(
 }
 
 /** reads problem data from file with given reader or returns SCIP_DIDNOTRUN */
-RETCODE SCIPreaderRead(
-   READER*          reader,             /**< reader */
-   SET*             set,                /**< global SCIP settings */
-   const char*      filename,           /**< name of the input file */
-   RESULT*          result              /**< pointer to store the result of the callback method */
+SCIP_RETCODE SCIPreaderRead(
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           filename,           /**< name of the input file */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    char* tmpfilename;
@@ -124,26 +124,26 @@ RETCODE SCIPreaderRead(
    assert(result != NULL);
 
    /* get path, name and extension from filename */
-   ALLOC_OKAY( duplicateMemoryArray(&tmpfilename, filename, strlen(filename)+1) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&tmpfilename, filename, strlen(filename)+1) );
    SCIPsplitFilename(tmpfilename, &path, &name, &extension, &compression);
 
    /* check, if reader is applicable on the given file */
    if( readerIsApplicable(reader, extension) )
    {
       /* call reader to read problem */
-      CHECK_OKAY( reader->readerread(set->scip, reader, filename, result) );
+      SCIP_CALL( reader->readerread(set->scip, reader, filename, result) );
    }
    else
       *result = SCIP_DIDNOTRUN;
 
-   freeMemoryArray(&tmpfilename);
+   BMSfreeMemoryArray(&tmpfilename);
 
    return SCIP_OKAY;
 }
 
 /** gets user data of reader */
-READERDATA* SCIPreaderGetData(
-   READER*          reader              /**< reader */
+SCIP_READERDATA* SCIPreaderGetData(
+   SCIP_READER*          reader              /**< reader */
    )
 {
    assert(reader != NULL);
@@ -153,8 +153,8 @@ READERDATA* SCIPreaderGetData(
 
 /** sets user data of reader; user has to free old data in advance! */
 void SCIPreaderSetData(
-   READER*          reader,             /**< reader */
-   READERDATA*      readerdata          /**< new reader user data */
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_READERDATA*      readerdata          /**< new reader user data */
    )
 {
    assert(reader != NULL);
@@ -164,7 +164,7 @@ void SCIPreaderSetData(
 
 /** gets name of reader */
 const char* SCIPreaderGetName(
-   READER*          reader              /**< reader */
+   SCIP_READER*          reader              /**< reader */
    )
 {
    assert(reader != NULL);
@@ -174,7 +174,7 @@ const char* SCIPreaderGetName(
 
 /** gets description of reader */
 const char* SCIPreaderGetDesc(
-   READER*          reader              /**< reader */
+   SCIP_READER*          reader              /**< reader */
    )
 {
    assert(reader != NULL);
@@ -184,7 +184,7 @@ const char* SCIPreaderGetDesc(
 
 /** gets file extension of reader */
 const char* SCIPreaderGetExtension(
-   READER*          reader              /**< reader */
+   SCIP_READER*          reader              /**< reader */
    )
 {
    assert(reader != NULL);

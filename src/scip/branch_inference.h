@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_inference.h,v 1.6 2005/07/15 17:20:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_inference.h,v 1.7 2005/08/22 18:35:32 bzfpfend Exp $"
 
 /**@file   branch_inference.h
  * @brief  inference history branching rule
@@ -32,8 +32,8 @@
 
 /** creates the inference history braching rule and includes it in SCIP */
 extern
-RETCODE SCIPincludeBranchruleInference(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeBranchruleInference(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

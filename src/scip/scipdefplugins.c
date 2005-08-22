@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.40 2005/06/23 16:30:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.41 2005/08/22 18:35:47 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -81,65 +81,65 @@
 
 
 /** includes default SCIP plugins into SCIP */
-RETCODE SCIPincludeDefaultPlugins(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeDefaultPlugins(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   CHECK_OKAY( SCIPincludeConshdlrLinear(scip) );
-   CHECK_OKAY( SCIPincludeConshdlrAnd(scip) );
-   CHECK_OKAY( SCIPincludeConshdlrConjunction(scip) );
-   CHECK_OKAY( SCIPincludeConshdlrIntegral(scip) );
-   CHECK_OKAY( SCIPincludeConshdlrKnapsack(scip) );
-   CHECK_OKAY( SCIPincludeConshdlrLogicor(scip) );
-   CHECK_OKAY( SCIPincludeConshdlrOr(scip) );
-   CHECK_OKAY( SCIPincludeConshdlrSetppc(scip) );
-   CHECK_OKAY( SCIPincludeConshdlrVarbound(scip) );
-   CHECK_OKAY( SCIPincludeConshdlrXor(scip) );
+   SCIP_CALL( SCIPincludeConshdlrLinear(scip) );
+   SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
+   SCIP_CALL( SCIPincludeConshdlrConjunction(scip) );
+   SCIP_CALL( SCIPincludeConshdlrIntegral(scip) );
+   SCIP_CALL( SCIPincludeConshdlrKnapsack(scip) );
+   SCIP_CALL( SCIPincludeConshdlrLogicor(scip) );
+   SCIP_CALL( SCIPincludeConshdlrOr(scip) );
+   SCIP_CALL( SCIPincludeConshdlrSetppc(scip) );
+   SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
+   SCIP_CALL( SCIPincludeConshdlrXor(scip) );
 
 #if 0
-   CHECK_OKAY( SCIPincludeConshdlrEqknapsack(scip) );
-   CHECK_OKAY( SCIPincludeConshdlrInvarknapsack(scip) );
-   CHECK_OKAY( SCIPincludeConshdlrBinpack(scip) );
+   SCIP_CALL( SCIPincludeConshdlrEqknapsack(scip) );
+   SCIP_CALL( SCIPincludeConshdlrInvarknapsack(scip) );
+   SCIP_CALL( SCIPincludeConshdlrBinpack(scip) );
 #endif
 
-   CHECK_OKAY( SCIPincludeReaderCnf(scip) );
-   CHECK_OKAY( SCIPincludeReaderMps(scip) );
-   CHECK_OKAY( SCIPincludePresolDualfix(scip) );
-   CHECK_OKAY( SCIPincludePresolProbing(scip) );
-   CHECK_OKAY( SCIPincludePresolTrivial(scip) );
-   CHECK_OKAY( SCIPincludeNodeselBfs(scip) );
-   CHECK_OKAY( SCIPincludeNodeselDfs(scip) );
-   CHECK_OKAY( SCIPincludeNodeselRestartdfs(scip) );
-   CHECK_OKAY( SCIPincludeBranchruleAllfullstrong(scip) );
-   CHECK_OKAY( SCIPincludeBranchruleFullstrong(scip) );
-   CHECK_OKAY( SCIPincludeBranchruleInference(scip) );
-   CHECK_OKAY( SCIPincludeBranchruleMostinf(scip) );
-   CHECK_OKAY( SCIPincludeBranchruleLeastinf(scip) );
-   CHECK_OKAY( SCIPincludeBranchrulePscost(scip) );
-   CHECK_OKAY( SCIPincludeBranchruleRelpscost(scip) );
-   CHECK_OKAY( SCIPincludeHeurCoefdiving(scip) );
-   CHECK_OKAY( SCIPincludeHeurFeaspump(scip) );
-   CHECK_OKAY( SCIPincludeHeurFixandinfer(scip) );
-   CHECK_OKAY( SCIPincludeHeurFracdiving(scip) );
-   CHECK_OKAY( SCIPincludeHeurGuideddiving(scip) );
-   CHECK_OKAY( SCIPincludeHeurLinesearchdiving(scip) );
-   CHECK_OKAY( SCIPincludeHeurObjpscostdiving(scip) );
-   CHECK_OKAY( SCIPincludeHeurOctane(scip) );
-   CHECK_OKAY( SCIPincludeHeurPscostdiving(scip) );
-   CHECK_OKAY( SCIPincludeHeurRootsoldiving(scip) );
-   CHECK_OKAY( SCIPincludeHeurRounding(scip) );
-   CHECK_OKAY( SCIPincludeHeurSimplerounding(scip) );
-   CHECK_OKAY( SCIPincludePropPseudoobj(scip) );
-   CHECK_OKAY( SCIPincludeSepaClique(scip) );
-   CHECK_OKAY( SCIPincludeSepaCmir(scip) );
-   CHECK_OKAY( SCIPincludeSepaGomory(scip) );
-   CHECK_OKAY( SCIPincludeSepaImpliedbounds(scip) );
-   CHECK_OKAY( SCIPincludeSepaIntobj(scip) );
-   CHECK_OKAY( SCIPincludeSepaStrongcg(scip) );
-   CHECK_OKAY( SCIPincludeDispDefault(scip) );
-   CHECK_OKAY( SCIPincludeDialogDefault(scip) );
+   SCIP_CALL( SCIPincludeReaderCnf(scip) );
+   SCIP_CALL( SCIPincludeReaderMps(scip) );
+   SCIP_CALL( SCIPincludePresolDualfix(scip) );
+   SCIP_CALL( SCIPincludePresolProbing(scip) );
+   SCIP_CALL( SCIPincludePresolTrivial(scip) );
+   SCIP_CALL( SCIPincludeNodeselBfs(scip) );
+   SCIP_CALL( SCIPincludeNodeselDfs(scip) );
+   SCIP_CALL( SCIPincludeNodeselRestartdfs(scip) );
+   SCIP_CALL( SCIPincludeBranchruleAllfullstrong(scip) );
+   SCIP_CALL( SCIPincludeBranchruleFullstrong(scip) );
+   SCIP_CALL( SCIPincludeBranchruleInference(scip) );
+   SCIP_CALL( SCIPincludeBranchruleMostinf(scip) );
+   SCIP_CALL( SCIPincludeBranchruleLeastinf(scip) );
+   SCIP_CALL( SCIPincludeBranchrulePscost(scip) );
+   SCIP_CALL( SCIPincludeBranchruleRelpscost(scip) );
+   SCIP_CALL( SCIPincludeHeurCoefdiving(scip) );
+   SCIP_CALL( SCIPincludeHeurFeaspump(scip) );
+   SCIP_CALL( SCIPincludeHeurFixandinfer(scip) );
+   SCIP_CALL( SCIPincludeHeurFracdiving(scip) );
+   SCIP_CALL( SCIPincludeHeurGuideddiving(scip) );
+   SCIP_CALL( SCIPincludeHeurLinesearchdiving(scip) );
+   SCIP_CALL( SCIPincludeHeurObjpscostdiving(scip) );
+   SCIP_CALL( SCIPincludeHeurOctane(scip) );
+   SCIP_CALL( SCIPincludeHeurPscostdiving(scip) );
+   SCIP_CALL( SCIPincludeHeurRootsoldiving(scip) );
+   SCIP_CALL( SCIPincludeHeurRounding(scip) );
+   SCIP_CALL( SCIPincludeHeurSimplerounding(scip) );
+   SCIP_CALL( SCIPincludePropPseudoobj(scip) );
+   SCIP_CALL( SCIPincludeSepaClique(scip) );
+   SCIP_CALL( SCIPincludeSepaCmir(scip) );
+   SCIP_CALL( SCIPincludeSepaGomory(scip) );
+   SCIP_CALL( SCIPincludeSepaImpliedbounds(scip) );
+   SCIP_CALL( SCIPincludeSepaIntobj(scip) );
+   SCIP_CALL( SCIPincludeSepaStrongcg(scip) );
+   SCIP_CALL( SCIPincludeDispDefault(scip) );
+   SCIP_CALL( SCIPincludeDialogDefault(scip) );
 
-   CHECK_OKAY( SCIPdebugIncludeProp(scip) ); /*lint !e506 !e774*/
+   SCIP_CALL( SCIPdebugIncludeProp(scip) ); /*lint !e506 !e774*/
 
    return SCIP_OKAY;
 }

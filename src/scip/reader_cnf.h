@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cnf.h,v 1.9 2005/07/15 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_cnf.h,v 1.10 2005/08/22 18:35:46 bzfpfend Exp $"
 
 /**@file   reader_cnf.h
  * @brief  cnf file reader
@@ -33,8 +33,8 @@
 
 /** includes the cnf file reader into SCIP */
 extern
-RETCODE SCIPincludeReaderCnf(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeReaderCnf(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

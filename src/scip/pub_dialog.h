@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_dialog.h,v 1.7 2005/07/15 17:20:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_dialog.h,v 1.8 2005/08/22 18:35:44 bzfpfend Exp $"
 
 /**@file   pub_dialog.h
  * @brief  public methods for user interface dialog
@@ -40,20 +40,20 @@
 
 /** returns the root dialog of the dialog handler */
 extern
-DIALOG* SCIPdialoghdlrGetRoot(
-   DIALOGHDLR*      dialoghdlr          /**< dialog handler */
+SCIP_DIALOG* SCIPdialoghdlrGetRoot(
+   SCIP_DIALOGHDLR*      dialoghdlr          /**< dialog handler */
    );
 
 /** clears the input command buffer of the dialog handler */
 extern
 void SCIPdialoghdlrClearBuffer(
-   DIALOGHDLR*      dialoghdlr          /**< dialog handler */
+   SCIP_DIALOGHDLR*      dialoghdlr          /**< dialog handler */
    );
 
 /** returns TRUE iff input command buffer is empty */
 extern
-Bool SCIPdialoghdlrIsBufferEmpty(
-   DIALOGHDLR*      dialoghdlr          /**< dialog handler */
+SCIP_Bool SCIPdialoghdlrIsBufferEmpty(
+   SCIP_DIALOGHDLR*      dialoghdlr          /**< dialog handler */
    );
 
 /** returns the next word in the handler's command buffer; if the buffer is empty, displays the given prompt or the 
@@ -61,19 +61,19 @@ Bool SCIPdialoghdlrIsBufferEmpty(
  */
 extern
 const char* SCIPdialoghdlrGetWord(
-   DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
-   DIALOG*          dialog,             /**< current dialog */
-   const char*      prompt              /**< prompt to display, or NULL to display the current dialog's path */
+   SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
+   SCIP_DIALOG*          dialog,             /**< current dialog */
+   const char*           prompt              /**< prompt to display, or NULL to display the current dialog's path */
    );
 
 /** adds a command to the command history of the dialog handler; if a dialog is given, the command is preceeded
  *  by the dialog's command path; if no command is given, only the path to the dialog is added to the command history
  */
 extern
-RETCODE SCIPdialoghdlrAddHistory(
-   DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
-   DIALOG*          dialog,             /**< current dialog, or NULL */
-   const char*      command             /**< command string to add to the command history, or NULL */
+SCIP_RETCODE SCIPdialoghdlrAddHistory(
+   SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
+   SCIP_DIALOG*          dialog,             /**< current dialog, or NULL */
+   const char*           command             /**< command string to add to the command history, or NULL */
    );
 
 
@@ -85,9 +85,9 @@ RETCODE SCIPdialoghdlrAddHistory(
 
 /** returns TRUE iff a dialog entry matching exactly the given name is existing in the given dialog */
 extern
-Bool SCIPdialogHasEntry(
-   DIALOG*          dialog,             /**< dialog */
-   const char*      entryname           /**< name of the dialog entry to find */
+SCIP_Bool SCIPdialogHasEntry(
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   const char*           entryname           /**< name of the dialog entry to find */
    );
 
 /** searches the dialog for entries corresponding to the given name;
@@ -100,81 +100,81 @@ Bool SCIPdialogHasEntry(
  */
 extern
 int SCIPdialogFindEntry(
-   DIALOG*          dialog,             /**< dialog */
-   const char*      entryname,          /**< name of the dialog entry to find */
-   DIALOG**         subdialog           /**< pointer to store the found dialog entry */
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   const char*           entryname,          /**< name of the dialog entry to find */
+   SCIP_DIALOG**         subdialog           /**< pointer to store the found dialog entry */
    );
 
 /** displays the dialog's menu */
 extern
-RETCODE SCIPdialogDisplayMenu(
-   DIALOG*          dialog,             /**< dialog */
-   SCIP*            scip                /**< SCIP data structure */   
+SCIP_RETCODE SCIPdialogDisplayMenu(
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   SCIP*                 scip                /**< SCIP data structure */   
    );
 
 /** displays the entry for the dialog in it's parent's menu */
 extern
-RETCODE SCIPdialogDisplayMenuEntry(
-   DIALOG*          dialog,             /**< dialog */
-   SCIP*            scip                /**< SCIP data structure */   
+SCIP_RETCODE SCIPdialogDisplayMenuEntry(
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   SCIP*                 scip                /**< SCIP data structure */   
    );
 
 /** displays all dialog entries with names starting with the given "entryname" */
 extern
-RETCODE SCIPdialogDisplayCompletions(
-   DIALOG*          dialog,             /**< dialog */
-   SCIP*            scip,               /**< SCIP data structure */   
-   const char*      entryname           /**< name of the dialog entry to find */
+SCIP_RETCODE SCIPdialogDisplayCompletions(
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   SCIP*                 scip,               /**< SCIP data structure */   
+   const char*           entryname           /**< name of the dialog entry to find */
    );
 
 /** gets the name of the current path in the dialog tree, separated by the given character */
 extern
 void SCIPdialogGetPath(
-   DIALOG*          dialog,             /**< dialog */
-   const char       sepchar,            /**< separation character to insert in path */
-   char*            path                /**< string buffer to store the path */
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   const char            sepchar,            /**< separation character to insert in path */
+   char*                 path                /**< string buffer to store the path */
    );
 
 /** gets the command name of the dialog */
 extern
 const char* SCIPdialogGetName(
-   DIALOG*          dialog              /**< dialog */
+   SCIP_DIALOG*          dialog              /**< dialog */
    );
 
 /** gets the description of the dialog */
 extern
 const char* SCIPdialogGetDesc(
-   DIALOG*          dialog              /**< dialog */
+   SCIP_DIALOG*          dialog              /**< dialog */
    );
 
 /** returns whether the dialog is a sub menu */
 extern
-Bool SCIPdialogIsSubmenu(
-   DIALOG*          dialog              /**< dialog */
+SCIP_Bool SCIPdialogIsSubmenu(
+   SCIP_DIALOG*          dialog              /**< dialog */
    );
 
 /** gets the parent dialog of the given dialog */
 extern
-DIALOG* SCIPdialogGetParent(
-   DIALOG*          dialog              /**< dialog */
+SCIP_DIALOG* SCIPdialogGetParent(
+   SCIP_DIALOG*          dialog              /**< dialog */
    );
 
 /** gets the array of subdialogs associated with the given dialog */
 extern
-DIALOG** SCIPdialogGetSubdialogs(
-   DIALOG*          dialog              /**< dialog */
+SCIP_DIALOG** SCIPdialogGetSubdialogs(
+   SCIP_DIALOG*          dialog              /**< dialog */
    );
 
 /** gets the number of subdialogs associated with the given dialog */
 extern
 int SCIPdialogGetNSubdialogs(
-   DIALOG*          dialog              /**< dialog */
+   SCIP_DIALOG*          dialog              /**< dialog */
    );
 
 /** gets the user defined data associated with the given dialog */
 extern
-DIALOGDATA* SCIPdialogGetData(
-   DIALOG*          dialog              /**< dialog */
+SCIP_DIALOGDATA* SCIPdialogGetData(
+   SCIP_DIALOG*          dialog              /**< dialog */
    );
 
 

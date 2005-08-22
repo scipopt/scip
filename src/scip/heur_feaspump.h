@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.h,v 1.10 2005/07/15 17:20:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.h,v 1.11 2005/08/22 18:35:38 bzfpfend Exp $"
 
 /**@file   heur_feaspump.h
  * @brief  feaspump primal heuristic
@@ -32,8 +32,8 @@
 
 /** creates the feaspump primal heuristic and includes it in SCIP */
 extern
-RETCODE SCIPincludeHeurFeaspump(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeHeurFeaspump(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

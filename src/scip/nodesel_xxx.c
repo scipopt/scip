@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_xxx.c,v 1.12 2005/07/15 17:20:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_xxx.c,v 1.13 2005/08/22 18:35:42 bzfpfend Exp $"
 
 /**@file   nodesel_xxx.c
  * @brief  xxx node selector
@@ -44,7 +44,7 @@
 /* TODO: fill in the necessary node selector data */
 
 /** node selector data */
-struct NodeselData
+struct SCIP_NodeselData
 {
 };
 
@@ -69,9 +69,9 @@ struct NodeselData
 /** destructor of node selector to free user data (called when SCIP is exiting) */
 #if 0
 static
-DECL_NODESELFREE(nodeselFreeXxx)
+SCIP_DECL_NODESELFREE(nodeselFreeXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx node selector not implemented yet\n");
+   SCIPerrorMessage("method of xxx node selector not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -84,9 +84,9 @@ DECL_NODESELFREE(nodeselFreeXxx)
 /** initialization method of node selector (called after problem was transformed) */
 #if 0
 static
-DECL_NODESELINIT(nodeselInitXxx)
+SCIP_DECL_NODESELINIT(nodeselInitXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx node selector not implemented yet\n");
+   SCIPerrorMessage("method of xxx node selector not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -99,9 +99,9 @@ DECL_NODESELINIT(nodeselInitXxx)
 /** deinitialization method of node selector (called before transformed problem is freed) */
 #if 0
 static
-DECL_NODESELEXIT(nodeselExitXxx)
+SCIP_DECL_NODESELEXIT(nodeselExitXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx node selector not implemented yet\n");
+   SCIPerrorMessage("method of xxx node selector not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -114,9 +114,9 @@ DECL_NODESELEXIT(nodeselExitXxx)
 /** solving process initialization method of node selector (called when branch and bound process is about to begin) */
 #if 0
 static
-DECL_NODESELINITSOL(nodeselInitsolXxx)
+SCIP_DECL_NODESELINITSOL(nodeselInitsolXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx node selector not implemented yet\n");
+   SCIPerrorMessage("method of xxx node selector not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -129,9 +129,9 @@ DECL_NODESELINITSOL(nodeselInitsolXxx)
 /** solving process deinitialization method of node selector (called before branch and bound process data is freed) */
 #if 0
 static
-DECL_NODESELEXITSOL(nodeselExitsolXxx)
+SCIP_DECL_NODESELEXITSOL(nodeselExitsolXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx node selector not implemented yet\n");
+   SCIPerrorMessage("method of xxx node selector not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -143,9 +143,9 @@ DECL_NODESELEXITSOL(nodeselExitsolXxx)
 
 /** node selection method of node selector */
 static
-DECL_NODESELSELECT(nodeselSelectXxx)
+SCIP_DECL_NODESELSELECT(nodeselSelectXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx node selector not implemented yet\n");
+   SCIPerrorMessage("method of xxx node selector not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -153,9 +153,9 @@ DECL_NODESELSELECT(nodeselSelectXxx)
 
 /** node comparison method of node selector */
 static
-DECL_NODESELCOMP(nodeselCompXxx)
+SCIP_DECL_NODESELCOMP(nodeselCompXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx node selector not implemented yet\n");
+   SCIPerrorMessage("method of xxx node selector not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return 0;
@@ -169,18 +169,18 @@ DECL_NODESELCOMP(nodeselCompXxx)
  */
 
 /** creates the xxx node selector and includes it in SCIP */
-RETCODE SCIPincludeNodeselXxx(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeNodeselXxx(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   NODESELDATA* nodeseldata;
+   SCIP_NODESELDATA* nodeseldata;
 
    /* create xxx node selector data */
    nodeseldata = NULL;
    /* TODO: (optional) create node selector specific data here */
 
    /* include node selector */
-   CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+   SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
          NODESEL_LOWESTFIRST,
          nodeselFreeXxx, nodeselInitXxx, nodeselExitXxx, 
          nodeselInitsolXxx, nodeselExitsolXxx, nodeselSelectXxx, nodeselCompXxx,

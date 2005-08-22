@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.c,v 1.15 2005/05/31 17:20:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer.c,v 1.16 2005/08/22 18:35:43 bzfpfend Exp $"
 
 /**@file   pricer.c
  * @brief  methods for variable pricers
@@ -41,25 +41,25 @@
 
 
 /** compares two pricers w. r. to their activity and their priority */
-DECL_SORTPTRCOMP(SCIPpricerComp)
+SCIP_DECL_SORTPTRCOMP(SCIPpricerComp)
 {  /*lint --e{715}*/
-   if( ((PRICER*)elem1)->active != ((PRICER*)elem2)->active )
-      return ((PRICER*)elem1)->active ? -1 : +1;
+   if( ((SCIP_PRICER*)elem1)->active != ((SCIP_PRICER*)elem2)->active )
+      return ((SCIP_PRICER*)elem1)->active ? -1 : +1;
    else
-      return ((PRICER*)elem2)->priority - ((PRICER*)elem1)->priority;
+      return ((SCIP_PRICER*)elem2)->priority - ((SCIP_PRICER*)elem1)->priority;
 }
 
 /** method to call, when the priority of a pricer was changed */
 static
-DECL_PARAMCHGD(paramChgdPricerPriority)
+SCIP_DECL_PARAMCHGD(paramChgdPricerPriority)
 {  /*lint --e{715}*/
-   PARAMDATA* paramdata;
+   SCIP_PARAMDATA* paramdata;
 
    paramdata = SCIPparamGetData(param);
    assert(paramdata != NULL);
 
    /* use SCIPsetPricerPriority() to mark the pricers unsorted */
-   CHECK_OKAY( SCIPsetPricerPriority(scip, (PRICER*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
+   SCIP_CALL( SCIPsetPricerPriority(scip, (SCIP_PRICER*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -67,34 +67,34 @@ DECL_PARAMCHGD(paramChgdPricerPriority)
 /** creates a variable pricer
  *  To use the variable pricer for solving a problem, it first has to be activated with a call to SCIPactivatePricer().
  */
-RETCODE SCIPpricerCreate(
-   PRICER**         pricer,             /**< pointer to variable pricer data structure */
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory for parameter settings */
-   const char*      name,               /**< name of variable pricer */
-   const char*      desc,               /**< description of variable pricer */
-   int              priority,           /**< priority of the variable pricer */
-   DECL_PRICERFREE  ((*pricerfree)),    /**< destructor of variable pricer */
-   DECL_PRICERINIT  ((*pricerinit)),    /**< initialize variable pricer */
-   DECL_PRICEREXIT  ((*pricerexit)),    /**< deinitialize variable pricer */
-   DECL_PRICERINITSOL((*pricerinitsol)),/**< solving process initialization method of variable pricer */
-   DECL_PRICEREXITSOL((*pricerexitsol)),/**< solving process deinitialization method of variable pricer */
-   DECL_PRICERREDCOST((*pricerredcost)),/**< reduced cost pricing method of variable pricer for feasible LPs */
-   DECL_PRICERFARKAS((*pricerfarkas)),  /**< farkas pricing method of variable pricer for infeasible LPs */
-   PRICERDATA*      pricerdata          /**< variable pricer data */
+SCIP_RETCODE SCIPpricerCreate(
+   SCIP_PRICER**         pricer,             /**< pointer to variable pricer data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of variable pricer */
+   const char*           desc,               /**< description of variable pricer */
+   int                   priority,           /**< priority of the variable pricer */
+   SCIP_DECL_PRICERFREE  ((*pricerfree)),    /**< destructor of variable pricer */
+   SCIP_DECL_PRICERINIT  ((*pricerinit)),    /**< initialize variable pricer */
+   SCIP_DECL_PRICEREXIT  ((*pricerexit)),    /**< deinitialize variable pricer */
+   SCIP_DECL_PRICERINITSOL((*pricerinitsol)),/**< solving process initialization method of variable pricer */
+   SCIP_DECL_PRICEREXITSOL((*pricerexitsol)),/**< solving process deinitialization method of variable pricer */
+   SCIP_DECL_PRICERREDCOST((*pricerredcost)),/**< reduced cost pricing method of variable pricer for feasible LPs */
+   SCIP_DECL_PRICERFARKAS((*pricerfarkas)),  /**< farkas pricing method of variable pricer for infeasible LPs */
+   SCIP_PRICERDATA*      pricerdata          /**< variable pricer data */
    )
 {
-   char paramname[MAXSTRLEN];
-   char paramdesc[MAXSTRLEN];
+   char paramname[SCIP_MAXSTRLEN];
+   char paramdesc[SCIP_MAXSTRLEN];
 
    assert(pricer != NULL);
    assert(name != NULL);
    assert(desc != NULL);
    assert(pricerredcost != NULL);
 
-   ALLOC_OKAY( allocMemory(pricer) );
-   ALLOC_OKAY( duplicateMemoryArray(&(*pricer)->name, name, strlen(name)+1) );
-   ALLOC_OKAY( duplicateMemoryArray(&(*pricer)->desc, desc, strlen(desc)+1) );
+   SCIP_ALLOC( BMSallocMemory(pricer) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*pricer)->name, name, strlen(name)+1) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*pricer)->desc, desc, strlen(desc)+1) );
    (*pricer)->priority = priority;
    (*pricer)->pricerfree = pricerfree;
    (*pricer)->pricerinit = pricerinit;
@@ -104,7 +104,7 @@ RETCODE SCIPpricerCreate(
    (*pricer)->pricerredcost = pricerredcost;
    (*pricer)->pricerfarkas = pricerfarkas;
    (*pricer)->pricerdata = pricerdata;
-   CHECK_OKAY( SCIPclockCreate(&(*pricer)->clock, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*pricer)->pricerclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*pricer)->ncalls = 0;
    (*pricer)->nvarsfound = 0;
    (*pricer)->active = FALSE;
@@ -113,17 +113,17 @@ RETCODE SCIPpricerCreate(
    /* add parameters */
    sprintf(paramname, "pricers/%s/priority", name);
    sprintf(paramdesc, "priority of pricer <%s>", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
+   SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*pricer)->priority, priority, INT_MIN, INT_MAX, 
-                  paramChgdPricerPriority, (PARAMDATA*)(*pricer)) ); /*lint !e740*/
+                  paramChgdPricerPriority, (SCIP_PARAMDATA*)(*pricer)) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
 
 /** calls destructor and frees memory of variable pricer */
-RETCODE SCIPpricerFree(
-   PRICER**         pricer,             /**< pointer to variable pricer data structure */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPpricerFree(
+   SCIP_PRICER**         pricer,             /**< pointer to variable pricer data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(pricer != NULL);
@@ -134,21 +134,21 @@ RETCODE SCIPpricerFree(
    /* call destructor of variable pricer */
    if( (*pricer)->pricerfree != NULL )
    {
-      CHECK_OKAY( (*pricer)->pricerfree(set->scip, *pricer) );
+      SCIP_CALL( (*pricer)->pricerfree(set->scip, *pricer) );
    }
 
-   SCIPclockFree(&(*pricer)->clock);
-   freeMemoryArray(&(*pricer)->name);
-   freeMemoryArray(&(*pricer)->desc);
-   freeMemory(pricer);
+   SCIPclockFree(&(*pricer)->pricerclock);
+   BMSfreeMemoryArray(&(*pricer)->name);
+   BMSfreeMemoryArray(&(*pricer)->desc);
+   BMSfreeMemory(pricer);
 
    return SCIP_OKAY;
 }
 
 /** initializes variable pricer */
-RETCODE SCIPpricerInit(
-   PRICER*          pricer,             /**< variable pricer */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPpricerInit(
+   SCIP_PRICER*          pricer,             /**< variable pricer */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(pricer != NULL);
@@ -157,18 +157,18 @@ RETCODE SCIPpricerInit(
 
    if( pricer->initialized )
    {
-      errorMessage("variable pricer <%s> already initialized\n", pricer->name);
+      SCIPerrorMessage("variable pricer <%s> already initialized\n", pricer->name);
       return SCIP_INVALIDCALL;
    }
 
-   SCIPclockReset(pricer->clock);
+   SCIPclockReset(pricer->pricerclock);
 
    pricer->ncalls = 0;
    pricer->nvarsfound = 0;
 
    if( pricer->pricerinit != NULL )
    {
-      CHECK_OKAY( pricer->pricerinit(set->scip, pricer) );
+      SCIP_CALL( pricer->pricerinit(set->scip, pricer) );
    }
    pricer->initialized = TRUE;
 
@@ -176,9 +176,9 @@ RETCODE SCIPpricerInit(
 }
 
 /** calls exit method of variable pricer */
-RETCODE SCIPpricerExit(
-   PRICER*          pricer,             /**< variable pricer */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPpricerExit(
+   SCIP_PRICER*          pricer,             /**< variable pricer */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(pricer != NULL);
@@ -187,13 +187,13 @@ RETCODE SCIPpricerExit(
 
    if( !pricer->initialized )
    {
-      errorMessage("variable pricer <%s> not initialized\n", pricer->name);
+      SCIPerrorMessage("variable pricer <%s> not initialized\n", pricer->name);
       return SCIP_INVALIDCALL;
    }
 
    if( pricer->pricerexit != NULL )
    {
-      CHECK_OKAY( pricer->pricerexit(set->scip, pricer) );
+      SCIP_CALL( pricer->pricerexit(set->scip, pricer) );
    }
    pricer->initialized = FALSE;
 
@@ -201,9 +201,9 @@ RETCODE SCIPpricerExit(
 }
 
 /** informs variable pricer that the branch and bound process is being started */
-RETCODE SCIPpricerInitsol(
-   PRICER*          pricer,             /**< variable pricer */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPpricerInitsol(
+   SCIP_PRICER*          pricer,             /**< variable pricer */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(pricer != NULL);
@@ -212,16 +212,16 @@ RETCODE SCIPpricerInitsol(
    /* call solving process initialization method of variable pricer */
    if( pricer->pricerinitsol != NULL )
    {
-      CHECK_OKAY( pricer->pricerinitsol(set->scip, pricer) );
+      SCIP_CALL( pricer->pricerinitsol(set->scip, pricer) );
    }
 
    return SCIP_OKAY;
 }
 
 /** informs variable pricer that the branch and bound process data is being freed */
-RETCODE SCIPpricerExitsol(
-   PRICER*          pricer,             /**< variable pricer */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPpricerExitsol(
+   SCIP_PRICER*          pricer,             /**< variable pricer */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(pricer != NULL);
@@ -230,16 +230,16 @@ RETCODE SCIPpricerExitsol(
    /* call solving process deinitialization method of variable pricer */
    if( pricer->pricerexitsol != NULL )
    {
-      CHECK_OKAY( pricer->pricerexitsol(set->scip, pricer) );
+      SCIP_CALL( pricer->pricerexitsol(set->scip, pricer) );
    }
 
    return SCIP_OKAY;
 }
 
-/** activates pricer such that it is called in LP solving loop */
-RETCODE SCIPpricerActivate(
-   PRICER*          pricer,             /**< variable pricer */
-   SET*             set                 /**< global SCIP settings */
+/** activates pricer such that it is called in SCIP_LP solving loop */
+SCIP_RETCODE SCIPpricerActivate(
+   SCIP_PRICER*          pricer,             /**< variable pricer */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(pricer != NULL);
@@ -256,10 +256,10 @@ RETCODE SCIPpricerActivate(
    return SCIP_OKAY;
 }
 
-/** deactivates pricer such that it is no longer called in LP solving loop */
-RETCODE SCIPpricerDeactivate(
-   PRICER*          pricer,             /**< variable pricer */
-   SET*             set                 /**< global SCIP settings */
+/** deactivates pricer such that it is no longer called in SCIP_LP solving loop */
+SCIP_RETCODE SCIPpricerDeactivate(
+   SCIP_PRICER*          pricer,             /**< variable pricer */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(pricer != NULL);
@@ -277,8 +277,8 @@ RETCODE SCIPpricerDeactivate(
 }
 
 /** returns whether the given pricer is in use in the current problem */
-Bool SCIPpricerIsActive(
-   PRICER*          pricer              /**< variable pricer */
+SCIP_Bool SCIPpricerIsActive(
+   SCIP_PRICER*          pricer              /**< variable pricer */
    )
 {
    assert(pricer != NULL);
@@ -287,10 +287,10 @@ Bool SCIPpricerIsActive(
 }
 
 /** calls reduced cost pricing method of variable pricer */
-RETCODE SCIPpricerRedcost(
-   PRICER*          pricer,             /**< variable pricer */
-   SET*             set,                /**< global SCIP settings */
-   PROB*            prob                /**< transformed problem */
+SCIP_RETCODE SCIPpricerRedcost(
+   SCIP_PRICER*          pricer,             /**< variable pricer */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< transformed problem */
    )
 {
    int oldnvars;
@@ -301,18 +301,18 @@ RETCODE SCIPpricerRedcost(
    assert(set != NULL);
    assert(prob != NULL);
 
-   debugMessage("executing reduced cost pricing of variable pricer <%s>\n", pricer->name);
+   SCIPdebugMessage("executing reduced cost pricing of variable pricer <%s>\n", pricer->name);
    
    oldnvars = prob->nvars;
    
    /* start timing */
-   SCIPclockStart(pricer->clock, set);
+   SCIPclockStart(pricer->pricerclock, set);
    
    /* call external method */
-   CHECK_OKAY( pricer->pricerredcost(set->scip, pricer) );
+   SCIP_CALL( pricer->pricerredcost(set->scip, pricer) );
    
    /* stop timing */
-   SCIPclockStop(pricer->clock, set);
+   SCIPclockStop(pricer->pricerclock, set);
    
    /* evaluate result */
    pricer->ncalls++;
@@ -322,10 +322,10 @@ RETCODE SCIPpricerRedcost(
 }
 
 /** calls farkas pricing method of variable pricer */
-RETCODE SCIPpricerFarkas(
-   PRICER*          pricer,             /**< variable pricer */
-   SET*             set,                /**< global SCIP settings */
-   PROB*            prob                /**< transformed problem */
+SCIP_RETCODE SCIPpricerFarkas(
+   SCIP_PRICER*          pricer,             /**< variable pricer */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< transformed problem */
    )
 {
    int oldnvars;
@@ -339,18 +339,18 @@ RETCODE SCIPpricerFarkas(
    if( pricer->pricerfarkas == NULL )
       return SCIP_OKAY;
 
-   debugMessage("executing farkas pricing of variable pricer <%s>\n", pricer->name);
+   SCIPdebugMessage("executing farkas pricing of variable pricer <%s>\n", pricer->name);
    
    oldnvars = prob->nvars;
    
    /* start timing */
-   SCIPclockStart(pricer->clock, set);
+   SCIPclockStart(pricer->pricerclock, set);
    
    /* call external method */
-   CHECK_OKAY( pricer->pricerfarkas(set->scip, pricer) );
+   SCIP_CALL( pricer->pricerfarkas(set->scip, pricer) );
    
    /* stop timing */
-   SCIPclockStop(pricer->clock, set);
+   SCIPclockStop(pricer->pricerclock, set);
    
    /* evaluate result */
    pricer->ncalls++;
@@ -360,28 +360,28 @@ RETCODE SCIPpricerFarkas(
 }
 
 /** depending on the LP's solution status, calls reduced cost or farkas pricing method of variable pricer */
-RETCODE SCIPpricerExec(
-   PRICER*          pricer,             /**< variable pricer */
-   SET*             set,                /**< global SCIP settings */
-   PROB*            prob,               /**< transformed problem */
-   LP*              lp                  /**< LP data */
+SCIP_RETCODE SCIPpricerExec(
+   SCIP_PRICER*          pricer,             /**< variable pricer */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< transformed problem */
+   SCIP_LP*              lp                  /**< SCIP_LP data */
    )
 {
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
    {
-      CHECK_OKAY( SCIPpricerFarkas(pricer, set, prob) );
+      SCIP_CALL( SCIPpricerFarkas(pricer, set, prob) );
    }
    else
    {
-      CHECK_OKAY( SCIPpricerRedcost(pricer, set, prob) );
+      SCIP_CALL( SCIPpricerRedcost(pricer, set, prob) );
    }
 
    return SCIP_OKAY;
 }
 
 /** gets user data of variable pricer */
-PRICERDATA* SCIPpricerGetData(
-   PRICER*          pricer              /**< variable pricer */
+SCIP_PRICERDATA* SCIPpricerGetData(
+   SCIP_PRICER*          pricer              /**< variable pricer */
    )
 {
    assert(pricer != NULL);
@@ -391,8 +391,8 @@ PRICERDATA* SCIPpricerGetData(
 
 /** sets user data of variable pricer; user has to free old data in advance! */
 void SCIPpricerSetData(
-   PRICER*          pricer,             /**< variable pricer */
-   PRICERDATA*      pricerdata          /**< new variable pricer user data */
+   SCIP_PRICER*          pricer,             /**< variable pricer */
+   SCIP_PRICERDATA*      pricerdata          /**< new variable pricer user data */
    )
 {
    assert(pricer != NULL);
@@ -402,7 +402,7 @@ void SCIPpricerSetData(
 
 /** gets name of variable pricer */
 const char* SCIPpricerGetName(
-   PRICER*          pricer              /**< variable pricer */
+   SCIP_PRICER*          pricer              /**< variable pricer */
    )
 {
    assert(pricer != NULL);
@@ -412,7 +412,7 @@ const char* SCIPpricerGetName(
 
 /** gets description of variable pricer */
 const char* SCIPpricerGetDesc(
-   PRICER*          pricer              /**< variable pricer */
+   SCIP_PRICER*          pricer              /**< variable pricer */
    )
 {
    assert(pricer != NULL);
@@ -422,7 +422,7 @@ const char* SCIPpricerGetDesc(
 
 /** gets priority of variable pricer */
 int SCIPpricerGetPriority(
-   PRICER*          pricer              /**< variable pricer */
+   SCIP_PRICER*          pricer              /**< variable pricer */
    )
 {
    assert(pricer != NULL);
@@ -432,9 +432,9 @@ int SCIPpricerGetPriority(
 
 /** sets priority of variable pricer */
 void SCIPpricerSetPriority(
-   PRICER*          pricer,             /**< variable pricer */
-   SET*             set,                /**< global SCIP settings */
-   int              priority            /**< new priority of the variable pricer */
+   SCIP_PRICER*          pricer,             /**< variable pricer */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   priority            /**< new priority of the variable pricer */
    )
 {
    assert(pricer != NULL);
@@ -446,7 +446,7 @@ void SCIPpricerSetPriority(
 
 /** gets the number of times, the pricer was called and tried to find a variable with negative reduced costs */
 int SCIPpricerGetNCalls(
-   PRICER*          pricer              /**< variable pricer */
+   SCIP_PRICER*          pricer              /**< variable pricer */
    )
 {
    assert(pricer != NULL);
@@ -456,7 +456,7 @@ int SCIPpricerGetNCalls(
 
 /** gets the number of variables with negative reduced costs found by this pricer */
 int SCIPpricerGetNVarsFound(
-   PRICER*          pricer              /**< variable pricer */
+   SCIP_PRICER*          pricer              /**< variable pricer */
    )
 {
    assert(pricer != NULL);
@@ -465,8 +465,8 @@ int SCIPpricerGetNVarsFound(
 }
 
 /** is variable pricer initialized? */
-Bool SCIPpricerIsInitialized(
-   PRICER*            pricer                /**< variable pricer */
+SCIP_Bool SCIPpricerIsInitialized(
+   SCIP_PRICER*            pricer                /**< variable pricer */
    )
 {
    assert(pricer != NULL);
@@ -475,12 +475,12 @@ Bool SCIPpricerIsInitialized(
 }
 
 /** gets time in seconds used in this pricer */
-Real SCIPpricerGetTime(
-   PRICER*            pricer                /**< variable pricer */
+SCIP_Real SCIPpricerGetTime(
+   SCIP_PRICER*            pricer                /**< variable pricer */
    )
 {
    assert(pricer != NULL);
 
-   return SCIPclockGetTime(pricer->clock);
+   return SCIPclockGetTime(pricer->pricerclock);
 }
 

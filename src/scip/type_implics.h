@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_implics.h,v 1.3 2005/08/12 11:06:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_implics.h,v 1.4 2005/08/22 18:35:53 bzfpfend Exp $"
 
 /**@file   type_implics.h
  * @brief  type definitions for implications, variable bounds, and cliques
@@ -27,12 +27,12 @@
 #define __SCIP_TYPE_IMPLICS_H__
 
 
-typedef struct VBounds VBOUNDS;         /**< variable bounds of a variable x in the form x <= c*y or x >= c*y */
-typedef struct Implics IMPLICS;         /**< implications in the form x <= 0 or x >= 1 ==> y <= b or y >= b for x binary, NULL if x nonbinary */
-typedef struct Clique CLIQUE;           /**< single clique, stating that at most one of the binary variables can be fixed
-                                         *   to the corresponding value */
-typedef struct CliqueTable CLIQUETABLE; /**< collection of cliques */
-typedef struct CliqueList CLIQUELIST;   /**< list of cliques for a single variable */
+typedef struct SCIP_VBounds SCIP_VBOUNDS;         /**< variable bounds of a variable x in the form x <= c*y or x >= c*y */
+typedef struct SCIP_Implics SCIP_IMPLICS;         /**< implications in the form x <= 0 or x >= 1 ==> y <= b or y >= b for x binary, NULL if x nonbinary */
+typedef struct SCIP_Clique SCIP_CLIQUE;           /**< single clique, stating that at most one of the binary variables can be fixed
+                                              *   to the corresponding value */
+typedef struct SCIP_CliqueTable SCIP_CLIQUETABLE; /**< collection of cliques */
+typedef struct SCIP_CliqueList SCIP_CLIQUELIST;   /**< list of cliques for a single variable */
 
 
 #endif

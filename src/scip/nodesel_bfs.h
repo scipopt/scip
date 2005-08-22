@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_bfs.h,v 1.10 2005/07/15 17:20:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_bfs.h,v 1.11 2005/08/22 18:35:41 bzfpfend Exp $"
 
 /**@file   nodesel_bfs.h
  * @brief  node selector for best first search
@@ -32,8 +32,8 @@
 
 /** creates the node selector for best first search and includes it in SCIP */
 extern
-RETCODE SCIPincludeNodeselBfs(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeNodeselBfs(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

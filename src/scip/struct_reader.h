@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_reader.h,v 1.7 2005/07/15 17:20:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_reader.h,v 1.8 2005/08/22 18:35:51 bzfpfend Exp $"
 
 /**@file   struct_reader.h
  * @brief  datastructures for input file readers
@@ -32,14 +32,14 @@
 
 
 /** input file reader */
-struct Reader
+struct SCIP_Reader
 {
-   const char*      name;               /**< name of reader */
-   const char*      desc;               /**< description of reader */
-   const char*      extension;          /**< file extension that reader processes */
-   DECL_READERFREE  ((*readerfree));    /**< destructor of reader */
-   DECL_READERREAD  ((*readerread));    /**< read method */
-   READERDATA*      readerdata;         /**< reader data */
+   const char*           name;               /**< name of reader */
+   const char*           desc;               /**< description of reader */
+   const char*           extension;          /**< file extension that reader processes */
+   SCIP_DECL_READERFREE  ((*readerfree));    /**< destructor of reader */
+   SCIP_DECL_READERREAD  ((*readerread));    /**< read method */
+   SCIP_READERDATA*      readerdata;         /**< reader data */
 };
 
 

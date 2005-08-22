@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_simplerounding.h,v 1.7 2005/07/15 17:20:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_simplerounding.h,v 1.8 2005/08/22 18:35:39 bzfpfend Exp $"
 
 /**@file   heur_simplerounding.h
- * @brief  simple and fast LP rounding heuristic
+ * @brief  simple and fast SCIP_LP rounding heuristic
  * @author Tobias Achterberg
  */
 
@@ -32,8 +32,8 @@
 
 /** creates the simple rounding heuristic and includes it in SCIP */
 extern
-RETCODE SCIPincludeHeurSimplerounding(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeHeurSimplerounding(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

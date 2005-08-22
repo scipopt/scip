@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.h,v 1.39 2005/07/15 17:20:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.h,v 1.40 2005/08/22 18:35:47 bzfpfend Exp $"
 
 /**@file   sepa.h
  * @brief  internal methods for separators
@@ -41,77 +41,77 @@
 
 /** creates a separator */
 extern
-RETCODE SCIPsepaCreate(
-   SEPA**           sepa,               /**< pointer to separator data structure */
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory for parameter settings */
-   const char*      name,               /**< name of separator */
-   const char*      desc,               /**< description of separator */
-   int              priority,           /**< priority of separator (>= 0: before, < 0: after constraint handlers) */
-   int              freq,               /**< frequency for calling separator */
-   Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
-   DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
-   DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
-   DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
-   DECL_SEPAINITSOL ((*sepainitsol)),   /**< solving process initialization method of separator */
-   DECL_SEPAEXITSOL ((*sepaexitsol)),   /**< solving process deinitialization method of separator */
-   DECL_SEPAEXEC    ((*sepaexec)),      /**< execution method of separator */
-   SEPADATA*        sepadata            /**< separator data */
+SCIP_RETCODE SCIPsepaCreate(
+   SCIP_SEPA**           sepa,               /**< pointer to separator data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of separator */
+   const char*           desc,               /**< description of separator */
+   int                   priority,           /**< priority of separator (>= 0: before, < 0: after constraint handlers) */
+   int                   freq,               /**< frequency for calling separator */
+   SCIP_Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
+   SCIP_DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
+   SCIP_DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
+   SCIP_DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
+   SCIP_DECL_SEPAINITSOL ((*sepainitsol)),   /**< solving process initialization method of separator */
+   SCIP_DECL_SEPAEXITSOL ((*sepaexitsol)),   /**< solving process deinitialization method of separator */
+   SCIP_DECL_SEPAEXEC    ((*sepaexec)),      /**< execution method of separator */
+   SCIP_SEPADATA*        sepadata            /**< separator data */
    );
 
 /** calls destructor and frees memory of separator */
 extern
-RETCODE SCIPsepaFree(
-   SEPA**           sepa,               /**< pointer to separator data structure */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPsepaFree(
+   SCIP_SEPA**           sepa,               /**< pointer to separator data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** initializes separator */
 extern
-RETCODE SCIPsepaInit(
-   SEPA*            sepa,               /**< separator */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPsepaInit(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** calls exit method of separator */
 extern
-RETCODE SCIPsepaExit(
-   SEPA*            sepa,               /**< separator */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPsepaExit(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs separator that the branch and bound process is being started */
 extern
-RETCODE SCIPsepaInitsol(
-   SEPA*            sepa,               /**< separator */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPsepaInitsol(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs separator that the branch and bound process data is being freed */
 extern
-RETCODE SCIPsepaExitsol(
-   SEPA*            sepa,               /**< separator */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPsepaExitsol(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** calls execution method of separator */
 extern
-RETCODE SCIPsepaExec(
-   SEPA*            sepa,               /**< separator */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   SEPASTORE*       sepastore,          /**< separation storage */
-   int              depth,              /**< depth of current node */
-   Bool             execdelayed,        /**< execute separator even if it is marked to be delayed */
-   RESULT*          result              /**< pointer to store the result of the callback method */
+SCIP_RETCODE SCIPsepaExec(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   int                   depth,              /**< depth of current node */
+   SCIP_Bool             execdelayed,        /**< execute separator even if it is marked to be delayed */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 /** sets priority of separator */
 extern
 void SCIPsepaSetPriority(
-   SEPA*            sepa,               /**< separator */
-   SET*             set,                /**< global SCIP settings */
-   int              priority            /**< new priority of the separator */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   priority            /**< new priority of the separator */
    );
 
 #endif

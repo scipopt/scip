@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.43 2005/08/11 09:59:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.44 2005/08/22 18:35:41 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -47,9 +47,9 @@
 
 /** resizes element memory to hold at least the given number of elements */
 static
-RETCODE pqueueResize(
-   PQUEUE*          pqueue,             /**< pointer to a priority queue */
-   int              minsize             /**< minimal number of storeable elements */
+SCIP_RETCODE pqueueResize(
+   SCIP_PQUEUE*          pqueue,             /**< pointer to a priority queue */
+   int                   minsize             /**< minimal number of storeable elements */
    )
 {
    assert(pqueue != NULL);
@@ -58,17 +58,17 @@ RETCODE pqueueResize(
       return SCIP_OKAY;
 
    pqueue->size = MAX(minsize, (int)(pqueue->size * pqueue->sizefac));
-   ALLOC_OKAY( reallocMemoryArray(&pqueue->slots, pqueue->size) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&pqueue->slots, pqueue->size) );
 
    return SCIP_OKAY;
 }
 
 /** creates priority queue */
-RETCODE SCIPpqueueCreate(
-   PQUEUE**         pqueue,             /**< pointer to a priority queue */
-   int              initsize,           /**< initial number of available element slots */
-   Real             sizefac,            /**< memory growing factor applied, if more element slots are needed */
-   DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+SCIP_RETCODE SCIPpqueueCreate(
+   SCIP_PQUEUE**         pqueue,             /**< pointer to a priority queue */
+   int                   initsize,           /**< initial number of available element slots */
+   SCIP_Real             sizefac,            /**< memory growing factor applied, if more element slots are needed */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
    )
 {
    assert(pqueue != NULL);
@@ -77,31 +77,31 @@ RETCODE SCIPpqueueCreate(
    initsize = MAX(1, initsize);
    sizefac = MAX(1.0, sizefac);
 
-   ALLOC_OKAY( allocMemory(pqueue) );
+   SCIP_ALLOC( BMSallocMemory(pqueue) );
    (*pqueue)->len = 0;
    (*pqueue)->size = 0;
    (*pqueue)->sizefac = sizefac;
    (*pqueue)->slots = NULL;
    (*pqueue)->ptrcomp = ptrcomp;
-   CHECK_OKAY( pqueueResize(*pqueue, initsize) );
+   SCIP_CALL( pqueueResize(*pqueue, initsize) );
 
    return SCIP_OKAY;
 }
 
 /** frees priority queue, but not the data elements themselves */
 void SCIPpqueueFree(
-   PQUEUE**         pqueue              /**< pointer to a priority queue */
+   SCIP_PQUEUE**         pqueue              /**< pointer to a priority queue */
    )
 {
    assert(pqueue != NULL);
 
-   freeMemoryArray(&(*pqueue)->slots);
-   freeMemory(pqueue);
+   BMSfreeMemoryArray(&(*pqueue)->slots);
+   BMSfreeMemory(pqueue);
 }
 
 /** clears the priority queue, but doesn't free the data elements themselves */
 void SCIPpqueueClear(
-   PQUEUE*          pqueue              /**< priority queue */
+   SCIP_PQUEUE*          pqueue              /**< priority queue */
    )
 {
    assert(pqueue != NULL);
@@ -110,9 +110,9 @@ void SCIPpqueueClear(
 }
 
 /** inserts element into priority queue */
-RETCODE SCIPpqueueInsert(
-   PQUEUE*          pqueue,             /**< priority queue */
-   void*            elem                /**< element to be inserted */
+SCIP_RETCODE SCIPpqueueInsert(
+   SCIP_PQUEUE*          pqueue,             /**< priority queue */
+   void*                 elem                /**< element to be inserted */
    )
 {
    int pos;
@@ -121,7 +121,7 @@ RETCODE SCIPpqueueInsert(
    assert(pqueue->len >= 0);
    assert(elem != NULL);
 
-   CHECK_OKAY( pqueueResize(pqueue, pqueue->len+1) );
+   SCIP_CALL( pqueueResize(pqueue, pqueue->len+1) );
 
    /* insert element as leaf in the tree, move it towards the root as long it is better than its parent */
    pos = pqueue->len;
@@ -138,7 +138,7 @@ RETCODE SCIPpqueueInsert(
 
 /** removes and returns best element from the priority queue */
 void* SCIPpqueueRemove(
-   PQUEUE*          pqueue              /**< priority queue */
+   SCIP_PQUEUE*          pqueue              /**< priority queue */
    )
 {
    void* root;
@@ -179,7 +179,7 @@ void* SCIPpqueueRemove(
 
 /** returns the best element of the queue without removing it */
 void* SCIPpqueueFirst(
-   PQUEUE*          pqueue              /**< priority queue */
+   SCIP_PQUEUE*          pqueue              /**< priority queue */
    )
 {
    assert(pqueue != NULL);
@@ -193,7 +193,7 @@ void* SCIPpqueueFirst(
 
 /** returns the number of elements in the queue */
 int SCIPpqueueNElems(
-   PQUEUE*          pqueue              /**< priority queue */
+   SCIP_PQUEUE*          pqueue              /**< priority queue */
    )
 {
    assert(pqueue != NULL);
@@ -204,7 +204,7 @@ int SCIPpqueueNElems(
 
 /** returns the elements of the queue; changing the returned array may destroy the queue's ordering! */
 void** SCIPpqueueElems(
-   PQUEUE*          pqueue              /**< priority queue */
+   SCIP_PQUEUE*          pqueue              /**< priority queue */
    )
 {
    assert(pqueue != NULL);
@@ -222,19 +222,19 @@ void** SCIPpqueueElems(
 
 /** appends element to the hash list */
 static
-RETCODE hashtablelistAppend(
-   HASHTABLELIST**  hashtablelist,      /**< pointer to hash list */
-   BLKMEM*          blkmem,             /**< block memory */
-   void*            element             /**< element to append to the list */
+SCIP_RETCODE hashtablelistAppend(
+   SCIP_HASHTABLELIST**  hashtablelist,      /**< pointer to hash list */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   void*                 element             /**< element to append to the list */
    )
 {
-   HASHTABLELIST* newlist;
+   SCIP_HASHTABLELIST* newlist;
 
    assert(hashtablelist != NULL);
    assert(blkmem != NULL);
    assert(element != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(blkmem, &newlist) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &newlist) );
    newlist->element = element;
    newlist->next = *hashtablelist;
    *hashtablelist = newlist;
@@ -245,12 +245,12 @@ RETCODE hashtablelistAppend(
 /** frees a hash list entry and all its successors */
 static
 void hashtablelistFree(
-   HASHTABLELIST**  hashtablelist,      /**< pointer to hash list to free */
-   BLKMEM*          blkmem              /**< block memory */
+   SCIP_HASHTABLELIST**  hashtablelist,      /**< pointer to hash list to free */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   HASHTABLELIST* list;
-   HASHTABLELIST* nextlist;
+   SCIP_HASHTABLELIST* list;
+   SCIP_HASHTABLELIST* nextlist;
 
    assert(hashtablelist != NULL);
    assert(blkmem != NULL);
@@ -259,7 +259,7 @@ void hashtablelistFree(
    while( list != NULL )
    {
       nextlist = list->next;
-      freeBlockMemory(blkmem, &list);
+      BMSfreeBlockMemory(blkmem, &list);
       list = nextlist;
    }
 
@@ -268,13 +268,13 @@ void hashtablelistFree(
 
 /** finds hash list entry pointing to element with given key in the hash list, returns NULL if not found */
 static
-HASHTABLELIST* hashtablelistFind(
-   HASHTABLELIST*   hashtablelist,      /**< hash list */
-   DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
-   DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
-   DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
-   unsigned int     keyval,             /**< hash value of key */
-   void*            key                 /**< key to retrieve */
+SCIP_HASHTABLELIST* hashtablelistFind(
+   SCIP_HASHTABLELIST*   hashtablelist,      /**< hash list */
+   SCIP_DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
+   SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
+   SCIP_DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
+   unsigned int          keyval,             /**< hash value of key */
+   void*                 key                 /**< key to retrieve */
    )
 {
    unsigned int currentkeyval;
@@ -298,15 +298,15 @@ HASHTABLELIST* hashtablelistFind(
 /** retrieves element with given key from the hash list, or NULL */
 static
 void* hashtablelistRetrieve(
-   HASHTABLELIST*   hashtablelist,      /**< hash list */
-   DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
-   DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
-   DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
-   unsigned int     keyval,             /**< hash value of key */
-   void*            key                 /**< key to retrieve */
+   SCIP_HASHTABLELIST*   hashtablelist,      /**< hash list */
+   SCIP_DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
+   SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
+   SCIP_DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
+   unsigned int          keyval,             /**< hash value of key */
+   void*                 key                 /**< key to retrieve */
    )
 {
-   HASHTABLELIST* h;
+   SCIP_HASHTABLELIST* h;
 
    /* find hash list entry */
    h = hashtablelistFind(hashtablelist, hashgetkey, hashkeyeq, hashkeyval, keyval, key);
@@ -320,13 +320,13 @@ void* hashtablelistRetrieve(
 
 /** removes element from the hash list */
 static
-RETCODE hashtablelistRemove(
-   HASHTABLELIST**  hashtablelist,      /**< pointer to hash list */
-   BLKMEM*          blkmem,             /**< block memory */
-   void*            element             /**< element to remove from the list */
+SCIP_RETCODE hashtablelistRemove(
+   SCIP_HASHTABLELIST**  hashtablelist,      /**< pointer to hash list */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   void*                 element             /**< element to remove from the list */
    )
 {
-   HASHTABLELIST* nextlist;
+   SCIP_HASHTABLELIST* nextlist;
 
    assert(hashtablelist != NULL);
    assert(blkmem != NULL);
@@ -339,7 +339,7 @@ RETCODE hashtablelistRemove(
    if( *hashtablelist != NULL )
    {
       nextlist = (*hashtablelist)->next;
-      freeBlockMemory(blkmem, hashtablelist);
+      BMSfreeBlockMemory(blkmem, hashtablelist);
       *hashtablelist = nextlist;
    }
 
@@ -348,13 +348,13 @@ RETCODE hashtablelistRemove(
 
    
 /** creates a hash table */
-RETCODE SCIPhashtableCreate(
-   HASHTABLE**      hashtable,          /**< pointer to store the created hash table */
-   BLKMEM*          blkmem,             /**< block memory used to store hash table entries */
-   int              tablesize,          /**< size of the hash table */
-   DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
-   DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
-   DECL_HASHKEYVAL((*hashkeyval))       /**< returns the hash value of the key */
+SCIP_RETCODE SCIPhashtableCreate(
+   SCIP_HASHTABLE**      hashtable,          /**< pointer to store the created hash table */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to store hash table entries */
+   int                   tablesize,          /**< size of the hash table */
+   SCIP_DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
+   SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
+   SCIP_DECL_HASHKEYVAL((*hashkeyval))       /**< returns the hash value of the key */
    )
 {
    int i;
@@ -365,8 +365,8 @@ RETCODE SCIPhashtableCreate(
    assert(hashkeyeq != NULL);
    assert(hashkeyval != NULL);
 
-   ALLOC_OKAY( allocMemory(hashtable) );
-   ALLOC_OKAY( allocMemoryArray(&(*hashtable)->lists, tablesize) );
+   SCIP_ALLOC( BMSallocMemory(hashtable) );
+   SCIP_ALLOC( BMSallocMemoryArray(&(*hashtable)->lists, tablesize) );
    (*hashtable)->blkmem = blkmem;
    (*hashtable)->nlists = tablesize;
    (*hashtable)->hashgetkey = hashgetkey;
@@ -382,7 +382,7 @@ RETCODE SCIPhashtableCreate(
 
 /** frees the hash table */
 void SCIPhashtableFree(
-   HASHTABLE**      hashtable           /**< pointer to the hash table */
+   SCIP_HASHTABLE**      hashtable           /**< pointer to the hash table */
    )
 {
    int i;
@@ -395,14 +395,14 @@ void SCIPhashtableFree(
       hashtablelistFree(&(*hashtable)->lists[i], (*hashtable)->blkmem);
 
    /* free main hast table data structure */
-   freeMemoryArray(&(*hashtable)->lists);
-   freeMemory(hashtable);
+   BMSfreeMemoryArray(&(*hashtable)->lists);
+   BMSfreeMemory(hashtable);
 }
 
 /** inserts element in hash table (multiple inserts of same element possible) */
-RETCODE SCIPhashtableInsert(
-   HASHTABLE*       hashtable,          /**< hash table */
-   void*            element             /**< element to insert into the table */
+SCIP_RETCODE SCIPhashtableInsert(
+   SCIP_HASHTABLE*       hashtable,          /**< hash table */
+   void*                 element             /**< element to insert into the table */
    )
 {
    void* key;
@@ -423,15 +423,15 @@ RETCODE SCIPhashtableInsert(
    hashval = keyval % hashtable->nlists; /*lint !e573*/
 
    /* append element to the list at the hash position */
-   CHECK_OKAY( hashtablelistAppend(&hashtable->lists[hashval], hashtable->blkmem, element) );
+   SCIP_CALL( hashtablelistAppend(&hashtable->lists[hashval], hashtable->blkmem, element) );
    
    return SCIP_OKAY;
 }
 
 /** inserts element in hash table (multiple insertion of same element is checked and results in an error) */
-RETCODE SCIPhashtableSafeInsert(
-   HASHTABLE*       hashtable,          /**< hash table */
-   void*            element             /**< element to insert into the table */
+SCIP_RETCODE SCIPhashtableSafeInsert(
+   SCIP_HASHTABLE*       hashtable,          /**< hash table */
+   void*                 element             /**< element to insert into the table */
    )
 {
    assert(hashtable != NULL);
@@ -442,15 +442,15 @@ RETCODE SCIPhashtableSafeInsert(
       return SCIP_KEYALREADYEXISTING;
 
    /* insert element in hash table */
-   CHECK_OKAY( SCIPhashtableInsert(hashtable, element) );
+   SCIP_CALL( SCIPhashtableInsert(hashtable, element) );
    
    return SCIP_OKAY;
 }
 
 /** retrieve element with key from hash table, returns NULL if not existing */
 void* SCIPhashtableRetrieve(
-   HASHTABLE*       hashtable,          /**< hash table */
-   void*            key                 /**< key to retrieve */
+   SCIP_HASHTABLE*       hashtable,          /**< hash table */
+   void*                 key                 /**< key to retrieve */
    )
 {
    unsigned int keyval;
@@ -473,9 +473,9 @@ void* SCIPhashtableRetrieve(
 }
 
 /** returns whether the given element exists in the table */
-Bool SCIPhashtableExists(
-   HASHTABLE*       hashtable,          /**< hash table */
-   void*            element             /**< element to search in the table */
+SCIP_Bool SCIPhashtableExists(
+   SCIP_HASHTABLE*       hashtable,          /**< hash table */
+   void*                 element             /**< element to search in the table */
    )
 {
    void* key;
@@ -500,9 +500,9 @@ Bool SCIPhashtableExists(
 }
 
 /** removes element from the hash table, if it exists */
-RETCODE SCIPhashtableRemove(
-   HASHTABLE*       hashtable,          /**< hash table */
-   void*            element             /**< element to remove from the table */
+SCIP_RETCODE SCIPhashtableRemove(
+   SCIP_HASHTABLE*       hashtable,          /**< hash table */
+   void*                 element             /**< element to remove from the table */
    )
 {
    void* key;
@@ -523,17 +523,17 @@ RETCODE SCIPhashtableRemove(
    hashval = keyval % hashtable->nlists; /*lint !e573*/
 
    /* remove element from the list at the hash position */
-   CHECK_OKAY( hashtablelistRemove(&hashtable->lists[hashval], hashtable->blkmem, element) );
+   SCIP_CALL( hashtablelistRemove(&hashtable->lists[hashval], hashtable->blkmem, element) );
    
    return SCIP_OKAY;
 }
 
 /** prints statistics about hash table usage */
 void SCIPhashtablePrintStatistics(
-   HASHTABLE*       hashtable           /**< hash table */
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
    )
 {
-   HASHTABLELIST* hashtablelist;
+   SCIP_HASHTABLELIST* hashtablelist;
    int usedslots;
    int maxslotsize;
    int sumslotsize;
@@ -563,16 +563,16 @@ void SCIPhashtablePrintStatistics(
    }
 
    SCIPmessagePrintInfo("%d hash entries, used %d/%d slots (%.1f%%)",
-      sumslotsize, usedslots, hashtable->nlists, 100.0*(Real)usedslots/(Real)(hashtable->nlists));
+      sumslotsize, usedslots, hashtable->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(hashtable->nlists));
    if( usedslots > 0 )
       SCIPmessagePrintInfo(", avg. %.1f entries/used slot, max. %d entries in slot",
-         (Real)sumslotsize/(Real)usedslots, maxslotsize);
+         (SCIP_Real)sumslotsize/(SCIP_Real)usedslots, maxslotsize);
    SCIPmessagePrintInfo("\n");
 }
 
 
 /** returns TRUE iff both keys (i.e. strings) are equal */
-DECL_HASHKEYEQ(SCIPhashKeyEqString)
+SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqString)
 {  /*lint --e{715}*/
    const char* string1 = (const char*)key1;
    const char* string2 = (const char*)key2;
@@ -589,7 +589,7 @@ const int strhashshift[28] = {
 };
 
 /** returns the hash value of the key (i.e. string) */
-DECL_HASHKEYVAL(SCIPhashKeyValString)
+SCIP_DECL_HASHKEYVAL(SCIPhashKeyValString)
 {  /*lint --e{715}*/
    const char* string = (const char*)key;
    unsigned int sum;
@@ -621,20 +621,20 @@ DECL_HASHKEYVAL(SCIPhashKeyValString)
 
 /** appends origin->image pair to the hash list */
 static
-RETCODE hashmaplistAppend(
-   HASHMAPLIST**    hashmaplist,        /**< pointer to hash list */
-   BLKMEM*          blkmem,             /**< block memory */
-   void*            origin,             /**< origin of the mapping origin -> image */
-   void*            image               /**< image of the mapping origin -> image */
+SCIP_RETCODE hashmaplistAppend(
+   SCIP_HASHMAPLIST**    hashmaplist,        /**< pointer to hash list */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   void*                 origin,             /**< origin of the mapping origin -> image */
+   void*                 image               /**< image of the mapping origin -> image */
    )
 {
-   HASHMAPLIST* newlist;
+   SCIP_HASHMAPLIST* newlist;
 
    assert(hashmaplist != NULL);
    assert(blkmem != NULL);
    assert(origin != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(blkmem, &newlist) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &newlist) );
    newlist->origin = origin;
    newlist->image = image;
    newlist->next = *hashmaplist;
@@ -646,12 +646,12 @@ RETCODE hashmaplistAppend(
 /** frees a hash list entry and all its successors */
 static
 void hashmaplistFree(
-   HASHMAPLIST**    hashmaplist,        /**< pointer to hash list to free */
-   BLKMEM*          blkmem              /**< block memory */
+   SCIP_HASHMAPLIST**    hashmaplist,        /**< pointer to hash list to free */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   HASHMAPLIST* list;
-   HASHMAPLIST* nextlist;
+   SCIP_HASHMAPLIST* list;
+   SCIP_HASHMAPLIST* nextlist;
 
    assert(hashmaplist != NULL);
    assert(blkmem != NULL);
@@ -660,7 +660,7 @@ void hashmaplistFree(
    while( list != NULL )
    {
       nextlist = list->next;
-      freeBlockMemory(blkmem, &list);
+      BMSfreeBlockMemory(blkmem, &list);
       list = nextlist;
    }
 
@@ -669,9 +669,9 @@ void hashmaplistFree(
 
 /** finds hash list entry pointing to given origin in the hash list, returns NULL if not found */
 static
-HASHMAPLIST* hashmaplistFind(
-   HASHMAPLIST*     hashmaplist,        /**< hash list */
-   void*            origin              /**< origin to find */
+SCIP_HASHMAPLIST* hashmaplistFind(
+   SCIP_HASHMAPLIST*     hashmaplist,        /**< hash list */
+   void*                 origin              /**< origin to find */
    )
 {
    assert(origin != NULL);
@@ -689,11 +689,11 @@ HASHMAPLIST* hashmaplistFind(
 /** retrieves image of given origin from the hash list, or NULL */
 static
 void* hashmaplistGetImage(
-   HASHMAPLIST*     hashmaplist,        /**< hash list */
-   void*            origin              /**< origin to retrieve image for */
+   SCIP_HASHMAPLIST*     hashmaplist,        /**< hash list */
+   void*                 origin              /**< origin to retrieve image for */
    )
 {
-   HASHMAPLIST* h;
+   SCIP_HASHMAPLIST* h;
 
    /* find hash list entry */
    h = hashmaplistFind(hashmaplist, origin);
@@ -709,14 +709,14 @@ void* hashmaplistGetImage(
  *  new origin->image pair
  */
 static
-RETCODE hashmaplistSetImage(
-   HASHMAPLIST**    hashmaplist,        /**< pointer to hash list */
-   BLKMEM*          blkmem,             /**< block memory */
-   void*            origin,             /**< origin to set image for */
-   void*            image               /**< new image for origin */
+SCIP_RETCODE hashmaplistSetImage(
+   SCIP_HASHMAPLIST**    hashmaplist,        /**< pointer to hash list */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   void*                 origin,             /**< origin to set image for */
+   void*                 image               /**< new image for origin */
    )
 {
-   HASHMAPLIST* h;
+   SCIP_HASHMAPLIST* h;
 
    /* find hash list entry */
    h = hashmaplistFind(*hashmaplist, origin);
@@ -726,7 +726,7 @@ RETCODE hashmaplistSetImage(
       h->image = image;
    else
    {
-      CHECK_OKAY( hashmaplistAppend(hashmaplist, blkmem, origin, image) );
+      SCIP_CALL( hashmaplistAppend(hashmaplist, blkmem, origin, image) );
    }
 
    return SCIP_OKAY;
@@ -734,13 +734,13 @@ RETCODE hashmaplistSetImage(
 
 /** removes origin->image pair from the hash list */
 static
-RETCODE hashmaplistRemove(
-   HASHMAPLIST**    hashmaplist,        /**< pointer to hash list */
-   BLKMEM*          blkmem,             /**< block memory */
-   void*            origin              /**< origin to remove from the list */
+SCIP_RETCODE hashmaplistRemove(
+   SCIP_HASHMAPLIST**    hashmaplist,        /**< pointer to hash list */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   void*                 origin              /**< origin to remove from the list */
    )
 {
-   HASHMAPLIST* nextlist;
+   SCIP_HASHMAPLIST* nextlist;
 
    assert(hashmaplist != NULL);
    assert(blkmem != NULL);
@@ -753,7 +753,7 @@ RETCODE hashmaplistRemove(
    if( *hashmaplist != NULL )
    {
       nextlist = (*hashmaplist)->next;
-      freeBlockMemory(blkmem, hashmaplist);
+      BMSfreeBlockMemory(blkmem, hashmaplist);
       *hashmaplist = nextlist;
    }
 
@@ -762,10 +762,10 @@ RETCODE hashmaplistRemove(
 
 
 /** creates a hash map mapping pointers to pointers */
-RETCODE SCIPhashmapCreate(
-   HASHMAP**        hashmap,            /**< pointer to store the created hash map */
-   BLKMEM*          blkmem,             /**< block memory used to store hash map entries */
-   int              mapsize             /**< size of the hash map */
+SCIP_RETCODE SCIPhashmapCreate(
+   SCIP_HASHMAP**        hashmap,            /**< pointer to store the created hash map */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to store hash map entries */
+   int                   mapsize             /**< size of the hash map */
    )
 {
    int i;
@@ -773,8 +773,8 @@ RETCODE SCIPhashmapCreate(
    assert(hashmap != NULL);
    assert(mapsize > 0);
 
-   ALLOC_OKAY( allocMemory(hashmap) );
-   ALLOC_OKAY( allocMemoryArray(&(*hashmap)->lists, mapsize) );
+   SCIP_ALLOC( BMSallocMemory(hashmap) );
+   SCIP_ALLOC( BMSallocMemoryArray(&(*hashmap)->lists, mapsize) );
    (*hashmap)->blkmem = blkmem;
    (*hashmap)->nlists = mapsize;
 
@@ -787,7 +787,7 @@ RETCODE SCIPhashmapCreate(
 
 /** frees the hash map */
 void SCIPhashmapFree(
-   HASHMAP**        hashmap             /**< pointer to the hash map */
+   SCIP_HASHMAP**        hashmap             /**< pointer to the hash map */
    )
 {
    int i;
@@ -800,15 +800,15 @@ void SCIPhashmapFree(
       hashmaplistFree(&(*hashmap)->lists[i], (*hashmap)->blkmem);
 
    /* free main hast map data structure */
-   freeMemoryArray(&(*hashmap)->lists);
-   freeMemory(hashmap);
+   BMSfreeMemoryArray(&(*hashmap)->lists);
+   BMSfreeMemory(hashmap);
 }
 
 /** inserts new origin->image pair in hash map (must not be called for already existing origins!) */
-RETCODE SCIPhashmapInsert(
-   HASHMAP*         hashmap,            /**< hash map */
-   void*            origin,             /**< origin to set image for */
-   void*            image               /**< new image for origin */
+SCIP_RETCODE SCIPhashmapInsert(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin,             /**< origin to set image for */
+   void*                 image               /**< new image for origin */
    )
 {
    unsigned int hashval;
@@ -822,15 +822,15 @@ RETCODE SCIPhashmapInsert(
    hashval = (unsigned int)origin % (unsigned int)hashmap->nlists;
 
    /* append origin->image pair to the list at the hash position */
-   CHECK_OKAY( hashmaplistAppend(&hashmap->lists[hashval], hashmap->blkmem, origin, image) );
+   SCIP_CALL( hashmaplistAppend(&hashmap->lists[hashval], hashmap->blkmem, origin, image) );
    
    return SCIP_OKAY;
 }
 
 /** retrieves image of given origin from the hash map, or NULL if no image exists */
 void* SCIPhashmapGetImage(
-   HASHMAP*         hashmap,            /**< hash map */
-   void*            origin              /**< origin to retrieve image for */
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin              /**< origin to retrieve image for */
    )
 {
    unsigned int hashval;
@@ -850,10 +850,10 @@ void* SCIPhashmapGetImage(
 /** sets image for given origin in the hash map, either by modifying existing origin->image pair or by appending a
  *  new origin->image pair
  */
-RETCODE SCIPhashmapSetImage(
-   HASHMAP*         hashmap,            /**< hash map */
-   void*            origin,             /**< origin to set image for */
-   void*            image               /**< new image for origin */
+SCIP_RETCODE SCIPhashmapSetImage(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin,             /**< origin to set image for */
+   void*                 image               /**< new image for origin */
    )
 {
    unsigned int hashval;
@@ -867,15 +867,15 @@ RETCODE SCIPhashmapSetImage(
    hashval = (unsigned int)origin % (unsigned int)hashmap->nlists;
 
    /* set image for origin in hash list */
-   CHECK_OKAY( hashmaplistSetImage(&hashmap->lists[hashval], hashmap->blkmem, origin, image) );
+   SCIP_CALL( hashmaplistSetImage(&hashmap->lists[hashval], hashmap->blkmem, origin, image) );
    
    return SCIP_OKAY;
 }
 
 /** checks whether an image to the given origin exists in the hash map */
-Bool SCIPhashmapExists(
-   HASHMAP*         hashmap,            /**< hash map */
-   void*            origin              /**< origin to search for */
+SCIP_Bool SCIPhashmapExists(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin              /**< origin to search for */
    )
 {
    unsigned int hashval;
@@ -892,9 +892,9 @@ Bool SCIPhashmapExists(
 }
 
 /** removes origin->image pair from the hash map, if it exists */
-RETCODE SCIPhashmapRemove(
-   HASHMAP*         hashmap,            /**< hash map */
-   void*            origin              /**< origin to remove from the list */
+SCIP_RETCODE SCIPhashmapRemove(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin              /**< origin to remove from the list */
    )
 {
    unsigned int hashval;
@@ -908,17 +908,17 @@ RETCODE SCIPhashmapRemove(
    hashval = (unsigned int)origin % (unsigned int)hashmap->nlists;
 
    /* remove element from the list at the hash position */
-   CHECK_OKAY( hashmaplistRemove(&hashmap->lists[hashval], hashmap->blkmem, origin) );
+   SCIP_CALL( hashmaplistRemove(&hashmap->lists[hashval], hashmap->blkmem, origin) );
    
    return SCIP_OKAY;
 }
 
 /** prints statistics about hash map usage */
 void SCIPhashmapPrintStatistics(
-   HASHMAP*         hashmap             /**< hash map */
+   SCIP_HASHMAP*         hashmap             /**< hash map */
    )
 {
-   HASHMAPLIST* hashmaplist;
+   SCIP_HASHMAPLIST* hashmaplist;
    int usedslots;
    int maxslotsize;
    int sumslotsize;
@@ -948,10 +948,10 @@ void SCIPhashmapPrintStatistics(
    }
 
    SCIPmessagePrintInfo("%d hash entries, used %d/%d slots (%.1f%%)",
-      sumslotsize, usedslots, hashmap->nlists, 100.0*(Real)usedslots/(Real)(hashmap->nlists));
+      sumslotsize, usedslots, hashmap->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(hashmap->nlists));
    if( usedslots > 0 )
       SCIPmessagePrintInfo(", avg. %.1f entries/used slot, max. %d entries in slot", 
-         (Real)sumslotsize/(Real)usedslots, maxslotsize);
+         (SCIP_Real)sumslotsize/(SCIP_Real)usedslots, maxslotsize);
    SCIPmessagePrintInfo("\n");
 }
 
@@ -963,15 +963,15 @@ void SCIPhashmapPrintStatistics(
  */
 
 /** creates a dynamic array of real values */
-RETCODE SCIPrealarrayCreate(
-   REALARRAY**      realarray,          /**< pointer to store the real array */
-   BLKMEM*          blkmem              /**< block memory */
+SCIP_RETCODE SCIPrealarrayCreate(
+   SCIP_REALARRAY**      realarray,          /**< pointer to store the real array */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(realarray != NULL);
    assert(blkmem != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(blkmem, realarray) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, realarray) );
    (*realarray)->blkmem = blkmem;
    (*realarray)->vals = NULL;
    (*realarray)->valssize = 0;
@@ -983,19 +983,19 @@ RETCODE SCIPrealarrayCreate(
 }
 
 /** creates a copy of a dynamic array of real values */
-RETCODE SCIPrealarrayCopy(
-   REALARRAY**      realarray,          /**< pointer to store the copied real array */
-   BLKMEM*          blkmem,             /**< block memory */
-   REALARRAY*       sourcerealarray     /**< dynamic real array to copy */
+SCIP_RETCODE SCIPrealarrayCopy(
+   SCIP_REALARRAY**      realarray,          /**< pointer to store the copied real array */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_REALARRAY*       sourcerealarray     /**< dynamic real array to copy */
    )
 {
    assert(realarray != NULL);
    assert(sourcerealarray != NULL);
 
-   CHECK_OKAY( SCIPrealarrayCreate(realarray, blkmem) );
+   SCIP_CALL( SCIPrealarrayCreate(realarray, blkmem) );
    if( sourcerealarray->valssize > 0 )
    {
-      ALLOC_OKAY( duplicateBlockMemoryArray(blkmem, &(*realarray)->vals, sourcerealarray->vals,
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*realarray)->vals, sourcerealarray->vals,
                      sourcerealarray->valssize) );
    }
    (*realarray)->valssize = sourcerealarray->valssize;
@@ -1007,25 +1007,25 @@ RETCODE SCIPrealarrayCopy(
 }
 
 /** frees a dynamic array of real values */
-RETCODE SCIPrealarrayFree(
-   REALARRAY**      realarray           /**< pointer to the real array */
+SCIP_RETCODE SCIPrealarrayFree(
+   SCIP_REALARRAY**      realarray           /**< pointer to the real array */
    )
 {
    assert(realarray != NULL);
    assert(*realarray != NULL);
 
-   freeBlockMemoryArrayNull((*realarray)->blkmem, &(*realarray)->vals, (*realarray)->valssize);
-   freeBlockMemory((*realarray)->blkmem, realarray);
+   BMSfreeBlockMemoryArrayNull((*realarray)->blkmem, &(*realarray)->vals, (*realarray)->valssize);
+   BMSfreeBlockMemory((*realarray)->blkmem, realarray);
 
    return SCIP_OKAY;
 }
 
 /** extends dynamic array to be able to store indices from minidx to maxidx */
-RETCODE SCIPrealarrayExtend(
-   REALARRAY*       realarray,          /**< dynamic real array */
-   SET*             set,                /**< global SCIP settings */
-   int              minidx,             /**< smallest index to allocate storage for */
-   int              maxidx              /**< largest index to allocate storage for */
+SCIP_RETCODE SCIPrealarrayExtend(
+   SCIP_REALARRAY*       realarray,          /**< dynamic real array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   minidx,             /**< smallest index to allocate storage for */
+   int                   maxidx              /**< largest index to allocate storage for */
    )
 {
    int nused;
@@ -1046,19 +1046,19 @@ RETCODE SCIPrealarrayExtend(
    assert(0 <= minidx);
    assert(minidx <= maxidx);
 
-   debugMessage("extending realarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
+   SCIPdebugMessage("extending realarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
       realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx, minidx, maxidx);
 
    /* check, whether we have to allocate additional memory, or shift the array */
    nused = maxidx - minidx + 1;
    if( nused > realarray->valssize )
    {
-      Real* newvals;
+      SCIP_Real* newvals;
       int newvalssize;
 
       /* allocate new memory storage */
       newvalssize = SCIPsetCalcMemGrowSize(set, nused);
-      ALLOC_OKAY( allocBlockMemoryArray(realarray->blkmem, &newvals, newvalssize) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(realarray->blkmem, &newvals, newvalssize) );
       nfree = newvalssize - nused;
       newfirstidx = minidx - nfree/2;
       newfirstidx = MAX(newfirstidx, 0);
@@ -1070,7 +1070,7 @@ RETCODE SCIPrealarrayExtend(
       {
          for( i = 0; i < realarray->minusedidx - newfirstidx; ++i )
             newvals[i] = 0.0;
-         copyMemoryArray(&newvals[realarray->minusedidx - newfirstidx],
+         BMScopyMemoryArray(&newvals[realarray->minusedidx - newfirstidx],
             &realarray->vals[realarray->minusedidx - realarray->firstidx],
             realarray->maxusedidx - realarray->minusedidx + 1);
          for( i = realarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
@@ -1083,7 +1083,7 @@ RETCODE SCIPrealarrayExtend(
       }
 
       /* free old memory storage, and set the new array parameters */
-      freeBlockMemoryArrayNull(realarray->blkmem, &realarray->vals, realarray->valssize);
+      BMSfreeBlockMemoryArrayNull(realarray->blkmem, &realarray->vals, realarray->valssize);
       realarray->vals = newvals;
       realarray->valssize = newvalssize;
       realarray->firstidx = newfirstidx;
@@ -1171,13 +1171,13 @@ RETCODE SCIPrealarrayExtend(
 }
 
 /** clears a dynamic real array */
-RETCODE SCIPrealarrayClear(
-   REALARRAY*       realarray           /**< dynamic real array */
+SCIP_RETCODE SCIPrealarrayClear(
+   SCIP_REALARRAY*       realarray           /**< dynamic real array */
    )
 {
    assert(realarray != NULL);
 
-   debugMessage("clearing realarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
+   SCIPdebugMessage("clearing realarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
       realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx);
 
    if( realarray->minusedidx <= realarray->maxusedidx )
@@ -1204,9 +1204,9 @@ RETCODE SCIPrealarrayClear(
 }
 
 /** gets value of entry in dynamic array */
-Real SCIPrealarrayGetVal(
-   REALARRAY*       realarray,          /**< dynamic real array */
-   int              idx                 /**< array index to get value for */
+SCIP_Real SCIPrealarrayGetVal(
+   SCIP_REALARRAY*       realarray,          /**< dynamic real array */
+   int                   idx                 /**< array index to get value for */
    )
 {
    assert(realarray != NULL);
@@ -1225,23 +1225,23 @@ Real SCIPrealarrayGetVal(
 }
 
 /** sets value of entry in dynamic array */
-RETCODE SCIPrealarraySetVal(
-   REALARRAY*       realarray,          /**< dynamic real array */
-   SET*             set,                /**< global SCIP settings */
-   int              idx,                /**< array index to set value for */
-   Real             val                 /**< value to set array index to */
+SCIP_RETCODE SCIPrealarraySetVal(
+   SCIP_REALARRAY*       realarray,          /**< dynamic real array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   idx,                /**< array index to set value for */
+   SCIP_Real             val                 /**< value to set array index to */
    )
 {
    assert(realarray != NULL);
    assert(idx >= 0);
 
-   debugMessage("setting realarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %g\n", 
+   SCIPdebugMessage("setting realarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %g\n", 
       realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx, idx, val);
 
    if( !SCIPsetIsZero(set, val) )
    {
       /* extend array to be able to store the index */
-      CHECK_OKAY( SCIPrealarrayExtend(realarray, set, idx, idx) );
+      SCIP_CALL( SCIPrealarrayExtend(realarray, set, idx, idx) );
       assert(idx >= realarray->firstidx);
       assert(idx < realarray->firstidx + realarray->valssize);
       
@@ -1292,11 +1292,11 @@ RETCODE SCIPrealarraySetVal(
 }
 
 /** increases value of entry in dynamic array */
-RETCODE SCIPrealarrayIncVal(
-   REALARRAY*       realarray,          /**< dynamic real array */
-   SET*             set,                /**< global SCIP settings */
-   int              idx,                /**< array index to increase value for */
-   Real             incval              /**< value to increase array index */
+SCIP_RETCODE SCIPrealarrayIncVal(
+   SCIP_REALARRAY*       realarray,          /**< dynamic real array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   idx,                /**< array index to increase value for */
+   SCIP_Real             incval              /**< value to increase array index */
    )
 {
    return SCIPrealarraySetVal(realarray, set, idx, SCIPrealarrayGetVal(realarray, idx) + incval);
@@ -1304,7 +1304,7 @@ RETCODE SCIPrealarrayIncVal(
 
 /** returns the minimal index of all stored non-zero elements */
 int SCIPrealarrayGetMinIdx(
-   REALARRAY*       realarray           /**< dynamic real array */
+   SCIP_REALARRAY*       realarray           /**< dynamic real array */
    )
 {
    assert(realarray != NULL);
@@ -1314,7 +1314,7 @@ int SCIPrealarrayGetMinIdx(
 
 /** returns the maximal index of all stored non-zero elements */
 int SCIPrealarrayGetMaxIdx(
-   REALARRAY*       realarray           /**< dynamic real array */
+   SCIP_REALARRAY*       realarray           /**< dynamic real array */
    )
 {
    assert(realarray != NULL);
@@ -1323,15 +1323,15 @@ int SCIPrealarrayGetMaxIdx(
 }
 
 /** creates a dynamic array of int values */
-RETCODE SCIPintarrayCreate(
-   INTARRAY**       intarray,           /**< pointer to store the int array */
-   BLKMEM*          blkmem              /**< block memory */
+SCIP_RETCODE SCIPintarrayCreate(
+   SCIP_INTARRAY**       intarray,           /**< pointer to store the int array */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(intarray != NULL);
    assert(blkmem != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(blkmem, intarray) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, intarray) );
    (*intarray)->blkmem = blkmem;
    (*intarray)->vals = NULL;
    (*intarray)->valssize = 0;
@@ -1343,19 +1343,19 @@ RETCODE SCIPintarrayCreate(
 }
 
 /** creates a copy of a dynamic array of int values */
-RETCODE SCIPintarrayCopy(
-   INTARRAY**       intarray,           /**< pointer to store the copied int array */
-   BLKMEM*          blkmem,             /**< block memory */
-   INTARRAY*        sourceintarray      /**< dynamic int array to copy */
+SCIP_RETCODE SCIPintarrayCopy(
+   SCIP_INTARRAY**       intarray,           /**< pointer to store the copied int array */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_INTARRAY*        sourceintarray      /**< dynamic int array to copy */
    )
 {
    assert(intarray != NULL);
    assert(sourceintarray != NULL);
 
-   CHECK_OKAY( SCIPintarrayCreate(intarray, blkmem) );
+   SCIP_CALL( SCIPintarrayCreate(intarray, blkmem) );
    if( sourceintarray->valssize > 0 )
    {
-      ALLOC_OKAY( duplicateBlockMemoryArray(blkmem, &(*intarray)->vals, sourceintarray->vals, sourceintarray->valssize) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*intarray)->vals, sourceintarray->vals, sourceintarray->valssize) );
    }
    (*intarray)->valssize = sourceintarray->valssize;
    (*intarray)->firstidx = sourceintarray->firstidx;
@@ -1366,25 +1366,25 @@ RETCODE SCIPintarrayCopy(
 }
 
 /** frees a dynamic array of int values */
-RETCODE SCIPintarrayFree(
-   INTARRAY**       intarray            /**< pointer to the int array */
+SCIP_RETCODE SCIPintarrayFree(
+   SCIP_INTARRAY**       intarray            /**< pointer to the int array */
    )
 {
    assert(intarray != NULL);
    assert(*intarray != NULL);
 
-   freeBlockMemoryArrayNull((*intarray)->blkmem, &(*intarray)->vals, (*intarray)->valssize);
-   freeBlockMemory((*intarray)->blkmem, intarray);
+   BMSfreeBlockMemoryArrayNull((*intarray)->blkmem, &(*intarray)->vals, (*intarray)->valssize);
+   BMSfreeBlockMemory((*intarray)->blkmem, intarray);
 
    return SCIP_OKAY;
 }
 
 /** extends dynamic array to be able to store indices from minidx to maxidx */
-RETCODE SCIPintarrayExtend(
-   INTARRAY*        intarray,           /**< dynamic int array */
-   SET*             set,                /**< global SCIP settings */
-   int              minidx,             /**< smallest index to allocate storage for */
-   int              maxidx              /**< largest index to allocate storage for */
+SCIP_RETCODE SCIPintarrayExtend(
+   SCIP_INTARRAY*        intarray,           /**< dynamic int array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   minidx,             /**< smallest index to allocate storage for */
+   int                   maxidx              /**< largest index to allocate storage for */
    )
 {
    int nused;
@@ -1405,7 +1405,7 @@ RETCODE SCIPintarrayExtend(
    assert(0 <= minidx);
    assert(minidx <= maxidx);
 
-   debugMessage("extending intarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
+   SCIPdebugMessage("extending intarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
       intarray, intarray->firstidx, intarray->valssize, intarray->minusedidx, intarray->maxusedidx, minidx, maxidx);
 
    /* check, whether we have to allocate additional memory, or shift the array */
@@ -1417,7 +1417,7 @@ RETCODE SCIPintarrayExtend(
 
       /* allocate new memory storage */
       newvalssize = SCIPsetCalcMemGrowSize(set, nused);
-      ALLOC_OKAY( allocBlockMemoryArray(intarray->blkmem, &newvals, newvalssize) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(intarray->blkmem, &newvals, newvalssize) );
       nfree = newvalssize - nused;
       newfirstidx = minidx - nfree/2;
       newfirstidx = MAX(newfirstidx, 0);
@@ -1429,7 +1429,7 @@ RETCODE SCIPintarrayExtend(
       {
          for( i = 0; i < intarray->minusedidx - newfirstidx; ++i )
             newvals[i] = 0;
-         copyMemoryArray(&newvals[intarray->minusedidx - newfirstidx],
+         BMScopyMemoryArray(&newvals[intarray->minusedidx - newfirstidx],
             &intarray->vals[intarray->minusedidx - intarray->firstidx],
             intarray->maxusedidx - intarray->minusedidx + 1);
          for( i = intarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
@@ -1442,7 +1442,7 @@ RETCODE SCIPintarrayExtend(
       }
 
       /* free old memory storage, and set the new array parameters */
-      freeBlockMemoryArrayNull(intarray->blkmem, &intarray->vals, intarray->valssize);
+      BMSfreeBlockMemoryArrayNull(intarray->blkmem, &intarray->vals, intarray->valssize);
       intarray->vals = newvals;
       intarray->valssize = newvalssize;
       intarray->firstidx = newfirstidx;
@@ -1530,13 +1530,13 @@ RETCODE SCIPintarrayExtend(
 }
 
 /** clears a dynamic int array */
-RETCODE SCIPintarrayClear(
-   INTARRAY*        intarray            /**< dynamic int array */
+SCIP_RETCODE SCIPintarrayClear(
+   SCIP_INTARRAY*        intarray            /**< dynamic int array */
    )
 {
    assert(intarray != NULL);
 
-   debugMessage("clearing intarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
+   SCIPdebugMessage("clearing intarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
       intarray, intarray->firstidx, intarray->valssize, intarray->minusedidx, intarray->maxusedidx);
 
    if( intarray->minusedidx <= intarray->maxusedidx )
@@ -1564,8 +1564,8 @@ RETCODE SCIPintarrayClear(
 
 /** gets value of entry in dynamic array */
 int SCIPintarrayGetVal(
-   INTARRAY*        intarray,           /**< dynamic int array */
-   int              idx                 /**< array index to get value for */
+   SCIP_INTARRAY*        intarray,           /**< dynamic int array */
+   int                   idx                 /**< array index to get value for */
    )
 {
    assert(intarray != NULL);
@@ -1584,23 +1584,23 @@ int SCIPintarrayGetVal(
 }
 
 /** sets value of entry in dynamic array */
-RETCODE SCIPintarraySetVal(
-   INTARRAY*        intarray,           /**< dynamic int array */
-   SET*             set,                /**< global SCIP settings */
-   int              idx,                /**< array index to set value for */
-   int              val                 /**< value to set array index to */
+SCIP_RETCODE SCIPintarraySetVal(
+   SCIP_INTARRAY*        intarray,           /**< dynamic int array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   idx,                /**< array index to set value for */
+   int                   val                 /**< value to set array index to */
    )
 {
    assert(intarray != NULL);
    assert(idx >= 0);
 
-   debugMessage("setting intarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %d\n", 
+   SCIPdebugMessage("setting intarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %d\n", 
       intarray, intarray->firstidx, intarray->valssize, intarray->minusedidx, intarray->maxusedidx, idx, val);
 
    if( val != 0 )
    {
       /* extend array to be able to store the index */
-      CHECK_OKAY( SCIPintarrayExtend(intarray, set, idx, idx) );
+      SCIP_CALL( SCIPintarrayExtend(intarray, set, idx, idx) );
       assert(idx >= intarray->firstidx);
       assert(idx < intarray->firstidx + intarray->valssize);
       
@@ -1651,11 +1651,11 @@ RETCODE SCIPintarraySetVal(
 }
 
 /** increases value of entry in dynamic array */
-RETCODE SCIPintarrayIncVal(
-   INTARRAY*        intarray,           /**< dynamic int array */
-   SET*             set,                /**< global SCIP settings */
-   int              idx,                /**< array index to increase value for */
-   int              incval              /**< value to increase array index */
+SCIP_RETCODE SCIPintarrayIncVal(
+   SCIP_INTARRAY*        intarray,           /**< dynamic int array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   idx,                /**< array index to increase value for */
+   int                   incval              /**< value to increase array index */
    )
 {
    return SCIPintarraySetVal(intarray, set, idx, SCIPintarrayGetVal(intarray, idx) + incval);
@@ -1663,7 +1663,7 @@ RETCODE SCIPintarrayIncVal(
 
 /** returns the minimal index of all stored non-zero elements */
 int SCIPintarrayGetMinIdx(
-   INTARRAY*        intarray            /**< dynamic int array */
+   SCIP_INTARRAY*        intarray            /**< dynamic int array */
    )
 {
    assert(intarray != NULL);
@@ -1673,7 +1673,7 @@ int SCIPintarrayGetMinIdx(
 
 /** returns the maximal index of all stored non-zero elements */
 int SCIPintarrayGetMaxIdx(
-   INTARRAY*        intarray            /**< dynamic int array */
+   SCIP_INTARRAY*        intarray            /**< dynamic int array */
    )
 {
    assert(intarray != NULL);
@@ -1683,15 +1683,15 @@ int SCIPintarrayGetMaxIdx(
 
 
 /** creates a dynamic array of bool values */
-RETCODE SCIPboolarrayCreate(
-   BOOLARRAY**      boolarray,          /**< pointer to store the bool array */
-   BLKMEM*          blkmem              /**< block memory */
+SCIP_RETCODE SCIPboolarrayCreate(
+   SCIP_BOOLARRAY**      boolarray,          /**< pointer to store the bool array */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(boolarray != NULL);
    assert(blkmem != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(blkmem, boolarray) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, boolarray) );
    (*boolarray)->blkmem = blkmem;
    (*boolarray)->vals = NULL;
    (*boolarray)->valssize = 0;
@@ -1703,19 +1703,19 @@ RETCODE SCIPboolarrayCreate(
 }
 
 /** creates a copy of a dynamic array of bool values */
-RETCODE SCIPboolarrayCopy(
-   BOOLARRAY**      boolarray,          /**< pointer to store the copied bool array */
-   BLKMEM*          blkmem,             /**< block memory */
-   BOOLARRAY*       sourceboolarray     /**< dynamic bool array to copy */
+SCIP_RETCODE SCIPboolarrayCopy(
+   SCIP_BOOLARRAY**      boolarray,          /**< pointer to store the copied bool array */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_BOOLARRAY*       sourceboolarray     /**< dynamic bool array to copy */
    )
 {
    assert(boolarray != NULL);
    assert(sourceboolarray != NULL);
 
-   CHECK_OKAY( SCIPboolarrayCreate(boolarray, blkmem) );
+   SCIP_CALL( SCIPboolarrayCreate(boolarray, blkmem) );
    if( sourceboolarray->valssize > 0 )
    {
-      ALLOC_OKAY( duplicateBlockMemoryArray(blkmem, &(*boolarray)->vals, sourceboolarray->vals, 
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*boolarray)->vals, sourceboolarray->vals, 
                      sourceboolarray->valssize) );
    }
    (*boolarray)->valssize = sourceboolarray->valssize;
@@ -1727,25 +1727,25 @@ RETCODE SCIPboolarrayCopy(
 }
 
 /** frees a dynamic array of bool values */
-RETCODE SCIPboolarrayFree(
-   BOOLARRAY**      boolarray           /**< pointer to the bool array */
+SCIP_RETCODE SCIPboolarrayFree(
+   SCIP_BOOLARRAY**      boolarray           /**< pointer to the bool array */
    )
 {
    assert(boolarray != NULL);
    assert(*boolarray != NULL);
 
-   freeBlockMemoryArrayNull((*boolarray)->blkmem, &(*boolarray)->vals, (*boolarray)->valssize);
-   freeBlockMemory((*boolarray)->blkmem, boolarray);
+   BMSfreeBlockMemoryArrayNull((*boolarray)->blkmem, &(*boolarray)->vals, (*boolarray)->valssize);
+   BMSfreeBlockMemory((*boolarray)->blkmem, boolarray);
 
    return SCIP_OKAY;
 }
 
 /** extends dynamic array to be able to store indices from minidx to maxidx */
-RETCODE SCIPboolarrayExtend(
-   BOOLARRAY*       boolarray,          /**< dynamic bool array */
-   SET*             set,                /**< global SCIP settings */
-   int              minidx,             /**< smallest index to allocate storage for */
-   int              maxidx              /**< largest index to allocate storage for */
+SCIP_RETCODE SCIPboolarrayExtend(
+   SCIP_BOOLARRAY*       boolarray,          /**< dynamic bool array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   minidx,             /**< smallest index to allocate storage for */
+   int                   maxidx              /**< largest index to allocate storage for */
    )
 {
    int nused;
@@ -1766,19 +1766,19 @@ RETCODE SCIPboolarrayExtend(
    assert(0 <= minidx);
    assert(minidx <= maxidx);
 
-   debugMessage("extending boolarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
+   SCIPdebugMessage("extending boolarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
       boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx, minidx, maxidx);
 
    /* check, whether we have to allocate additional memory, or shift the array */
    nused = maxidx - minidx + 1;
    if( nused > boolarray->valssize )
    {
-      Bool* newvals;
+      SCIP_Bool* newvals;
       int newvalssize;
 
       /* allocate new memory storage */
       newvalssize = SCIPsetCalcMemGrowSize(set, nused);
-      ALLOC_OKAY( allocBlockMemoryArray(boolarray->blkmem, &newvals, newvalssize) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(boolarray->blkmem, &newvals, newvalssize) );
       nfree = newvalssize - nused;
       newfirstidx = minidx - nfree/2;
       newfirstidx = MAX(newfirstidx, 0);
@@ -1790,7 +1790,7 @@ RETCODE SCIPboolarrayExtend(
       {
          for( i = 0; i < boolarray->minusedidx - newfirstidx; ++i )
             newvals[i] = FALSE;
-         copyMemoryArray(&newvals[boolarray->minusedidx - newfirstidx],
+         BMScopyMemoryArray(&newvals[boolarray->minusedidx - newfirstidx],
             &boolarray->vals[boolarray->minusedidx - boolarray->firstidx],
             boolarray->maxusedidx - boolarray->minusedidx + 1);
          for( i = boolarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
@@ -1803,7 +1803,7 @@ RETCODE SCIPboolarrayExtend(
       }
 
       /* free old memory storage, and set the new array parameters */
-      freeBlockMemoryArrayNull(boolarray->blkmem, &boolarray->vals, boolarray->valssize);
+      BMSfreeBlockMemoryArrayNull(boolarray->blkmem, &boolarray->vals, boolarray->valssize);
       boolarray->vals = newvals;
       boolarray->valssize = newvalssize;
       boolarray->firstidx = newfirstidx;
@@ -1891,13 +1891,13 @@ RETCODE SCIPboolarrayExtend(
 }
 
 /** clears a dynamic bool array */
-RETCODE SCIPboolarrayClear(
-   BOOLARRAY*       boolarray           /**< dynamic bool array */
+SCIP_RETCODE SCIPboolarrayClear(
+   SCIP_BOOLARRAY*       boolarray           /**< dynamic bool array */
    )
 {
    assert(boolarray != NULL);
 
-   debugMessage("clearing boolarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
+   SCIPdebugMessage("clearing boolarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
       boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx);
 
    if( boolarray->minusedidx <= boolarray->maxusedidx )
@@ -1924,9 +1924,9 @@ RETCODE SCIPboolarrayClear(
 }
 
 /** gets value of entry in dynamic array */
-Bool SCIPboolarrayGetVal(
-   BOOLARRAY*       boolarray,          /**< dynamic bool array */
-   int              idx                 /**< array index to get value for */
+SCIP_Bool SCIPboolarrayGetVal(
+   SCIP_BOOLARRAY*       boolarray,          /**< dynamic bool array */
+   int                   idx                 /**< array index to get value for */
    )
 {
    assert(boolarray != NULL);
@@ -1945,23 +1945,23 @@ Bool SCIPboolarrayGetVal(
 }
 
 /** sets value of entry in dynamic array */
-RETCODE SCIPboolarraySetVal(
-   BOOLARRAY*       boolarray,          /**< dynamic bool array */
-   SET*             set,                /**< global SCIP settings */
-   int              idx,                /**< array index to set value for */
-   Bool             val                 /**< value to set array index to */
+SCIP_RETCODE SCIPboolarraySetVal(
+   SCIP_BOOLARRAY*       boolarray,          /**< dynamic bool array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   idx,                /**< array index to set value for */
+   SCIP_Bool             val                 /**< value to set array index to */
    )
 {
    assert(boolarray != NULL);
    assert(idx >= 0);
 
-   debugMessage("setting boolarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %d\n", 
+   SCIPdebugMessage("setting boolarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %d\n", 
       boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx, idx, val);
 
    if( val != FALSE )
    {
       /* extend array to be able to store the index */
-      CHECK_OKAY( SCIPboolarrayExtend(boolarray, set, idx, idx) );
+      SCIP_CALL( SCIPboolarrayExtend(boolarray, set, idx, idx) );
       assert(idx >= boolarray->firstidx);
       assert(idx < boolarray->firstidx + boolarray->valssize);
       
@@ -2013,7 +2013,7 @@ RETCODE SCIPboolarraySetVal(
 
 /** returns the minimal index of all stored non-zero elements */
 int SCIPboolarrayGetMinIdx(
-   BOOLARRAY*       boolarray           /**< dynamic bool array */
+   SCIP_BOOLARRAY*       boolarray           /**< dynamic bool array */
    )
 {
    assert(boolarray != NULL);
@@ -2023,7 +2023,7 @@ int SCIPboolarrayGetMinIdx(
 
 /** returns the maximal index of all stored non-zero elements */
 int SCIPboolarrayGetMaxIdx(
-   BOOLARRAY*       boolarray           /**< dynamic bool array */
+   SCIP_BOOLARRAY*       boolarray           /**< dynamic bool array */
    )
 {
    assert(boolarray != NULL);
@@ -2033,15 +2033,15 @@ int SCIPboolarrayGetMaxIdx(
 
 
 /** creates a dynamic array of pointer values */
-RETCODE SCIPptrarrayCreate(
-   PTRARRAY**       ptrarray,           /**< pointer to store the ptr array */
-   BLKMEM*          blkmem              /**< block memory */
+SCIP_RETCODE SCIPptrarrayCreate(
+   SCIP_PTRARRAY**       ptrarray,           /**< pointer to store the ptr array */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(ptrarray != NULL);
    assert(blkmem != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(blkmem, ptrarray) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, ptrarray) );
    (*ptrarray)->blkmem = blkmem;
    (*ptrarray)->vals = NULL;
    (*ptrarray)->valssize = 0;
@@ -2053,19 +2053,19 @@ RETCODE SCIPptrarrayCreate(
 }
 
 /** creates a copy of a dynamic array of pointer values */
-RETCODE SCIPptrarrayCopy(
-   PTRARRAY**       ptrarray,           /**< pointer to store the copied ptr array */
-   BLKMEM*          blkmem,             /**< block memory */
-   PTRARRAY*        sourceptrarray      /**< dynamic ptr array to copy */
+SCIP_RETCODE SCIPptrarrayCopy(
+   SCIP_PTRARRAY**       ptrarray,           /**< pointer to store the copied ptr array */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_PTRARRAY*        sourceptrarray      /**< dynamic ptr array to copy */
    )
 {
    assert(ptrarray != NULL);
    assert(sourceptrarray != NULL);
 
-   CHECK_OKAY( SCIPptrarrayCreate(ptrarray, blkmem) );
+   SCIP_CALL( SCIPptrarrayCreate(ptrarray, blkmem) );
    if( sourceptrarray->valssize > 0 )
    {
-      ALLOC_OKAY( duplicateBlockMemoryArray(blkmem, &(*ptrarray)->vals, sourceptrarray->vals, sourceptrarray->valssize) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*ptrarray)->vals, sourceptrarray->vals, sourceptrarray->valssize) );
    }
    (*ptrarray)->valssize = sourceptrarray->valssize;
    (*ptrarray)->firstidx = sourceptrarray->firstidx;
@@ -2076,25 +2076,25 @@ RETCODE SCIPptrarrayCopy(
 }
 
 /** frees a dynamic array of pointer values */
-RETCODE SCIPptrarrayFree(
-   PTRARRAY**       ptrarray            /**< pointer to the ptr array */
+SCIP_RETCODE SCIPptrarrayFree(
+   SCIP_PTRARRAY**       ptrarray            /**< pointer to the ptr array */
    )
 {
    assert(ptrarray != NULL);
    assert(*ptrarray != NULL);
 
-   freeBlockMemoryArrayNull((*ptrarray)->blkmem, &(*ptrarray)->vals, (*ptrarray)->valssize);
-   freeBlockMemory((*ptrarray)->blkmem, ptrarray);
+   BMSfreeBlockMemoryArrayNull((*ptrarray)->blkmem, &(*ptrarray)->vals, (*ptrarray)->valssize);
+   BMSfreeBlockMemory((*ptrarray)->blkmem, ptrarray);
 
    return SCIP_OKAY;
 }
 
 /** extends dynamic array to be able to store indices from minidx to maxidx */
-RETCODE SCIPptrarrayExtend(
-   PTRARRAY*        ptrarray,           /**< dynamic ptr array */
-   SET*             set,                /**< global SCIP settings */
-   int              minidx,             /**< smallest index to allocate storage for */
-   int              maxidx              /**< largest index to allocate storage for */
+SCIP_RETCODE SCIPptrarrayExtend(
+   SCIP_PTRARRAY*        ptrarray,           /**< dynamic ptr array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   minidx,             /**< smallest index to allocate storage for */
+   int                   maxidx              /**< largest index to allocate storage for */
    )
 {
    int nused;
@@ -2115,7 +2115,7 @@ RETCODE SCIPptrarrayExtend(
    assert(0 <= minidx);
    assert(minidx <= maxidx);
 
-   debugMessage("extending ptrarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
+   SCIPdebugMessage("extending ptrarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
       ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx, minidx, maxidx);
 
    /* check, whether we have to allocate additional memory, or shift the array */
@@ -2127,7 +2127,7 @@ RETCODE SCIPptrarrayExtend(
 
       /* allocate new memory storage */
       newvalssize = SCIPsetCalcMemGrowSize(set, nused);
-      ALLOC_OKAY( allocBlockMemoryArray(ptrarray->blkmem, &newvals, newvalssize) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(ptrarray->blkmem, &newvals, newvalssize) );
       nfree = newvalssize - nused;
       newfirstidx = minidx - nfree/2;
       newfirstidx = MAX(newfirstidx, 0);
@@ -2139,7 +2139,7 @@ RETCODE SCIPptrarrayExtend(
       {
          for( i = 0; i < ptrarray->minusedidx - newfirstidx; ++i )
             newvals[i] = NULL;
-         copyMemoryArray(&newvals[ptrarray->minusedidx - newfirstidx],
+         BMScopyMemoryArray(&newvals[ptrarray->minusedidx - newfirstidx],
             &ptrarray->vals[ptrarray->minusedidx - ptrarray->firstidx],
             ptrarray->maxusedidx - ptrarray->minusedidx + 1);
          for( i = ptrarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
@@ -2152,7 +2152,7 @@ RETCODE SCIPptrarrayExtend(
       }
 
       /* free old memory storage, and set the new array parameters */
-      freeBlockMemoryArrayNull(ptrarray->blkmem, &ptrarray->vals, ptrarray->valssize);
+      BMSfreeBlockMemoryArrayNull(ptrarray->blkmem, &ptrarray->vals, ptrarray->valssize);
       ptrarray->vals = newvals;
       ptrarray->valssize = newvalssize;
       ptrarray->firstidx = newfirstidx;
@@ -2240,13 +2240,13 @@ RETCODE SCIPptrarrayExtend(
 }
 
 /** clears a dynamic pointer array */
-RETCODE SCIPptrarrayClear(
-   PTRARRAY*        ptrarray            /**< dynamic ptr array */
+SCIP_RETCODE SCIPptrarrayClear(
+   SCIP_PTRARRAY*        ptrarray            /**< dynamic ptr array */
    )
 {
    assert(ptrarray != NULL);
 
-   debugMessage("clearing ptrarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
+   SCIPdebugMessage("clearing ptrarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
       ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx);
 
    if( ptrarray->minusedidx <= ptrarray->maxusedidx )
@@ -2274,8 +2274,8 @@ RETCODE SCIPptrarrayClear(
 
 /** gets value of entry in dynamic array */
 void* SCIPptrarrayGetVal(
-   PTRARRAY*        ptrarray,           /**< dynamic ptr array */
-   int              idx                 /**< array index to get value for */
+   SCIP_PTRARRAY*        ptrarray,           /**< dynamic ptr array */
+   int                   idx                 /**< array index to get value for */
    )
 {
    assert(ptrarray != NULL);
@@ -2294,23 +2294,23 @@ void* SCIPptrarrayGetVal(
 }
 
 /** sets value of entry in dynamic array */
-RETCODE SCIPptrarraySetVal(
-   PTRARRAY*        ptrarray,           /**< dynamic ptr array */
-   SET*             set,                /**< global SCIP settings */
-   int              idx,                /**< array index to set value for */
-   void*            val                 /**< value to set array index to */
+SCIP_RETCODE SCIPptrarraySetVal(
+   SCIP_PTRARRAY*        ptrarray,           /**< dynamic ptr array */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   idx,                /**< array index to set value for */
+   void*                 val                 /**< value to set array index to */
    )
 {
    assert(ptrarray != NULL);
    assert(idx >= 0);
 
-   debugMessage("setting ptrarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %p\n", 
+   SCIPdebugMessage("setting ptrarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %p\n", 
       ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx, idx, val);
 
    if( val != NULL )
    {
       /* extend array to be able to store the index */
-      CHECK_OKAY( SCIPptrarrayExtend(ptrarray, set, idx, idx) );
+      SCIP_CALL( SCIPptrarrayExtend(ptrarray, set, idx, idx) );
       assert(idx >= ptrarray->firstidx);
       assert(idx < ptrarray->firstidx + ptrarray->valssize);
       
@@ -2362,7 +2362,7 @@ RETCODE SCIPptrarraySetVal(
 
 /** returns the minimal index of all stored non-zero elements */
 int SCIPptrarrayGetMinIdx(
-   PTRARRAY*        ptrarray            /**< dynamic ptr array */
+   SCIP_PTRARRAY*        ptrarray            /**< dynamic ptr array */
    )
 {
    assert(ptrarray != NULL);
@@ -2372,7 +2372,7 @@ int SCIPptrarrayGetMinIdx(
 
 /** returns the maximal index of all stored non-zero elements */
 int SCIPptrarrayGetMaxIdx(
-   PTRARRAY*        ptrarray            /**< dynamic ptr array */
+   SCIP_PTRARRAY*        ptrarray            /**< dynamic ptr array */
    )
 {
    assert(ptrarray != NULL);
@@ -2389,10 +2389,10 @@ int SCIPptrarrayGetMaxIdx(
 
 /** bubble sort an indexed element set, resulting in a permutation index array */
 void SCIPbsort(
-   void*            dataptr,            /**< pointer to data field that is given to the external compare method */
-   int              len,                /**< number of elements to be sorted (valid index range) */
-   DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
-   int*             indarray            /**< pointer to store the sorted index array */
+   void*                 dataptr,            /**< pointer to data field that is given to the external compare method */
+   int                   len,                /**< number of elements to be sorted (valid index range) */
+   SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
+   int*                  indarray            /**< pointer to store the sorted index array */
    )
 {
    int firstpos;
@@ -2463,9 +2463,9 @@ void SCIPbsort(
 
 /** bubble sort of an array of pointers */
 void SCIPbsortPtr(
-   void**           ptrarray,           /**< pointer array to be sorted */
-   int              len,                /**< length of array */
-   DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+   void**                ptrarray,           /**< pointer array to be sorted */
+   int                   len,                /**< length of array */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
    )
 {
    int firstpos;
@@ -2531,10 +2531,10 @@ void SCIPbsortPtr(
 
 /** bubble sort of two joint arrays of pointers/Reals, sorted by first array */
 void SCIPbsortPtrReal(
-   void**           ptrarray,           /**< pointer array to be sorted */
-   Real*            realarray,          /**< Real array to be permuted in the same way */
-   int              len,                /**< length of arrays */
-   DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+   void**                ptrarray,           /**< pointer array to be sorted */
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+   int                   len,                /**< length of arrays */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
    )
 {
    int firstpos;
@@ -2542,7 +2542,7 @@ void SCIPbsortPtrReal(
    int pos;
    int sortpos;
    void* tmpptr;
-   Real tmpreal;
+   SCIP_Real tmpreal;
 
    assert(len == 0 || ptrarray != NULL);
    assert(len == 0 || realarray != NULL);
@@ -2608,10 +2608,10 @@ void SCIPbsortPtrReal(
 
 /** bubble sort of two joint arrays of pointers/ints, sorted by first array */
 void SCIPbsortPtrInt(
-   void**           ptrarray,           /**< pointer array to be sorted */
-   int*             intarray,           /**< int array to be permuted in the same way */
-   int              len,                /**< length of arrays */
-   DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+   void**                ptrarray,           /**< pointer array to be sorted */
+   int*                  intarray,           /**< int array to be permuted in the same way */
+   int                   len,                /**< length of arrays */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
    )
 {
    int firstpos;
@@ -2685,11 +2685,11 @@ void SCIPbsortPtrInt(
 
 /** bubble sort of three joint arrays of pointers/ints/ints, sorted by first array */
 void SCIPbsortPtrIntInt(
-   void**           ptrarray,           /**< pointer array to be sorted */
-   int*             intarray1,          /**< first int array to be permuted in the same way */
-   int*             intarray2,          /**< second int array to be permuted in the same way */
-   int              len,                /**< length of arrays */
-   DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+   void**                ptrarray,           /**< pointer array to be sorted */
+   int*                  intarray1,          /**< first int array to be permuted in the same way */
+   int*                  intarray2,          /**< second int array to be permuted in the same way */
+   int                   len,                /**< length of arrays */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
    )
 {
    int firstpos;
@@ -2771,11 +2771,11 @@ void SCIPbsortPtrIntInt(
 
 /** bubble sort of three joint arrays of pointers/Reals/ints, sorted by first */
 void SCIPbsortPtrRealInt(
-   void**           ptrarray,           /**< pointer array to be sorted */
-   Real*            realarray,          /**< Real array to be permuted in the same way */
-   int*             intarray,           /**< int array to be permuted in the same way */
-   int              len,                /**< length of arrays */
-   DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+   void**                ptrarray,           /**< pointer array to be sorted */
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+   int*                  intarray,           /**< int array to be permuted in the same way */
+   int                   len,                /**< length of arrays */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
    )
 {
    int firstpos;
@@ -2783,7 +2783,7 @@ void SCIPbsortPtrRealInt(
    int pos;
    int sortpos;
    void* tmpptr;
-   Real tmpreal;
+   SCIP_Real tmpreal;
    int tmpint;
 
    assert(len == 0 || ptrarray != NULL);
@@ -2857,12 +2857,12 @@ void SCIPbsortPtrRealInt(
 
 /** bubble sort of four joint arrays of pointers/Reals/ints/ints, sorted by first */
 void SCIPbsortPtrRealIntInt(
-   void**           ptrarray,           /**< pointer array to be sorted */
-   Real*            realarray,          /**< Real array to be permuted in the same way */
-   int*             intarray1,          /**< first int array to be permuted in the same way */
-   int*             intarray2,          /**< second int array to be permuted in the same way */
-   int              len,                /**< length of arrays */
-   DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+   void**                ptrarray,           /**< pointer array to be sorted */
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+   int*                  intarray1,          /**< first int array to be permuted in the same way */
+   int*                  intarray2,          /**< second int array to be permuted in the same way */
+   int                   len,                /**< length of arrays */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
    )
 {
    int firstpos;
@@ -2870,7 +2870,7 @@ void SCIPbsortPtrRealIntInt(
    int pos;
    int sortpos;
    void* tmpptr;
-   Real tmpreal;
+   SCIP_Real tmpreal;
    int tmpint1;
    int tmpint2;
 
@@ -2950,18 +2950,18 @@ void SCIPbsortPtrRealIntInt(
    }
 }
 
-/** bubble sort of two joint arrays of Reals/pointers, sorted s.t. the Real array is in non-decreasing order */
+/** bubble sort of two joint arrays of Reals/pointers, sorted s.t. the SCIP_Real array is in non-decreasing order */
 void SCIPbsortRealPtr(
-   Real*            realarray,          /**< Real array to be permuted in the same way */
-   void**           ptrarray,           /**< pointer array to be sorted */
-   int              len                 /**< length of arrays */
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+   void**                ptrarray,           /**< pointer array to be sorted */
+   int                   len                 /**< length of arrays */
    )
 {
    int firstpos;
    int lastpos;
    int pos;
    int sortpos;
-   Real tmpreal;
+   SCIP_Real tmpreal;
    void* tmpptr;
 
    assert(len == 0 || realarray != NULL);
@@ -3031,14 +3031,14 @@ void SCIPbsortRealPtr(
  */
 
 /** returns the machine epsilon: the smallest number eps > 0, for which 1.0 + eps > 1.0 */
-Real SCIPcalcMachineEpsilon(
+SCIP_Real SCIPcalcMachineEpsilon(
    void
    )
 {
-   Real eps;
-   Real lasteps;
-   Real one;
-   Real onepluseps;
+   SCIP_Real eps;
+   SCIP_Real lasteps;
+   SCIP_Real one;
+   SCIP_Real onepluseps;
 
    one = 1.0;
    eps = 1.0;
@@ -3054,13 +3054,13 @@ Real SCIPcalcMachineEpsilon(
 }
 
 /** calculates the greatest common divisor of the two given values */
-Longint SCIPcalcGreComDiv(
-   Longint          val1,               /**< first value of greatest common devisor calculation */
-   Longint          val2                /**< second value of greatest common devisor calculation */
+SCIP_Longint SCIPcalcGreComDiv(
+   SCIP_Longint          val1,               /**< first value of greatest common devisor calculation */
+   SCIP_Longint          val2                /**< second value of greatest common devisor calculation */
    )
 {
-   Longint t;
-   Longint gcd;
+   SCIP_Longint t;
+   SCIP_Longint gcd;
 
    assert(val1 > 0);
    assert(val2 > 0);
@@ -3094,12 +3094,12 @@ Longint SCIPcalcGreComDiv(
 }
 
 /** calculates the smallest common multiple of the two given values */
-Longint SCIPcalcSmaComMul(
-   Longint          val1,               /**< first value of smallest common multiple calculation */
-   Longint          val2                /**< second value of smallest common multiple calculation */
+SCIP_Longint SCIPcalcSmaComMul(
+   SCIP_Longint          val1,               /**< first value of smallest common multiple calculation */
+   SCIP_Longint          val2                /**< second value of smallest common multiple calculation */
    )
 {
-   Longint gcd;
+   SCIP_Longint gcd;
 
    assert(val1 > 0);
    assert(val2 > 0);
@@ -3109,32 +3109,32 @@ Longint SCIPcalcSmaComMul(
    return val1/gcd * val2;
 }
 
-static const Real simplednoms[] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+static const SCIP_Real simplednoms[] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
                                    17.0, 18.0, 19.0, 25.0, -1.0};
 
 /** converts a real number into a (approximate) rational representation, and returns TRUE iff the conversion was
  *  successful
  */
-Bool SCIPrealToRational(
-   Real             val,                /**< real value r to convert into rational number */
-   Real             mindelta,           /**< minimal allowed difference r - q of real r and rational q = n/d */
-   Real             maxdelta,           /**< maximal allowed difference r - q of real r and rational q = n/d */
-   Longint          maxdnom,            /**< maximal denominator allowed */
-   Longint*         nominator,          /**< pointer to store the nominator n of the rational number */
-   Longint*         denominator         /**< pointer to store the denominator d of the rational number */
+SCIP_Bool SCIPrealToRational(
+   SCIP_Real             val,                /**< real value r to convert into rational number */
+   SCIP_Real             mindelta,           /**< minimal allowed difference r - q of real r and rational q = n/d */
+   SCIP_Real             maxdelta,           /**< maximal allowed difference r - q of real r and rational q = n/d */
+   SCIP_Longint          maxdnom,            /**< maximal denominator allowed */
+   SCIP_Longint*         nominator,          /**< pointer to store the nominator n of the rational number */
+   SCIP_Longint*         denominator         /**< pointer to store the denominator d of the rational number */
    )
 {
-   Real a;
-   Real b;
-   Real g0;
-   Real g1;
-   Real gx;
-   Real h0;
-   Real h1;
-   Real hx;
-   Real delta0;
-   Real delta1;
-   Real epsilon;
+   SCIP_Real a;
+   SCIP_Real b;
+   SCIP_Real g0;
+   SCIP_Real g1;
+   SCIP_Real gx;
+   SCIP_Real h0;
+   SCIP_Real h1;
+   SCIP_Real hx;
+   SCIP_Real delta0;
+   SCIP_Real delta1;
+   SCIP_Real epsilon;
    int i;
 
    assert(mindelta < 0.0);
@@ -3147,10 +3147,10 @@ Bool SCIPrealToRational(
     */
    for( i = 0; simplednoms[i] > 0.0; ++i )
    {
-      Real nom;
-      Real dnom;
-      Real ratval0;
-      Real ratval1;
+      SCIP_Real nom;
+      SCIP_Real dnom;
+      SCIP_Real ratval0;
+      SCIP_Real ratval1;
 
       /* try powers of 10 (including 10^0) */
       dnom = simplednoms[i];
@@ -3163,14 +3163,14 @@ Bool SCIPrealToRational(
          {
             if( val - ratval0 <= maxdelta )
             {
-               *nominator = (Longint)nom;
-               *denominator = (Longint)dnom;
+               *nominator = (SCIP_Longint)nom;
+               *denominator = (SCIP_Longint)dnom;
                return TRUE;
             }
             if( mindelta <= val - ratval1 )
             {
-               *nominator = (Longint)(nom+1.0);
-               *denominator = (Longint)dnom;
+               *nominator = (SCIP_Longint)(nom+1.0);
+               *denominator = (SCIP_Longint)dnom;
                return TRUE;
             }
          }
@@ -3216,7 +3216,7 @@ Bool SCIPrealToRational(
       delta1 = (delta0 < 0.0 ? val - (g0-1.0)/h0 : val - (g0+1.0)/h0);
    }
 
-   if( REALABS(g0) > (LONGINT_MAX >> 4) || h0 > (LONGINT_MAX >> 4) )
+   if( REALABS(g0) > (SCIP_LONGINT_MAX >> 4) || h0 > (SCIP_LONGINT_MAX >> 4) )
       return FALSE;
 
    assert(h0 > 0.5);
@@ -3224,39 +3224,39 @@ Bool SCIPrealToRational(
    if( delta0 < mindelta )
    {
       assert(mindelta <= delta1 && delta1 <= maxdelta);
-      *nominator = (Longint)(g0 - 1.0);
-      *denominator = (Longint)h0;
+      *nominator = (SCIP_Longint)(g0 - 1.0);
+      *denominator = (SCIP_Longint)h0;
    }
    else if( delta0 > maxdelta )
    {
       assert(mindelta <= delta1 && delta1 <= maxdelta);
-      *nominator = (Longint)(g0 + 1.0);
-      *denominator = (Longint)h0;
+      *nominator = (SCIP_Longint)(g0 + 1.0);
+      *denominator = (SCIP_Longint)h0;
    }
    else
    {
-      *nominator = (Longint)g0;
-      *denominator = (Longint)h0;
+      *nominator = (SCIP_Longint)g0;
+      *denominator = (SCIP_Longint)h0;
    }
    assert(*denominator >= 1);
-   assert(val - (Real)(*nominator)/(Real)(*denominator) >= mindelta);
-   assert(val - (Real)(*nominator)/(Real)(*denominator) <= maxdelta);
+   assert(val - (SCIP_Real)(*nominator)/(SCIP_Real)(*denominator) >= mindelta);
+   assert(val - (SCIP_Real)(*nominator)/(SCIP_Real)(*denominator) <= maxdelta);
 
    return TRUE;
 }
 
 /** checks, whether the given scalar scales the given value to an integral number with error in the given bounds */
 static
-Bool isIntegralScalar(
-   Real             val,                /**< value that should be scaled to an integral value */
-   Real             scalar,             /**< scalar that should be tried */
-   Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
-   Real             maxdelta            /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
+SCIP_Bool isIntegralScalar(
+   SCIP_Real             val,                /**< value that should be scaled to an integral value */
+   SCIP_Real             scalar,             /**< scalar that should be tried */
+   SCIP_Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
+   SCIP_Real             maxdelta            /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
    )
 {
-   Real sval;
-   Real downval;
-   Real upval;
+   SCIP_Real sval;
+   SCIP_Real downval;
+   SCIP_Real upval;
 
    assert(mindelta <= 0.0);
    assert(maxdelta >= 0.0);
@@ -3269,33 +3269,33 @@ Bool isIntegralScalar(
 }
 
 /** additional scalars that are tried in integrality scaling */
-static const Real scalars[] = {3.0, 5.0, 7.0, 9.0, 11.0, 13.0, 15.0, 17.0, 19.0};
+static const SCIP_Real scalars[] = {3.0, 5.0, 7.0, 9.0, 11.0, 13.0, 15.0, 17.0, 19.0};
 static const int nscalars = 9;
 
 /** tries to find a value, such that all given values, if scaled with this value become integral */
-RETCODE SCIPcalcIntegralScalar(
-   Real*            vals,               /**< values to scale */
-   int              nvals,              /**< number of values to scale */
-   Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
-   Real             maxdelta,           /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
-   Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
-   Real             maxscale,           /**< maximal allowed scalar */
-   Real*            intscalar,          /**< pointer to store scalar that would make the coefficients integral, or NULL */
-   Bool*            success             /**< stores whether returned value is valid */
+SCIP_RETCODE SCIPcalcIntegralScalar(
+   SCIP_Real*            vals,               /**< values to scale */
+   int                   nvals,              /**< number of values to scale */
+   SCIP_Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
+   SCIP_Real             maxdelta,           /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
+   SCIP_Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
+   SCIP_Real             maxscale,           /**< maximal allowed scalar */
+   SCIP_Real*            intscalar,          /**< pointer to store scalar that would make the coefficients integral, or NULL */
+   SCIP_Bool*            success             /**< stores whether returned value is valid */
    )
 {
-   Longint gcd;
-   Longint scm;
-   Longint nominator;
-   Longint denominator;
-   Real val;
-   Real minval;
-   Real absval;
-   Real scaleval;
-   Real twomultval;
-   Bool scalable;
-   Bool twomult;
-   Bool rational;
+   SCIP_Longint gcd;
+   SCIP_Longint scm;
+   SCIP_Longint nominator;
+   SCIP_Longint denominator;
+   SCIP_Real val;
+   SCIP_Real minval;
+   SCIP_Real absval;
+   SCIP_Real scaleval;
+   SCIP_Real twomultval;
+   SCIP_Bool scalable;
+   SCIP_Bool twomult;
+   SCIP_Bool rational;
    int c;
    int s;
 
@@ -3306,14 +3306,14 @@ RETCODE SCIPcalcIntegralScalar(
    assert(maxdelta > 0.0);
    assert(success != NULL);
 
-   debugMessage("trying to find rational representation for given values\n");
+   SCIPdebugMessage("trying to find rational representation for given values\n");
 
    if( intscalar != NULL )
       *intscalar = SCIP_INVALID;
    *success = FALSE;
 
    /* get minimal absolute non-zero value */
-   minval = REAL_MAX;
+   minval = SCIP_REAL_MAX;
    for( c = 0; c < nvals; ++c )
    {
       val = vals[c];
@@ -3324,13 +3324,13 @@ RETCODE SCIPcalcIntegralScalar(
       }
    }
 
-   if( minval == REAL_MAX )
+   if( minval == SCIP_REAL_MAX )
    {
       /* all coefficients are zero (inside tolerances) */
       if( intscalar != NULL )
          *intscalar = 1.0;
       *success = TRUE;
-      debugMessage(" -> all values are zero (inside tolerances)\n");
+      SCIPdebugMessage(" -> all values are zero (inside tolerances)\n");
 
       return SCIP_OKAY;
    }
@@ -3362,7 +3362,7 @@ RETCODE SCIPcalcIntegralScalar(
             scaleval *= 2.0;
       }
       scalable = (scaleval <= maxscale);
-      debugMessage(" -> val=%g, scaleval=%g, val*scaleval=%g, scalable=%d\n", 
+      SCIPdebugMessage(" -> val=%g, scaleval=%g, val*scaleval=%g, scalable=%d\n", 
          val, scaleval, val*scaleval, scalable);
    }
    if( scalable )
@@ -3372,7 +3372,7 @@ RETCODE SCIPcalcIntegralScalar(
       if( intscalar != NULL )
          *intscalar = scaleval;
       *success = TRUE;
-      debugMessage(" -> integrality can be achieved by scaling with %g (minval=%g)\n", scaleval, minval);
+      SCIPdebugMessage(" -> integrality can be achieved by scaling with %g (minval=%g)\n", scaleval, minval);
       
       return SCIP_OKAY;
    }
@@ -3403,7 +3403,7 @@ RETCODE SCIPcalcIntegralScalar(
             twomultval *= 2.0;
       }
       twomult = (twomultval <= maxscale);
-      debugMessage(" -> val=%g, twomult=%g, val*twomult=%g, twomultable=%d\n",
+      SCIPdebugMessage(" -> val=%g, twomult=%g, val*twomult=%g, twomultable=%d\n",
          val, twomultval, val*twomultval, twomult);
    }
    if( twomult )
@@ -3413,7 +3413,7 @@ RETCODE SCIPcalcIntegralScalar(
       if( intscalar != NULL )
          *intscalar = twomultval;
       *success = TRUE;
-      debugMessage(" -> integrality can be achieved by scaling with %g (power of 2)\n", twomultval);
+      SCIPdebugMessage(" -> integrality can be achieved by scaling with %g (power of 2)\n", twomultval);
       
       return SCIP_OKAY;
    }
@@ -3438,8 +3438,8 @@ RETCODE SCIPcalcIntegralScalar(
          assert(denominator > 0);
          gcd = ABS(nominator);
          scm = denominator;
-         rational = ((Real)scm/(Real)gcd <= maxscale);
-         debugMessage(" -> c=%d first rational: val: %g == %lld/%lld, gcd=%lld, scm=%lld, rational=%d\n",
+         rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
+         SCIPdebugMessage(" -> c=%d first rational: val: %g == %lld/%lld, gcd=%lld, scm=%lld, rational=%d\n",
             c, val, nominator, denominator, gcd, scm, rational);
          break;
       }
@@ -3458,25 +3458,25 @@ RETCODE SCIPcalcIntegralScalar(
          assert(denominator > 0);
          gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
          scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
-         rational = ((Real)scm/(Real)gcd <= maxscale);
-         debugMessage(" -> c=%d next rational : val: %g == %lld/%lld, gcd=%lld, scm=%lld, rational=%d\n",
+         rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
+         SCIPdebugMessage(" -> c=%d next rational : val: %g == %lld/%lld, gcd=%lld, scm=%lld, rational=%d\n",
             c, val, nominator, denominator, gcd, scm, rational);
       }
       else
       {
-         debugMessage(" -> failed to convert %g into a rational representation\n", val);
+         SCIPdebugMessage(" -> failed to convert %g into a rational representation\n", val);
       }
    }
 
    if( rational )
    {
       /* make values integral by multiplying them with the smallest common multiple of the denominators */
-      assert((Real)scm/(Real)gcd <= maxscale);
+      assert((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
       if( intscalar != NULL )
-         *intscalar = (Real)scm/(Real)gcd;
+         *intscalar = (SCIP_Real)scm/(SCIP_Real)gcd;
       *success = TRUE;
-      debugMessage(" -> integrality can be achieved by scaling with %g (rational:%lld/%lld)\n", 
-         (Real)scm/(Real)gcd, scm, gcd);
+      SCIPdebugMessage(" -> integrality can be achieved by scaling with %g (rational:%lld/%lld)\n", 
+         (SCIP_Real)scm/(SCIP_Real)gcd, scm, gcd);
    }
 
    return SCIP_OKAY;
@@ -3486,16 +3486,16 @@ RETCODE SCIPcalcIntegralScalar(
  *  number, probably multiplied with powers of 10) out of this interval; returns TRUE iff a valid rational
  *  number inside the interval was found
  */
-Bool SCIPfindSimpleRational(
-   Real             lb,                 /**< lower bound of the interval */
-   Real             ub,                 /**< upper bound of the interval */
-   Longint          maxdnom,            /**< maximal denominator allowed for resulting rational number */
-   Longint*         nominator,          /**< pointer to store the nominator n of the rational number */
-   Longint*         denominator         /**< pointer to store the denominator d of the rational number */
+SCIP_Bool SCIPfindSimpleRational(
+   SCIP_Real             lb,                 /**< lower bound of the interval */
+   SCIP_Real             ub,                 /**< upper bound of the interval */
+   SCIP_Longint          maxdnom,            /**< maximal denominator allowed for resulting rational number */
+   SCIP_Longint*         nominator,          /**< pointer to store the nominator n of the rational number */
+   SCIP_Longint*         denominator         /**< pointer to store the denominator d of the rational number */
    )
 {
-   Real center;
-   Real delta;
+   SCIP_Real center;
+   SCIP_Real delta;
 
    assert(lb <= ub);
 
@@ -3509,32 +3509,32 @@ Bool SCIPfindSimpleRational(
  *  with simple denominator (i.e. a small number, probably multiplied with powers of 10);
  *  if no valid rational number inside the interval was found, selects the central value of the interval
  */
-Real SCIPselectSimpleValue(
-   Real             lb,                 /**< lower bound of the interval */
-   Real             ub,                 /**< upper bound of the interval */
-   Longint          maxdnom             /**< maximal denominator allowed for resulting rational number */
+SCIP_Real SCIPselectSimpleValue(
+   SCIP_Real             lb,                 /**< lower bound of the interval */
+   SCIP_Real             ub,                 /**< upper bound of the interval */
+   SCIP_Longint          maxdnom             /**< maximal denominator allowed for resulting rational number */
    )
 {
-   Real val;
+   SCIP_Real val;
 
    val = 0.5*(lb+ub);
    if( lb < ub )
    {
-      Longint nominator;
-      Longint denominator;
-      Bool success;
+      SCIP_Longint nominator;
+      SCIP_Longint denominator;
+      SCIP_Bool success;
       
       /* try to find a "simple" rational number inside the interval */
-      debugMessage("simple rational in [%.9f,%.9f]:", lb, ub);
+      SCIPdebugMessage("simple rational in [%.9f,%.9f]:", lb, ub);
       success = SCIPfindSimpleRational(lb, ub, maxdnom, &nominator, &denominator);
       if( success )
       {
-         val = (Real)nominator/(Real)denominator;
-         debugPrintf(" %lld/%lld == %.9f\n", nominator, denominator, val);
+         val = (SCIP_Real)nominator/(SCIP_Real)denominator;
+         SCIPdebugPrintf(" %lld/%lld == %.9f\n", nominator, denominator, val);
       }
       else
       {
-         debugPrintf(" failed\n");
+         SCIPdebugPrintf(" failed\n");
       }
    }
    
@@ -3549,8 +3549,8 @@ Real SCIPselectSimpleValue(
  */
 
 /** returns, whether the given file exists */
-Bool SCIPfileExists(
-   const char*      filename            /**< file name */
+SCIP_Bool SCIPfileExists(
+   const char*           filename            /**< file name */
    )
 {
    FILE* f;
@@ -3566,11 +3566,11 @@ Bool SCIPfileExists(
 
 /** splits filename into path, name, and extension */
 void SCIPsplitFilename(
-   char*            filename,           /**< filename to split; is destroyed (but not freed) during process */
-   char**           path,               /**< pointer to store path, or NULL if not needed */
-   char**           name,               /**< pointer to store name, or NULL if not needed */
-   char**           extension,          /**< pointer to store extension, or NULL if not needed */
-   char**           compression         /**< pointer to store compression extension, or NULL if not needed */
+   char*                 filename,           /**< filename to split; is destroyed (but not freed) during process */
+   char**                path,               /**< pointer to store path, or NULL if not needed */
+   char**                name,               /**< pointer to store name, or NULL if not needed */
+   char**                extension,          /**< pointer to store extension, or NULL if not needed */
+   char**                compression         /**< pointer to store compression extension, or NULL if not needed */
    )
 {
    char* lastslash;
@@ -3642,7 +3642,7 @@ void SCIPsplitFilename(
  * simple functions implemented as defines
  */
 
-/* In debug mode, the following methods are implemented as function calls to ensure
+/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
  * type validity.
  * In optimized mode, the methods are implemented as defines to improve performance.
  * However, we want to have them in the library anyways, so we have to undef the defines.
@@ -3651,14 +3651,14 @@ void SCIPsplitFilename(
 #undef SCIPrelDiff
 
 /** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0) */
-Real SCIPrelDiff(
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
+SCIP_Real SCIPrelDiff(
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
    )
 {
-   Real absval1;
-   Real absval2;
-   Real quot;
+   SCIP_Real absval1;
+   SCIP_Real absval2;
+   SCIP_Real quot;
 
    absval1 = REALABS(val1);
    absval2 = REALABS(val2);

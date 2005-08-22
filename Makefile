@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.118 2005/08/08 13:20:35 bzfpfend Exp $
+# $Id: Makefile,v 1.119 2005/08/22 18:35:28 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -29,9 +29,10 @@ ARCH            :=      $(shell uname -m | \
 			-e s/i.86/x86/ \
 			-e s/IP../mips/ \
 			-e s/9000..../hppa/ \
+			-e s/Power\ Macintosh/ppc/ \
 			-e s/00........../pwr4/)
 OSTYPE		:=	$(shell uname -s | tr '[:upper:]' '[:lower:]' | sed -e s/irix../irix/ )
-MACHINENAME	:=	$(shell uname -n | tr '[:upper:]' '[:lower:]')
+HOSTNAME	:=	$(shell uname -n | tr '[:upper:]' '[:lower:]')
 
 
 #-----------------------------------------------------------------------------
@@ -342,11 +343,11 @@ doc:
 
 test:		
 		cd check; \
-		/bin/sh ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(MAIN).$(MACHINENAME) $(TIME) $(NODES) $(MEM) $(FEASTOL);
+		/bin/sh ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(MAIN).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL);
 
 testcplex:		
 		cd check; \
-		/bin/sh ./check_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) $(OSTYPE).$(ARCH).$(MACHINENAME) $(TIME) $(NODES) $(MEM) $(FEASTOL);
+		/bin/sh ./check_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL);
 
 $(OBJDIR):	
 		@-mkdir -p $(OBJDIR)

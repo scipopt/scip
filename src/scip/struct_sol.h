@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sol.h,v 1.13 2005/07/15 17:20:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_sol.h,v 1.14 2005/08/22 18:35:52 bzfpfend Exp $"
 
 /**@file   struct_sol.h
  * @brief  datastructures for storing primal CIP solutions
@@ -42,23 +42,23 @@
  *  The user has to call SCIPsolUnlink() in order to retrieve all non-cached elements from the solution's source
  *  and to store the values in the solution's own array. This changes the solution's origin to SCIP_SOLORIGIN_ZERO.
  *  A linked solution with origin SCIP_SOLORIGIN_LPSOL or SCIP_SOLORIGIN_PSEUDOSOL becomes invalid after the
- *  next node is focused (i.e. the LP and pseudo solutions changed) and cannot be accessed anymore.
+ *  next node is focused (i.e. the SCIP_LP and pseudo solutions changed) and cannot be accessed anymore.
  *
- *  Solutions with origin ORIGINAL contain the values for original variables. The stored objective value also
+ *  Solutions with origin SCIP_ORIGINAL contain the values for original variables. The stored objective value also
  *  corresponds to the original problem.
  */
-struct Sol
+struct SCIP_Sol
 {
-   Real             obj;                /**< objective value of solution */
-   Real             time;               /**< clock time, when the solution was discovered */
-   Longint          nodenum;            /**< last node number of current run, where this solution was modified */
-   REALARRAY*       vals;               /**< solution values for variables */
-   BOOLARRAY*       valid;              /**< is value in vals array valid? otherwise it has to be retrieved from origin */
-   HEUR*            heur;               /**< heuristic that found the solution (or NULL if it's an LP solution) */
-   int              runnum;             /**< branch and bound run number in which the solution was found */
-   int              depth;              /**< depth at which the solution was found */
-   int              primalindex;        /**< index of solution in array of existing solutions of primal data */
-   SOLORIGIN        solorigin;          /**< origin of solution: where to retrieve uncached elements */
+   SCIP_Real             obj;                /**< objective value of solution */
+   SCIP_Real             time;               /**< clock time, when the solution was discovered */
+   SCIP_Longint          nodenum;            /**< last node number of current run, where this solution was modified */
+   SCIP_REALARRAY*       vals;               /**< solution values for variables */
+   SCIP_BOOLARRAY*       valid;              /**< is value in vals array valid? otherwise it has to be retrieved from origin */
+   SCIP_HEUR*            heur;               /**< heuristic that found the solution (or NULL if it's an SCIP_LP solution) */
+   int                   runnum;             /**< branch and bound run number in which the solution was found */
+   int                   depth;              /**< depth at which the solution was found */
+   int                   primalindex;        /**< index of solution in array of existing solutions of primal data */
+   SCIP_SOLORIGIN        solorigin;          /**< origin of solution: where to retrieve uncached elements */
 };
 
 

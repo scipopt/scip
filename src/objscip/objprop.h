@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprop.h,v 1.9 2005/07/15 17:20:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprop.h,v 1.10 2005/08/22 18:35:31 bzfpfend Exp $"
 
 /**@file   objprop.h
  * @brief  C++ wrapper for propagators
@@ -53,15 +53,15 @@ public:
    const int scip_freq_;
 
    /** should propagator be delayed, if other propagators found reductions? */
-   const Bool scip_delay_;
+   const SCIP_Bool scip_delay_;
 
    /** default constructor */
    ObjProp(
-      const char*   name,               /**< name of propagator */
-      const char*   desc,               /**< description of propagator */
-      int           priority,           /**< priority of the propagator */
-      int           freq,               /**< frequency for calling propagator */
-      Bool          delay               /**< should propagator be delayed, if other propagators found reductions? */
+      const char*        name,               /**< name of propagator */
+      const char*        desc,               /**< description of propagator */
+      int                priority,           /**< priority of the propagator */
+      int                freq,               /**< frequency for calling propagator */
+      SCIP_Bool          delay               /**< should propagator be delayed, if other propagators found reductions? */
       )
       : scip_name_(name),
         scip_desc_(desc),
@@ -77,27 +77,27 @@ public:
    }
 
    /** destructor of propagator to free user data (called when SCIP is exiting) */
-   virtual RETCODE scip_free(
-      SCIP*         scip,               /**< SCIP data structure */
-      PROP*         prop                /**< the propagator itself */
+   virtual SCIP_RETCODE scip_free(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_PROP*         prop                /**< the propagator itself */
       )
    {
       return SCIP_OKAY;
    }
    
    /** initialization method of propagator (called after problem was transformed) */
-   virtual RETCODE scip_init(
-      SCIP*         scip,               /**< SCIP data structure */
-      PROP*         prop                /**< the propagator itself */
+   virtual SCIP_RETCODE scip_init(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_PROP*         prop                /**< the propagator itself */
       )
    {
       return SCIP_OKAY;
    }
    
    /** deinitialization method of propagator (called before transformed problem is freed) */
-   virtual RETCODE scip_exit(
-      SCIP*         scip,               /**< SCIP data structure */
-      PROP*         prop                /**< the propagator itself */
+   virtual SCIP_RETCODE scip_exit(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_PROP*         prop                /**< the propagator itself */
       )
    {
       return SCIP_OKAY;
@@ -109,9 +109,9 @@ public:
     *  The propagator may use this call to initialize its branch and bound specific data.
     *
     */
-   virtual RETCODE scip_initsol(
-      SCIP*         scip,               /**< SCIP data structure */
-      PROP*         prop                /**< the propagator itself */
+   virtual SCIP_RETCODE scip_initsol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_PROP*         prop                /**< the propagator itself */
       )
    {
       return SCIP_OKAY;
@@ -122,9 +122,9 @@ public:
     *  This method is called before the branch and bound process is freed.
     *  The propagator should use this call to clean up its branch and bound data.
     */
-   virtual RETCODE scip_exitsol(
-      SCIP*         scip,               /**< SCIP data structure */
-      PROP*         prop                /**< the propagator itself */
+   virtual SCIP_RETCODE scip_exitsol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_PROP*         prop                /**< the propagator itself */
       )
    {
       return SCIP_OKAY;
@@ -141,10 +141,10 @@ public:
     *  - SCIP_DIDNOTRUN  : the propagator was skipped
     *  - SCIP_DELAYED    : the propagator was skipped, but should be called again
     */
-   virtual RETCODE scip_exec(
-      SCIP*         scip,               /**< SCIP data structure */
-      PROP*         prop,               /**< the propagator itself */
-      RESULT*       result              /**< pointer to store the result of the propagation call */
+   virtual SCIP_RETCODE scip_exec(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_PROP*         prop,               /**< the propagator itself */
+      SCIP_RESULT*       result              /**< pointer to store the result of the propagation call */
       ) = 0;
 
    /** propagation conflict resolving method of propagator
@@ -177,16 +177,16 @@ public:
     *  - SCIP_SUCCESS    : the conflicting bound change has been successfully resolved by adding all reason bounds
     *  - SCIP_DIDNOTFIND : the conflicting bound change could not be resolved and has to be put into the conflict set
     */
-   virtual RETCODE scip_resprop(
-      SCIP*         scip,               /**< SCIP data structure */
-      PROP*         prop,               /**< the propagator itself */
-      VAR*          infervar,           /**< the conflict variable whose bound change has to be resolved */
-      int           inferinfo,          /**< the user information passed to the corresponding SCIPinferVarLbProp() or
-                                         *    SCIPinferVarUbProp() call */
-      BOUNDTYPE     boundtype,          /**< the type of the changed bound (lower or upper bound) */
-      BDCHGIDX*     bdchgidx,           /**< the index of the bound change, representing the point of time where the
-                                         *   change took place */
-      RESULT*       result              /**< pointer to store the result of the propagation call */
+   virtual SCIP_RETCODE scip_resprop(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_PROP*         prop,               /**< the propagator itself */
+      SCIP_VAR*          infervar,           /**< the conflict variable whose bound change has to be resolved */
+      int                inferinfo,          /**< the user information passed to the corresponding SCIPinferVarLbProp() or
+                                              *    SCIPinferVarUbProp() call */
+      SCIP_BOUNDTYPE     boundtype,          /**< the type of the changed bound (lower or upper bound) */
+      SCIP_BDCHGIDX*     bdchgidx,           /**< the index of the bound change, representing the point of time where the
+                                              *   change took place */
+      SCIP_RESULT*       result              /**< pointer to store the result of the propagation call */
       ) = 0;
 };
 
@@ -199,40 +199,40 @@ public:
  *  The method should be called in one of the following ways:
  *
  *   1. The user is resposible of deleting the object:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MyProp* myprop = new MyProp(...);
- *       CHECK_OKAY( SCIPincludeObjProp(scip, &myprop, FALSE) );
+ *       SCIP_CALL( SCIPincludeObjProp(scip, &myprop, FALSE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );
+ *       SCIP_CALL( SCIPfree(&scip) );
  *       delete myprop;    // delete prop AFTER SCIPfree() !
  *
  *   2. The object pointer is passed to SCIP and deleted by SCIP in the SCIPfree() call:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
- *       CHECK_OKAY( SCIPincludeObjProp(scip, new MyProp(...), TRUE) );
+ *       SCIP_CALL( SCIPincludeObjProp(scip, new MyProp(...), TRUE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );  // destructor of MyProp is called here
+ *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyProp is called here
  */
 extern
-RETCODE SCIPincludeObjProp(
-   SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjProp*   objprop,            /**< propagator object */
-   Bool             deleteobject        /**< should the propagator object be deleted when propagator is freed? */
+SCIP_RETCODE SCIPincludeObjProp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   scip::ObjProp*        objprop,            /**< propagator object */
+   SCIP_Bool             deleteobject        /**< should the propagator object be deleted when propagator is freed? */
    );
 
 /** returns the prop object of the given name, or NULL if not existing */
 extern
 scip::ObjProp* SCIPfindObjProp(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< name of propagator */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of propagator */
    );
 
 /** returns the prop object for the given propagator */
 extern
 scip::ObjProp* SCIPgetObjProp(
-   SCIP*            scip,               /**< SCIP data structure */
-   PROP*            prop                /**< propagator */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop                /**< propagator */
    );
 
 #endif

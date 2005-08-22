@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_impliedbounds.h,v 1.4 2005/07/15 17:20:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_impliedbounds.h,v 1.5 2005/08/22 18:35:48 bzfpfend Exp $"
 
 /**@file   sepa_impliedbounds.h
  * @brief  implied bounds separator
@@ -33,8 +33,8 @@
 
 /** creates the impliedbounds separator and includes it in SCIP */
 extern
-RETCODE SCIPincludeSepaImpliedbounds(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeSepaImpliedbounds(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

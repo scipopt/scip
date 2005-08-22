@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_binpack.c,v 1.30 2005/07/15 17:20:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_binpack.c,v 1.31 2005/08/22 18:35:34 bzfpfend Exp $"
 
 /**@file   cons_binpack.c
  * @brief  constraint handler for binpack constraints
@@ -40,7 +40,7 @@
 #define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ            -1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
-                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -70,9 +70,9 @@
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 #if 0
 static
-DECL_CONSFREE(consFreeBinpack)
+SCIP_DECL_CONSFREE(consFreeBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -85,9 +85,9 @@ DECL_CONSFREE(consFreeBinpack)
 /** initialization method of constraint handler (called after problem was transformed) */
 #if 0
 static
-DECL_CONSINIT(consInitBinpack)
+SCIP_DECL_CONSINIT(consInitBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -100,9 +100,9 @@ DECL_CONSINIT(consInitBinpack)
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
 #if 0
 static
-DECL_CONSEXIT(consExitBinpack)
+SCIP_DECL_CONSEXIT(consExitBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -115,9 +115,9 @@ DECL_CONSEXIT(consExitBinpack)
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 #if 0
 static
-DECL_CONSINITPRE(consInitpreBinpack)
+SCIP_DECL_CONSINITPRE(consInitpreBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -130,9 +130,9 @@ DECL_CONSINITPRE(consInitpreBinpack)
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 #if 0
 static
-DECL_CONSEXITPRE(consExitpreBinpack)
+SCIP_DECL_CONSEXITPRE(consExitpreBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -145,9 +145,9 @@ DECL_CONSEXITPRE(consExitpreBinpack)
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 #if 0
 static
-DECL_CONSINITSOL(consInitsolBinpack)
+SCIP_DECL_CONSINITSOL(consInitsolBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -160,9 +160,9 @@ DECL_CONSINITSOL(consInitsolBinpack)
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 #if 0
 static
-DECL_CONSEXITSOL(consExitsolBinpack)
+SCIP_DECL_CONSEXITSOL(consExitsolBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -175,9 +175,9 @@ DECL_CONSEXITSOL(consExitsolBinpack)
 /** frees specific constraint data */
 #if 0
 static
-DECL_CONSDELETE(consDeleteBinpack)
+SCIP_DECL_CONSDELETE(consDeleteBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -190,9 +190,9 @@ DECL_CONSDELETE(consDeleteBinpack)
 /** transforms constraint data into data belonging to the transformed problem */ 
 #if 0
 static
-DECL_CONSTRANS(consTransBinpack)
+SCIP_DECL_CONSTRANS(consTransBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -202,12 +202,12 @@ DECL_CONSTRANS(consTransBinpack)
 #endif
 
 
-/** LP initialization method of constraint handler */
+/** SCIP_LP initialization method of constraint handler */
 #if 0
 static
-DECL_CONSINITLP(consInitlpBinpack)
+SCIP_DECL_CONSINITLP(consInitlpBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -220,9 +220,9 @@ DECL_CONSINITLP(consInitlpBinpack)
 /** separation method of constraint handler */
 #if 0
 static
-DECL_CONSSEPA(consSepaBinpack)
+SCIP_DECL_CONSSEPA(consSepaBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -232,11 +232,11 @@ DECL_CONSSEPA(consSepaBinpack)
 #endif
 
 
-/** constraint enforcing method of constraint handler for LP solutions */
+/** constraint enforcing method of constraint handler for SCIP_LP solutions */
 static
-DECL_CONSENFOLP(consEnfolpBinpack)
+SCIP_DECL_CONSENFOLP(consEnfolpBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -245,9 +245,9 @@ DECL_CONSENFOLP(consEnfolpBinpack)
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
-DECL_CONSENFOPS(consEnfopsBinpack)
+SCIP_DECL_CONSENFOPS(consEnfopsBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -256,9 +256,9 @@ DECL_CONSENFOPS(consEnfopsBinpack)
 
 /** feasibility check method of constraint handler for integral solutions */
 static
-DECL_CONSCHECK(consCheckBinpack)
+SCIP_DECL_CONSCHECK(consCheckBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -268,9 +268,9 @@ DECL_CONSCHECK(consCheckBinpack)
 /** domain propagation method of constraint handler */
 #if 0
 static
-DECL_CONSPROP(consPropBinpack)
+SCIP_DECL_CONSPROP(consPropBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -283,9 +283,9 @@ DECL_CONSPROP(consPropBinpack)
 /** presolving method of constraint handler */
 #if 0
 static
-DECL_CONSPRESOL(consPresolBinpack)
+SCIP_DECL_CONSPRESOL(consPresolBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -298,9 +298,9 @@ DECL_CONSPRESOL(consPresolBinpack)
 /** propagation conflict resolving method of constraint handler */
 #if 0
 static
-DECL_CONSRESPROP(consRespropBinpack)
+SCIP_DECL_CONSRESPROP(consRespropBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -312,9 +312,9 @@ DECL_CONSRESPROP(consRespropBinpack)
 
 /** variable rounding lock method of constraint handler */
 static
-DECL_CONSLOCK(consLockBinpack)
+SCIP_DECL_CONSLOCK(consLockBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -324,9 +324,9 @@ DECL_CONSLOCK(consLockBinpack)
 /** constraint activation notification method of constraint handler */
 #if 0
 static
-DECL_CONSACTIVE(consActiveBinpack)
+SCIP_DECL_CONSACTIVE(consActiveBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -339,9 +339,9 @@ DECL_CONSACTIVE(consActiveBinpack)
 /** constraint deactivation notification method of constraint handler */
 #if 0
 static
-DECL_CONSDEACTIVE(consDeactiveBinpack)
+SCIP_DECL_CONSDEACTIVE(consDeactiveBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -354,9 +354,9 @@ DECL_CONSDEACTIVE(consDeactiveBinpack)
 /** constraint enabling notification method of constraint handler */
 #if 0
 static
-DECL_CONSENABLE(consEnableBinpack)
+SCIP_DECL_CONSENABLE(consEnableBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -369,9 +369,9 @@ DECL_CONSENABLE(consEnableBinpack)
 /** constraint disabling notification method of constraint handler */
 #if 0
 static
-DECL_CONSDISABLE(consDisableBinpack)
+SCIP_DECL_CONSDISABLE(consDisableBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -383,9 +383,9 @@ DECL_CONSDISABLE(consDisableBinpack)
 /** constraint display method of constraint handler */
 #if 0
 static
-DECL_CONSPRINT(consPrintBinpack)
+SCIP_DECL_CONSPRINT(consPrintBinpack)
 {  /*lint --e{715}*/
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -403,9 +403,9 @@ DECL_CONSPRINT(consPrintBinpack)
 
 #ifdef LINCONSUPGD_PRIORITY
 static
-DECL_LINCONSUPGD(linconsUpgdBinpack)
+SCIP_DECL_LINCONSUPGD(linconsUpgdBinpack)
 {  /*lint --e{715}*/
-   Bool upgrade;
+   SCIP_Bool upgrade;
 
    assert(upgdcons != NULL);
    
@@ -422,7 +422,7 @@ DECL_LINCONSUPGD(linconsUpgdBinpack)
       && ncoeffspone + ncoeffsnone + ncoeffspint + ncoeffsnint == nvars
       && (SCIPisInfinity(scip, -lhs) ^ SCIPisInfinity(scip, rhs)) )
    {
-      Bool found;
+      SCIP_Bool found;
       int i;
 
       found = FALSE;
@@ -446,11 +446,11 @@ DECL_LINCONSUPGD(linconsUpgdBinpack)
 
    if( upgrade )
    {
-      debugMessage("upgrading constraint <%s> to binpack constraint\n", SCIPconsGetName(cons));
+      SCIPdebugMessage("upgrading constraint <%s> to binpack constraint\n", SCIPconsGetName(cons));
       
       /* create the bin Binpack constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));
-      CHECK_OKAY( SCIPcreateConsBinpack(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, rhs,
+      SCIP_CALL( SCIPcreateConsBinpack(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, rhs,
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
@@ -469,18 +469,18 @@ DECL_LINCONSUPGD(linconsUpgdBinpack)
  */
 
 /** creates the handler for binpack constraints and includes it in SCIP */
-RETCODE SCIPincludeConshdlrBinpack(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeConshdlrBinpack(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    /* create binpack constraint handler data */
    conshdlrdata = NULL;
    /* TODO: (optional) create constraint handler specific data here */
 
    /* include constraint handler */
-   CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
@@ -496,7 +496,7 @@ RETCODE SCIPincludeConshdlrBinpack(
 
 #ifdef LINCONSUPGD_PRIORITY
    /* include the linear constraint upgrade in the linear constraint handler */
-   CHECK_OKAY( SCIPincludeLinconsUpgrade(scip, linconsUpgdBinpack, LINCONSUPGD_PRIORITY) );
+   SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdBinpack, LINCONSUPGD_PRIORITY) );
 #endif
 
    /* add binpack constraint handler parameters */
@@ -506,36 +506,36 @@ RETCODE SCIPincludeConshdlrBinpack(
 }
 
 /** creates and captures a binpack constraint */
-RETCODE SCIPcreateConsBinpack(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*      name,               /**< name of constraint */
-   int              len,                /**< number of nonzeros in the constraint */
-   VAR**            vars,               /**< array with variables of constraint entries */
-   Real*            vals,               /**< array with coefficients of constraint entries */
-   Real             rhs,                /**< right hand side of constraint */
-   Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             separate,           /**< should the constraint be separated during LP processing? */
-   Bool             enforce,            /**< should the constraint be enforced during node processing? */
-   Bool             check,              /**< should the constraint be checked for feasibility? */
-   Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
-   Bool             dynamic,            /**< is constraint subject to aging? */
-   Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+SCIP_RETCODE SCIPcreateConsBinpack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   len,                /**< number of nonzeros in the constraint */
+   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
+   SCIP_Real*            vals,               /**< array with coefficients of constraint entries */
+   SCIP_Real             rhs,                /**< right hand side of constraint */
+   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   SCIP_Bool             local,              /**< is constraint only valid locally? */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
+   SCIP_Bool             removeable          /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
    )
 {
-   CONSHDLR* conshdlr;
-   CONSDATA* consdata;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
 
-   errorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527} --e{715}*/
 
    /* find the binpack constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      errorMessage("binpack constraint handler not found\n");
+      SCIPerrorMessage("binpack constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 
@@ -544,7 +544,7 @@ RETCODE SCIPcreateConsBinpack(
    /* TODO: create and store constraint specific data here */
 
    /* create constraint */
-   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
+   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removeable) );
 
    return SCIP_OKAY;

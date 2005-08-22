@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_branch.h,v 1.12 2005/07/15 17:20:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_branch.h,v 1.13 2005/08/22 18:35:53 bzfpfend Exp $"
 
 /**@file   type_branch.h
  * @brief  type definitions for branching rules
@@ -26,9 +26,9 @@
 #define __SCIP_TYPE_BRANCH_H__
 
 
-typedef struct BranchCand BRANCHCAND;   /**< branching candidate storage */
-typedef struct Branchrule BRANCHRULE;   /**< branching method data structure */
-typedef struct BranchruleData BRANCHRULEDATA; /**< branching method specific data */
+typedef struct SCIP_BranchCand SCIP_BRANCHCAND;   /**< branching candidate storage */
+typedef struct SCIP_Branchrule SCIP_BRANCHRULE;   /**< branching method data structure */
+typedef struct SCIP_BranchruleData SCIP_BRANCHRULEDATA; /**< branching method specific data */
 
 
 /** destructor of branching method to free user data (called when SCIP is exiting)
@@ -37,7 +37,7 @@ typedef struct BranchruleData BRANCHRULEDATA; /**< branching method specific dat
  *  - scip            : SCIP main data structure
  *  - branchrule      : the branching rule itself
  */
-#define DECL_BRANCHFREE(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule)
+#define SCIP_DECL_BRANCHFREE(x) SCIP_RETCODE x (SCIP* scip, SCIP_BRANCHRULE* branchrule)
 
 /** initialization method of branching rule (called after problem was transformed)
  *
@@ -45,7 +45,7 @@ typedef struct BranchruleData BRANCHRULEDATA; /**< branching method specific dat
  *  - scip            : SCIP main data structure
  *  - branchrule      : the branching rule itself
  */
-#define DECL_BRANCHINIT(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule)
+#define SCIP_DECL_BRANCHINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_BRANCHRULE* branchrule)
 
 /** deinitialization method of branching rule (called before transformed problem is freed)
  *
@@ -53,7 +53,7 @@ typedef struct BranchruleData BRANCHRULEDATA; /**< branching method specific dat
  *  - scip            : SCIP main data structure
  *  - branchrule      : the branching rule itself
  */
-#define DECL_BRANCHEXIT(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule)
+#define SCIP_DECL_BRANCHEXIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_BRANCHRULE* branchrule)
 
 /** solving process initialization method of branching rule (called when branch and bound process is about to begin)
  *
@@ -64,7 +64,7 @@ typedef struct BranchruleData BRANCHRULEDATA; /**< branching method specific dat
  *  - scip            : SCIP main data structure
  *  - branchrule      : the branching rule itself
  */
-#define DECL_BRANCHINITSOL(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule)
+#define SCIP_DECL_BRANCHINITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_BRANCHRULE* branchrule)
 
 /** solving process deinitialization method of branching rule (called before branch and bound process data is freed)
  *
@@ -75,9 +75,9 @@ typedef struct BranchruleData BRANCHRULEDATA; /**< branching method specific dat
  *  - scip            : SCIP main data structure
  *  - branchrule      : the branching rule itself
  */
-#define DECL_BRANCHEXITSOL(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule)
+#define SCIP_DECL_BRANCHEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_BRANCHRULE* branchrule)
 
-/** branching execution method for fractional LP solutions
+/** branching execution method for fractional SCIP_LP solutions
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -90,12 +90,12 @@ typedef struct BranchruleData BRANCHRULEDATA; /**< branching method specific dat
  *  - SCIP_CUTOFF     : the current node was detected to be infeasible
  *  - SCIP_CONSADDED  : an additional constraint (e.g. a conflict clause) was generated; this result code must not be
  *                      returned, if allowaddcons is FALSE
- *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current LP solution infeasible
+ *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current SCIP_LP solution infeasible
  *  - SCIP_SEPARATED  : a cutting plane was generated
  *  - SCIP_BRANCHED   : branching was applied
  *  - SCIP_DIDNOTRUN  : the branching rule was skipped
  */
-#define DECL_BRANCHEXECLP(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule, Bool allowaddcons, RESULT* result)
+#define SCIP_DECL_BRANCHEXECLP(x) SCIP_RETCODE x (SCIP* scip, SCIP_BRANCHRULE* branchrule, SCIP_Bool allowaddcons, SCIP_RESULT* result)
 
 /** branching execution method for not completely fixed pseudo solutions
  *
@@ -114,7 +114,7 @@ typedef struct BranchruleData BRANCHRULEDATA; /**< branching method specific dat
  *  - SCIP_BRANCHED   : branching was applied
  *  - SCIP_DIDNOTRUN  : the branching rule was skipped
  */
-#define DECL_BRANCHEXECPS(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule, Bool allowaddcons, RESULT* result)
+#define SCIP_DECL_BRANCHEXECPS(x) SCIP_RETCODE x (SCIP* scip, SCIP_BRANCHRULE* branchrule, SCIP_Bool allowaddcons, SCIP_RESULT* result)
 
 
 

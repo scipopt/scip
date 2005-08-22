@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_dialog.h,v 1.9 2005/07/15 17:20:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_dialog.h,v 1.10 2005/08/22 18:35:50 bzfpfend Exp $"
 
 /**@file   struct_dialog.h
  * @brief  datastructures for user interface dialog
@@ -33,29 +33,29 @@
 
 
 /** user interface dialog */
-struct Dialog
+struct SCIP_Dialog
 {
-   DECL_DIALOGEXEC  ((*dialogexec));    /**< execution method of dialog */
-   DECL_DIALOGDESC  ((*dialogdesc));    /**< description output method of dialog, or NULL */
-   char*            name;               /**< name of dialog: command name appearing in parent's dialog menu */
-   char*            desc;               /**< description of dialog used if description output method is NULL */
-   DIALOG*          parent;             /**< parent dialog of dialog */
-   DIALOG**         subdialogs;         /**< sub dialogs of dialog */
-   DIALOGDATA*      dialogdata;         /**< user defined dialog data */
-   int              nsubdialogs;        /**< number of sub dialogs */
-   int              subdialogssize;     /**< size of subdialogs array */
-   int              nuses;              /**< number of times, the dialog is used */
-   Bool             issubmenu;          /**< is the dialog a submenu? */
+   SCIP_DECL_DIALOGEXEC  ((*dialogexec));    /**< execution method of dialog */
+   SCIP_DECL_DIALOGDESC  ((*dialogdesc));    /**< description output method of dialog, or NULL */
+   char*                 name;               /**< name of dialog: command name appearing in parent's dialog menu */
+   char*                 desc;               /**< description of dialog used if description output method is NULL */
+   SCIP_DIALOG*          parent;             /**< parent dialog of dialog */
+   SCIP_DIALOG**         subdialogs;         /**< sub dialogs of dialog */
+   SCIP_DIALOGDATA*      dialogdata;         /**< user defined dialog data */
+   int                   nsubdialogs;        /**< number of sub dialogs */
+   int                   subdialogssize;     /**< size of subdialogs array */
+   int                   nuses;              /**< number of times, the dialog is used */
+   SCIP_Bool             issubmenu;          /**< is the dialog a submenu? */
 };
 
 /** dialog handler */
-struct Dialoghdlr
+struct SCIP_Dialoghdlr
 {
-   DIALOG*          rootdialog;         /**< main (root) dialog */
-   char*            buffer;             /**< command buffer */
-   int              buffersize;         /**< size of command buffer */
-   int              bufferpos;          /**< position of first unprocessed character in buffer */
-   int              nprotectedhistelems;/**< number of history entries protected from cleaning up */
+   SCIP_DIALOG*          rootdialog;         /**< main (root) dialog */
+   char*                 buffer;             /**< command buffer */
+   int                   buffersize;         /**< size of command buffer */
+   int                   bufferpos;          /**< position of first unprocessed character in buffer */
+   int                   nprotectedhistelems;/**< number of history entries protected from cleaning up */
 };
 
 

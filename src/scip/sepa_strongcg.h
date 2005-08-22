@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.h,v 1.7 2005/07/15 17:20:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.h,v 1.8 2005/08/22 18:35:48 bzfpfend Exp $"
 
 /**@file   sepa_strongcg.h
  * @brief  Strong CG Cuts (Letchford & Lodi)
@@ -33,8 +33,8 @@
 
 /** creates the strong CG cut separator and includes it in SCIP */
 extern
-RETCODE SCIPincludeSepaStrongcg(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeSepaStrongcg(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

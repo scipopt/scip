@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_heur.h,v 1.10 2005/07/15 17:20:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_heur.h,v 1.11 2005/08/22 18:35:45 bzfpfend Exp $"
 
 /**@file   pub_heur.h
  * @brief  public methods for primal heuristics
@@ -35,85 +35,85 @@
 
 /** compares two heuristics w. r. to their priority */
 extern
-DECL_SORTPTRCOMP(SCIPheurComp);
+SCIP_DECL_SORTPTRCOMP(SCIPheurComp);
 
 /** gets user data of primal heuristic */
 extern
-HEURDATA* SCIPheurGetData(
-   HEUR*            heur                /**< primal heuristic */
+SCIP_HEURDATA* SCIPheurGetData(
+   SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** sets user data of primal heuristic; user has to free old data in advance! */
 extern
 void SCIPheurSetData(
-   HEUR*            heur,               /**< primal heuristic */
-   HEURDATA*        heurdata            /**< new primal heuristic user data */
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_HEURDATA*        heurdata            /**< new primal heuristic user data */
    );
 
 /** gets name of primal heuristic */
 extern
 const char* SCIPheurGetName(
-   HEUR*            heur                /**< primal heuristic */
+   SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets description of primal heuristic */
 extern
 const char* SCIPheurGetDesc(
-   HEUR*            heur                /**< primal heuristic */
+   SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets display character of primal heuristic */
 extern
 char SCIPheurGetDispchar(
-   HEUR*            heur                /**< primal heuristic */
+   SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets priority of primal heuristic */
 extern
 int SCIPheurGetPriority(
-   HEUR*            heur                /**< primal heuristic */
+   SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets frequency of primal heuristic */
 extern
 int SCIPheurGetFreq(
-   HEUR*            heur                /**< primal heuristic */
+   SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets frequency offset of primal heuristic */
 extern
 int SCIPheurGetFreqofs(
-   HEUR*            heur                /**< primal heuristic */
+   SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets maximal depth level for calling primal heuristic (returns -1, if no depth limit exists) */
 extern
 int SCIPheurGetMaxdepth(
-   HEUR*            heur                /**< primal heuristic */
+   SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets the number of times, the heuristic was called and tried to find a solution */
 extern
-Longint SCIPheurGetNCalls(
-   HEUR*            heur                /**< primal heuristic */
+SCIP_Longint SCIPheurGetNCalls(
+   SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets the number of primal feasible solutions found by this heuristic */
 extern
-Longint SCIPheurGetNSolsFound(
-   HEUR*            heur                /**< primal heuristic */
+SCIP_Longint SCIPheurGetNSolsFound(
+   SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** is primal heuristic initialized? */
 extern
-Bool SCIPheurIsInitialized(
-   HEUR*            heur                /**< primal heuristic */
+SCIP_Bool SCIPheurIsInitialized(
+   SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets time in seconds used in this heuristic */
 extern
-Real SCIPheurGetTime(
-   HEUR*            heur                /**< primal heuristic */
+SCIP_Real SCIPheurGetTime(
+   SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
 

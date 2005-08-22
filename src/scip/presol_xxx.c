@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_xxx.c,v 1.16 2005/07/15 17:20:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_xxx.c,v 1.17 2005/08/22 18:35:43 bzfpfend Exp $"
 
 /**@file   presol_xxx.c
  * @brief  xxx presolver
@@ -44,7 +44,7 @@
 /* TODO: fill in the necessary presolver data */
 
 /** presolver data */
-struct PresolData
+struct SCIP_PresolData
 {
 };
 
@@ -69,9 +69,9 @@ struct PresolData
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 #if 0
 static
-DECL_PRESOLFREE(presolFreeXxx)
+SCIP_DECL_PRESOLFREE(presolFreeXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx presolver not implemented yet\n");
+   SCIPerrorMessage("method of xxx presolver not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -84,9 +84,9 @@ DECL_PRESOLFREE(presolFreeXxx)
 /** initialization method of presolver (called after problem was transformed) */
 #if 0
 static
-DECL_PRESOLINIT(presolInitXxx)
+SCIP_DECL_PRESOLINIT(presolInitXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx presolver not implemented yet\n");
+   SCIPerrorMessage("method of xxx presolver not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -99,9 +99,9 @@ DECL_PRESOLINIT(presolInitXxx)
 /** deinitialization method of presolver (called before transformed problem is freed) */
 #if 0
 static
-DECL_PRESOLEXIT(presolExitXxx)
+SCIP_DECL_PRESOLEXIT(presolExitXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx presolver not implemented yet\n");
+   SCIPerrorMessage("method of xxx presolver not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -114,9 +114,9 @@ DECL_PRESOLEXIT(presolExitXxx)
 /** presolving initialization method of presolver (called when presolving is about to begin) */
 #if 0
 static
-DECL_PRESOLINITPRE(presolInitpreXxx)
+SCIP_DECL_PRESOLINITPRE(presolInitpreXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx presolver not implemented yet\n");
+   SCIPerrorMessage("method of xxx presolver not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -129,9 +129,9 @@ DECL_PRESOLINITPRE(presolInitpreXxx)
 /** presolving deinitialization method of presolver (called after presolving has been finished) */
 #if 0
 static
-DECL_PRESOLEXITPRE(presolExitpreXxx)
+SCIP_DECL_PRESOLEXITPRE(presolExitpreXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx presolver not implemented yet\n");
+   SCIPerrorMessage("method of xxx presolver not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -143,9 +143,9 @@ DECL_PRESOLEXITPRE(presolExitpreXxx)
 
 /** execution method of presolver */
 static
-DECL_PRESOLEXEC(presolExecXxx)
+SCIP_DECL_PRESOLEXEC(presolExecXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx presolver not implemented yet\n");
+   SCIPerrorMessage("method of xxx presolver not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -160,18 +160,18 @@ DECL_PRESOLEXEC(presolExecXxx)
  */
 
 /** creates the xxx presolver and includes it in SCIP */
-RETCODE SCIPincludePresolXxx(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludePresolXxx(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   PRESOLDATA* presoldata;
+   SCIP_PRESOLDATA* presoldata;
 
    /* create xxx presolver data */
    presoldata = NULL;
    /* TODO: (optional) create presolver specific data here */
 
    /* include presolver */
-   CHECK_OKAY( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+   SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
          presolFreeXxx, presolInitXxx, presolExitXxx, 
          presolInitpreXxx, presolExitpreXxx, presolExecXxx,
          presoldata) );

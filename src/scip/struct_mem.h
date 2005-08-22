@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_mem.h,v 1.4 2005/07/15 17:20:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_mem.h,v 1.5 2005/08/22 18:35:50 bzfpfend Exp $"
 
 /**@file   struct_mem.h
  * @brief  datastructures for block memory pools and memory buffers
@@ -33,11 +33,11 @@
 
 
 /** various block memory buffers */
-struct Mem
+struct SCIP_Mem
 {
-   BLKMEM*          setmem;             /**< memory blocks for parameter settings */
-   BLKMEM*          probmem;            /**< memory blocks for original problem */
-   BLKMEM*          solvemem;           /**< memory blocks for solution process: preprocessing, bab-tree, ... */
+   BMS_BLKMEM*           setmem;             /**< memory blocks for parameter settings */
+   BMS_BLKMEM*           probmem;            /**< memory blocks for original problem */
+   BMS_BLKMEM*           solvemem;           /**< memory blocks for solution process: preprocessing, bab-tree, ... */
 };
 
 

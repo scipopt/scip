@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.h,v 1.7 2005/07/15 17:20:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.h,v 1.8 2005/08/22 18:35:34 bzfpfend Exp $"
 
 /**@file   cons_conjunction.h
  * @brief  constraint handler for conjunction constraints
@@ -32,31 +32,31 @@
 
 /** creates the handler for conjunction constraints and includes it in SCIP */
 extern
-RETCODE SCIPincludeConshdlrConjunction(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeConshdlrConjunction(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** creates and captures a conjunction constraint */
 extern
-RETCODE SCIPcreateConsConjunction(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*      name,               /**< name of constraint */
-   int              nconss,             /**< number of initial constraints in conjunction */
-   CONS**           conss,              /**< initial constraint in conjunction */
-   Bool             enforce,            /**< should the constraint be enforced during node processing? */
-   Bool             check,              /**< should the constraint be checked for feasibility? */
-   Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
-   Bool             dynamic             /**< is constraint subject to aging? */
+SCIP_RETCODE SCIPcreateConsConjunction(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nconss,             /**< number of initial constraints in conjunction */
+   SCIP_CONS**           conss,              /**< initial constraint in conjunction */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
+   SCIP_Bool             local,              /**< is constraint only valid locally? */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   SCIP_Bool             dynamic             /**< is constraint subject to aging? */
    );
 
 /** adds constraint to the conjunction of constraints */
 extern
-RETCODE SCIPaddConsElemConjunction(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< conjunction constraint */
-   CONS*            addcons             /**< additional constraint in conjunction */
+SCIP_RETCODE SCIPaddConsElemConjunction(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< conjunction constraint */
+   SCIP_CONS*            addcons             /**< additional constraint in conjunction */
    );
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.h,v 1.23 2005/07/15 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader.h,v 1.24 2005/08/22 18:35:46 bzfpfend Exp $"
 
 /**@file   reader.h
  * @brief  internal methods for input file readers
@@ -38,30 +38,30 @@
 
 /** creates a reader */
 extern
-RETCODE SCIPreaderCreate(
-   READER**         reader,             /**< pointer to store reader */
-   const char*      name,               /**< name of reader */
-   const char*      desc,               /**< description of reader */
-   const char*      extension,          /**< file extension that reader processes */
-   DECL_READERFREE  ((*readerfree)),    /**< destructor of reader */
-   DECL_READERREAD  ((*readerread)),    /**< read method */
-   READERDATA*      readerdata          /**< reader data */
+SCIP_RETCODE SCIPreaderCreate(
+   SCIP_READER**         reader,             /**< pointer to store reader */
+   const char*           name,               /**< name of reader */
+   const char*           desc,               /**< description of reader */
+   const char*           extension,          /**< file extension that reader processes */
+   SCIP_DECL_READERFREE  ((*readerfree)),    /**< destructor of reader */
+   SCIP_DECL_READERREAD  ((*readerread)),    /**< read method */
+   SCIP_READERDATA*      readerdata          /**< reader data */
    );
 
 /** frees memory of reader */
 extern
-RETCODE SCIPreaderFree(
-   READER**         reader,             /**< pointer to reader data structure */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPreaderFree(
+   SCIP_READER**         reader,             /**< pointer to reader data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** reads problem data from file with given reader or returns SCIP_DIDNOTRUN */
 extern
-RETCODE SCIPreaderRead(
-   READER*          reader,             /**< reader */
-   SET*             set,                /**< global SCIP settings */
-   const char*      filename,           /**< name of the input file */
-   RESULT*          result              /**< pointer to store the result of the callback method */
+SCIP_RETCODE SCIPreaderRead(
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           filename,           /**< name of the input file */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 

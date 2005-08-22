@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sepa.h,v 1.12 2005/07/15 17:20:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_sepa.h,v 1.13 2005/08/22 18:35:51 bzfpfend Exp $"
 
 /**@file   struct_sepa.h
  * @brief  datastructures for separators
@@ -33,28 +33,28 @@
 
 
 /** separators data */
-struct Sepa
+struct SCIP_Sepa
 {
-   Longint          lastsepanode;       /**< last (total) node where this separator was called */
-   Longint          ncalls;             /**< number of times, this separator was called */
-   Longint          ncutsfound;         /**< number of cutting planes found so far by this separator */
-   char*            name;               /**< name of separator */
-   char*            desc;               /**< description of separator */
-   DECL_SEPAFREE    ((*sepafree));      /**< destructor of separator */
-   DECL_SEPAINIT    ((*sepainit));      /**< initialize separator */
-   DECL_SEPAEXIT    ((*sepaexit));      /**< deinitialize separator */
-   DECL_SEPAINITSOL ((*sepainitsol));   /**< solving process initialization method of separator */
-   DECL_SEPAEXITSOL ((*sepaexitsol));   /**< solving process deinitialization method of separator */
-   DECL_SEPAEXEC    ((*sepaexec));      /**< execution method of separator */
-   SEPADATA*        sepadata;           /**< separators local data */
-   CLOCK*           clock;              /**< separation time */
-   int              priority;           /**< priority of the separator */
-   int              freq;               /**< frequency for calling separator */
-   int              ncallsatnode;       /**< number of times, this separator was called at the current node */
-   int              ncutsfoundatnode;   /**< number of cutting planes found at the current node */
-   Bool             delay;              /**< should separator be delayed, if other separators found cuts? */
-   Bool             wasdelayed;         /**< was the separator delayed at the last call? */
-   Bool             initialized;        /**< is separator initialized? */
+   SCIP_Longint          lastsepanode;       /**< last (total) node where this separator was called */
+   SCIP_Longint          ncalls;             /**< number of times, this separator was called */
+   SCIP_Longint          ncutsfound;         /**< number of cutting planes found so far by this separator */
+   char*                 name;               /**< name of separator */
+   char*                 desc;               /**< description of separator */
+   SCIP_DECL_SEPAFREE    ((*sepafree));      /**< destructor of separator */
+   SCIP_DECL_SEPAINIT    ((*sepainit));      /**< initialize separator */
+   SCIP_DECL_SEPAEXIT    ((*sepaexit));      /**< deinitialize separator */
+   SCIP_DECL_SEPAINITSOL ((*sepainitsol));   /**< solving process initialization method of separator */
+   SCIP_DECL_SEPAEXITSOL ((*sepaexitsol));   /**< solving process deinitialization method of separator */
+   SCIP_DECL_SEPAEXEC    ((*sepaexec));      /**< execution method of separator */
+   SCIP_SEPADATA*        sepadata;           /**< separators local data */
+   SCIP_CLOCK*           sepaclock;          /**< separation time */
+   int                   priority;           /**< priority of the separator */
+   int                   freq;               /**< frequency for calling separator */
+   int                   ncallsatnode;       /**< number of times, this separator was called at the current node */
+   int                   ncutsfoundatnode;   /**< number of cutting planes found at the current node */
+   SCIP_Bool             delay;              /**< should separator be delayed, if other separators found cuts? */
+   SCIP_Bool             wasdelayed;         /**< was the separator delayed at the last call? */
+   SCIP_Bool             initialized;        /**< is separator initialized? */
 };
 
 

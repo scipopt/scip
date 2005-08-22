@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nodesel.h,v 1.10 2005/07/15 17:20:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_nodesel.h,v 1.11 2005/08/22 18:35:54 bzfpfend Exp $"
 
 /**@file   type_nodesel.h
  * @brief  type definitions for node selectors
@@ -27,9 +27,9 @@
 #define __SCIP_TYPE_NODESEL_H__
 
 
-typedef struct NodePQ NODEPQ;           /**< node priority queue */
-typedef struct Nodesel NODESEL;         /**< node selector data structure */
-typedef struct NodeselData NODESELDATA; /**< node selector specific data */
+typedef struct SCIP_NodePQ SCIP_NODEPQ;           /**< node priority queue */
+typedef struct SCIP_Nodesel SCIP_NODESEL;         /**< node selector data structure */
+typedef struct SCIP_NodeselData SCIP_NODESELDATA; /**< node selector specific data */
 
 
 /** destructor of node selector to free user data (called when SCIP is exiting)
@@ -38,7 +38,7 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
  *  - scip            : SCIP main data structure
  *  - nodesel         : the node selector itself
  */
-#define DECL_NODESELFREE(x) RETCODE x (SCIP* scip, NODESEL* nodesel)
+#define SCIP_DECL_NODESELFREE(x) SCIP_RETCODE x (SCIP* scip, SCIP_NODESEL* nodesel)
 
 /** initialization method of node selector (called after problem was transformed)
  *
@@ -46,7 +46,7 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
  *  - scip            : SCIP main data structure
  *  - nodesel         : the node selector itself
  */
-#define DECL_NODESELINIT(x) RETCODE x (SCIP* scip, NODESEL* nodesel)
+#define SCIP_DECL_NODESELINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_NODESEL* nodesel)
 
 /** deinitialization method of node selector (called before transformed problem is freed)
  *
@@ -54,7 +54,7 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
  *  - scip            : SCIP main data structure
  *  - nodesel         : the node selector itself
  */
-#define DECL_NODESELEXIT(x) RETCODE x (SCIP* scip, NODESEL* nodesel)
+#define SCIP_DECL_NODESELEXIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_NODESEL* nodesel)
 
 /** solving process initialization method of node selector (called when branch and bound process is about to begin)
  *
@@ -65,7 +65,7 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
  *  - scip            : SCIP main data structure
  *  - nodesel         : the node selector itself
  */
-#define DECL_NODESELINITSOL(x) RETCODE x (SCIP* scip, NODESEL* nodesel)
+#define SCIP_DECL_NODESELINITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_NODESEL* nodesel)
 
 /** solving process deinitialization method of node selector (called before branch and bound process data is freed)
  *
@@ -76,7 +76,7 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
  *  - scip            : SCIP main data structure
  *  - nodesel         : the node selector itself
  */
-#define DECL_NODESELEXITSOL(x) RETCODE x (SCIP* scip, NODESEL* nodesel)
+#define SCIP_DECL_NODESELEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_NODESEL* nodesel)
 
 /** node selection method of node selector
  *
@@ -91,7 +91,7 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
  *  - NULL    : problem is solved, because tree is empty
  *  - non-NULL: node to be solved next
  */
-#define DECL_NODESELSELECT(x) RETCODE x (SCIP* scip, NODESEL* nodesel, NODE** selnode)
+#define SCIP_DECL_NODESELSELECT(x) SCIP_RETCODE x (SCIP* scip, SCIP_NODESEL* nodesel, SCIP_NODE** selnode)
 
 /** node comparison method of node selector
  *
@@ -108,7 +108,7 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
  *  - value = 0: both nodes are equally good
  *  - value > 0: node2 comes after (is worse than) node2
  */
-#define DECL_NODESELCOMP(x) int x (SCIP* scip, NODESEL* nodesel, NODE* node1, NODE* node2)
+#define SCIP_DECL_NODESELCOMP(x) int x (SCIP* scip, SCIP_NODESEL* nodesel, SCIP_NODE* node1, SCIP_NODE* node2)
 
 
 

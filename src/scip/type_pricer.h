@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_pricer.h,v 1.12 2005/07/15 17:20:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_pricer.h,v 1.13 2005/08/22 18:35:54 bzfpfend Exp $"
 
 /**@file   type_pricer.h
  * @brief  type definitions for variable pricers
@@ -27,8 +27,8 @@
 #define __SCIP_TYPE_PRICER_H__
 
 
-typedef struct Pricer PRICER;           /**< variable pricer data */
-typedef struct PricerData PRICERDATA;   /**< locally defined variable pricer data */
+typedef struct SCIP_Pricer SCIP_PRICER;           /**< variable pricer data */
+typedef struct SCIP_PricerData SCIP_PRICERDATA;   /**< locally defined variable pricer data */
 
 
 /** destructor of variable pricer to free user data (called when SCIP is exiting)
@@ -37,7 +37,7 @@ typedef struct PricerData PRICERDATA;   /**< locally defined variable pricer dat
  *  - scip            : SCIP main data structure
  *  - pricer          : the variable pricer itself
  */
-#define DECL_PRICERFREE(x) RETCODE x (SCIP* scip, PRICER* pricer)
+#define SCIP_DECL_PRICERFREE(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRICER* pricer)
 
 /** initialization method of variable pricer (called after problem was transformed and pricer is active)
  *
@@ -45,7 +45,7 @@ typedef struct PricerData PRICERDATA;   /**< locally defined variable pricer dat
  *  - scip            : SCIP main data structure
  *  - pricer          : the variable pricer itself
  */
-#define DECL_PRICERINIT(x) RETCODE x (SCIP* scip, PRICER* pricer)
+#define SCIP_DECL_PRICERINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRICER* pricer)
 
 /** deinitialization method of variable pricer (called before transformed problem is freed and pricer is active)
  *
@@ -53,7 +53,7 @@ typedef struct PricerData PRICERDATA;   /**< locally defined variable pricer dat
  *  - scip            : SCIP main data structure
  *  - pricer          : the variable pricer itself
  */
-#define DECL_PRICEREXIT(x) RETCODE x (SCIP* scip, PRICER* pricer)
+#define SCIP_DECL_PRICEREXIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRICER* pricer)
 
 /** solving process initialization method of variable pricer (called when branch and bound process is about to begin)
  *
@@ -64,7 +64,7 @@ typedef struct PricerData PRICERDATA;   /**< locally defined variable pricer dat
  *  - scip            : SCIP main data structure
  *  - pricer          : the variable pricer itself
  */
-#define DECL_PRICERINITSOL(x) RETCODE x (SCIP* scip, PRICER* pricer)
+#define SCIP_DECL_PRICERINITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRICER* pricer)
 
 /** solving process deinitialization method of variable pricer (called before branch and bound process data is freed)
  *
@@ -75,7 +75,7 @@ typedef struct PricerData PRICERDATA;   /**< locally defined variable pricer dat
  *  - scip            : SCIP main data structure
  *  - pricer          : the variable pricer itself
  */
-#define DECL_PRICEREXITSOL(x) RETCODE x (SCIP* scip, PRICER* pricer)
+#define SCIP_DECL_PRICEREXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRICER* pricer)
 
 /** reduced cost pricing method of variable pricer for feasible LPs
  *
@@ -84,7 +84,7 @@ typedef struct PricerData PRICERDATA;   /**< locally defined variable pricer dat
  *  reduced costs for non-negative variables, positive reduced costs for non-positive variables,
  *  and non-zero reduced costs for variables that can be negative and positive.
  *
- *  The method is called in the LP solving loop after an LP was proven to be feasible.
+ *  The method is called in the SCIP_LP solving loop after an SCIP_LP was proven to be feasible.
  *
  *  Whenever the pricer finds a variable with negative feasibility, it should call SCIPcreateVar()
  *  and SCIPaddPricedVar() to add the variable to the problem. Furthermore, it should call the appropriate
@@ -94,16 +94,16 @@ typedef struct PricerData PRICERDATA;   /**< locally defined variable pricer dat
  *  - scip            : SCIP main data structure
  *  - pricer          : the variable pricer itself
  */
-#define DECL_PRICERREDCOST(x) RETCODE x (SCIP* scip, PRICER* pricer)
+#define SCIP_DECL_PRICERREDCOST(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRICER* pricer)
 
 /** farkas pricing method of variable pricer for infeasible LPs
  *
  *  Searches for variables that can contribute to the feasibility of the current LP.
  *  In standard branch-and-price, these are variables with positive farkas values:
  *
- *  The LP was proven infeasible, so we have an infeasibility proof by the dual farkas multipliers y.
+ *  The SCIP_LP was proven infeasible, so we have an infeasibility proof by the dual farkas multipliers y.
  *  With the values of y, an implicit inequality  y^T A x >= y^T b  is associated, with b given
- *  by the sides of the LP rows and the sign of y:
+ *  by the sides of the SCIP_LP rows and the sign of y:
  *   - if y_i is positive, b_i is the left hand side of the row,
  *   - if y_i is negative, b_i is the right hand side of the row.
  *
@@ -111,9 +111,9 @@ typedef struct PricerData PRICERDATA;   /**< locally defined variable pricer dat
  *  especially by the (for this inequality least infeasible solution) x' defined by 
  *     x'_i := ub_i, if y^T A_i >= 0
  *     x'_i := lb_i, if y^T A_i < 0.
- *  Pricing in this case means to add variables i with positive farkas value, i.e. y^T A_i x'_i > 0.
+ *  SCIP_Pricing in this case means to add variables i with positive farkas value, i.e. y^T A_i x'_i > 0.
  *
- *  The method is called in the LP solving loop after an LP was proven to be infeasible.
+ *  The method is called in the SCIP_LP solving loop after an SCIP_LP was proven to be infeasible.
  *
  *  Whenever the pricer finds a variable with positive farkas value, it should call SCIPcreateVar()
  *  and SCIPaddPricedVar() to add the variable to the problem. Furthermore, it should call the appropriate
@@ -123,7 +123,7 @@ typedef struct PricerData PRICERDATA;   /**< locally defined variable pricer dat
  *  - scip            : SCIP main data structure
  *  - pricer          : the variable pricer itself
  */
-#define DECL_PRICERFARKAS(x) RETCODE x (SCIP* scip, PRICER* pricer)
+#define SCIP_DECL_PRICERFARKAS(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRICER* pricer)
 
 
 

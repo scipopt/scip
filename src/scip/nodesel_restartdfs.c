@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.20 2005/06/22 08:27:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.21 2005/08/22 18:35:42 bzfpfend Exp $"
 
 /**@file   nodesel_restartdfs.c
  * @brief  node selector for depth first search with periodical selection of the best node
@@ -47,9 +47,9 @@
 
 
 /** node selector data for best first search node selection */
-struct NodeselData
+struct SCIP_NodeselData
 {
-   int              selectbestfreq;     /**< frequency for selecting the best node instead of the deepest one */
+   int                   selectbestfreq;     /**< frequency for selecting the best node instead of the deepest one */
 };
 
 
@@ -61,9 +61,9 @@ struct NodeselData
 
 /** destructor of node selector to free user data (called when SCIP is exiting) */
 static
-DECL_NODESELFREE(nodeselFreeRestartdfs)
+SCIP_DECL_NODESELFREE(nodeselFreeRestartdfs)
 {  /*lint --e{715}*/
-   NODESELDATA* nodeseldata;
+   SCIP_NODESELDATA* nodeseldata;
 
    assert(nodesel != NULL);
    assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
@@ -96,9 +96,9 @@ DECL_NODESELFREE(nodeselFreeRestartdfs)
 
 /** node selection method of node selector */
 static
-DECL_NODESELSELECT(nodeselSelectRestartdfs)
+SCIP_DECL_NODESELSELECT(nodeselSelectRestartdfs)
 {  /*lint --e{715}*/
-   NODESELDATA* nodeseldata;
+   SCIP_NODESELDATA* nodeseldata;
 
    assert(nodesel != NULL);
    assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
@@ -131,7 +131,7 @@ DECL_NODESELSELECT(nodeselSelectRestartdfs)
 
 /** node comparison method of node selector */
 static
-DECL_NODESELCOMP(nodeselCompRestartdfs)
+SCIP_DECL_NODESELCOMP(nodeselCompRestartdfs)
 {  /*lint --e{715}*/
    return SCIPnodeGetNumber(node2) - SCIPnodeGetNumber(node1);
 }
@@ -145,25 +145,25 @@ DECL_NODESELCOMP(nodeselCompRestartdfs)
  */
 
 /** creates the node selector for restarting depth first search and includes it in SCIP */
-RETCODE SCIPincludeNodeselRestartdfs(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeNodeselRestartdfs(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   NODESELDATA* nodeseldata;
+   SCIP_NODESELDATA* nodeseldata;
 
    /* allocate and initialize node selector data; this has to be freed in the destructor */
-   CHECK_OKAY( SCIPallocMemory(scip, &nodeseldata) );
+   SCIP_CALL( SCIPallocMemory(scip, &nodeseldata) );
    nodeseldata->selectbestfreq = SELECTBESTFREQ;
 
    /* include node selector */
-   CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+   SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
          NODESEL_LOWESTFIRST,
          nodeselFreeRestartdfs, nodeselInitRestartdfs, nodeselExitRestartdfs, 
          nodeselInitsolRestartdfs, nodeselExitsolRestartdfs, nodeselSelectRestartdfs, nodeselCompRestartdfs,
          nodeseldata) );
 
    /* add node selector parameters */
-   CHECK_OKAY( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
                   "nodeselection/restartdfs/selectbestfreq",
                   "frequency for selecting the best node instead of the deepest one (0: never)",
                   &nodeseldata->selectbestfreq, SELECTBESTFREQ, 0, INT_MAX, NULL, NULL) );

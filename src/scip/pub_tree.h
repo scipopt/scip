@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_tree.h,v 1.14 2005/07/15 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_tree.h,v 1.15 2005/08/22 18:35:46 bzfpfend Exp $"
 
 /**@file   pub_tree.h
  * @brief  public methods for branch and bound tree
@@ -38,59 +38,59 @@
 
 
 /*
- * Node methods
+ * SCIP_Node methods
  */
 
 /** node comparator for best lower bound */
 extern
-DECL_SORTPTRCOMP(SCIPnodeCompLowerbound);
+SCIP_DECL_SORTPTRCOMP(SCIPnodeCompLowerbound);
 
 #ifndef NDEBUG
 
-/* In debug mode, the following methods are implemented as function calls to ensure
+/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
 
 /** gets the type of the node */
 extern
-NODETYPE SCIPnodeGetType(
-   NODE*            node                /**< node */
+SCIP_NODETYPE SCIPnodeGetType(
+   SCIP_NODE*            node                /**< node */
    );
 
 /** gets successively assigned number of the node */
 extern
-Longint SCIPnodeGetNumber(
-   NODE*            node                /**< node */
+SCIP_Longint SCIPnodeGetNumber(
+   SCIP_NODE*            node                /**< node */
    );
 
 /** gets the depth of the node */
 extern
 int SCIPnodeGetDepth(
-   NODE*            node                /**< node */
+   SCIP_NODE*            node                /**< node */
    );
 
 /** gets the lower bound of the node */
 extern
-Real SCIPnodeGetLowerbound(
-   NODE*            node                /**< node */
+SCIP_Real SCIPnodeGetLowerbound(
+   SCIP_NODE*            node                /**< node */
    );
 
 /** gets the node selection priority of the node assigned by the branching rule */
 extern
-Real SCIPnodeGetPriority(
-   NODE*            node                /**< node */
+SCIP_Real SCIPnodeGetPriority(
+   SCIP_NODE*            node                /**< node */
    );
 
 /** returns whether node is in the path to the current node */
 extern
-Bool SCIPnodeIsActive(
-   NODE*            node                /**< node */
+SCIP_Bool SCIPnodeIsActive(
+   SCIP_NODE*            node                /**< node */
    );
 
 /** returns whether the node is marked to be propagated again */
 extern
-Bool SCIPnodeIsPropagatedAgain(
-   NODE*            node                /**< node data */
+SCIP_Bool SCIPnodeIsPropagatedAgain(
+   SCIP_NODE*            node                /**< node data */
    );
 
 #else

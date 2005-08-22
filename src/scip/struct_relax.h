@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_relax.h,v 1.8 2005/07/15 17:20:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_relax.h,v 1.9 2005/08/22 18:35:51 bzfpfend Exp $"
 
 /**@file   struct_relax.h
  * @brief  datastructures for relaxators
@@ -33,23 +33,23 @@
 
 
 /** relaxators data */
-struct Relax
+struct SCIP_Relax
 {
-   Longint          ncalls;             /**< number of times, this relaxator was called */
-   Longint          lastsolvednode;     /**< last total nodes counter, where the current relaxation was solved */
-   char*            name;               /**< name of relaxator */
-   char*            desc;               /**< description of relaxator */
-   DECL_RELAXFREE   ((*relaxfree));     /**< destructor of relaxator */
-   DECL_RELAXINIT   ((*relaxinit));     /**< initialize relaxator */
-   DECL_RELAXEXIT   ((*relaxexit));     /**< deinitialize relaxator */
-   DECL_RELAXINITSOL((*relaxinitsol));  /**< solving process initialization method of relaxator */
-   DECL_RELAXEXITSOL((*relaxexitsol));  /**< solving process deinitialization method of relaxator */
-   DECL_RELAXEXEC   ((*relaxexec));     /**< execution method of relaxator */
-   RELAXDATA*       relaxdata;          /**< relaxators local data */
-   CLOCK*           clock;              /**< relaxation time */
-   int              priority;           /**< priority of the relaxator */
-   int              freq;               /**< frequency for calling relaxator */
-   Bool             initialized;        /**< is relaxator initialized? */
+   SCIP_Longint          ncalls;             /**< number of times, this relaxator was called */
+   SCIP_Longint          lastsolvednode;     /**< last total nodes counter, where the current relaxation was solved */
+   char*                 name;               /**< name of relaxator */
+   char*                 desc;               /**< description of relaxator */
+   SCIP_DECL_RELAXFREE   ((*relaxfree));     /**< destructor of relaxator */
+   SCIP_DECL_RELAXINIT   ((*relaxinit));     /**< initialize relaxator */
+   SCIP_DECL_RELAXEXIT   ((*relaxexit));     /**< deinitialize relaxator */
+   SCIP_DECL_RELAXINITSOL((*relaxinitsol));  /**< solving process initialization method of relaxator */
+   SCIP_DECL_RELAXEXITSOL((*relaxexitsol));  /**< solving process deinitialization method of relaxator */
+   SCIP_DECL_RELAXEXEC   ((*relaxexec));     /**< execution method of relaxator */
+   SCIP_RELAXDATA*       relaxdata;          /**< relaxators local data */
+   SCIP_CLOCK*           relaxclock;         /**< relaxation time */
+   int                   priority;           /**< priority of the relaxator */
+   int                   freq;               /**< frequency for calling relaxator */
+   SCIP_Bool             initialized;        /**< is relaxator initialized? */
 };
 
 

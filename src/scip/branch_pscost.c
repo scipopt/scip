@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.11 2005/05/31 17:20:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.12 2005/08/22 18:35:32 bzfpfend Exp $"
 
 /**@file   branch_pscost.c
  * @brief  pseudo costs branching rule
@@ -62,17 +62,17 @@
 #define branchExitsolPscost NULL
 
 
-/** branching execution method for fractional LP solutions */
+/** branching execution method for fractional SCIP_LP solutions */
 static
-DECL_BRANCHEXECLP(branchExeclpPscost)
+SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
 {  /*lint --e{715}*/
-   NODE* node;
-   VAR** lpcands;
-   Real* lpcandssol;
-   Real* lpcandsfrac;
-   Real bestscore;
-   Real bestrootdiff;
-   Real downprio;
+   SCIP_NODE* node;
+   SCIP_VAR** lpcands;
+   SCIP_Real* lpcandssol;
+   SCIP_Real* lpcandsfrac;
+   SCIP_Real bestscore;
+   SCIP_Real bestrootdiff;
+   SCIP_Real downprio;
    int nlpcands;
    int bestcand;
    int c;
@@ -82,10 +82,10 @@ DECL_BRANCHEXECLP(branchExeclpPscost)
    assert(scip != NULL);
    assert(result != NULL);
 
-   debugMessage("Execlp method of pscost branching\n");
+   SCIPdebugMessage("Execlp method of pscost branching\n");
 
    /* get branching candidates */
-   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, NULL, &nlpcands) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, NULL, &nlpcands) );
    assert(nlpcands > 0);
 
    bestcand = -1;
@@ -93,9 +93,9 @@ DECL_BRANCHEXECLP(branchExeclpPscost)
    bestrootdiff = 0.0;
    for( c = 0; c < nlpcands; ++c )
    {
-      Real score;
-      Real rootsolval;
-      Real rootdiff;
+      SCIP_Real score;
+      SCIP_Real rootsolval;
+      SCIP_Real rootdiff;
 
       score = SCIPgetVarPseudocostScore(scip, lpcands[c], lpcandssol[c]);
       rootsolval = SCIPvarGetRootSol(lpcands[c]);
@@ -111,7 +111,7 @@ DECL_BRANCHEXECLP(branchExeclpPscost)
    assert(!SCIPisFeasIntegral(scip, lpcandssol[bestcand]));
 
    /* perform the branching */
-   debugMessage(" -> %d cands, selected cand %d: variable <%s> (solval=%g, score=%g)\n",
+   SCIPdebugMessage(" -> %d cands, selected cand %d: variable <%s> (solval=%g, score=%g)\n",
       nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandssol[bestcand], bestscore);
 
    /* choose preferred branching direction */
@@ -127,22 +127,22 @@ DECL_BRANCHEXECLP(branchExeclpPscost)
       downprio = SCIPvarGetRootSol(lpcands[bestcand]) - lpcandssol[bestcand];
       break;
    default:
-      errorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 
+      SCIPerrorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 
          SCIPvarGetBranchDirection(lpcands[bestcand]), SCIPvarGetName(lpcands[bestcand]));
       return SCIP_INVALIDDATA;
    }
 
    /* create child node with x <= floor(x') */
-   debugMessage(" -> creating child: <%s> <= %g\n",
+   SCIPdebugMessage(" -> creating child: <%s> <= %g\n",
       SCIPvarGetName(lpcands[bestcand]), SCIPfeasFloor(scip, lpcandssol[bestcand]));
-   CHECK_OKAY( SCIPcreateChild(scip, &node, downprio) );
-   CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestcand], SCIPfeasFloor(scip, lpcandssol[bestcand])) );
+   SCIP_CALL( SCIPcreateChild(scip, &node, downprio) );
+   SCIP_CALL( SCIPchgVarUbNode(scip, node, lpcands[bestcand], SCIPfeasFloor(scip, lpcandssol[bestcand])) );
       
    /* create child node with x >= ceil(x') */
-   debugMessage(" -> creating child: <%s> >= %g\n", 
+   SCIPdebugMessage(" -> creating child: <%s> >= %g\n", 
       SCIPvarGetName(lpcands[bestcand]), SCIPfeasCeil(scip, lpcandssol[bestcand]));
-   CHECK_OKAY( SCIPcreateChild(scip, &node, -downprio) );
-   CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestcand], SCIPfeasCeil(scip, lpcandssol[bestcand])) );
+   SCIP_CALL( SCIPcreateChild(scip, &node, -downprio) );
+   SCIP_CALL( SCIPchgVarLbNode(scip, node, lpcands[bestcand], SCIPfeasCeil(scip, lpcandssol[bestcand])) );
 
    *result = SCIP_BRANCHED;
 
@@ -161,17 +161,17 @@ DECL_BRANCHEXECLP(branchExeclpPscost)
  */
 
 /** creates the pseudo cost braching rule and includes it in SCIP */
-RETCODE SCIPincludeBranchrulePscost(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeBranchrulePscost(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   BRANCHRULEDATA* branchruledata;
+   SCIP_BRANCHRULEDATA* branchruledata;
 
    /* create pscost branching rule data */
    branchruledata = NULL;
    
    /* include branching rule */
-   CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
+   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
          branchFreePscost, branchInitPscost, branchExitPscost, branchInitsolPscost, branchExitsolPscost, 
          branchExeclpPscost, branchExecpsPscost,

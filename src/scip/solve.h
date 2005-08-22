@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.36 2005/07/15 17:20:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.37 2005/08/22 18:35:49 bzfpfend Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -50,44 +50,44 @@
  *  if the solving process was stopped, stores the reason as status in stat
  */
 extern
-Bool SCIPsolveIsStopped(
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat                /**< dynamic problem statistics */
+SCIP_Bool SCIPsolveIsStopped(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
 /** applies domain propagation on current node and flushes the conflict storage afterwards */
 extern
-RETCODE SCIPpropagateDomains(
-   BLKMEM*          blkmem,             /**< block memory buffers */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   PROB*            prob,               /**< transformed problem after presolve */
-   TREE*            tree,               /**< branch and bound tree */
-   CONFLICT*        conflict,           /**< conflict analysis data */
-   int              depth,              /**< depth level to use for propagator frequency checks */
-   int              maxrounds,          /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
-   Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+SCIP_RETCODE SCIPpropagateDomains(
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   int                   depth,              /**< depth level to use for propagator frequency checks */
+   int                   maxrounds,          /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    );
 
 /** main solving loop */
 extern
-RETCODE SCIPsolveCIP(
-   BLKMEM*          blkmem,             /**< block memory buffers */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   MEM*             mem,                /**< block memory pools */
-   PROB*            prob,               /**< transformed problem after presolve */
-   PRIMAL*          primal,             /**< primal data */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< LP data */
-   PRICESTORE*      pricestore,         /**< pricing storage */
-   SEPASTORE*       sepastore,          /**< separation storage */
-   CUTPOOL*         cutpool,            /**< global cut pool */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   CONFLICT*        conflict,           /**< conflict analysis data */
-   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   EVENTQUEUE*      eventqueue,         /**< event queue */
-   Bool*            restart             /**< should solving process be started again with presolving? */
+SCIP_RETCODE SCIPsolveCIP(
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_MEM*             mem,                /**< block memory pools */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_CUTPOOL*         cutpool,            /**< global cut pool */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Bool*            restart             /**< should solving process be started again with presolving? */
    );
 
 

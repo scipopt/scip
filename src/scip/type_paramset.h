@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_paramset.h,v 1.7 2005/07/15 17:20:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_paramset.h,v 1.8 2005/08/22 18:35:54 bzfpfend Exp $"
 
 /**@file   type_paramset.h
  * @brief  type definitions for handling parameter settings
@@ -28,7 +28,7 @@
 
 
 /** possible parameter types */
-enum ParamType
+enum SCIP_ParamType
 {
    SCIP_PARAMTYPE_BOOL    = 0,           /**< bool values: TRUE or FALSE */
    SCIP_PARAMTYPE_INT     = 1,           /**< integer values */
@@ -37,11 +37,11 @@ enum ParamType
    SCIP_PARAMTYPE_CHAR    = 4,           /**< characters */
    SCIP_PARAMTYPE_STRING  = 5            /**< strings: arrays of characters */
 };
-typedef enum ParamType PARAMTYPE;
+typedef enum SCIP_ParamType SCIP_PARAMTYPE;
 
-typedef struct Param PARAM;             /**< single parameter */
-typedef struct ParamData PARAMDATA;     /**< locally defined parameter specific data */
-typedef struct ParamSet PARAMSET;       /**< set of parameters */
+typedef struct SCIP_Param SCIP_PARAM;             /**< single parameter */
+typedef struct SCIP_ParamData SCIP_PARAMDATA;     /**< locally defined parameter specific data */
+typedef struct SCIP_ParamSet SCIP_PARAMSET;       /**< set of parameters */
 
 
 /** information method for changes in the parameter
@@ -55,7 +55,7 @@ typedef struct ParamSet PARAMSET;       /**< set of parameters */
  *    scip            : SCIP main data structure
  *    param           : the changed parameter (already set to its new value)
  */
-#define DECL_PARAMCHGD(x) RETCODE x (SCIP* scip, PARAM* param)
+#define SCIP_DECL_PARAMCHGD(x) SCIP_RETCODE x (SCIP* scip, SCIP_PARAM* param)
 
 
 

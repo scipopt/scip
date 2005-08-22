@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_xxx.h,v 1.7 2005/07/15 17:20:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_xxx.h,v 1.8 2005/08/22 18:35:39 bzfpfend Exp $"
 
 /**@file   heur_xxx.h
  * @brief  xxx primal heuristic
@@ -32,8 +32,8 @@
 
 /** creates the xxx primal heuristic and includes it in SCIP */
 extern
-RETCODE SCIPincludeHeurXxx(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeHeurXxx(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

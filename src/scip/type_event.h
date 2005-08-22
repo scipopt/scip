@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_event.h,v 1.17 2005/08/17 14:25:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_event.h,v 1.18 2005/08/22 18:35:53 bzfpfend Exp $"
 
 /**@file   type_event.h
  * @brief  type definitions for managing events
@@ -46,7 +46,7 @@
 #define SCIP_EVENTTYPE_HOLEADDED      0x00000200 /**< ??? TODO: a hole has been added to the hole list of a variable's domain */
 #define SCIP_EVENTTYPE_HOLEREMOVED    0x00000400 /**< ??? TODO: a hole has been removed from the hole list of a variable's domain */
 #define SCIP_EVENTTYPE_IMPLADDED      0x00000800 /**< the variable's implication list, variable bound or clique information
-                                                  *   was extended */
+                                                       *   was extended */
 
 /* presolving events */
 #define SCIP_EVENTTYPE_PRESOLVEROUND  0x00001000 /**< a presolving round has been finished */
@@ -57,9 +57,9 @@
 #define SCIP_EVENTTYPE_NODEINFEASIBLE 0x00008000 /**< the focus node has been proven to be infeasible or was bounded */
 #define SCIP_EVENTTYPE_NODEBRANCHED   0x00010000 /**< the focus node has been solved by branching */
 
-/* LP events */
-#define SCIP_EVENTTYPE_FIRSTLPSOLVED  0x00020000 /**< the node's initial LP was solved */
-#define SCIP_EVENTTYPE_LPSOLVED       0x00040000 /**< the node's LP was completely solved with cut & price */
+/* SCIP_LP events */
+#define SCIP_EVENTTYPE_FIRSTLPSOLVED  0x00020000 /**< the node's initial SCIP_LP was solved */
+#define SCIP_EVENTTYPE_LPSOLVED       0x00040000 /**< the node's SCIP_LP was completely solved with cut & price */
 
 /* primal solution events */
 #define SCIP_EVENTTYPE_POORSOLFOUND   0x00080000 /**< a good enough primal feasible (but not new best) solution was found */
@@ -82,29 +82,29 @@
                                        | SCIP_EVENTTYPE_NODEBRANCHED)
 #define SCIP_EVENTTYPE_NODEEVENT      (SCIP_EVENTTYPE_NODEFOCUSED | SCIP_EVENTTYPE_NODESOLVED)
 
-/* event masks for LP events */
+/* event masks for SCIP_LP events */
 #define SCIP_EVENTTYPE_LPEVENT        (SCIP_EVENTTYPE_FIRSTLPSOLVED | SCIP_EVENTTYPE_LPSOLVED)
 
 /* event masks for primal solution events */
 #define SCIP_EVENTTYPE_SOLFOUND       (SCIP_EVENTTYPE_POORSOLFOUND | SCIP_EVENTTYPE_BESTSOLFOUND)
 #define SCIP_EVENTTYPE_SOLEVENT       (SCIP_EVENTTYPE_SOLFOUND)
 
-typedef unsigned int EVENTTYPE;         /**< type of event (bit field) */
+typedef unsigned int SCIP_EVENTTYPE;         /**< type of event (bit field) */
 
 
-typedef struct Eventhdlr EVENTHDLR;     /**< event handler for a specific events */
-typedef struct EventhdlrData EVENTHDLRDATA; /**< event handler data */
-typedef struct Event EVENT;             /**< event data structure */
-typedef struct EventVarAdded EVENTVARADDED; /**< data for variable addition events */
-typedef struct EventVarDeleted EVENTVARDELETED; /**< data for variable deletion events */
-typedef struct EventVarFixed EVENTVARFIXED; /**< data for variable fixing events */
-typedef struct EventLocksChg EVENTLOCKSCHG; /**< data for locks change events */
-typedef struct EventObjChg EVENTOBJCHG; /**< data for objective value change events */
-typedef struct EventBdChg EVENTBDCHG;   /**< data for bound change events */
-typedef struct EventImplAdd EVENTIMPLADD; /**< data for implication added events */
-typedef struct EventData EVENTDATA;     /**< locally defined event specific data */
-typedef struct EventFilter EVENTFILTER; /**< event filter to select events to be processed by an event handler */
-typedef struct EventQueue EVENTQUEUE;   /**< event queue to cache events and process them later */
+typedef struct SCIP_Eventhdlr SCIP_EVENTHDLR;     /**< event handler for a specific events */
+typedef struct SCIP_EventhdlrData SCIP_EVENTHDLRDATA; /**< event handler data */
+typedef struct SCIP_Event SCIP_EVENT;             /**< event data structure */
+typedef struct SCIP_EventVarAdded SCIP_EVENTVARADDED; /**< data for variable addition events */
+typedef struct SCIP_EventVarDeleted SCIP_EVENTVARDELETED; /**< data for variable deletion events */
+typedef struct SCIP_EventVarFixed SCIP_EVENTVARFIXED; /**< data for variable fixing events */
+typedef struct SCIP_EventLocksChg SCIP_EVENTLOCKSCHG; /**< data for locks change events */
+typedef struct SCIP_EventObjChg SCIP_EVENTOBJCHG; /**< data for objective value change events */
+typedef struct SCIP_EventBdChg SCIP_EVENTBDCHG;   /**< data for bound change events */
+typedef struct SCIP_EventImplAdd SCIP_EVENTIMPLADD; /**< data for implication added events */
+typedef struct SCIP_EventData SCIP_EVENTDATA;     /**< locally defined event specific data */
+typedef struct SCIP_EventFilter SCIP_EVENTFILTER; /**< event filter to select events to be processed by an event handler */
+typedef struct SCIP_EventQueue SCIP_EVENTQUEUE;   /**< event queue to cache events and process them later */
 
 
 /** destructor of event handler to free user data (called when SCIP is exiting)
@@ -113,7 +113,7 @@ typedef struct EventQueue EVENTQUEUE;   /**< event queue to cache events and pro
  *    scip            : SCIP main data structure
  *    eventhdlr       : the event handler itself
  */
-#define DECL_EVENTFREE(x) RETCODE x (SCIP* scip, EVENTHDLR* eventhdlr)
+#define SCIP_DECL_EVENTFREE(x) SCIP_RETCODE x (SCIP* scip, SCIP_EVENTHDLR* eventhdlr)
 
 /** initialization method of event handler (called after problem was transformed)
  *
@@ -121,7 +121,7 @@ typedef struct EventQueue EVENTQUEUE;   /**< event queue to cache events and pro
  *    scip            : SCIP main data structure
  *    eventhdlr       : the event handler itself
  */
-#define DECL_EVENTINIT(x) RETCODE x (SCIP* scip, EVENTHDLR* eventhdlr)
+#define SCIP_DECL_EVENTINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_EVENTHDLR* eventhdlr)
 
 /** deinitialization method of event handler (called before transformed problem is freed)
  *
@@ -129,7 +129,7 @@ typedef struct EventQueue EVENTQUEUE;   /**< event queue to cache events and pro
  *    scip            : SCIP main data structure
  *    eventhdlr       : the event handler itself
  */
-#define DECL_EVENTEXIT(x) RETCODE x (SCIP* scip, EVENTHDLR* eventhdlr)
+#define SCIP_DECL_EVENTEXIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_EVENTHDLR* eventhdlr)
 
 /** solving process initialization method of event handler (called when branch and bound process is about to begin)
  *
@@ -140,7 +140,7 @@ typedef struct EventQueue EVENTQUEUE;   /**< event queue to cache events and pro
  *  - scip            : SCIP main data structure
  *  - eventhdlr       : the event handler itself
  */
-#define DECL_EVENTINITSOL(x) RETCODE x (SCIP* scip, EVENTHDLR* eventhdlr)
+#define SCIP_DECL_EVENTINITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_EVENTHDLR* eventhdlr)
 
 /** solving process deinitialization method of event handler (called before branch and bound process data is freed)
  *
@@ -151,7 +151,7 @@ typedef struct EventQueue EVENTQUEUE;   /**< event queue to cache events and pro
  *  - scip            : SCIP main data structure
  *  - eventhdlr       : the event handler itself
  */
-#define DECL_EVENTEXITSOL(x) RETCODE x (SCIP* scip, EVENTHDLR* eventhdlr)
+#define SCIP_DECL_EVENTEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_EVENTHDLR* eventhdlr)
 
 /** frees specific event data
  *
@@ -160,12 +160,12 @@ typedef struct EventQueue EVENTQUEUE;   /**< event queue to cache events and pro
  *    eventhdlr       : the event handler itself
  *    eventdata       : pointer to the event data to free
  */
-#define DECL_EVENTDELETE(x) RETCODE x (SCIP* scip, EVENTHDLR* eventhdlr, EVENTDATA** eventdata)
+#define SCIP_DECL_EVENTDELETE(x) SCIP_RETCODE x (SCIP* scip, SCIP_EVENTHDLR* eventhdlr, SCIP_EVENTDATA** eventdata)
 
 /** execution method of event handler
  *
  *  Processes the event. The method is called every time an event occurs, for which the event handler
- *  is responsible. Event handlers may declare themselves resposible for events by calling the
+ *  is responsible. SCIP_Event handlers may declare themselves resposible for events by calling the
  *  corresponding SCIPcatch...() method. This method creates an event filter object to point to the
  *  given event handler and event data.
  *
@@ -175,7 +175,7 @@ typedef struct EventQueue EVENTQUEUE;   /**< event queue to cache events and pro
  *    event           : event to process
  *    eventdata       : user data for the event
  */
-#define DECL_EVENTEXEC(x) RETCODE x (SCIP* scip, EVENTHDLR* eventhdlr, EVENT* event, EVENTDATA* eventdata)
+#define SCIP_DECL_EVENTEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_EVENTHDLR* eventhdlr, SCIP_EVENT* event, SCIP_EVENTDATA* eventdata)
 
 
 

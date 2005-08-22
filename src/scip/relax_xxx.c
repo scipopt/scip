@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax_xxx.c,v 1.4 2005/07/15 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: relax_xxx.c,v 1.5 2005/08/22 18:35:46 bzfpfend Exp $"
 
 /**@file   relax_xxx.c
  * @brief  xxx relaxator
@@ -43,7 +43,7 @@
 /* TODO: fill in the necessary relaxator data */
 
 /** relaxator data */
-struct RelaxData
+struct SCIP_RelaxData
 {
 };
 
@@ -68,9 +68,9 @@ struct RelaxData
 /** destructor of relaxator to free user data (called when SCIP is exiting) */
 #if 0
 static
-DECL_RELAXFREE(relaxFreeXxx)
+SCIP_DECL_RELAXFREE(relaxFreeXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx relaxator not implemented yet\n");
+   SCIPerrorMessage("method of xxx relaxator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -83,9 +83,9 @@ DECL_RELAXFREE(relaxFreeXxx)
 /** initialization method of relaxator (called after problem was transformed) */
 #if 0
 static
-DECL_RELAXINIT(relaxInitXxx)
+SCIP_DECL_RELAXINIT(relaxInitXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx relaxator not implemented yet\n");
+   SCIPerrorMessage("method of xxx relaxator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -98,9 +98,9 @@ DECL_RELAXINIT(relaxInitXxx)
 /** deinitialization method of relaxator (called before transformed problem is freed) */
 #if 0
 static
-DECL_RELAXEXIT(relaxExitXxx)
+SCIP_DECL_RELAXEXIT(relaxExitXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx relaxator not implemented yet\n");
+   SCIPerrorMessage("method of xxx relaxator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -113,9 +113,9 @@ DECL_RELAXEXIT(relaxExitXxx)
 /** solving process initialization method of relaxator (called when branch and bound process is about to begin) */
 #if 0
 static
-DECL_RELAXINITSOL(relaxInitsolXxx)
+SCIP_DECL_RELAXINITSOL(relaxInitsolXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx relaxator not implemented yet\n");
+   SCIPerrorMessage("method of xxx relaxator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -128,9 +128,9 @@ DECL_RELAXINITSOL(relaxInitsolXxx)
 /** solving process deinitialization method of relaxator (called before branch and bound process data is freed) */
 #if 0
 static
-DECL_RELAXEXITSOL(relaxExitsolXxx)
+SCIP_DECL_RELAXEXITSOL(relaxExitsolXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx relaxator not implemented yet\n");
+   SCIPerrorMessage("method of xxx relaxator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -142,9 +142,9 @@ DECL_RELAXEXITSOL(relaxExitsolXxx)
 
 /** execution method of relaxator */
 static
-DECL_RELAXEXEC(relaxExecXxx)
+SCIP_DECL_RELAXEXEC(relaxExecXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx relaxator not implemented yet\n");
+   SCIPerrorMessage("method of xxx relaxator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -159,18 +159,18 @@ DECL_RELAXEXEC(relaxExecXxx)
  */
 
 /** creates the xxx relaxator and includes it in SCIP */
-RETCODE SCIPincludeRelaxXxx(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeRelaxXxx(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   RELAXDATA* relaxdata;
+   SCIP_RELAXDATA* relaxdata;
 
    /* create xxx relaxator data */
    relaxdata = NULL;
    /* TODO: (optional) create relaxator specific data here */
 
    /* include relaxator */
-   CHECK_OKAY( SCIPincludeRelax(scip, RELAX_NAME, RELAX_DESC, RELAX_DISPCHAR, RELAX_PRIORITY, RELAX_FREQ, RELAX_FREQOFS,
+   SCIP_CALL( SCIPincludeRelax(scip, RELAX_NAME, RELAX_DESC, RELAX_DISPCHAR, RELAX_PRIORITY, RELAX_FREQ, RELAX_FREQOFS,
          RELAX_MAXDEPTH, RELAX_PSEUDONODES, RELAX_DURINGPLUNGING,
          relaxFreeXxx, relaxInitXxx, relaxExitXxx, 
          relaxInitsolXxx, relaxExitsolXxx, relaxExecXxx,

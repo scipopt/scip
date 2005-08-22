@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_clock.h,v 1.7 2005/07/15 17:20:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_clock.h,v 1.8 2005/08/22 18:35:53 bzfpfend Exp $"
 
 /**@file   type_clock.h
  * @brief  type definitions for clocks and timing issues
@@ -26,17 +26,17 @@
 #ifndef __SCIP_TYPE_CLOCK_H__
 #define __SCIP_TYPE_CLOCK_H__
 
-enum ClockType
+enum SCIP_ClockType
 {
    SCIP_CLOCKTYPE_DEFAULT = 0,          /**< use default clock type */
    SCIP_CLOCKTYPE_CPU     = 1,          /**< use CPU clock */
    SCIP_CLOCKTYPE_WALL    = 2           /**< use wall clock */
 };
-typedef enum ClockType CLOCKTYPE;       /**< clock type to use */
+typedef enum SCIP_ClockType SCIP_CLOCKTYPE;       /**< clock type to use */
 
-typedef struct Clock CLOCK;             /**< clock timer */
-typedef struct CPUClock CPUCLOCK;       /**< CPU clock counter */
-typedef struct WallClock WALLCLOCK;     /**< wall clock counter */
+typedef struct SCIP_Clock SCIP_CLOCK;             /**< clock timer */
+typedef struct SCIP_CPUClock SCIP_CPUCLOCK;       /**< CPU clock counter */
+typedef struct SCIP_WallClock SCIP_WALLCLOCK;     /**< wall clock counter */
 
 
 #include "scip/def.h"

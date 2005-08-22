@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.35 2005/08/09 16:27:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.36 2005/08/22 18:35:52 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -37,215 +37,215 @@
 
 
 /** hole in a domain */
-struct Hole
+struct SCIP_Hole
 {
-   Real             left;               /**< left bound of open interval defining the hole (left,right) */
-   Real             right;              /**< right bound of open interval defining the hole (left,right) */
+   SCIP_Real             left;               /**< left bound of open interval defining the hole (left,right) */
+   SCIP_Real             right;              /**< right bound of open interval defining the hole (left,right) */
 };
 
 /** list of domain holes */
-struct Holelist
+struct SCIP_Holelist
 {
-   HOLE             hole;               /**< this hole */
-   HOLELIST*        next;               /**< next hole in list */
+   SCIP_HOLE             hole;               /**< this hole */
+   SCIP_HOLELIST*        next;               /**< next hole in list */
 };
 
 /** change in a hole list */
-struct HoleChg
+struct SCIP_HoleChg
 {
-   HOLELIST**       ptr;                /**< changed list pointer */
-   HOLELIST*        newlist;            /**< new value of list pointer */
-   HOLELIST*        oldlist;            /**< old value of list pointer */
+   SCIP_HOLELIST**       ptr;                /**< changed list pointer */
+   SCIP_HOLELIST*        newlist;            /**< new value of list pointer */
+   SCIP_HOLELIST*        oldlist;            /**< old value of list pointer */
 };
 
 /** data for branching decision bound changes */
-struct BranchingData
+struct SCIP_BranchingData
 {
-   Real             lpsolval;           /**< sol val of var in last LP prior to bound change, or SCIP_INVALID if unknown */
+   SCIP_Real             lpsolval;           /**< sol val of var in last SCIP_LP prior to bound change, or SCIP_INVALID if unknown */
 };
 
 /** data for infered bound changes */
-struct InferenceData
+struct SCIP_InferenceData
 {
-   VAR*             var;                /**< variable that was changed (parent of var, or var itself) */
+   SCIP_VAR*             var;                /**< variable that was changed (parent of var, or var itself) */
    union
    {
-      CONS*         cons;               /**< constraint that infered this bound change, or NULL */
-      PROP*         prop;               /**< propagator that infered this bound change, or NULL */
+      SCIP_CONS*         cons;               /**< constraint that infered this bound change, or NULL */
+      SCIP_PROP*         prop;               /**< propagator that infered this bound change, or NULL */
    } reason;
-   int              info;               /**< user information for inference to help resolving the conflict */
+   int                   info;               /**< user information for inference to help resolving the conflict */
 };
 
 /** change in one bound of a variable */
-struct BoundChg
+struct SCIP_BoundChg
 {
-   Real             newbound;           /**< new value for bound */
+   SCIP_Real             newbound;           /**< new value for bound */
    union
    {
-      BRANCHINGDATA branchingdata;      /**< data for branching decisions */
-      INFERENCEDATA inferencedata;      /**< data for infered bound changes */
+      SCIP_BRANCHINGDATA branchingdata;      /**< data for branching decisions */
+      SCIP_INFERENCEDATA inferencedata;      /**< data for infered bound changes */
    } data;
-   VAR*             var;                /**< active variable to change the bounds for */
-   unsigned int     boundchgtype:2;     /**< bound change type: branching decision or infered bound change */
-   unsigned int     boundtype:1;        /**< type of bound for var: lower or upper bound */
-   unsigned int     inferboundtype:1;   /**< type of bound for inference var (see inference data): lower or upper bound */
-   unsigned int     applied:1;          /**< was this bound change applied at least once? */
+   SCIP_VAR*             var;                /**< active variable to change the bounds for */
+   unsigned int          boundchgtype:2;     /**< bound change type: branching decision or infered bound change */
+   unsigned int          boundtype:1;        /**< type of bound for var: lower or upper bound */
+   unsigned int          inferboundtype:1;   /**< type of bound for inference var (see inference data): lower or upper bound */
+   unsigned int          applied:1;          /**< was this bound change applied at least once? */
 };
 
 /** bound change index representing the time of the bound change in path from root to current node */
-struct BdChgIdx
+struct SCIP_BdChgIdx
 {
-   int              depth;              /**< depth of node where the bound change was created */
-   int              pos;                /**< position of bound change in node's domchg array */
+   int                   depth;              /**< depth of node where the bound change was created */
+   int                   pos;                /**< position of bound change in node's domchg array */
 };
 
 /** bound change information to track bound changes from root node to current node */
-struct BdChgInfo
+struct SCIP_BdChgInfo
 {
-   Real             oldbound;           /**< old value for bound */
-   Real             newbound;           /**< new value for bound */
-   VAR*             var;                /**< active variable that changed the bounds */
-   INFERENCEDATA    inferencedata;      /**< data for infered bound changes */
-   BDCHGIDX         bdchgidx;           /**< bound change index in path from root to current node */
-   unsigned int     boundchgtype:2;     /**< bound change type: branching decision or infered bound change */
-   unsigned int     boundtype:1;        /**< type of bound for var: lower or upper bound */
-   unsigned int     inferboundtype:1;   /**< type of bound for inference var (see inference data): lower or upper bound */
+   SCIP_Real             oldbound;           /**< old value for bound */
+   SCIP_Real             newbound;           /**< new value for bound */
+   SCIP_VAR*             var;                /**< active variable that changed the bounds */
+   SCIP_INFERENCEDATA    inferencedata;      /**< data for infered bound changes */
+   SCIP_BDCHGIDX         bdchgidx;           /**< bound change index in path from root to current node */
+   unsigned int          boundchgtype:2;     /**< bound change type: branching decision or infered bound change */
+   unsigned int          boundtype:1;        /**< type of bound for var: lower or upper bound */
+   unsigned int          inferboundtype:1;   /**< type of bound for inference var (see inference data): lower or upper bound */
 };
 
 /** tracks changes of the variables' domains (static arrays, bound changes only) */
-struct DomChgBound
+struct SCIP_DomChgBound
 {
-   unsigned int     nboundchgs:30;      /**< number of bound changes (must be first structure entry!) */
-   unsigned int     domchgtype:2;       /**< type of domain change data (must be first structure entry!) */
-   BOUNDCHG*        boundchgs;          /**< array with changes in bounds of variables */
+   unsigned int          nboundchgs:30;      /**< number of bound changes (must be first structure entry!) */
+   unsigned int          domchgtype:2;       /**< type of domain change data (must be first structure entry!) */
+   SCIP_BOUNDCHG*        boundchgs;          /**< array with changes in bounds of variables */
 };
 
 /** tracks changes of the variables' domains (static arrays, bound and hole changes) */
-struct DomChgBoth
+struct SCIP_DomChgBoth
 {
-   unsigned int     nboundchgs:30;      /**< number of bound changes (must be first structure entry!) */
-   unsigned int     domchgtype:2;       /**< type of domain change data (must be first structure entry!) */
-   BOUNDCHG*        boundchgs;          /**< array with changes in bounds of variables */
-   HOLECHG*         holechgs;           /**< array with changes in hole lists */
-   int              nholechgs;          /**< number of hole list changes */
+   unsigned int          nboundchgs:30;      /**< number of bound changes (must be first structure entry!) */
+   unsigned int          domchgtype:2;       /**< type of domain change data (must be first structure entry!) */
+   SCIP_BOUNDCHG*        boundchgs;          /**< array with changes in bounds of variables */
+   SCIP_HOLECHG*         holechgs;           /**< array with changes in hole lists */
+   int                   nholechgs;          /**< number of hole list changes */
 };
 
 /** tracks changes of the variables' domains (dynamic arrays) */
-struct DomChgDyn
+struct SCIP_DomChgDyn
 {
-   unsigned int     nboundchgs:30;      /**< number of bound changes (must be first structure entry!) */
-   unsigned int     domchgtype:2;       /**< type of domain change data (must be first structure entry!) */
-   BOUNDCHG*        boundchgs;          /**< array with changes in bounds of variables */
-   HOLECHG*         holechgs;           /**< array with changes in hole lists */
-   int              nholechgs;          /**< number of hole list changes */
-   int              boundchgssize;      /**< size of bound changes array */
-   int              holechgssize;       /**< size of hole changes array */
+   unsigned int          nboundchgs:30;      /**< number of bound changes (must be first structure entry!) */
+   unsigned int          domchgtype:2;       /**< type of domain change data (must be first structure entry!) */
+   SCIP_BOUNDCHG*        boundchgs;          /**< array with changes in bounds of variables */
+   SCIP_HOLECHG*         holechgs;           /**< array with changes in hole lists */
+   int                   nholechgs;          /**< number of hole list changes */
+   int                   boundchgssize;      /**< size of bound changes array */
+   int                   holechgssize;       /**< size of hole changes array */
 };
 
 /** tracks changes of the variables' domains */
-union DomChg
+union SCIP_DomChg
 {
-   DOMCHGBOUND      domchgbound;        /**< bound changes */
-   DOMCHGBOTH       domchgboth;         /**< bound and hole changes */
-   DOMCHGDYN        domchgdyn;          /**< bound and hole changes with dynamic arrays */
+   SCIP_DOMCHGBOUND      domchgbound;        /**< bound changes */
+   SCIP_DOMCHGBOTH       domchgboth;         /**< bound and hole changes */
+   SCIP_DOMCHGDYN        domchgdyn;          /**< bound and hole changes with dynamic arrays */
 };
 
 /** domain of a variable */
-struct Dom
+struct SCIP_Dom
 {
-   Real             lb;                 /**< lower bounds of variables */
-   Real             ub;                 /**< upper bounds of variables */
-   HOLELIST*        holelist;           /**< list of holes */
+   SCIP_Real             lb;                 /**< lower bounds of variables */
+   SCIP_Real             ub;                 /**< upper bounds of variables */
+   SCIP_HOLELIST*        holelist;           /**< list of holes */
 };
 
 /** original variable information */
-struct Original
+struct SCIP_Original
 {
-   DOM              origdom;            /**< domain of variable in original problem */
-   VAR*             transvar;           /**< pointer to representing transformed variable */
+   SCIP_DOM              origdom;            /**< domain of variable in original problem */
+   SCIP_VAR*             transvar;           /**< pointer to representing transformed variable */
 };
 
 /** aggregation information: x = a*y + c */
-struct Aggregate
+struct SCIP_Aggregate
 {
-   Real             scalar;             /**< multiplier a in aggregation */
-   Real             constant;           /**< constant shift c in aggregation */
-   VAR*             var;                /**< variable y in aggregation */
+   SCIP_Real             scalar;             /**< multiplier a in aggregation */
+   SCIP_Real             constant;           /**< constant shift c in aggregation */
+   SCIP_VAR*             var;                /**< variable y in aggregation */
 };
 
 /** multiple aggregation information: x = a_1*y_1 + ... + a_k*y_k + c */
-struct Multaggr
+struct SCIP_Multaggr
 {
-   Real             constant;           /**< constant shift c in multiple aggregation */
-   Real*            scalars;            /**< multipliers a in multiple aggregation */
-   VAR**            vars;               /**< variables y in multiple aggregation */
-   int              nvars;              /**< number of variables in aggregation */
-   int              varssize;           /**< size of vars and scalars arrays */
+   SCIP_Real             constant;           /**< constant shift c in multiple aggregation */
+   SCIP_Real*            scalars;            /**< multipliers a in multiple aggregation */
+   SCIP_VAR**            vars;               /**< variables y in multiple aggregation */
+   int                   nvars;              /**< number of variables in aggregation */
+   int                   varssize;           /**< size of vars and scalars arrays */
 };
 
 /** negation information: x' = c - x */
-struct Negate
+struct SCIP_Negate
 {
-   Real             constant;           /**< constant shift c in negation */
+   SCIP_Real             constant;           /**< constant shift c in negation */
 };
 
 /** variable of the problem */
-struct Var
+struct SCIP_Var
 {
-   Real             obj;                /**< objective function value of variable */
-   Real             branchfactor;       /**< factor to weigh variable's branching score with */
-   Real             rootsol;            /**< primal solution of variable in root node, or SCIP_INVALID */
-   Real             primsolavg;         /**< weighted average of all values of variable in primal feasible solutions */
-   DOM              glbdom;             /**< domain of variable in global problem */
-   DOM              locdom;             /**< domain of variable in current subproblem */
+   SCIP_Real             obj;                /**< objective function value of variable */
+   SCIP_Real             branchfactor;       /**< factor to weigh variable's branching score with */
+   SCIP_Real             rootsol;            /**< primal solution of variable in root node, or SCIP_INVALID */
+   SCIP_Real             primsolavg;         /**< weighted average of all values of variable in primal feasible solutions */
+   SCIP_DOM              glbdom;             /**< domain of variable in global problem */
+   SCIP_DOM              locdom;             /**< domain of variable in current subproblem */
    union
    {
-      ORIGINAL      original;           /**< original variable information */
-      COL*          col;                /**< LP column (for column variables) */
-      AGGREGATE     aggregate;          /**< aggregation information (for aggregated variables) */
-      MULTAGGR      multaggr;           /**< multiple aggregation information (for multiple aggregated variables) */
-      NEGATE        negate;             /**< negation information (for negated variables) */
+      SCIP_ORIGINAL      original;           /**< original variable information */
+      SCIP_COL*          col;                /**< SCIP_LP column (for column variables) */
+      SCIP_AGGREGATE     aggregate;          /**< aggregation information (for aggregated variables) */
+      SCIP_MULTAGGR      multaggr;           /**< multiple aggregation information (for multiple aggregated variables) */
+      SCIP_NEGATE        negate;             /**< negation information (for negated variables) */
    } data;
-   char*            name;               /**< name of the variable */
-   DECL_VARDELORIG  ((*vardelorig));    /**< frees user data of original variable */
-   DECL_VARTRANS    ((*vartrans));      /**< creates transformed user data by transforming original user data */
-   DECL_VARDELTRANS ((*vardeltrans));   /**< frees user data of transformed variable */
-   VARDATA*         vardata;            /**< user data for this specific variable */
-   VAR**            parentvars;         /**< parent variables in the aggregation tree */
-   VAR*             negatedvar;         /**< pointer to the variables negation: x' = lb + ub - x, or NULL if not created */
-   VBOUNDS*         vlbs;               /**< variable lower bounds x >= b*y + d */
-   VBOUNDS*         vubs;               /**< variable upper bounds x <= b*y + d */
-   IMPLICS*         implics;            /**< implications y >=/<= b following from x <= 0 and x >= 1 (x binary), or NULL if x is not binary */
-   CLIQUELIST*      cliquelist;         /**< list of cliques the variable and its negation is member of */
-   EVENTFILTER*     eventfilter;        /**< event filter for events concerning this variable; not for ORIGINAL vars */
-   BDCHGINFO*       lbchginfos;         /**< bound change informations for lower bound changes from root to current node */
-   BDCHGINFO*       ubchginfos;         /**< bound change informations for upper bound changes from root to current node */
-   HISTORY*         history;            /**< branching and inference history information */
-   HISTORY*         historycrun;        /**< branching and inference history information for current run */
-   int              index;              /**< consecutively numbered variable identifier */
-   int              probindex;          /**< array position in problems vars array, or -1 if not assigned to a problem */
-   int              pseudocandindex;    /**< array position in pseudo branching candidates array, or -1 */
-   int              eventqueueindexobj; /**< array position in event queue of objective change event, or -1 */
-   int              eventqueueindexlb;  /**< array position in event queue of lower bound change event, or -1 */
-   int              eventqueueindexub;  /**< array position in event queue of upper bound change event, or -1 */
-   int              parentvarssize;     /**< available slots in parentvars array */
-   int              nparentvars;        /**< number of parent variables in aggregation tree (used slots of parentvars) */
-   int              nuses;              /**< number of times, this variable is referenced */
-   int              nlocksdown;         /**< number of locks for rounding down; if zero, rounding down is always feasible */
-   int              nlocksup;           /**< number of locks for rounding up; if zero, rounding up is always feasible */
-   int              branchpriority;     /**< priority of the variable for branching */
-   int              lbchginfossize;     /**< available slots in lbchginfos array */
-   int              nlbchginfos;        /**< number of lower bound changes from root node to current node */
-   int              ubchginfossize;     /**< available slots in ubchginfos array */
-   int              nubchginfos;        /**< number of upper bound changes from root node to current node */
-   int              conflictsetcount;   /**< number of last conflict set, this variable was member of */
-   unsigned int     initial:1;          /**< TRUE iff var's column should be present in the initial root LP */
-   unsigned int     removeable:1;       /**< TRUE iff var's column is removeable from the LP (due to aging or cleanup) */
-   unsigned int     deleted:1;          /**< TRUE iff variable was deleted from the problem */
-   unsigned int     vartype:2;          /**< type of variable: binary, integer, implicit integer, continuous */
-   unsigned int     varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */
-   unsigned int     pseudocostflag:2;   /**< temporary flag used in pseudo cost update */
-   unsigned int     branchdirection:2;  /**< preferred branching direction of the variable (downwards, upwards, auto) */
+   char*                 name;               /**< name of the variable */
+   SCIP_DECL_VARDELORIG  ((*vardelorig));    /**< frees user data of original variable */
+   SCIP_DECL_VARTRANS    ((*vartrans));      /**< creates transformed user data by transforming original user data */
+   SCIP_DECL_VARDELTRANS ((*vardeltrans));   /**< frees user data of transformed variable */
+   SCIP_VARDATA*         vardata;            /**< user data for this specific variable */
+   SCIP_VAR**            parentvars;         /**< parent variables in the aggregation tree */
+   SCIP_VAR*             negatedvar;         /**< pointer to the variables negation: x' = lb + ub - x, or NULL if not created */
+   SCIP_VBOUNDS*         vlbs;               /**< variable lower bounds x >= b*y + d */
+   SCIP_VBOUNDS*         vubs;               /**< variable upper bounds x <= b*y + d */
+   SCIP_IMPLICS*         implics;            /**< implications y >=/<= b following from x <= 0 and x >= 1 (x binary), or NULL if x is not binary */
+   SCIP_CLIQUELIST*      cliquelist;         /**< list of cliques the variable and its negation is member of */
+   SCIP_EVENTFILTER*     eventfilter;        /**< event filter for events concerning this variable; not for SCIP_ORIGINAL vars */
+   SCIP_BDCHGINFO*       lbchginfos;         /**< bound change informations for lower bound changes from root to current node */
+   SCIP_BDCHGINFO*       ubchginfos;         /**< bound change informations for upper bound changes from root to current node */
+   SCIP_HISTORY*         history;            /**< branching and inference history information */
+   SCIP_HISTORY*         historycrun;        /**< branching and inference history information for current run */
+   int                   index;              /**< consecutively numbered variable identifier */
+   int                   probindex;          /**< array position in problems vars array, or -1 if not assigned to a problem */
+   int                   pseudocandindex;    /**< array position in pseudo branching candidates array, or -1 */
+   int                   eventqueueindexobj; /**< array position in event queue of objective change event, or -1 */
+   int                   eventqueueindexlb;  /**< array position in event queue of lower bound change event, or -1 */
+   int                   eventqueueindexub;  /**< array position in event queue of upper bound change event, or -1 */
+   int                   parentvarssize;     /**< available slots in parentvars array */
+   int                   nparentvars;        /**< number of parent variables in aggregation tree (used slots of parentvars) */
+   int                   nuses;              /**< number of times, this variable is referenced */
+   int                   nlocksdown;         /**< number of locks for rounding down; if zero, rounding down is always feasible */
+   int                   nlocksup;           /**< number of locks for rounding up; if zero, rounding up is always feasible */
+   int                   branchpriority;     /**< priority of the variable for branching */
+   int                   lbchginfossize;     /**< available slots in lbchginfos array */
+   int                   nlbchginfos;        /**< number of lower bound changes from root node to current node */
+   int                   ubchginfossize;     /**< available slots in ubchginfos array */
+   int                   nubchginfos;        /**< number of upper bound changes from root node to current node */
+   int                   conflictsetcount;   /**< number of last conflict set, this variable was member of */
+   unsigned int          initial:1;          /**< TRUE iff var's column should be present in the initial root SCIP_LP */
+   unsigned int          removeable:1;       /**< TRUE iff var's column is removeable from the SCIP_LP (due to aging or cleanup) */
+   unsigned int          deleted:1;          /**< TRUE iff variable was deleted from the problem */
+   unsigned int          vartype:2;          /**< type of variable: binary, integer, implicit integer, continuous */
+   unsigned int          varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */
+   unsigned int          pseudocostflag:2;   /**< temporary flag used in pseudo cost update */
+   unsigned int          branchdirection:2;  /**< preferred branching direction of the variable (downwards, upwards, auto) */
 };
 
 

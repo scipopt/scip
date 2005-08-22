@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.35 2005/07/15 17:20:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.36 2005/08/22 18:35:29 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -67,36 +67,36 @@ public:
    const int scip_eagerfreq_;
 
    /** maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-   const Bool scip_maxprerounds_;
+   const SCIP_Bool scip_maxprerounds_;
 
    /** should separation method be delayed, if other separators found cuts? */
-   const Bool scip_delaysepa_;
+   const SCIP_Bool scip_delaysepa_;
 
    /** should propagation method be delayed, if other propagators found reductions? */
-   const Bool scip_delayprop_;
+   const SCIP_Bool scip_delayprop_;
 
    /** should presolving method be delayed, if other presolvers found reductions? */
-   const Bool scip_delaypresol_;
+   const SCIP_Bool scip_delaypresol_;
 
    /** should the constraint handler be skipped, if no constraints are available? */
-   const Bool scip_needscons_;
+   const SCIP_Bool scip_needscons_;
 
    /** default constructor */
    ObjConshdlr(
-      const char*   name,               /**< name of constraint handler */
-      const char*   desc,               /**< description of constraint handler */
-      int           sepapriority,       /**< priority of the constraint handler for separation */
-      int           enfopriority,       /**< priority of the constraint handler for constraint enforcing */
-      int           checkpriority,      /**< priority of the constraint handler for checking infeasibility */
-      int           sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
-      int           propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
-      int           eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
-                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
-      int           maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-      Bool          delaysepa,          /**< should separation method be delayed, if other separators found cuts? */
-      Bool          delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
-      Bool          delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
-      Bool          needscons           /**< should the constraint handler be skipped, if no constraints are available? */
+      const char*        name,               /**< name of constraint handler */
+      const char*        desc,               /**< description of constraint handler */
+      int                sepapriority,       /**< priority of the constraint handler for separation */
+      int                enfopriority,       /**< priority of the constraint handler for constraint enforcing */
+      int                checkpriority,      /**< priority of the constraint handler for checking infeasibility */
+      int                sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
+      int                propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
+      int                eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
+                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+      int                maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+      SCIP_Bool          delaysepa,          /**< should separation method be delayed, if other separators found cuts? */
+      SCIP_Bool          delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
+      SCIP_Bool          delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
+      SCIP_Bool          needscons           /**< should the constraint handler be skipped, if no constraints are available? */
       )
       : scip_name_(name),
         scip_desc_(desc),
@@ -120,31 +120,31 @@ public:
    }
 
    /** destructor of constraint handler to free user data (called when SCIP is exiting) */
-   virtual RETCODE scip_free(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr            /**< the constraint handler itself */
+   virtual SCIP_RETCODE scip_free(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr            /**< the constraint handler itself */
       )
    {
       return SCIP_OKAY;
    }
    
    /** initialization method of constraint handler (called after problem was transformed) */
-   virtual RETCODE scip_init(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS**        conss,              /**< array of constraints in transformed problem */
-      int           nconss              /**< number of constraints in transformed problem */
+   virtual SCIP_RETCODE scip_init(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        conss,              /**< array of constraints in transformed problem */
+      int                nconss              /**< number of constraints in transformed problem */
       )
    {
       return SCIP_OKAY;
    }
    
    /** deinitialization method of constraint handler (called before transformed problem is freed) */
-   virtual RETCODE scip_exit(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS**        conss,              /**< array of constraints in transformed problem */
-      int           nconss              /**< number of constraints in transformed problem */
+   virtual SCIP_RETCODE scip_exit(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        conss,              /**< array of constraints in transformed problem */
+      int                nconss              /**< number of constraints in transformed problem */
       )
    {
       return SCIP_OKAY;
@@ -163,12 +163,12 @@ public:
     *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
     *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
     */
-   virtual RETCODE scip_initpre(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS**        conss,              /**< array of constraints in transformed problem */
-      int           nconss,             /**< number of constraints in transformed problem */
-      RESULT*       result              /**< pointer to store the result of the callback method */
+   virtual SCIP_RETCODE scip_initpre(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        conss,              /**< array of constraints in transformed problem */
+      int                nconss,             /**< number of constraints in transformed problem */
+      SCIP_RESULT*       result              /**< pointer to store the result of the callback method */
       )
    {
       assert(result != NULL);
@@ -191,12 +191,12 @@ public:
     *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
     *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
     */
-   virtual RETCODE scip_exitpre(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS**        conss,              /**< final array of constraints in transformed problem */
-      int           nconss,             /**< final number of constraints in transformed problem */
-      RESULT*       result              /**< pointer to store the result of the callback method */
+   virtual SCIP_RETCODE scip_exitpre(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        conss,              /**< final array of constraints in transformed problem */
+      int                nconss,             /**< final number of constraints in transformed problem */
+      SCIP_RESULT*       result              /**< pointer to store the result of the callback method */
       )
    {
       assert(result != NULL);
@@ -211,11 +211,11 @@ public:
     *  This method is called when the presolving was finished and the branch and bound process is about to begin.
     *  The constraint handler may use this call to initialize its branch and bound specific data.
     */
-   virtual RETCODE scip_initsol(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS**        conss,              /**< array of constraints of the constraint handler */
-      int           nconss              /**< number of constraints of the constraint handler */
+   virtual SCIP_RETCODE scip_initsol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        conss,              /**< array of constraints of the constraint handler */
+      int                nconss              /**< number of constraints of the constraint handler */
       )
    {
       return SCIP_OKAY;
@@ -225,13 +225,13 @@ public:
     *
     *  This method is called before the branch and bound process is freed.
     *  The constraint handler should use this call to clean up its branch and bound data, in particular to release
-    *  all LP rows that he has created or captured.
+    *  all SCIP_LP rows that he has created or captured.
     */
-   virtual RETCODE scip_exitsol(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS**        conss,              /**< array of constraints of the constraint handler */
-      int           nconss              /**< number of constraints of the constraint handler */
+   virtual SCIP_RETCODE scip_exitsol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        conss,              /**< array of constraints of the constraint handler */
+      int                nconss              /**< number of constraints of the constraint handler */
       )
    {
       return SCIP_OKAY;
@@ -242,34 +242,34 @@ public:
     *  WARNING! There may exist unprocessed events. For example, a variable's bound may have been already changed, but
     *  the corresponding bound change event was not yet processed.
     */
-   virtual RETCODE scip_delete(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONSDATA**    consdata            /**< pointer to the constraint data to free */
+   virtual SCIP_RETCODE scip_delete(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONSDATA**    consdata            /**< pointer to the constraint data to free */
       )
    {
       return SCIP_OKAY;
    }
 
    /** transforms constraint data into data belonging to the transformed problem */
-   virtual RETCODE scip_trans(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS*         sourcecons,         /**< source constraint to transform */
-      CONS**        targetcons          /**< pointer to store created target constraint */
+   virtual SCIP_RETCODE scip_trans(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS*         sourcecons,         /**< source constraint to transform */
+      SCIP_CONS**        targetcons          /**< pointer to store created target constraint */
       ) = 0;
 
-   /** LP initialization method of constraint handler
+   /** SCIP_LP initialization method of constraint handler
     *
-    *  Puts the LP relaxations of all "initial" constraints into the LP. The method should scan the constraints
-    *  array for constraints that are marked initial via calls to SCIPconsIsInitial() and put the LP relaxation
-    *  of all initial constraints to the LP with calls to SCIPaddCut().
+    *  Puts the SCIP_LP relaxations of all "initial" constraints into the LP. The method should scan the constraints
+    *  array for constraints that are marked initial via calls to SCIPconsIsInitial() and put the SCIP_LP relaxation
+    *  of all initial constraints to the SCIP_LP with calls to SCIPaddCut().
     */
-   virtual RETCODE scip_initlp(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS**        conss,              /**< array of constraints to process */
-      int           nconss              /**< number of constraints to process */
+   virtual SCIP_RETCODE scip_initlp(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        conss,              /**< array of constraints to process */
+      int                nconss              /**< number of constraints to process */
       )
    {
       return SCIP_OKAY;
@@ -277,8 +277,8 @@ public:
 
    /** separation method of constraint handler
     *
-    *  Separates all constraints of the constraint handler. The method is called in the LP solution loop,
-    *  which means that a valid LP solution exists.
+    *  Separates all constraints of the constraint handler. The method is called in the SCIP_LP solution loop,
+    *  which means that a valid SCIP_LP solution exists.
     *
     *  The first nusefulconss constraints are the ones, that are identified to likely be violated. The separation
     *  method should process only the useful constraints in most runs, and only occasionally the remaining
@@ -293,13 +293,13 @@ public:
     *  - SCIP_DIDNOTRUN  : the separator was skipped
     *  - SCIP_DELAYED    : the separator was skipped, but should be called again
     */
-   virtual RETCODE scip_sepa(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS**        conss,              /**< array of constraints to process */
-      int           nconss,             /**< number of constraints to process */
-      int           nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
-      RESULT*       result              /**< pointer to store the result of the separation call */
+   virtual SCIP_RETCODE scip_sepa(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        conss,              /**< array of constraints to process */
+      int                nconss,             /**< number of constraints to process */
+      int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+      SCIP_RESULT*       result              /**< pointer to store the result of the separation call */
       )
    {
       assert(result != NULL);
@@ -307,10 +307,10 @@ public:
       return SCIP_OKAY;
    }
 
-   /** constraint enforcing method of constraint handler for LP solutions
+   /** constraint enforcing method of constraint handler for SCIP_LP solutions
     *
-    *  The method is called at the end of the node processing loop for a node where the LP was solved.
-    *  The LP solution has to be checked for feasibility. If possible, an infeasibility should be resolved by
+    *  The method is called at the end of the node processing loop for a node where the SCIP_LP was solved.
+    *  The SCIP_LP solution has to be checked for feasibility. If possible, an infeasibility should be resolved by
     *  branching, reducing a variable's domain to exclude the solution or separating the solution with a valid
     *  cutting plane.
     *
@@ -337,24 +337,24 @@ public:
     *  - SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
     *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
     */
-   virtual RETCODE scip_enfolp(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS**        conss,              /**< array of constraints to process */
-      int           nconss,             /**< number of constraints to process */
-      int           nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
-      RESULT*       result              /**< pointer to store the result of the enforcing call */
+   virtual SCIP_RETCODE scip_enfolp(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        conss,              /**< array of constraints to process */
+      int                nconss,             /**< number of constraints to process */
+      int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+      SCIP_RESULT*       result              /**< pointer to store the result of the enforcing call */
       ) = 0;
 
    /** constraint enforcing method of constraint handler for pseudo solutions
     *
-    *  The method is called at the end of the node processing loop for a node where the LP was not solved.
+    *  The method is called at the end of the node processing loop for a node where the SCIP_LP was not solved.
     *  The pseudo solution has to be checked for feasibility. If possible, an infeasibility should be resolved by
     *  branching, reducing a variable's domain to exclude the solution or adding an additional constraint.
-    *  Separation is not possible, since the LP is not processed at the current node. All LP informations like
-    *  LP solution, slack values, or reduced costs are invalid and must not be accessed.
+    *  Separation is not possible, since the SCIP_LP is not processed at the current node. All SCIP_LP informations like
+    *  SCIP_LP solution, slack values, or reduced costs are invalid and must not be accessed.
     *
-    *  Like in the enforcing method for LP solutions, the enforcing methods of the active constraint handlers are
+    *  Like in the enforcing method for SCIP_LP solutions, the enforcing methods of the active constraint handlers are
     *  called in decreasing order of their enforcing priorities until the first constraint handler returned with
     *  the value SCIP_CUTOFF, SCIP_REDUCEDDOM, SCIP_CONSADDED, SCIP_BRANCHED, or SCIP_SOLVELP.
     *
@@ -371,19 +371,19 @@ public:
     *  - SCIP_CONSADDED  : an additional constraint was generated
     *  - SCIP_REDUCEDDOM : a variable's domain was reduced
     *  - SCIP_BRANCHED   : no changes were made to the problem, but a branching was applied to resolve an infeasibility
-    *  - SCIP_SOLVELP    : at least one constraint is infeasible, and this can only be resolved by solving the LP
+    *  - SCIP_SOLVELP    : at least one constraint is infeasible, and this can only be resolved by solving the SCIP_LP
     *  - SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
     *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
     *  - SCIP_DIDNOTRUN  : the enforcement was skipped (only possible, if objinfeasible is true)
     */
-   virtual RETCODE scip_enfops(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS**        conss,              /**< array of constraints to process */
-      int           nconss,             /**< number of constraints to process */
-      int           nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
-      Bool          objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
-      RESULT*       result              /**< pointer to store the result of the enforcing call */
+   virtual SCIP_RETCODE scip_enfops(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        conss,              /**< array of constraints to process */
+      int                nconss,             /**< number of constraints to process */
+      int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+      SCIP_Bool          objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
+      SCIP_RESULT*       result              /**< pointer to store the result of the enforcing call */
       ) = 0;
 
    /** feasibility check method of constraint handler for primal solutions
@@ -399,7 +399,7 @@ public:
     *  check priority greater than zero (e.g. if the check is much faster than testing all variables for
     *  integrality).
     *
-    *  In some cases, integrality conditions or rows of the current LP don't have to be checked, because their
+    *  In some cases, integrality conditions or rows of the current SCIP_LP don't have to be checked, because their
     *  feasibility is already checked or implicitly given. In these cases, 'checkintegrality' or
     *  'checklprows' is FALSE.
     *
@@ -407,15 +407,15 @@ public:
     *  - SCIP_INFEASIBLE : at least one constraint of the handler is infeasible
     *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
     */
-   virtual RETCODE scip_check(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS**        conss,              /**< array of constraints to process */
-      int           nconss,             /**< number of constraints to process */
-      SOL*          sol,                /**< the solution to check feasibility for */
-      Bool          checkintegrality,   /**< has integrality to be checked? */
-      Bool          checklprows,        /**< have current LP rows to be checked? */
-      RESULT*       result              /**< pointer to store the result of the feasibility checking call */
+   virtual SCIP_RETCODE scip_check(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        conss,              /**< array of constraints to process */
+      int                nconss,             /**< number of constraints to process */
+      SCIP_SOL*          sol,                /**< the solution to check feasibility for */
+      SCIP_Bool          checkintegrality,   /**< has integrality to be checked? */
+      SCIP_Bool          checklprows,        /**< have current SCIP_LP rows to be checked? */
+      SCIP_RESULT*       result              /**< pointer to store the result of the feasibility checking call */
       ) = 0;
 
    /** domain propagation method of constraint handler
@@ -431,13 +431,13 @@ public:
     *  - SCIP_DIDNOTRUN  : the propagator was skipped
     *  - SCIP_DELAYED    : the propagator was skipped, but should be called again
     */
-   virtual RETCODE scip_prop(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS**        conss,              /**< array of constraints to process */
-      int           nconss,             /**< number of constraints to process */
-      int           nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
-      RESULT*       result              /**< pointer to store the result of the propagation call */
+   virtual SCIP_RETCODE scip_prop(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        conss,              /**< array of constraints to process */
+      int                nconss,             /**< number of constraints to process */
+      int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+      SCIP_RESULT*       result              /**< pointer to store the result of the propagation call */
       )
    {
       assert(result != NULL);
@@ -458,31 +458,31 @@ public:
     *  - SCIP_DIDNOTRUN  : the presolver was skipped
     *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
     */
-   virtual RETCODE scip_presol(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS**        conss,              /**< array of constraints to process */
-      int           nconss,             /**< no. of constraints to process */
-      int           nrounds,            /**< no. of presolving rounds already done */
-      int           nnewfixedvars,      /**< no. of variables fixed since last call to presolving method */
-      int           nnewaggrvars,       /**< no. of variables aggregated since last call to presolving method */
-      int           nnewchgvartypes,    /**< no. of variable type changes since last call to presolving method */
-      int           nnewchgbds,         /**< no. of variable bounds tightend since last call to presolving method */
-      int           nnewholes,          /**< no. of domain holes added since last call to presolving method */
-      int           nnewdelconss,       /**< no. of deleted constraints since last call to presolving method */
-      int           nnewupgdconss,      /**< no. of upgraded constraints since last call to presolving method */
-      int           nnewchgcoefs,       /**< no. of changed coefficients since last call to presolving method */
-      int           nnewchgsides,       /**< no. of changed left or right hand sides since last call to presolving method */
-      int*          nfixedvars,         /**< pointer to count total number of variables fixed of all presolvers */
-      int*          naggrvars,          /**< pointer to count total number of variables aggregated of all presolvers */
-      int*          nchgvartypes,       /**< pointer to count total number of variable type changes of all presolvers */
-      int*          nchgbds,            /**< pointer to count total number of variable bounds tightend of all presolvers */
-      int*          naddholes,          /**< pointer to count total number of domain holes added of all presolvers */
-      int*          ndelconss,          /**< pointer to count total number of deleted constraints of all presolvers */
-      int*          nupgdconss,         /**< pointer to count total number of upgraded constraints of all presolvers */
-      int*          nchgcoefs,          /**< pointer to count total number of changed coefficients of all presolvers */
-      int*          nchgsides,          /**< pointer to count total number of changed sides of all presolvers */
-      RESULT*       result              /**< pointer to store the result of the presolving call */
+   virtual SCIP_RETCODE scip_presol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        conss,              /**< array of constraints to process */
+      int                nconss,             /**< no. of constraints to process */
+      int                nrounds,            /**< no. of presolving rounds already done */
+      int                nnewfixedvars,      /**< no. of variables fixed since last call to presolving method */
+      int                nnewaggrvars,       /**< no. of variables aggregated since last call to presolving method */
+      int                nnewchgvartypes,    /**< no. of variable type changes since last call to presolving method */
+      int                nnewchgbds,         /**< no. of variable bounds tightend since last call to presolving method */
+      int                nnewholes,          /**< no. of domain holes added since last call to presolving method */
+      int                nnewdelconss,       /**< no. of deleted constraints since last call to presolving method */
+      int                nnewupgdconss,      /**< no. of upgraded constraints since last call to presolving method */
+      int                nnewchgcoefs,       /**< no. of changed coefficients since last call to presolving method */
+      int                nnewchgsides,       /**< no. of changed left or right hand sides since last call to presolving method */
+      int*               nfixedvars,         /**< pointer to count total number of variables fixed of all presolvers */
+      int*               naggrvars,          /**< pointer to count total number of variables aggregated of all presolvers */
+      int*               nchgvartypes,       /**< pointer to count total number of variable type changes of all presolvers */
+      int*               nchgbds,            /**< pointer to count total number of variable bounds tightend of all presolvers */
+      int*               naddholes,          /**< pointer to count total number of domain holes added of all presolvers */
+      int*               ndelconss,          /**< pointer to count total number of deleted constraints of all presolvers */
+      int*               nupgdconss,         /**< pointer to count total number of upgraded constraints of all presolvers */
+      int*               nchgcoefs,          /**< pointer to count total number of changed coefficients of all presolvers */
+      int*               nchgsides,          /**< pointer to count total number of changed sides of all presolvers */
+      SCIP_RESULT*       result              /**< pointer to store the result of the presolving call */
       )
    {
       assert(result != NULL);
@@ -518,18 +518,18 @@ public:
     *  - SCIP_SUCCESS    : the conflicting bound change has been successfully resolved by adding all reason bounds
     *  - SCIP_DIDNOTFIND : the conflicting bound change could not be resolved and has to be put into the conflict set
     */
-   virtual RETCODE scip_resprop(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS*         cons,               /**< the constraint that deduced the bound change of the conflict variable */
-      VAR*          infervar,           /**< the conflict variable whose bound change has to be resolved */
-      int           inferinfo,          /**< the user information passed to the corresponding SCIPinferVarLbCons()
-                                         *   or SCIPinferVarUbCons() call */
-      BOUNDTYPE     boundtype,          /**< the type of the changed bound (lower or upper bound) */
-      BDCHGIDX*     bdchgidx,           /**< the index of the bound change, representing the point of time where the
-                                         *   change took place */
-      RESULT*       result              /**< pointer to store the result of the propagation conflict resolving resolving
-                                         *   call */
+   virtual SCIP_RETCODE scip_resprop(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS*         cons,               /**< the constraint that deduced the bound change of the conflict variable */
+      SCIP_VAR*          infervar,           /**< the conflict variable whose bound change has to be resolved */
+      int                inferinfo,          /**< the user information passed to the corresponding SCIPinferVarLbCons()
+                                              *   or SCIPinferVarUbCons() call */
+      SCIP_BOUNDTYPE     boundtype,          /**< the type of the changed bound (lower or upper bound) */
+      SCIP_BDCHGIDX*     bdchgidx,           /**< the index of the bound change, representing the point of time where the
+                                              *   change took place */
+      SCIP_RESULT*       result              /**< pointer to store the result of the propagation conflict resolving resolving
+                                              *   call */
       )
    {
       assert(result != NULL);
@@ -586,13 +586,13 @@ public:
     *  SCIPaddConsLocks(scip, c, nlockspos + nlocksneg, nlockspos + nlocksneg), because any modification to the
     *  value of y or to the feasibility of c can alter the feasibility of the equivalence constraint.
     */
-   virtual RETCODE scip_lock(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS*         cons,               /**< the constraint that should lock rounding of its variables, or NULL if the
-                                         *   constraint handler does not need constraints */
-      int           nlockspos,          /**< no. of times, the roundings should be locked for the constraint */
-      int           nlocksneg           /**< no. of times, the roundings should be locked for the constraint's negation */
+   virtual SCIP_RETCODE scip_lock(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS*         cons,               /**< the constraint that should lock rounding of its variables, or NULL if the
+                                              *   constraint handler does not need constraints */
+      int                nlockspos,          /**< no. of times, the roundings should be locked for the constraint */
+      int                nlocksneg           /**< no. of times, the roundings should be locked for the constraint's negation */
       ) = 0;
 
    /** constraint activation notification method of constraint handler
@@ -603,10 +603,10 @@ public:
     *  This method is always called after a constraint of the constraint handler was activated. The constraint
     *  handler may use this call to update his own (statistical) data.
     */
-   virtual RETCODE scip_active(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS*         cons                /**< the constraint that has been activated */
+   virtual SCIP_RETCODE scip_active(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS*         cons                /**< the constraint that has been activated */
       )
    {
       return SCIP_OKAY;
@@ -620,10 +620,10 @@ public:
     *  This method is always called before a constraint of the constraint handler is deactivated. The constraint
     *  handler may use this call to update his own (statistical) data.
     */
-   virtual RETCODE scip_deactive(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS*         cons                /**< the constraint that has been deactivated */
+   virtual SCIP_RETCODE scip_deactive(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS*         cons                /**< the constraint that has been deactivated */
       )
    {
       return SCIP_OKAY;
@@ -637,10 +637,10 @@ public:
     *  This method is always called after a constraint of the constraint handler was enabled. The constraint
     *  handler may use this call to update his own (statistical) data.
     */
-   virtual RETCODE scip_enable(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS*         cons                /**< the constraint that has been enabled */
+   virtual SCIP_RETCODE scip_enable(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS*         cons                /**< the constraint that has been enabled */
       )
    {
       return SCIP_OKAY;
@@ -654,10 +654,10 @@ public:
     *  This method is always called before a constraint of the constraint handler is disabled. The constraint
     *  handler may use this call to update his own (statistical) data.
     */
-   virtual RETCODE scip_disable(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS*         cons                /**< the constraint that has been disabled */
+   virtual SCIP_RETCODE scip_disable(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS*         cons                /**< the constraint that has been disabled */
       )
    {
       return SCIP_OKAY;
@@ -667,11 +667,11 @@ public:
     *
     *  The constraint handler should store a representation of the constraint into the given text file.
     */
-   virtual RETCODE scip_print(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS*         cons,               /**< the constraint that should be displayed */
-      FILE*         file                /**< the text file to store the information into */
+   virtual SCIP_RETCODE scip_print(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS*         cons,               /**< the constraint that should be displayed */
+      FILE*              file                /**< the text file to store the information into */
       )
    {
       fprintf(file, "constraint handler <%s> doesn't support printing constraints\n", SCIPconshdlrGetName(conshdlr));
@@ -688,40 +688,40 @@ public:
  *  The method should be called in one of the following ways:
  *
  *   1. The user is resposible of deleting the object:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MyConshdlr* myconshdlr = new MyConshdlr(...);
- *       CHECK_OKAY( SCIPincludeObjConshdlr(scip, &myconshdlr, FALSE) );
+ *       SCIP_CALL( SCIPincludeObjConshdlr(scip, &myconshdlr, FALSE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );
+ *       SCIP_CALL( SCIPfree(&scip) );
  *       delete myconshdlr;    // delete conshdlr AFTER SCIPfree() !
  *
  *   2. The object pointer is passed to SCIP and deleted by SCIP in the SCIPfree() call:
- *       CHECK_OKAY( SCIPcreate(&scip) );
+ *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
- *       CHECK_OKAY( SCIPincludeObjConshdlr(scip, new MyConshdlr(...), TRUE) );
+ *       SCIP_CALL( SCIPincludeObjConshdlr(scip, new MyConshdlr(...), TRUE) );
  *       ...
- *       CHECK_OKAY( SCIPfree(&scip) );  // destructor of MyConshdlr is called here
+ *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyConshdlr is called here
  */
 extern
-RETCODE SCIPincludeObjConshdlr(
-   SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjConshdlr* objconshdlr,      /**< constraint handler object */
-   Bool             deleteobject        /**< should the constraint handler object be deleted when conshdlr is freed? */
+SCIP_RETCODE SCIPincludeObjConshdlr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   scip::ObjConshdlr*    objconshdlr,        /**< constraint handler object */
+   SCIP_Bool             deleteobject        /**< should the constraint handler object be deleted when conshdlr is freed? */
    );
 
 /** returns the conshdlr object of the given name, or NULL if not existing */
 extern
 scip::ObjConshdlr* SCIPfindObjConshdlr(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< name of constraint handler */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of constraint handler */
    );
 
 /** returns the conshdlr object for the given constraint handler */
 extern
 scip::ObjConshdlr* SCIPgetObjConshdlr(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 #endif

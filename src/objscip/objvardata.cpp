@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objvardata.cpp,v 1.5 2005/05/31 17:20:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objvardata.cpp,v 1.6 2005/08/22 18:35:31 bzfpfend Exp $"
 
 /**@file   objvardata.cpp
  * @brief  C++ wrapper for user variable data
@@ -35,10 +35,10 @@
  */
 
 /** user variable data */
-struct VarData
+struct SCIP_VarData
 {
-   scip::ObjVardata* objvardata;        /**< user variable data object */
-   Bool             deleteobject;       /**< should the user variable data object be deleted when variable is freed? */
+   scip::ObjVardata*     objvardata;         /**< user variable data object */
+   SCIP_Bool             deleteobject;       /**< should the user variable data object be deleted when variable is freed? */
 };
 
 
@@ -50,14 +50,14 @@ struct VarData
 
 /** frees user data of original variable (called when the original variable is freed) */
 static
-DECL_VARDELORIG(varDelorigObj)
+SCIP_DECL_VARDELORIG(varDelorigObj)
 {  /*lint --e{715}*/
    assert(vardata != NULL);
    assert(*vardata != NULL);
    assert((*vardata)->objvardata != NULL);
 
    /* call virtual method of vardata object */
-   CHECK_OKAY( (*vardata)->objvardata->scip_delorig(scip, var) );
+   SCIP_CALL( (*vardata)->objvardata->scip_delorig(scip, var) );
 
    /* free vardata object */
    if( (*vardata)->deleteobject )
@@ -75,10 +75,10 @@ DECL_VARDELORIG(varDelorigObj)
  *  (called after variable was transformed)
  */
 static
-DECL_VARTRANS(varTransObj)
+SCIP_DECL_VARTRANS(varTransObj)
 {  /*lint --e{715}*/
    scip::ObjVardata* objvardata;
-   Bool deleteobject;
+   SCIP_Bool deleteobject;
 
    assert(sourcedata != NULL);
    assert(sourcedata->objvardata != NULL);
@@ -86,10 +86,10 @@ DECL_VARTRANS(varTransObj)
    assert(*targetdata == NULL);
 
    /* call virtual method of vardata object */
-   CHECK_OKAY( sourcedata->objvardata->scip_trans(scip, targetvar, &objvardata, &deleteobject) );
+   SCIP_CALL( sourcedata->objvardata->scip_trans(scip, targetvar, &objvardata, &deleteobject) );
 
    /* create transformed user variable data */
-   *targetdata = new VARDATA;
+   *targetdata = new SCIP_VARDATA;
    (*targetdata)->objvardata = objvardata;
    (*targetdata)->deleteobject = deleteobject;
 
@@ -99,14 +99,14 @@ DECL_VARTRANS(varTransObj)
 
 /** frees user data of transformed variable (called when the transformed variable is freed) */
 static
-DECL_VARDELTRANS(varDeltransObj)
+SCIP_DECL_VARDELTRANS(varDeltransObj)
 {  /*lint --e{715}*/
    assert(vardata != NULL);
    assert(*vardata != NULL);
    assert((*vardata)->objvardata != NULL);
 
    /* call virtual method of vardata object */
-   CHECK_OKAY( (*vardata)->objvardata->scip_deltrans(scip, var) );
+   SCIP_CALL( (*vardata)->objvardata->scip_deltrans(scip, var) );
 
    /* free vardata object */
    if( (*vardata)->deleteobject )
@@ -130,29 +130,29 @@ DECL_VARDELTRANS(varDeltransObj)
 /** create and capture problem variable and associates the given variable data with the variable;
  *  if variable is of integral type, fractional bounds are automatically rounded
  */
-RETCODE SCIPcreateObjVar(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR**            var,                /**< pointer to variable object */
-   const char*      name,               /**< name of variable, or NULL for automatic name creation */
-   Real             lb,                 /**< lower bound of variable */
-   Real             ub,                 /**< upper bound of variable */
-   Real             obj,                /**< objective function value */
-   VARTYPE          vartype,            /**< type of variable */
-   Bool             initial,            /**< should var's column be present in the initial root LP? */
-   Bool             removeable,         /**< is var's column removeable from the LP (due to aging or cleanup)? */
-   scip::ObjVardata* objvardata,        /**< user variable data object */
-   Bool             deleteobject        /**< should the user variable data object be deleted when variable is freed? */
+SCIP_RETCODE SCIPcreateObjVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            var,                /**< pointer to variable object */
+   const char*           name,               /**< name of variable, or NULL for automatic name creation */
+   SCIP_Real             lb,                 /**< lower bound of variable */
+   SCIP_Real             ub,                 /**< upper bound of variable */
+   SCIP_Real             obj,                /**< objective function value */
+   SCIP_VARTYPE          vartype,            /**< type of variable */
+   SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
+   SCIP_Bool             removeable,         /**< is var's column removeable from the SCIP_LP (due to aging or cleanup)? */
+   scip::ObjVardata*     objvardata,        /**< user variable data object */
+   SCIP_Bool             deleteobject        /**< should the user variable data object be deleted when variable is freed? */
    )
 {
-   VARDATA* vardata;
+   SCIP_VARDATA* vardata;
 
    /* create user variable data */
-   vardata = new VARDATA;
+   vardata = new SCIP_VARDATA;
    vardata->objvardata = objvardata;
    vardata->deleteobject = deleteobject;
 
    /* create variable */
-   CHECK_OKAY( SCIPcreateVar(scip, var, name, lb, ub, obj, vartype, initial, removeable, 
+   SCIP_CALL( SCIPcreateVar(scip, var, name, lb, ub, obj, vartype, initial, removeable, 
          varDelorigObj, varTransObj, varDeltransObj, vardata) );
 
    return SCIP_OKAY;
@@ -163,11 +163,11 @@ RETCODE SCIPcreateObjVar(
  *  Otherwise, a segmentation fault may arise, or an undefined pointer is returned.
  */
 scip::ObjVardata* SCIPgetObjVardata(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var                 /**< problem variable */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
    )
 {
-   VARDATA* vardata;
+   SCIP_VARDATA* vardata;
 
    vardata = SCIPgetVarData(scip, var);
    assert(vardata != NULL);

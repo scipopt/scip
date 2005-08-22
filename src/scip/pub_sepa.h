@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_sepa.h,v 1.9 2005/07/15 17:20:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_sepa.h,v 1.10 2005/08/22 18:35:45 bzfpfend Exp $"
 
 /**@file   pub_sepa.h
  * @brief  public methods for separators
@@ -35,91 +35,91 @@
 
 /** compares two separators w. r. to their priority */
 extern
-DECL_SORTPTRCOMP(SCIPsepaComp);
+SCIP_DECL_SORTPTRCOMP(SCIPsepaComp);
 
 /** gets user data of separator */
 extern
-SEPADATA* SCIPsepaGetData(
-   SEPA*            sepa                /**< separator */
+SCIP_SEPADATA* SCIPsepaGetData(
+   SCIP_SEPA*            sepa                /**< separator */
    );
 
 /** sets user data of separator; user has to free old data in advance! */
 extern
 void SCIPsepaSetData(
-   SEPA*            sepa,               /**< separator */
-   SEPADATA*        sepadata            /**< new separator user data */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SEPADATA*        sepadata            /**< new separator user data */
    );
 
 /** gets name of separator */
 extern
 const char* SCIPsepaGetName(
-   SEPA*            sepa                /**< separator */
+   SCIP_SEPA*            sepa                /**< separator */
    );
 
 /** gets description of separator */
 extern
 const char* SCIPsepaGetDesc(
-   SEPA*            sepa                /**< separator */
+   SCIP_SEPA*            sepa                /**< separator */
    );
 
 /** gets priority of separator */
 extern
 int SCIPsepaGetPriority(
-   SEPA*            sepa                /**< separator */
+   SCIP_SEPA*            sepa                /**< separator */
    );
 
 /** gets frequency of separator */
 extern
 int SCIPsepaGetFreq(
-   SEPA*            sepa                /**< separator */
+   SCIP_SEPA*            sepa                /**< separator */
    );
 
 /** gets time in seconds used in this separator */
 extern
-Real SCIPsepaGetTime(
-   SEPA*            sepa                /**< separator */
+SCIP_Real SCIPsepaGetTime(
+   SCIP_SEPA*            sepa                /**< separator */
    );
 
 /** gets the total number of times, the separator was called */
 extern
-Longint SCIPsepaGetNCalls(
-   SEPA*            sepa                /**< separator */
+SCIP_Longint SCIPsepaGetNCalls(
+   SCIP_SEPA*            sepa                /**< separator */
    );
 
 /** gets the number of times, the separator was called at the current node */
 extern
 int SCIPsepaGetNCallsAtNode(
-   SEPA*            sepa                /**< separator */
+   SCIP_SEPA*            sepa                /**< separator */
    );
 
 /** gets the total number of cutting planes found by this separator */
 extern
-Longint SCIPsepaGetNCutsFound(
-   SEPA*            sepa                /**< separator */
+SCIP_Longint SCIPsepaGetNCutsFound(
+   SCIP_SEPA*            sepa                /**< separator */
    );
 
 /** gets the number of cutting planes found by this separator at the current node */
 extern
-Longint SCIPsepaGetNCutsFoundAtNode(
-   SEPA*            sepa                /**< separator */
+SCIP_Longint SCIPsepaGetNCutsFoundAtNode(
+   SCIP_SEPA*            sepa                /**< separator */
    );
 
 /** should separator be delayed, if other separators found cuts? */
 extern
-Bool SCIPsepaIsDelayed(
-   SEPA*            sepa                /**< separator */
+SCIP_Bool SCIPsepaIsDelayed(
+   SCIP_SEPA*            sepa                /**< separator */
    );
 
 /** was separator delayed at the last call? */
 extern
-Bool SCIPsepaWasDelayed(
-   SEPA*            sepa                /**< separator */
+SCIP_Bool SCIPsepaWasDelayed(
+   SCIP_SEPA*            sepa                /**< separator */
    );
 
 /** is separator initialized? */
 extern
-Bool SCIPsepaIsInitialized(
-   SEPA*            sepa                /**< separator */
+SCIP_Bool SCIPsepaIsInitialized(
+   SCIP_SEPA*            sepa                /**< separator */
    );
 
 

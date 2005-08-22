@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.h,v 1.10 2005/07/15 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: relax.h,v 1.11 2005/08/22 18:35:46 bzfpfend Exp $"
 
 /**@file   relax.h
  * @brief  internal methods for relaxators
@@ -40,81 +40,81 @@
 
 /** creates a relaxator */
 extern
-RETCODE SCIPrelaxCreate(
-   RELAX**          relax,              /**< pointer to relaxator data structure */
-   SET*             set,                /**< global SCIP settings */
-   BLKMEM*          blkmem,             /**< block memory for parameter settings */
-   const char*      name,               /**< name of relaxator */
-   const char*      desc,               /**< description of relaxator */
-   int              priority,           /**< priority of the relaxator (negative: after LP, non-negative: before LP) */
-   int              freq,               /**< frequency for calling relaxator */
-   DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxator */
-   DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxator */
-   DECL_RELAXEXIT   ((*relaxexit)),     /**< deinitialize relaxator */
-   DECL_RELAXINITSOL((*relaxinitsol)),  /**< solving process initialization method of relaxator */
-   DECL_RELAXEXITSOL((*relaxexitsol)),  /**< solving process deinitialization method of relaxator */
-   DECL_RELAXEXEC   ((*relaxexec)),     /**< execution method of relaxator */
-   RELAXDATA*       relaxdata           /**< relaxator data */
+SCIP_RETCODE SCIPrelaxCreate(
+   SCIP_RELAX**          relax,              /**< pointer to relaxator data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   const char*           name,               /**< name of relaxator */
+   const char*           desc,               /**< description of relaxator */
+   int                   priority,           /**< priority of the relaxator (negative: after LP, non-negative: before SCIP_LP) */
+   int                   freq,               /**< frequency for calling relaxator */
+   SCIP_DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxator */
+   SCIP_DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxator */
+   SCIP_DECL_RELAXEXIT   ((*relaxexit)),     /**< deinitialize relaxator */
+   SCIP_DECL_RELAXINITSOL((*relaxinitsol)),  /**< solving process initialization method of relaxator */
+   SCIP_DECL_RELAXEXITSOL((*relaxexitsol)),  /**< solving process deinitialization method of relaxator */
+   SCIP_DECL_RELAXEXEC   ((*relaxexec)),     /**< execution method of relaxator */
+   SCIP_RELAXDATA*       relaxdata           /**< relaxator data */
    );
 
 /** calls destructor and frees memory of relaxator */
 extern
-RETCODE SCIPrelaxFree(
-   RELAX**          relax,              /**< pointer to relaxator data structure */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPrelaxFree(
+   SCIP_RELAX**          relax,              /**< pointer to relaxator data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** initializes relaxator */
 extern
-RETCODE SCIPrelaxInit(
-   RELAX*           relax,              /**< relaxator */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPrelaxInit(
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** calls exit method of relaxator */
 extern
-RETCODE SCIPrelaxExit(
-   RELAX*           relax,              /**< relaxator */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPrelaxExit(
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs relaxator that the branch and bound process is being started */
 extern
-RETCODE SCIPrelaxInitsol(
-   RELAX*           relax,              /**< relaxator */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPrelaxInitsol(
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs relaxator that the branch and bound process data is being freed */
 extern
-RETCODE SCIPrelaxExitsol(
-   RELAX*           relax,              /**< relaxator */
-   SET*             set                 /**< global SCIP settings */
+SCIP_RETCODE SCIPrelaxExitsol(
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** calls execution method of relaxator */
 extern
-RETCODE SCIPrelaxExec(
-   RELAX*           relax,              /**< relaxator */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   int              depth,              /**< depth of current node */
-   RESULT*          result              /**< pointer to store the result of the callback method */
+SCIP_RETCODE SCIPrelaxExec(
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   int                   depth,              /**< depth of current node */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 /** sets priority of relaxator */
 extern
 void SCIPrelaxSetPriority(
-   RELAX*           relax,              /**< relaxator */
-   SET*             set,                /**< global SCIP settings */
-   int              priority            /**< new priority of the relaxator */
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   priority            /**< new priority of the relaxator */
    );
 
 /** returns whether the relaxation was completely solved at the current node */
 extern
-Bool SCIPrelaxIsSolved(
-   RELAX*           relax,              /**< relaxator */
-   STAT*            stat                /**< dynamic problem statistics */
+SCIP_Bool SCIPrelaxIsSolved(
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
 #endif

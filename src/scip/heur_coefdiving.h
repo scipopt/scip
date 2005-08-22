@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_coefdiving.h,v 1.7 2005/07/15 17:20:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_coefdiving.h,v 1.8 2005/08/22 18:35:37 bzfpfend Exp $"
 
 /**@file   heur_coefdiving.h
- * @brief  LP diving heuristic that chooses fixings w.r.t. the matrix coefficients
+ * @brief  SCIP_LP diving heuristic that chooses fixings w.r.t. the matrix coefficients
  * @author Tobias Achterberg
  */
 
@@ -32,8 +32,8 @@
 
 /** creates the coefdiving heuristic and includes it in SCIP */
 extern
-RETCODE SCIPincludeHeurCoefdiving(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeHeurCoefdiving(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

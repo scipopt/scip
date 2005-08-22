@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.h,v 1.7 2005/07/15 17:20:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.h,v 1.8 2005/08/22 18:35:48 bzfpfend Exp $"
 
 /**@file   sepa_cmir.h
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -33,8 +33,8 @@
 
 /** creates the cmir separator and includes it in SCIP */
 extern
-RETCODE SCIPincludeSepaCmir(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeSepaCmir(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

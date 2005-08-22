@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax_xxx.h,v 1.4 2005/07/15 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: relax_xxx.h,v 1.5 2005/08/22 18:35:46 bzfpfend Exp $"
 
 /**@file   relax_xxx.h
  * @brief  xxx relaxator
@@ -32,8 +32,8 @@
 
 /** creates the xxx relaxator and includes it in SCIP */
 extern
-RETCODE SCIPincludeRelaxXxx(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeRelaxXxx(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

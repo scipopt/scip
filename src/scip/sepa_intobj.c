@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.18 2005/05/31 17:20:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.19 2005/08/22 18:35:48 bzfpfend Exp $"
 
 /**@file   sepa_intobj.c
  * @brief  integer objective value separator
@@ -45,10 +45,10 @@
  */
 
 /** separator data */
-struct SepaData
+struct SCIP_SepaData
 {
-   ROW*             objrow;             /**< objective value equality */
-   VAR*             objvar;             /**< objective value variable */
+   SCIP_ROW*             objrow;             /**< objective value equality */
+   SCIP_VAR*             objvar;             /**< objective value variable */
 };
 
 
@@ -60,14 +60,14 @@ struct SepaData
 
 /** creates separator data */
 static
-RETCODE sepadataCreate(
-   SCIP*            scip,               /**< SCIP data structure */
-   SEPADATA**       sepadata            /**< pointer to store separator data */
+SCIP_RETCODE sepadataCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA**       sepadata            /**< pointer to store separator data */
    )
 {
    assert(sepadata != NULL);
 
-   CHECK_OKAY( SCIPallocMemory(scip, sepadata) );
+   SCIP_CALL( SCIPallocMemory(scip, sepadata) );
    (*sepadata)->objrow = NULL;
    (*sepadata)->objvar = NULL;
 
@@ -76,9 +76,9 @@ RETCODE sepadataCreate(
 
 /** frees separator data */
 static
-RETCODE sepadataFree(
-   SCIP*            scip,               /**< SCIP data structure */
-   SEPADATA**       sepadata            /**< pointer to separator data */
+SCIP_RETCODE sepadataFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA**       sepadata            /**< pointer to separator data */
    )
 {
    assert(sepadata != NULL);
@@ -93,27 +93,27 @@ RETCODE sepadataFree(
 
 /** creates the objective value equality and the objective value variable, if not yet existing */
 static
-RETCODE createObjRow(
-   SCIP*            scip,               /**< SCIP data structure */
-   SEPADATA*        sepadata            /**< separator data */
+SCIP_RETCODE createObjRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata            /**< separator data */
    )
 {
    assert(sepadata != NULL);
 
    if( sepadata->objrow == NULL )
    {
-      VAR** vars;
-      Real obj;
+      SCIP_VAR** vars;
+      SCIP_Real obj;
       int nvars;
       int v;
 
       /* create and add objective value variable */
       if( sepadata->objvar == NULL )
       {
-         CHECK_OKAY( SCIPcreateVar(scip, &sepadata->objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
+         SCIP_CALL( SCIPcreateVar(scip, &sepadata->objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
                SCIP_VARTYPE_IMPLINT, FALSE, TRUE, NULL, NULL, NULL, NULL) );
-         CHECK_OKAY( SCIPaddVar(scip, sepadata->objvar) );
-         CHECK_OKAY( SCIPaddVarLocks(scip, sepadata->objvar, +1, +1) );
+         SCIP_CALL( SCIPaddVar(scip, sepadata->objvar) );
+         SCIP_CALL( SCIPaddVarLocks(scip, sepadata->objvar, +1, +1) );
       }
 
       /* get problem variables */
@@ -121,23 +121,23 @@ RETCODE createObjRow(
       nvars = SCIPgetNOrigVars(scip);
 
       /* create objective value equality */
-      CHECK_OKAY( SCIPcreateEmptyRow(scip, &sepadata->objrow, "objrow", 0.0, 0.0,
+      SCIP_CALL( SCIPcreateEmptyRow(scip, &sepadata->objrow, "objrow", 0.0, 0.0,
                      FALSE, !SCIPallVarsInProb(scip), TRUE) );
 
-      CHECK_OKAY( SCIPcacheRowExtensions(scip, sepadata->objrow) );
+      SCIP_CALL( SCIPcacheRowExtensions(scip, sepadata->objrow) );
       for( v = 0; v < nvars; ++v )
       {
          obj = SCIPvarGetObj(vars[v]);
          if( !SCIPisZero(scip, obj) )
          {
-            CHECK_OKAY( SCIPaddVarToRow(scip, sepadata->objrow, vars[v], obj) );
+            SCIP_CALL( SCIPaddVarToRow(scip, sepadata->objrow, vars[v], obj) );
          }
       }
-      CHECK_OKAY( SCIPaddVarToRow(scip, sepadata->objrow, sepadata->objvar, -1.0) );
-      CHECK_OKAY( SCIPflushRowExtensions(scip, sepadata->objrow) );
+      SCIP_CALL( SCIPaddVarToRow(scip, sepadata->objrow, sepadata->objvar, -1.0) );
+      SCIP_CALL( SCIPflushRowExtensions(scip, sepadata->objrow) );
 
-      debugMessage("created objective value row: ");
-      debug(SCIPprintRow(scip, sepadata->objrow, NULL));
+      SCIPdebugMessage("created objective value row: ");
+      SCIPdebug(SCIPprintRow(scip, sepadata->objrow, NULL));
    }
 
    return SCIP_OKAY;
@@ -152,15 +152,15 @@ RETCODE createObjRow(
 
 /** destructor of separator to free user data (called when SCIP is exiting) */
 static
-DECL_SEPAFREE(sepaFreeIntobj)
+SCIP_DECL_SEPAFREE(sepaFreeIntobj)
 {  /*lint --e{715}*/
-   SEPADATA* sepadata;
+   SCIP_SEPADATA* sepadata;
 
    /* free separator data */
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   CHECK_OKAY( sepadataFree(scip, &sepadata) );
+   SCIP_CALL( sepadataFree(scip, &sepadata) );
 
    SCIPsepaSetData(sepa, NULL);
 
@@ -174,9 +174,9 @@ DECL_SEPAFREE(sepaFreeIntobj)
 
 /** deinitialization method of separator (called before transformed problem is freed) */
 static
-DECL_SEPAEXIT(sepaExitIntobj)
+SCIP_DECL_SEPAEXIT(sepaExitIntobj)
 {  /*lint --e{715}*/
-   SEPADATA* sepadata;
+   SCIP_SEPADATA* sepadata;
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
@@ -184,7 +184,7 @@ DECL_SEPAEXIT(sepaExitIntobj)
    /* release objective variable */
    if( sepadata->objvar != NULL )
    {
-      CHECK_OKAY( SCIPreleaseVar(scip, &sepadata->objvar) );
+      SCIP_CALL( SCIPreleaseVar(scip, &sepadata->objvar) );
    }
 
    return SCIP_OKAY;
@@ -197,9 +197,9 @@ DECL_SEPAEXIT(sepaExitIntobj)
 
 /** solving process deinitialization method of separator (called before branch and bound process data is freed) */
 static
-DECL_SEPAEXITSOL(sepaExitsolIntobj)
+SCIP_DECL_SEPAEXITSOL(sepaExitsolIntobj)
 {  /*lint --e{715}*/
-   SEPADATA* sepadata;
+   SCIP_SEPADATA* sepadata;
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
@@ -207,7 +207,7 @@ DECL_SEPAEXITSOL(sepaExitsolIntobj)
    /* release objective row */
    if( sepadata->objrow != NULL )
    {
-      CHECK_OKAY( SCIPreleaseRow(scip, &sepadata->objrow) );
+      SCIP_CALL( SCIPreleaseRow(scip, &sepadata->objrow) );
    }
 
    return SCIP_OKAY;
@@ -216,13 +216,13 @@ DECL_SEPAEXITSOL(sepaExitsolIntobj)
 
 /** execution method of separator */
 static
-DECL_SEPAEXEC(sepaExecIntobj)
+SCIP_DECL_SEPAEXEC(sepaExecIntobj)
 {  /*lint --e{715}*/
-   SEPADATA* sepadata;
-   Real objval;
-   Real intobjval;
-   Bool infeasible;
-   Bool tightened;
+   SCIP_SEPADATA* sepadata;
+   SCIP_Real objval;
+   SCIP_Real intobjval;
+   SCIP_Bool infeasible;
+   SCIP_Bool tightened;
 
    assert(result != NULL);
 
@@ -244,30 +244,30 @@ DECL_SEPAEXEC(sepaExecIntobj)
    assert(sepadata != NULL);
 
    /* the objective value is fractional: create the objective value equality, if not yet existing */
-   CHECK_OKAY( createObjRow(scip, sepadata) );
+   SCIP_CALL( createObjRow(scip, sepadata) );
 
    /* adjust the bounds of the objective value variable */
    if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
    {
       intobjval = SCIPceil(scip, objval);
-      CHECK_OKAY( SCIPtightenVarLb(scip, sepadata->objvar, intobjval, &infeasible, &tightened) );
-      debugMessage("new objective variable lower bound: <%s>[%g,%g]\n", 
+      SCIP_CALL( SCIPtightenVarLb(scip, sepadata->objvar, intobjval, &infeasible, &tightened) );
+      SCIPdebugMessage("new objective variable lower bound: <%s>[%g,%g]\n", 
          SCIPvarGetName(sepadata->objvar), SCIPvarGetLbLocal(sepadata->objvar), SCIPvarGetUbLocal(sepadata->objvar));
    }
    else
    {
       intobjval = SCIPfloor(scip, objval);
-      CHECK_OKAY( SCIPtightenVarUb(scip, sepadata->objvar, intobjval, &infeasible, &tightened) );
-      debugMessage("new objective variable upper bound: <%s>[%g,%g]\n", 
+      SCIP_CALL( SCIPtightenVarUb(scip, sepadata->objvar, intobjval, &infeasible, &tightened) );
+      SCIPdebugMessage("new objective variable upper bound: <%s>[%g,%g]\n", 
          SCIPvarGetName(sepadata->objvar), SCIPvarGetLbLocal(sepadata->objvar), SCIPvarGetUbLocal(sepadata->objvar));
    }
 
-   /* add the objective value equality as a cut to the LP */
+   /* add the objective value equality as a cut to the SCIP_LP */
    if( infeasible )
       *result = SCIP_CUTOFF;
    else if( !SCIProwIsInLP(sepadata->objrow) )
    {
-      CHECK_OKAY( SCIPaddCut(scip, sepadata->objrow, FALSE) );
+      SCIP_CALL( SCIPaddCut(scip, sepadata->objrow, FALSE) );
       *result = SCIP_SEPARATED;
    }
    else if( tightened )
@@ -287,18 +287,18 @@ DECL_SEPAEXEC(sepaExecIntobj)
 
 /** initialization method of event handler (called after problem was transformed) */
 static
-DECL_EVENTINIT(eventInitIntobj)
+SCIP_DECL_EVENTINIT(eventInitIntobj)
 {  /*lint --e{715}*/
-   CHECK_OKAY( SCIPcatchEvent(scip, SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_OBJCHANGED, eventhdlr, NULL, NULL) );
+   SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_OBJCHANGED, eventhdlr, NULL, NULL) );
 
    return SCIP_OKAY;
 }
 
 /** deinitialization method of event handler (called before transformed problem is freed) */
 static
-DECL_EVENTEXIT(eventExitIntobj)
+SCIP_DECL_EVENTEXIT(eventExitIntobj)
 {  /*lint --e{715}*/
-   CHECK_OKAY( SCIPdropEvent(scip, SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_OBJCHANGED, eventhdlr, NULL, -1) );
+   SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_OBJCHANGED, eventhdlr, NULL, -1) );
 
    return SCIP_OKAY;
 }
@@ -314,15 +314,15 @@ DECL_EVENTEXIT(eventExitIntobj)
 
 /** execution methode of objective change event handler */
 static
-DECL_EVENTEXEC(eventExecIntobj)
+SCIP_DECL_EVENTEXEC(eventExecIntobj)
 {  /*lint --e{715}*/
-   EVENTHDLRDATA* eventhdlrdata;
-   SEPADATA* sepadata;
-   VAR* var;
-   Real objdelta;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_SEPADATA* sepadata;
+   SCIP_VAR* var;
+   SCIP_Real objdelta;
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
-   sepadata = (SEPADATA*)eventhdlrdata;
+   sepadata = (SCIP_SEPADATA*)eventhdlrdata;
    assert(sepadata != NULL);
 
    /* we don't have anything to do, if the objective value equality doesn't yet exist */
@@ -334,23 +334,23 @@ DECL_EVENTEXEC(eventExecIntobj)
    switch( SCIPeventGetType(event) )
    {
    case SCIP_EVENTTYPE_VARADDED:
-      debugMessage("variable <%s> with obj=%g was added to the problem\n", SCIPvarGetName(var), SCIPvarGetObj(var));
+      SCIPdebugMessage("variable <%s> with obj=%g was added to the problem\n", SCIPvarGetName(var), SCIPvarGetObj(var));
       objdelta = SCIPvarGetObj(var);
       if( !SCIPisZero(scip, objdelta) )
       {
-         CHECK_OKAY( SCIPaddVarToRow(scip, sepadata->objrow, var, SCIPvarGetObj(var)) );
+         SCIP_CALL( SCIPaddVarToRow(scip, sepadata->objrow, var, SCIPvarGetObj(var)) );
       }
       break;
 
    case SCIP_EVENTTYPE_OBJCHANGED:
-      debugMessage("variable <%s> changed objective value from %g to %g\n", 
+      SCIPdebugMessage("variable <%s> changed objective value from %g to %g\n", 
          SCIPvarGetName(var), SCIPeventGetOldobj(event), SCIPeventGetNewobj(event));
       objdelta = SCIPeventGetNewobj(event) - SCIPeventGetOldobj(event);
-      CHECK_OKAY( SCIPaddVarToRow(scip, sepadata->objrow, var, objdelta) );
+      SCIP_CALL( SCIPaddVarToRow(scip, sepadata->objrow, var, objdelta) );
       break;
 
    default:
-      errorMessage("invalid event type %x\n", SCIPeventGetType(event));
+      SCIPerrorMessage("invalid event type %x\n", SCIPeventGetType(event));
       return SCIP_INVALIDDATA;
    }
 
@@ -365,25 +365,25 @@ DECL_EVENTEXEC(eventExecIntobj)
  */
 
 /** creates the integer objective value separator and includes it in SCIP */
-RETCODE SCIPincludeSepaIntobj(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeSepaIntobj(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SEPADATA* sepadata;
-   EVENTHDLRDATA* eventhdlrdata;
+   SCIP_SEPADATA* sepadata;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
 
    /* create intobj separator data */
-   CHECK_OKAY( sepadataCreate(scip, &sepadata) );
+   SCIP_CALL( sepadataCreate(scip, &sepadata) );
 
    /* include separator */
-   CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
          sepaFreeIntobj, sepaInitIntobj, sepaExitIntobj, 
          sepaInitsolIntobj, sepaExitsolIntobj, sepaExecIntobj,
          sepadata) );
 
    /* include event handler for objective change events */
-   eventhdlrdata = (EVENTHDLRDATA*)sepadata;
-   CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC, 
+   eventhdlrdata = (SCIP_EVENTHDLRDATA*)sepadata;
+   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC, 
          eventFreeIntobj, eventInitIntobj, eventExitIntobj, 
          eventInitsolIntobj, eventExitsolIntobj, eventDeleteIntobj, eventExecIntobj,
          eventhdlrdata) );

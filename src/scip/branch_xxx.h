@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_xxx.h,v 1.7 2005/07/15 17:20:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_xxx.h,v 1.8 2005/08/22 18:35:33 bzfpfend Exp $"
 
 /**@file   branch_xxx.h
  * @brief  xxx branching rule
@@ -32,8 +32,8 @@
 
 /** creates the xxx branching rule and includes it in SCIP */
 extern
-RETCODE SCIPincludeBranchruleXxx(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeBranchruleXxx(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

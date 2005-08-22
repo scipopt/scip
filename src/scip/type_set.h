@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_set.h,v 1.7 2005/07/15 17:20:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_set.h,v 1.8 2005/08/22 18:35:55 bzfpfend Exp $"
 
 /**@file   type_set.h
  * @brief  type definitions for global SCIP settings
@@ -28,7 +28,7 @@
 
 
 /** SCIP operation stage */
-enum Stage
+enum SCIP_Stage
 {
    SCIP_STAGE_INIT         =  0,        /**< SCIP datastructures are initialized, no problem exists */
    SCIP_STAGE_PROBLEM      =  1,        /**< the problem is being created and modified */
@@ -42,19 +42,19 @@ enum Stage
    SCIP_STAGE_FREESOLVE    =  9,        /**< the solving process data is being freed */
    SCIP_STAGE_FREETRANS    = 10         /**< the transformed problem is being freed */
 };
-typedef enum Stage STAGE;
+typedef enum SCIP_Stage SCIP_STAGE;
 
 /** possible settings for enabling/disabling algorithms and other features */
-enum Setting
+enum SCIP_Setting
 {
    SCIP_UNDEFINED = 0,                  /**< undefined setting */
    SCIP_DISABLED  = 1,                  /**< feature is disabled */
    SCIP_AUTO      = 2,                  /**< feature is set to automatic mode */
    SCIP_ENABLED   = 3                   /**< feature is enabled */
 };
-typedef enum Setting SETTING;
+typedef enum SCIP_Setting SCIP_SETTING;
 
-typedef struct Set SET;                 /**< global SCIP settings */
+typedef struct SCIP_Set SCIP_SET;                 /**< global SCIP settings */
 
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_primal.h,v 1.12 2005/07/15 17:20:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_primal.h,v 1.13 2005/08/22 18:35:51 bzfpfend Exp $"
 
 /**@file   struct_primal.h
  * @brief  datastructures for collecting primal CIP solutions and primal informations
@@ -34,20 +34,20 @@
 
 
 /** primal data and solution storage */
-struct Primal
+struct SCIP_Primal
 {
-   Longint          nsolsfound;         /**< number of primal CIP solutions found up to now */
-   Longint          nbestsolsfound;     /**< number of new best primal CIP solutions found up to now */
-   Real             upperbound;         /**< upper (primal) bound of CIP: objective value of best solution or user bound */
-   Real             cutoffbound;        /**< upper bound for better primal solutions (if objective value is always
-                                         *   integral, cutoffbound is equal to ceil(upperbound) - 1.0 (+eps) */
-   SOL**            sols;               /**< primal CIP solutions */
-   SOL**            existingsols;       /**< all existing primal solutions (feasible and infeasible) */
-   SOL*             currentsol;         /**< internal solution for temporarily storing the current solution */
-   int              solssize;           /**< size of sols array */
-   int              nsols;              /**< number of primal CIP solutions stored in sols array */
-   int              existingsolssize;   /**< size of existingsols array */
-   int              nexistingsols;      /**< number of primal CIP solutions stored in existingsols array */
+   SCIP_Longint          nsolsfound;         /**< number of primal CIP solutions found up to now */
+   SCIP_Longint          nbestsolsfound;     /**< number of new best primal CIP solutions found up to now */
+   SCIP_Real             upperbound;         /**< upper (primal) bound of CIP: objective value of best solution or user bound */
+   SCIP_Real             cutoffbound;        /**< upper bound for better primal solutions (if objective value is always
+                                              *   integral, cutoffbound is equal to ceil(upperbound) - 1.0 (+eps) */
+   SCIP_SOL**            sols;               /**< primal CIP solutions */
+   SCIP_SOL**            existingsols;       /**< all existing primal solutions (feasible and infeasible) */
+   SCIP_SOL*             currentsol;         /**< internal solution for temporarily storing the current solution */
+   int                   solssize;           /**< size of sols array */
+   int                   nsols;              /**< number of primal CIP solutions stored in sols array */
+   int                   existingsolssize;   /**< size of existingsols array */
+   int                   nexistingsols;      /**< number of primal CIP solutions stored in existingsols array */
 };
 
 

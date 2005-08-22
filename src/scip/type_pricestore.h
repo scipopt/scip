@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_pricestore.h,v 1.6 2005/07/15 17:20:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_pricestore.h,v 1.7 2005/08/22 18:35:54 bzfpfend Exp $"
 
 /**@file   type_pricestore.h
  * @brief  type definitions for storing priced variables
@@ -27,7 +27,7 @@
 #define __SCIP_TYPE_PRICESTORE_H__
 
 
-typedef struct Pricestore PRICESTORE;   /**< storage for priced variables */
+typedef struct SCIP_Pricestore SCIP_PRICESTORE;   /**< storage for priced variables */
 
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_dualfix.h,v 1.8 2005/07/15 17:20:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_dualfix.h,v 1.9 2005/08/22 18:35:42 bzfpfend Exp $"
 
 /**@file   presol_dualfix.h
  * @brief  fixing roundable variables to best bound
@@ -32,8 +32,8 @@
 
 /** creates the dual fixing presolver and includes it in SCIP */
 extern
-RETCODE SCIPincludePresolDualfix(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludePresolDualfix(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #endif

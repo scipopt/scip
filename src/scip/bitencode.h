@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: bitencode.h,v 1.11 2005/07/15 17:20:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: bitencode.h,v 1.12 2005/08/22 18:35:31 bzfpfend Exp $"
 
 /**@file   bitencode.h
  * @brief  packing single and dual bit values
@@ -26,42 +26,42 @@
 #ifndef __SCIP_BITENCODE_H__
 #define __SCIP_BITENCODE_H__
 
-typedef unsigned int SINGLEPACKET;                /**< storing single bits in packed format */
-#define SINGLEPACKETSIZE (sizeof(SINGLEPACKET)*8) /**< each entry needs one bit of information */
-typedef unsigned int DUALPACKET;                  /**< storing bit pairs in packed format */
-#define DUALPACKETSIZE   (sizeof(DUALPACKET)*4)   /**< each entry needs two bits of information */
+typedef unsigned int SCIP_SINGLEPACKET;                /**< storing single bits in packed format */
+#define SCIP_SINGLEPACKETSIZE (sizeof(SCIP_SINGLEPACKET)*8) /**< each entry needs one bit of information */
+typedef unsigned int SCIP_DUALPACKET;                  /**< storing bit pairs in packed format */
+#define SCIP_DUALPACKETSIZE   (sizeof(SCIP_DUALPACKET)*4)   /**< each entry needs two bits of information */
 
 
 /** encode a single bit vector into packed format */
 extern
 void SCIPencodeSingleBit(
-   const int*       inp,                /**< unpacked input vector */
-   SINGLEPACKET*    out,                /**< buffer to store the packed vector */
-   int              count               /**< number of elements */
+   const int*            inp,                /**< unpacked input vector */
+   SCIP_SINGLEPACKET*    out,                /**< buffer to store the packed vector */
+   int                   count               /**< number of elements */
    );
 
 /** decode a packed single bit vector into unpacked format */
 extern
 void SCIPdecodeSingleBit(
-   const SINGLEPACKET* inp,             /**< packed input vector */
-   int*             out,                /**< buffer to store unpacked vector */
-   int              count               /**< number of elements */
+   const SCIP_SINGLEPACKET* inp,             /**< packed input vector */
+   int*                  out,                /**< buffer to store unpacked vector */
+   int                   count               /**< number of elements */
    );
 
 /** encode a dual bit vector into packed format */
 extern
 void SCIPencodeDualBit(
-   const int*       inp,                /**< unpacked input vector */
-   DUALPACKET*      out,                /**< buffer to store the packed vector */
-   int              count               /**< number of elements */
+   const int*            inp,                /**< unpacked input vector */
+   SCIP_DUALPACKET*      out,                /**< buffer to store the packed vector */
+   int                   count               /**< number of elements */
    );
 
 /** decode a packed dual bit vector into unpacked format */
 extern
 void SCIPdecodeDualBit(
-   const DUALPACKET* inp,               /**< packed input vector */
-   int*             out,                /**< buffer to store unpacked vector */
-   int              count               /**< number of elements */
+   const SCIP_DUALPACKET* inp,               /**< packed input vector */
+   int*                  out,                /**< buffer to store unpacked vector */
+   int                   count               /**< number of elements */
    );
 
 

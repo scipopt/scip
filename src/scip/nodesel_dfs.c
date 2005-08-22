@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_dfs.c,v 1.24 2005/05/31 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_dfs.c,v 1.25 2005/08/22 18:35:41 bzfpfend Exp $"
 
 /**@file   nodesel_dfs.c
  * @brief  node selector for depth first search
@@ -64,7 +64,7 @@
 
 /** node selection method of node selector */
 static
-DECL_NODESELSELECT(nodeselSelectDfs)
+SCIP_DECL_NODESELSELECT(nodeselSelectDfs)
 {  /*lint --e{715}*/
    assert(nodesel != NULL);
    assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
@@ -87,7 +87,7 @@ DECL_NODESELSELECT(nodeselSelectDfs)
 
 /** node comparison method of node selector */
 static
-DECL_NODESELCOMP(nodeselCompDfs)
+SCIP_DECL_NODESELCOMP(nodeselCompDfs)
 {  /*lint --e{715}*/
    int depth1;
    int depth2;
@@ -104,8 +104,8 @@ DECL_NODESELCOMP(nodeselCompDfs)
       return +1;
    else
    {
-      Real lowerbound1;
-      Real lowerbound2;
+      SCIP_Real lowerbound1;
+      SCIP_Real lowerbound2;
 
       lowerbound1 = SCIPnodeGetLowerbound(node1);
       lowerbound2 = SCIPnodeGetLowerbound(node2);
@@ -127,17 +127,17 @@ DECL_NODESELCOMP(nodeselCompDfs)
  */
 
 /** creates the node selector for depth first search and includes it in SCIP */
-RETCODE SCIPincludeNodeselDfs(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPincludeNodeselDfs(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   NODESELDATA* nodeseldata;
+   SCIP_NODESELDATA* nodeseldata;
 
    /* create dfs node selector data */
    nodeseldata = NULL;
 
    /* include node selector */
-   CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+   SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
          NODESEL_LOWESTFIRST,
          nodeselFreeDfs, nodeselInitDfs, nodeselExitDfs, 
          nodeselInitsolDfs, nodeselExitsolDfs, nodeselSelectDfs, nodeselCompDfs,

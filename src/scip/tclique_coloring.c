@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_coloring.c,v 1.10 2005/08/08 11:16:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_coloring.c,v 1.11 2005/08/22 18:35:52 bzfpfend Exp $"
 
 /**@file   tclique_coloring.c
  * @brief  coloring part of algorithm for maximum cliques
@@ -45,11 +45,11 @@ int getMaxSatdegIndex(
    int*             V,                  /**< non-zero weighted nodes for branching */
    int              nV,                 /**< number of non-zero weighted nodes for branching */
    NBC*             gsd,                /**< neighbor color information of all nodes */
-   Bool*            iscolored,          /**< coloring status of all nodes */
-   const WEIGHT*    weights             /**< weight of nodes in grpah */
+   TCLIQUE_Bool*    iscolored,          /**< coloring status of all nodes */
+   const TCLIQUE_WEIGHT*    weights             /**< weight of nodes in grpah */
    )
 {   
-   WEIGHT maxweight;
+   TCLIQUE_WEIGHT maxweight;
    int maxsatdeg;
    int maxsatdegindex;
    int i;
@@ -63,7 +63,7 @@ int getMaxSatdegIndex(
 
    for( i = 0; i < nV; i++ )
    {
-      WEIGHT weight;
+      TCLIQUE_WEIGHT weight;
       int satdeg;
 
       /* check only uncolored nodes */ 
@@ -90,13 +90,13 @@ static
 int getMaxWeightIndex( 
    TCLIQUE_GETNNODES((*getnnodes)),     /**< user function to get the number of nodes */
    TCLIQUE_GETWEIGHTS((*getweights)),   /**< user function to get the node weights */
-   TCLIQUEGRAPH*    tcliquegraph,       /**< pointer to graph data structure */
+   TCLIQUE_GRAPH*   tcliquegraph,       /**< pointer to graph data structure */
    int*             V,                  /**< non-zero weighted nodes for branching */
    int              nV                  /**< number of non-zero weighted nodes for branching */
    )
 {
-   const WEIGHT* weights;
-   WEIGHT maxweight;
+   const TCLIQUE_WEIGHT* weights;
+   TCLIQUE_WEIGHT maxweight;
    int maxweightindex;
    int i;
    
@@ -132,7 +132,7 @@ int getMaxWeightIndex(
  */
 static
 void updateNeighbor(
-   CHKMEM*          mem,                /**< block memory */
+   BMS_CHKMEM*           mem,                /**< block memory */
    NBC*             pgsd,               /**< pointer to neighbor color information of node to update */
    LIST_ITV*        pnc                 /**< pointer to given list of color intervals */
    )
@@ -152,7 +152,7 @@ void updateNeighbor(
    {
       if( pnc->itv.inf < pciv->itv.inf ) 
       {	
-         ALLOC_ABORT( allocChunkMemory(mem, &nciv) );
+         ALLOC_ABORT( BMSallocChunkMemory(mem, &nciv) );
          nciv->itv = pnc->itv;
          nciv->next = pciv;
          apciv->next = nciv;
@@ -175,7 +175,7 @@ void updateNeighbor(
 
    while( pnc != NULL )
    {
-      ALLOC_ABORT( allocChunkMemory(mem, &nciv) );
+      ALLOC_ABORT( BMSallocChunkMemory(mem, &nciv) );
       nciv->itv = pnc->itv;
       nciv->next = NULL;
       
@@ -205,7 +205,7 @@ void updateNeighbor(
        
          /* free data structure for created colorinterval */
          tmp = pciv->next; 
-         freeChunkMemory(mem, &pciv); 
+         BMSfreeChunkMemory(mem, &pciv); 
          pciv = tmp; 
       }
    }
@@ -218,27 +218,27 @@ void updateNeighbor(
 /** colors the positive weighted nodes of a given set of nodes V with the lowest possible number of colors and 
  *  finds a clique in the graph induced by V, an upper bound and an apriori bound for further branching steps
  */
-WEIGHT tcliqueColoring( 
+TCLIQUE_WEIGHT tcliqueColoring( 
    TCLIQUE_GETNNODES((*getnnodes)),     /**< user function to get the number of nodes */
    TCLIQUE_GETWEIGHTS((*getweights)),   /**< user function to get the node weights */
    TCLIQUE_SELECTADJNODES((*selectadjnodes)), /**< user function to select adjacent edges */
-   TCLIQUEGRAPH*    tcliquegraph,       /**< pointer to graph data structure */
-   CHKMEM*          mem,                /**< block memory */
+   TCLIQUE_GRAPH*   tcliquegraph,       /**< pointer to graph data structure */
+   BMS_CHKMEM*           mem,                /**< block memory */
    int*             buffer,             /**< buffer of size nnodes */
    int*             V,                  /**< non-zero weighted nodes for branching */
    int              nV,                 /**< number of non-zero weighted nodes for branching */
    NBC*             gsd,                /**< neighbor color information of all nodes */
-   Bool*            iscolored,          /**< coloring status of all nodes */
-   WEIGHT*          apbound,            /**< pointer to store apriori bound of nodes for branching */ 
+   TCLIQUE_Bool*    iscolored,          /**< coloring status of all nodes */
+   TCLIQUE_WEIGHT*  apbound,            /**< pointer to store apriori bound of nodes for branching */ 
    int*             clique,             /**< buffer for storing the clique */
    int*             nclique,            /**< pointer to store number of nodes in the clique */
-   WEIGHT*          weightclique        /**< pointer to store the weight of the clique */
+   TCLIQUE_WEIGHT*  weightclique        /**< pointer to store the weight of the clique */
    )
 {
-   const WEIGHT* weights;
-   WEIGHT maxsatdegree; 
-   WEIGHT range;
-   Bool growclique; 
+   const TCLIQUE_WEIGHT* weights;
+   TCLIQUE_WEIGHT maxsatdegree; 
+   TCLIQUE_WEIGHT range;
+   TCLIQUE_Bool growclique; 
    int node; 
    int nodeVindex;
    int i;     
@@ -285,8 +285,8 @@ WEIGHT tcliqueColoring(
    assert(range > 0);
 
    /* set up data structures for coloring */
-   clearMemoryArray(iscolored, nV); /* new-memory */
-   clearMemoryArray(gsd, nV); /* new-memory */
+   BMSclearMemoryArray(iscolored, nV); /* new-memory */
+   BMSclearMemoryArray(gsd, nV); /* new-memory */
    iscolored[nodeVindex] = TRUE;
 
    /* color the first node */
@@ -318,7 +318,7 @@ WEIGHT tcliqueColoring(
          gsd[i].satdeg = range;
                
          /* creates new color interval [1,range] */
-         ALLOC_ABORT( allocChunkMemory(mem, &colorinterval) );
+         ALLOC_ABORT( BMSallocChunkMemory(mem, &colorinterval) );
          colorinterval->next = NULL;
          colorinterval->itv.inf = 1;
          colorinterval->itv.sup = range;
@@ -334,7 +334,7 @@ WEIGHT tcliqueColoring(
    }
 
    /* set up data structures for the current clique */
-   ALLOC_ABORT( allocMemoryArray(&currentclique, nV) );
+   ALLOC_ABORT( BMSallocMemoryArray(&currentclique, nV) );
    ncurrentclique = 0;
    weightcurrentclique = 0;
    workclique = clique;
@@ -407,7 +407,7 @@ WEIGHT tcliqueColoring(
             currentclique[ncurrentclique] = node;
             ncurrentclique++; 
             weightcurrentclique += range;
-#ifdef DEBUG
+#ifdef TCLIQUE_DEBUG
             {
                int k;
                debugMessage("current clique (size:%d, weight:%d):", ncurrentclique, weightcurrentclique);
@@ -430,7 +430,7 @@ WEIGHT tcliqueColoring(
       if( gsd[nodeVindex].lcitv == NULL )
       {
          /* current node has no colored neighbors yet: create new color interval [1,range] */
-         ALLOC_ABORT( allocChunkMemory(mem, &colorinterval) );
+         ALLOC_ABORT( BMSallocChunkMemory(mem, &colorinterval) );
          colorinterval->next = NULL;
          colorinterval->itv.inf = 1;
          colorinterval->itv.sup = range;
@@ -456,7 +456,7 @@ WEIGHT tcliqueColoring(
             if( dif > tocolor )
                dif = tocolor;
             
-            ALLOC_ABORT( allocChunkMemory(mem, &colorinterval) );
+            ALLOC_ABORT( BMSallocChunkMemory(mem, &colorinterval) );
             colorinterval->next = NULL;
             colorinterval->itv.inf = 1;
             colorinterval->itv.sup = dif;
@@ -473,7 +473,7 @@ WEIGHT tcliqueColoring(
          {	
             dif = tocolor;	
             
-            ALLOC_ABORT( allocChunkMemory(mem, &colorinterval) );
+            ALLOC_ABORT( BMSallocChunkMemory(mem, &colorinterval) );
             colorinterval->next = NULL;
             colorinterval->itv.inf = lcitv->itv.sup+1;			
             if( lcitv->next != NULL )
@@ -522,7 +522,7 @@ WEIGHT tcliqueColoring(
       while( item != NULL )
       {
          tmpitem = item->next;                  
-         freeChunkMemory(mem, &item);       
+         BMSfreeChunkMemory(mem, &item);       
          item = tmpitem;                        
       }                                     
 
@@ -531,7 +531,7 @@ WEIGHT tcliqueColoring(
       while( item != NULL )
       {
          tmpitem = item->next;                  
-         freeChunkMemory(mem, &item);       
+         BMSfreeChunkMemory(mem, &item);       
          item = tmpitem;                        
       }                                     
    }
@@ -555,15 +555,15 @@ WEIGHT tcliqueColoring(
    {
       assert(clique == currentclique);
       assert(*nclique <= nV);
-      copyMemoryArray(clique, workclique, *nclique);
+      BMScopyMemoryArray(clique, workclique, *nclique);
       currentclique = workclique;
    }
 
    /* free data structures */
-   freeMemoryArray(&currentclique);
+   BMSfreeMemoryArray(&currentclique);
 
    /* clear chunk memory */
-   clearChunkMemory(mem);
+   BMSclearChunkMemory(mem);
 
    debugMessage("------------coloringend-----------------\n");
 

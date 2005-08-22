@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.cpp,v 1.11 2005/05/31 17:20:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpresol.cpp,v 1.12 2005/08/22 18:35:30 bzfpfend Exp $"
 
 /**@file   objpresol.cpp
  * @brief  C++ wrapper for presolvers
@@ -35,10 +35,10 @@
  */
 
 /** presolver data */
-struct PresolData
+struct SCIP_PresolData
 {
-   scip::ObjPresol* objpresol;          /**< presolver object */
-   Bool             deleteobject;       /**< should the presolver object be deleted when presolver is freed? */
+   scip::ObjPresol*      objpresol;          /**< presolver object */
+   SCIP_Bool             deleteobject;       /**< should the presolver object be deleted when presolver is freed? */
 };
 
 
@@ -50,16 +50,16 @@ struct PresolData
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 static
-DECL_PRESOLFREE(presolFreeObj)
+SCIP_DECL_PRESOLFREE(presolFreeObj)
 {  /*lint --e{715}*/
-   PRESOLDATA* presoldata;
+   SCIP_PRESOLDATA* presoldata;
 
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
    assert(presoldata->objpresol != NULL);
 
    /* call virtual method of presol object */
-   CHECK_OKAY( presoldata->objpresol->scip_free(scip, presol) );
+   SCIP_CALL( presoldata->objpresol->scip_free(scip, presol) );
 
    /* free presol object */
    if( presoldata->deleteobject )
@@ -75,16 +75,16 @@ DECL_PRESOLFREE(presolFreeObj)
 
 /** initialization method of presolver (called after problem was transformed) */
 static
-DECL_PRESOLINIT(presolInitObj)
+SCIP_DECL_PRESOLINIT(presolInitObj)
 {  /*lint --e{715}*/
-   PRESOLDATA* presoldata;
+   SCIP_PRESOLDATA* presoldata;
 
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
    assert(presoldata->objpresol != NULL);
 
    /* call virtual method of presol object */
-   CHECK_OKAY( presoldata->objpresol->scip_init(scip, presol) );
+   SCIP_CALL( presoldata->objpresol->scip_init(scip, presol) );
 
    return SCIP_OKAY;
 }
@@ -92,16 +92,16 @@ DECL_PRESOLINIT(presolInitObj)
 
 /** deinitialization method of presolver (called before transformed problem is freed) */
 static
-DECL_PRESOLEXIT(presolExitObj)
+SCIP_DECL_PRESOLEXIT(presolExitObj)
 {  /*lint --e{715}*/
-   PRESOLDATA* presoldata;
+   SCIP_PRESOLDATA* presoldata;
 
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
    assert(presoldata->objpresol != NULL);
 
    /* call virtual method of presol object */
-   CHECK_OKAY( presoldata->objpresol->scip_exit(scip, presol) );
+   SCIP_CALL( presoldata->objpresol->scip_exit(scip, presol) );
 
    return SCIP_OKAY;
 }
@@ -109,16 +109,16 @@ DECL_PRESOLEXIT(presolExitObj)
 
 /** presolving initialization method of presolver (called when presolving is about to begin) */
 static
-DECL_PRESOLINITPRE(presolInitpreObj)
+SCIP_DECL_PRESOLINITPRE(presolInitpreObj)
 {  /*lint --e{715}*/
-   PRESOLDATA* presoldata;
+   SCIP_PRESOLDATA* presoldata;
 
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
    assert(presoldata->objpresol != NULL);
 
    /* call virtual method of presol object */
-   CHECK_OKAY( presoldata->objpresol->scip_initpre(scip, presol, result) );
+   SCIP_CALL( presoldata->objpresol->scip_initpre(scip, presol, result) );
 
    return SCIP_OKAY;
 }
@@ -126,16 +126,16 @@ DECL_PRESOLINITPRE(presolInitpreObj)
 
 /** presolving deinitialization method of presolver (called after presolving has been finished) */
 static
-DECL_PRESOLEXITPRE(presolExitpreObj)
+SCIP_DECL_PRESOLEXITPRE(presolExitpreObj)
 {  /*lint --e{715}*/
-   PRESOLDATA* presoldata;
+   SCIP_PRESOLDATA* presoldata;
 
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
    assert(presoldata->objpresol != NULL);
 
    /* call virtual method of presol object */
-   CHECK_OKAY( presoldata->objpresol->scip_exitpre(scip, presol, result) );
+   SCIP_CALL( presoldata->objpresol->scip_exitpre(scip, presol, result) );
 
    return SCIP_OKAY;
 }
@@ -143,16 +143,16 @@ DECL_PRESOLEXITPRE(presolExitpreObj)
 
 /** execution method of presolver */
 static
-DECL_PRESOLEXEC(presolExecObj)
+SCIP_DECL_PRESOLEXEC(presolExecObj)
 {  /*lint --e{715}*/
-   PRESOLDATA* presoldata;
+   SCIP_PRESOLDATA* presoldata;
 
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
    assert(presoldata->objpresol != NULL);
 
    /* call virtual method of presol object */
-   CHECK_OKAY( presoldata->objpresol->scip_exec(scip, presol, nrounds,
+   SCIP_CALL( presoldata->objpresol->scip_exec(scip, presol, nrounds,
          nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
          nnewdelconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
          nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
@@ -169,21 +169,21 @@ DECL_PRESOLEXEC(presolExecObj)
  */
 
 /** creates the presolver for the given presolver object and includes it in SCIP */
-RETCODE SCIPincludeObjPresol(
-   SCIP*            scip,               /**< SCIP data structure */
-   scip::ObjPresol* objpresol,          /**< presolver object */
-   Bool             deleteobject        /**< should the presolver object be deleted when presolver is freed? */
+SCIP_RETCODE SCIPincludeObjPresol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   scip::ObjPresol*      objpresol,          /**< presolver object */
+   SCIP_Bool             deleteobject        /**< should the presolver object be deleted when presolver is freed? */
    )
 {
-   PRESOLDATA* presoldata;
+   SCIP_PRESOLDATA* presoldata;
 
    /* create presolver data */
-   presoldata = new PRESOLDATA;
+   presoldata = new SCIP_PRESOLDATA;
    presoldata->objpresol = objpresol;
    presoldata->deleteobject = deleteobject;
 
    /* include presolver */
-   CHECK_OKAY( SCIPincludePresol(scip, objpresol->scip_name_, objpresol->scip_desc_, 
+   SCIP_CALL( SCIPincludePresol(scip, objpresol->scip_name_, objpresol->scip_desc_, 
          objpresol->scip_priority_, objpresol->scip_maxrounds_, objpresol->scip_delay_,
          presolFreeObj, presolInitObj, presolExitObj, 
          presolInitpreObj, presolExitpreObj, presolExecObj,
@@ -194,12 +194,12 @@ RETCODE SCIPincludeObjPresol(
 
 /** returns the presol object of the given name, or NULL if not existing */
 scip::ObjPresol* SCIPfindObjPresol(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< name of presolver */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of presolver */
    )
 {
-   PRESOL* presol;
-   PRESOLDATA* presoldata;
+   SCIP_PRESOL* presol;
+   SCIP_PRESOLDATA* presoldata;
 
    presol = SCIPfindPresol(scip, name);
    if( presol == NULL )
@@ -213,11 +213,11 @@ scip::ObjPresol* SCIPfindObjPresol(
    
 /** returns the presol object for the given presolver */
 scip::ObjPresol* SCIPgetObjPresol(
-   SCIP*            scip,               /**< SCIP data structure */
-   PRESOL*          presol              /**< presolver */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOL*          presol              /**< presolver */
    )
 {
-   PRESOLDATA* presoldata;
+   SCIP_PRESOLDATA* presoldata;
 
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);

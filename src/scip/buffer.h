@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: buffer.h,v 1.15 2005/07/15 17:20:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: buffer.h,v 1.16 2005/08/22 18:35:33 bzfpfend Exp $"
 
 /**@file   buffer.h
  * @brief  internal methods for memory buffers for temporary objects
@@ -35,56 +35,56 @@
 
 /** creates memory buffer storage */
 extern
-RETCODE SCIPbufferCreate(
-   BUFFER**         buffer              /**< pointer to memory buffer */
+SCIP_RETCODE SCIPbufferCreate(
+   SCIP_BUFFER**         buffer              /**< pointer to memory buffer */
    );
 
 /** frees memory buffer storage */
 extern
 void SCIPbufferFree(
-   BUFFER**         buffer              /**< pointer to memory buffer */
+   SCIP_BUFFER**         buffer              /**< pointer to memory buffer */
    );
 
 /** allocates the next unused buffer */
 extern
-RETCODE SCIPbufferAllocMem(
-   BUFFER*          buffer,             /**< memory buffer storage */
-   SET*             set,                /**< global SCIP settings */
-   void**           ptr,                /**< pointer to store the allocated memory buffer */
-   int              size                /**< minimal required size of the buffer */
+SCIP_RETCODE SCIPbufferAllocMem(
+   SCIP_BUFFER*          buffer,             /**< memory buffer storage */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   void**                ptr,                /**< pointer to store the allocated memory buffer */
+   int                   size                /**< minimal required size of the buffer */
    );
 
 /** allocates the next unused buffer and copies the given memory into the buffer */
 extern
-RETCODE SCIPbufferDuplicateMem(
-   BUFFER*          buffer,             /**< memory buffer storage */
-   SET*             set,                /**< global SCIP settings */
-   void**           ptr,                /**< pointer to store the allocated memory buffer */
-   void*            source,             /**< memory block to copy into the buffer */
-   int              size                /**< minimal required size of the buffer */
+SCIP_RETCODE SCIPbufferDuplicateMem(
+   SCIP_BUFFER*          buffer,             /**< memory buffer storage */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   void**                ptr,                /**< pointer to store the allocated memory buffer */
+   void*                 source,             /**< memory block to copy into the buffer */
+   int                   size                /**< minimal required size of the buffer */
    );
 
 /** reallocates the buffer to at least the given size */
 extern
-RETCODE SCIPbufferReallocMem(
-   BUFFER*          buffer,             /**< memory buffer storage */
-   SET*             set,                /**< global SCIP settings */
-   void**           ptr,                /**< pointer to the allocated memory buffer */
-   int              size                /**< minimal required size of the buffer */
+SCIP_RETCODE SCIPbufferReallocMem(
+   SCIP_BUFFER*          buffer,             /**< memory buffer storage */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   void**                ptr,                /**< pointer to the allocated memory buffer */
+   int                   size                /**< minimal required size of the buffer */
    );
 
 /** frees a buffer */
 extern
 void SCIPbufferFreeMem(
-   BUFFER*          buffer,             /**< memory buffer storage */
-   void**           ptr,                /**< pointer to the allocated memory buffer */
-   int              dummysize           /**< used to get a safer define for SCIPsetFreeBufferSize/Array */
+   SCIP_BUFFER*          buffer,             /**< memory buffer storage */
+   void**                ptr,                /**< pointer to the allocated memory buffer */
+   int                   dummysize           /**< used to get a safer define for SCIPsetFreeBufferSize/Array */
    );
 
 /** gets number of used buffers */
 extern
 int SCIPbufferGetNUsed(
-   BUFFER*          buffer              /**< memory buffer storage */
+   SCIP_BUFFER*          buffer              /**< memory buffer storage */
    );
 
 #endif

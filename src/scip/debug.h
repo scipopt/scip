@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.h,v 1.9 2005/08/17 14:25:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.h,v 1.10 2005/08/22 18:35:36 bzfpfend Exp $"
 
 /**@file   debug.h
  * @brief  methods for debugging
@@ -27,7 +27,7 @@
 #define __SCIP_DEBUG_H__
 
 /** uncomment this define to activate debugging on given solution */
-/*#define DEBUG_SOLUTION "dcmulti.sol"*/
+/*#define SCIP_DEBUG_SOLUTION "dcmulti.sol"*/
 
 
 #include "scip/def.h"
@@ -38,84 +38,84 @@
 #include "scip/type_tree.h"
 
 
-#ifdef DEBUG_SOLUTION
+#ifdef SCIP_DEBUG_SOLUTION
 
 /** checks whether given row is valid for the debugging solution */
 extern
-RETCODE SCIPdebugCheckRow(
-   SET*             set,                /**< global SCIP settings */
-   ROW*             row                 /**< row to check for validity */
+SCIP_RETCODE SCIPdebugCheckRow(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             row                 /**< row to check for validity */
    );
 
 /** checks whether given global lower bound is valid for the debugging solution */
 extern
-RETCODE SCIPdebugCheckLbGlobal(
-   SET*             set,                /**< global SCIP settings */
-   VAR*             var,                /**< problem variable */
-   Real             lb                  /**< lower bound */
+SCIP_RETCODE SCIPdebugCheckLbGlobal(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             lb                  /**< lower bound */
    );
 
 /** checks whether given global upper bound is valid for the debugging solution */
 extern
-RETCODE SCIPdebugCheckUbGlobal(
-   SET*             set,                /**< global SCIP settings */
-   VAR*             var,                /**< problem variable */
-   Real             ub                  /**< upper bound */
+SCIP_RETCODE SCIPdebugCheckUbGlobal(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             ub                  /**< upper bound */
    );
 
 /** checks whether given local bound implication is valid for the debugging solution */
 extern
-RETCODE SCIPdebugCheckInference(
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   NODE*            node,               /**< local node where this bound change was applied */
-   VAR*             var,                /**< problem variable */
-   Real             newbound,           /**< new value for bound */
-   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+SCIP_RETCODE SCIPdebugCheckInference(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE*            node,               /**< local node where this bound change was applied */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    );
 
 /** informs solution debugger, that the given node will be freed */
 extern
-RETCODE SCIPdebugRemoveNode(
-   NODE*            node                /**< node that will be freed */
+SCIP_RETCODE SCIPdebugRemoveNode(
+   SCIP_NODE*            node                /**< node that will be freed */
    );
 
 /** checks whether given variable bound is valid for the debugging solution */
 extern
-RETCODE SCIPdebugCheckVbound(
-   SET*             set,                /**< global SCIP settings */
-   VAR*             var,                /**< problem variable x in x <= b*z + d  or  x >= b*z + d */
-   BOUNDTYPE        vbtype,             /**< type of variable bound (LOWER or UPPER) */
-   VAR*             vbvar,              /**< variable z    in x <= b*z + d  or  x >= b*z + d */
-   Real             vbcoef,             /**< coefficient b in x <= b*z + d  or  x >= b*z + d */
-   Real             vbconstant          /**< constant d    in x <= b*z + d  or  x >= b*z + d */
+SCIP_RETCODE SCIPdebugCheckVbound(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< problem variable x in x <= b*z + d  or  x >= b*z + d */
+   SCIP_BOUNDTYPE        vbtype,             /**< type of variable bound (LOWER or UPPER) */
+   SCIP_VAR*             vbvar,              /**< variable z    in x <= b*z + d  or  x >= b*z + d */
+   SCIP_Real             vbcoef,             /**< coefficient b in x <= b*z + d  or  x >= b*z + d */
+   SCIP_Real             vbconstant          /**< constant d    in x <= b*z + d  or  x >= b*z + d */
    );
 
 /** checks whether given implication is valid for the debugging solution */
 extern
-RETCODE SCIPdebugCheckImplic(
-   SET*             set,                /**< global SCIP settings */
-   VAR*             var,                /**< problem variable */
-   Bool             varfixing,          /**< FALSE if y should be added in implications for x == 0, TRUE for x == 1 */
-   VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
-   BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
-   Real             implbound           /**< bound b    in implication y <= b or y >= b */
+SCIP_RETCODE SCIPdebugCheckImplic(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool             varfixing,          /**< FALSE if y should be added in implications for x == 0, TRUE for x == 1 */
+   SCIP_VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
+   SCIP_BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
+   SCIP_Real             implbound           /**< bound b    in implication y <= b or y >= b */
    );
 
 /** checks whether given conflict is valid for the debugging solution */
 extern
-RETCODE SCIPdebugCheckConflict(
-   BLKMEM*          blkmem,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   NODE*            node,               /**< node where the conflict clause is added */
-   VAR**            conflictset,        /**< variables in the conflict set */
-   int              nliterals           /**< number of literals in the conflict set */
+SCIP_RETCODE SCIPdebugCheckConflict(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE*            node,               /**< node where the conflict clause is added */
+   SCIP_VAR**            conflictset,        /**< variables in the conflict set */
+   int                   nliterals           /**< number of literals in the conflict set */
    );
 
 /** creates the debugging propagator and includes it in SCIP */
 extern
-RETCODE SCIPdebugIncludeProp(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPdebugIncludeProp(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #else
