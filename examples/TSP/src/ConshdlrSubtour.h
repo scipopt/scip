@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.h,v 1.2 2005/05/31 17:20:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.h,v 1.3 2005/08/24 17:57:07 bzfpfend Exp $"
 
 /**@file   ConshdlrSubtour.h
  * @brief  C++ constraint handler for TSP subtour elimination constraints
@@ -57,18 +57,18 @@ public:
     *  WARNING! There may exist unprocessed events. For example, a variable's bound may have been already changed, but
     *  the corresponding bound change event was not yet processed.
     */
-   virtual RETCODE scip_delete(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONSDATA**    consdata            /**< pointer to the constraint data to free */
+   virtual SCIP_RETCODE scip_delete(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONSDATA**    consdata            /**< pointer to the constraint data to free */
       );
 
    /** transforms constraint data into data belonging to the transformed problem */
-   virtual RETCODE scip_trans(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS*         sourcecons,         /**< source constraint to transform */
-      CONS**        targetcons          /**< pointer to store created target constraint */
+   virtual SCIP_RETCODE scip_trans(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS*         sourcecons,         /**< source constraint to transform */
+      SCIP_CONS**        targetcons          /**< pointer to store created target constraint */
       );
 
 
@@ -90,13 +90,13 @@ public:
     *  - SCIP_DIDNOTRUN  : the separator was skipped
     *  - SCIP_DELAYED    : the separator was skipped, but should be called again
     */
-   virtual RETCODE scip_sepa(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS**        conss,              /**< array of constraints to process */
-      int           nconss,             /**< number of constraints to process */
-      int           nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
-      RESULT*       result              /**< pointer to store the result of the separation call */
+   virtual SCIP_RETCODE scip_sepa(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        conss,              /**< array of constraints to process */
+      int                nconss,             /**< number of constraints to process */
+      int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+      SCIP_RESULT*       result              /**< pointer to store the result of the separation call */
       );
 
 
@@ -130,13 +130,13 @@ public:
     *  - SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
     *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
     */
-   virtual RETCODE scip_enfolp(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS**        conss,              /**< array of constraints to process */
-      int           nconss,             /**< number of constraints to process */
-      int           nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
-      RESULT*       result              /**< pointer to store the result of the enforcing call */
+   virtual SCIP_RETCODE scip_enfolp(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        conss,              /**< array of constraints to process */
+      int                nconss,             /**< number of constraints to process */
+      int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+      SCIP_RESULT*       result              /**< pointer to store the result of the enforcing call */
       );
 
    /** constraint enforcing method of constraint handler for pseudo solutions
@@ -164,19 +164,19 @@ public:
     *  - SCIP_CONSADDED  : an additional constraint was generated
     *  - SCIP_REDUCEDDOM : a variable's domain was reduced
     *  - SCIP_BRANCHED   : no changes were made to the problem, but a branching was applied to resolve an infeasibility
-    *  - SCIP_SOLVELP    : at least one constraint is infeasible, and this can only be resolved by solving the LP
+    *  - SCIP_SOLVELP    : at least one constraint is infeasible, and this can only be resolved by solving the SCIP_LP
     *  - SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
     *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
     *  - SCIP_DIDNOTRUN  : the enforcement was skipped (only possible, if objinfeasible is true)
     */
-   virtual RETCODE scip_enfops(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS**        conss,              /**< array of constraints to process */
-      int           nconss,             /**< number of constraints to process */
-      int           nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
-      Bool          objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
-      RESULT*       result              /**< pointer to store the result of the enforcing call */
+   virtual SCIP_RETCODE scip_enfops(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        conss,              /**< array of constraints to process */
+      int                nconss,             /**< number of constraints to process */
+      int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+      SCIP_Bool          objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
+      SCIP_RESULT*       result              /**< pointer to store the result of the enforcing call */
       );
 
    /** feasibility check method of constraint handler for primal solutions
@@ -200,15 +200,15 @@ public:
     *  - SCIP_INFEASIBLE : at least one constraint of the handler is infeasible
     *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
     */
-   virtual RETCODE scip_check(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS**        conss,              /**< array of constraints to process */
-      int           nconss,             /**< number of constraints to process */
-      SOL*          sol,                /**< the solution to check feasibility for */
-      Bool          checkintegrality,   /**< has integrality to be checked? */
-      Bool          checklprows,        /**< have current LP rows to be checked? */
-      RESULT*       result              /**< pointer to store the result of the feasibility checking call */
+   virtual SCIP_RETCODE scip_check(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        conss,              /**< array of constraints to process */
+      int                nconss,             /**< number of constraints to process */
+      SCIP_SOL*          sol,                /**< the solution to check feasibility for */
+      SCIP_Bool          checkintegrality,   /**< has integrality to be checked? */
+      SCIP_Bool          checklprows,        /**< have current LP rows to be checked? */
+      SCIP_RESULT*       result              /**< pointer to store the result of the feasibility checking call */
       );
 
    /** domain propagation method of constraint handler
@@ -224,13 +224,13 @@ public:
     *  - SCIP_DIDNOTRUN  : the propagator was skipped
     *  - SCIP_DELAYED    : the propagator was skipped, but should be called again
     */
-   virtual RETCODE scip_prop(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS**        conss,              /**< array of constraints to process */
-      int           nconss,             /**< number of constraints to process */
-      int           nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
-      RESULT*       result              /**< pointer to store the result of the propagation call */
+   virtual SCIP_RETCODE scip_prop(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        conss,              /**< array of constraints to process */
+      int                nconss,             /**< number of constraints to process */
+      int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+      SCIP_RESULT*       result              /**< pointer to store the result of the propagation call */
       );
 
    /** variable rounding lock method of constraint handler
@@ -282,43 +282,43 @@ public:
     *  SCIPaddConsLocks(scip, c, nlockspos + nlocksneg, nlockspos + nlocksneg), because any modification to the
     *  value of y or to the feasibility of c can alter the feasibility of the equivalence constraint.
     */
-   virtual RETCODE scip_lock(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS*         cons,               /**< the constraint that should lock rounding of its variables, or NULL if the
-                                         *   constraint handler does not need constraints */
-      int           nlockspos,          /**< no. of times, the roundings should be locked for the constraint */
-      int           nlocksneg           /**< no. of times, the roundings should be locked for the constraint's negation */
+   virtual SCIP_RETCODE scip_lock(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS*         cons,               /**< the constraint that should lock rounding of its variables, or NULL if the
+                                              *   constraint handler does not need constraints */
+      int                nlockspos,          /**< no. of times, the roundings should be locked for the constraint */
+      int                nlocksneg           /**< no. of times, the roundings should be locked for the constraint's negation */
       );
 
    /** constraint display method of constraint handler
     *
     *  The constraint handler should store a representation of the constraint into the given text file.
     */
-   virtual RETCODE scip_print(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS*         cons,               /**< the constraint that should be displayed */
-      FILE*         file                /**< the text file to store the information into */
+   virtual SCIP_RETCODE scip_print(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS*         cons,               /**< the constraint that should be displayed */
+      FILE*              file                /**< the text file to store the information into */
       );
 };
 
 
 /** creates and captures a TSP subtour constraint */
-RETCODE SCIPcreateConsSubtour(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*      name,               /**< name of constraint */
-   GRAPH*           graph,              /**< the underlying graph */
-   Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             separate,           /**< should the constraint be separated during LP processing? */
-   Bool             enforce,            /**< should the constraint be enforced during node processing? */
-   Bool             check,              /**< should the constraint be checked for feasibility? */
-   Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
-   Bool             dynamic,            /**< is constraint dynamic? */
-   Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
+SCIP_RETCODE SCIPcreateConsSubtour(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   GRAPH*                graph,              /**< the underlying graph */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   SCIP_Bool             local,              /**< is constraint only valid locally? */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   SCIP_Bool             dynamic,            /**< is constraint dynamic? */
+   SCIP_Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    );
 
 }

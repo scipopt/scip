@@ -33,28 +33,28 @@
 static GRAPHNODE **active;
 static long *number;
 static long max_dist, bound;
-static Bool co_check;
+static SCIP_Bool co_check;
 
-Bool create_graph (int n, int m, GRAPH** gr)
+SCIP_Bool create_graph (int n, int m, GRAPH** gr)
 {
    assert( gr != NULL );
 
-   allocMemory(gr);
+   BMSallocMemory(gr);
    if( gr == NULL )
       return FALSE;
 
-   allocMemoryArray( &(*gr)->nodes, n );
+   BMSallocMemoryArray( &(*gr)->nodes, n );
    if( (*gr)->nodes == NULL )
    {
-      freeMemory(gr);
+      BMSfreeMemory(gr);
       return FALSE;
    }
 
-   allocMemoryArray( &(*gr)->edges, m );
+   BMSallocMemoryArray( &(*gr)->edges, m );
    if( (*gr)->edges == NULL )
    {
-      freeMemoryArray(&(*gr)->nodes);
-      freeMemory(gr);
+      BMSfreeMemoryArray(&(*gr)->nodes);
+      BMSfreeMemory(gr);
       return FALSE;
    }
    (*gr)->nuses = 1;
@@ -70,9 +70,9 @@ void free_graph (GRAPH** gr)
    assert(gr != NULL);
    assert(*gr != NULL);
    assert((*gr)->nuses == 0);
-   freeMemory(&(*gr)->nodes);
-   freeMemory(&(*gr)->edges);
-   freeMemory(gr);
+   BMSfreeMemory(&(*gr)->nodes);
+   BMSfreeMemory(&(*gr)->edges);
+   BMSfreeMemory(gr);
 }
 
 void capture_graph (GRAPH* gr)
@@ -91,7 +91,7 @@ void release_graph (GRAPH** gr)
    *gr = NULL;
 }
 
-Bool init_maxflow (long n)
+SCIP_Bool init_maxflow (long n)
 {
    active = (GRAPHNODE **) malloc ((n+1L) * sizeof (GRAPHNODE *));
    /* holds stacks of active nodes arranged by distances */ 
@@ -497,7 +497,7 @@ double maxflow (GRAPH *gr, GRAPHNODE *s_ptr, GRAPHNODE *t_ptr)
    return (t_ptr->excess - 1.0L);
 }
 
-Bool nodeOnRootPath(GRAPH* gr, int i, int j)
+SCIP_Bool nodeOnRootPath(GRAPH* gr, int i, int j)
 {
    while( i != j && j != 0 )
    {
@@ -510,7 +510,7 @@ Bool nodeOnRootPath(GRAPH* gr, int i, int j)
 }
 
 // constructs a list of cuts for a TSP relaxation polytope from a Gomory Hu Tree 
-void constructCutList(GRAPH *gr, Bool** cuts, int* ncuts, double minviol)
+void constructCutList(GRAPH *gr, SCIP_Bool** cuts, int* ncuts, double minviol)
 {
    int k = 0;
    for( int i = 1; i < gr->nnodes; i++ )
@@ -527,13 +527,13 @@ void constructCutList(GRAPH *gr, Bool** cuts, int* ncuts, double minviol)
 
 // if the non-zero-edges of a TSP relaxation induce a non-connected graph, 
 // an according cut is generated, using information from BFS in method maxflow
-void constructSingleCut(GRAPH *gr, Bool** cuts)
+void constructSingleCut(GRAPH *gr, SCIP_Bool** cuts)
 {
    for( int i = 1; i < gr->nnodes; i++ )
       cuts[0][i]=gr->nodes[i].unmarked;
 }
 
-Bool ghc_tree (GRAPH *gr, Bool** cuts, int* ncuts, double minviol)
+SCIP_Bool ghc_tree (GRAPH *gr, SCIP_Bool** cuts, int* ncuts, double minviol)
 {
    /* Determines Gomory/Hu cut tree for input graph with
       capacitated edges, the tree structures is represented

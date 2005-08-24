@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: EventhdlrNewSol.h,v 1.2 2005/05/31 17:20:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: EventhdlrNewSol.h,v 1.3 2005/08/24 17:57:07 bzfpfend Exp $"
 
 /**@file   EventhdlrNewSol.h
  * @brief  event handler for new solutions in TSP
@@ -48,21 +48,21 @@ public:
    }
 
    /** destructor of event handler to free user data (called when SCIP is exiting) */
-   virtual RETCODE scip_free(
-      SCIP*         scip,               /**< SCIP data structure */
-      EVENTHDLR*    eventhdlr           /**< the event handler itself */
+   virtual SCIP_RETCODE scip_free(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
       );
    
    /** initialization method of event handler (called after problem was transformed) */
-   virtual RETCODE scip_init(
-      SCIP*         scip,               /**< SCIP data structure */
-      EVENTHDLR*    eventhdlr           /**< the event handler itself */
+   virtual SCIP_RETCODE scip_init(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
       );
    
    /** deinitialization method of event handler (called before transformed problem is freed) */
-   virtual RETCODE scip_exit(
-      SCIP*         scip,               /**< SCIP data structure */
-      EVENTHDLR*    eventhdlr           /**< the event handler itself */
+   virtual SCIP_RETCODE scip_exit(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
       );
    
    /** solving process initialization method of event handler (called when branch and bound process is about to begin)
@@ -71,9 +71,9 @@ public:
     *  The event handler may use this call to initialize its branch and bound specific data.
     *
     */
-   virtual RETCODE scip_initsol(
-      SCIP*         scip,               /**< SCIP data structure */
-      EVENTHDLR*    eventhdlr           /**< the event handler itself */
+   virtual SCIP_RETCODE scip_initsol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
       );
    
    /** solving process deinitialization method of event handler (called before branch and bound process data is freed)
@@ -81,16 +81,16 @@ public:
     *  This method is called before the branch and bound process is freed.
     *  The event handler should use this call to clean up its branch and bound data.
     */
-   virtual RETCODE scip_exitsol(
-      SCIP*         scip,               /**< SCIP data structure */
-      EVENTHDLR*    eventhdlr           /**< the event handler itself */
+   virtual SCIP_RETCODE scip_exitsol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
       );
    
    /** frees specific constraint data */
-   virtual RETCODE scip_delete(
-      SCIP*         scip,               /**< SCIP data structure */
-      EVENTHDLR*    eventhdlr,          /**< the event handler itself */
-      EVENTDATA**   eventdata           /**< pointer to the event data to free */
+   virtual SCIP_RETCODE scip_delete(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_EVENTHDLR*    eventhdlr,          /**< the event handler itself */
+      SCIP_EVENTDATA**   eventdata           /**< pointer to the event data to free */
       );
 
    /** execution method of event handler
@@ -100,11 +100,11 @@ public:
     *  corresponding SCIPcatch...() method. This method creates an event filter object to point to the
     *  given event handler and event data.
     */
-   virtual RETCODE scip_exec(
-      SCIP*         scip,               /**< SCIP data structure */
-      EVENTHDLR*    eventhdlr,          /**< the event handler itself */
-      EVENT*        event,              /**< event to process */
-      EVENTDATA*    eventdata           /**< user data for the event */
+   virtual SCIP_RETCODE scip_exec(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_EVENTHDLR*    eventhdlr,          /**< the event handler itself */
+      SCIP_EVENT*        event,              /**< event to process */
+      SCIP_EVENTDATA*    eventdata           /**< user data for the event */
       );
 };
 

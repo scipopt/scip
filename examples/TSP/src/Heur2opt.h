@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: Heur2opt.h,v 1.4 2005/05/31 17:20:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: Heur2opt.h,v 1.5 2005/08/24 17:57:07 bzfpfend Exp $"
 
 /**@file   heur2opt.h
  * @brief  2-Optimum - combinatorial improvement heuristic for TSP
@@ -33,10 +33,10 @@ namespace tsp
    /** C++ wrapper */
    class Heur2opt : public scip::ObjHeur
    {
-      GRAPH*           graph_;             /**< the underlying graph of the TSP */
-      int              ncalls_;            /**< number of calls of the heuristic since the last solution was found */
-      SOL*             sol_;               /**< current solution */
-      GRAPHEDGE**      tour_;              /**< tour induced by sol */
+      GRAPH*             graph_;             /**< the underlying graph of the TSP */
+      int                ncalls_;            /**< number of calls of the heuristic since the last solution was found */
+      SCIP_SOL*          sol_;               /**< current solution */
+      GRAPHEDGE**        tour_;              /**< tour induced by sol */
    
    public:
 
@@ -56,21 +56,21 @@ namespace tsp
       }
 
       /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-      virtual RETCODE scip_free(
-         SCIP*         scip,               /**< SCIP data structure */
-         HEUR*         heur                /**< the primal heuristic itself */
+      virtual SCIP_RETCODE scip_free(
+         SCIP*              scip,               /**< SCIP data structure */
+         SCIP_HEUR*         heur                /**< the primal heuristic itself */
          );
    
       /** initialization method of primal heuristic (called after problem was transformed) */
-      virtual RETCODE scip_init(
-         SCIP*         scip,               /**< SCIP data structure */
-         HEUR*         heur                /**< the primal heuristic itself */
+      virtual SCIP_RETCODE scip_init(
+         SCIP*              scip,               /**< SCIP data structure */
+         SCIP_HEUR*         heur                /**< the primal heuristic itself */
          );
 
       /** deinitialization method of primal heuristic (called before transformed problem is freed) */
-      virtual RETCODE scip_exit(
-         SCIP*         scip,               /**< SCIP data structure */
-         HEUR*         heur                /**< the primal heuristic itself */
+      virtual SCIP_RETCODE scip_exit(
+         SCIP*              scip,               /**< SCIP data structure */
+         SCIP_HEUR*         heur                /**< the primal heuristic itself */
          );
    
       /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin)
@@ -79,9 +79,9 @@ namespace tsp
        *  The primal heuristic may use this call to initialize its branch and bound specific data.
        *
        */
-      virtual RETCODE scip_initsol(
-         SCIP*         scip,               /**< SCIP data structure */
-         HEUR*         heur                /**< the primal heuristic itself */
+      virtual SCIP_RETCODE scip_initsol(
+         SCIP*              scip,               /**< SCIP data structure */
+         SCIP_HEUR*         heur                /**< the primal heuristic itself */
          );
    
       /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed)
@@ -89,9 +89,9 @@ namespace tsp
        *  This method is called before the branch and bound process is freed.
        *  The primal heuristic should use this call to clean up its branch and bound data.
        */
-      virtual RETCODE scip_exitsol(
-         SCIP*         scip,               /**< SCIP data structure */
-         HEUR*         heur                /**< the primal heuristic itself */
+      virtual SCIP_RETCODE scip_exitsol(
+         SCIP*              scip,               /**< SCIP data structure */
+         SCIP_HEUR*         heur                /**< the primal heuristic itself */
          );
    
       /** execution method of primal heuristic
@@ -105,10 +105,10 @@ namespace tsp
        *  - SCIP_DELAYED    : the heuristic was skipped, but should be called again as soon as possible, disregarding
        *                      its frequency
        */
-      virtual RETCODE scip_exec(
-         SCIP*         scip,               /**< SCIP data structure */
-         HEUR*         heur,               /**< the primal heuristic itself */
-         RESULT*       result              /**< pointer to store the result of the heuristic call */
+      virtual SCIP_RETCODE scip_exec(
+         SCIP*              scip,               /**< SCIP data structure */
+         SCIP_HEUR*         heur,               /**< the primal heuristic itself */
+         SCIP_RESULT*       result              /**< pointer to store the result of the heuristic call */
          );
    };
 

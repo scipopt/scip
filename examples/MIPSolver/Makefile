@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.6 2005/05/31 17:20:06 bzfpfend Exp $
+# $Id: Makefile,v 1.7 2005/08/24 17:57:00 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ example project using SCIP as a callable library
@@ -38,15 +38,17 @@ MACHINENAME	:=	$(shell uname -n | tr A-Z a-z)
 # default settings
 #-----------------------------------------------------------------------------
 
-OPT		=	dbg
-LPS		=	cpx
-COMP		=	gnu
 TIME     	=  	3600
 NODES           =       2100000000
 MEM		=	1024
 TEST		=	
 SETTINGS        =       default
 
+VERBOSE		=	false
+OPT		=	opt
+LPS		=	cpx
+COMP		=	gnu
+LINK		=	static
 LINKER  	=	CPP
 
 CC		=	gcc
@@ -78,7 +80,7 @@ GXXWARN		=	-Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
 			-Woverloaded-virtual -Wsign-promo -Wsynth \
 			-Wcast-qual -Wno-unused-parameter # -Wold-style-cast -Wshadow -Wundef
 
-BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
+BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LINK)
 OBJDIR		=	obj/O.$(BASE)
 SRCDIR		=	src
 BINDIR		=	bin
@@ -187,21 +189,45 @@ depend:
 
 ifeq ($(LINKER),C)
 $(MAINFILE):	$(OBJDIR) $(BINDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINXXX)
+		@echo "-> linking $@"
+ifeq ($(VERBOSE), true)
 		$(CC) $(CFLAGS) $(MAINXXX) \
 		-L$(LIBDIR)/scip/lib -l$(SCIPLIB) -l$(LPILIB) -l$(LPSLIB) -L$(LIBDIR) \
 		$(LDFLAGS) -o $@
+else
+		@$(CC) $(CFLAGS) $(MAINXXX) \
+		-L$(LIBDIR)/scip/lib -l$(SCIPLIB) -l$(LPILIB) -l$(LPSLIB) -L$(LIBDIR) \
+		$(LDFLAGS) -o $@
+endif
 endif
 ifeq ($(LINKER),CPP)
 $(MAINFILE):	$(OBJDIR) $(BINDIR) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINXXX)
+		@echo "-> linking $@"
+ifeq ($(VERBOSE), true)
 		$(CXX) $(CXXFLAGS) $(MAINXXX) \
 		-L$(LIBDIR)/scip/lib -l$(SCIPLIB) -l$(OBJSCIPLIB) -l$(LPILIB) -l$(LPSLIB) -L$(LIBDIR) \
 		$(LDFLAGS) -o $@
+else
+		@$(CXX) $(CXXFLAGS) $(MAINXXX) \
+		-L$(LIBDIR)/scip/lib -l$(SCIPLIB) -l$(OBJSCIPLIB) -l$(LPILIB) -l$(LPSLIB) -L$(LIBDIR) \
+		$(LDFLAGS) -o $@
+endif
 endif
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
+		@echo "-> compiling $@"
+ifeq ($(VERBOSE), true)
 		$(CC) $(FLAGS) $(CFLAGS) -c $< -o $@
+else
+		$(CC) $(FLAGS) $(CFLAGS) -c $< -o $@
+endif
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
+		@echo "-> compiling $@"
+ifeq ($(VERBOSE), true)
 		$(CXX) $(FLAGS) $(CXXFLAGS) -c $< -o $@
+else
+		$(CXX) $(FLAGS) $(CXXFLAGS) -c $< -o $@
+endif
 
 # --- EOF ---------------------------------------------------------------------

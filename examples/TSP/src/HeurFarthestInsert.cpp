@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: HeurFarthestInsert.cpp,v 1.4 2005/05/31 17:20:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: HeurFarthestInsert.cpp,v 1.5 2005/08/24 17:57:07 bzfpfend Exp $"
 
 /**@file   HeurFarthestInsert.cpp
  * @brief  farthest insert - combinatorial heuristic for TSP
@@ -32,17 +32,17 @@ using namespace tsp;
 using namespace std;
 
 /** primal heuristic data */
-struct HeurData
+struct SCIP_HeurData
 {  
-   scip::ObjHeur*   objheur;         /**< primal heuristic object */
-   Bool             deleteobject;    /**< should the primal heuristic object be deleted when heuristic is freed? */
+   scip::ObjHeur*     objheur;            /**< primal heuristic object */
+   SCIP_Bool          deleteobject;       /**< should the primal heuristic object be deleted when heuristic is freed? */
 };
 
 /** method finding the edge going from the node with id index1 to the node with id index2 */
 GRAPHEDGE* findEdge(
-   GRAPHNODE*    nodes,              /**< all nodes of the graph */
-   int           index1,             /**< id of the node where the searched edge starts */
-   int           index2              /**< id of the node where the searched edge ends */
+   GRAPHNODE*         nodes,              /**< all nodes of the graph */
+   int                index1,             /**< id of the node where the searched edge starts */
+   int                index2              /**< id of the node where the searched edge ends */
    )
 {
    GRAPHEDGE* edge = nodes[index1].first_edge;
@@ -60,9 +60,9 @@ GRAPHEDGE* findEdge(
 
 /** method updating the distances of the nodes to the tour after having inserted one node with id index */
 void updateDistances(
-   GRAPHNODE*    nodes,              /**< all nodes of the graph */
-   double*       dist,               /**< array with current distances of all nodes to the subtour */
-   int           index               /**< id of the inserted node */
+   GRAPHNODE*         nodes,              /**< all nodes of the graph */
+   double*            dist,               /**< array with current distances of all nodes to the subtour */
+   int                index               /**< id of the inserted node */
    )
 { 
    GRAPHEDGE* edge = nodes[index].first_edge;
@@ -78,18 +78,18 @@ void updateDistances(
 
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-RETCODE HeurFarthestInsert::scip_free(
-   SCIP*         scip,               /**< SCIP data structure */
-   HEUR*         heur                /**< the primal heuristic itself */
+SCIP_RETCODE HeurFarthestInsert::scip_free(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_HEUR*         heur                /**< the primal heuristic itself */
    )
 {
    return SCIP_OKAY;
 }
    
 /** initialization method of primal heuristic (called after problem was transformed) */
-RETCODE HeurFarthestInsert::scip_init(
-   SCIP*         scip,               /**< SCIP data structure */
-   HEUR*         heur                /**< the primal heuristic itself */
+SCIP_RETCODE HeurFarthestInsert::scip_init(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_HEUR*         heur                /**< the primal heuristic itself */
    )
 {
    ProbDataTSP* probdata = dynamic_cast<ProbDataTSP*>(SCIPgetObjProbData(scip));
@@ -99,9 +99,9 @@ RETCODE HeurFarthestInsert::scip_init(
 }
    
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
-RETCODE HeurFarthestInsert::scip_exit(
-   SCIP*         scip,               /**< SCIP data structure */
-   HEUR*         heur                /**< the primal heuristic itself */
+SCIP_RETCODE HeurFarthestInsert::scip_exit(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_HEUR*         heur                /**< the primal heuristic itself */
    )
 {
    release_graph(&graph_);
@@ -115,9 +115,9 @@ RETCODE HeurFarthestInsert::scip_exit(
  *  The primal heuristic may use this call to initialize its branch and bound specific data.
  *
  */
-RETCODE HeurFarthestInsert::scip_initsol(
-   SCIP*         scip,               /**< SCIP data structure */
-   HEUR*         heur                /**< the primal heuristic itself */
+SCIP_RETCODE HeurFarthestInsert::scip_initsol(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_HEUR*         heur                /**< the primal heuristic itself */
    )
 {
    return SCIP_OKAY;
@@ -128,9 +128,9 @@ RETCODE HeurFarthestInsert::scip_initsol(
  *  This method is called before the branch and bound process is freed.
  *  The primal heuristic should use this call to clean up its branch and bound data.
  */
-RETCODE HeurFarthestInsert::scip_exitsol(
-   SCIP*         scip,               /**< SCIP data structure */
-   HEUR*         heur                /**< the primal heuristic itself */
+SCIP_RETCODE HeurFarthestInsert::scip_exitsol(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_HEUR*         heur                /**< the primal heuristic itself */
    )
 {
    return SCIP_OKAY;
@@ -147,10 +147,10 @@ RETCODE HeurFarthestInsert::scip_exitsol(
  *  - SCIP_DELAYED    : the heuristic was skipped, but should be called again as soon as possible, disregarding
  *                      its frequency
  */
-RETCODE HeurFarthestInsert::scip_exec(
-   SCIP*         scip,               /**< SCIP data structure */
-   HEUR*         heur,               /**< the primal heuristic itself */
-   RESULT*       result              /**< pointer to store the result of the heuristic call */
+SCIP_RETCODE HeurFarthestInsert::scip_exec(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_HEUR*         heur,               /**< the primal heuristic itself */
+   SCIP_RESULT*       result              /**< pointer to store the result of the heuristic call */
    )
 {   
    int nnodes = graph_->nnodes;
@@ -161,7 +161,7 @@ RETCODE HeurFarthestInsert::scip_exec(
    {   
       bool* subtour;
       int i;
-      double*  dist;
+      double*       dist;
 
       GRAPHNODE* startnode;   
       GRAPHNODE* node;
@@ -176,13 +176,13 @@ RETCODE HeurFarthestInsert::scip_exec(
          assert( i == nodes[i].id );
 
       // memory allocation
-      CHECK_OKAY( SCIPallocBufferArray(scip, &subtour, nnodes) ); 
-      CHECK_OKAY( SCIPallocBufferArray(scip, &dist, nnodes) );
-      CHECK_OKAY( SCIPallocBufferArray(scip, &successor, nnodes) );
-      CHECK_OKAY( SCIPallocBufferArray(scip, &edges, 3) );
-      CHECK_OKAY( SCIPallocBufferArray(scip, &bestedges, 3) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &subtour, nnodes) ); 
+      SCIP_CALL( SCIPallocBufferArray(scip, &dist, nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &successor, nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &edges, 3) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &bestedges, 3) );
 
-      clearMemoryArray(subtour, nnodes);
+      BMSclearMemoryArray(subtour, nnodes);
       for( i = 0; i < nnodes; i++ )
          dist[i] = DBL_MAX;
       
@@ -226,7 +226,7 @@ RETCODE HeurFarthestInsert::scip_exec(
          assert(newnodeindex >= 0);
 
          // find connection to one node in the tour 
-         clearMemoryArray(bestedges, 3);
+         BMSclearMemoryArray(bestedges, 3);
          edge = nodes[newnodeindex].first_edge;
          startnode = NULL;
         
@@ -281,19 +281,19 @@ RETCODE HeurFarthestInsert::scip_exec(
          updateDistances(nodes, dist, newnodeindex);
       }
 
-      SOL* sol;
-      Bool success;
+      SCIP_SOL* sol;
+      SCIP_Bool success;
 
       // now create a solution out of the edges stored in successor and try to add it to SCIP
-      CHECK_OKAY( SCIPcreateSol (scip, &sol, heur) );      
+      SCIP_CALL( SCIPcreateSol (scip, &sol, heur) );      
       for( i = 0; i < nnodes; i++ )
       {
-         CHECK_OKAY( SCIPsetSolVal(scip, sol, successor[i]->var, 1.0) );
+         SCIP_CALL( SCIPsetSolVal(scip, sol, successor[i]->var, 1.0) );
       }
-      CHECK_OKAY( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, &success) );
       if( success )
          *result = SCIP_FOUNDSOL;  
-      CHECK_OKAY( SCIPfreeSol(scip, &sol) );
+      SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
       // free all local memory
       SCIPfreeBufferArray(scip, &bestedges);

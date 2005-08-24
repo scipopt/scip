@@ -34,8 +34,12 @@ conflict/maxvarsfac = 0.02
 # [type: int, range: [0,2147483647], default: 30]
 conflict/minmaxvars = 30
 
+# maximal number of unfixed variables at insertion depth of conflict clause (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+conflict/maxunfixed = -1
+
 # maximal number of LP resolving loops during conflict analysis
-# [type: int, range: [1,2147483647], default: 100]
+# [type: int, range: [0,2147483647], default: 100]
 conflict/maxlploops = 100
 
 # number of depth levels up to which first UIP's are used in conflict analysis (-1: use All-FirstUIP rule)
@@ -49,6 +53,10 @@ conflict/interclauses = 1
 # maximal number of conflict clauses accepted at an infeasible node (-1: use all generated conflict clauses)
 # [type: int, range: [-1,2147483647], default: 10]
 conflict/maxclauses = 10
+
+# should conflict clauses be generated that are only valid locally?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+conflict/allowlocal = TRUE
 
 # should earlier nodes be repropagated in order to replace branching decisions by deductions
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -66,16 +74,16 @@ conflict/dynamic = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 conflict/removeable = TRUE
 
-# maximum age an unnecessary constraint can reach before it is deleted, or -1 to keep all constraints
-# [type: int, range: [-1,2147483647], default: 200]
+# maximum age an unnecessary constraint can reach before it is deleted (0: dynamic, -1: keep all constraints)
+# [type: int, range: [-1,2147483647], default: 0]
 constraints/agelimit = 200
 
-# age of a constraint after which it is marked obsolete, or -1 to not mark constraints obsolete
-# [type: int, range: [-1,2147483647], default: 100]
+# age of a constraint after which it is marked obsolete (0: dynamic, -1 do not mark constraints obsolete)
+# [type: int, range: [-1,2147483647], default: 0]
 constraints/obsoleteage = 100
 
 # verbosity level of output
-# [type: int, range: [0,4], default: 2]
+# [type: int, range: [0,5], default: 3]
 display/verblevel = 4
 
 # maximal number of characters in a node information line
@@ -138,8 +146,8 @@ lp/initalgorithm = s
 # [type: char, range: {sbc}, default: s]
 lp/resolvealgorithm = s
 
-# LP pricing strategy ('a'uto, 'f'ull pricing, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)
-# [type: char, range: {afsqd}, default: s]
+# LP pricing strategy ('a'uto, 'f'ull pricing, 'p'artial, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)
+# [type: char, range: {afpsqd}, default: s]
 lp/pricing = s
 
 # maximum age a dynamic column can reach before it is deleted from the LP (-1: don't delete columns due to aging)
@@ -566,6 +574,14 @@ constraints/knapsack/maxsepacuts = 50
 # [type: int, range: [0,2147483647], default: 200]
 constraints/knapsack/maxsepacutsroot = 200
 
+# maximal number of cardinality inequalities lifted per separation round (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/knapsack/maxnumcardlift = -1
+
+# should disaggregation of knapsack constraints be allowed in preprocessing?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/knapsack/disaggregation = TRUE
+
 # priority of conflict handler <logicor>
 # [type: int, range: [-2147483648,2147483647], default: 800000]
 conflict/logicor/priority = 800000
@@ -878,6 +894,10 @@ branching/inference/maxbounddist = 1
 # [type: real, range: [0,1.79769313486232e+308], default: 1]
 branching/inference/cutoffweight = 1
 
+# should branching on LP solution be restricted to the fractional variables?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+branching/inference/fractionals = TRUE
+
 # priority of branching rule <mostinf>
 # [type: int, range: [-2147483648,2147483647], default: 100]
 branching/mostinf/priority = 100
@@ -990,20 +1010,20 @@ heuristics/coefdiving/maxlpiterquot = 0.02
 # [type: int, range: [0,2147483647], default: 1000]
 heuristics/coefdiving/maxlpiterofs = 1000
 
-# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
+# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed (0.0: no limit)
 # [type: real, range: [0,1], default: 0.8]
 heuristics/coefdiving/maxdiveubquot = 0.8
 
-# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
-# [type: real, range: [0,1.79769313486232e+308], default: 4]
+# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/coefdiving/maxdiveavgquot = 4
 
-# maximal UBQUOT when no solution was found yet
+# maximal UBQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1], default: 0.1]
 heuristics/coefdiving/maxdiveubquotnosol = 0.1
 
-# maximal AVGQUOT when no solution was found yet
-# [type: real, range: [0,1.79769313486232e+308], default: 8]
+# maximal AVGQUOT when no solution was found yet (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/coefdiving/maxdiveavgquotnosol = 8
 
 # priority of heuristic <feaspump>
@@ -1110,20 +1130,20 @@ heuristics/fracdiving/maxlpiterquot = 0.02
 # [type: int, range: [0,2147483647], default: 1000]
 heuristics/fracdiving/maxlpiterofs = 1000
 
-# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
+# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed (0.0: no limit)
 # [type: real, range: [0,1], default: 0.8]
 heuristics/fracdiving/maxdiveubquot = 0.8
 
-# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
-# [type: real, range: [0,1.79769313486232e+308], default: 4]
+# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/fracdiving/maxdiveavgquot = 4
 
-# maximal UBQUOT when no solution was found yet
+# maximal UBQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1], default: 0.1]
 heuristics/fracdiving/maxdiveubquotnosol = 0.1
 
-# maximal AVGQUOT when no solution was found yet
-# [type: real, range: [0,1.79769313486232e+308], default: 8]
+# maximal AVGQUOT when no solution was found yet (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/fracdiving/maxdiveavgquotnosol = 8
 
 # priority of heuristic <guideddiving>
@@ -1158,21 +1178,13 @@ heuristics/guideddiving/maxlpiterquot = 0.02
 # [type: int, range: [0,2147483647], default: 1000]
 heuristics/guideddiving/maxlpiterofs = 1000
 
-# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
+# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed (0.0: no limit)
 # [type: real, range: [0,1], default: 0.8]
 heuristics/guideddiving/maxdiveubquot = 0.8
 
-# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
-# [type: real, range: [0,1.79769313486232e+308], default: 4]
+# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/guideddiving/maxdiveavgquot = 4
-
-# maximal UBQUOT when no solution was found yet
-# [type: real, range: [0,1], default: 0.1]
-heuristics/guideddiving/maxdiveubquotnosol = 0.1
-
-# maximal AVGQUOT when no solution was found yet
-# [type: real, range: [0,1.79769313486232e+308], default: 8]
-heuristics/guideddiving/maxdiveavgquotnosol = 8
 
 # priority of heuristic <linesearchdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1006000]
@@ -1206,65 +1218,21 @@ heuristics/linesearchdiving/maxlpiterquot = 0.02
 # [type: int, range: [0,2147483647], default: 1000]
 heuristics/linesearchdiving/maxlpiterofs = 1000
 
-# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
+# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed (0.0: no limit)
 # [type: real, range: [0,1], default: 0.8]
 heuristics/linesearchdiving/maxdiveubquot = 0.8
 
-# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
-# [type: real, range: [0,1.79769313486232e+308], default: 4]
+# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/linesearchdiving/maxdiveavgquot = 4
 
-# maximal UBQUOT when no solution was found yet
+# maximal UBQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1], default: 0.1]
 heuristics/linesearchdiving/maxdiveubquotnosol = 0.1
 
-# maximal AVGQUOT when no solution was found yet
-# [type: real, range: [0,1.79769313486232e+308], default: 8]
+# maximal AVGQUOT when no solution was found yet (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/linesearchdiving/maxdiveavgquotnosol = 8
-
-# priority of heuristic <objfeaspump>
-# [type: int, range: [-2147483648,2147483647], default: -1008000]
-heuristics/objfeaspump/priority = -1008000
-
-# frequency for calling primal heuristic <objfeaspump> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 20]
-heuristics/objfeaspump/freq = 10
-
-# frequency offset for calling primal heuristic <objfeaspump>
-# [type: int, range: [0,2147483647], default: 8]
-heuristics/objfeaspump/freqofs = 8
-
-# maximal depth level to call primal heuristic <objfeaspump> (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-heuristics/objfeaspump/maxdepth = -1
-
-# minimal relative depth to start diving
-# [type: real, range: [0,1], default: 0]
-heuristics/objfeaspump/minreldepth = 0
-
-# maximal relative depth to start diving
-# [type: real, range: [0,1], default: 1]
-heuristics/objfeaspump/maxreldepth = 1
-
-# maximal fraction of diving LP iterations compared to node LP iterations
-# [type: real, range: [0,1.79769313486232e+308], default: 0.01]
-heuristics/objfeaspump/maxlpiterquot = 0.01
-
-# additional number of allowed LP iterations
-# [type: int, range: [0,2147483647], default: 1000]
-heuristics/objfeaspump/maxlpiterofs = 1000
-
-# total number of feasible solutions found up to which heuristic is called (-1: no limit)
-# [type: int, range: [-1,2147483647], default: 5]
-heuristics/objfeaspump/maxsols = 5
-
-# maximal diving depth: number of binary/integer variables times depthfac
-# [type: real, range: [0,1.79769313486232e+308], default: 0.5]
-heuristics/objfeaspump/depthfac = 0.5
-
-# maximal diving depth factor if no feasible solution was found yet
-# [type: real, range: [0,1.79769313486232e+308], default: 2]
-heuristics/objfeaspump/depthfacnosol = 2
 
 # priority of heuristic <objpscostdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1004000]
@@ -1299,7 +1267,7 @@ heuristics/objpscostdiving/maxlpiterquot = 0.01
 heuristics/objpscostdiving/maxlpiterofs = 1000
 
 # total number of feasible solutions found up to which heuristic is called (-1: no limit)
-# [type: int, range: [-1,2147483647], default: 5]
+# [type: int, range: [-1,2147483647], default: -1]
 heuristics/objpscostdiving/maxsols = 5
 
 # maximal diving depth: number of binary/integer variables times depthfac
@@ -1309,6 +1277,50 @@ heuristics/objpscostdiving/depthfac = 0.5
 # maximal diving depth factor if no feasible solution was found yet
 # [type: real, range: [0,1.79769313486232e+308], default: 2]
 heuristics/objpscostdiving/depthfacnosol = 2
+
+# priority of heuristic <octane>
+# [type: int, range: [-2147483648,2147483647], default: -1008000]
+heuristics/octane/priority = -1008000
+
+# frequency for calling primal heuristic <octane> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/octane/freq = 10
+
+# frequency offset for calling primal heuristic <octane>
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/octane/freqofs = 0
+
+# maximal depth level to call primal heuristic <octane> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/octane/maxdepth = -1
+
+# number of 0-1-points to be tested as possible solutions by OCTANE
+# [type: int, range: [1,2147483647], default: 100]
+heuristics/octane/fmax = 100
+
+# number of 0-1-points to be tested at first whether they violate a common row
+# [type: int, range: [1,2147483647], default: 10]
+heuristics/octane/ffirst = 10
+
+# execute OCTANE only in the space of fractional variables (TRUE) or in the full space? 
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/octane/usefracspace = TRUE
+
+# should the inner normal of the objective be used as one ray direction?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/octane/useobjray = TRUE
+
+# should the average of the non-basics be used as one ray direction?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/octane/useavgray = TRUE
+
+# should the difference between the root solution and the current LP solution be used as one ray direction?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/octane/usediffray = TRUE
+
+# should the difference between the current LP solution and the root solution be used as one ray direction?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/octane/usediffbwray = TRUE
 
 # priority of heuristic <pscostdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1002000]
@@ -1342,20 +1354,20 @@ heuristics/pscostdiving/maxlpiterquot = 0.02
 # [type: int, range: [0,2147483647], default: 1000]
 heuristics/pscostdiving/maxlpiterofs = 1000
 
-# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed
+# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed (0.0: no limit)
 # [type: real, range: [0,1], default: 0.8]
 heuristics/pscostdiving/maxdiveubquot = 0.8
 
-# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
-# [type: real, range: [0,1.79769313486232e+308], default: 4]
+# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/pscostdiving/maxdiveavgquot = 4
 
-# maximal UBQUOT when no solution was found yet
+# maximal UBQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1], default: 0.1]
 heuristics/pscostdiving/maxdiveubquotnosol = 0.1
 
-# maximal AVGQUOT when no solution was found yet
-# [type: real, range: [0,1.79769313486232e+308], default: 8]
+# maximal AVGQUOT when no solution was found yet (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/pscostdiving/maxdiveavgquotnosol = 8
 
 # priority of heuristic <rootsoldiving>
@@ -1391,7 +1403,7 @@ heuristics/rootsoldiving/maxlpiterquot = 0.01
 heuristics/rootsoldiving/maxlpiterofs = 1000
 
 # total number of feasible solutions found up to which heuristic is called (-1: no limit)
-# [type: int, range: [-1,2147483647], default: 5]
+# [type: int, range: [-1,2147483647], default: -1]
 heuristics/rootsoldiving/maxsols = 5
 
 # maximal diving depth: number of binary/integer variables times depthfac

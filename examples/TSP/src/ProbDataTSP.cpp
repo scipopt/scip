@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ProbDataTSP.cpp,v 1.2 2005/05/31 17:20:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: ProbDataTSP.cpp,v 1.3 2005/08/24 17:57:07 bzfpfend Exp $"
 
 /**@file   ProbDataTSP.cpp
  * @brief  C++ problem data for TSP
@@ -37,13 +37,13 @@ using namespace scip;
  *  after the SCIP problem is freed, this method should delete all the problem specific data that is no
  *  longer needed.
  */
-RETCODE ProbDataTSP::scip_delorig(
-   SCIP*         scip                /**< SCIP data structure */
+SCIP_RETCODE ProbDataTSP::scip_delorig(
+   SCIP*              scip                /**< SCIP data structure */
    )
 {
    for( int i = 0; i < graph_->nedges; i++ )
    {
-      CHECK_OKAY( SCIPreleaseVar(scip, &graph_->edges[i].var) );
+      SCIP_CALL( SCIPreleaseVar(scip, &graph_->edges[i].var) );
    }
    release_graph(&graph_);
 

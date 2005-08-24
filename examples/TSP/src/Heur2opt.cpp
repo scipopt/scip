@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: Heur2opt.cpp,v 1.3 2005/05/31 17:20:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: Heur2opt.cpp,v 1.4 2005/08/24 17:57:07 bzfpfend Exp $"
 
 /**@file   heur2opt.cpp
  * @brief  2-Optimum - combinatorial improvement heuristic for TSP
@@ -36,9 +36,9 @@ using namespace std;
 /** method finding the edge going from the node with id index1 to the node with id index2 */
 static
 GRAPHEDGE* findEdge(
-   GRAPHNODE*    nodes,              /**< all nodes of the graph */
-   GRAPHNODE*    node1,              /**< id of the node where the searched edge starts */
-   GRAPHNODE*    node2               /**< id of the node where the searched edge ends */
+   GRAPHNODE*         nodes,              /**< all nodes of the graph */
+   GRAPHNODE*         node1,              /**< id of the node where the searched edge starts */
+   GRAPHNODE*         node2               /**< id of the node where the searched edge ends */
    )
 {
    GRAPHEDGE* edge =  node1->first_edge;
@@ -55,18 +55,18 @@ GRAPHEDGE* findEdge(
 
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-RETCODE Heur2opt::scip_free(
-   SCIP*         scip,               /**< SCIP data structure */
-   HEUR*         heur                /**< the primal heuristic itself */
+SCIP_RETCODE Heur2opt::scip_free(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_HEUR*         heur                /**< the primal heuristic itself */
    )
 {
    return SCIP_OKAY;
 }
    
 /** initialization method of primal heuristic (called after problem was transformed) */
-RETCODE Heur2opt::scip_init(
-   SCIP*         scip,               /**< SCIP data structure */
-   HEUR*         heur                /**< the primal heuristic itself */
+SCIP_RETCODE Heur2opt::scip_init(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_HEUR*         heur                /**< the primal heuristic itself */
    )
 {
    return SCIP_OKAY;
@@ -74,9 +74,9 @@ RETCODE Heur2opt::scip_init(
 
    
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
-RETCODE Heur2opt::scip_exit(
-   SCIP*         scip,               /**< SCIP data structure */
-   HEUR*         heur                /**< the primal heuristic itself */
+SCIP_RETCODE Heur2opt::scip_exit(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_HEUR*         heur                /**< the primal heuristic itself */
    )
 {
    return SCIP_OKAY;
@@ -89,9 +89,9 @@ RETCODE Heur2opt::scip_exit(
  *  The primal heuristic may use this call to initialize its branch and bound specific data.
  *
  */
-RETCODE Heur2opt::scip_initsol(
-   SCIP*         scip,               /**< SCIP data structure */
-   HEUR*         heur                /**< the primal heuristic itself */
+SCIP_RETCODE Heur2opt::scip_initsol(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_HEUR*         heur                /**< the primal heuristic itself */
    )
 {
    ProbDataTSP* probdata = dynamic_cast<ProbDataTSP*>(SCIPgetObjProbData(scip));
@@ -100,7 +100,7 @@ RETCODE Heur2opt::scip_initsol(
 
    ncalls_ = 0;
    sol_ = NULL;
-   CHECK_OKAY( SCIPallocMemoryArray(scip, &tour_, graph_->nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &tour_, graph_->nnodes) );
    
    return SCIP_OKAY;
 }
@@ -111,9 +111,9 @@ RETCODE Heur2opt::scip_initsol(
  *  This method is called before the branch and bound process is freed.
  *  The primal heuristic should use this call to clean up its branch and bound data.
  */
-RETCODE Heur2opt::scip_exitsol(
-   SCIP*         scip,               /**< SCIP data structure */
-   HEUR*         heur                /**< the primal heuristic itself */
+SCIP_RETCODE Heur2opt::scip_exitsol(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_HEUR*         heur                /**< the primal heuristic itself */
    )
 {
    release_graph(&graph_);
@@ -124,14 +124,14 @@ RETCODE Heur2opt::scip_exitsol(
 
 
 /** execution method of primal heuristic 2-Opt */
-RETCODE Heur2opt::scip_exec(
-   SCIP*         scip,               /**< SCIP data structure */
-   HEUR*         heur,               /**< the primal heuristic itself */
-   RESULT*       result              /**< pointer to store the result of the heuristic call */
+SCIP_RETCODE Heur2opt::scip_exec(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_HEUR*         heur,               /**< the primal heuristic itself */
+   SCIP_RESULT*       result              /**< pointer to store the result of the heuristic call */
    )
 {  
    assert( heur != NULL );
-   SOL* sol = SCIPgetBestSol( scip );
+   SCIP_SOL* sol = SCIPgetBestSol( scip );
    bool newsol;
 
    // check whether a new solution was found meanwhile
@@ -198,7 +198,7 @@ RETCODE Heur2opt::scip_exec(
    }
 
    GRAPHEDGE** edges2test;
-   CHECK_OKAY( SCIPallocBufferArray(scip, &edges2test, 4) ); 
+   SCIP_CALL( SCIPallocBufferArray(scip, &edges2test, 4) ); 
 
    // test current edge with all 'longer' edges for improvement 
    // if swapping with crossing edges (though do 2Opt for one edge)
@@ -213,23 +213,23 @@ RETCODE Heur2opt::scip_exec(
       if( edges2test[0]->length + edges2test[1]->length > edges2test[2]->length + edges2test[3]->length )
       {
 
-         Bool success;
-         SOL* swapsol; // copy of sol with 4 edges swapped 
+         SCIP_Bool success;
+         SCIP_SOL* swapsol; // copy of sol with 4 edges swapped 
 
-         CHECK_OKAY( SCIPcreateSol(scip, &swapsol, heur) );
+         SCIP_CALL( SCIPcreateSol(scip, &swapsol, heur) );
 
          // copy the old solution
          for( int j = 0; j < nnodes; j++)
          {
-            CHECK_OKAY( SCIPsetSolVal(scip, swapsol, tour_[j]->var, 1.0) );
+            SCIP_CALL( SCIPsetSolVal(scip, swapsol, tour_[j]->var, 1.0) );
          }
 
          // and replace two edges
-         CHECK_OKAY( SCIPsetSolVal(scip, swapsol, edges2test[0]->var, 0.0) );
-         CHECK_OKAY( SCIPsetSolVal(scip, swapsol, edges2test[1]->var, 0.0) );
-         CHECK_OKAY( SCIPsetSolVal(scip, swapsol, edges2test[2]->var, 1.0) );
-         CHECK_OKAY( SCIPsetSolVal(scip, swapsol, edges2test[3]->var, 1.0) );
-         CHECK_OKAY( SCIPaddSolFree(scip, &swapsol, &success) );
+         SCIP_CALL( SCIPsetSolVal(scip, swapsol, edges2test[0]->var, 0.0) );
+         SCIP_CALL( SCIPsetSolVal(scip, swapsol, edges2test[1]->var, 0.0) );
+         SCIP_CALL( SCIPsetSolVal(scip, swapsol, edges2test[2]->var, 1.0) );
+         SCIP_CALL( SCIPsetSolVal(scip, swapsol, edges2test[3]->var, 1.0) );
+         SCIP_CALL( SCIPaddSolFree(scip, &swapsol, &success) );
 
          assert(success);
          *result = SCIP_FOUNDSOL;                   

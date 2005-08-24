@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ProbDataTSP.h,v 1.2 2005/05/31 17:20:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: ProbDataTSP.h,v 1.3 2005/08/24 17:57:07 bzfpfend Exp $"
 
 /**@file   ProbDataTSP.h
  * @brief  C++ problem data for TSP
@@ -35,13 +35,13 @@ namespace tsp
 /** SCIP user problem data for TSP */
 class ProbDataTSP : public scip::ObjProbData
 {
-   GRAPH*           graph_;            /**< graph data */
+   GRAPH*                graph_;             /**< graph data */
 
 public:
 
    /** default constructor */
    ProbDataTSP(
-      GRAPH*        g                  /**< graph data */
+      GRAPH*             g                   /**< graph data */
       )
         : graph_(g)
    {
@@ -61,8 +61,8 @@ public:
     *  after the SCIP problem is freed, this method should delete all the problem specific data that is no
     *  longer needed.
     */
-   virtual RETCODE scip_delorig(
-      SCIP*         scip                /**< SCIP data structure */
+   virtual SCIP_RETCODE scip_delorig(
+      SCIP*              scip                /**< SCIP data structure */
       );
 
    GRAPH* getGraph()

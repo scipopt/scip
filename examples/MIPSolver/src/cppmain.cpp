@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.5 2005/05/31 17:20:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.6 2005/08/24 17:57:04 bzfpfend Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for C++ example project using SCIP as a callable library
@@ -34,9 +34,9 @@ extern "C"
 
 
 static
-RETCODE readParams(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      filename            /**< parameter file name, or NULL */
+SCIP_RETCODE readParams(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< parameter file name, or NULL */
    )
 {
    if( filename != NULL )
@@ -44,7 +44,7 @@ RETCODE readParams(
       if( SCIPfileExists(filename) )
       {
          std::cout << "reading parameter file <" << filename << ">" << std::endl;
-         CHECK_OKAY( SCIPreadParams(scip, filename) );
+         SCIP_CALL( SCIPreadParams(scip, filename) );
       }
       else
          std::cout << "parameter file <" << filename << "> not found - using default parameters" << std::endl;
@@ -52,16 +52,16 @@ RETCODE readParams(
    else if( SCIPfileExists("example.set") )
    {
       std::cout << "reading parameter file <example.set>" << std::endl;
-      CHECK_OKAY( SCIPreadParams(scip, "example.set") );
+      SCIP_CALL( SCIPreadParams(scip, "example.set") );
    }
 
    return SCIP_OKAY;
 }
 
 static
-RETCODE fromCommandLine(
-   SCIP*            scip,               /**< SCIP data structure */
-   const char*      filename            /**< input file name */
+SCIP_RETCODE fromCommandLine(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< input file name */
    )
 {
    /********************
@@ -70,7 +70,7 @@ RETCODE fromCommandLine(
 
    std::cout << std::endl << "read problem <" << filename << ">" << std::endl;
    std::cout << "============" << std::endl << std::endl;
-   CHECK_OKAY( SCIPreadProb(scip, filename) );
+   SCIP_CALL( SCIPreadProb(scip, filename) );
 
 
    /*******************
@@ -80,11 +80,11 @@ RETCODE fromCommandLine(
    /* solve problem */
    std::cout << "solve problem" << std::endl;
    std::cout << "=============" << std::endl;
-   CHECK_OKAY( SCIPsolve(scip) );
+   SCIP_CALL( SCIPsolve(scip) );
 
    std::cout << std::endl << "primal solution:" << std::endl;
    std::cout << "================" << std::endl << std::endl;
-   CHECK_OKAY( SCIPprintBestSol(scip, NULL) );
+   SCIP_CALL( SCIPprintBestSol(scip, NULL) );
 
 
    /**************
@@ -94,26 +94,26 @@ RETCODE fromCommandLine(
    std::cout << std::endl << "Statistics" << std::endl;
    std::cout << "==========" << std::endl << std::endl;
 
-   CHECK_OKAY( SCIPprintStatistics(scip, NULL) );
+   SCIP_CALL( SCIPprintStatistics(scip, NULL) );
 
    return SCIP_OKAY;
 }
 
 static
-RETCODE interactive(
-   SCIP*            scip                /**< SCIP data structure */
+SCIP_RETCODE interactive(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    /* start user interactive mode */
-   CHECK_OKAY( SCIPstartInteraction(scip) );
+   SCIP_CALL( SCIPstartInteraction(scip) );
 
    return SCIP_OKAY;
 }
 
 static
-RETCODE runSCIP(
-   int              argc,
-   char**           argv
+SCIP_RETCODE runSCIP(
+   int                   argc,
+   char**                argv
    )
 {
    SCIP* scip = NULL;
@@ -132,11 +132,11 @@ RETCODE runSCIP(
     *********/
 
    /* initialize SCIP */
-   CHECK_OKAY( SCIPcreate(&scip) );
+   SCIP_CALL( SCIPcreate(&scip) );
 
 
    /* include default SCIP plugins */
-   CHECK_OKAY( SCIPincludeDefaultPlugins(scip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
 
    /**************
@@ -145,11 +145,11 @@ RETCODE runSCIP(
 
    if( argc >= 3 )
    {
-      CHECK_OKAY( readParams(scip, argv[2]) );
+      SCIP_CALL( readParams(scip, argv[2]) );
    }
    else
    {
-      CHECK_OKAY( readParams(scip, NULL) );
+      SCIP_CALL( readParams(scip, NULL) );
    }
    /*CHECK_OKAY( SCIPwriteParams(scip, "example.set", TRUE) );*/
 
@@ -160,13 +160,13 @@ RETCODE runSCIP(
 
    if( argc >= 2 )
    {
-      CHECK_OKAY( fromCommandLine(scip, argv[1]) );
+      SCIP_CALL( fromCommandLine(scip, argv[1]) );
    }
    else
    {
       printf("\n");
 
-      CHECK_OKAY( interactive(scip) );
+      SCIP_CALL( interactive(scip) );
    }
 
    
@@ -174,20 +174,20 @@ RETCODE runSCIP(
     * Deinitialization *
     ********************/
 
-   CHECK_OKAY( SCIPfree(&scip) );
+   SCIP_CALL( SCIPfree(&scip) );
 
-   checkEmptyMemory();
+   BMScheckEmptyMemory();
 
    return SCIP_OKAY;
 }
 
 int
 main(
-   int              argc,
-   char**           argv
+   int                   argc,
+   char**                argv
    )
 {
-   RETCODE retcode;
+   SCIP_RETCODE retcode;
 
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )
