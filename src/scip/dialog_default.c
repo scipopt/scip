@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.52 2005/08/22 18:35:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.53 2005/08/24 17:26:44 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -2247,7 +2247,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(setmenu, "vbc") )
    {
       SCIP_CALL( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-            "vbc", "change parameters for SCIP_VBC tool output", TRUE, NULL) );
+            "vbc", "change parameters for VBC tool output", TRUE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }

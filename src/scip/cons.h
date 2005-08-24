@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.95 2005/08/22 18:35:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.96 2005/08/24 17:26:39 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -83,9 +83,9 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_DECL_CONSEXITSOL ((*consexitsol)),   /**< solving process deinitialization method of constraint handler */
    SCIP_DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
    SCIP_DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
-   SCIP_DECL_CONSINITLP  ((*consinitlp)),    /**< initialize SCIP_LP with relaxations of "initial" constraints */
+   SCIP_DECL_CONSINITLP  ((*consinitlp)),    /**< initialize LP with relaxations of "initial" constraints */
    SCIP_DECL_CONSSEPA    ((*conssepa)),      /**< separate cutting planes */
-   SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for SCIP_LP solutions */
+   SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
    SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
    SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
@@ -163,7 +163,7 @@ SCIP_RETCODE SCIPconshdlrExitsol(
    SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
-/** calls SCIP_LP initialization method of constraint handler to separate all initial active constraints */
+/** calls LP initialization method of constraint handler to separate all initial active constraints */
 extern
 SCIP_RETCODE SCIPconshdlrInitLP(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -185,7 +185,7 @@ SCIP_RETCODE SCIPconshdlrSeparate(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** calls enforcing method of constraint handler for SCIP_LP solution for all constraints added after last
+/** calls enforcing method of constraint handler for LP solution for all constraints added after last
  *  conshdlrReset() call
  */
 extern
@@ -222,7 +222,7 @@ SCIP_RETCODE SCIPconshdlrCheck(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current SCIP_LP rows to be checked? */
+   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -337,9 +337,9 @@ SCIP_RETCODE SCIPconssetchgUndo(
  */
 
 /** creates and captures a constraint, and inserts it into the conss array of its constraint handler
- *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a SCIP_LP or pseudo solution
+ *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
  *  may be declared feasible even if it violates this particular constraint.
- *  This constellation should only be used, if no SCIP_LP or pseudo solution can violate the constraint -- e.g. if a
+ *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
  *  local constraint is redundant due to the variable's local bounds.
  */
 extern
@@ -350,15 +350,15 @@ SCIP_RETCODE SCIPconsCreate(
    const char*           name,               /**< name of constraint */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
    SCIP_CONSDATA*        consdata,           /**< data for this specific constraint */
-   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
-   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable,         /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
+   SCIP_Bool             removeable,         /**< should the relaxation be removed from the LP due to aging or cleanup? */
    SCIP_Bool             original            /**< is constraint belonging to the original problem? */
    );
 
@@ -568,7 +568,7 @@ SCIP_RETCODE SCIPconsCheck(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current SCIP_LP rows to be checked? */
+   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

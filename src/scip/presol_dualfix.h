@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_dualfix.h,v 1.9 2005/08/22 18:35:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_dualfix.h,v 1.10 2005/08/24 17:26:51 bzfpfend Exp $"
 
 /**@file   presol_dualfix.h
  * @brief  fixing roundable variables to best bound

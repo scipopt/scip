@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.41 2005/08/22 18:35:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.42 2005/08/24 17:26:58 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -153,7 +153,7 @@ SCIP_RETCODE SCIPsepastoreFree(
    return SCIP_OKAY;
 }
 
-/** informs separation storage, that the setup of the initial SCIP_LP starts now */
+/** informs separation storage, that the setup of the initial LP starts now */
 void SCIPsepastoreStartInitialLP(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    )
@@ -166,7 +166,7 @@ void SCIPsepastoreStartInitialLP(
    sepastore->initiallp = TRUE;
 }
 
-/** informs separation storage, that the setup of the initial SCIP_LP is now finished */
+/** informs separation storage, that the setup of the initial LP is now finished */
 void SCIPsepastoreEndInitialLP(
    SCIP_SEPASTORE*       sepastore           /**< separation storage */
    )
@@ -238,7 +238,7 @@ SCIP_Bool sepastoreIsCutRedundant(
    return FALSE;
 }
 
-/** adds cut stored as SCIP_LP row to separation storage and captures it;
+/** adds cut stored as LP row to separation storage and captures it;
  *  if the cut should be forced to enter the LP, an infinite score has to be used
  */
 static
@@ -247,7 +247,7 @@ SCIP_RETCODE sepastoreAddCut(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
    SCIP_Bool             root                /**< are we at the root node? */
@@ -270,7 +270,7 @@ SCIP_RETCODE sepastoreAddCut(
    assert(!SCIPsetIsInfinity(set, -SCIProwGetLhs(cut)) || !SCIPsetIsInfinity(set, SCIProwGetRhs(cut)));
 
    /* check cut for redundancy
-    * in each separation round, make sure that at least one (even redundant) cut enters the SCIP_LP to avoid cycling
+    * in each separation round, make sure that at least one (even redundant) cut enters the LP to avoid cycling
     */
    if( !forcecut && sepastore->ncuts + sepastore->nbdchgs > 0 && sepastoreIsCutRedundant(sepastore, set, stat, cut) )
       return SCIP_OKAY;
@@ -469,7 +469,7 @@ SCIP_RETCODE sepastoreAddBdchg(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_VAR*             var,                /**< variable to change the bound for */
    SCIP_Real             newbound,           /**< new bound value */
    SCIP_BOUNDTYPE        boundtype           /**< type of bound to change */
@@ -512,7 +512,7 @@ SCIP_RETCODE SCIPsepastoreAddCut(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
    SCIP_Bool             root                /**< are we at the root node? */
@@ -603,21 +603,21 @@ SCIP_RETCODE SCIPsepastoreAddCut(
    }
    else
    {
-      /* add SCIP_LP row cut to separation storage */
+      /* add LP row cut to separation storage */
       SCIP_CALL( sepastoreAddCut(sepastore, blkmem, set, stat, lp, cut, forcecut, root) );
    }
 
    return SCIP_OKAY;
 }
 
-/** adds cuts to the SCIP_LP and clears separation storage */
+/** adds cuts to the LP and clears separation storage */
 SCIP_RETCODE SCIPsepastoreApplyCuts(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
@@ -686,7 +686,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       }
    }
 
-   /* apply cuts stored as SCIP_LP rows */
+   /* apply cuts stored as LP rows */
    for( i = 0; i < sepastore->ncuts; ++i )
    {
       /* a row could have been added twice to the separation store; add it only once! */
@@ -698,7 +698,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
          /*debug(SCIProwPrint(sepastore->cuts[i], NULL));*/
          assert(i == 0 || sepastore->scores[i] <= sepastore->scores[i-1]);
 
-         /* add cut to the SCIP_LP and capture it */
+         /* add cut to the LP and capture it */
          SCIP_CALL( SCIPlpAddRow(lp, set, sepastore->cuts[i], SCIPnodeGetDepth(node)) );
          
          /* release the row */
@@ -718,12 +718,12 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    return SCIP_OKAY;
 }
 
-/** clears the separation storage without adding the cuts to the SCIP_LP */
+/** clears the separation storage without adding the cuts to the LP */
 SCIP_RETCODE SCIPsepastoreClearCuts(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< SCIP_LP data */
+   SCIP_LP*              lp                  /**< LP data */
    )
 {
    int c;

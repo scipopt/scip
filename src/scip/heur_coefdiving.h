@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_coefdiving.h,v 1.8 2005/08/22 18:35:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_coefdiving.h,v 1.9 2005/08/24 17:26:45 bzfpfend Exp $"
 
 /**@file   heur_coefdiving.h
- * @brief  SCIP_LP diving heuristic that chooses fixings w.r.t. the matrix coefficients
+ * @brief  LP diving heuristic that chooses fixings w.r.t. the matrix coefficients
  * @author Tobias Achterberg
  */
 

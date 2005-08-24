@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.87 2005/08/22 18:35:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.88 2005/08/24 17:26:58 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -598,28 +598,28 @@ SCIP_RETCODE SCIPsetSetVerbLevel(
    SCIP_VERBLEVEL        verblevel           /**< verbosity level for message output */
    );
 
-/** sets SCIP_LP feasibility tolerance */
+/** sets LP feasibility tolerance */
 extern
 SCIP_RETCODE SCIPsetSetFeastol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             feastol             /**< new feasibility tolerance */
    );
 
-/** sets SCIP_LP feasibility tolerance for reduced costs */
+/** sets LP feasibility tolerance for reduced costs */
 extern
 SCIP_RETCODE SCIPsetSetDualfeastol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             dualfeastol         /**< new reduced costs feasibility tolerance */
    );
 
-/** sets SCIP_LP convergence tolerance used in barrier algorithm */
+/** sets LP convergence tolerance used in barrier algorithm */
 extern
 SCIP_RETCODE SCIPsetSetBarrierconvtol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             barrierconvtol      /**< new convergence tolerance used in barrier algorithm */
    );
 
-/** returns the maximal number of variables priced into the SCIP_LP per round */
+/** returns the maximal number of variables priced into the LP per round */
 extern
 int SCIPsetGetPriceMaxvars(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -922,7 +922,7 @@ SCIP_Bool SCIPsetIsFeasNegative(
    SCIP_Real             val                 /**< value to be compared against zero */
    );
 
-/** checks, if value is integral within the SCIP_LP feasibility bounds */
+/** checks, if value is integral within the LP feasibility bounds */
 extern
 SCIP_Bool SCIPsetIsFeasIntegral(
    SCIP_SET*             set,                /**< global SCIP settings */

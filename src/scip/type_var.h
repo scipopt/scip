@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_var.h,v 1.17 2005/08/22 18:35:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_var.h,v 1.18 2005/08/24 17:27:06 bzfpfend Exp $"
 
 /**@file   type_var.h
  * @brief  type definitions for problem variables

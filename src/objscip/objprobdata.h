@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.h,v 1.13 2005/08/22 18:35:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprobdata.h,v 1.14 2005/08/24 17:26:35 bzfpfend Exp $"
 
 /**@file   objprobdata.h
  * @brief  C++ wrapper for user problem data
@@ -82,7 +82,7 @@ public:
     */
    virtual SCIP_RETCODE scip_trans(
       SCIP*              scip,               /**< SCIP data structure */
-      ObjProbData**      objprobdata,        /**< pointer to store the transformed problem data object */
+      ObjProbData** objprobdata,        /**< pointer to store the transformed problem data object */
       SCIP_Bool*         deleteobject        /**< pointer to store whether SCIP should delete the object after solving */
       )
    {
@@ -128,7 +128,7 @@ public:
    /** solving process deinitialization method of transformed data (called before the branch and bound data is freed)
     *
     *  This method is called before the branch and bound data is freed and should be used to free all data that
-    *  was allocated in the solving process initialization method. The user has to make sure, that all SCIP_LP rows associated
+    *  was allocated in the solving process initialization method. The user has to make sure, that all LP rows associated
     *  to the transformed user problem data are released.
     */
    virtual SCIP_RETCODE scip_exitsol(

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.32 2005/08/22 18:35:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.33 2005/08/24 17:26:39 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -42,7 +42,7 @@
 
 
 /*
- * SCIP_Conflict Handler
+ * Conflict Handler
  */
 
 /** creates a conflict handler */
@@ -123,7 +123,7 @@ void SCIPconflicthdlrSetPriority(
 
 
 /*
- * SCIP_Conflict Analysis
+ * Conflict Analysis
  */
 
 /** creates conflict analysis data for propagation conflicts */
@@ -267,14 +267,14 @@ SCIP_Longint SCIPconflictGetNPropReconvergenceLiterals(
 
 
 /*
- * Infeasible SCIP_LP SCIP_Conflict Analysis
+ * Infeasible LP Conflict Analysis
  */
 
-/** analyzes an infeasible SCIP_LP to find out the bound changes on binary variables that were responsible for the 
+/** analyzes an infeasible LP to find out the bound changes on binary variables that were responsible for the 
  *  infeasibility;
  *  on success, calls standard conflict analysis with the responsible variables as starting conflict set, thus creating
  *  a conflict constraint out of the resulting conflict set;
- *  updates statistics for infeasible SCIP_LP conflict analysis
+ *  updates statistics for infeasible LP conflict analysis
  */
 extern
 SCIP_RETCODE SCIPconflictAnalyzeLP(
@@ -284,47 +284,47 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
 
-/** gets time in seconds used for analyzing infeasible SCIP_LP conflicts */
+/** gets time in seconds used for analyzing infeasible LP conflicts */
 extern
 SCIP_Real SCIPconflictGetLPTime(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of calls to infeasible SCIP_LP conflict analysis */
+/** gets number of calls to infeasible LP conflict analysis */
 extern
 SCIP_Longint SCIPconflictGetNLPCalls(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of conflict clauses detected in infeasible SCIP_LP conflict analysis */
+/** gets number of conflict clauses detected in infeasible LP conflict analysis */
 extern
 SCIP_Longint SCIPconflictGetNLPConflictClauses(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets total number of literals in conflict clauses created in infeasible SCIP_LP conflict analysis */
+/** gets total number of literals in conflict clauses created in infeasible LP conflict analysis */
 extern
 SCIP_Longint SCIPconflictGetNLPConflictLiterals(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of reconvergence clauses detected in infeasible SCIP_LP conflict analysis */
+/** gets number of reconvergence clauses detected in infeasible LP conflict analysis */
 extern
 SCIP_Longint SCIPconflictGetNLPReconvergenceClauses(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets total number of literals in reconvergence clauses created in infeasible SCIP_LP conflict analysis */
+/** gets total number of literals in reconvergence clauses created in infeasible LP conflict analysis */
 extern
 SCIP_Longint SCIPconflictGetNLPReconvergenceLiterals(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of SCIP_LP iterations in infeasible SCIP_LP conflict analysis */
+/** gets number of LP iterations in infeasible LP conflict analysis */
 extern
 SCIP_Longint SCIPconflictGetNLPIterations(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -346,8 +346,8 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
-   SCIP_COL*             col,                /**< SCIP_LP column with at least one infeasible strong branching subproblem */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_COL*             col,                /**< LP column with at least one infeasible strong branching subproblem */
    SCIP_Bool*            downconflict,       /**< pointer to store whether a conflict clause was created for an infeasible
                                               *   downwards branch, or NULL */
    SCIP_Bool*            upconflict          /**< pointer to store whether a conflict clause was created for an infeasible
@@ -390,7 +390,7 @@ SCIP_Longint SCIPconflictGetNStrongbranchReconvergenceLiterals(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of SCIP_LP iterations in infeasible strong branching conflict analysis */
+/** gets number of LP iterations in infeasible strong branching conflict analysis */
 extern
 SCIP_Longint SCIPconflictGetNStrongbranchIterations(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -417,7 +417,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
 

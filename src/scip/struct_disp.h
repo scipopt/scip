@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_disp.h,v 1.9 2005/08/22 18:35:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_disp.h,v 1.10 2005/08/24 17:27:00 bzfpfend Exp $"
 
 /**@file   struct_disp.h
  * @brief  datastructures for displaying runtime statistics

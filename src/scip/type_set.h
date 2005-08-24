@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_set.h,v 1.8 2005/08/22 18:35:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_set.h,v 1.9 2005/08/24 17:27:06 bzfpfend Exp $"
 
 /**@file   type_set.h
  * @brief  type definitions for global SCIP settings

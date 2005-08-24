@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.35 2005/08/22 18:35:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.36 2005/08/24 17:26:42 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -61,7 +61,7 @@ struct SCIP_ConsData
    SCIP_Real             rhs;                /**< right hand side of variable bound inequality */
    SCIP_VAR*             var;                /**< variable x that has variable bound */
    SCIP_VAR*             vbdvar;             /**< binary, integer or implicit integer bounding variable y */
-   SCIP_ROW*             row;                /**< SCIP_LP row, if constraint is already stored in SCIP_LP row format */
+   SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
    unsigned int          propagated:1;       /**< is the varbound constraint already propagated? */
 };
 
@@ -216,7 +216,7 @@ SCIP_RETCODE consdataFree(
    return SCIP_OKAY;
 }
 
-/** creates SCIP_LP row corresponding to varbound constraint */
+/** creates LP row corresponding to varbound constraint */
 static 
 SCIP_RETCODE createRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -237,7 +237,7 @@ SCIP_RETCODE createRelaxation(
    return SCIP_OKAY;
 }  
 
-/** adds linear relaxation of varbound constraint to the SCIP_LP */
+/** adds linear relaxation of varbound constraint to the LP */
 static 
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -282,7 +282,7 @@ SCIP_RETCODE separateCons(
 
    *separated = FALSE;
 
-   /* create SCIP_LP relaxation if not yet existing */
+   /* create LP relaxation if not yet existing */
    if( consdata->row == NULL )
    {
       SCIP_CALL( createRelaxation(scip, cons) );
@@ -308,7 +308,7 @@ SCIP_Bool checkCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< varbound constraint */
    SCIP_SOL*             sol,                /**< solution to check, NULL for current solution */
-   SCIP_Bool             checklprows         /**< should SCIP_LP rows be checked? */
+   SCIP_Bool             checklprows         /**< should LP rows be checked? */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -685,7 +685,7 @@ SCIP_DECL_CONSTRANS(consTransVarbound)
 }
 
 
-/** SCIP_LP initialization method of constraint handler */
+/** LP initialization method of constraint handler */
 static
 SCIP_DECL_CONSINITLP(consInitlpVarbound)
 {  /*lint --e{715}*/
@@ -732,7 +732,7 @@ SCIP_DECL_CONSSEPA(consSepaVarbound)
 }
 
 
-/** constraint enforcing method of constraint handler for SCIP_LP solutions */
+/** constraint enforcing method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSENFOLP(consEnfolpVarbound)
 {  /*lint --e{715}*/
@@ -1047,7 +1047,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdVarbound)
 
 
 /*
- * SCIP_Event Handler
+ * Event Handler
  */
 
 /** execution methode of bound change event handler */
@@ -1119,15 +1119,15 @@ SCIP_RETCODE SCIPcreateConsVarbound(
    SCIP_Real             vbdcoef,            /**< coefficient c of bounding variable y */
    SCIP_Real             lhs,                /**< left hand side of variable bound inequality */
    SCIP_Real             rhs,                /**< right hand side of variable bound inequality */
-   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
-   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
+   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -1151,7 +1151,7 @@ SCIP_RETCODE SCIPcreateConsVarbound(
    return SCIP_OKAY;
 }
 
-/** gets the dual solution of the varbound constraint in the current SCIP_LP */
+/** gets the dual solution of the varbound constraint in the current LP */
 SCIP_Real SCIPgetDualsolVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -1174,7 +1174,7 @@ SCIP_Real SCIPgetDualsolVarbound(
       return 0.0;
 }
 
-/** gets the dual farkas value of the varbound constraint in the current infeasible SCIP_LP */
+/** gets the dual farkas value of the varbound constraint in the current infeasible LP */
 SCIP_Real SCIPgetDualfarkasVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

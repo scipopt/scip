@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_inference.c,v 1.13 2005/08/22 18:35:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_inference.c,v 1.14 2005/08/24 17:26:37 bzfpfend Exp $"
 
 /**@file   branch_inference.c
  * @brief  inference history branching rule
@@ -36,14 +36,14 @@
 #define BRANCHRULE_MAXBOUNDDIST  1.0
 
 #define DEFAULT_CUTOFFWEIGHT     1.0    /**< factor to weigh average number of cutoffs in branching score */
-#define DEFAULT_FRACTIONALS      TRUE   /**< should branching on SCIP_LP solution be restricted to the fractional variables? */
+#define DEFAULT_FRACTIONALS      TRUE   /**< should branching on LP solution be restricted to the fractional variables? */
 
 
 /** branching rule data */
 struct SCIP_BranchruleData
 {
    SCIP_Real             cutoffweight;       /**< factor to weigh average number of cutoffs in branching score */
-   SCIP_Bool             fractionals;        /**< should branching on SCIP_LP solution be restricted to the fractional variables? */
+   SCIP_Bool             fractionals;        /**< should branching on LP solution be restricted to the fractional variables? */
 };
 
 
@@ -137,7 +137,7 @@ SCIP_DECL_BRANCHFREE(branchFreeInference)
 #define branchExitsolInference NULL
 
 
-/** branching execution method for fractional SCIP_LP solutions */
+/** branching execution method for fractional LP solutions */
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpInference)
 {  /*lint --e{715}*/
@@ -153,7 +153,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpInference)
 
    if( branchruledata->fractionals )
    {
-      /* get SCIP_LP candidates (fractional integer variables) */
+      /* get LP candidates (fractional integer variables) */
       SCIP_CALL( SCIPgetLPBranchCands(scip, &cands, NULL, NULL, NULL, &ncands) );
    }
    else
@@ -227,7 +227,7 @@ SCIP_RETCODE SCIPincludeBranchruleInference(
          &branchruledata->cutoffweight, DEFAULT_CUTOFFWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/inference/fractionals", 
-         "should branching on SCIP_LP solution be restricted to the fractional variables?",
+         "should branching on LP solution be restricted to the fractional variables?",
          &branchruledata->fractionals, DEFAULT_FRACTIONALS, NULL, NULL) );
 
    return SCIP_OKAY;

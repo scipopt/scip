@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.45 2005/08/22 18:35:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.46 2005/08/24 17:26:47 bzfpfend Exp $"
 
 /**@file   heur_rounding.c
- * @brief  SCIP_LP rounding heuristic that tries to recover from intermediate infeasibilities
+ * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
  * @author Tobias Achterberg
  */
 
@@ -58,12 +58,12 @@ struct SCIP_HeurData
 static
 void updateViolations(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_ROW**            violrows,           /**< array with currently violated rows */
-   int*                  violrowpos,         /**< position of SCIP_LP rows in violrows array */
+   int*                  violrowpos,         /**< position of LP rows in violrows array */
    int*                  nviolrows,          /**< pointer to the number of currently violated rows */
-   SCIP_Real             oldactivity,        /**< old activity value of SCIP_LP row */
-   SCIP_Real             newactivity         /**< new activity value of SCIP_LP row */
+   SCIP_Real             oldactivity,        /**< old activity value of LP row */
+   SCIP_Real             newactivity         /**< new activity value of LP row */
    )
 {
    SCIP_Real lhs;
@@ -116,11 +116,11 @@ void updateViolations(
 static
 SCIP_RETCODE updateActivities(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            activities,         /**< SCIP_LP row activities */
+   SCIP_Real*            activities,         /**< LP row activities */
    SCIP_ROW**            violrows,           /**< array with currently violated rows */
-   int*                  violrowpos,         /**< position of SCIP_LP rows in violrows array */
+   int*                  violrowpos,         /**< position of LP rows in violrows array */
    int*                  nviolrows,          /**< pointer to the number of currently violated rows */
-   int                   nlprows,            /**< number of rows in current SCIP_LP */
+   int                   nlprows,            /**< number of rows in current LP */
    SCIP_VAR*             var,                /**< variable that has been changed */
    SCIP_Real             oldsolval,          /**< old solution value of variable */
    SCIP_Real             newsolval           /**< new solution value of variable */
@@ -182,7 +182,7 @@ SCIP_RETCODE selectRounding(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution */
    SCIP_Real             minobj,             /**< minimal objective value possible after rounding remaining fractional vars */
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    int                   direction,          /**< should the activity be increased (+1) or decreased (-1)? */
    SCIP_VAR**            roundvar,           /**< pointer to store the rounding variable, returns NULL if impossible */
    SCIP_Real*            oldsolval,          /**< old (fractional) solution value of rounding variable */
@@ -284,7 +284,7 @@ SCIP_RETCODE selectIncreaseRounding(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution */
    SCIP_Real             minobj,             /**< minimal objective value possible after rounding remaining fractional vars */
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_VAR**            roundvar,           /**< pointer to store the rounding variable, returns NULL if impossible */
    SCIP_Real*            oldsolval,          /**< old (fractional) solution value of rounding variable */
    SCIP_Real*            newsolval           /**< new (rounded) solution value of rounding variable */
@@ -299,7 +299,7 @@ SCIP_RETCODE selectDecreaseRounding(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution */
    SCIP_Real             minobj,             /**< minimal objective value possible after rounding remaining fractional vars */
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_VAR**            roundvar,           /**< pointer to store the rounding variable, returns NULL if impossible */
    SCIP_Real*            oldsolval,          /**< old (fractional) solution value of rounding variable */
    SCIP_Real*            newsolval           /**< new (rounded) solution value of rounding variable */
@@ -318,8 +318,8 @@ SCIP_RETCODE selectEssentialRounding(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution */
    SCIP_Real             minobj,             /**< minimal objective value possible after rounding remaining fractional vars */
-   SCIP_VAR**            lpcands,            /**< fractional variables in SCIP_LP */
-   int                   nlpcands,           /**< number of fractional variables in SCIP_LP */
+   SCIP_VAR**            lpcands,            /**< fractional variables in LP */
+   int                   nlpcands,           /**< number of fractional variables in LP */
    SCIP_VAR**            roundvar,           /**< pointer to store the rounding variable, returns NULL if impossible */
    SCIP_Real*            oldsolval,          /**< old (fractional) solution value of rounding variable */
    SCIP_Real*            newsolval           /**< new (rounded) solution value of rounding variable */
@@ -484,7 +484,7 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
 
    *result = SCIP_DIDNOTRUN;
 
-   /* only call heuristic, if an optimal SCIP_LP solution is at hand */
+   /* only call heuristic, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
@@ -499,16 +499,16 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL) );
    nfrac = nlpcands;
 
-   /* only call heuristic, if SCIP_LP solution is fractional */
+   /* only call heuristic, if LP solution is fractional */
    if( nfrac == 0 )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
 
-   /* get SCIP_LP rows */
+   /* get LP rows */
    SCIP_CALL( SCIPgetLPRowsData(scip, &lprows, &nlprows) );
 
-   SCIPdebugMessage("executing rounding heuristic: %d SCIP_LP rows, %d fractionals\n", nlprows, nfrac);
+   SCIPdebugMessage("executing rounding heuristic: %d LP rows, %d fractionals\n", nlprows, nfrac);
 
    /* get memory for activities, violated rows, and row violation positions */
    SCIP_CALL( SCIPallocBufferArray(scip, &activities, nlprows) );
@@ -516,7 +516,7 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    SCIP_CALL( SCIPallocBufferArray(scip, &violrowpos, nlprows) );
 
    /* get the activities for all globally valid rows;
-    * the rows should be feasible, but due to numerical inaccuracies in the SCIP_LP solver, they can be violated
+    * the rows should be feasible, but due to numerical inaccuracies in the LP solver, they can be violated
     */
    nviolrows = 0;
    for( r = 0; r < nlprows; ++r )
@@ -547,7 +547,7 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    sol = heurdata->sol;
    assert(sol != NULL);
 
-   /* copy the current SCIP_LP solution to the working solution */
+   /* copy the current LP solution to the working solution */
    SCIP_CALL( SCIPlinkLPSol(scip, sol) );
 
    /* calculate the minimal objective value possible after rounding fractional variables */
@@ -641,8 +641,8 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
       SCIP_Bool stored;
 
       /* check solution for feasibility, and add it to solution store if possible
-       * neither integrality nor feasibility of SCIP_LP rows has to be checked, because this is already
-       * done in the rounding heuristic itself; however, be better check feasibility of SCIP_LP rows,
+       * neither integrality nor feasibility of LP rows has to be checked, because this is already
+       * done in the rounding heuristic itself; however, be better check feasibility of LP rows,
        * because of numerical problems with activity updating
        */
       SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, &stored) );

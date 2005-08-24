@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.27 2005/08/22 18:35:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.28 2005/08/24 17:26:44 bzfpfend Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog

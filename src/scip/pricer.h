@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.h,v 1.18 2005/08/22 18:35:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer.h,v 1.19 2005/08/24 17:26:52 bzfpfend Exp $"
 
 /**@file   pricer.h
  * @brief  internal methods for variable pricers
@@ -92,14 +92,14 @@ SCIP_RETCODE SCIPpricerExitsol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** activates pricer such that it is called in SCIP_LP solving loop */
+/** activates pricer such that it is called in LP solving loop */
 extern
 SCIP_RETCODE SCIPpricerActivate(
    SCIP_PRICER*          pricer,             /**< variable pricer */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** deactivates pricer such that it is no longer called in SCIP_LP solving loop */
+/** deactivates pricer such that it is no longer called in LP solving loop */
 extern
 SCIP_RETCODE SCIPpricerDeactivate(
    SCIP_PRICER*          pricer,             /**< variable pricer */
@@ -128,7 +128,7 @@ SCIP_RETCODE SCIPpricerExec(
    SCIP_PRICER*          pricer,             /**< variable pricer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< transformed problem */
-   SCIP_LP*              lp                  /**< SCIP_LP data */
+   SCIP_LP*              lp                  /**< LP data */
    );
 
 /** sets priority of variable pricer */

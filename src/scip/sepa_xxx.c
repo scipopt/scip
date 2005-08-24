@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_xxx.c,v 1.14 2005/08/22 18:35:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_xxx.c,v 1.15 2005/08/24 17:26:58 bzfpfend Exp $"
 
 /**@file   sepa_xxx.c
  * @brief  xxx separator

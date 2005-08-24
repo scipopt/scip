@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_event.h,v 1.18 2005/08/22 18:35:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_event.h,v 1.19 2005/08/24 17:27:00 bzfpfend Exp $"
 
 /**@file   struct_event.h
  * @brief  datastructures for managing events
@@ -93,7 +93,7 @@ struct SCIP_Event
       SCIP_EVENTOBJCHG   eventobjchg;        /**< data for objective value change events */
       SCIP_EVENTBDCHG    eventbdchg;         /**< data for bound change events */
       SCIP_EVENTIMPLADD  eventimpladd;       /**< data for implication added events */
-      SCIP_NODE*         node;               /**< data for node and SCIP_LP events */
+      SCIP_NODE*         node;               /**< data for node and LP events */
       SCIP_SOL*          sol;                /**< data for primal solution events */
    } data;
    SCIP_EVENTTYPE        eventtype;          /**< type of event */

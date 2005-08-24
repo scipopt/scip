@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_conflict.h,v 1.19 2005/08/22 18:35:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_conflict.h,v 1.20 2005/08/24 17:26:59 bzfpfend Exp $"
 
 /**@file   struct_conflict.h
  * @brief  datastructures for conflict analysis
@@ -76,26 +76,26 @@ struct SCIP_Conflict
    SCIP_Longint          npropconfliterals;  /**< total number of literals in valid propagation conflict clauses */
    SCIP_Longint          npropreconvclauses; /**< number of reconvergence clauses detected in propagation conflict analysis */
    SCIP_Longint          npropreconvliterals;/**< total number of literals in valid propagation reconvergence clauses */
-   SCIP_Longint          nlpcalls;           /**< number of calls to infeasible SCIP_LP conflict analysis */
-   SCIP_Longint          nlpconfclauses;     /**< number of valid conflict clauses detected in infeas SCIP_LP conflict analysis */
-   SCIP_Longint          nlpconfliterals;    /**< total number of literals in valid infeasible SCIP_LP conflict clauses */
-   SCIP_Longint          nlpreconvclauses;   /**< number of reconvergence clauses detected in infeasible SCIP_LP conflict analysis */
-   SCIP_Longint          nlpreconvliterals;  /**< total number of literals in valid infeasible SCIP_LP reconvergence clauses */
-   SCIP_Longint          nlpiterations;      /**< total number of SCIP_LP iterations used in SCIP_LP conflict analysis */
+   SCIP_Longint          nlpcalls;           /**< number of calls to infeasible LP conflict analysis */
+   SCIP_Longint          nlpconfclauses;     /**< number of valid conflict clauses detected in infeas LP conflict analysis */
+   SCIP_Longint          nlpconfliterals;    /**< total number of literals in valid infeasible LP conflict clauses */
+   SCIP_Longint          nlpreconvclauses;   /**< number of reconvergence clauses detected in infeasible LP conflict analysis */
+   SCIP_Longint          nlpreconvliterals;  /**< total number of literals in valid infeasible LP reconvergence clauses */
+   SCIP_Longint          nlpiterations;      /**< total number of LP iterations used in LP conflict analysis */
    SCIP_Longint          nsbcalls;           /**< number of calls to infeasible strong branching conflict analysis */
    SCIP_Longint          nsbconfclauses;     /**< number of conflict clauses detected in strong branching conflict analysis */
    SCIP_Longint          nsbconfliterals;    /**< total number of literals in valid strong branching conflict clauses */
    SCIP_Longint          nsbreconvclauses;   /**< number of reconvergence clauses detected in strong branch conflict analysis */
    SCIP_Longint          nsbreconvliterals;  /**< total number of literals in valid strong branching reconvergence clauses */
-   SCIP_Longint          nsbiterations;      /**< total number of SCIP_LP iterations used in strong branching conflict analysis */
+   SCIP_Longint          nsbiterations;      /**< total number of LP iterations used in strong branching conflict analysis */
    SCIP_Longint          npseudocalls;       /**< number of calls to pseudo solution conflict analysis */
    SCIP_Longint          npseudoconfclauses; /**< number of valid conflict clauses detected in pseudo sol conflict analysis */
    SCIP_Longint          npseudoconfliterals;/**< total number of literals in valid pseudo solution conflict clauses */
    SCIP_Longint          npseudoreconvclauses; /**< number of reconvergence clauses detected in pseudo sol conflict analysis */
    SCIP_Longint          npseudoreconvliterals;/**< total number of literals in valid pseudo solution reconvergence clauses */
    SCIP_CLOCK*           propanalyzetime;    /**< time used for propagation conflict analysis */
-   SCIP_CLOCK*           lpanalyzetime;      /**< time used for infeasible SCIP_LP conflict analysis */
-   SCIP_CLOCK*           sbanalyzetime;      /**< time used for infeasible SCIP_LP conflict analysis */
+   SCIP_CLOCK*           lpanalyzetime;      /**< time used for infeasible LP conflict analysis */
+   SCIP_CLOCK*           sbanalyzetime;      /**< time used for infeasible LP conflict analysis */
    SCIP_CLOCK*           pseudoanalyzetime;  /**< time used for pseudo solution conflict analysis */
    SCIP_CLAUSE**         clauses;            /**< conflict clauses found at the current node */
    SCIP_PQUEUE*          binbdchgqueue;      /**< unprocessed conflict bound changes on binary variables */

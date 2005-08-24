@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: bitencode.c,v 1.13 2005/08/22 18:35:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: bitencode.c,v 1.14 2005/08/24 17:26:36 bzfpfend Exp $"
 
 /**@file   bitencode.c
  * @brief  packing single and dual bit values
@@ -36,8 +36,7 @@ void SCIPencodeSingleBit(
    int                   count               /**< number of elements */
    )
 {
-   /* if the packetsize changes, the mask has to be updated */
-   static const SCIP_SINGLEPACKET mask[SCIP_SINGLEPACKETSIZE][2] = {
+   static const SCIP_SINGLEPACKET mask[SCIP_SINGLEPACKETSIZE][2] = {   /* if the packetsize changes, the mask has to be updated */
       {0x00000000, 0x00000001},
       {0x00000000, 0x00000002},
       {0x00000000, 0x00000004},
@@ -234,8 +233,7 @@ void SCIPencodeDualBit(
    int                   count               /**< number of elements */
    )
 {
-   /* if the packetsize changes, the mask has to be updated */
-   static const SCIP_DUALPACKET mask[SCIP_DUALPACKETSIZE][4] = {
+   static const SCIP_DUALPACKET mask[SCIP_DUALPACKETSIZE][4] = {   /* if the packetsize changes, the mask has to be updated */
       {0x00000000, 0x00000001, 0x00000002, 0x00000003},
       {0x00000000, 0x00000004, 0x00000008, 0x0000000C},
       {0x00000000, 0x00000010, 0x00000020, 0x00000030},

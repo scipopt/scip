@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.28 2005/08/22 18:35:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.29 2005/08/24 17:26:55 bzfpfend Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers

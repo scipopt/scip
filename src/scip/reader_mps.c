@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.57 2005/08/22 18:35:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.58 2005/08/24 17:26:55 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  mps file reader
@@ -454,7 +454,7 @@ SCIP_Bool mpsinputReadLine(
                || isdigit(mpsi->buf[32]) || isdigit(mpsi->buf[33]) 
                || isdigit(mpsi->buf[34]) || isdigit(mpsi->buf[35]); 
             
-            /* len < 13 is handle SCIP_ROW lines with embedded spaces
+            /* len < 13 is handle ROW lines with embedded spaces
              * in the names correctly
              */
             if (number || len < 13)
@@ -611,7 +611,7 @@ SCIP_RETCODE readName(
    return SCIP_OKAY;
 }
 
-/* Process SCIP_OBJSEN section. This Section is an ILOG extension.
+/* Process OBJSEN section. This Section is an ILOG extension.
  */
 static
 SCIP_RETCODE readObjsen(
@@ -1021,7 +1021,7 @@ SCIP_RETCODE readRanges(
          strcpy(rngname, mpsinputField1(mpsi));
 
       /* The rules are:
-       * SCIP_Row Sign   LHS             RHS
+       * Row Sign   LHS             RHS
        * ----------------------------------------
        *  G   +/-   rhs             rhs + |range|
        *  L   +/-   rhs - |range|   rhs
@@ -1235,7 +1235,7 @@ SCIP_RETCODE readBounds(
    return SCIP_OKAY;
 }
 
-/* Read SCIP_LP in "MPS File Format".
+/* Read LP in "MPS File Format".
  * 
  *  The specification is taken from the
  *

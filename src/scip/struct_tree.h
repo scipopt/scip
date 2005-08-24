@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.26 2005/08/22 18:35:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.27 2005/08/24 17:27:02 bzfpfend Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -52,10 +52,10 @@ struct SCIP_Sibling
 /** leaf information (should not exceed the size of a pointer) */
 struct SCIP_Leaf
 {
-   SCIP_NODE*            lpfork;             /**< fork/subroot node defining the SCIP_LP state of the leaf */
+   SCIP_NODE*            lpfork;             /**< fork/subroot node defining the LP state of the leaf */
 };
 
-/** fork without SCIP_LP solution, where only bounds and constraints have been changed */
+/** fork without LP solution, where only bounds and constraints have been changed */
 struct SCIP_Junction
 {
    int                   nchildren;          /**< number of children of this parent node */
@@ -64,25 +64,25 @@ struct SCIP_Junction
 /** fork with solved LP, where bounds and constraints have been changed, and rows and columns were added */
 struct SCIP_Fork
 {
-   SCIP_COL**            addedcols;          /**< array with pointers to new columns added at this node into the SCIP_LP */
-   SCIP_ROW**            addedrows;          /**< array with pointers to new rows added at this node into the SCIP_LP */
-   SCIP_LPISTATE*        lpistate;           /**< SCIP_LP state information */
+   SCIP_COL**            addedcols;          /**< array with pointers to new columns added at this node into the LP */
+   SCIP_ROW**            addedrows;          /**< array with pointers to new rows added at this node into the LP */
+   SCIP_LPISTATE*        lpistate;           /**< LP state information */
    int                   naddedcols;         /**< number of columns added at this node */
    int                   naddedrows;         /**< number of rows added at this node */
    int                   nchildren;          /**< number of children of this parent node */
-   int                   nlpistateref;       /**< number of times, the SCIP_LP state is needed */   
+   int                   nlpistateref;       /**< number of times, the LP state is needed */   
 };
 
 /** fork with solved LP, where bounds and constraints have been changed, and rows and columns were removed and added */
 struct SCIP_Subroot
 {
-   SCIP_COL**            cols;               /**< array with pointers to the columns in the same order as in the SCIP_LP */
-   SCIP_ROW**            rows;               /**< array with pointers to the rows in the same order as in the SCIP_LP */
-   SCIP_LPISTATE*        lpistate;           /**< SCIP_LP state information */
-   int                   ncols;              /**< number of columns in the SCIP_LP */
-   int                   nrows;              /**< number of rows in the SCIP_LP */
+   SCIP_COL**            cols;               /**< array with pointers to the columns in the same order as in the LP */
+   SCIP_ROW**            rows;               /**< array with pointers to the rows in the same order as in the LP */
+   SCIP_LPISTATE*        lpistate;           /**< LP state information */
+   int                   ncols;              /**< number of columns in the LP */
+   int                   nrows;              /**< number of rows in the LP */
    int                   nchildren;          /**< number of children of this parent node */
-   int                   nlpistateref;       /**< number of times, the SCIP_LP state is needed */   
+   int                   nlpistateref;       /**< number of times, the LP state is needed */   
 };
 
 /** node data structure */
@@ -123,34 +123,34 @@ struct SCIP_Tree
                                               *   siblings in the tree data structure; the focus node is the currently
                                               *   processed node; it doesn't need to be active all the time, because it
                                               *   may be cut off and the active path stops at the cut off node */
-   SCIP_NODE*            focuslpfork;        /**< SCIP_LP defining fork/subroot of the focus node */
+   SCIP_NODE*            focuslpfork;        /**< LP defining fork/subroot of the focus node */
    SCIP_NODE*            focussubroot;       /**< subroot of the focus node's sub tree */
    SCIP_NODE*            probingroot;        /**< root node of the current probing path, or NULL */
    SCIP_NODE**           children;           /**< array with children of the focus node */
    SCIP_NODE**           siblings;           /**< array with siblings of the focus node */
    SCIP_Real*            childrenprio;       /**< array with node selection priorities of children */
    SCIP_Real*            siblingsprio;       /**< array with node selection priorities of children */
-   int*                  pathnlpcols;        /**< array with number of SCIP_LP columns for each problem in active path (except
+   int*                  pathnlpcols;        /**< array with number of LP columns for each problem in active path (except
                                               *   newly added columns of the focus node) */
-   int*                  pathnlprows;        /**< array with number of SCIP_LP rows for each problem in active path (except
+   int*                  pathnlprows;        /**< array with number of LP rows for each problem in active path (except
                                               *   newly added rows of the focus node) */
-   SCIP_LPISTATE*        probinglpistate;    /**< SCIP_LP state information before probing started */
-   int                   focuslpforklpcount; /**< SCIP_LP number of last solved SCIP_LP in current SCIP_LP fork, or -1 if unknown */
+   SCIP_LPISTATE*        probinglpistate;    /**< LP state information before probing started */
+   int                   focuslpforklpcount; /**< LP number of last solved LP in current LP fork, or -1 if unknown */
    int                   childrensize;       /**< available slots in children vector */
    int                   nchildren;          /**< number of children of focus node (number of used slots in children vector) */
    int                   siblingssize;       /**< available slots in siblings vector */
    int                   nsiblings;          /**< number of siblings of focus node (number of used slots in siblings vector) */
    int                   pathlen;            /**< length of the current path */
    int                   pathsize;           /**< number of available slots in path arrays */
-   int                   correctlpdepth;     /**< depth to which current SCIP_LP data corresponds to SCIP_LP data of active path */
+   int                   correctlpdepth;     /**< depth to which current LP data corresponds to LP data of active path */
    int                   cutoffdepth;        /**< depth of first node in active path that is marked being cutoff */
    int                   repropdepth;        /**< depth of first node in active path that has to be propagated again */
    int                   repropsubtreecount; /**< cyclicly increased counter to create markers for subtree repropagation */
-   SCIP_Bool             focusnodehaslp;     /**< is SCIP_LP being processed in the focus node? */
-   SCIP_Bool             probingnodehaslp;   /**< was the SCIP_LP solved (at least once) in the current probing node? */
+   SCIP_Bool             focusnodehaslp;     /**< is LP being processed in the focus node? */
+   SCIP_Bool             probingnodehaslp;   /**< was the LP solved (at least once) in the current probing node? */
    SCIP_Bool             cutoffdelayed;      /**< the treeCutoff() call was delayed because of diving and has to be executed */
-   SCIP_Bool             probinglpwasflushed;/**< was the SCIP_LP flushed before we entered the probing mode? */
-   SCIP_Bool             probinglpwassolved; /**< was the SCIP_LP solved before we entered the probing mode? */
+   SCIP_Bool             probinglpwasflushed;/**< was the LP flushed before we entered the probing mode? */
+   SCIP_Bool             probinglpwassolved; /**< was the LP solved before we entered the probing mode? */
 };
 
 

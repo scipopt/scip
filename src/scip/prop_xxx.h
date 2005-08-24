@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_xxx.h,v 1.7 2005/08/22 18:35:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_xxx.h,v 1.8 2005/08/24 17:26:53 bzfpfend Exp $"
 
 /**@file   prop_xxx.h
  * @brief  xxx propagator

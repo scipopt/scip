@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_event.h,v 1.18 2005/08/22 18:35:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_event.h,v 1.19 2005/08/24 17:27:03 bzfpfend Exp $"
 
 /**@file   type_event.h
  * @brief  type definitions for managing events
@@ -57,9 +57,9 @@
 #define SCIP_EVENTTYPE_NODEINFEASIBLE 0x00008000 /**< the focus node has been proven to be infeasible or was bounded */
 #define SCIP_EVENTTYPE_NODEBRANCHED   0x00010000 /**< the focus node has been solved by branching */
 
-/* SCIP_LP events */
-#define SCIP_EVENTTYPE_FIRSTLPSOLVED  0x00020000 /**< the node's initial SCIP_LP was solved */
-#define SCIP_EVENTTYPE_LPSOLVED       0x00040000 /**< the node's SCIP_LP was completely solved with cut & price */
+/* LP events */
+#define SCIP_EVENTTYPE_FIRSTLPSOLVED  0x00020000 /**< the node's initial LP was solved */
+#define SCIP_EVENTTYPE_LPSOLVED       0x00040000 /**< the node's LP was completely solved with cut & price */
 
 /* primal solution events */
 #define SCIP_EVENTTYPE_POORSOLFOUND   0x00080000 /**< a good enough primal feasible (but not new best) solution was found */
@@ -82,7 +82,7 @@
                                        | SCIP_EVENTTYPE_NODEBRANCHED)
 #define SCIP_EVENTTYPE_NODEEVENT      (SCIP_EVENTTYPE_NODEFOCUSED | SCIP_EVENTTYPE_NODESOLVED)
 
-/* event masks for SCIP_LP events */
+/* event masks for LP events */
 #define SCIP_EVENTTYPE_LPEVENT        (SCIP_EVENTTYPE_FIRSTLPSOLVED | SCIP_EVENTTYPE_LPSOLVED)
 
 /* event masks for primal solution events */
@@ -165,7 +165,7 @@ typedef struct SCIP_EventQueue SCIP_EVENTQUEUE;   /**< event queue to cache even
 /** execution method of event handler
  *
  *  Processes the event. The method is called every time an event occurs, for which the event handler
- *  is responsible. SCIP_Event handlers may declare themselves resposible for events by calling the
+ *  is responsible. Event handlers may declare themselves resposible for events by calling the
  *  corresponding SCIPcatch...() method. This method creates an event filter object to point to the
  *  given event handler and event data.
  *

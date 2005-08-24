@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.81 2005/08/22 18:35:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.82 2005/08/24 17:27:03 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -48,7 +48,7 @@
 
 
 /*
- * SCIP_Node methods
+ * Node methods
  */
 
 /** creates a child node of the focus node */
@@ -69,22 +69,22 @@ SCIP_RETCODE SCIPnodeFree(
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    );
 
-/** increases the reference counter of the SCIP_LP state in the fork or subroot node */
+/** increases the reference counter of the LP state in the fork or subroot node */
 extern
 void SCIPnodeCaptureLPIState(
    SCIP_NODE*            node,               /**< fork/subroot node */
    int                   nuses               /**< number to add to the usage counter */
    );
 
-/** decreases the reference counter of the SCIP_LP state in the fork or subroot node */
+/** decreases the reference counter of the LP state in the fork or subroot node */
 extern
 SCIP_RETCODE SCIPnodeReleaseLPIState(
    SCIP_NODE*            node,               /**< fork/subroot node */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    );
 
 /** installs a child, a sibling, or a leaf node as the new focus node */
@@ -98,7 +98,7 @@ SCIP_RETCODE SCIPnodeFocus(
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
@@ -168,7 +168,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_VAR*             var,                /**< variable to change the bounds for */
@@ -190,7 +190,7 @@ SCIP_RETCODE SCIPnodeAddBoundchg(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_VAR*             var,                /**< variable to change the bounds for */
@@ -228,7 +228,7 @@ SCIP_RETCODE SCIPnodePropagateImplics(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
@@ -238,7 +238,7 @@ SCIP_RETCODE SCIPnodePropagateImplics(
 
 
 /*
- * SCIP_Tree methods
+ * Tree methods
  */
 
 /** creates an initialized tree data structure */
@@ -255,7 +255,7 @@ SCIP_RETCODE SCIPtreeFree(
    SCIP_TREE**           tree,               /**< pointer to tree data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    );
 
 /** clears and resets tree data structure and deletes all nodes */
@@ -264,7 +264,7 @@ SCIP_RETCODE SCIPtreeClear(
    SCIP_TREE*            tree,               /**< tree data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    );
 
 /** creates the root node of the tree and puts it into the leaves queue */
@@ -274,7 +274,7 @@ SCIP_RETCODE SCIPtreeCreateRoot(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    );
 
 /** creates a temporary presolving root node of the tree and installs it as focus node */
@@ -286,7 +286,7 @@ SCIP_RETCODE SCIPtreeCreatePresolvingRoot(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
@@ -302,7 +302,7 @@ SCIP_RETCODE SCIPtreeFreePresolvingRoot(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
@@ -331,19 +331,19 @@ SCIP_RETCODE SCIPtreeCutoff(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    );
 
-/** constructs the SCIP_LP and loads SCIP_LP state for fork/subroot of the focus node */
+/** constructs the LP and loads LP state for fork/subroot of the focus node */
 extern
 SCIP_RETCODE SCIPtreeLoadLP(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
-   SCIP_Bool*            initroot            /**< pointer to store whether the root SCIP_LP relaxation has to be initialized */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Bool*            initroot            /**< pointer to store whether the root LP relaxation has to be initialized */
    );
 
 /** branches on a variable; if solution value x' is fractional, two child nodes are created
@@ -356,7 +356,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_VAR*             var,                /**< variable to branch on */
@@ -369,7 +369,7 @@ SCIP_RETCODE SCIPtreeStartProbing(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    );
 
 /** creates a new probing child node in the probing path */
@@ -390,7 +390,7 @@ SCIP_RETCODE SCIPtreeBacktrackProbing(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    int                   probingdepth        /**< probing depth of the node in the probing path that should be reactivated */
@@ -406,7 +406,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
@@ -478,20 +478,20 @@ int SCIPtreeGetFocusDepth(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
-/** returns, whether the SCIP_LP was or is to be solved in the focus node */
+/** returns, whether the LP was or is to be solved in the focus node */
 extern
 SCIP_Bool SCIPtreeHasFocusNodeLP(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
-/** sets mark to solve or to ignore the SCIP_LP while processing the focus node */
+/** sets mark to solve or to ignore the LP while processing the focus node */
 extern
 void SCIPtreeSetFocusNodeLP(
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_Bool             solvelp             /**< should the SCIP_LP be solved in focus node? */
+   SCIP_Bool             solvelp             /**< should the LP be solved in focus node? */
    );
 
-/** marks the probing node to have a solved SCIP_LP relaxation */
+/** marks the probing node to have a solved LP relaxation */
 extern
 void SCIPtreeMarkProbingNodeHasLP(
    SCIP_TREE*            tree                /**< branch and bound tree */
@@ -509,7 +509,7 @@ int SCIPtreeGetCurrentDepth(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
-/** returns, whether the SCIP_LP was or is to be solved in the current node */
+/** returns, whether the LP was or is to be solved in the current node */
 extern
 SCIP_Bool SCIPtreeHasCurrentNodeLP(
    SCIP_TREE*            tree                /**< branch and bound tree */

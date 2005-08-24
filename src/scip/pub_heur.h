@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_heur.h,v 1.11 2005/08/22 18:35:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_heur.h,v 1.12 2005/08/24 17:26:54 bzfpfend Exp $"
 
 /**@file   pub_heur.h
  * @brief  public methods for primal heuristics

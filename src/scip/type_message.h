@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_message.h,v 1.2 2005/08/22 18:35:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_message.h,v 1.3 2005/08/24 17:27:04 bzfpfend Exp $"
 
 /**@file   type_message.h
  * @brief  type definitions for message output methods

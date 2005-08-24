@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.56 2005/08/22 18:35:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.57 2005/08/24 17:26:44 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -134,7 +134,7 @@
 #define DISP_STRI_CURCONSS      TRUE
 
 #define DISP_NAME_CURCOLS       "curcols"
-#define DISP_DESC_CURCOLS       "number of SCIP_LP columns in current node"
+#define DISP_DESC_CURCOLS       "number of LP columns in current node"
 #define DISP_HEAD_CURCOLS       "cols"
 #define DISP_WIDT_CURCOLS       5
 #define DISP_PRIO_CURCOLS       800
@@ -142,7 +142,7 @@
 #define DISP_STRI_CURCOLS       TRUE
 
 #define DISP_NAME_CURROWS       "currows"
-#define DISP_DESC_CURROWS       "number of SCIP_LP rows in current node"
+#define DISP_DESC_CURROWS       "number of LP rows in current node"
 #define DISP_HEAD_CURROWS       "rows"
 #define DISP_WIDT_CURROWS       5
 #define DISP_PRIO_CURROWS       900
@@ -166,7 +166,7 @@
 #define DISP_STRI_SEPAROUNDS    TRUE
 
 #define DISP_NAME_POOLSIZE      "poolsize"
-#define DISP_DESC_POOLSIZE      "number of SCIP_LP rows in the cut pool"
+#define DISP_DESC_POOLSIZE      "number of LP rows in the cut pool"
 #define DISP_HEAD_POOLSIZE      "pool"
 #define DISP_WIDT_POOLSIZE      5
 #define DISP_PRIO_POOLSIZE      50

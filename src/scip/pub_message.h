@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_message.h,v 1.2 2005/08/22 18:35:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_message.h,v 1.3 2005/08/24 17:26:54 bzfpfend Exp $"
 
 /**@file   pub_message.h
  * @brief  public methods for message output
@@ -38,7 +38,7 @@
 #ifdef SCIP_DEBUG
 
 /** executes command only if SCIP_DEBUG flag is set */
-#define SCIPdebug(x)                    x
+#define SCIPdebug(x)                        x
 
 /** prints a debugging message if SCIP_DEBUG flag is set */
 #define SCIPdebugMessage                printf("[%s:%d] debug: ", __FILE__, __LINE__); printf
@@ -49,7 +49,7 @@
 #else
 
 /** executes command only if SCIP_DEBUG flag is set */
-#define SCIPdebug(x)                    /**/
+#define SCIPdebug(x)                        /**/
 
 /** prints a debugging message if SCIP_DEBUG flag is set */
 #define SCIPdebugMessage                while( FALSE ) printf

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.c,v 1.18 2005/08/22 18:35:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: message.c,v 1.19 2005/08/24 17:26:49 bzfpfend Exp $"
 
 /**@file   message.c
  * @brief  message output methods

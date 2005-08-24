@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.129 2005/08/22 18:35:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.130 2005/08/24 17:26:39 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -702,7 +702,7 @@ SCIP_RETCODE conshdlrAddEnfocons(
    else
    {
       /* we have to make sure that even this obsolete constraint is enforced in the next enforcement call;
-       * if the same SCIP_LP or pseudo solution is enforced again, only the newly added useful constraints are
+       * if the same LP or pseudo solution is enforced again, only the newly added useful constraints are
        * enforced; thus, we have to reset the enforcement counters and force all constraints to be 
        * enforced again; this is not needed for separation and propagation, because they are not vital for correctness
        */
@@ -1610,9 +1610,9 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_DECL_CONSEXITSOL ((*consexitsol)),   /**< solving process deinitialization method of constraint handler */
    SCIP_DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
    SCIP_DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
-   SCIP_DECL_CONSINITLP  ((*consinitlp)),    /**< initialize SCIP_LP with relaxations of "initial" constraints */
+   SCIP_DECL_CONSINITLP  ((*consinitlp)),    /**< initialize LP with relaxations of "initial" constraints */
    SCIP_DECL_CONSSEPA    ((*conssepa)),      /**< separate cutting planes */
-   SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for SCIP_LP solutions */
+   SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
    SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
    SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
@@ -2094,7 +2094,7 @@ SCIP_RETCODE SCIPconshdlrExitsol(
    return SCIP_OKAY;
 }
 
-/** calls SCIP_LP initialization method of constraint handler to separate all initial active constraints */
+/** calls LP initialization method of constraint handler to separate all initial active constraints */
 SCIP_RETCODE SCIPconshdlrInitLP(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -2106,7 +2106,7 @@ SCIP_RETCODE SCIPconshdlrInitLP(
 
    if( conshdlr->consinitlp != NULL )
    {
-      SCIPdebugMessage("initializing SCIP_LP with %d active constraints of handler <%s>\n", conshdlr->nactiveconss, conshdlr->name);
+      SCIPdebugMessage("initializing LP with %d active constraints of handler <%s>\n", conshdlr->nactiveconss, conshdlr->name);
          
       /* because during constraint processing, constraints of this handler may be deleted, activated, deactivated,
        * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
@@ -2161,10 +2161,10 @@ SCIP_RETCODE SCIPconshdlrSeparate(
          int nusefulconss;
          int firstcons;
 
-         /* check, if this SCIP_LP solution was already separated */
+         /* check, if this LP solution was already separated */
          if( conshdlr->lastsepalpcount == stat->lpcount )
          {
-            /* all constraints that were not yet separated on the new SCIP_LP solution must be useful constraints, which means,
+            /* all constraints that were not yet separated on the new LP solution must be useful constraints, which means,
              * that the new constraints are the last constraints of the useful ones
              */
             nconss = conshdlr->nusefulsepaconss - conshdlr->lastnusefulsepaconss;
@@ -2173,7 +2173,7 @@ SCIP_RETCODE SCIPconshdlrSeparate(
          }
          else
          {
-            /* on a new SCIP_LP solution, we want to separate all constraints */
+            /* on a new LP solution, we want to separate all constraints */
             nconss = conshdlr->nsepaconss;
             nusefulconss = conshdlr->nusefulsepaconss;
             firstcons = 0;
@@ -2192,11 +2192,11 @@ SCIP_RETCODE SCIPconshdlrSeparate(
             int lastsepalpcount;
             int lastnusefulsepaconss;
 
-            SCIPdebugMessage("separating constraints %d to %d of %d constraints of handler <%s> (%s SCIP_LP solution)\n",
+            SCIPdebugMessage("separating constraints %d to %d of %d constraints of handler <%s> (%s LP solution)\n",
                firstcons, firstcons + nconss - 1, conshdlr->nsepaconss, conshdlr->name,
                conshdlr->lastsepalpcount == stat->lpcount ? "old" : "new");
 
-            /* remember the number of processed constraints on the current SCIP_LP solution */
+            /* remember the number of processed constraints on the current LP solution */
             lastsepalpcount = stat->lpcount;
             lastnusefulsepaconss = conshdlr->nusefulsepaconss;
 
@@ -2272,7 +2272,7 @@ SCIP_RETCODE SCIPconshdlrSeparate(
    return SCIP_OKAY;
 }
 
-/** calls enforcing method of constraint handler for SCIP_LP solution for all constraints added after last
+/** calls enforcing method of constraint handler for LP solution for all constraints added after last
  *  conshdlrResetEnfo() call
  */
 SCIP_RETCODE SCIPconshdlrEnforceLPSol(
@@ -2307,10 +2307,10 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
       int firstcons;
       SCIP_Bool lpchanged;
 
-      /* check, if this SCIP_LP solution was already enforced */
+      /* check, if this LP solution was already enforced */
       if( conshdlr->lastenfolplpcount == stat->lpcount && conshdlr->lastenfolpdomchgcount == stat->domchgcount )
       {
-         /* all constraints that were not yet enforced on the new SCIP_LP solution must be useful constraints, which means,
+         /* all constraints that were not yet enforced on the new LP solution must be useful constraints, which means,
           * that the new constraints are the last constraints of the useful ones
           */
          nconss = conshdlr->nusefulenfoconss - conshdlr->lastnusefulenfoconss;
@@ -2320,7 +2320,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
       }
       else
       {
-         /* on a new SCIP_LP solution, we want to enforce all constraints */
+         /* on a new LP solution, we want to enforce all constraints */
          nconss = conshdlr->nenfoconss;
          nusefulconss = conshdlr->nusefulenfoconss;
          firstcons = 0;
@@ -2338,10 +2338,10 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
          int oldncutsstored;
          int oldnactiveconss;
 
-         SCIPdebugMessage("enforcing constraints %d to %d of %d constraints of handler <%s> (%s SCIP_LP solution)\n",
+         SCIPdebugMessage("enforcing constraints %d to %d of %d constraints of handler <%s> (%s LP solution)\n",
             firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name, lpchanged ? "new" : "old");
 
-         /* remember the number of processed constraints on the current SCIP_LP solution */
+         /* remember the number of processed constraints on the current LP solution */
          conshdlr->lastenfolplpcount = stat->lpcount;
          conshdlr->lastenfolpdomchgcount = stat->domchgcount;
          conshdlr->lastnusefulenfoconss = conshdlr->nusefulenfoconss;
@@ -2401,7 +2401,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
             && *result != SCIP_INFEASIBLE
             && *result != SCIP_FEASIBLE )
          {
-            SCIPerrorMessage("enforcing method of constraint handler <%s> for SCIP_LP solutions returned invalid result <%d>\n", 
+            SCIPerrorMessage("enforcing method of constraint handler <%s> for LP solutions returned invalid result <%d>\n", 
                conshdlr->name, *result);
             return SCIP_INVALIDRESULT;
          }
@@ -2446,10 +2446,10 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
       int firstcons;
       SCIP_Bool pschanged;
 
-      /* check, if this SCIP_LP solution was already enforced */
+      /* check, if this LP solution was already enforced */
       if( conshdlr->lastenfopsdomchgcount == stat->domchgcount )
       {
-         /* all constraints that were not yet enforced on the new SCIP_LP solution must be useful constraints, which means,
+         /* all constraints that were not yet enforced on the new LP solution must be useful constraints, which means,
           * that the new constraints are the last constraints of the useful ones
           */
          nconss = conshdlr->nusefulenfoconss - conshdlr->lastnusefulenfoconss;
@@ -2558,7 +2558,7 @@ SCIP_RETCODE SCIPconshdlrCheck(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current SCIP_LP rows to be checked? */
+   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -3019,7 +3019,7 @@ SCIP_Real SCIPconshdlrGetSepaTime(
    return SCIPclockGetTime(conshdlr->sepatime);
 }
 
-/** gets time in seconds used for SCIP_LP enforcement in this constraint handler */
+/** gets time in seconds used for LP enforcement in this constraint handler */
 SCIP_Real SCIPconshdlrGetEnfoLPTime(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    )
@@ -3059,7 +3059,7 @@ SCIP_Longint SCIPconshdlrGetNSepaCalls(
    return conshdlr->nsepacalls;
 }
 
-/** gets number of calls to the constraint handler's SCIP_LP enforcing method */
+/** gets number of calls to the constraint handler's LP enforcing method */
 SCIP_Longint SCIPconshdlrGetNEnfoLPCalls(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    )
@@ -3860,9 +3860,9 @@ SCIP_RETCODE SCIPconssetchgUndo(
  */
 
 /** creates and captures a constraint, and inserts it into the conss array of its constraint handler
- *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a SCIP_LP or pseudo solution
+ *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
  *  may be declared feasible even if it violates this particular constraint.
- *  This constellation should only be used, if no SCIP_LP or pseudo solution can violate the constraint -- e.g. if a
+ *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
  *  local constraint is redundant due to the variable's local bounds.
  */
 SCIP_RETCODE SCIPconsCreate(
@@ -3872,15 +3872,15 @@ SCIP_RETCODE SCIPconsCreate(
    const char*           name,               /**< name of constraint */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
    SCIP_CONSDATA*        consdata,           /**< data for this specific constraint */
-   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
-   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable,         /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
+   SCIP_Bool             removeable,         /**< should the relaxation be removed from the LP due to aging or cleanup? */
    SCIP_Bool             original            /**< is constraint belonging to the original problem? */
    )
 {
@@ -4677,7 +4677,7 @@ SCIP_RETCODE SCIPconsCheck(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current SCIP_LP rows to be checked? */
+   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -4930,7 +4930,7 @@ SCIP_Real SCIPconsGetAge(
    return cons->age;
 }
 
-/** returns TRUE iff the SCIP_LP relaxation of constraint should be in the initial SCIP_LP */
+/** returns TRUE iff the LP relaxation of constraint should be in the initial LP */
 SCIP_Bool SCIPconsIsInitial(
    SCIP_CONS*            cons                /**< constraint */
    )
@@ -4940,7 +4940,7 @@ SCIP_Bool SCIPconsIsInitial(
    return cons->initial;
 }
 
-/** returns TRUE iff constraint should be separated during SCIP_LP processing */
+/** returns TRUE iff constraint should be separated during LP processing */
 SCIP_Bool SCIPconsIsSeparated(
    SCIP_CONS*            cons                /**< constraint */
    )
@@ -5020,7 +5020,7 @@ SCIP_Bool SCIPconsIsDynamic(
    return cons->dynamic;
 }
 
-/** returns TRUE iff constraint's relaxation should be removed from the SCIP_LP due to aging or cleanup */
+/** returns TRUE iff constraint's relaxation should be removed from the LP due to aging or cleanup */
 SCIP_Bool SCIPconsIsRemoveable(
    SCIP_CONS*            cons                /**< constraint */
    )

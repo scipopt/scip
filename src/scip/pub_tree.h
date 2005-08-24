@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_tree.h,v 1.15 2005/08/22 18:35:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_tree.h,v 1.16 2005/08/24 17:26:55 bzfpfend Exp $"
 
 /**@file   pub_tree.h
  * @brief  public methods for branch and bound tree
@@ -38,7 +38,7 @@
 
 
 /*
- * SCIP_Node methods
+ * Node methods
  */
 
 /** node comparator for best lower bound */

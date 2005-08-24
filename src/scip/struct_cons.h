@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.35 2005/08/22 18:35:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.36 2005/08/24 17:26:59 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -55,8 +55,8 @@ struct SCIP_Cons
    int                   nlocksneg;          /**< number of times, the constraint locked vars for the constraint's negation */
    int                   activedepth;        /**< depth level of constraint activation (-2: inactive, -1: problem constraint) */
    int                   validdepth;         /**< depth level where constraint is valid (-1: equals activedepth) */
-   unsigned int          initial:1;          /**< TRUE iff SCIP_LP relaxation of constraint should be in initial LP, if possible */
-   unsigned int          separate:1;         /**< TRUE iff constraint should be separated during SCIP_LP processing */
+   unsigned int          initial:1;          /**< TRUE iff LP relaxation of constraint should be in initial LP, if possible */
+   unsigned int          separate:1;         /**< TRUE iff constraint should be separated during LP processing */
    unsigned int          enforce:1;          /**< TRUE iff constraint should be enforced during node processing */
    unsigned int          check:1;            /**< TRUE iff constraint should be checked for feasibility */
    unsigned int          propagate:1;        /**< TRUE iff constraint should be propagated during node processing */
@@ -65,7 +65,7 @@ struct SCIP_Cons
    unsigned int          local:1;            /**< TRUE iff constraint is only valid locally */
    unsigned int          modifiable:1;       /**< TRUE iff constraint is modifiable (subject to column generation) */
    unsigned int          dynamic:1;          /**< TRUE iff constraint is subject to aging */
-   unsigned int          removeable:1;       /**< TRUE iff relaxation should be removed from the SCIP_LP due to aging or cleanup */
+   unsigned int          removeable:1;       /**< TRUE iff relaxation should be removed from the LP due to aging or cleanup */
    unsigned int          original:1;         /**< TRUE iff constraint belongs to original problem */
    unsigned int          active:1;           /**< TRUE iff constraint is active in the current node */
    unsigned int          enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in current node */
@@ -100,7 +100,7 @@ struct SCIP_ConsSetChg
 struct SCIP_Conshdlr
 {
    SCIP_Longint          nsepacalls;         /**< number of times, the separator was called */
-   SCIP_Longint          nenfolpcalls;       /**< number of times, the SCIP_LP enforcer was called */
+   SCIP_Longint          nenfolpcalls;       /**< number of times, the LP enforcer was called */
    SCIP_Longint          nenfopscalls;       /**< number of times, the pseudo enforcer was called */
    SCIP_Longint          npropcalls;         /**< number of times, the propagator was called */
    SCIP_Longint          ncutoffs;           /**< number of cutoffs found so far by this constraint handler */
@@ -109,7 +109,7 @@ struct SCIP_Conshdlr
    SCIP_Longint          ndomredsfound;      /**< number of domain reductions found so far by this constraint handler */
    SCIP_Longint          nchildren;          /**< number of children the constraint handler created during branching */
    SCIP_Longint          lastpropdomchgcount;/**< last bound change number, where the domain propagation was called */
-   SCIP_Longint          lastenfolpdomchgcount;/**< last bound change number, where the SCIP_LP enforcement was called */
+   SCIP_Longint          lastenfolpdomchgcount;/**< last bound change number, where the LP enforcement was called */
    SCIP_Longint          lastenfopsdomchgcount;/**< last bound change number, where the pseudo enforcement was called */
    SCIP_Real             ageresetavg;        /**< exp. decaying weighted average of constraint ages at moment of age reset */
    char*                 name;               /**< name of constraint handler */
@@ -123,9 +123,9 @@ struct SCIP_Conshdlr
    SCIP_DECL_CONSEXITSOL ((*consexitsol));   /**< solving process deinitialization method of constraint handler */
    SCIP_DECL_CONSDELETE  ((*consdelete));    /**< free specific constraint data */
    SCIP_DECL_CONSTRANS   ((*constrans));     /**< transform constraint data into data belonging to the transformed problem */
-   SCIP_DECL_CONSINITLP  ((*consinitlp));    /**< initialize SCIP_LP with relaxations of "initial" constraints */
+   SCIP_DECL_CONSINITLP  ((*consinitlp));    /**< initialize LP with relaxations of "initial" constraints */
    SCIP_DECL_CONSSEPA    ((*conssepa));      /**< separate cutting planes */
-   SCIP_DECL_CONSENFOLP  ((*consenfolp));    /**< enforcing constraints for SCIP_LP solutions */
+   SCIP_DECL_CONSENFOLP  ((*consenfolp));    /**< enforcing constraints for LP solutions */
    SCIP_DECL_CONSENFOPS  ((*consenfops));    /**< enforcing constraints for pseudo solutions */
    SCIP_DECL_CONSCHECK   ((*conscheck));     /**< check feasibility of primal solution */
    SCIP_DECL_CONSPROP    ((*consprop));      /**< propagate variable domains */
@@ -139,14 +139,14 @@ struct SCIP_Conshdlr
    SCIP_DECL_CONSPRINT   ((*consprint));     /**< constraint display method */
    SCIP_CONSHDLRDATA*    conshdlrdata;       /**< constraint handler data */
    SCIP_CONS**           conss;              /**< array with all transformed constraints, active ones preceed incative ones */
-   SCIP_CONS**           sepaconss;          /**< array with active constraints that must be separated during SCIP_LP processing */
+   SCIP_CONS**           sepaconss;          /**< array with active constraints that must be separated during LP processing */
    SCIP_CONS**           enfoconss;          /**< array with active constraints that must be enforced during node processing */
    SCIP_CONS**           checkconss;         /**< array with active constraints that must be checked for feasibility */
    SCIP_CONS**           propconss;          /**< array with active constraints that must be propagated during node processing */
    SCIP_CONS**           updateconss;        /**< array with constraints that changed and have to be update in the handler */
    SCIP_CLOCK*           presoltime;         /**< time used for presolving of this constraint handler */
    SCIP_CLOCK*           sepatime;           /**< time used for separation of this constraint handler */
-   SCIP_CLOCK*           enfolptime;         /**< time used for SCIP_LP enforcement of this constraint handler */
+   SCIP_CLOCK*           enfolptime;         /**< time used for LP enforcement of this constraint handler */
    SCIP_CLOCK*           enfopstime;         /**< time used for pseudo enforcement of this constraint handler */
    SCIP_CLOCK*           proptime;           /**< time used for propagation of this constraint handler */
    int                   sepapriority;       /**< priority of the constraint handler for separation */
@@ -163,7 +163,7 @@ struct SCIP_Conshdlr
    int                   maxnactiveconss;    /**< maximal number of active constraints existing at the same time */
    int                   startnactiveconss;  /**< number of active constraints existing when problem solving started */
    int                   sepaconsssize;      /**< size of sepaconss array */
-   int                   nsepaconss;         /**< number of active constraints that may be separated during SCIP_LP processing */
+   int                   nsepaconss;         /**< number of active constraints that may be separated during LP processing */
    int                   nusefulsepaconss;   /**< number of non-obsolete active constraints that should be separated */
    int                   enfoconsssize;      /**< size of enfoconss array */
    int                   nenfoconss;         /**< number of active constraints that must be enforced during node processing */
@@ -177,8 +177,8 @@ struct SCIP_Conshdlr
    int                   updateconsssize;    /**< size of updateconss array */
    int                   nupdateconss;       /**< number of update constraints */
    int                   nenabledconss;      /**< total number of enabled constraints of the handler */
-   int                   lastsepalpcount;    /**< last SCIP_LP number, where the separations was called */
-   int                   lastenfolplpcount;  /**< last SCIP_LP number, where the SCIP_LP enforcement was called */
+   int                   lastsepalpcount;    /**< last LP number, where the separations was called */
+   int                   lastenfolplpcount;  /**< last LP number, where the LP enforcement was called */
    int                   lastnusefulpropconss;/**< number of already propagated useful constraints on current domains */
    int                   lastnusefulsepaconss;/**< number of already separated useful constraints on current solution */
    int                   lastnusefulenfoconss;/**< number of already enforced useful constraints on current solution */

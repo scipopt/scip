@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.h,v 1.11 2005/08/22 18:35:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objrelax.h,v 1.12 2005/08/24 17:26:36 bzfpfend Exp $"
 
 /**@file   objrelax.h
  * @brief  C++ wrapper for relaxators
@@ -46,7 +46,7 @@ public:
    /** description of the relaxator */
    const char* const scip_desc_;
    
-   /** default priority of the relaxator (negative: call after LP, non-negative: call before SCIP_LP) */
+   /** default priority of the relaxator (negative: call after LP, non-negative: call before LP) */
    const int scip_priority_;
 
    /** frequency for calling relaxator */
@@ -56,7 +56,7 @@ public:
    ObjRelax(
       const char*        name,               /**< name of relaxator */
       const char*        desc,               /**< description of relaxator */
-      int                priority,           /**< priority of the relaxator (negative: after LP, non-negative: before SCIP_LP) */
+      int                priority,           /**< priority of the relaxator (negative: after LP, non-negative: before LP) */
       int                freq                /**< frequency for calling relaxator */
       )
       : scip_name_(name),
@@ -128,7 +128,7 @@ public:
    /** execution method of relaxator
     *
     *  The method is called in the node processing loop. It solves the current subproblem's relaxation.
-    *  Like the SCIP_LP relaxation, the relaxator should only operate on COLUMN variables.
+    *  Like the LP relaxation, the relaxator should only operate on COLUMN variables.
     *
     *  possible return values for *result (if more than one applies, the first in the list should be used):
     *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
@@ -174,7 +174,7 @@ public:
 extern
 SCIP_RETCODE SCIPincludeObjRelax(
    SCIP*                 scip,               /**< SCIP data structure */
-   scip::ObjRelax*       objrelax,           /**< relaxator object */
+   scip::ObjRelax*  objrelax,           /**< relaxator object */
    SCIP_Bool             deleteobject        /**< should the relaxator object be deleted when relaxator is freed? */
    );
 

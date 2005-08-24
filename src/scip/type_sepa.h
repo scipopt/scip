@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_sepa.h,v 1.14 2005/08/22 18:35:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_sepa.h,v 1.15 2005/08/24 17:27:06 bzfpfend Exp $"
 
 /**@file   type_sepa.h
  * @brief  type definitions for separators
@@ -80,7 +80,7 @@ typedef struct SCIP_SepaData SCIP_SEPADATA;       /**< locally defined separator
 
 /** execution method of separator
  *
- *  Searches for cutting planes. The method is called in the SCIP_LP solving loop.
+ *  Searches for cutting planes. The method is called in the LP solving loop.
  *
  *  input:
  *  - scip            : SCIP main data structure

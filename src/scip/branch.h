@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.42 2005/08/22 18:35:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.43 2005/08/24 17:26:36 bzfpfend Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -61,17 +61,17 @@ SCIP_RETCODE SCIPbranchcandFree(
    SCIP_BRANCHCAND**     branchcand          /**< pointer to store branching candidate storage */
    );
 
-/** gets branching candidates for SCIP_LP solution branching (fractional variables) */
+/** gets branching candidates for LP solution branching (fractional variables) */
 extern
 SCIP_RETCODE SCIPbranchcandGetLPCands(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
-   SCIP_VAR***           lpcands,            /**< pointer to store the array of SCIP_LP branching candidates, or NULL */
-   SCIP_Real**           lpcandssol,         /**< pointer to store the array of SCIP_LP candidate solution values, or NULL */
-   SCIP_Real**           lpcandsfrac,        /**< pointer to store the array of SCIP_LP candidate fractionalities, or NULL */
-   int*                  nlpcands,           /**< pointer to store the number of SCIP_LP branching candidates, or NULL */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_VAR***           lpcands,            /**< pointer to store the array of LP branching candidates, or NULL */
+   SCIP_Real**           lpcandssol,         /**< pointer to store the array of LP candidate solution values, or NULL */
+   SCIP_Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
+   int*                  nlpcands,           /**< pointer to store the number of LP branching candidates, or NULL */
    int*                  npriolpcands        /**< pointer to store the number of candidates with maximal priority, or NULL */
    );
 
@@ -156,7 +156,7 @@ SCIP_RETCODE SCIPbranchruleCreate(
    SCIP_DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */
    SCIP_DECL_BRANCHINITSOL((*branchinitsol)),/**< solving process initialization method of branching rule */
    SCIP_DECL_BRANCHEXITSOL((*branchexitsol)),/**< solving process deinitialization method of branching rule */
-   SCIP_DECL_BRANCHEXECLP((*branchexeclp)),  /**< branching execution method for fractional SCIP_LP solutions */
+   SCIP_DECL_BRANCHEXECLP((*branchexeclp)),  /**< branching execution method for fractional LP solutions */
    SCIP_DECL_BRANCHEXECPS((*branchexecps)),  /**< branching execution method for not completely fixed pseudo solutions */
    SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
    );
@@ -196,7 +196,7 @@ SCIP_RETCODE SCIPbranchruleExitsol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** executes branching rule for fractional SCIP_LP solution */
+/** executes branching rule for fractional LP solution */
 extern
 SCIP_RETCODE SCIPbranchruleExecLPSol(
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
@@ -267,7 +267,7 @@ SCIP_Real SCIPbranchGetScoreMultiple(
    SCIP_Real*            gains               /**< prediction of objective gain for each child */
    );
 
-/** calls branching rules to branch on an SCIP_LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN;
+/** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN;
  *  if the branch priority of an unfixed variable is larger than the maximal branch priority of the fractional
  *  variables, pseudo solution branching is applied on the unfixed variables with maximal branch priority
  */
@@ -277,7 +277,7 @@ SCIP_RETCODE SCIPbranchExecLP(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -293,7 +293,7 @@ SCIP_RETCODE SCIPbranchExecPseudo(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             cutoffbound,        /**< global upper cutoff bound */

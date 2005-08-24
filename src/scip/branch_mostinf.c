@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_mostinf.c,v 1.20 2005/08/22 18:35:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_mostinf.c,v 1.21 2005/08/24 17:26:38 bzfpfend Exp $"
 
 /**@file   branch_mostinf.c
  * @brief  most infeasible LP branching rule
@@ -62,7 +62,7 @@
 #define branchExitsolMostinf NULL
 
 
-/** branching execution method for fractional SCIP_LP solutions */
+/** branching execution method for fractional LP solutions */
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpMostinf)
 {  /*lint --e{715}*/
@@ -134,7 +134,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMostinf)
  * branching specific interface methods
  */
 
-/** creates the most infeasible SCIP_LP braching rule and includes it in SCIP */
+/** creates the most infeasible LP braching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleMostinf(
    SCIP*                 scip                /**< SCIP data structure */
    )

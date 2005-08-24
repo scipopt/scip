@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sepastore.h,v 1.16 2005/08/22 18:35:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_sepastore.h,v 1.17 2005/08/24 17:27:01 bzfpfend Exp $"
 
 /**@file   struct_sepastore.h
  * @brief  datastructures for storing separated cuts
@@ -40,7 +40,7 @@
 struct SCIP_SepaStore
 {
    SCIP_ROW**            cuts;               /**< array with separated cuts sorted by score */
-   SCIP_Real*            efficacies;         /**< efficacy for each separated cut: distance of hyperplane to SCIP_LP solution */
+   SCIP_Real*            efficacies;         /**< efficacy for each separated cut: distance of hyperplane to LP solution */
    SCIP_Real*            objparallelisms;    /**< parallelism of cut to the objective function */
    SCIP_Real*            orthogonalities;    /**< minimal orthogonality of cut with all other cuts of larger score */
    SCIP_Real*            scores;             /**< score for each separated cut: weighted sum of efficacy and orthogonality */
@@ -55,7 +55,7 @@ struct SCIP_SepaStore
    int                   ncutsfoundround;    /**< number of cuts (and bound changes) found so far in this separation round */
    int                   ncutsstored;        /**< total number of cuts stored (and possibly removed again) in this round */
    int                   ncutsapplied;       /**< total number of cuts (and bound changes) applied to the LPs */
-   SCIP_Bool             initiallp;          /**< is the separation storage currently being filled with the initial SCIP_LP rows? */
+   SCIP_Bool             initiallp;          /**< is the separation storage currently being filled with the initial LP rows? */
    SCIP_Bool             forcecuts;          /**< should the cuts be used despite the number of cuts parameter limit? */
 };
 

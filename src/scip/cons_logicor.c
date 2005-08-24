@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.86 2005/08/22 18:35:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.87 2005/08/24 17:26:41 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -70,7 +70,7 @@ struct SCIP_ConshdlrData
 /** logic or constraint data */
 struct SCIP_ConsData
 {
-   SCIP_ROW*             row;                /**< SCIP_LP row, if constraint is already stored in SCIP_LP row format */
+   SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
    SCIP_VAR**            vars;               /**< variables of the constraint */
    int                   varssize;           /**< size of vars array */
    int                   nvars;              /**< number of variables in the constraint */
@@ -556,7 +556,7 @@ SCIP_RETCODE processWatchedVars(
    if( watchedvar1 == -1 )
    {
       /* there is no unfixed variable left -> the constraint is infeasible
-       *  - a modifiable constraint must be added as a cut and further pricing must be performed in the SCIP_LP solving loop
+       *  - a modifiable constraint must be added as a cut and further pricing must be performed in the LP solving loop
        *  - an unmodifiable constraint is infeasible and the node can be cut off
        */
       assert(watchedvar2 == -1);
@@ -645,7 +645,7 @@ SCIP_RETCODE checkCons(
    vars = consdata->vars;
    nvars = consdata->nvars;
    
-   /* if we should check the current SCIP_LP or pseudo solution, look for a fixed-to-one variable in order to disable
+   /* if we should check the current LP or pseudo solution, look for a fixed-to-one variable in order to disable
     * the constraint
     */
    if( sol == NULL )
@@ -690,7 +690,7 @@ SCIP_RETCODE checkCons(
    return SCIP_OKAY;
 }
 
-/** creates an SCIP_LP row in a logic or constraint data object */
+/** creates an LP row in a logic or constraint data object */
 static
 SCIP_RETCODE createRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -711,7 +711,7 @@ SCIP_RETCODE createRow(
    return SCIP_OKAY;
 }
 
-/** adds logic or constraint as cut to the SCIP_LP */
+/** adds logic or constraint as cut to the LP */
 static
 SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -725,7 +725,7 @@ SCIP_RETCODE addCut(
    
    if( consdata->row == NULL )
    {
-      /* convert logic or constraint data into SCIP_LP row */
+      /* convert logic or constraint data into LP row */
       SCIP_CALL( createRow(scip, cons) );
    }
    assert(consdata->row != NULL);
@@ -733,7 +733,7 @@ SCIP_RETCODE addCut(
 
    SCIPdebugMessage("adding constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
 
-   /* insert SCIP_LP row as cut */
+   /* insert LP row as cut */
    SCIP_CALL( SCIPaddCut(scip, consdata->row, FALSE) );
 
    return SCIP_OKAY;
@@ -785,7 +785,7 @@ SCIP_RETCODE separateCons(
       /* variable's fixings didn't give us any information -> we have to check the constraint */
       if( consdata->row != NULL )
       {
-         /* skip constraints already in the SCIP_LP */
+         /* skip constraints already in the LP */
          if( SCIProwIsInLP(consdata->row) )
             return SCIP_OKAY;
          else
@@ -805,7 +805,7 @@ SCIP_RETCODE separateCons(
 
    if( addcut )
    {
-      /* insert SCIP_LP row as cut */
+      /* insert LP row as cut */
       SCIP_CALL( addCut(scip, cons) );
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       *separated = TRUE;
@@ -823,7 +823,7 @@ SCIP_RETCODE enforcePseudo(
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
    SCIP_Bool*            infeasible,         /**< pointer to store TRUE, if the constraint was infeasible */
    SCIP_Bool*            reduceddom,         /**< pointer to store TRUE, if a domain reduction was found */
-   SCIP_Bool*            solvelp             /**< pointer to store TRUE, if the SCIP_LP has to be solved */
+   SCIP_Bool*            solvelp             /**< pointer to store TRUE, if the LP has to be solved */
    )
 {
    SCIP_Bool addcut;
@@ -865,7 +865,7 @@ SCIP_RETCODE enforcePseudo(
    }
    else if( addcut )
    {
-      /* a cut must be added to the SCIP_LP -> we have to solve the SCIP_LP immediately */
+      /* a cut must be added to the LP -> we have to solve the LP immediately */
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       *solvelp = TRUE;
    }
@@ -954,7 +954,7 @@ SCIP_DECL_CONSDELETE(consDeleteLogicor)
    assert(consdata != NULL);
    assert(*consdata != NULL);
 
-   /* free SCIP_LP row and logic or constraint */
+   /* free LP row and logic or constraint */
    SCIP_CALL( consdataFree(scip, consdata) );
 
    return SCIP_OKAY;
@@ -978,7 +978,7 @@ SCIP_DECL_CONSTRANS(consTransLogicor)
 
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
-   assert(sourcedata->row == NULL);  /* in original problem, there cannot be SCIP_LP rows */
+   assert(sourcedata->row == NULL);  /* in original problem, there cannot be LP rows */
 
    /* create constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars) );
@@ -994,7 +994,7 @@ SCIP_DECL_CONSTRANS(consTransLogicor)
 }
 
 
-/** SCIP_LP initialization method of constraint handler */
+/** LP initialization method of constraint handler */
 static
 SCIP_DECL_CONSINITLP(consInitlpLogicor)
 {  /*lint --e{715}*/
@@ -1058,7 +1058,7 @@ SCIP_DECL_CONSSEPA(consSepaLogicor)
    return SCIP_OKAY;
 }
 
-/** constraint enforcing method of constraint handler for SCIP_LP solutions */
+/** constraint enforcing method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSENFOLP(consEnfolpLogicor)
 {  /*lint --e{715}*/
@@ -1511,15 +1511,15 @@ SCIP_RETCODE createNormalizedLogicor(
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
    SCIP_Real*            vals,               /**< array with coefficients (+1.0 or -1.0) */
    int                   mult,               /**< multiplier on the coefficients(+1 or -1) */
-   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
-   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
+   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    SCIP_VAR** transvars;
@@ -1716,15 +1716,15 @@ SCIP_RETCODE SCIPcreateConsLogicor(
    const char*           name,               /**< name of constraint */
    int                   nvars,              /**< number of variables in the constraint */
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
-   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
+   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -1750,7 +1750,7 @@ SCIP_RETCODE SCIPcreateConsLogicor(
    return SCIP_OKAY;
 }
 
-/** gets the dual solution of the logic or constraint in the current SCIP_LP */
+/** gets the dual solution of the logic or constraint in the current LP */
 SCIP_Real SCIPgetDualsolLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -1773,7 +1773,7 @@ SCIP_Real SCIPgetDualsolLogicor(
       return 0.0;
 }
 
-/** gets the dual farkas value of the logic or constraint in the current infeasible SCIP_LP */
+/** gets the dual farkas value of the logic or constraint in the current infeasible LP */
 SCIP_Real SCIPgetDualfarkasLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

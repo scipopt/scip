@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.h,v 1.40 2005/08/22 18:35:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.h,v 1.41 2005/08/24 17:26:41 bzfpfend Exp $"
 
 /**@file   cons_linear.h
  * @brief  constraint handler for linear constraints
@@ -104,15 +104,15 @@ SCIP_RETCODE SCIPcreateConsLinear(
    SCIP_Real*            vals,               /**< array with coefficients of constraint entries */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs,                /**< right hand side of constraint */
-   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
-   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
+   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    );
 
 /** adds coefficient to linear constraint */
@@ -170,14 +170,14 @@ SCIP_Real SCIPgetFeasibilityLinear(
    SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
    );
 
-/** gets the dual solution of the linear constraint in the current SCIP_LP */
+/** gets the dual solution of the linear constraint in the current LP */
 extern
 SCIP_Real SCIPgetDualsolLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** gets the dual farkas value of the linear constraint in the current infeasible SCIP_LP */
+/** gets the dual farkas value of the linear constraint in the current infeasible LP */
 extern
 SCIP_Real SCIPgetDualfarkasLinear(
    SCIP*                 scip,               /**< SCIP data structure */

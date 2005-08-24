@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.9 2005/08/22 18:35:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.10 2005/08/24 17:26:43 bzfpfend Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -630,7 +630,7 @@ SCIP_DECL_PROPEXEC(propExecDebug)
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
 #if 1
-   /* solve at least one SCIP_LP */
+   /* solve at least one LP */
    if( SCIPgetNLPIterations(scip) == 0 )
       return SCIP_OKAY;
 #endif

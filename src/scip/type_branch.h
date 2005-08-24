@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_branch.h,v 1.13 2005/08/22 18:35:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_branch.h,v 1.14 2005/08/24 17:27:03 bzfpfend Exp $"
 
 /**@file   type_branch.h
  * @brief  type definitions for branching rules
@@ -77,7 +77,7 @@ typedef struct SCIP_BranchruleData SCIP_BRANCHRULEDATA; /**< branching method sp
  */
 #define SCIP_DECL_BRANCHEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_BRANCHRULE* branchrule)
 
-/** branching execution method for fractional SCIP_LP solutions
+/** branching execution method for fractional LP solutions
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -90,7 +90,7 @@ typedef struct SCIP_BranchruleData SCIP_BRANCHRULEDATA; /**< branching method sp
  *  - SCIP_CUTOFF     : the current node was detected to be infeasible
  *  - SCIP_CONSADDED  : an additional constraint (e.g. a conflict clause) was generated; this result code must not be
  *                      returned, if allowaddcons is FALSE
- *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current SCIP_LP solution infeasible
+ *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current LP solution infeasible
  *  - SCIP_SEPARATED  : a cutting plane was generated
  *  - SCIP_BRANCHED   : branching was applied
  *  - SCIP_DIDNOTRUN  : the branching rule was skipped

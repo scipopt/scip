@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cutpool.h,v 1.7 2005/08/22 18:35:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cutpool.h,v 1.8 2005/08/24 17:27:03 bzfpfend Exp $"
 
 /**@file   type_cutpool.h
  * @brief  type definitions for storing cuts in a cut pool

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_result.h,v 1.10 2005/08/22 18:35:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_result.h,v 1.11 2005/08/24 17:27:05 bzfpfend Exp $"
 
 /**@file   type_result.h
  * @brief  result codes for SCIP callback methods
@@ -41,7 +41,7 @@ enum SCIP_Result
    SCIP_CONSADDED   =  10,            /**< the method added a constraint */
    SCIP_CONSCHANGED =  11,            /**< the method changed a constraint */
    SCIP_BRANCHED    =  12,            /**< the method created a branching */
-   SCIP_SOLVELP     =  13,            /**< the current node's SCIP_LP must be solved */
+   SCIP_SOLVELP     =  13,            /**< the current node's LP must be solved */
    SCIP_FOUNDSOL    =  14,            /**< the method found a feasible primal solution */
    SCIP_SUCCESS     =  15,            /**< the method was successfully executed */  
    SCIP_SUSPENDED   =  16             /**< the method interrupted its execution, but can continue if needed */

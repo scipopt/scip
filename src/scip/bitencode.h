@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: bitencode.h,v 1.12 2005/08/22 18:35:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: bitencode.h,v 1.13 2005/08/24 17:26:36 bzfpfend Exp $"
 
 /**@file   bitencode.h
  * @brief  packing single and dual bit values

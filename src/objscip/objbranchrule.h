@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.h,v 1.20 2005/08/22 18:35:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objbranchrule.h,v 1.21 2005/08/24 17:26:34 bzfpfend Exp $"
 
 /**@file   objbranchrule.h
  * @brief  C++ wrapper for branching rules
@@ -128,13 +128,13 @@ public:
       return SCIP_OKAY;
    }
    
-   /** branching execution method for fractional SCIP_LP solutions
+   /** branching execution method for fractional LP solutions
     *
     *  possible return values for *result (if more than one applies, the first in the list should be used):
     *  - SCIP_CUTOFF     : the current node was detected to be infeasible
     *  - SCIP_CONSADDED  : an additional constraint (e.g. a conflict clause) was generated; this result code must not be
     *                      returned, if allowaddcons is FALSE
-    *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current SCIP_LP solution infeasible
+    *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current LP solution infeasible
     *  - SCIP_SEPARATED  : a cutting plane was generated
     *  - SCIP_BRANCHED   : branching was applied
     *  - SCIP_DIDNOTRUN  : the branching rule was skipped

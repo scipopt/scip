@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.63 2005/08/22 18:35:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.64 2005/08/24 17:26:58 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -309,7 +309,7 @@ SCIP_RETCODE SCIPsolCopy(
    return SCIP_OKAY;
 }
 
-/** creates primal CIP solution, initialized to the current SCIP_LP solution */
+/** creates primal CIP solution, initialized to the current LP solution */
 SCIP_RETCODE SCIPsolCreateLPSol(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -317,7 +317,7 @@ SCIP_RETCODE SCIPsolCreateLPSol(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
@@ -339,7 +339,7 @@ SCIP_RETCODE SCIPsolCreatePseudoSol(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
@@ -359,7 +359,7 @@ SCIP_RETCODE SCIPsolCreateCurrentSol(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
@@ -408,13 +408,13 @@ void SCIPsolSetHeur(
    sol->heur = heur;
 }
 
-/** copies current SCIP_LP solution into CIP solution by linking */
+/** copies current LP solution into CIP solution by linking */
 SCIP_RETCODE SCIPsolLinkLPSol(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(sol != NULL);
@@ -429,7 +429,7 @@ SCIP_RETCODE SCIPsolLinkLPSol(
    /* clear the old solution arrays */
    SCIP_CALL( solClearArrays(sol) );
 
-   /* link solution to SCIP_LP solution */
+   /* link solution to LP solution */
    if( SCIPlpDivingObjChanged(lp) )
    {
       /* the objective value has to be calculated manually, because the LP's value is invalid;
@@ -471,7 +471,7 @@ SCIP_RETCODE SCIPsolLinkPseudoSol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(sol != NULL);
@@ -493,13 +493,13 @@ SCIP_RETCODE SCIPsolLinkPseudoSol(
    return SCIP_OKAY;
 }
 
-/** copies current solution (SCIP_LP or pseudo solution) into CIP solution by linking */
+/** copies current solution (LP or pseudo solution) into CIP solution by linking */
 SCIP_RETCODE SCIPsolLinkCurrentSol(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(tree != NULL);
@@ -841,7 +841,7 @@ SCIP_RETCODE SCIPsolCheck(
    SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current SCIP_LP rows to be checked? */
+   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
    SCIP_Bool*            feasible            /**< stores whether solution is feasible */
    )
 {

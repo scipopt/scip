@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.6 2005/08/22 18:35:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.7 2005/08/24 17:26:57 bzfpfend Exp $"
 
 /**@file   sepa_impliedbounds.c
  * @brief  implied bounds separator
@@ -48,10 +48,10 @@ SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< given coefficient of first variable */
    SCIP_VAR*             var1,               /**< given first variable */
-   SCIP_Real             solval1,            /**< current SCIP_LP solution value of first variable */
+   SCIP_Real             solval1,            /**< current LP solution value of first variable */
    SCIP_Real             val2,               /**< given coefficient of second variable */
    SCIP_VAR*             var2,               /**< given second variable */
-   SCIP_Real             solval2,            /**< current SCIP_LP solution value of second variable */
+   SCIP_Real             solval2,            /**< current LP solution value of second variable */
    SCIP_Real             rhs,                /**< given right hand side of the cut to add */
    int*                  ncuts               /**< pointer to update number of cuts added */
    )

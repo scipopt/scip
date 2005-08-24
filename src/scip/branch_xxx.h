@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_xxx.h,v 1.8 2005/08/22 18:35:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_xxx.h,v 1.9 2005/08/24 17:26:38 bzfpfend Exp $"
 
 /**@file   branch_xxx.h
  * @brief  xxx branching rule

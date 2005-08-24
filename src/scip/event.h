@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.h,v 1.39 2005/08/22 18:35:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.h,v 1.40 2005/08/24 17:26:45 bzfpfend Exp $"
 
 /**@file   event.h
  * @brief  internal methods for managing events
@@ -44,7 +44,7 @@
 
 
 /*
- * SCIP_Event handler methods
+ * Event handler methods
  */
 
 /** creates an event handler */
@@ -111,7 +111,7 @@ SCIP_RETCODE SCIPeventhdlrExec(
 
 
 /*
- * SCIP_Event methods
+ * Event methods
  */
 
 /** creates an event for an addition of a variable to the problem */
@@ -198,7 +198,7 @@ SCIP_RETCODE SCIPeventChgType(
    SCIP_EVENTTYPE        eventtype           /**< new event type */
    );
 
-/** sets node for a node or SCIP_LP event */
+/** sets node for a node or LP event */
 extern
 SCIP_RETCODE SCIPeventChgNode(
    SCIP_EVENT*           event,              /**< event */
@@ -218,7 +218,7 @@ SCIP_RETCODE SCIPeventProcess(
    SCIP_EVENT*           event,              /**< event */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PRIMAL*          primal,             /**< primal data; only needed for objchanged events */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data; only needed for obj/boundchanged events */
+   SCIP_LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for boundchange events */
    SCIP_EVENTFILTER*     eventfilter         /**< event filter for global events; not needed for variable specific events */
    );
@@ -226,7 +226,7 @@ SCIP_RETCODE SCIPeventProcess(
 
 
 /*
- * SCIP_Event filter methods
+ * Event filter methods
  */
 
 /** creates an event filter */
@@ -279,7 +279,7 @@ SCIP_RETCODE SCIPeventfilterProcess(
 
 
 /*
- * SCIP_Event queue methods
+ * Event queue methods
  */
 
 /** creates an event queue */
@@ -301,7 +301,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PRIMAL*          primal,             /**< primal data; only needed for objchanged events */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data; only needed for obj/boundchanged events */
+   SCIP_LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for boundchange events */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events; not needed for variable specific events */
    SCIP_EVENT**          event               /**< pointer to event to add to the queue; will be NULL after queue addition */
@@ -320,7 +320,7 @@ SCIP_RETCODE SCIPeventqueueProcess(
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTFILTER*     eventfilter         /**< event filter for global (not variable dependent) events */
    );

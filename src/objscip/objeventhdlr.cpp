@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objeventhdlr.cpp,v 1.3 2005/08/22 18:35:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objeventhdlr.cpp,v 1.4 2005/08/24 17:26:34 bzfpfend Exp $"
 
 /**@file   objeventhdlr.cpp
  * @brief  C++ wrapper for event handlers

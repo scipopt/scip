@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.20 2005/08/22 18:35:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.21 2005/08/24 17:26:47 bzfpfend Exp $"
 
 /**@file   heur_simplerounding.c
- * @brief  simple and fast SCIP_LP rounding heuristic
+ * @brief  simple and fast LP rounding heuristic
  * @author Tobias Achterberg
  */
 
@@ -30,7 +30,7 @@
 
 
 #define HEUR_NAME             "simplerounding"
-#define HEUR_DESC             "simple and fast SCIP_LP rounding heuristic"
+#define HEUR_DESC             "simple and fast LP rounding heuristic"
 #define HEUR_DISPCHAR         'r'
 #define HEUR_PRIORITY         0
 #define HEUR_FREQ             1
@@ -126,14 +126,14 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
 
    *result = SCIP_DIDNOTRUN;
 
-   /* only call heuristic, if an optimal SCIP_LP solution is at hand */
+   /* only call heuristic, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
    /* get fractional variables, that should be integral */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL) );
 
-   /* only call heuristic, if SCIP_LP solution is fractional */
+   /* only call heuristic, if LP solution is fractional */
    if( nlpcands == 0 )
       return SCIP_OKAY;
 
@@ -147,7 +147,7 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
    sol = heurdata->sol;
    assert(sol != NULL);
 
-   /* copy the current SCIP_LP solution to the working solution */
+   /* copy the current LP solution to the working solution */
    SCIP_CALL( SCIPlinkLPSol(scip, sol) );
 
    /* round all roundable fractional columns in the corresponding direction as long as no unroundable column was found */
@@ -194,7 +194,7 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
       SCIP_Bool stored;
 
       /* check solution for feasibility, and add it to solution store if possible
-       * neither integrality nor feasibility of SCIP_LP rows has to be checked, because all fractional
+       * neither integrality nor feasibility of LP rows has to be checked, because all fractional
        * variables were already moved in feasible direction to the next integer
        */
       SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, &stored) );

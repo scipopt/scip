@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.c,v 1.22 2005/08/22 18:35:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.c,v 1.23 2005/08/24 17:26:47 bzfpfend Exp $"
 
 /**@file   history.c
  * @brief  methods for branching and inference history
@@ -116,13 +116,13 @@ void SCIPhistoryUnite(
    history->branchdepthsum[1] += addhistory->branchdepthsum[1-d];
 }
 
-/** updates the pseudo costs for a change of "solvaldelta" in the variable's SCIP_LP solution value and a change of "objdelta"
+/** updates the pseudo costs for a change of "solvaldelta" in the variable's LP solution value and a change of "objdelta"
  *  in the LP's objective value
  */
 void SCIPhistoryUpdatePseudocost(
    SCIP_HISTORY*         history,            /**< branching and inference history */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             solvaldelta,        /**< difference of variable's new SCIP_LP value - old SCIP_LP value */
+   SCIP_Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
    SCIP_Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
    SCIP_Real             weight              /**< weight of this update in pseudo cost sum (added to pscostcount) */
    )
@@ -214,7 +214,7 @@ SCIP_BRANCHDIR SCIPbranchdirOpposite(
 /** returns the expected dual gain for moving the corresponding variable by "solvaldelta" */
 SCIP_Real SCIPhistoryGetPseudocost(
    SCIP_HISTORY*         history,            /**< branching and inference history */
-   SCIP_Real             solvaldelta         /**< difference of variable's new SCIP_LP value - old SCIP_LP value */
+   SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
    )
 {
    assert(history != NULL);

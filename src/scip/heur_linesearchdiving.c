@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_linesearchdiving.c,v 1.23 2005/08/22 18:35:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_linesearchdiving.c,v 1.24 2005/08/24 17:26:46 bzfpfend Exp $"
 
 /**@file   heur_linesearchdiving.c
  * @brief  linesearchdiving primal heuristic
@@ -48,8 +48,8 @@
 
 #define DEFAULT_MINRELDEPTH         0.0 /**< minimal relative depth to start diving */
 #define DEFAULT_MAXRELDEPTH         1.0 /**< maximal relative depth to start diving */
-#define DEFAULT_MAXLPITERQUOT      0.05 /**< maximal fraction of diving SCIP_LP iterations compared to node SCIP_LP iterations */
-#define DEFAULT_MAXLPITEROFS       1000 /**< additional number of allowed SCIP_LP iterations */
+#define DEFAULT_MAXLPITERQUOT      0.05 /**< maximal fraction of diving LP iterations compared to node LP iterations */
+#define DEFAULT_MAXLPITEROFS       1000 /**< additional number of allowed LP iterations */
 #define DEFAULT_MAXDIVEUBQUOT       0.8 /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
                                               *   where diving is performed (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOT      0.0 /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
@@ -57,7 +57,7 @@
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
 
-#define MINLPITER                 10000 /**< minimal number of SCIP_LP iterations allowed in each SCIP_LP solving call */
+#define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
 
 
 
@@ -71,15 +71,15 @@ struct SCIP_HeurData
    SCIP_SOL*             sol;                /**< working solution */
    SCIP_Real             minreldepth;        /**< minimal relative depth to start diving */
    SCIP_Real             maxreldepth;        /**< maximal relative depth to start diving */
-   SCIP_Real             maxlpiterquot;      /**< maximal fraction of diving SCIP_LP iterations compared to node SCIP_LP iterations */
-   int                   maxlpiterofs;       /**< additional number of allowed SCIP_LP iterations */
+   SCIP_Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to node LP iterations */
+   int                   maxlpiterofs;       /**< additional number of allowed LP iterations */
    SCIP_Real             maxdiveubquot;      /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
                                               *   where diving is performed (0.0: no limit) */
    SCIP_Real             maxdiveavgquot;     /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
                                               *   where diving is performed (0.0: no limit) */
    SCIP_Real             maxdiveubquotnosol; /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
    SCIP_Real             maxdiveavgquotnosol;/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
-   SCIP_Longint          nlpiterations;      /**< SCIP_LP iterations used in this heuristic */
+   SCIP_Longint          nlpiterations;      /**< LP iterations used in this heuristic */
 };
 
 
@@ -212,11 +212,11 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
 
    *result = SCIP_DELAYED;
 
-   /* only call heuristic, if an optimal SCIP_LP solution is at hand */
+   /* only call heuristic, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
-   /* only call heuristic, if the SCIP_LP solution is basic (which allows fast resolve in diving) */
+   /* only call heuristic, if the LP solution is basic (which allows fast resolve in diving) */
    if( !SCIPisLPSolBasic(scip) )
       return SCIP_OKAY;
 
@@ -237,18 +237,18 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
    if( depth < heurdata->minreldepth*maxdepth || depth > heurdata->maxreldepth*maxdepth )
       return SCIP_OKAY;
 
-   /* calculate the maximal number of SCIP_LP iterations until heuristic is aborted */
+   /* calculate the maximal number of LP iterations until heuristic is aborted */
    nlpiterations = SCIPgetNNodeLPIterations(scip);
    ncalls = SCIPheurGetNCalls(heur);
    nsolsfound = SCIPheurGetNSolsFound(heur);
    maxnlpiterations = (SCIP_Longint)((1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations);
    maxnlpiterations += heurdata->maxlpiterofs;
 
-   /* don't try to dive, if we took too many SCIP_LP iterations during diving */
+   /* don't try to dive, if we took too many LP iterations during diving */
    if( heurdata->nlpiterations >= maxnlpiterations )
       return SCIP_OKAY;
 
-   /* allow at least a certain number of SCIP_LP iterations in this dive */
+   /* allow at least a certain number of LP iterations in this dive */
    maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + MINLPITER);
 
    /* calculate the objective search bound */
@@ -291,7 +291,7 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
    /* start diving */
    SCIP_CALL( SCIPstartProbing(scip) );
 
-   /* get SCIP_LP objective value, and fractional variables, that should be integral */
+   /* get LP objective value, and fractional variables, that should be integral */
    lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    objval = SCIPgetLPObjval(scip);
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
@@ -318,7 +318,7 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
 
       /* choose variable fixing:
        * - in the projected space of fractional variables, extend the line segment connecting the root solution and
-       *   the current SCIP_LP solution up to the point, where one of the fractional variables becomes integral
+       *   the current LP solution up to the point, where one of the fractional variables becomes integral
        * - round this variable to the integral value
        */
       bestcand = 0;
@@ -364,7 +364,7 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
          }
       }
 
-      /* create solution from diving SCIP_LP and try to round it */
+      /* create solution from diving LP and try to round it */
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
       SCIP_CALL( SCIProundSol(scip, heurdata->sol, &success) );
       if( success )
@@ -397,7 +397,7 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
       if( bestcandroundup )
       {
          /* round variable up */
-         SCIPdebugMessage("  dive %d/%d, SCIP_LP iter %lld/%lld: var <%s>, sol=%g, root=%g, [%g,%g] -> [%g,%g]\n",
+         SCIPdebugMessage("  dive %d/%d, LP iter %lld/%lld: var <%s>, sol=%g, root=%g, [%g,%g] -> [%g,%g]\n",
             divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
             SCIPvarGetName(var), lpcandssol[bestcand], SCIPvarGetRootSol(var),
             SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
@@ -407,7 +407,7 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
       else
       {
          /* round variable down */
-         SCIPdebugMessage("  dive %d/%d, SCIP_LP iter %lld/%lld: var <%s>, sol=%g, root=%g, [%g,%g] -> [%g,%g]\n",
+         SCIPdebugMessage("  dive %d/%d, LP iter %lld/%lld: var <%s>, sol=%g, root=%g, [%g,%g] -> [%g,%g]\n",
             divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
             SCIPvarGetName(var), lpcandssol[bestcand], SCIPvarGetRootSol(var),
             SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
@@ -420,7 +420,7 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
       if( cutoff )
          break;
 
-      /* resolve the diving SCIP_LP */
+      /* resolve the diving LP */
       nlpiterations = SCIPgetNLPIterations(scip);
       SCIP_CALL( SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
       if( lperror )
@@ -429,7 +429,7 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
       /* update iteration count */
       heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
 
-      /* get SCIP_LP solution status, objective value, and fractional variables, that should be integral */
+      /* get LP solution status, objective value, and fractional variables, that should be integral */
       lpsolstat = SCIPgetLPSolstat(scip);
       if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
       {
@@ -461,7 +461,7 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
    /* check if a solution has been found */
    if( nlpcands == 0 && !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
    {
-      /* create solution from diving SCIP_LP */
+      /* create solution from diving LP */
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
       SCIPdebugMessage("linesearchdiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
@@ -520,11 +520,11 @@ SCIP_RETCODE SCIPincludeHeurLinesearchdiving(
          &heurdata->maxreldepth, DEFAULT_MAXRELDEPTH, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/linesearchdiving/maxlpiterquot", 
-         "maximal fraction of diving SCIP_LP iterations compared to node SCIP_LP iterations",
+         "maximal fraction of diving LP iterations compared to node LP iterations",
          &heurdata->maxlpiterquot, DEFAULT_MAXLPITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/linesearchdiving/maxlpiterofs", 
-         "additional number of allowed SCIP_LP iterations",
+         "additional number of allowed LP iterations",
          &heurdata->maxlpiterofs, DEFAULT_MAXLPITEROFS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/linesearchdiving/maxdiveubquot",

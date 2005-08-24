@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.h,v 1.23 2005/08/22 18:35:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: message.h,v 1.24 2005/08/24 17:26:50 bzfpfend Exp $"
 
 /**@file   message.h
  * @brief  message output methods
@@ -52,6 +52,7 @@
 
 
 #define infoMessage                     SCIPmessagePrintInfo
+
 #define printErrorHeader                SCIPmessagePrintErrorHeader
 #define printError                      SCIPmessagePrintError
 #define printInfo                       SCIPmessagePrintInfo

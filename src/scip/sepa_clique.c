@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.15 2005/08/22 18:35:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.16 2005/08/24 17:26:57 bzfpfend Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -51,7 +51,7 @@ struct SCIP_SepaData
 {
    TCLIQUE_GRAPH*        tcliquegraph;       /**< tclique graph data structure */
    SCIP*                 scip;               /**< SCIP data structure */
-   SCIP_Real*            varsolvals;         /**< SCIP_LP solution of binary variables (contained in a 3-clique in implgraph) */
+   SCIP_Real*            varsolvals;         /**< LP solution of binary variables (contained in a 3-clique in implgraph) */
    SCIP_Real             scaleval;           /**< factor for scaling weights */
    int                   maxtreenodes;       /**< maximal number of nodes in branch and bound tree (-1: no limit) */
    int                   ncuts;              /**< number of cuts found */
@@ -63,14 +63,14 @@ struct SCIP_SepaData
 struct TCLIQUE_Graph
 {
    SCIP_VAR**            vars;               /**< active problem variables (or negated variables) the nodes belong to */
-   TCLIQUE_WEIGHT*       weights;            /**< weight of nodes */
+   TCLIQUE_WEIGHT*  weights;	        /**< weight of nodes */
    int*                  adjnodesidxs;       /**< indices in adjnodes array of first adjacent nodes for each node */
    int*                  cliqueidsidxs;      /**< indices in cliqueids array of first clique the node is contained in */
-   int*                  adjnodes;           /**< adjacent nodes of edges */
+   int*                  adjnodes;	        /**< adjacent nodes of edges */
    int*                  cliqueids;          /**< unique ids of cliques */
    int                   adjnodessize;       /**< size of adjnodes array */
    int                   cliqueidssize;      /**< size of cliqueids array */
-   int                   nnodes;             /**< number of nodes in graph */
+   int                   nnodes;		/**< number of nodes in graph */
 };
 
 

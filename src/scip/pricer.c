@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.c,v 1.16 2005/08/22 18:35:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer.c,v 1.17 2005/08/24 17:26:52 bzfpfend Exp $"
 
 /**@file   pricer.c
  * @brief  methods for variable pricers
@@ -236,7 +236,7 @@ SCIP_RETCODE SCIPpricerExitsol(
    return SCIP_OKAY;
 }
 
-/** activates pricer such that it is called in SCIP_LP solving loop */
+/** activates pricer such that it is called in LP solving loop */
 SCIP_RETCODE SCIPpricerActivate(
    SCIP_PRICER*          pricer,             /**< variable pricer */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -256,7 +256,7 @@ SCIP_RETCODE SCIPpricerActivate(
    return SCIP_OKAY;
 }
 
-/** deactivates pricer such that it is no longer called in SCIP_LP solving loop */
+/** deactivates pricer such that it is no longer called in LP solving loop */
 SCIP_RETCODE SCIPpricerDeactivate(
    SCIP_PRICER*          pricer,             /**< variable pricer */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -364,7 +364,7 @@ SCIP_RETCODE SCIPpricerExec(
    SCIP_PRICER*          pricer,             /**< variable pricer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< transformed problem */
-   SCIP_LP*              lp                  /**< SCIP_LP data */
+   SCIP_LP*              lp                  /**< LP data */
    )
 {
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )

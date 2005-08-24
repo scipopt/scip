@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique.h,v 1.2 2005/08/22 18:35:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique.h,v 1.3 2005/08/24 17:27:02 bzfpfend Exp $"
 
 /**@file   tclique.h
  * @brief  tclique user interface

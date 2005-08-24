@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.90 2005/08/22 18:35:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.91 2005/08/24 17:26:42 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -55,7 +55,7 @@
 #define CONFLICTHDLR_DESC      "conflict handler creating set covering constraints"
 #define CONFLICTHDLR_PRIORITY  LINCONSUPGD_PRIORITY
 
-/*#define VARUSES*/  /* activate variable usage counting, that is necessary for SCIP_LP and pseudo branching */
+/*#define VARUSES*/  /* activate variable usage counting, that is necessary for LP and pseudo branching */
 #ifdef BRANCHLP
 #define MINBRANCHWEIGHT             0.3  /**< minimum weight of both sets in binary set branching */
 #define MAXBRANCHWEIGHT             0.7  /**< maximum weight of both sets in binary set branching */
@@ -76,7 +76,7 @@ struct SCIP_ConshdlrData
 /** constraint data for set partitioning / packing / covering constraints */
 struct SCIP_ConsData
 {
-   SCIP_ROW*             row;                /**< SCIP_LP row, if constraint is already stored in SCIP_LP row format */
+   SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
    SCIP_VAR**            vars;               /**< variables of the constraint */
    int                   varssize;           /**< size of vars array */
    int                   nvars;              /**< number of variables in the constraint */
@@ -638,7 +638,7 @@ SCIP_RETCODE addCoef(
    /* install the rounding locks for the new variable */
    SCIP_CALL( lockRounding(scip, cons, var) );
 
-   /* add the new coefficient to the SCIP_LP row */
+   /* add the new coefficient to the LP row */
    if( consdata->row != NULL )
    {
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, var, 1.0) );
@@ -1063,7 +1063,7 @@ SCIP_Bool checkCons(
    }
 }
 
-/** creates an SCIP_LP row in a set partitioning / packing / covering constraint data object */
+/** creates an LP row in a set partitioning / packing / covering constraint data object */
 static
 SCIP_RETCODE createRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1105,7 +1105,7 @@ SCIP_RETCODE createRow(
    return SCIP_OKAY;
 }
 
-/** adds setppc constraint as cut to the SCIP_LP */
+/** adds setppc constraint as cut to the LP */
 static
 SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1119,7 +1119,7 @@ SCIP_RETCODE addCut(
    
    if( consdata->row == NULL )
    {
-      /* convert set partitioning constraint data into SCIP_LP row */
+      /* convert set partitioning constraint data into LP row */
       SCIP_CALL( createRow(scip, cons) );
    }
    assert(consdata->row != NULL);
@@ -1127,7 +1127,7 @@ SCIP_RETCODE addCut(
 
    SCIPdebugMessage("adding constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
 
-   /* insert SCIP_LP row as cut */
+   /* insert LP row as cut */
    SCIP_CALL( SCIPaddCut(scip, consdata->row, FALSE) );
 
    return SCIP_OKAY;
@@ -1160,7 +1160,7 @@ SCIP_RETCODE separateCons(
    assert(0 <= consdata->nfixedzeros && consdata->nfixedzeros <= consdata->nvars);
    assert(0 <= consdata->nfixedones && consdata->nfixedones <= consdata->nvars);
 
-   /* skip constraints already in the SCIP_LP */
+   /* skip constraints already in the LP */
    if( consdata->row != NULL && SCIProwIsInLP(consdata->row) )
       return SCIP_OKAY;
 
@@ -1194,7 +1194,7 @@ SCIP_RETCODE separateCons(
 
    if( addcut )
    {
-      /* insert SCIP_LP row as cut */
+      /* insert LP row as cut */
       SCIP_CALL( addCut(scip, cons) );
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       *separated = TRUE;
@@ -1211,7 +1211,7 @@ SCIP_RETCODE enforcePseudo(
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
    SCIP_Bool*            infeasible,         /**< pointer to store TRUE, if the constraint was infeasible */
    SCIP_Bool*            reduceddom,         /**< pointer to store TRUE, if a domain reduction was found */
-   SCIP_Bool*            solvelp             /**< pointer to store TRUE, if the SCIP_LP has to be solved */
+   SCIP_Bool*            solvelp             /**< pointer to store TRUE, if the LP has to be solved */
    )
 {
    SCIP_Bool addcut;
@@ -1253,7 +1253,7 @@ SCIP_RETCODE enforcePseudo(
 
    if( addcut )
    {
-      /* a cut must be added to the SCIP_LP -> we have to solve the SCIP_LP immediately */
+      /* a cut must be added to the LP -> we have to solve the LP immediately */
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       *solvelp = TRUE;
    }
@@ -1383,7 +1383,7 @@ SCIP_DECL_CONSTRANS(consTransSetppc)
    
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
-   assert(sourcedata->row == NULL);  /* in original problem, there cannot be SCIP_LP rows */
+   assert(sourcedata->row == NULL);  /* in original problem, there cannot be LP rows */
 
    /* create constraint data for target constraint */
    SCIP_CALL( consdataCreateTransformed(scip, &targetdata, sourcedata->nvars, sourcedata->vars,
@@ -1403,7 +1403,7 @@ SCIP_DECL_CONSTRANS(consTransSetppc)
 }
 
 
-/** SCIP_LP initialization method of constraint handler */
+/** LP initialization method of constraint handler */
 static
 SCIP_DECL_CONSINITLP(consInitlpSetppc)
 {  /*lint --e{715}*/
@@ -1488,7 +1488,7 @@ SCIP_RETCODE branchLP(
    int i;
    int j;
 
-   /**@todo use a better set partitioning / packing / covering branching on SCIP_LP solution (use SOS branching) */
+   /**@todo use a better set partitioning / packing / covering branching on LP solution (use SOS branching) */
 
    assert(conshdlr != NULL);
    assert(result != NULL);
@@ -1749,7 +1749,7 @@ SCIP_RETCODE branchPseudo(
 
 
 
-/** constraint enforcing method of constraint handler for SCIP_LP solutions */
+/** constraint enforcing method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSENFOLP(consEnfolpSetppc)
 {  /*lint --e{715}*/
@@ -2436,15 +2436,15 @@ SCIP_RETCODE createConsSetppc(
    int                   nvars,              /**< number of variables in the constraint */
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
    SCIP_SETPPCTYPE       setppctype,         /**< type of constraint: set partitioning, packing, or covering constraint */
-   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
-   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
+   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -2503,15 +2503,15 @@ SCIP_RETCODE createNormalizedSetppc(
    SCIP_Real*            vals,               /**< array with coefficients (+1.0 or -1.0) */
    int                   mult,               /**< multiplier on the coefficients(+1 or -1) */
    SCIP_SETPPCTYPE       setppctype,         /**< type of constraint: set partitioning, packing, or covering constraint */
-   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
-   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
+   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    SCIP_VAR** transvars;
@@ -2775,15 +2775,15 @@ SCIP_RETCODE SCIPcreateConsSetpart(
    const char*           name,               /**< name of constraint */
    int                   nvars,              /**< number of variables in the constraint */
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
-   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
+   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    return createConsSetppc(scip, cons, name, nvars, vars, SCIP_SETPPCTYPE_PARTITIONING,
@@ -2797,15 +2797,15 @@ SCIP_RETCODE SCIPcreateConsSetpack(
    const char*           name,               /**< name of constraint */
    int                   nvars,              /**< number of variables in the constraint */
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
-   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
+   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    return createConsSetppc(scip, cons, name, nvars, vars, SCIP_SETPPCTYPE_PACKING,
@@ -2819,15 +2819,15 @@ SCIP_RETCODE SCIPcreateConsSetcover(
    const char*           name,               /**< name of constraint */
    int                   nvars,              /**< number of variables in the constraint */
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
-   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
+   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    return createConsSetppc(scip, cons, name, nvars, vars, SCIP_SETPPCTYPE_COVERING,
@@ -2857,7 +2857,7 @@ SCIP_RETCODE SCIPaddCoefSetppc(
    return SCIP_OKAY;
 }
 
-/** gets the dual solution of the set partitioning / packing / covering constraint in the current SCIP_LP */
+/** gets the dual solution of the set partitioning / packing / covering constraint in the current LP */
 SCIP_Real SCIPgetDualsolSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -2880,7 +2880,7 @@ SCIP_Real SCIPgetDualsolSetppc(
       return 0.0;
 }
 
-/** gets the dual farkas value of the set partitioning / packing / covering constraint in the current infeasible SCIP_LP */
+/** gets the dual farkas value of the set partitioning / packing / covering constraint in the current infeasible LP */
 SCIP_Real SCIPgetDualfarkasSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */

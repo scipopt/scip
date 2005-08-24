@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.82 2005/08/22 18:35:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.83 2005/08/24 17:26:43 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -147,7 +147,7 @@
 #define SCIP_HASHSIZE_CUTPOOLS   131101 /**< size of hash table in cut pools */
 #define SCIP_HASHSIZE_CLIQUES    131101 /**< size of hash table in clique tables */
 #define SCIP_HASHSIZE_PARAMS       4099 /**< size of hash table in parameter name tables */
-#define SCIP_HASHSIZE_VBC        131101 /**< size of hash map for node -> nodenum mapping used for SCIP_VBC output */
+#define SCIP_HASHSIZE_VBC        131101 /**< size of hash map for node -> nodenum mapping used for VBC output */
 
 /*#define BMS_NOBLOCKMEM*/
 

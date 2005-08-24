@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.52 2005/08/22 18:35:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.53 2005/08/24 17:26:44 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -39,7 +39,7 @@
 
 
 /*
- * SCIP_Event handler methods
+ * Event handler methods
  */
 
 /** creates an event handler */
@@ -251,7 +251,7 @@ SCIP_Bool SCIPeventhdlrIsInitialized(
 
 
 /*
- * SCIP_Event methods
+ * Event methods
  */
 
 /** creates an event for an addition of a variable to the problem */
@@ -608,7 +608,7 @@ SCIP_Real SCIPeventGetNewbound(
    }  /*lint !e788*/
 }
 
-/** gets node for a node or SCIP_LP event */
+/** gets node for a node or LP event */
 SCIP_NODE* SCIPeventGetNode(
    SCIP_EVENT*           event               /**< event */
    )
@@ -617,14 +617,14 @@ SCIP_NODE* SCIPeventGetNode(
    
    if( (event->eventtype & (SCIP_EVENTTYPE_NODEEVENT | SCIP_EVENTTYPE_LPEVENT)) == 0 )
    {
-      SCIPerrorMessage("event is neither node nor SCIP_LP event\n");
+      SCIPerrorMessage("event is neither node nor LP event\n");
       return NULL;
    }
 
    return event->data.node;
 }
 
-/** sets node for a node or SCIP_LP event */
+/** sets node for a node or LP event */
 SCIP_RETCODE SCIPeventChgNode(
    SCIP_EVENT*           event,              /**< event */
    SCIP_NODE*            node                /**< new node */
@@ -634,7 +634,7 @@ SCIP_RETCODE SCIPeventChgNode(
 
    if( (event->eventtype & (SCIP_EVENTTYPE_NODEEVENT | SCIP_EVENTTYPE_LPEVENT)) == 0 )
    {
-      SCIPerrorMessage("event is neither node nor SCIP_LP event\n");
+      SCIPerrorMessage("event is neither node nor LP event\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -683,7 +683,7 @@ SCIP_RETCODE SCIPeventProcess(
    SCIP_EVENT*           event,              /**< event */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PRIMAL*          primal,             /**< primal data; only needed for objchanged events */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data; only needed for obj/boundchanged events */
+   SCIP_LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for boundchange events */
    SCIP_EVENTFILTER*     eventfilter         /**< event filter for global events; not needed for variable specific events */
    )
@@ -735,7 +735,7 @@ SCIP_RETCODE SCIPeventProcess(
       assert(var->eventqueueindexobj == -1);
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
 
-      /* inform SCIP_LP about the objective change */
+      /* inform LP about the objective change */
       if( SCIPvarGetProbindex(var) >= 0 )
       {
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
@@ -758,7 +758,7 @@ SCIP_RETCODE SCIPeventProcess(
       assert(var != NULL);
       assert(var->eventqueueindexlb == -1);
 
-      /* inform SCIP_LP about bound change and update branching candidates */
+      /* inform LP about bound change and update branching candidates */
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       {
          assert(SCIPvarGetProbindex(var) >= 0);
@@ -781,7 +781,7 @@ SCIP_RETCODE SCIPeventProcess(
       assert(var != NULL);
       assert(var->eventqueueindexub == -1);
 
-      /* inform SCIP_LP about bound change and update branching candidates */
+      /* inform LP about bound change and update branching candidates */
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       {
          assert(SCIPvarGetProbindex(var) >= 0);
@@ -825,7 +825,7 @@ SCIP_RETCODE SCIPeventProcess(
 
 
 /*
- * SCIP_Event filter methods
+ * Event filter methods
  */
 
 /** resizes eventfilter arrays to be able to store at least num entries */
@@ -1181,7 +1181,7 @@ SCIP_RETCODE SCIPeventfilterProcess(
 
 
 /*
- * SCIP_Event queue methods
+ * Event queue methods
  */
 
 /** resizes events array to be able to store at least num entries */
@@ -1270,7 +1270,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PRIMAL*          primal,             /**< primal data; only needed for objchanged events */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data; only needed for obj/boundchanged events */
+   SCIP_LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for boundchange events */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events; not needed for variable specific events */
    SCIP_EVENT**          event               /**< pointer to event to add to the queue; will be NULL after queue addition */
@@ -1498,7 +1498,7 @@ SCIP_RETCODE SCIPeventqueueProcess(
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTFILTER*     eventfilter         /**< event filter for global (not variable dependent) events */
    )

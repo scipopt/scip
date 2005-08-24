@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.25 2005/08/22 18:35:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.26 2005/08/24 17:26:34 bzfpfend Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -209,7 +209,7 @@ SCIP_DECL_CONSTRANS(consTransObj)
 }
 
 
-/** SCIP_LP initialization method of constraint handler */
+/** LP initialization method of constraint handler */
 static
 SCIP_DECL_CONSINITLP(consInitlpObj)
 {  /*lint --e{715}*/
@@ -243,7 +243,7 @@ SCIP_DECL_CONSSEPA(consSepaObj)
 }
 
 
-/** constraint enforcing method of constraint handler for SCIP_LP solutions */
+/** constraint enforcing method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSENFOLP(consEnfolpObj)
 {  /*lint --e{715}*/

@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.15 2005/08/22 18:35:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.16 2005/08/24 17:27:07 bzfpfend Exp $"
 
 /**@file   vbc.c
- * @brief  methods for SCIP_VBC Tool output
+ * @brief  methods for VBC Tool output
  * @author Tobias Achterberg
  */
 
@@ -39,7 +39,7 @@
 
 
 
-/** node colors in SCIP_VBC output:
+/** node colors in VBC output:
  *   1: indian red
  *   2: green
  *   3: light gray
@@ -93,9 +93,9 @@ SCIP_VAR* getBranchVar(
    return domchgbound->boundchgs[0].var;
 }
 
-/** creates SCIP_VBC Tool data structure */
+/** creates VBC Tool data structure */
 SCIP_RETCODE SCIPvbcCreate(
-   SCIP_VBC**            vbc                 /**< pointer to store the SCIP_VBC information */
+   SCIP_VBC**            vbc                 /**< pointer to store the VBC information */
    )
 {
    SCIP_ALLOC( BMSallocMemory(vbc) );
@@ -108,9 +108,9 @@ SCIP_RETCODE SCIPvbcCreate(
    return SCIP_OKAY;
 }
 
-/** frees SCIP_VBC Tool data structure */
+/** frees VBC Tool data structure */
 void SCIPvbcFree(
-   SCIP_VBC**            vbc                 /**< pointer to store the SCIP_VBC information */
+   SCIP_VBC**            vbc                 /**< pointer to store the VBC information */
    )
 {
    assert(vbc != NULL);
@@ -121,9 +121,9 @@ void SCIPvbcFree(
    BMSfreeMemory(vbc);
 }
 
-/** initializes SCIP_VBC information and creates a file for SCIP_VBC output */
+/** initializes VBC information and creates a file for VBC output */
 SCIP_RETCODE SCIPvbcInit(
-   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_VBC*             vbc,                /**< VBC information */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
@@ -136,7 +136,7 @@ SCIP_RETCODE SCIPvbcInit(
       return SCIP_OKAY;
 
    SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
-      "storing SCIP_VBC information in file <%s>\n", set->vbc_filename);
+      "storing VBC information in file <%s>\n", set->vbc_filename);
    vbc->file = fopen(set->vbc_filename, "w");
    vbc->timestep = 0;
    vbc->userealtime = set->vbc_realtime;
@@ -158,9 +158,9 @@ SCIP_RETCODE SCIPvbcInit(
    return SCIP_OKAY;
 }
 
-/** closes the SCIP_VBC output file */
+/** closes the VBC output file */
 void SCIPvbcExit(
-   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
@@ -169,7 +169,7 @@ void SCIPvbcExit(
 
    if( vbc->file != NULL )
    {
-      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL, "closing SCIP_VBC information file\n");
+      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL, "closing VBC information file\n");
       
       fclose(vbc->file);
       vbc->file = NULL;
@@ -178,10 +178,10 @@ void SCIPvbcExit(
    }
 }
 
-/** prints current solution time to SCIP_VBC output file */
+/** prints current solution time to VBC output file */
 static
 void printTime(
-   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat                /**< problem statistics */
    )
 {
@@ -216,9 +216,9 @@ void printTime(
    SCIPmessageFPrintInfo(vbc->file, "%02d:%02d:%02d.%02d ", hours, mins, secs, hunds);
 }
 
-/** creates a new node entry in the SCIP_VBC output file */
+/** creates a new node entry in the VBC output file */
 SCIP_RETCODE SCIPvbcNewChild(
-   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< new node, that was created */
    )
@@ -231,14 +231,14 @@ SCIP_RETCODE SCIPvbcNewChild(
    assert(stat != NULL);
    assert(node != NULL);
 
-   /* check, if SCIP_VBC output should be created */
+   /* check, if VBC output should be created */
    if( vbc->file == NULL )
       return SCIP_OKAY;
 
    /* insert mapping node -> nodenum into hash map */
    if( stat->ncreatednodesrun >= (SCIP_Longint)INT_MAX )
    {
-      SCIPerrorMessage("too many nodes to store in the SCIP_VBC file\n");
+      SCIPerrorMessage("too many nodes to store in the VBC file\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -266,7 +266,7 @@ SCIP_RETCODE SCIPvbcNewChild(
 /** changes the color of the node to the given color */
 static
 void vbcSetColor(
-   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node,               /**< node to change color for */
    VBCCOLOR         color               /**< new color of node, or -1 */
@@ -288,7 +288,7 @@ void vbcSetColor(
 
 /** changes the color of the node to the color of solved nodes */
 void SCIPvbcSolvedNode(
-   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< new node, that was created */
    )
@@ -300,7 +300,7 @@ void SCIPvbcSolvedNode(
    assert(stat != NULL);
    assert(node != NULL);
 
-   /* check, if SCIP_VBC output should be created */
+   /* check, if VBC output should be created */
    if( vbc->file == NULL )
       return;
 
@@ -321,7 +321,7 @@ void SCIPvbcSolvedNode(
 
 /** changes the color of the node to the color of cutoff nodes */
 void SCIPvbcCutoffNode(
-   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< new node, that was created */
    )
@@ -331,7 +331,7 @@ void SCIPvbcCutoffNode(
 
 /** changes the color of the node to the color of nodes where a conflict clause was found */
 void SCIPvbcFoundConflict(
-   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< new node, that was created */
    )
@@ -341,7 +341,7 @@ void SCIPvbcFoundConflict(
 
 /** changes the color of the node to the color of nodes that were marked to be repropagated */
 void SCIPvbcMarkedRepropagateNode(
-   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< new node, that was created */
    )
@@ -351,7 +351,7 @@ void SCIPvbcMarkedRepropagateNode(
 
 /** changes the color of the node to the color of repropagated nodes */
 void SCIPvbcRepropagatedNode(
-   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< new node, that was created */
    )
@@ -361,7 +361,7 @@ void SCIPvbcRepropagatedNode(
 
 /** changes the color of the node to the color of nodes with a primal solution */
 void SCIPvbcFoundSolution(
-   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< new node, that was created */
    )
@@ -369,16 +369,16 @@ void SCIPvbcFoundSolution(
    vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_SOLUTION);
 }
 
-/** outputs a new global lower bound to the SCIP_VBC output file */
+/** outputs a new global lower bound to the VBC output file */
 void SCIPvbcLowerbound(
-   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Real             lowerbound          /**< new lower bound */
    )
 {
    assert(vbc != NULL);
 
-   /* check, if SCIP_VBC output should be created */
+   /* check, if VBC output should be created */
    if( vbc->file == NULL )
       return;
 
@@ -386,16 +386,16 @@ void SCIPvbcLowerbound(
    SCIPmessageFPrintInfo(vbc->file, "L %f\n", lowerbound);
 }
 
-/** outputs a new global upper bound to the SCIP_VBC output file */
+/** outputs a new global upper bound to the VBC output file */
 void SCIPvbcUpperbound(
-   SCIP_VBC*             vbc,                /**< SCIP_VBC information */
+   SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Real             upperbound          /**< new upper bound */
    )
 {
    assert(vbc != NULL);
 
-   /* check, if SCIP_VBC output should be created */
+   /* check, if VBC output should be created */
    if( vbc->file == NULL )
       return;
 

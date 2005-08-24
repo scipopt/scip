@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.37 2005/08/22 18:35:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.38 2005/08/24 17:26:38 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -37,8 +37,8 @@
 
 #define DEFAULT_MINRELIABLE      1.0    /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
 #define DEFAULT_MAXRELIABLE      8.0    /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
-#define DEFAULT_SBITERQUOT       0.5    /**< maximal fraction of strong branching SCIP_LP iterations compared to normal iters */
-#define DEFAULT_SBITEROFS   100000      /**< additional number of allowed strong branching SCIP_LP iterations */
+#define DEFAULT_SBITERQUOT       0.5    /**< maximal fraction of strong branching LP iterations compared to normal iters */
+#define DEFAULT_SBITEROFS   100000      /**< additional number of allowed strong branching LP iterations */
 #define DEFAULT_MAXLOOKAHEAD     8      /**< maximal number of further variables evaluated without better score */
 #define DEFAULT_INITCAND       100      /**< maximal number of candidates initialized with strong branching per node */
 #define DEFAULT_INITITER         0      /**< iteration limit for strong branching init of pseudo cost entries (0: auto) */
@@ -50,8 +50,8 @@ struct SCIP_BranchruleData
 {
    SCIP_Real             minreliable;        /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
    SCIP_Real             maxreliable;        /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
-   SCIP_Real             sbiterquot;         /**< maximal fraction of strong branching SCIP_LP iterations compared to normal iters */
-   int                   sbiterofs;          /**< additional number of allowed strong branching SCIP_LP iterations */
+   SCIP_Real             sbiterquot;         /**< maximal fraction of strong branching LP iterations compared to normal iters */
+   int                   sbiterofs;          /**< additional number of allowed strong branching LP iterations */
    int                   maxlookahead;       /**< maximal number of further variables evaluated without better score */
    int                   initcand;           /**< maximal number of candidates initialized with strong branching per node */
    int                   inititer;           /**< iteration limit for strong branching init of pseudo cost entries (0: auto) */
@@ -114,7 +114,7 @@ static
 SCIP_RETCODE applyBdchgs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            lpcands,            /**< fractional branching candidates */
-   SCIP_Real*            lpcandssol,         /**< SCIP_LP solution array of branching candidates */
+   SCIP_Real*            lpcandssol,         /**< LP solution array of branching candidates */
    int*                  bdchginds,          /**< bound change index array */
    SCIP_Bool*            bdchgdowninfs,      /**< bound change direction array */
    int                   nbdchgs             /**< number of bound changes */
@@ -184,7 +184,7 @@ SCIP_DECL_BRANCHFREE(branchFreeRelpscost)
 #define branchExitsolRelpscost NULL
 
 
-/** branching execution method for fractional SCIP_LP solutions */
+/** branching execution method for fractional LP solutions */
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
 {  /*lint --e{715}*/
@@ -219,7 +219,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   /* get current SCIP_LP objective bound of the local sub problem and global cutoff bound */
+   /* get current LP objective bound of the local sub problem and global cutoff bound */
    lpobjval = SCIPgetLPObjval(scip);
    cutoffbound = SCIPgetCutoffbound(scip);
 
@@ -287,7 +287,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
       if( !SCIPisLPSolBasic(scip) )
          maxninitcands = 0;
 
-      /* calculate maximal number of strong branching SCIP_LP iterations; if we used too many, don't apply strong branching
+      /* calculate maximal number of strong branching LP iterations; if we used too many, don't apply strong branching
        * any more
        */
       maxnsblpiterations = (SCIP_Longint)(branchruledata->sbiterquot * SCIPgetNNodeLPIterations(scip))
@@ -755,11 +755,11 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          &branchruledata->maxreliable, DEFAULT_MAXRELIABLE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "branching/relpscost/sbiterquot", 
-         "maximal fraction of strong branching SCIP_LP iterations compared to node relaxation SCIP_LP iterations",
+         "maximal fraction of strong branching LP iterations compared to node relaxation LP iterations",
          &branchruledata->sbiterquot, DEFAULT_SBITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/relpscost/sbiterofs", 
-         "additional number of allowed strong branching SCIP_LP iterations",
+         "additional number of allowed strong branching LP iterations",
          &branchruledata->sbiterofs, DEFAULT_SBITEROFS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/relpscost/maxlookahead", 

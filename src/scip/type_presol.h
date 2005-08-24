@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_presol.h,v 1.12 2005/08/22 18:35:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_presol.h,v 1.13 2005/08/24 17:27:05 bzfpfend Exp $"
 
 /**@file   type_presol.h
  * @brief  type definitions for presolvers

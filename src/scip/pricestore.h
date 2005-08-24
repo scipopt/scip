@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.h,v 1.15 2005/08/22 18:35:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.h,v 1.16 2005/08/24 17:26:52 bzfpfend Exp $"
 
 /**@file   pricestore.h
  * @brief  internal methods for storing priced variables
@@ -54,13 +54,13 @@ SCIP_RETCODE SCIPpricestoreFree(
    SCIP_PRICESTORE**     pricestore          /**< pointer to store pricing storage */
    );
 
-/** informs pricing storage, that the setup of the initial SCIP_LP starts now */
+/** informs pricing storage, that the setup of the initial LP starts now */
 extern
 void SCIPpricestoreStartInitialLP(
    SCIP_PRICESTORE*      pricestore          /**< pricing storage */
    );
 
-/** informs pricing storage, that the setup of the initial SCIP_LP is now finished */
+/** informs pricing storage, that the setup of the initial LP is now finished */
 extern
 void SCIPpricestoreEndInitialLP(
    SCIP_PRICESTORE*      pricestore          /**< pricing storage */
@@ -72,7 +72,7 @@ SCIP_RETCODE SCIPpricestoreAddVar(
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_VAR*             var,                /**< priced variable */
    SCIP_Real             score,              /**< pricing score of variable (the larger, the better the variable) */
    SCIP_Bool             root                /**< are we at the root node? */
@@ -85,7 +85,7 @@ SCIP_RETCODE SCIPpricestoreAddBdviolvar(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_VAR*             var                 /**< variable, where zero violates the bounds */
@@ -100,12 +100,12 @@ SCIP_RETCODE SCIPpricestoreAddProbVars(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
-/** adds priced variables to the SCIP_LP */
+/** adds priced variables to the LP */
 extern
 SCIP_RETCODE SCIPpricestoreApplyVars(
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
@@ -114,7 +114,7 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp                  /**< SCIP_LP data */
+   SCIP_LP*              lp                  /**< LP data */
    );
 
 /** reset variables' bounds violated by zero to its original value */
@@ -124,7 +124,7 @@ SCIP_RETCODE SCIPpricestoreResetBounds(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
@@ -165,7 +165,7 @@ int SCIPpricestoreGetNVarsFound(
    SCIP_PRICESTORE*      pricestore          /**< pricing storage */
    );
 
-/** get total number of variables priced into the SCIP_LP so far */
+/** get total number of variables priced into the LP so far */
 extern
 int SCIPpricestoreGetNVarsApplied(
    SCIP_PRICESTORE*      pricestore          /**< pricing storage */

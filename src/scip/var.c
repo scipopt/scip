@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.180 2005/08/22 18:35:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.181 2005/08/24 17:27:06 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -402,7 +402,7 @@ SCIP_RETCODE SCIPboundchgApply(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    int                   depth,              /**< depth in the tree, where the bound change takes place */
@@ -592,7 +592,7 @@ SCIP_RETCODE SCIPboundchgUndo(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
@@ -1041,7 +1041,7 @@ SCIP_RETCODE SCIPdomchgApply(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    int                   depth,              /**< depth in the tree, where the domain change takes place */
@@ -1113,7 +1113,7 @@ SCIP_RETCODE SCIPdomchgUndo(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
@@ -1151,7 +1151,7 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    SCIP_Real             newbound,           /**< new value for bound */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound for var: lower or upper bound */
    SCIP_BOUNDCHGTYPE     boundchgtype,       /**< type of bound change: branching decision or inference */
-   SCIP_Real             lpsolval,           /**< solval of variable in last SCIP_LP on path to node, or SCIP_INVALID if unknown */
+   SCIP_Real             lpsolval,           /**< solval of variable in last LP on path to node, or SCIP_INVALID if unknown */
    SCIP_VAR*             infervar,           /**< variable that was changed (parent of var, or var itself), or NULL */
    SCIP_CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
    SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
@@ -1603,7 +1603,7 @@ SCIP_RETCODE varCreate(
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
-   SCIP_Bool             removeable,         /**< is var's column removeable from the SCIP_LP (due to aging or cleanup)? */
+   SCIP_Bool             removeable,         /**< is var's column removeable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
@@ -1707,7 +1707,7 @@ SCIP_RETCODE SCIPvarCreateOriginal(
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
-   SCIP_Bool             removeable,         /**< is var's column removeable from the SCIP_LP (due to aging or cleanup)? */
+   SCIP_Bool             removeable,         /**< is var's column removeable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
@@ -1749,7 +1749,7 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
-   SCIP_Bool             removeable,         /**< is var's column removeable from the SCIP_LP (due to aging or cleanup)? */
+   SCIP_Bool             removeable,         /**< is var's column removeable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
@@ -1832,7 +1832,7 @@ SCIP_RETCODE varFreeParents(
    SCIP_VAR**            var,                /**< pointer to variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current SCIP_LP data (or NULL, if it's an original variable) */
+   SCIP_LP*              lp                  /**< current LP data (or NULL, if it's an original variable) */
    )
 {
    SCIP_VAR* parentvar;
@@ -1903,7 +1903,7 @@ SCIP_RETCODE varFree(
    SCIP_VAR**            var,                /**< pointer to variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current SCIP_LP data (may be NULL, if it's not a column variable) */
+   SCIP_LP*              lp                  /**< current LP data (may be NULL, if it's not a column variable) */
    )
 {
    assert(blkmem != NULL);
@@ -1923,7 +1923,7 @@ SCIP_RETCODE varFree(
    case SCIP_VARSTATUS_LOOSE:
       break;
    case SCIP_VARSTATUS_COLUMN:
-      SCIP_CALL( SCIPcolFree(&(*var)->data.col, blkmem, set, lp) );  /* free corresponding SCIP_LP column */
+      SCIP_CALL( SCIPcolFree(&(*var)->data.col, blkmem, set, lp) );  /* free corresponding LP column */
       break;
    case SCIP_VARSTATUS_FIXED:
    case SCIP_VARSTATUS_AGGREGATED:
@@ -2011,7 +2011,7 @@ SCIP_RETCODE SCIPvarRelease(
    SCIP_VAR**            var,                /**< pointer to variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current SCIP_LP data (or NULL, if it's an original variable) */
+   SCIP_LP*              lp                  /**< current LP data (or NULL, if it's an original variable) */
    )
 {
    assert(blkmem != NULL);
@@ -2491,14 +2491,14 @@ SCIP_RETCODE SCIPvarGetTransformed(
    return SCIP_OKAY;
 }
 
-/** converts loose transformed variable into column variable, creates SCIP_LP column */
+/** converts loose transformed variable into column variable, creates LP column */
 SCIP_RETCODE SCIPvarColumn(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(var != NULL);
@@ -2524,13 +2524,13 @@ SCIP_RETCODE SCIPvarColumn(
    return SCIP_OKAY;
 }
 
-/** converts column transformed variable back into loose variable, frees SCIP_LP column */
+/** converts column transformed variable back into loose variable, frees LP column */
 SCIP_RETCODE SCIPvarLoose(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(var != NULL);
@@ -2560,7 +2560,7 @@ SCIP_RETCODE SCIPvarLoose(
    return SCIP_OKAY;
 }
 
-/** issues a VARFIXED event on the given variable and all its parents (except SCIP_ORIGINAL parents);
+/** issues a VARFIXED event on the given variable and all its parents (except ORIGINAL parents);
  *  the event issuing on the parents is necessary, because unlike with bound changes, the parent variables
  *  are not informed about a fixing of an active variable they are pointing to
  */
@@ -2602,7 +2602,7 @@ SCIP_RETCODE SCIPvarFix(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             fixedval,           /**< value to fix variable at */
@@ -2756,7 +2756,7 @@ SCIP_RETCODE varUpdateAggregationBounds(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_VAR*             aggvar,             /**< variable y in aggregation x = a*y + c */
@@ -2933,7 +2933,7 @@ SCIP_RETCODE SCIPvarAggregate(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -3199,7 +3199,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -3523,7 +3523,7 @@ SCIP_RETCODE varEventObjChanged(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             oldobj,             /**< old objective value for variable */
    SCIP_Real             newobj              /**< new objective value for variable */
@@ -3549,7 +3549,7 @@ SCIP_RETCODE SCIPvarChgObj(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             newobj              /**< new objective value for variable */
    )
@@ -3609,7 +3609,7 @@ SCIP_RETCODE SCIPvarAddObj(
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             addobj              /**< additional objective value for variable */
    )
@@ -3694,7 +3694,7 @@ SCIP_RETCODE SCIPvarAddObj(
 SCIP_RETCODE SCIPvarChgObjDive(
    SCIP_VAR*             var,                /**< problem variable to change */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             newobj              /**< new objective value for variable */
    )
 {
@@ -4098,7 +4098,7 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             newbound            /**< new bound for variable */
@@ -4207,7 +4207,7 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             newbound            /**< new bound for variable */
@@ -4316,14 +4316,14 @@ SCIP_RETCODE SCIPvarChgBdGlobal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             newbound,           /**< new bound for variable */
    SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    )
 {
-   /* apply bound change to the SCIP_LP data */
+   /* apply bound change to the LP data */
    switch( boundtype )
    {
    case SCIP_BOUNDTYPE_LOWER:
@@ -4342,7 +4342,7 @@ SCIP_RETCODE varEventLbChanged(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             oldbound,           /**< old lower bound for variable */
@@ -4355,7 +4355,7 @@ SCIP_RETCODE varEventLbChanged(
    assert(!SCIPsetIsEQ(set, oldbound, newbound));
 
    /* check, if the variable is being tracked for bound changes
-    * COLUMN and LOOSE variables are tracked always, because row activities and SCIP_LP changes have to be updated
+    * COLUMN and LOOSE variables are tracked always, because row activities and LP changes have to be updated
     */
    if( (var->eventfilter->len > 0 && (var->eventfilter->eventmask & SCIP_EVENTTYPE_LBCHANGED) != 0)
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
@@ -4378,7 +4378,7 @@ SCIP_RETCODE varEventUbChanged(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             oldbound,           /**< old upper bound for variable */
@@ -4391,7 +4391,7 @@ SCIP_RETCODE varEventUbChanged(
    assert(!SCIPsetIsEQ(set, oldbound, newbound));
 
    /* check, if the variable is being tracked for bound changes
-    * COLUMN and LOOSE variables are tracked always, because row activities and SCIP_LP changes have to be updated
+    * COLUMN and LOOSE variables are tracked always, because row activities and LP changes have to be updated
     */
    if( (var->eventfilter->len > 0 && (var->eventfilter->eventmask & SCIP_EVENTTYPE_UBCHANGED) != 0)
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
@@ -4417,7 +4417,7 @@ SCIP_RETCODE varProcessChgUbLocal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             newbound            /**< new bound for variable */
@@ -4430,7 +4430,7 @@ SCIP_RETCODE varProcessChgLbLocal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             newbound            /**< new bound for variable */
@@ -4525,7 +4525,7 @@ SCIP_RETCODE varProcessChgUbLocal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             newbound            /**< new bound for variable */
@@ -4621,7 +4621,7 @@ SCIP_RETCODE SCIPvarChgLbLocal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             newbound            /**< new bound for variable */
@@ -4725,7 +4725,7 @@ SCIP_RETCODE SCIPvarChgUbLocal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             newbound            /**< new bound for variable */
@@ -4828,14 +4828,14 @@ SCIP_RETCODE SCIPvarChgBdLocal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             newbound,           /**< new bound for variable */
    SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    )
 {
-   /* apply bound change to the SCIP_LP data */
+   /* apply bound change to the LP data */
    switch( boundtype )
    {
    case SCIP_BOUNDTYPE_LOWER:
@@ -4852,7 +4852,7 @@ SCIP_RETCODE SCIPvarChgBdLocal(
 SCIP_RETCODE SCIPvarChgLbDive(
    SCIP_VAR*             var,                /**< problem variable to change */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             newbound            /**< new bound for variable */
    )
 {
@@ -4934,7 +4934,7 @@ SCIP_RETCODE SCIPvarChgLbDive(
 SCIP_RETCODE SCIPvarChgUbDive(
    SCIP_VAR*             var,                /**< problem variable to change */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             newbound            /**< new bound for variable */
    )
 {
@@ -5204,7 +5204,7 @@ SCIP_RETCODE applyImplic(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
@@ -5267,7 +5267,7 @@ SCIP_RETCODE varAddImplic(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -5445,7 +5445,7 @@ SCIP_RETCODE varAddTransitiveImplic(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -5490,13 +5490,7 @@ SCIP_RETCODE varAddTransitiveImplic(
       implvars = SCIPimplicsGetVars(implvar->implics, implvarfixing);
       impltypes = SCIPimplicsGetTypes(implvar->implics, implvarfixing);
       implbounds = SCIPimplicsGetBounds(implvar->implics, implvarfixing);
-      /* we have to iterate from back to front, because in varAddImplic() it may happen that a conflict is detected and
-       * implvars[i] is fixed, s.t. the implication y == varfixing -> z <= b / z >= b is deleted; this affects the
-       * array over which we currently iterate; the only thing that can happen, is that elements of the array are
-       * deleted; in this case, the subsequent elements are moved to the front; if we iterate from back to front, the
-       * only thing that can happen is that we add the same implication twice - this does no harm
-       */
-      for( i = nimpls-1; i >= 0 && !(*infeasible); --i )
+      for( i = 0; i < nimpls && !(*infeasible); ++i )
       {
          assert(implvars[i] != implvar);
 
@@ -5507,9 +5501,7 @@ SCIP_RETCODE varAddTransitiveImplic(
          {
             SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
                   varfixing, implvars[i], impltypes[i], implbounds[i], infeasible, nbdchgs) );
-            assert(SCIPimplicsGetNImpls(implvar->implics, implvarfixing) <= nimpls);
-            nimpls = SCIPimplicsGetNImpls(implvar->implics, implvarfixing);
-            i = MIN(i, nimpls); /* some elements from the array could have been removed */
+            assert(SCIPimplicsGetNImpls(implvar->implics, implvarfixing) == nimpls);
          }
       }
 
@@ -5568,13 +5560,7 @@ SCIP_RETCODE varAddTransitiveImplic(
          vlbvars = SCIPvboundsGetVars(implvar->vlbs);
          vlbcoefs = SCIPvboundsGetCoefs(implvar->vlbs);
          vlbconstants = SCIPvboundsGetConstants(implvar->vlbs);
-         /* we have to iterate from back to front, because in varAddImplic() it may happen that a conflict is detected and
-          * vlbvars[i] is fixed, s.t. the variable bound y >= c*z + d is deleted; this affects the
-          * array over which we currently iterate; the only thing that can happen, is that elements of the array are
-          * deleted; in this case, the subsequent elements are moved to the front; if we iterate from back to front, the
-          * only thing that can happen is that we add the same implication twice - this does no harm
-          */
-         for( i = nvlbvars-1; i >= 0 && !(*infeasible); --i )
+         for( i = 0; i < nvlbvars && !(*infeasible); ++i )
          {
             assert(vlbvars[i] != implvar);
             assert(!SCIPsetIsZero(set, vlbcoefs[i]));
@@ -5600,9 +5586,7 @@ SCIP_RETCODE varAddTransitiveImplic(
                   SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
                         varfixing, vlbvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, infeasible, nbdchgs) );
                }
-               assert(SCIPvboundsGetNVbds(implvar->vlbs) <= nvlbvars);
-               nvlbvars = SCIPvboundsGetNVbds(implvar->vlbs);
-               i = MIN(i, nvlbvars); /* some elements from the array could have been removed */
+               assert(SCIPvboundsGetNVbds(implvar->vlbs) == nvlbvars);
             }
          }
       }
@@ -5620,12 +5604,6 @@ SCIP_RETCODE varAddTransitiveImplic(
          vubvars = SCIPvboundsGetVars(implvar->vubs);
          vubcoefs = SCIPvboundsGetCoefs(implvar->vubs);
          vubconstants = SCIPvboundsGetConstants(implvar->vubs);
-         /* we have to iterate from back to front, because in varAddImplic() it may happen that a conflict is detected and
-          * vubvars[i] is fixed, s.t. the variable bound y <= c*z + d is deleted; this affects the
-          * array over which we currently iterate; the only thing that can happen, is that elements of the array are
-          * deleted; in this case, the subsequent elements are moved to the front; if we iterate from back to front, the
-          * only thing that can happen is that we add the same implication twice - this does no harm
-          */
          for( i = 0; i < nvubvars && !(*infeasible); ++i )
          {
             assert(vubvars[i] != implvar);
@@ -5652,9 +5630,7 @@ SCIP_RETCODE varAddTransitiveImplic(
                   SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
                         varfixing, vubvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, infeasible, nbdchgs) );
                }
-               assert(SCIPvboundsGetNVbds(implvar->vubs) <= nvubvars);
-               nvubvars = SCIPvboundsGetNVbds(implvar->vubs);
-               i = MIN(i, nvubvars); /* some elements from the array could have been removed */
+               assert(SCIPvboundsGetNVbds(implvar->vubs) == nvubvars);
             }
          }
       }
@@ -5675,7 +5651,7 @@ SCIP_RETCODE SCIPvarAddVlb(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -5907,7 +5883,7 @@ SCIP_RETCODE SCIPvarAddVub(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -6135,7 +6111,7 @@ SCIP_RETCODE SCIPvarAddImplic(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -6280,7 +6256,7 @@ SCIP_RETCODE varFixBinary(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Bool             value,              /**< value to fix variable to */
@@ -6329,7 +6305,7 @@ SCIP_RETCODE SCIPvarAddClique(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Bool             value,              /**< value of the variable in the clique */
@@ -7173,7 +7149,7 @@ SCIP_Bool SCIPvarIsTransformedOrigvar(
 }
 
 /** gets objective value of variable in current SCIP_LP; the value can be different from the bound stored in the variable's own
- *  data due to diving, that operate only on the SCIP_LP without updating the variables
+ *  data due to diving, that operate only on the LP without updating the variables
  */
 SCIP_Real SCIPvarGetObjLP(
    SCIP_VAR*             var                 /**< problem variable */
@@ -7219,7 +7195,7 @@ SCIP_Real SCIPvarGetObjLP(
 }
 
 /** gets lower bound of variable in current SCIP_LP; the bound can be different from the bound stored in the variable's own
- *  data due to diving or conflict analysis, that operate only on the SCIP_LP without updating the variables
+ *  data due to diving or conflict analysis, that operate only on the LP without updating the variables
  */
 SCIP_Real SCIPvarGetLbLP(
    SCIP_VAR*             var                 /**< problem variable */
@@ -7281,7 +7257,7 @@ SCIP_Real SCIPvarGetLbLP(
 }
 
 /** gets upper bound of variable in current SCIP_LP; the bound can be different from the bound stored in the variable's own
- *  data due to diving or conflict analysis, that operate only on the SCIP_LP without updating the variables
+ *  data due to diving or conflict analysis, that operate only on the LP without updating the variables
  */
 SCIP_Real SCIPvarGetUbLP(
    SCIP_VAR*             var                 /**< problem variable */
@@ -7394,7 +7370,7 @@ SCIP_BOUNDTYPE SCIPvarGetWorstBoundType(
       return SCIP_BOUNDTYPE_LOWER;
 }
 
-/** gets primal SCIP_LP solution value of variable */
+/** gets primal LP solution value of variable */
 SCIP_Real SCIPvarGetLPSol(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -7499,10 +7475,10 @@ SCIP_Real SCIPvarGetPseudoSol(
    }
 }
 
-/** gets current SCIP_LP or pseudo solution value of variable */
+/** gets current LP or pseudo solution value of variable */
 SCIP_Real SCIPvarGetSol(
    SCIP_VAR*             var,                /**< problem variable */
-   SCIP_Bool             getlpval            /**< should the SCIP_LP solution value be returned? */
+   SCIP_Bool             getlpval            /**< should the LP solution value be returned? */
    )
 {
    if( getlpval )
@@ -7637,8 +7613,8 @@ SCIP_RETCODE SCIPvarAddToRow(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_Real             val                 /**< value of coefficient */
    )
 {
@@ -7655,7 +7631,7 @@ SCIP_RETCODE SCIPvarAddToRow(
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
       {
-         SCIPerrorMessage("cannot add untransformed original variable <%s> to SCIP_LP row <%s>\n", var->name, row->name);
+         SCIPerrorMessage("cannot add untransformed original variable <%s> to LP row <%s>\n", var->name, row->name);
          return SCIP_INVALIDDATA;
       }
       SCIP_CALL( SCIPvarAddToRow(var->data.original.transvar, blkmem, set, stat, prob, lp, row, val) );
@@ -7721,7 +7697,7 @@ SCIP_RETCODE SCIPvarUpdatePseudocost(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_Real             solvaldelta,        /**< difference of variable's new SCIP_LP value - old SCIP_LP value */
+   SCIP_Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
    SCIP_Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
    SCIP_Real             weight              /**< weight in (0,1] of this update in pseudo cost sum */
    )
@@ -7772,11 +7748,11 @@ SCIP_RETCODE SCIPvarUpdatePseudocost(
    }
 }
 
-/** gets the variable's pseudo cost value for the given step size "solvaldelta" in the variable's SCIP_LP solution value */
+/** gets the variable's pseudo cost value for the given step size "solvaldelta" in the variable's LP solution value */
 SCIP_Real SCIPvarGetPseudocost(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_Real             solvaldelta         /**< difference of variable's new SCIP_LP value - old SCIP_LP value */
+   SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
    )
 {
    SCIP_BRANCHDIR dir;
@@ -7819,13 +7795,13 @@ SCIP_Real SCIPvarGetPseudocost(
    }
 }
 
-/** gets the variable's pseudo cost value for the given step size "solvaldelta" in the variable's SCIP_LP solution value,
+/** gets the variable's pseudo cost value for the given step size "solvaldelta" in the variable's LP solution value,
  *  only using the pseudo cost information of the current run
  */
 SCIP_Real SCIPvarGetPseudocostCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_Real             solvaldelta         /**< difference of variable's new SCIP_LP value - old SCIP_LP value */
+   SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
    )
 {
    SCIP_BRANCHDIR dir;
@@ -9334,7 +9310,7 @@ SCIP_Bool SCIPvarIsIntegral(
    return (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
 }
 
-/** returns whether variable's column should be present in the initial root SCIP_LP */
+/** returns whether variable's column should be present in the initial root LP */
 SCIP_Bool SCIPvarIsInitial(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -9344,7 +9320,7 @@ SCIP_Bool SCIPvarIsInitial(
    return var->initial;
 }
 
-/** returns whether variable's column is removeable from the SCIP_LP (due to aging or cleanup) */
+/** returns whether variable's column is removeable from the LP (due to aging or cleanup) */
 SCIP_Bool SCIPvarIsRemoveable(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -9394,7 +9370,7 @@ int SCIPvarGetProbindex(
    return var->probindex;
 }
 
-/** gets transformed variable of SCIP_ORIGINAL variable */
+/** gets transformed variable of ORIGINAL variable */
 SCIP_VAR* SCIPvarGetTransVar(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -9416,7 +9392,7 @@ SCIP_COL* SCIPvarGetCol(
    return var->data.col;
 }
 
-/** returns whether the variable is a COLUMN variable that is member of the current SCIP_LP */
+/** returns whether the variable is a COLUMN variable that is member of the current LP */
 SCIP_Bool SCIPvarIsInLP(
    SCIP_VAR*             var                 /**< problem variable */
    )

@@ -14,17 +14,17 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.204 2005/08/22 18:35:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.205 2005/08/24 17:26:48 bzfpfend Exp $"
 
 /**@file   lp.c
- * @brief  SCIP_LP management methods and datastructures
+ * @brief  LP management methods and datastructures
  * @author Tobias Achterberg
  * @author Kati Wolter
  *
- *  In SCIP_LP management, we have to differ between the current SCIP_LP and the SCIP_LP
- *  stored in the SCIP_LP solver. All SCIP_LP methods affect the current SCIP_LP only. 
- *  Before solving the current SCIP_LP with the SCIP_LP solver or setting an SCIP_LP state,
- *  the SCIP_LP solvers data has to be updated to the current SCIP_LP with a call to
+ *  In LP management, we have to differ between the current LP and the SCIP_LP
+ *  stored in the LP solver. All LP methods affect the current LP only. 
+ *  Before solving the current LP with the LP solver or setting an LP state,
+ *  the LP solvers data has to be updated to the current LP with a call to
  *  lpFlush().
  */
 
@@ -56,7 +56,7 @@
 /** ensures, that chgcols array can store at least num entries */
 static
 SCIP_RETCODE ensureChgcolsSize(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   num                 /**< minimum number of entries to store */
    )
@@ -79,7 +79,7 @@ SCIP_RETCODE ensureChgcolsSize(
 /** ensures, that chgrows array can store at least num entries */
 static
 SCIP_RETCODE ensureChgrowsSize(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   num                 /**< minimum number of entries to store */
    )
@@ -102,7 +102,7 @@ SCIP_RETCODE ensureChgrowsSize(
 /** ensures, that lpicols array can store at least num entries */
 static
 SCIP_RETCODE ensureLpicolsSize(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   num                 /**< minimum number of entries to store */
    )
@@ -125,7 +125,7 @@ SCIP_RETCODE ensureLpicolsSize(
 /** ensures, that lpirows array can store at least num entries */
 static
 SCIP_RETCODE ensureLpirowsSize(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   num                 /**< minimum number of entries to store */
    )
@@ -148,7 +148,7 @@ SCIP_RETCODE ensureLpirowsSize(
 /** ensures, that cols array can store at least num entries */
 static
 SCIP_RETCODE ensureColsSize(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   num                 /**< minimum number of entries to store */
    )
@@ -171,7 +171,7 @@ SCIP_RETCODE ensureColsSize(
 /** ensures, that rows array can store at least num entries */
 static
 SCIP_RETCODE ensureRowsSize(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   num                 /**< minimum number of entries to store */
    )
@@ -194,7 +194,7 @@ SCIP_RETCODE ensureRowsSize(
 /** ensures, that row array of column can store at least num entries */
 static
 SCIP_RETCODE colEnsureSize(
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_COL*             col,                /**< LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   num                 /**< minimum number of entries to store */
@@ -220,7 +220,7 @@ SCIP_RETCODE colEnsureSize(
 
 /** ensures, that column array of row can store at least num entries */
 SCIP_RETCODE SCIProwEnsureSize(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   num                 /**< minimum number of entries to store */
@@ -255,7 +255,7 @@ SCIP_RETCODE SCIProwEnsureSize(
 /** bubble sort part of rows in a column */
 static
 void colBSort(
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_COL*             col,                /**< LP column */
    int                   firstpos,           /**< first position to include in the sort */
    int                   lastpos             /**< last position to include in the sort */
    )
@@ -345,7 +345,7 @@ void colBSort(
 /** bubble sort part of columns in a row */
 static
 void rowBSort(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    int                   firstpos,           /**< first position to include in the sort */
    int                   lastpos             /**< last position to include in the sort */
    )
@@ -443,7 +443,7 @@ void rowBSort(
    }
 }
 
-/** sorts column entries of linked rows currently in the SCIP_LP such that lower row indices precede higher ones */
+/** sorts column entries of linked rows currently in the LP such that lower row indices precede higher ones */
 static
 void colSortLP(
    SCIP_COL*             col                 /**< column to be sorted */
@@ -453,7 +453,7 @@ void colSortLP(
    
    assert(col != NULL);
 
-   /* check, if column is already sorted in the SCIP_LP part */
+   /* check, if column is already sorted in the LP part */
    if( col->lprowssorted )
       return;
 
@@ -474,7 +474,7 @@ void colSortLP(
    col->lprowssorted = TRUE;
 }
 
-/** sorts column entries of unlinked rows or rows currently not in the SCIP_LP such that lower row indices precede higher
+/** sorts column entries of unlinked rows or rows currently not in the LP such that lower row indices precede higher
  *  ones
  */
 static
@@ -507,7 +507,7 @@ void colSortNonLP(
    col->nonlprowssorted = TRUE;
 }
 
-/** sorts row entries of linked columns currently in the SCIP_LP such that lower column indices precede higher ones */
+/** sorts row entries of linked columns currently in the LP such that lower column indices precede higher ones */
 static
 void rowSortLP(
    SCIP_ROW*             row                 /**< row to be sorted */
@@ -517,7 +517,7 @@ void rowSortLP(
 
    assert(row != NULL);
 
-   /* check, if row is already sorted in the SCIP_LP part, or if the sorting should be delayed */
+   /* check, if row is already sorted in the LP part, or if the sorting should be delayed */
    if( row->lpcolssorted || row->delaysort )
       return;
 
@@ -538,7 +538,7 @@ void rowSortLP(
    row->lpcolssorted = TRUE;
 }
 
-/** sorts row entries of unlinked columns or columns currently not in the SCIP_LP such that lower column indices precede
+/** sorts row entries of unlinked columns or columns currently not in the LP such that lower column indices precede
  *  higher ones
  */
 static
@@ -621,7 +621,7 @@ int colSearchCoef(
 
    pos = -1;
 
-   /* search in the linked SCIP_LP rows */
+   /* search in the linked LP rows */
    if( row->lppos >= 0 )
    {
       /* column has to be sorted, such that binary search works */
@@ -702,7 +702,7 @@ int rowSearchCoef(
 
    pos = -1;
 
-   /* search in the linked SCIP_LP columns */
+   /* search in the linked LP columns */
    if( col->lppos >= 0 )
    {
       /* row has to be sorted, such that binary search works */
@@ -741,7 +741,7 @@ int rowSearchCoef(
 /** moves a coefficient in a column to a different place, and updates all corresponding data structures */
 static
 void colMoveCoef(
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_COL*             col,                /**< LP column */
    int                   oldpos,             /**< old position of coefficient */
    int                   newpos              /**< new position of coefficient */
    )
@@ -777,7 +777,7 @@ void colMoveCoef(
 /** swaps two coefficients in a column, and updates all corresponding data structures */
 static
 void colSwapCoefs(
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_COL*             col,                /**< LP column */
    int                   pos1,               /**< position of first coefficient */
    int                   pos2                /**< position of second coefficient */
    )
@@ -837,7 +837,7 @@ void colSwapCoefs(
 /** moves a coefficient in a row to a different place, and updates all corresponding data structures */
 static
 void rowMoveCoef(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    int                   oldpos,             /**< old position of coefficient */
    int                   newpos              /**< new position of coefficient */
    )
@@ -874,7 +874,7 @@ void rowMoveCoef(
 /** swaps two coefficients in a row, and updates all corresponding data structures */
 static
 void rowSwapCoefs(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    int                   pos1,               /**< position of first coefficient */
    int                   pos2                /**< position of second coefficient */
    )
@@ -951,7 +951,7 @@ static SCIP_Bool msgdisp = FALSE;
 
 static
 void checkLinks(
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    SCIP_COL* col;
@@ -1022,9 +1022,9 @@ void checkLinks(
 /** announces, that the given coefficient in the constraint matrix changed */
 static
 void coefChanged(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
-   SCIP_COL*             col,                /**< SCIP_LP col */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_COL*             col,                /**< LP col */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(row != NULL);
@@ -1055,7 +1055,7 @@ void coefChanged(
          lp->lpifirstchgcol = col->lpipos;
       }
 
-      /* mark the current SCIP_LP unflushed */
+      /* mark the current LP unflushed */
       lp->flushed = FALSE;
    }
 
@@ -1075,23 +1075,23 @@ void coefChanged(
 /* forward declaration for colAddCoef() */
 static
 SCIP_RETCODE rowAddCoef(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_COL*             col,                /**< LP column */
    SCIP_Real             val,                /**< value of coefficient */
    int                   linkpos             /**< position of row in the column's row array, or -1 */
    );
 
-/** adds a previously non existing coefficient to an SCIP_LP column */
+/** adds a previously non existing coefficient to an LP column */
 static
 SCIP_RETCODE colAddCoef(
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_COL*             col,                /**< LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_Real             val,                /**< value of coefficient */
    int                   linkpos             /**< position of column in the row's col array, or -1 */
    )
@@ -1114,7 +1114,7 @@ SCIP_RETCODE colAddCoef(
    pos = col->len;
    col->len++;
 
-   /* if the row is in current SCIP_LP and is linked to the column, we have to insert it at the end of the linked SCIP_LP rows
+   /* if the row is in current LP and is linked to the column, we have to insert it at the end of the linked LP rows
     * part of the column's arrays
     */
    if( row->lppos >= 0 && linkpos >= 0 )
@@ -1202,7 +1202,7 @@ static
 SCIP_RETCODE colDelCoefPos(
    SCIP_COL*             col,                /**< column to be changed */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    int                   pos                 /**< position in column vector to delete */
    )
 {
@@ -1225,7 +1225,7 @@ SCIP_RETCODE colDelCoefPos(
    if( col->linkpos[pos] == -1 )
       col->nunlinked--;
 
-   /* if row is a linked SCIP_LP row, move last linked SCIP_LP coefficient to position of empty slot (deleted coefficient) */
+   /* if row is a linked LP row, move last linked LP coefficient to position of empty slot (deleted coefficient) */
    if( pos < col->nlprows )
    {
       colMoveCoef(col, col->nlprows-1, pos);
@@ -1242,12 +1242,12 @@ SCIP_RETCODE colDelCoefPos(
    return SCIP_OKAY;
 }
 
-/** changes a coefficient at given position of an SCIP_LP column */
+/** changes a coefficient at given position of an LP column */
 static
 SCIP_RETCODE colChgCoefPos(
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_COL*             col,                /**< LP column */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    int                   pos,                /**< position in column vector to change */
    SCIP_Real             val                 /**< value of coefficient */
    )
@@ -1286,7 +1286,7 @@ SCIP_RETCODE colChgCoefPos(
 /** update row norms after addition of coefficient */
 static
 void rowAddNorms(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_COL*             col,                /**< column of added coefficient */
    SCIP_Real             val                 /**< value of added coefficient */
@@ -1340,7 +1340,7 @@ void rowAddNorms(
 /** update row norms after deletion of coefficient */
 static
 void rowDelNorms(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_COL*             col,                /**< column of deleted coefficient */
    SCIP_Real             val,                /**< value of deleted coefficient */
@@ -1386,14 +1386,14 @@ void rowDelNorms(
    }
 }
 
-/** adds a previously non existing coefficient to an SCIP_LP row */
+/** adds a previously non existing coefficient to an LP row */
 static
 SCIP_RETCODE rowAddCoef(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_COL*             col,                /**< LP column */
    SCIP_Real             val,                /**< value of coefficient */
    int                   linkpos             /**< position of row in the column's row array, or -1 */
    )
@@ -1422,7 +1422,7 @@ SCIP_RETCODE rowAddCoef(
    pos = row->len;
    row->len++;
 
-   /* if the column is in current SCIP_LP and is linked to the row, we have to insert it at the end of the linked SCIP_LP columns
+   /* if the column is in current LP and is linked to the row, we have to insert it at the end of the linked LP columns
     * part of the row's arrays
     */
    if( col->lppos >= 0 && linkpos >= 0 )
@@ -1520,7 +1520,7 @@ static
 SCIP_RETCODE rowDelCoefPos(
    SCIP_ROW*             row,                /**< row to be changed */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    int                   pos                 /**< position in row vector to delete */
    )
 {
@@ -1550,7 +1550,7 @@ SCIP_RETCODE rowDelCoefPos(
    if( row->linkpos[pos] == -1 )
       row->nunlinked--;
    
-   /* if column is a linked SCIP_LP column, move last linked SCIP_LP coefficient to position of empty slot (deleted coefficient) */
+   /* if column is a linked LP column, move last linked LP coefficient to position of empty slot (deleted coefficient) */
    if( pos < row->nlpcols )
    {
       rowMoveCoef(row, row->nlpcols-1, pos);
@@ -1569,12 +1569,12 @@ SCIP_RETCODE rowDelCoefPos(
    return SCIP_OKAY;
 }
 
-/** changes a coefficient at given position of an SCIP_LP row */
+/** changes a coefficient at given position of an LP row */
 static
 SCIP_RETCODE rowChgCoefPos(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    int                   pos,                /**< position in row vector to change */
    SCIP_Real             val                 /**< value of coefficient */
    )
@@ -1611,12 +1611,12 @@ SCIP_RETCODE rowChgCoefPos(
    return SCIP_OKAY;
 }
 
-/** notifies SCIP_LP row, that its sides were changed */
+/** notifies LP row, that its sides were changed */
 static
 SCIP_RETCODE rowSideChanged(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SIDETYPE         sidetype            /**< type of side: left or right hand side */
    )
 {
@@ -1647,7 +1647,7 @@ SCIP_RETCODE rowSideChanged(
          SCIPABORT();
       }
 
-      /* mark the current SCIP_LP unflushed */
+      /* mark the current LP unflushed */
       lp->flushed = FALSE;
 
       assert(lp->nchgrows > 0);
@@ -1669,7 +1669,7 @@ SCIP_RETCODE colLink(
    SCIP_COL*             col,                /**< column data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    int i;
@@ -1712,7 +1712,7 @@ SCIP_RETCODE colUnlink(
    SCIP_COL*             col,                /**< column data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    int i;
@@ -1750,7 +1750,7 @@ SCIP_RETCODE rowLink(
    SCIP_ROW*             row,                /**< row data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    int i;
@@ -1792,7 +1792,7 @@ SCIP_RETCODE rowUnlink(
    SCIP_ROW*             row,                /**< row data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    int i;
@@ -1826,14 +1826,14 @@ SCIP_RETCODE rowUnlink(
 
 
 /*
- * local SCIP_LP parameter methods
+ * local LP parameter methods
  */
 
-/** sets parameter of type int in SCIP_LP solver, ignoring unknown parameters */
+/** sets parameter of type int in LP solver, ignoring unknown parameters */
 static
 SCIP_RETCODE lpSetIntpar(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
-   SCIP_LPPARAM          lpparam,            /**< SCIP_LP parameter */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_LPPARAM          lpparam,            /**< LP parameter */
    int                   value,              /**< value to set parameter to */
    SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
    )
@@ -1856,11 +1856,11 @@ SCIP_RETCODE lpSetIntpar(
    return retcode;
 }
 
-/** sets parameter of type SCIP_Bool in SCIP_LP solver, ignoring unknown parameters */
+/** sets parameter of type SCIP_Bool in LP solver, ignoring unknown parameters */
 static
 SCIP_RETCODE lpSetBoolpar(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
-   SCIP_LPPARAM          lpparam,            /**< SCIP_LP parameter */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_LPPARAM          lpparam,            /**< LP parameter */
    SCIP_Bool             value,              /**< value to set parameter to */
    SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
    )
@@ -1868,11 +1868,11 @@ SCIP_RETCODE lpSetBoolpar(
    return lpSetIntpar(lp, lpparam, (int)value, success);
 }
 
-/** sets parameter of type SCIP_Real in SCIP_LP solver, ignoring unknown parameters */
+/** sets parameter of type SCIP_Real in LP solver, ignoring unknown parameters */
 static
 SCIP_RETCODE lpSetRealpar(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
-   SCIP_LPPARAM          lpparam,            /**< SCIP_LP parameter */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_LPPARAM          lpparam,            /**< LP parameter */
    SCIP_Real             value,              /**< value to set parameter to */
    SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
    )
@@ -1896,11 +1896,11 @@ SCIP_RETCODE lpSetRealpar(
 }
 
 #ifndef NDEBUG
-/** checks, that parameter of type int in SCIP_LP solver has the given value, ignoring unknown parameters */
+/** checks, that parameter of type int in LP solver has the given value, ignoring unknown parameters */
 static
 SCIP_RETCODE lpCheckIntpar(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
-   SCIP_LPPARAM          lpparam,            /**< SCIP_LP parameter */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_LPPARAM          lpparam,            /**< LP parameter */
    int                   value               /**< value parameter should have */
    )
 {
@@ -1921,22 +1921,22 @@ SCIP_RETCODE lpCheckIntpar(
    return retcode;
 }
 
-/** checks, that parameter of type SCIP_Bool in SCIP_LP solver has the given value, ignoring unknown parameters */
+/** checks, that parameter of type SCIP_Bool in LP solver has the given value, ignoring unknown parameters */
 static
 SCIP_RETCODE lpCheckBoolpar(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
-   SCIP_LPPARAM          lpparam,            /**< SCIP_LP parameter */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_LPPARAM          lpparam,            /**< LP parameter */
    SCIP_Bool             value               /**< value parameter should have */
    )
 {
    return lpCheckIntpar(lp, lpparam, (int)value);
 }
 
-/** checks, that parameter of type SCIP_Real in SCIP_LP solver has the given value, ignoring unknown parameters */
+/** checks, that parameter of type SCIP_Real in LP solver has the given value, ignoring unknown parameters */
 static
 SCIP_RETCODE lpCheckRealpar(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
-   SCIP_LPPARAM          lpparam,            /**< SCIP_LP parameter */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_LPPARAM          lpparam,            /**< LP parameter */
    SCIP_Real             value               /**< value parameter should have */
    )
 {
@@ -1963,10 +1963,10 @@ SCIP_RETCODE lpCheckRealpar(
 #define lpCheckRealpar(lp, lpparam, value) SCIP_OKAY
 #endif
 
-/** sets the upper objective limit of the SCIP_LP solver */
+/** sets the upper objective limit of the LP solver */
 static
 SCIP_RETCODE lpSetUobjlim(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             uobjlim             /**< new feasibility tolerance */
    )
@@ -1974,7 +1974,7 @@ SCIP_RETCODE lpSetUobjlim(
    assert(lp != NULL);
    assert(set != NULL);
 
-   /* if we want so solve exactly, we cannot rely on the SCIP_LP solver's objective limit handling */
+   /* if we want so solve exactly, we cannot rely on the LP solver's objective limit handling */
    if( set->misc_exactsolve )
       return SCIP_OKAY;
 
@@ -1999,10 +1999,10 @@ SCIP_RETCODE lpSetUobjlim(
    return SCIP_OKAY;
 }
 
-/** sets the feasibility tolerance of the SCIP_LP solver */
+/** sets the feasibility tolerance of the LP solver */
 static
 SCIP_RETCODE lpSetFeastol(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             feastol,            /**< new feasibility tolerance */
    SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
    )
@@ -2035,10 +2035,10 @@ SCIP_RETCODE lpSetFeastol(
    return SCIP_OKAY;
 }
 
-/** sets the reduced costs feasibility tolerance of the SCIP_LP solver */
+/** sets the reduced costs feasibility tolerance of the LP solver */
 static
 SCIP_RETCODE lpSetDualfeastol(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             dualfeastol,        /**< new reduced costs feasibility tolerance */
    SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
    )
@@ -2071,10 +2071,10 @@ SCIP_RETCODE lpSetDualfeastol(
    return SCIP_OKAY;
 }
 
-/** sets the convergence tolerance used in barrier algorithm of the SCIP_LP solver */
+/** sets the convergence tolerance used in barrier algorithm of the LP solver */
 static
 SCIP_RETCODE lpSetBarrierconvtol(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             barrierconvtol,     /**< new convergence tolerance used in barrier algorithm */
    SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
    )
@@ -2108,10 +2108,10 @@ SCIP_RETCODE lpSetBarrierconvtol(
    return SCIP_OKAY;
 }
 
-/** sets the FROMSCRATCH setting of the SCIP_LP solver */
+/** sets the FROMSCRATCH setting of the LP solver */
 static
 SCIP_RETCODE lpSetFromscratch(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             fromscratch,        /**< new FROMSCRATCH setting */
    SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
    )
@@ -2133,10 +2133,10 @@ SCIP_RETCODE lpSetFromscratch(
    return SCIP_OKAY;
 }
 
-/** sets the FASTMIP setting of the SCIP_LP solver */
+/** sets the FASTMIP setting of the LP solver */
 static
 SCIP_RETCODE lpSetFastmip(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             fastmip,            /**< new FASTMIP setting */
    SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
    )
@@ -2158,10 +2158,10 @@ SCIP_RETCODE lpSetFastmip(
    return SCIP_OKAY;
 }
 
-/** sets the SCALING setting of the SCIP_LP solver */
+/** sets the SCALING setting of the LP solver */
 static
 SCIP_RETCODE lpSetScaling(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             scaling,            /**< new SCALING setting */
    SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
    )
@@ -2183,10 +2183,10 @@ SCIP_RETCODE lpSetScaling(
    return SCIP_OKAY;
 }
 
-/** sets the PRESOLVING setting of the SCIP_LP solver */
+/** sets the PRESOLVING setting of the LP solver */
 static
 SCIP_RETCODE lpSetPresolving(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             presolving,         /**< new PRESOLVING setting */
    SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
    )
@@ -2208,11 +2208,11 @@ SCIP_RETCODE lpSetPresolving(
    return SCIP_OKAY;
 }
 
-/** sets the iteration limit of the SCIP_LP solver */
+/** sets the iteration limit of the LP solver */
 static
 SCIP_RETCODE lpSetIterationLimit(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
-   int                   itlim               /**< maximal number of SCIP_LP iterations to perform, or -1 for no limit */
+   SCIP_LP*              lp,                 /**< current LP data */
+   int                   itlim               /**< maximal number of LP iterations to perform, or -1 for no limit */
    )
 {
    SCIP_Bool success;
@@ -2244,10 +2244,10 @@ SCIP_RETCODE lpSetIterationLimit(
    return SCIP_OKAY;
 }
 
-/** sets the pricing strategy of the SCIP_LP solver */
+/** sets the pricing strategy of the LP solver */
 static
 SCIP_RETCODE lpSetPricing(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_PRICING          pricing             /**< pricing strategy */
    )
 {
@@ -2267,10 +2267,10 @@ SCIP_RETCODE lpSetPricing(
    return SCIP_OKAY;
 }
 
-/** sets the pricing strategy of the SCIP_LP solver (given the character representation of the strategy) */
+/** sets the pricing strategy of the LP solver (given the character representation of the strategy) */
 static
 SCIP_RETCODE lpSetPricingChar(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    char                  pricingchar         /**< character representing the pricing strategy */
    )
 {
@@ -2297,7 +2297,7 @@ SCIP_RETCODE lpSetPricingChar(
       pricing = SCIP_PRICING_DEVEX;
       break;
    default:
-      SCIPerrorMessage("invalid SCIP_LP pricing parameter <%c>\n", pricingchar);
+      SCIPerrorMessage("invalid LP pricing parameter <%c>\n", pricingchar);
       return SCIP_INVALIDDATA;
    }
 
@@ -2306,11 +2306,11 @@ SCIP_RETCODE lpSetPricingChar(
    return SCIP_OKAY;
 }
 
-/** sets the verbosity of the SCIP_LP solver */
+/** sets the verbosity of the LP solver */
 static
 SCIP_RETCODE lpSetLPInfo(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
-   SCIP_Bool             lpinfo              /**< should the SCIP_LP solver display status messages? */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Bool             lpinfo              /**< should the LP solver display status messages? */
    )
 {
    SCIP_Bool success;
@@ -2336,7 +2336,7 @@ SCIP_RETCODE lpSetLPInfo(
  * Column methods
  */
 
-/** creates an SCIP_LP column */
+/** creates an LP column */
 SCIP_RETCODE SCIPcolCreate(
    SCIP_COL**            col,                /**< pointer to column data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -2346,7 +2346,7 @@ SCIP_RETCODE SCIPcolCreate(
    int                   len,                /**< number of nonzeros in the column */
    SCIP_ROW**            rows,               /**< array with rows of column entries */
    SCIP_Real*            vals,               /**< array with coefficients of column entries */
-   SCIP_Bool             removeable          /**< should the column be removed from the SCIP_LP due to aging or cleanup? */
+   SCIP_Bool             removeable          /**< should the column be removed from the LP due to aging or cleanup? */
    )
 {
    int i;
@@ -2429,12 +2429,12 @@ SCIP_RETCODE SCIPcolCreate(
    return SCIP_OKAY;
 }
 
-/** frees an SCIP_LP column */
+/** frees an LP column */
 SCIP_RETCODE SCIPcolFree(
-   SCIP_COL**            col,                /**< pointer to SCIP_LP column */
+   SCIP_COL**            col,                /**< pointer to LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(blkmem != NULL);
@@ -2457,26 +2457,26 @@ SCIP_RETCODE SCIPcolFree(
    return SCIP_OKAY;
 }
 
-/** sorts column entries such that SCIP_LP rows precede non-LP rows and inside both parts lower row indices precede higher ones
+/** sorts column entries such that LP rows precede non-LP rows and inside both parts lower row indices precede higher ones
  */
 void SCIPcolSort(
    SCIP_COL*             col                 /**< column to be sorted */
    )
 {
-   /* sort SCIP_LP rows */
+   /* sort LP rows */
    colSortLP(col);
 
    /* sort non-LP rows */
    colSortNonLP(col);
 }
 
-/** adds a previously non existing coefficient to an SCIP_LP column */
+/** adds a previously non existing coefficient to an LP column */
 SCIP_RETCODE SCIPcolAddCoef(
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_COL*             col,                /**< LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_Real             val                 /**< value of coefficient */
    )
 {
@@ -2494,7 +2494,7 @@ SCIP_RETCODE SCIPcolAddCoef(
 SCIP_RETCODE SCIPcolDelCoef(
    SCIP_COL*             col,                /**< column to be changed */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_ROW*             row                 /**< coefficient to be deleted */
    )
 {
@@ -2533,13 +2533,13 @@ SCIP_RETCODE SCIPcolDelCoef(
    return SCIP_OKAY;
 }
 
-/** changes or adds a coefficient to an SCIP_LP column */
+/** changes or adds a coefficient to an LP column */
 SCIP_RETCODE SCIPcolChgCoef(
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_COL*             col,                /**< LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_Real             val                 /**< value of coefficient */
    )
 {
@@ -2583,13 +2583,13 @@ SCIP_RETCODE SCIPcolChgCoef(
    return SCIP_OKAY;
 }
 
-/** increases value of an existing or nonexisting coefficient in an SCIP_LP column */
+/** increases value of an existing or nonexisting coefficient in an LP column */
 SCIP_RETCODE SCIPcolIncCoef(
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_COL*             col,                /**< LP column */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_Real             incval              /**< value to add to the coefficient */
    )
 {
@@ -2638,9 +2638,9 @@ SCIP_RETCODE SCIPcolIncCoef(
 
 /** changes objective value of column */
 SCIP_RETCODE SCIPcolChgObj(
-   SCIP_COL*             col,                /**< SCIP_LP column to change */
+   SCIP_COL*             col,                /**< LP column to change */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             newobj              /**< new objective value */
    )
 {
@@ -2665,7 +2665,7 @@ SCIP_RETCODE SCIPcolChgObj(
       /* mark objective value change in the column */
       col->objchanged = TRUE;
       
-      /* mark the current SCIP_LP unflushed */
+      /* mark the current LP unflushed */
       lp->flushed = FALSE;
 
       assert(lp->nchgcols > 0);
@@ -2679,9 +2679,9 @@ SCIP_RETCODE SCIPcolChgObj(
 
 /** changes lower bound of column */
 SCIP_RETCODE SCIPcolChgLb(
-   SCIP_COL*             col,                /**< SCIP_LP column to change */
+   SCIP_COL*             col,                /**< LP column to change */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             newlb               /**< new lower bound value */
    )
 {
@@ -2706,7 +2706,7 @@ SCIP_RETCODE SCIPcolChgLb(
       /* mark bound change in the column */
       col->lbchanged = TRUE;
       
-      /* mark the current SCIP_LP unflushed */
+      /* mark the current LP unflushed */
       lp->flushed = FALSE;
 
       assert(lp->nchgcols > 0);
@@ -2719,9 +2719,9 @@ SCIP_RETCODE SCIPcolChgLb(
 
 /** changes upper bound of column */
 SCIP_RETCODE SCIPcolChgUb(
-   SCIP_COL*             col,                /**< SCIP_LP column to change */
+   SCIP_COL*             col,                /**< LP column to change */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             newub               /**< new upper bound value */
    )
 {
@@ -2746,7 +2746,7 @@ SCIP_RETCODE SCIPcolChgUb(
       /* mark bound change in the column */
       col->ubchanged = TRUE;
       
-      /* mark the current SCIP_LP unflushed */
+      /* mark the current LP unflushed */
       lp->flushed = FALSE;
 
       assert(lp->nchgcols > 0);
@@ -2759,8 +2759,8 @@ SCIP_RETCODE SCIPcolChgUb(
 
 /** calculates the reduced costs of a column using the given dual solution vector */
 SCIP_Real SCIPcolCalcRedcost(
-   SCIP_COL*             col,                /**< SCIP_LP column */
-   SCIP_Real*            dualsol             /**< dual solution vector for current SCIP_LP rows */
+   SCIP_COL*             col,                /**< LP column */
+   SCIP_Real*            dualsol             /**< dual solution vector for current LP rows */
    )
 {
    SCIP_ROW* row;
@@ -2811,7 +2811,7 @@ SCIP_Real SCIPcolCalcRedcost(
 /** calculates the reduced costs of a column using the dual solution stored in the rows */
 static
 SCIP_Real colCalcInternalRedcost(
-   SCIP_COL*             col                 /**< SCIP_LP column */
+   SCIP_COL*             col                 /**< LP column */
    )
 {
    SCIP_ROW* row;
@@ -2862,11 +2862,11 @@ SCIP_Real colCalcInternalRedcost(
    return redcost;
 }
 
-/** gets the reduced costs of a column in last SCIP_LP or after recalculation */
+/** gets the reduced costs of a column in last LP or after recalculation */
 SCIP_Real SCIPcolGetRedcost(
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_COL*             col,                /**< LP column */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(col != NULL);
@@ -2886,12 +2886,12 @@ SCIP_Real SCIPcolGetRedcost(
    return col->redcost;
 }
 
-/** gets the feasibility of (the dual row of) a column in last SCIP_LP or after recalculation */
+/** gets the feasibility of (the dual row of) a column in last LP or after recalculation */
 SCIP_Real SCIPcolGetFeasibility(
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_COL*             col,                /**< LP column */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(col != NULL);
@@ -2942,8 +2942,8 @@ SCIP_Real SCIPcolGetFeasibility(
 
 /** calculates the farkas coefficient y^T A_i of a column i using the given dual farkas vector y */
 SCIP_Real SCIPcolCalcFarkasCoef(
-   SCIP_COL*             col,                /**< SCIP_LP column */
-   SCIP_Real*            dualfarkas          /**< dense dual farkas vector for current SCIP_LP rows */
+   SCIP_COL*             col,                /**< LP column */
+   SCIP_Real*            dualfarkas          /**< dense dual farkas vector for current LP rows */
    )
 {
    SCIP_ROW* row;
@@ -2991,10 +2991,10 @@ SCIP_Real SCIPcolCalcFarkasCoef(
    return farkas;
 }
 
-/** gets the farkas coefficient y^T A_i of a column i in last SCIP_LP (which must be infeasible) */
+/** gets the farkas coefficient y^T A_i of a column i in last LP (which must be infeasible) */
 static
 SCIP_Real colCalcInternalFarkasCoef(
-   SCIP_COL*             col                 /**< SCIP_LP column */
+   SCIP_COL*             col                 /**< LP column */
    )
 {
    SCIP_ROW* row;
@@ -3045,11 +3045,11 @@ SCIP_Real colCalcInternalFarkasCoef(
    return farkas;
 }
 
-/** gets the farkas coefficient of a column in last SCIP_LP (which must be infeasible) */
+/** gets the farkas coefficient of a column in last LP (which must be infeasible) */
 SCIP_Real SCIPcolGetFarkasCoef(
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_COL*             col,                /**< LP column */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(col != NULL);
@@ -3069,13 +3069,13 @@ SCIP_Real SCIPcolGetFarkasCoef(
    return col->farkascoef;
 }
 
-/** gets the farkas value of a column in last SCIP_LP (which must be infeasible), i.e. the farkas coefficient y^T A_i times
+/** gets the farkas value of a column in last LP (which must be infeasible), i.e. the farkas coefficient y^T A_i times
  *  the best bound for this coefficient, i.e. max{y^T A_i x_i | lb <= x_i <= ub}
  */
 SCIP_Real SCIPcolGetFarkasValue(
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_COL*             col,                /**< LP column */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    SCIP_Real farkascoef;
@@ -3093,12 +3093,12 @@ SCIP_Real SCIPcolGetFarkasValue(
 /** actually performs strong branching on the given variable */
 static
 SCIP_RETCODE colStrongbranch(
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_COL*             col,                /**< LP column */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    int                   itlim,              /**< iteration limit for strong branchings */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved SCIP_LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
    SCIP_RETCODE retcode;
@@ -3124,7 +3124,7 @@ SCIP_RETCODE colStrongbranch(
    /* start timing */
    SCIPclockStart(stat->strongbranchtime, set);
       
-   /* call SCIP_LPI strong branching */
+   /* call LPI strong branching */
    col->sbitlim = itlim;
    col->nsbcalls++;
    retcode = SCIPlpiStrongbranch(lp->lpi, col->lpipos, col->primsol, itlim,
@@ -3182,10 +3182,10 @@ SCIP_RETCODE colStrongbranch(
 
 /** gets strong branching information on a column variable */
 SCIP_RETCODE SCIPcolGetStrongbranch(
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_COL*             col,                /**< LP column */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    int                   itlim,              /**< iteration limit for strong branchings */
    SCIP_Real*            down,               /**< stores dual bound after branching column down */
    SCIP_Real*            up,                 /**< stores dual bound after branching column up */
@@ -3193,7 +3193,7 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
                                               *   otherwise, it can only be used as an estimate value */
    SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound, or NULL;
                                               *   otherwise, it can only be used as an estimate value */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved SCIP_LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
    assert(col != NULL);
@@ -3228,7 +3228,7 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
       col->sblpobjval = SCIPlpGetObjval(lp, set);
       col->sbnode = stat->nnodes;
 
-      /* if a loose variables has an infinite best bound, the SCIP_LP bound is -infinity and no gain can be achieved */
+      /* if a loose variables has an infinite best bound, the LP bound is -infinity and no gain can be achieved */
       if( lp->looseobjvalinf > 0 )
       {
          col->sbdown = -SCIPsetInfinity(set);
@@ -3257,18 +3257,18 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
 
 /** gets last strong branching information available for a column variable;
  *  returns values of SCIP_INVALID, if strong branching was not yet called on the given column;
- *  keep in mind, that the returned old values may have nothing to do with the current SCIP_LP solution
+ *  keep in mind, that the returned old values may have nothing to do with the current LP solution
  */
 void SCIPcolGetStrongbranchLast(
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_COL*             col,                /**< LP column */
    SCIP_Real*            down,               /**< stores dual bound after branching column down, or NULL */
    SCIP_Real*            up,                 /**< stores dual bound after branching column up, or NULL */
    SCIP_Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound, or NULL;
                                               *   otherwise, it can only be used as an estimate value */
    SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound, or NULL;
                                               *   otherwise, it can only be used as an estimate value */
-   SCIP_Real*            solval,             /**< stores SCIP_LP solution value of column at last strong branching call, or NULL */
-   SCIP_Real*            lpobjval            /**< stores SCIP_LP objective value at last strong branching call, or NULL */
+   SCIP_Real*            solval,             /**< stores LP solution value of column at last strong branching call, or NULL */
+   SCIP_Real*            lpobjval            /**< stores LP objective value at last strong branching call, or NULL */
    )
 {
    assert(col != NULL);
@@ -3288,11 +3288,11 @@ void SCIPcolGetStrongbranchLast(
 }
 
 /** if strong branching was already applied on the column at the current node, returns the number of LPs solved after
- *  the SCIP_LP where the strong branching on this column was applied;
+ *  the LP where the strong branching on this column was applied;
  *  if strong branching was not yet applied on the column at the current node, returns INT_MAX
  */
 int SCIPcolGetStrongbranchLPAge(
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_COL*             col,                /**< LP column */
    SCIP_STAT*            stat                /**< dynamic problem statistics */
    )
 {
@@ -3304,7 +3304,7 @@ int SCIPcolGetStrongbranchLPAge(
 
 /** output column to file stream */
 void SCIPcolPrint(
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_COL*             col,                /**< LP column */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
@@ -3332,13 +3332,13 @@ void SCIPcolPrint(
 
 
 /*
- * SCIP_Row methods
+ * Row methods
  */
 
 /** calculates row norms and min/maxidx from scratch, and checks for sortation */
 static
 void rowCalcNorms(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
@@ -3437,10 +3437,10 @@ SCIP_Bool isIntegralScalar(
  */
 static
 SCIP_RETCODE rowScale(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             scaleval,           /**< value to scale row with */
    SCIP_Bool             integralcontvars,   /**< should the coefficients of the continuous variables also be made integral,
                                               *   if they are close to integral values? */
@@ -3582,9 +3582,9 @@ SCIP_RETCODE rowScale(
    return SCIP_OKAY;
 }
 
-/** creates and captures an SCIP_LP row */
+/** creates and captures an LP row */
 SCIP_RETCODE SCIProwCreate(
-   SCIP_ROW**            row,                /**< pointer to SCIP_LP row data */
+   SCIP_ROW**            row,                /**< pointer to LP row data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -3596,7 +3596,7 @@ SCIP_RETCODE SCIProwCreate(
    SCIP_Real             rhs,                /**< right hand side of row */
    SCIP_Bool             local,              /**< is row only valid locally? */
    SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   SCIP_Bool             removeable          /**< should the row be removed from the SCIP_LP due to aging or cleanup? */
+   SCIP_Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
    assert(row != NULL);
@@ -3695,12 +3695,12 @@ SCIP_RETCODE SCIProwCreate(
    return SCIP_OKAY;
 }
 
-/** frees an SCIP_LP row */
+/** frees an LP row */
 SCIP_RETCODE SCIProwFree(
-   SCIP_ROW**            row,                /**< pointer to SCIP_LP row */
+   SCIP_ROW**            row,                /**< pointer to LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(blkmem != NULL);
@@ -3722,9 +3722,9 @@ SCIP_RETCODE SCIProwFree(
    return SCIP_OKAY;
 }
 
-/** increases usage counter of SCIP_LP row */
+/** increases usage counter of LP row */
 void SCIProwCapture(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -3735,12 +3735,12 @@ void SCIProwCapture(
    row->nuses++;
 }
 
-/** decreases usage counter of SCIP_LP row, and frees memory if necessary */
+/** decreases usage counter of LP row, and frees memory if necessary */
 SCIP_RETCODE SCIProwRelease(
-   SCIP_ROW**            row,                /**< pointer to SCIP_LP row */
+   SCIP_ROW**            row,                /**< pointer to LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(blkmem != NULL);
@@ -3763,7 +3763,7 @@ SCIP_RETCODE SCIProwRelease(
 
 /** locks an unmodifiable row, which forbids further changes; has no effect on modifiable rows */
 void SCIProwLock(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -3778,7 +3778,7 @@ void SCIProwLock(
 
 /** unlocks a lock of an unmodifiable row; a row with no sealed lock may be modified; has no effect on modifiable rows */
 void SCIProwUnlock(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -3792,13 +3792,13 @@ void SCIProwUnlock(
    }
 }
 
-/** adds a previously non existing coefficient to an SCIP_LP row */
+/** adds a previously non existing coefficient to an LP row */
 SCIP_RETCODE SCIProwAddCoef(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_COL*             col,                /**< LP column */
    SCIP_Real             val                 /**< value of coefficient */
    )
 {
@@ -3816,7 +3816,7 @@ SCIP_RETCODE SCIProwAddCoef(
 SCIP_RETCODE SCIProwDelCoef(
    SCIP_ROW*             row,                /**< row to be changed */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_COL*             col                 /**< coefficient to be deleted */
    )
 {
@@ -3856,13 +3856,13 @@ SCIP_RETCODE SCIProwDelCoef(
    return SCIP_OKAY;
 }
 
-/** changes or adds a coefficient to an SCIP_LP row */
+/** changes or adds a coefficient to an LP row */
 SCIP_RETCODE SCIProwChgCoef(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_COL*             col,                /**< LP column */
    SCIP_Real             val                 /**< value of coefficient */
    )
 {
@@ -3907,13 +3907,13 @@ SCIP_RETCODE SCIProwChgCoef(
    return SCIP_OKAY;
 }
 
-/** increases value of an existing or nonexisting coefficient in an SCIP_LP row */
+/** increases value of an existing or nonexisting coefficient in an LP row */
 SCIP_RETCODE SCIProwIncCoef(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_COL*             col,                /**< LP column */
    SCIP_Real             incval              /**< value to add to the coefficient */
    )
 {
@@ -3962,10 +3962,10 @@ SCIP_RETCODE SCIProwIncCoef(
 
 /** changes constant value of a row */
 SCIP_RETCODE SCIProwChgConstant(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             constant            /**< new constant value */
    )
 {
@@ -4008,10 +4008,10 @@ SCIP_RETCODE SCIProwChgConstant(
 
 /** add constant value to a row */
 SCIP_RETCODE SCIProwAddConstant(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             addval              /**< constant value to add to the row */
    )
 {
@@ -4030,11 +4030,11 @@ SCIP_RETCODE SCIProwAddConstant(
    return SCIP_OKAY;
 }
 
-/** changes left hand side of SCIP_LP row */
+/** changes left hand side of LP row */
 SCIP_RETCODE SCIProwChgLhs(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             lhs                 /**< new left hand side */
    )
 {
@@ -4051,11 +4051,11 @@ SCIP_RETCODE SCIProwChgLhs(
    return SCIP_OKAY;
 }
 
-/** changes right hand side of SCIP_LP row */
+/** changes right hand side of LP row */
 SCIP_RETCODE SCIProwChgRhs(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             rhs                 /**< new right hand side */
    )
 {
@@ -4078,7 +4078,7 @@ static const int nscalars = 9;
 
 /** tries to find a value, such that all row coefficients, if scaled with this value become integral */
 SCIP_RETCODE SCIProwCalcIntegralScalar(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
    SCIP_Real             maxdelta,           /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
@@ -4311,10 +4311,10 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
 
 /** tries to scale row, s.t. all coefficients become integral */
 SCIP_RETCODE SCIProwMakeIntegral(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
    SCIP_Real             maxdelta,           /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
    SCIP_Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
@@ -4340,7 +4340,7 @@ SCIP_RETCODE SCIProwMakeIntegral(
    return SCIP_OKAY;
 }
 
-/** sorts row entries such that SCIP_LP columns precede non-LP columns and inside both parts lower column indices precede
+/** sorts row entries such that LP columns precede non-LP columns and inside both parts lower column indices precede
  *  higher ones
  */
 void SCIProwSort(
@@ -4349,7 +4349,7 @@ void SCIProwSort(
 {
    assert(row != NULL);
 
-   /* sort SCIP_LP columns */
+   /* sort LP columns */
    rowSortLP(row);
 
    /* sort non-LP columns */
@@ -4459,7 +4459,7 @@ void rowMerge(
 
 /** enables delaying of row sorting */
 void SCIProwDelaySort(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -4470,7 +4470,7 @@ void SCIProwDelaySort(
 
 /** disables delaying of row sorting, sorts row and merges coefficients with equal columns */
 void SCIProwForceSort(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
@@ -4483,7 +4483,7 @@ void SCIProwForceSort(
 
 /** recalculates the current activity of a row */
 void SCIProwRecalcLPActivity(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_STAT*            stat                /**< problem statistics */
    )
 {
@@ -4533,11 +4533,11 @@ void SCIProwRecalcLPActivity(
    row->validactivitylp = stat->lpcount;
 }
 
-/** returns the activity of a row in the current SCIP_LP solution */
+/** returns the activity of a row in the current LP solution */
 SCIP_Real SCIProwGetLPActivity(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(row != NULL);
@@ -4554,11 +4554,11 @@ SCIP_Real SCIProwGetLPActivity(
    return row->activity;
 }
 
-/** returns the feasibility of a row in the current SCIP_LP solution: negative value means infeasibility */
+/** returns the feasibility of a row in the current LP solution: negative value means infeasibility */
 SCIP_Real SCIProwGetLPFeasibility(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    SCIP_Real activity;
@@ -4599,7 +4599,7 @@ void SCIProwRecalcPseudoActivity(
 
 /** returns the pseudo activity of a row in the current pseudo solution */
 SCIP_Real SCIProwGetPseudoActivity(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_STAT*            stat                /**< problem statistics */
    )
 {
@@ -4618,7 +4618,7 @@ SCIP_Real SCIProwGetPseudoActivity(
 
 /** returns the pseudo feasibility of a row in the current pseudo solution: negative value means infeasibility */
 SCIP_Real SCIProwGetPseudoFeasibility(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_STAT*            stat                /**< problem statistics */
    )
 {
@@ -4633,7 +4633,7 @@ SCIP_Real SCIProwGetPseudoFeasibility(
 
 /** returns the activity of a row for a given solution */
 SCIP_RETCODE SCIProwGetSolActivity(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -4665,7 +4665,7 @@ SCIP_RETCODE SCIProwGetSolActivity(
 
 /** returns the feasibility of a row for the given solution */
 SCIP_RETCODE SCIProwGetSolFeasibility(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -4745,7 +4745,7 @@ void rowCalcActivityBounds(
 
 /** returns the minimal activity of a row w.r.t. the column's bounds */
 SCIP_Real SCIProwGetMinActivity(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< problem statistics data */
    )
@@ -4766,7 +4766,7 @@ SCIP_Real SCIProwGetMinActivity(
    
 /** returns the maximal activity of a row w.r.t. the column's bounds */
 SCIP_Real SCIProwGetMaxActivity(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< problem statistics data */
    )
@@ -4787,7 +4787,7 @@ SCIP_Real SCIProwGetMaxActivity(
    
 /** gets maximal absolute value of row vector coefficients */
 SCIP_Real SCIProwGetMaxval(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
@@ -4803,7 +4803,7 @@ SCIP_Real SCIProwGetMaxval(
 
 /** gets minimal absolute value of row vector's non-zero coefficients */
 SCIP_Real SCIProwGetMinval(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
@@ -4817,12 +4817,12 @@ SCIP_Real SCIProwGetMinval(
    return row->minval;
 }
 
-/** returns row's efficacy with respect to the current SCIP_LP solution: e = -feasibility/norm */
+/** returns row's efficacy with respect to the current LP solution: e = -feasibility/norm */
 SCIP_Real SCIProwGetEfficacy(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    SCIP_Real norm;
@@ -4858,12 +4858,12 @@ SCIP_Real SCIProwGetEfficacy(
    return -feasibility / norm;
 }
 
-/** returns whether the row's efficacy with respect to the current SCIP_LP solution is greater than the minimal cut efficacy */
+/** returns whether the row's efficacy with respect to the current LP solution is greater than the minimal cut efficacy */
 SCIP_Bool SCIProwIsEfficacious(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             root                /**< should the root's minimal cut efficacy be used? */
    )
 {
@@ -4876,8 +4876,8 @@ SCIP_Bool SCIProwIsEfficacious(
 
 /** returns the scalar product of the coefficient vectors of the two given rows */
 SCIP_Real SCIProwGetScalarProduct(
-   SCIP_ROW*             row1,               /**< first SCIP_LP row */
-   SCIP_ROW*             row2                /**< second SCIP_LP row */
+   SCIP_ROW*             row1,               /**< first LP row */
+   SCIP_ROW*             row2                /**< second LP row */
    )
 {
    SCIP_Real scalarprod;
@@ -4924,8 +4924,8 @@ SCIP_Real SCIProwGetScalarProduct(
  *  the hyperplanes are parellel, iff p = 1, they are orthogonal, iff p = 0
  */
 SCIP_Real SCIProwGetParallelism(
-   SCIP_ROW*             row1,               /**< first SCIP_LP row */
-   SCIP_ROW*             row2                /**< second SCIP_LP row */
+   SCIP_ROW*             row1,               /**< first LP row */
+   SCIP_ROW*             row2                /**< second LP row */
    )
 {
    SCIP_Real scalarprod;
@@ -4940,8 +4940,8 @@ SCIP_Real SCIProwGetParallelism(
  *  the hyperplanes are orthogonal, iff p = 1, they are parallel, iff p = 0
  */
 SCIP_Real SCIProwGetOrthogonality(
-   SCIP_ROW*             row1,               /**< first SCIP_LP row */
-   SCIP_ROW*             row2                /**< second SCIP_LP row */
+   SCIP_ROW*             row1,               /**< first LP row */
+   SCIP_ROW*             row2                /**< second LP row */
    )
 {
    return 1.0 - SCIProwGetParallelism(row1, row2);
@@ -4951,9 +4951,9 @@ SCIP_Real SCIProwGetOrthogonality(
  *  function, if the value is 0, it is orthogonal to the objective function
  */
 SCIP_Real SCIProwGetObjParallelism(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    SCIP_Real prod;
@@ -4973,7 +4973,7 @@ SCIP_Real SCIProwGetObjParallelism(
 
 /** output row to file stream */
 void SCIProwPrint(
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
@@ -5008,10 +5008,10 @@ void SCIProwPrint(
 
 
 /*
- * SCIP_LP solver data update
+ * LP solver data update
  */
 
-/** resets column data to represent a column not in the SCIP_LP solver */
+/** resets column data to represent a column not in the LP solver */
 static
 void markColDeleted(
    SCIP_COL*             col                 /**< column to be marked deleted */
@@ -5033,10 +5033,10 @@ void markColDeleted(
    col->basisstatus = SCIP_BASESTAT_ZERO; /*lint !e641*/
 }
 
-/** applies all cached column removals to the SCIP_LP solver */
+/** applies all cached column removals to the LP solver */
 static
 SCIP_RETCODE lpFlushDelCols(
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(lp != NULL);
@@ -5053,13 +5053,13 @@ SCIP_RETCODE lpFlushDelCols(
       lp->lpifirstchgcol++;
    }
    
-   /* shrink SCIP_LP to the part which didn't change */
+   /* shrink LP to the part which didn't change */
    if( lp->lpifirstchgcol < lp->nlpicols )
    {
       int i;
 
       assert(!lp->diving);
-      SCIPdebugMessage("flushing col deletions: shrink SCIP_LP from %d to %d colums\n", lp->nlpicols, lp->lpifirstchgcol);
+      SCIPdebugMessage("flushing col deletions: shrink LP from %d to %d colums\n", lp->nlpicols, lp->lpifirstchgcol);
       SCIP_CALL( SCIPlpiDelCols(lp->lpi, lp->lpifirstchgcol, lp->nlpicols-1) );
       for( i = lp->lpifirstchgcol; i < lp->nlpicols; ++i )
       {
@@ -5068,7 +5068,7 @@ SCIP_RETCODE lpFlushDelCols(
       lp->nlpicols = lp->lpifirstchgcol;
       lp->flushdeletedcols = TRUE;
 
-      /* mark the SCIP_LP unsolved */
+      /* mark the LP unsolved */
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
       lp->lpobjval = SCIP_INVALID;
@@ -5079,10 +5079,10 @@ SCIP_RETCODE lpFlushDelCols(
    return SCIP_OKAY;
 }
 
-/** applies all cached column additions to the SCIP_LP solver */
+/** applies all cached column additions to the LP solver */
 static
 SCIP_RETCODE lpFlushAddCols(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
@@ -5152,7 +5152,7 @@ SCIP_RETCODE lpFlushAddCols(
       SCIPdebugMessage("flushing added column <%s>: ", SCIPvarGetName(col->var));
       SCIPdebug( SCIPcolPrint(col, NULL) );
 
-      /* Because the column becomes a member of the SCIP_LP solver, it now can take values
+      /* Because the column becomes a member of the LP solver, it now can take values
        * different from zero. That means, we have to include the column in the corresponding
        * row vectors.
        */
@@ -5212,8 +5212,8 @@ SCIP_RETCODE lpFlushAddCols(
 #endif
    }
 
-   /* call SCIP_LP interface */
-   SCIPdebugMessage("flushing col additions: enlarge SCIP_LP from %d to %d colums\n", lp->nlpicols, lp->ncols);
+   /* call LP interface */
+   SCIPdebugMessage("flushing col additions: enlarge LP from %d to %d colums\n", lp->nlpicols, lp->ncols);
    SCIP_CALL( SCIPlpiAddCols(lp->lpi, naddcols, obj, lb, ub, name, nnonz, beg, ind, val) );
    lp->nlpicols = lp->ncols;
    lp->lpifirstchgcol = lp->nlpicols;
@@ -5229,7 +5229,7 @@ SCIP_RETCODE lpFlushAddCols(
 
    lp->flushaddedcols = TRUE;
 
-   /* mark the SCIP_LP unsolved */
+   /* mark the LP unsolved */
    lp->solved = FALSE;
    lp->dualfeasible = FALSE;
    lp->lpobjval = SCIP_INVALID;
@@ -5238,7 +5238,7 @@ SCIP_RETCODE lpFlushAddCols(
    return SCIP_OKAY;
 }
 
-/** resets row data to represent a row not in the SCIP_LP solver */
+/** resets row data to represent a row not in the LP solver */
 static
 void markRowDeleted(
    SCIP_ROW*             row                 /**< row to be marked deleted */
@@ -5254,10 +5254,10 @@ void markRowDeleted(
    row->validactivitylp = -1;
 }
 
-/** applies all cached row removals to the SCIP_LP solver */
+/** applies all cached row removals to the LP solver */
 static
 SCIP_RETCODE lpFlushDelRows(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
@@ -5276,13 +5276,13 @@ SCIP_RETCODE lpFlushDelRows(
       lp->lpifirstchgrow++;
    }
    
-   /* shrink SCIP_LP to the part which didn't change */
+   /* shrink LP to the part which didn't change */
    if( lp->lpifirstchgrow < lp->nlpirows )
    {
       int i;
 
       assert(!lp->diving);
-      SCIPdebugMessage("flushing row deletions: shrink SCIP_LP from %d to %d rows\n", lp->nlpirows, lp->lpifirstchgrow);
+      SCIPdebugMessage("flushing row deletions: shrink LP from %d to %d rows\n", lp->nlpirows, lp->lpifirstchgrow);
       SCIP_CALL( SCIPlpiDelRows(lp->lpi, lp->lpifirstchgrow, lp->nlpirows-1) );
       for( i = lp->lpifirstchgrow; i < lp->nlpirows; ++i )
       {
@@ -5292,7 +5292,7 @@ SCIP_RETCODE lpFlushDelRows(
       lp->nlpirows = lp->lpifirstchgrow;
       lp->flushdeletedrows = TRUE;
 
-      /* mark the SCIP_LP unsolved */
+      /* mark the LP unsolved */
       lp->solved = FALSE;
       lp->dualfeasible = FALSE;
       lp->lpobjval = SCIP_INVALID;
@@ -5303,10 +5303,10 @@ SCIP_RETCODE lpFlushDelRows(
    return SCIP_OKAY;
 }
 
-/** applies all cached row additions and removals to the SCIP_LP solver */
+/** applies all cached row additions and removals to the LP solver */
 static
 SCIP_RETCODE lpFlushAddRows(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
@@ -5370,7 +5370,7 @@ SCIP_RETCODE lpFlushAddRows(
       SCIPdebugMessage("flushing added row <%s>: ", row->name);
       SCIPdebug( SCIProwPrint(row, NULL) );
 
-      /* Because the row becomes a member of the SCIP_LP solver, its dual variable now can take values
+      /* Because the row becomes a member of the LP solver, its dual variable now can take values
        * different from zero. That means, we have to include the row in the corresponding
        * column vectors.
        */
@@ -5425,8 +5425,8 @@ SCIP_RETCODE lpFlushAddRows(
 #endif
    }
 
-   /* call SCIP_LP interface */
-   SCIPdebugMessage("flushing row additions: enlarge SCIP_LP from %d to %d rows\n", lp->nlpirows, lp->nrows);
+   /* call LP interface */
+   SCIPdebugMessage("flushing row additions: enlarge LP from %d to %d rows\n", lp->nlpirows, lp->nrows);
    SCIP_CALL( SCIPlpiAddRows(lp->lpi, naddrows, lhs, rhs, name, nnonz, beg, ind, val) );
    lp->nlpirows = lp->nrows;
    lp->lpifirstchgrow = lp->nlpirows;
@@ -5441,7 +5441,7 @@ SCIP_RETCODE lpFlushAddRows(
 
    lp->flushaddedrows = TRUE;
 
-   /* mark the SCIP_LP unsolved */
+   /* mark the LP unsolved */
    lp->solved = FALSE;
    lp->primalfeasible = FALSE;
    lp->lpobjval = SCIP_INVALID;
@@ -5450,10 +5450,10 @@ SCIP_RETCODE lpFlushAddRows(
    return SCIP_OKAY;
 }
 
-/** applies all cached column bound and objective changes to the SCIP_LP */
+/** applies all cached column bound and objective changes to the LP */
 static
 SCIP_RETCODE lpFlushChgCols(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
@@ -5546,26 +5546,26 @@ SCIP_RETCODE lpFlushChgCols(
       }
    }
 
-   /* change objective values in SCIP_LP */
+   /* change objective values in LP */
    if( nobjchg > 0 )
    {
       SCIPdebugMessage("flushing objective changes: change %d objective values of %d changed columns\n", nobjchg, lp->nchgcols);
       SCIP_CALL( SCIPlpiChgObj(lp->lpi, nobjchg, objind, obj) );
 
-      /* mark the SCIP_LP unsolved */
+      /* mark the LP unsolved */
       lp->solved = FALSE;
       lp->dualfeasible = FALSE;
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
 
-   /* change bounds in SCIP_LP */
+   /* change bounds in LP */
    if( nbdchg > 0 )
    {
       SCIPdebugMessage("flushing bound changes: change %d bounds of %d changed columns\n", nbdchg, lp->nchgcols);
       SCIP_CALL( SCIPlpiChgBounds(lp->lpi, nbdchg, bdind, lb, ub) );
 
-      /* mark the SCIP_LP unsolved */
+      /* mark the LP unsolved */
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
       lp->lpobjval = SCIP_INVALID;
@@ -5584,10 +5584,10 @@ SCIP_RETCODE lpFlushChgCols(
    return SCIP_OKAY;
 }
 
-/** applies all cached row side changes to the SCIP_LP */
+/** applies all cached row side changes to the LP */
 static
 SCIP_RETCODE lpFlushChgRows(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
@@ -5654,13 +5654,13 @@ SCIP_RETCODE lpFlushChgRows(
       }
    }
 
-   /* change left and right hand sides in SCIP_LP */
+   /* change left and right hand sides in LP */
    if( nchg > 0 )
    {
       SCIPdebugMessage("flushing side changes: change %d sides of %d rows\n", nchg, lp->nchgrows);
       SCIP_CALL( SCIPlpiChgSides(lp->lpi, nchg, ind, lhs, rhs) );
 
-      /* mark the SCIP_LP unsolved */
+      /* mark the LP unsolved */
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
       lp->lpobjval = SCIP_INVALID;
@@ -5677,9 +5677,9 @@ SCIP_RETCODE lpFlushChgRows(
    return SCIP_OKAY;
 }
 
-/** applies all cached changes to the SCIP_LP solver */
+/** applies all cached changes to the LP solver */
 SCIP_RETCODE SCIPlpFlush(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
@@ -5687,7 +5687,7 @@ SCIP_RETCODE SCIPlpFlush(
    assert(lp != NULL);
    assert(blkmem != NULL);
    
-   SCIPdebugMessage("flushing SCIP_LP changes: old (%d cols, %d rows), nchgcols=%d, nchgrows=%d, firstchgcol=%d, firstchgrow=%d, new (%d cols, %d rows), flushed=%d\n",
+   SCIPdebugMessage("flushing LP changes: old (%d cols, %d rows), nchgcols=%d, nchgrows=%d, firstchgcol=%d, firstchgrow=%d, new (%d cols, %d rows), flushed=%d\n",
       lp->nlpicols, lp->nlpirows, lp->nchgcols, lp->nchgrows, lp->lpifirstchgcol, lp->lpifirstchgrow, 
       lp->ncols, lp->nrows, lp->flushed);
 
@@ -5721,9 +5721,9 @@ SCIP_RETCODE SCIPlpFlush(
    return SCIP_OKAY;
 }
 
-/** marks the SCIP_LP to be flushed, even if the SCIP_LP thinks it is not flushed */
+/** marks the LP to be flushed, even if the LP thinks it is not flushed */
 SCIP_RETCODE SCIPlpMarkFlushed(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
@@ -5823,7 +5823,7 @@ SCIP_RETCODE SCIPlpMarkFlushed(
    }
    lp->nchgrows = 0;
 
-   /* mark the SCIP_LP to be flushed */
+   /* mark the LP to be flushed */
    lp->flushed = TRUE;
 
    checkLinks(lp);
@@ -5835,13 +5835,13 @@ SCIP_RETCODE SCIPlpMarkFlushed(
 
 
 /*
- * SCIP_LP methods
+ * LP methods
  */
 
 /** updates link data after addition of column */
 static
 void colUpdateAddLP(
-   SCIP_COL*             col                 /**< SCIP_LP column */
+   SCIP_COL*             col                 /**< LP column */
    )
 {
    SCIP_ROW* row;
@@ -5872,7 +5872,7 @@ void colUpdateAddLP(
 /** updates link data after addition of row */
 static
 void rowUpdateAddLP(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    SCIP_COL* col;
@@ -5903,7 +5903,7 @@ void rowUpdateAddLP(
 /** updates link data after removal of column */
 static
 void colUpdateDelLP(
-   SCIP_COL*             col                 /**< SCIP_LP column */
+   SCIP_COL*             col                 /**< LP column */
    )
 {
    SCIP_ROW* row;
@@ -5934,7 +5934,7 @@ void colUpdateDelLP(
 /** updates link data after removal of row */
 static
 void rowUpdateDelLP(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    SCIP_COL* col;
@@ -5962,9 +5962,9 @@ void rowUpdateDelLP(
    }
 }
 
-/** creates empty SCIP_LP data object */
+/** creates empty LP data object */
 SCIP_RETCODE SCIPlpCreate(
-   SCIP_LP**             lp,                 /**< pointer to SCIP_LP data object */
+   SCIP_LP**             lp,                 /**< pointer to LP data object */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    const char*           name                /**< problem name */
@@ -5979,7 +5979,7 @@ SCIP_RETCODE SCIPlpCreate(
 
    SCIP_ALLOC( BMSallocMemory(lp) );
 
-   /* open SCIP_LP Solver interface */
+   /* open LP Solver interface */
    SCIP_CALL( SCIPlpiCreate(&(*lp)->lpi, name, SCIP_OBJSEN_MINIMIZE) );
 
    (*lp)->lpicols = NULL;
@@ -6044,7 +6044,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpipricing = SCIP_PRICING_AUTO;
    (*lp)->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
 
-   /* set default parameters in SCIP_LP solver */
+   /* set default parameters in LP solver */
    SCIP_CALL( lpSetRealpar(*lp, SCIP_LPPAR_UOBJLIM, (*lp)->lpiuobjlim, &success) );
    if( !success )
    {
@@ -6057,7 +6057,7 @@ SCIP_RETCODE SCIPlpCreate(
    if( !success )
    {
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "LP Solver <%s>: primal feasibility tolerance cannot be set -- tolerance of SCIP and SCIP_LP solver may differ\n",
+         "LP Solver <%s>: primal feasibility tolerance cannot be set -- tolerance of SCIP and LP solver may differ\n",
          SCIPlpiGetSolverName());
    }
    SCIP_CALL( lpSetRealpar(*lp, SCIP_LPPAR_DUALFEASTOL, (*lp)->lpidualfeastol, &success) );
@@ -6065,7 +6065,7 @@ SCIP_RETCODE SCIPlpCreate(
    if( !success )
    {
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "LP Solver <%s>: dual feasibility tolerance cannot be set -- tolerance of SCIP and SCIP_LP solver may differ\n",
+         "LP Solver <%s>: dual feasibility tolerance cannot be set -- tolerance of SCIP and LP solver may differ\n",
          SCIPlpiGetSolverName());
    }
    SCIP_CALL( lpSetRealpar(*lp, SCIP_LPPAR_BARRIERCONVTOL, (*lp)->lpibarrierconvtol, &success) );
@@ -6073,7 +6073,7 @@ SCIP_RETCODE SCIPlpCreate(
    if( !success )
    {
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "LP Solver <%s>: barrier convergence tolerance cannot be set -- tolerance of SCIP and SCIP_LP solver may differ\n",
+         "LP Solver <%s>: barrier convergence tolerance cannot be set -- tolerance of SCIP and LP solver may differ\n",
          SCIPlpiGetSolverName());
    }
    SCIP_CALL( lpSetBoolpar(*lp, SCIP_LPPAR_FROMSCRATCH, (*lp)->lpifromscratch, &success) );
@@ -6126,9 +6126,9 @@ SCIP_RETCODE SCIPlpCreate(
    return SCIP_OKAY;
 }
 
-/** frees SCIP_LP data object */
+/** frees LP data object */
 SCIP_RETCODE SCIPlpFree(
-   SCIP_LP**             lp,                 /**< pointer to SCIP_LP data object */
+   SCIP_LP**             lp,                 /**< pointer to LP data object */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
@@ -6140,7 +6140,7 @@ SCIP_RETCODE SCIPlpFree(
    
    SCIP_CALL( SCIPlpClear(*lp, blkmem, set) );
 
-   /* release SCIP_LPI rows */
+   /* release LPI rows */
    for( i = 0; i < (*lp)->nlpirows; ++i )
    {
       SCIP_CALL( SCIProwRelease(&(*lp)->lpirows[i], blkmem, set, *lp) );
@@ -6161,11 +6161,11 @@ SCIP_RETCODE SCIPlpFree(
    return SCIP_OKAY;
 }
 
-/** resets the SCIP_LP to the empty SCIP_LP by removing all columns and rows from LP, releasing all rows, and flushing the
- *  changes to the SCIP_LP solver
+/** resets the LP to the empty LP by removing all columns and rows from LP, releasing all rows, and flushing the
+ *  changes to the LP solver
  */
 SCIP_RETCODE SCIPlpReset(
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< problem statistics */
@@ -6176,7 +6176,7 @@ SCIP_RETCODE SCIPlpReset(
    SCIP_CALL( SCIPlpClear(lp, blkmem, set) );
    SCIP_CALL( SCIPlpFlush(lp, blkmem, set) );
 
-   /* mark the empty SCIP_LP to be solved */
+   /* mark the empty LP to be solved */
    lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    lp->lpobjval = 0.0;
    lp->validsollp = stat->lpcount; /* the initial (empty) SCIP_LP is solved with primal and dual solution of zero */
@@ -6190,11 +6190,11 @@ SCIP_RETCODE SCIPlpReset(
    return SCIP_OKAY;
 }
 
-/** adds a column to the SCIP_LP */
+/** adds a column to the LP */
 SCIP_RETCODE SCIPlpAddCol(
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_COL*             col,                /**< SCIP_LP column */
+   SCIP_COL*             col,                /**< LP column */
    int                   depth               /**< depth in the tree where the column addition is performed */
    )
 {
@@ -6208,7 +6208,7 @@ SCIP_RETCODE SCIPlpAddCol(
    assert(SCIPvarGetCol(col->var) == col);
    assert(SCIPvarIsIntegral(col->var) == col->integral);
    
-   SCIPdebugMessage("adding column <%s> to SCIP_LP (%d rows, %d cols)\n", SCIPvarGetName(col->var), lp->nrows, lp->ncols);
+   SCIPdebugMessage("adding column <%s> to LP (%d rows, %d cols)\n", SCIPvarGetName(col->var), lp->nrows, lp->ncols);
 #ifdef SCIP_DEBUG
    {
       int i;
@@ -6228,7 +6228,7 @@ SCIP_RETCODE SCIPlpAddCol(
    if( col->removeable )
       lp->nremoveablecols++;
 
-   /* mark the current SCIP_LP unflushed */
+   /* mark the current LP unflushed */
    lp->flushed = FALSE;
 
    /* update column arrays of all linked rows */
@@ -6239,11 +6239,11 @@ SCIP_RETCODE SCIPlpAddCol(
    return SCIP_OKAY;
 }
 
-/** adds a row to the SCIP_LP and captures it */
+/** adds a row to the LP and captures it */
 SCIP_RETCODE SCIPlpAddRow(
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_ROW*             row,                /**< SCIP_LP row */
+   SCIP_ROW*             row,                /**< LP row */
    int                   depth               /**< depth in the tree where the row addition is performed */
    )
 {
@@ -6256,7 +6256,7 @@ SCIP_RETCODE SCIPlpAddRow(
    SCIProwCapture(row);
    SCIProwLock(row);
 
-   SCIPdebugMessage("adding row <%s> to SCIP_LP (%d rows, %d cols)\n", row->name, lp->nrows, lp->ncols);
+   SCIPdebugMessage("adding row <%s> to LP (%d rows, %d cols)\n", row->name, lp->nrows, lp->ncols);
 #ifdef SCIP_DEBUG
    {
       int i;
@@ -6278,7 +6278,7 @@ SCIP_RETCODE SCIPlpAddRow(
    if( row->removeable )
       lp->nremoveablerows++;
 
-   /* mark the current SCIP_LP unflushed */
+   /* mark the current LP unflushed */
    lp->flushed = FALSE;
 
    /* update row arrays of all linked columns */
@@ -6289,17 +6289,17 @@ SCIP_RETCODE SCIPlpAddRow(
    return SCIP_OKAY;
 }
 
-/** removes all columns after the given number of cols from the SCIP_LP */
+/** removes all columns after the given number of cols from the LP */
 SCIP_RETCODE SCIPlpShrinkCols(
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
-   int                   newncols            /**< new number of columns in the SCIP_LP */
+   SCIP_LP*              lp,                 /**< LP data */
+   int                   newncols            /**< new number of columns in the LP */
    )
 {
    SCIP_COL* col;
    int c;
 
    assert(lp != NULL);
-   SCIPdebugMessage("shrinking SCIP_LP from %d to %d columns\n", lp->ncols, newncols);
+   SCIPdebugMessage("shrinking LP from %d to %d columns\n", lp->ncols, newncols);
    assert(0 <= newncols);
    assert(newncols <= lp->ncols);
 
@@ -6317,7 +6317,7 @@ SCIP_RETCODE SCIPlpShrinkCols(
          assert(SCIPvarGetCol(col->var) == lp->cols[c]);
          assert(col->lppos == c);
          
-         /* mark column to be removed from the SCIP_LP */
+         /* mark column to be removed from the LP */
          col->lppos = -1;
          col->lpdepth = -1;
          lp->ncols--;
@@ -6332,7 +6332,7 @@ SCIP_RETCODE SCIPlpShrinkCols(
       assert(lp->ncols == newncols);
       lp->lpifirstchgcol = MIN(lp->lpifirstchgcol, newncols);
 
-      /* mark the current SCIP_LP unflushed */
+      /* mark the current LP unflushed */
       lp->flushed = FALSE;
 
       checkLinks(lp);
@@ -6342,12 +6342,12 @@ SCIP_RETCODE SCIPlpShrinkCols(
    return SCIP_OKAY;
 }
 
-/** removes and releases all rows after the given number of rows from the SCIP_LP */
+/** removes and releases all rows after the given number of rows from the LP */
 SCIP_RETCODE SCIPlpShrinkRows(
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   int                   newnrows            /**< new number of rows in the SCIP_LP */
+   int                   newnrows            /**< new number of rows in the LP */
    )
 {
    SCIP_ROW* row;
@@ -6356,7 +6356,7 @@ SCIP_RETCODE SCIPlpShrinkRows(
    assert(lp != NULL);
    assert(0 <= newnrows && newnrows <= lp->nrows);
 
-   SCIPdebugMessage("shrinking SCIP_LP from %d to %d rows\n", lp->nrows, newnrows);
+   SCIPdebugMessage("shrinking LP from %d to %d rows\n", lp->nrows, newnrows);
    if( newnrows < lp->nrows )
    {
       assert(!lp->diving);
@@ -6368,7 +6368,7 @@ SCIP_RETCODE SCIPlpShrinkRows(
          assert(row->len == 0 || row->cols != NULL);
          assert(row->lppos == r);
 
-         /* mark row to be removed from the SCIP_LP */
+         /* mark row to be removed from the LP */
          row->lppos = -1;
          row->lpdepth = -1;
          lp->nrows--;
@@ -6386,7 +6386,7 @@ SCIP_RETCODE SCIPlpShrinkRows(
       assert(lp->nrows == newnrows);
       lp->lpifirstchgrow = MIN(lp->lpifirstchgrow, newnrows);
 
-      /* mark the current SCIP_LP unflushed */
+      /* mark the current LP unflushed */
       lp->flushed = FALSE;
 
       checkLinks(lp);
@@ -6398,7 +6398,7 @@ SCIP_RETCODE SCIPlpShrinkRows(
 
 /** removes all columns and rows from LP, releases all rows */
 SCIP_RETCODE SCIPlpClear(
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
@@ -6415,7 +6415,7 @@ SCIP_RETCODE SCIPlpClear(
 
 /** remembers number of columns and rows to track the newly added ones */
 void SCIPlpMarkSize(
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(lp != NULL);
@@ -6427,7 +6427,7 @@ void SCIPlpMarkSize(
 
 /** gets all indices of basic columns and rows: index i >= 0 corresponds to column i, index i < 0 to row -i-1 */
 SCIP_RETCODE SCIPlpGetBasisInd(
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    int*                  basisind            /**< pointer to store the basis indices */
    )
 {
@@ -6444,7 +6444,7 @@ SCIP_RETCODE SCIPlpGetBasisInd(
 
 /** gets current basis status for columns and rows; arrays must be large enough to store the basis status */
 SCIP_RETCODE SCIPlpGetBase(
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    int*                  cstat,              /**< array to store column basis status, or NULL */
    int*                  rstat               /**< array to store row basis status, or NULL */
    )
@@ -6461,7 +6461,7 @@ SCIP_RETCODE SCIPlpGetBase(
 
 /** gets a row from the inverse basis matrix B^-1 */
 SCIP_RETCODE SCIPlpGetBInvRow(
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    int                   r,                  /**< row number */
    SCIP_Real*            coef                /**< pointer to store the coefficients of the row */
    )
@@ -6480,7 +6480,7 @@ SCIP_RETCODE SCIPlpGetBInvRow(
 
 /** gets a row from the product of inverse basis matrix B^-1 and coefficient matrix A (i.e. from B^-1 * A) */
 SCIP_RETCODE SCIPlpGetBInvARow(
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    int                   r,                  /**< row number */
    SCIP_Real*            binvrow,            /**< row in B^-1 from prior call to SCIPlpGetBInvRow(), or NULL */
    SCIP_Real*            coef                /**< pointer to store the coefficients of the row */
@@ -6498,11 +6498,11 @@ SCIP_RETCODE SCIPlpGetBInvARow(
    return SCIP_OKAY;
 }
 
-/** calculates a weighted sum of all SCIP_LP rows; for negative weights, the left and right hand side of the corresponding
- *  SCIP_LP row are swapped in the summation
+/** calculates a weighted sum of all LP rows; for negative weights, the left and right hand side of the corresponding
+ *  LP row are swapped in the summation
  */
 SCIP_RETCODE SCIPlpSumRows(
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Real*            weights,            /**< row weights in row summation */
@@ -6591,7 +6591,7 @@ static
 void sumMIRRow(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Bool             allowlocal,         /**< should local rows be included, resulting in a locally valid summation? */
@@ -6742,7 +6742,7 @@ void cleanupMIRRow(
       *mirrhs = SCIPsetInfinity(set);
 }
 
-/** returns SCIP_LP solution value and index of variable lower bound that is closest to variable's current SCIP_LP solution value */
+/** returns LP solution value and index of variable lower bound that is closest to variable's current LP solution value */
 static
 void getClosestVlb(
    SCIP_VAR*             var,                /**< active problem variable */
@@ -6783,7 +6783,7 @@ void getClosestVlb(
    }
 }
 
-/** returns SCIP_LP solution value and index of variable upper bound that is closest to variable's current SCIP_LP solution value */
+/** returns LP solution value and index of variable upper bound that is closest to variable's current LP solution value */
 static
 void getClosestVub(
    SCIP_VAR*             var,                /**< active problem variable */
@@ -7262,7 +7262,7 @@ static
 void substituteMIRRow(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_Real*            weights,            /**< row weights in row summation */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
@@ -7406,11 +7406,11 @@ void printMIR(
 }
 #endif
 
-/* calculates a MIR cut out of the weighted sum of SCIP_LP rows; The weights of modifiable rows are set to 0.0, because these
+/* calculates a MIR cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because these
  * rows cannot participate in a MIR cut.
  */
 SCIP_RETCODE SCIPlpCalcMIR(
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
@@ -7581,7 +7581,7 @@ static
 void sumStrongCGRow(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Bool             allowlocal,         /**< should local rows be included, resulting in a locally valid summation? */
@@ -7648,7 +7648,7 @@ void sumStrongCGRow(
 
          if( row->integral )
          { 
-            /* SCIP_Row is integral:
+            /* Row is integral:
              * Decide, if we want to use the left or the right hand side of the row in the summation.
              * If possible, use the side that leads to a positive slack value in the summation. 
              */
@@ -7665,7 +7665,7 @@ void sumStrongCGRow(
          }
          else
          {
-            /* SCIP_Row is NOT integral:
+            /* Row is NOT integral:
              * Decide, if we have to use the left or the right hand side of the row in the summation,
              * in order to get a positive slack variable in the summation.
              * If not possible, ignore row in summation.
@@ -8087,7 +8087,7 @@ static
 void substituteStrongCGRow(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_Real*            weights,            /**< row weights in row summation */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            strongcgcoef,       /**< array to store strong CG coefficients: must be of size nvars */
@@ -8225,11 +8225,11 @@ void substituteStrongCGRow(
       *strongcgrhs = 0.0;
 }
 
-/* calculates a strong CG cut out of the weighted sum of SCIP_LP rows; The weights of modifiable rows are set to 0.0, because these
+/* calculates a strong CG cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because these
  * rows cannot participate in a strong CG cut.
  */
 SCIP_RETCODE SCIPlpCalcStrongCG(
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
@@ -8403,11 +8403,11 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    return SCIP_OKAY;
 }
 
-/** stores SCIP_LP state (like basis information) into SCIP_LP state object */
+/** stores LP state (like basis information) into LP state object */
 SCIP_RETCODE SCIPlpGetState(
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPISTATE**       lpistate            /**< pointer to SCIP_LP state information (like basis information) */
+   SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    )
 {
    assert(lp != NULL);
@@ -8421,22 +8421,22 @@ SCIP_RETCODE SCIPlpGetState(
    return SCIP_OKAY;
 }
 
-/** loads SCIP_LP state (like basis information) into solver */
+/** loads LP state (like basis information) into solver */
 SCIP_RETCODE SCIPlpSetState(
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LPISTATE*        lpistate            /**< SCIP_LP state information (like basis information) */
+   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
    )
 {
    assert(lp != NULL);
    assert(blkmem != NULL);
 
-   /* flush changes to the SCIP_LP solver */
+   /* flush changes to the LP solver */
    SCIP_CALL( SCIPlpFlush(lp, blkmem, set) );
    assert(lp->flushed);
 
-   /* set SCIP_LPI state in the SCIP_LP solver */
+   /* set LPI state in the LP solver */
    SCIP_CALL( SCIPlpiSetState(lp->lpi, blkmem, lpistate) );
    lp->primalfeasible = TRUE;
    lp->dualfeasible = TRUE;
@@ -8445,11 +8445,11 @@ SCIP_RETCODE SCIPlpSetState(
    return SCIP_OKAY;
 }
 
-/** frees SCIP_LP state information */
+/** frees LP state information */
 SCIP_RETCODE SCIPlpFreeState(
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPISTATE**       lpistate            /**< pointer to SCIP_LP state information (like basis information) */
+   SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    )
 {
    assert(lp != NULL);
@@ -8459,16 +8459,16 @@ SCIP_RETCODE SCIPlpFreeState(
    return SCIP_OKAY;
 }
 
-/** sets the upper objective limit of the SCIP_LP solver */
+/** sets the upper objective limit of the LP solver */
 SCIP_RETCODE SCIPlpSetCutoffbound(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             cutoffbound         /**< new upper objective limit */
    )
 {
    assert(lp != NULL);
 
-   SCIPdebugMessage("setting SCIP_LP upper objective limit from %g to %g\n", lp->cutoffbound, cutoffbound);
+   SCIPdebugMessage("setting LP upper objective limit from %g to %g\n", lp->cutoffbound, cutoffbound);
    
    /* if the objective function was changed in diving, the cutoff bound has no meaning (it will be set correctly
     * in SCIPendDive())
@@ -8479,8 +8479,8 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
       return SCIP_OKAY;
    }
 
-   /* if the cutoff bound is increased, and the SCIP_LP was proved to exceed the old cutoff, it is no longer solved;
-    * if the cutoff bound is decreased below the current optimal value, the SCIP_LP now exceeds the objective limit
+   /* if the cutoff bound is increased, and the LP was proved to exceed the old cutoff, it is no longer solved;
+    * if the cutoff bound is decreased below the current optimal value, the LP now exceeds the objective limit
     */
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && cutoffbound > lp->cutoffbound )
    {
@@ -8501,10 +8501,10 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
    return SCIP_OKAY;
 }
 
-/** returns the name of the given SCIP_LP algorithm */
+/** returns the name of the given LP algorithm */
 static
 const char* lpalgoName(
-   SCIP_LPALGO           lpalgo              /**< SCIP_LP algorithm */
+   SCIP_LPALGO           lpalgo              /**< LP algorithm */
 )
 {
    switch( lpalgo )
@@ -8518,21 +8518,21 @@ const char* lpalgoName(
    case SCIP_LPALGO_BARRIERCROSSOVER:
       return "barrier/crossover";
    default:
-      SCIPerrorMessage("invalid SCIP_LP algorithm\n");
+      SCIPerrorMessage("invalid LP algorithm\n");
       SCIPABORT();
       return "invalid";
    }
 }
 
-/** calls SCIP_LPI to perform primal simplex, measures time and counts iterations, gets basis feasibility status */
+/** calls LPI to perform primal simplex, measures time and counts iterations, gets basis feasibility status */
 static
 SCIP_RETCODE lpPrimalSimplex(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool             resolve,            /**< is this a resolving call (starting with feasible basis)? */
-   SCIP_Bool             keepsol,            /**< should the old SCIP_LP solution be kept if no iterations were performed? */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved SCIP_LP error occured */
+   SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
    SCIP_RETCODE retcode;
@@ -8544,7 +8544,7 @@ SCIP_RETCODE lpPrimalSimplex(
    assert(stat != NULL);
    assert(lperror != NULL);
 
-   SCIPdebugMessage("solving primal SCIP_LP %d (SCIP_LP %d, %d cols, %d rows)\n", 
+   SCIPdebugMessage("solving primal LP %d (LP %d, %d cols, %d rows)\n", 
       stat->nprimallps+1, stat->nlps+1, lp->ncols, lp->nrows);
 
    *lperror = FALSE;
@@ -8555,7 +8555,7 @@ SCIP_RETCODE lpPrimalSimplex(
       char fname[SCIP_MAXSTRLEN];
       sprintf(fname, "lp%lld_%d.mps", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
-      SCIPmessagePrintInfo("wrote SCIP_LP to file <%s> (primal simplex, uobjlim=%g, feastol=%g/%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
+      SCIPmessagePrintInfo("wrote LP to file <%s> (primal simplex, uobjlim=%g, feastol=%g/%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol,
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
@@ -8572,7 +8572,7 @@ SCIP_RETCODE lpPrimalSimplex(
    if( retcode == SCIP_LPERROR )
    {
       *lperror = TRUE;
-      SCIPdebugMessage("(node %lld) primal simplex solving error in SCIP_LP %d\n", stat->nnodes, stat->nlps);
+      SCIPdebugMessage("(node %lld) primal simplex solving error in LP %d\n", stat->nnodes, stat->nlps);
    }
    else
    {
@@ -8620,20 +8620,20 @@ SCIP_RETCODE lpPrimalSimplex(
          lp->validfarkaslp = stat->lpcount;
    }
 
-   SCIPdebugMessage("solved primal SCIP_LP %d in %d iterations\n", stat->lpcount, iterations);
+   SCIPdebugMessage("solved primal LP %d in %d iterations\n", stat->lpcount, iterations);
 
    return SCIP_OKAY;
 }
 
-/** calls SCIP_LPI to perform dual simplex, measures time and counts iterations */
+/** calls LPI to perform dual simplex, measures time and counts iterations */
 static
 SCIP_RETCODE lpDualSimplex(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool             resolve,            /**< is this a resolving call (starting with feasible basis)? */
-   SCIP_Bool             keepsol,            /**< should the old SCIP_LP solution be kept if no iterations were performed? */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved SCIP_LP error occured */
+   SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
    SCIP_RETCODE retcode;
@@ -8645,7 +8645,7 @@ SCIP_RETCODE lpDualSimplex(
    assert(stat != NULL);
    assert(lperror != NULL);
 
-   SCIPdebugMessage("solving dual SCIP_LP %d (SCIP_LP %d, %d cols, %d rows)\n", 
+   SCIPdebugMessage("solving dual LP %d (LP %d, %d cols, %d rows)\n", 
       stat->nduallps+1, stat->nlps+1, lp->ncols, lp->nrows);
 
    *lperror = FALSE;
@@ -8656,7 +8656,7 @@ SCIP_RETCODE lpDualSimplex(
       char fname[SCIP_MAXSTRLEN];
       sprintf(fname, "lp%lld_%d.mps", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
-      SCIPmessagePrintInfo("wrote SCIP_LP to file <%s> (dual simplex, uobjlim=%g, feastol=%g/%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
+      SCIPmessagePrintInfo("wrote LP to file <%s> (dual simplex, uobjlim=%g, feastol=%g/%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, 
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
@@ -8673,7 +8673,7 @@ SCIP_RETCODE lpDualSimplex(
    if( retcode == SCIP_LPERROR )
    {
       *lperror = TRUE;
-      SCIPdebugMessage("(node %lld) dual simplex solving error in SCIP_LP %d\n", stat->nnodes, stat->nlps);
+      SCIPdebugMessage("(node %lld) dual simplex solving error in LP %d\n", stat->nnodes, stat->nlps);
    }
    else
    {
@@ -8721,20 +8721,20 @@ SCIP_RETCODE lpDualSimplex(
          lp->validfarkaslp = stat->lpcount;
    }
 
-   SCIPdebugMessage("solved dual SCIP_LP %d in %d iterations\n", stat->lpcount, iterations);
+   SCIPdebugMessage("solved dual LP %d in %d iterations\n", stat->lpcount, iterations);
 
    return SCIP_OKAY;
 }
 
-/** calls SCIP_LPI to perform barrier, measures time and counts iterations, gets basis feasibility status */
+/** calls LPI to perform barrier, measures time and counts iterations, gets basis feasibility status */
 static
 SCIP_RETCODE lpBarrier(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool             crossover,          /**< should crossover be performed? */
-   SCIP_Bool             keepsol,            /**< should the old SCIP_LP solution be kept if no iterations were performed? */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved SCIP_LP error occured */
+   SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
    SCIP_RETCODE retcode;
@@ -8746,7 +8746,7 @@ SCIP_RETCODE lpBarrier(
    assert(stat != NULL);
    assert(lperror != NULL);
 
-   SCIPdebugMessage("solving barrier%s SCIP_LP %d (SCIP_LP %d, %d cols, %d rows)\n", 
+   SCIPdebugMessage("solving barrier%s LP %d (LP %d, %d cols, %d rows)\n", 
       crossover ? "/crossover" : "", stat->nbarrierlps+1, stat->nlps+1, lp->ncols, lp->nrows);
 
    *lperror = FALSE;
@@ -8757,7 +8757,7 @@ SCIP_RETCODE lpBarrier(
       char fname[SCIP_MAXSTRLEN];
       sprintf(fname, "lp%lld_%d.mps", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
-      SCIPmessagePrintInfo("wrote SCIP_LP to file <%s> (barrier, uobjlim=%g, feastol=%g/%g, convtol=%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
+      SCIPmessagePrintInfo("wrote LP to file <%s> (barrier, uobjlim=%g, feastol=%g/%g, convtol=%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, lp->lpibarrierconvtol,
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
@@ -8774,7 +8774,7 @@ SCIP_RETCODE lpBarrier(
    if( retcode == SCIP_LPERROR )
    {
       *lperror = TRUE;
-      SCIPdebugMessage("(node %lld) barrier solving error in SCIP_LP %d\n", stat->nnodes, stat->nlps);
+      SCIPdebugMessage("(node %lld) barrier solving error in LP %d\n", stat->nnodes, stat->nlps);
    }
    else
    {
@@ -8817,30 +8817,30 @@ SCIP_RETCODE lpBarrier(
          lp->validfarkaslp = stat->lpcount;
    }
 
-   SCIPdebugMessage("solved barrier SCIP_LP %d in %d iterations\n", stat->lpcount, iterations);
+   SCIPdebugMessage("solved barrier LP %d in %d iterations\n", stat->lpcount, iterations);
 
    return SCIP_OKAY;
 }
 
-/** solves the SCIP_LP with the given algorithm */
+/** solves the LP with the given algorithm */
 static
 SCIP_RETCODE lpAlgorithm(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LPALGO           lpalgo,             /**< SCIP_LP algorithm that should be applied */
+   SCIP_LPALGO           lpalgo,             /**< LP algorithm that should be applied */
    SCIP_Bool             resolve,            /**< is this a resolving call (starting with feasible basis)? */
-   SCIP_Bool             keepsol,            /**< should the old SCIP_LP solution be kept if no iterations were performed? */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved SCIP_LP error occured */
+   SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lperror != NULL);
 
-   SCIPdebugMessage("calling SCIP_LP algorithm <%s>\n", lpalgoName(lpalgo));
+   SCIPdebugMessage("calling LP algorithm <%s>\n", lpalgoName(lpalgo));
 
-   /* call appropriate SCIP_LP algorithm */
+   /* call appropriate LP algorithm */
    switch( lpalgo )
    {
    case SCIP_LPALGO_PRIMALSIMPLEX:
@@ -8860,7 +8860,7 @@ SCIP_RETCODE lpAlgorithm(
       break;
 
    default:
-      SCIPerrorMessage("invalid SCIP_LP algorithm\n");
+      SCIPerrorMessage("invalid LP algorithm\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -8876,19 +8876,19 @@ SCIP_RETCODE lpAlgorithm(
 }
 
 #define FEASTOLTIGHTFAC 0.001
-/** solves the SCIP_LP with the given SCIP_LP algorithm, and tries to resolve numerical problems */
+/** solves the LP with the given LP algorithm, and tries to resolve numerical problems */
 static
 SCIP_RETCODE lpSolveStable(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LPALGO           lpalgo,             /**< SCIP_LP algorithm that should be applied */
+   SCIP_LPALGO           lpalgo,             /**< LP algorithm that should be applied */
    SCIP_Bool             resolve,            /**< is this a resolving call (starting with feasible basis)? */
-   SCIP_Bool             fastmip,            /**< should the FASTMIP setting of the SCIP_LP solver be activated? */
+   SCIP_Bool             fastmip,            /**< should the FASTMIP setting of the LP solver be activated? */
    SCIP_Bool             tightfeastol,       /**< should a tighter feasibility tolerance be used? */
-   SCIP_Bool             fromscratch,        /**< should the SCIP_LP be solved from scratch without using current basis? */
-   SCIP_Bool             keepsol,            /**< should the old SCIP_LP solution be kept if no iterations were performed? */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved SCIP_LP error occured */
+   SCIP_Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
+   SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
    SCIP_Bool success;
@@ -8932,7 +8932,7 @@ SCIP_RETCODE lpSolveStable(
       if( success )
       {
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %lld) numerical troubles in SCIP_LP %d -- ignoring instability of %s\n",
+            "(node %lld) numerical troubles in LP %d -- ignoring instability of %s\n",
             stat->nnodes, stat->nlps, lpalgoName(lpalgo));
          return SCIP_OKAY;
       }
@@ -8945,7 +8945,7 @@ SCIP_RETCODE lpSolveStable(
       if( success )
       {
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %lld) numerical troubles in SCIP_LP %d -- solve again without FASTMIP with %s\n", 
+            "(node %lld) numerical troubles in LP %d -- solve again without FASTMIP with %s\n", 
             stat->nnodes, stat->nlps, lpalgoName(lpalgo));
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, lperror) );
          
@@ -8958,7 +8958,7 @@ SCIP_RETCODE lpSolveStable(
             if( success )
             {
                SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %lld) numerical troubles in SCIP_LP %d -- ignoring instability of %s\n",
+                  "(node %lld) numerical troubles in LP %d -- ignoring instability of %s\n",
                   stat->nnodes, stat->nlps, lpalgoName(lpalgo));
                return SCIP_OKAY;
             }
@@ -8971,7 +8971,7 @@ SCIP_RETCODE lpSolveStable(
    if( success )
    {
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %lld) numerical troubles in SCIP_LP %d -- solve again with %s %s scaling\n", 
+         "(node %lld) numerical troubles in LP %d -- solve again with %s %s scaling\n", 
          stat->nnodes, stat->nlps, lpalgoName(lpalgo), !set->lp_scaling ? "with" : "without");
       SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, lperror) );
    
@@ -8984,7 +8984,7 @@ SCIP_RETCODE lpSolveStable(
          if( success )
          {
             SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "(node %lld) numerical troubles in SCIP_LP %d -- ignoring instability of %s\n",
+               "(node %lld) numerical troubles in LP %d -- ignoring instability of %s\n",
                stat->nnodes, stat->nlps, lpalgoName(lpalgo));
             return SCIP_OKAY;
          }
@@ -9000,7 +9000,7 @@ SCIP_RETCODE lpSolveStable(
    if( success )
    {
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %lld) numerical troubles in SCIP_LP %d -- solve again with %s %s presolving\n", 
+         "(node %lld) numerical troubles in LP %d -- solve again with %s %s presolving\n", 
          stat->nnodes, stat->nlps, lpalgoName(lpalgo), !set->lp_presolving ? "with" : "without");
       SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, lperror) );
    
@@ -9013,7 +9013,7 @@ SCIP_RETCODE lpSolveStable(
          if( success )
          {
             SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "(node %lld) numerical troubles in SCIP_LP %d -- ignoring instability of %s\n",
+               "(node %lld) numerical troubles in LP %d -- ignoring instability of %s\n",
                stat->nnodes, stat->nlps, lpalgoName(lpalgo));
             return SCIP_OKAY;
          }
@@ -9033,7 +9033,7 @@ SCIP_RETCODE lpSolveStable(
       if( success || success2 )
       {
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %lld) numerical troubles in SCIP_LP %d -- solve again with %s with tighter feasibility tolerance\n", 
+            "(node %lld) numerical troubles in LP %d -- solve again with %s with tighter feasibility tolerance\n", 
             stat->nnodes, stat->nlps, lpalgoName(lpalgo));
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, lperror) );
       
@@ -9046,7 +9046,7 @@ SCIP_RETCODE lpSolveStable(
             if( success )
             {
                SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %lld) numerical troubles in SCIP_LP %d -- ignoring instability of %s\n",
+                  "(node %lld) numerical troubles in LP %d -- ignoring instability of %s\n",
                   stat->nnodes, stat->nlps, lpalgoName(lpalgo));
                return SCIP_OKAY;
             }
@@ -9066,7 +9066,7 @@ SCIP_RETCODE lpSolveStable(
       if( success )
       {
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %lld) numerical troubles in SCIP_LP %d -- solve again from scratch with %s\n", 
+            "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s\n", 
             stat->nnodes, stat->nlps, lpalgoName(lpalgo));
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, lperror) );
          
@@ -9079,7 +9079,7 @@ SCIP_RETCODE lpSolveStable(
             if( success )
             {
                SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %lld) numerical troubles in SCIP_LP %d -- ignoring instability of %s\n",
+                  "(node %lld) numerical troubles in LP %d -- ignoring instability of %s\n",
                   stat->nnodes, stat->nlps, lpalgoName(lpalgo));
                return SCIP_OKAY;
             }
@@ -9092,7 +9092,7 @@ SCIP_RETCODE lpSolveStable(
    {
       lpalgo = (lpalgo == SCIP_LPALGO_PRIMALSIMPLEX ? SCIP_LPALGO_DUALSIMPLEX : SCIP_LPALGO_PRIMALSIMPLEX);
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %lld) numerical troubles in SCIP_LP %d -- solve again from scratch with %s\n", 
+         "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s\n", 
          stat->nnodes, stat->nlps, lpalgoName(lpalgo));
       SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, lperror) );
 
@@ -9105,7 +9105,7 @@ SCIP_RETCODE lpSolveStable(
          if( success )
          {
             SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "(node %lld) numerical troubles in SCIP_LP %d -- ignoring instability of %s\n",
+               "(node %lld) numerical troubles in LP %d -- ignoring instability of %s\n",
                stat->nnodes, stat->nlps, lpalgoName(lpalgo));
             return SCIP_OKAY;
          }
@@ -9116,7 +9116,7 @@ SCIP_RETCODE lpSolveStable(
       if( success )
       {
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %lld) numerical troubles in SCIP_LP %d -- solve again from scratch with %s %s scaling\n", 
+            "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s %s scaling\n", 
             stat->nnodes, stat->nlps, lpalgoName(lpalgo), !set->lp_scaling ? "with" : "without");
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, lperror) );
          
@@ -9129,7 +9129,7 @@ SCIP_RETCODE lpSolveStable(
             if( success )
             {
                SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %lld) numerical troubles in SCIP_LP %d -- ignoring instability of %s\n",
+                  "(node %lld) numerical troubles in LP %d -- ignoring instability of %s\n",
                   stat->nnodes, stat->nlps, lpalgoName(lpalgo));
                return SCIP_OKAY;
             }
@@ -9145,7 +9145,7 @@ SCIP_RETCODE lpSolveStable(
       if( success )
       {
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %lld) numerical troubles in SCIP_LP %d -- solve again from scratch with %s %s presolving\n", 
+            "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s %s presolving\n", 
             stat->nnodes, stat->nlps, lpalgoName(lpalgo), !set->lp_presolving ? "with" : "without");
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, lperror) );
          
@@ -9158,7 +9158,7 @@ SCIP_RETCODE lpSolveStable(
             if( success )
             {
                SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %lld) numerical troubles in SCIP_LP %d -- ignoring instability of %s\n",
+                  "(node %lld) numerical troubles in LP %d -- ignoring instability of %s\n",
                   stat->nnodes, stat->nlps, lpalgoName(lpalgo));
                return SCIP_OKAY;
             }
@@ -9178,7 +9178,7 @@ SCIP_RETCODE lpSolveStable(
          if( success || success2 )
          {
             SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "(node %lld) numerical troubles in SCIP_LP %d -- solve again from scratch with %s with tighter feasibility tolerance\n", 
+               "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s with tighter feasibility tolerance\n", 
                stat->nnodes, stat->nlps, lpalgoName(lpalgo));
             SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, lperror) );
          
@@ -9191,7 +9191,7 @@ SCIP_RETCODE lpSolveStable(
                if( success )
                {
                   SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                     "(node %lld) numerical troubles in SCIP_LP %d -- ignoring instability of %s\n",
+                     "(node %lld) numerical troubles in LP %d -- ignoring instability of %s\n",
                      stat->nnodes, stat->nlps, lpalgoName(lpalgo));
                   return SCIP_OKAY;
                }
@@ -9205,29 +9205,29 @@ SCIP_RETCODE lpSolveStable(
       }
    }
 
-   /* nothing worked -- store the instable SCIP_LP to a file and exit with an LPERROR */
-   SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "(node %lld) unresolved numerical troubles in SCIP_LP %d\n", 
+   /* nothing worked -- store the instable LP to a file and exit with an LPERROR */
+   SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "(node %lld) unresolved numerical troubles in LP %d\n", 
       stat->nnodes, stat->nlps);
    *lperror = TRUE;
 
    return SCIP_OKAY;
 }
 
-/** solves the SCIP_LP with the given algorithm and evaluates return status */
+/** solves the LP with the given algorithm and evaluates return status */
 static
 SCIP_RETCODE lpSolve(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LPALGO           lpalgo,             /**< SCIP_LP algorithm that should be applied */
-   SCIP_Bool             needprimalray,      /**< if the SCIP_LP is unbounded, do we need a primal ray? */
-   SCIP_Bool             needdualray,        /**< if the SCIP_LP is infeasible, do we need a dual ray? */
+   SCIP_LPALGO           lpalgo,             /**< LP algorithm that should be applied */
+   SCIP_Bool             needprimalray,      /**< if the LP is unbounded, do we need a primal ray? */
+   SCIP_Bool             needdualray,        /**< if the LP is infeasible, do we need a dual ray? */
    SCIP_Bool             resolve,            /**< is this a resolving call (starting with feasible basis)? */
-   SCIP_Bool             fastmip,            /**< should the FASTMIP setting of the SCIP_LP solver be activated? */
+   SCIP_Bool             fastmip,            /**< should the FASTMIP setting of the LP solver be activated? */
    SCIP_Bool             tightfeastol,       /**< should a tighter feasibility tolerance be used? */
-   SCIP_Bool             fromscratch,        /**< should the SCIP_LP be solved from scratch without using current basis? */
-   SCIP_Bool             keepsol,            /**< should the old SCIP_LP solution be kept if no iterations were performed? */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved SCIP_LP error occured */
+   SCIP_Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
+   SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
    SCIP_Bool solvedprimal;
@@ -9254,7 +9254,7 @@ SCIP_RETCODE lpSolve(
    /* check, if an error occured */
    if( *lperror )
    {
-      SCIPdebugMessage("unresolved error while solving SCIP_LP with %s\n", lpalgoName(lp->lastlpalgo));
+      SCIPdebugMessage("unresolved error while solving LP with %s\n", lpalgoName(lp->lastlpalgo));
       lp->solved = FALSE;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
       return SCIP_OKAY;
@@ -9326,7 +9326,7 @@ SCIP_RETCODE lpSolve(
       assert(lpalgo != SCIP_LPALGO_DUALSIMPLEX);
       lpalgo = SCIP_LPALGO_DUALSIMPLEX;
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %lld) solution status of SCIP_LP %d couldn't be proved (internal status:%d) -- solve again with %s\n", 
+         "(node %lld) solution status of LP %d couldn't be proved (internal status:%d) -- solve again with %s\n", 
          stat->nnodes, stat->nlps, lpalgoName(lpalgo));
       goto SOLVEAGAIN;
    }
@@ -9335,13 +9335,13 @@ SCIP_RETCODE lpSolve(
       assert(lpalgo != SCIP_LPALGO_PRIMALSIMPLEX);
       lpalgo = SCIP_LPALGO_PRIMALSIMPLEX;
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %lld) solution status of SCIP_LP %d couldn't be proved (internal status:%d) -- solve again with %s\n", 
+         "(node %lld) solution status of LP %d couldn't be proved (internal status:%d) -- solve again with %s\n", 
          stat->nnodes, stat->nlps, lpalgoName(lpalgo));
       goto SOLVEAGAIN;
    }
    else
    {
-      SCIPerrorMessage("(node %lld) error or unknown return status of %s in SCIP_LP %d (internal status: %d)\n", 
+      SCIPerrorMessage("(node %lld) error or unknown return status of %s in LP %d (internal status: %d)\n", 
          stat->nnodes, lpalgoName(lp->lastlpalgo), stat->nlps, SCIPlpiGetInternalStatus(lp->lpi));
       lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
       return SCIP_LPERROR;
@@ -9349,27 +9349,27 @@ SCIP_RETCODE lpSolve(
 
    lp->solved = TRUE;
 
-   SCIPdebugMessage("solving SCIP_LP with %s returned solstat=%d (internal status: %d, pfeas=%d, dfeas=%d)\n",
+   SCIPdebugMessage("solving LP with %s returned solstat=%d (internal status: %d, pfeas=%d, dfeas=%d)\n",
       lpalgoName(lp->lastlpalgo), lp->lpsolstat, SCIPlpiGetInternalStatus(lp->lpi),
       SCIPlpiIsPrimalFeasible(lp->lpi), SCIPlpiIsDualFeasible(lp->lpi));
 
    return SCIP_OKAY;
 }
 
-/** flushes the SCIP_LP and solves it with the primal or dual simplex algorithm, depending on the current basis feasibility */
+/** flushes the LP and solves it with the primal or dual simplex algorithm, depending on the current basis feasibility */
 static
 SCIP_RETCODE lpFlushAndSolve(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_Bool             needprimalray,      /**< if the SCIP_LP is unbounded, do we need a primal ray? */
-   SCIP_Bool             needdualray,        /**< if the SCIP_LP is infeasible, do we need a dual ray? */
-   SCIP_Bool             fastmip,            /**< should the FASTMIP setting of the SCIP_LP solver be activated? */
+   SCIP_Bool             needprimalray,      /**< if the LP is unbounded, do we need a primal ray? */
+   SCIP_Bool             needdualray,        /**< if the LP is infeasible, do we need a dual ray? */
+   SCIP_Bool             fastmip,            /**< should the FASTMIP setting of the LP solver be activated? */
    SCIP_Bool             tightfeastol,       /**< should a tighter feasibility tolerance be used? */
-   SCIP_Bool             fromscratch,        /**< should the SCIP_LP be solved from scratch without using current basis? */
-   SCIP_Bool             keepsol,            /**< should the old SCIP_LP solution be kept if no iterations were performed? */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved SCIP_LP error occured */
+   SCIP_Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
+   SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
    SCIP_Bool resolve;
@@ -9379,11 +9379,11 @@ SCIP_RETCODE lpFlushAndSolve(
    assert(set != NULL);
    assert(lperror != NULL);
 
-   /* flush changes to the SCIP_LP solver */
+   /* flush changes to the LP solver */
    SCIP_CALL( SCIPlpFlush(lp, blkmem, set) );
    fastmip = fastmip && !lp->flushaddedcols && !lp->flushdeletedcols; /* turn off FASTMIP if columns were changed */
    
-   /* select SCIP_LP algorithm to apply */
+   /* select LP algorithm to apply */
    resolve = lp->solisbasic && (lp->dualfeasible || lp->primalfeasible);
    algo = resolve ? set->lp_resolvealgorithm : set->lp_initalgorithm;
    switch( algo )
@@ -9411,13 +9411,13 @@ SCIP_RETCODE lpFlushAndSolve(
       break;
 
    case 'c':
-      SCIPdebugMessage("solving barrier SCIP_LP with crossover\n");
+      SCIPdebugMessage("solving barrier LP with crossover\n");
       SCIP_CALL( lpSolve(lp, set, stat, SCIP_LPALGO_BARRIERCROSSOVER, needprimalray, needdualray, resolve, fastmip,
             tightfeastol, fromscratch, keepsol, lperror) );
       break;
 
    default:
-      SCIPerrorMessage("invalid parameter setting <%c> for SCIP_LP algorithm\n", algo);
+      SCIPerrorMessage("invalid parameter setting <%c> for LP algorithm\n", algo);
       return SCIP_PARAMETERWRONGVAL;
    }
    assert(!(*lperror) || !lp->solved);
@@ -9425,17 +9425,17 @@ SCIP_RETCODE lpFlushAndSolve(
    return SCIP_OKAY;
 }
 
-/** solves the SCIP_LP with simplex algorithm, and copy the solution into the column's data */
+/** solves the LP with simplex algorithm, and copy the solution into the column's data */
 SCIP_RETCODE SCIPlpSolveAndEval(
-   SCIP_LP*              lp,                 /**< SCIP_LP data */
+   SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
-   int                   itlim,              /**< maximal number of SCIP_LP iterations to perform, or -1 for no limit */
+   int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    SCIP_Bool             aging,              /**< should aging and removal of obsolete cols/rows be applied? */
-   SCIP_Bool             keepsol,            /**< should the old SCIP_LP solution be kept if no iterations were performed? */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved SCIP_LP error occured */
+   SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
    SCIP_Bool needprimalray;
@@ -9455,7 +9455,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    needprimalray = TRUE;
    needdualray = (!SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve || set->conf_uselp);
 
-   /* flush changes to the SCIP_LP solver */
+   /* flush changes to the LP solver */
    SCIP_CALL( SCIPlpFlush(lp, blkmem, set) );
 
    /* set iteration limit for this solve */
@@ -9470,13 +9470,13 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       SCIP_Bool fromscratch;
       int oldnlps;
 
-      /* set initial SCIP_LP solver settings */
+      /* set initial LP solver settings */
       fastmip = set->lp_fastmip && lp->lpihasfastmip && !lp->flushaddedcols && !lp->flushdeletedcols && stat->nnodes > 1;
       tightfeastol = FALSE;
       fromscratch = FALSE;
 
    SOLVEAGAIN:
-      /* solve the SCIP_LP */
+      /* solve the LP */
       oldnlps = stat->nlps;
       SCIP_CALL( lpFlushAndSolve(lp, blkmem, set, stat, needprimalray, needdualray, fastmip, tightfeastol, fromscratch,
             keepsol, lperror) );
@@ -9493,26 +9493,26 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       case SCIP_LPSOLSTAT_OPTIMAL:
          if( set->lp_checkfeas )
          {
-            /* get SCIP_LP solution and check the solution's feasibility again */
+            /* get LP solution and check the solution's feasibility again */
             SCIP_CALL( SCIPlpGetSol(lp, set, stat, &primalfeasible, &dualfeasible) );
          }
          else
          {
-            /* get SCIP_LP solution believing in the feasibility of the SCIP_LP solution */
+            /* get LP solution believing in the feasibility of the LP solution */
             SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
             primalfeasible = TRUE;
             dualfeasible = TRUE;
          }
          if( primalfeasible && dualfeasible && aging && !lp->diving && !lp->probing && stat->nlps > oldnlps )
          {
-            /* update ages and remove obsolete columns and rows from SCIP_LP */
+            /* update ages and remove obsolete columns and rows from LP */
             SCIP_CALL( SCIPlpUpdateAges(lp, stat) );
             SCIP_CALL( SCIPlpRemoveNewObsoletes(lp, blkmem, set, stat) );
             
             if( !lp->solved )
             {
-               /* resolve SCIP_LP after removing obsolete columns and rows */
-               SCIPdebugMessage("removed obsoletes - resolve SCIP_LP again: %d rows, %d cols\n", lp->nrows, lp->ncols);
+               /* resolve LP after removing obsolete columns and rows */
+               SCIPdebugMessage("removed obsoletes - resolve LP again: %d rows, %d cols\n", lp->nrows, lp->ncols);
                aging = FALSE; /* to prevent infinite loops */
                goto SOLVEAGAIN;
             }
@@ -9525,7 +9525,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             {
                /* solution is infeasible (this can happen due to numerical problems): solve again without FASTMIP */
                SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %lld) solution of SCIP_LP %d not optimal (pfeas=%d, dfeas=%d) -- solving again without FASTMIP\n",
+                  "(node %lld) solution of LP %d not optimal (pfeas=%d, dfeas=%d) -- solving again without FASTMIP\n",
                   stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
                fastmip = FALSE;
                goto SOLVEAGAIN;
@@ -9536,7 +9536,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                 * tolerance
                 */
                SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %lld) solution of SCIP_LP %d not optimal (pfeas=%d, dfeas=%d) -- solving again with tighter feasibility tolerance\n",
+                  "(node %lld) solution of LP %d not optimal (pfeas=%d, dfeas=%d) -- solving again with tighter feasibility tolerance\n",
                   stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
                tightfeastol = TRUE;
                goto SOLVEAGAIN;
@@ -9545,7 +9545,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             {
                /* solution is infeasible (this can happen due to numerical problems): solve again from scratch */
                SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %lld) solution of SCIP_LP %d not optimal (pfeas=%d, dfeas=%d) -- solving again from scratch\n",
+                  "(node %lld) solution of LP %d not optimal (pfeas=%d, dfeas=%d) -- solving again from scratch\n",
                   stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
                fromscratch = TRUE;
                goto SOLVEAGAIN;
@@ -9553,13 +9553,13 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             else
             {
                SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %lld) unresolved numerical troubles in SCIP_LP %d\n", stat->nnodes, stat->nlps);
+                  "(node %lld) unresolved numerical troubles in LP %d\n", stat->nnodes, stat->nlps);
                lp->solved = FALSE;
                lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
                *lperror = TRUE;
             }
          }
-         SCIPdebugMessage(" -> SCIP_LP objective value: %g + %g = %g (solstat=%d, cutoff=%g)\n",
+         SCIPdebugMessage(" -> LP objective value: %g + %g = %g (solstat=%d, cutoff=%g)\n",
             lp->lpobjval, lp->looseobjval, lp->lpobjval + lp->looseobjval, lp->lpsolstat, lp->cutoffbound);
          break;
 
@@ -9568,12 +9568,12 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          {
             SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat) );
          }
-         SCIPdebugMessage(" -> SCIP_LP infeasible\n");
+         SCIPdebugMessage(" -> LP infeasible\n");
          break;
 
       case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
          SCIP_CALL( SCIPlpGetUnboundedSol(lp, set, stat) );
-         SCIPdebugMessage(" -> SCIP_LP has unbounded primal ray\n");
+         SCIPdebugMessage(" -> LP has unbounded primal ray\n");
          break;
 
       case SCIP_LPSOLSTAT_OBJLIMIT:
@@ -9581,7 +9581,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          {
             SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
          }
-         SCIPdebugMessage(" -> SCIP_LP objective limit reached\n");
+         SCIPdebugMessage(" -> LP objective limit reached\n");
          break;
 
       case SCIP_LPSOLSTAT_ITERLIMIT:
@@ -9594,11 +9594,11 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
       case SCIP_LPSOLSTAT_ERROR:
       case SCIP_LPSOLSTAT_NOTSOLVED:
-         SCIPerrorMessage("error in SCIP_LP solver\n");
+         SCIPerrorMessage("error in LP solver\n");
          return SCIP_LPERROR;
 
       default:
-         SCIPerrorMessage("unknown SCIP_LP solution status\n");
+         SCIPerrorMessage("unknown LP solution status\n");
          return SCIP_ERROR;
       }
    }
@@ -9607,9 +9607,9 @@ SCIP_RETCODE SCIPlpSolveAndEval(
    return SCIP_OKAY;
 }
 
-/** gets solution status of current SCIP_LP */
+/** gets solution status of current LP */
 SCIP_LPSOLSTAT SCIPlpGetSolstat(
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(lp != NULL);
@@ -9618,9 +9618,9 @@ SCIP_LPSOLSTAT SCIPlpGetSolstat(
    return (lp->flushed ? lp->lpsolstat : SCIP_LPSOLSTAT_NOTSOLVED);
 }
 
-/** gets objective value of current SCIP_LP */
+/** gets objective value of current LP */
 SCIP_Real SCIPlpGetObjval(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
@@ -9639,9 +9639,9 @@ SCIP_Real SCIPlpGetObjval(
       return lp->lpobjval + lp->looseobjval;
 }
 
-/** gets part of objective value of current SCIP_LP that results from COLUMN variables only */
+/** gets part of objective value of current LP that results from COLUMN variables only */
 SCIP_Real SCIPlpGetColumnObjval(
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(lp != NULL);
@@ -9650,9 +9650,9 @@ SCIP_Real SCIPlpGetColumnObjval(
    return (lp->flushed ? lp->lpobjval : SCIP_INVALID);
 }
 
-/** gets part of objective value of current SCIP_LP that results from LOOSE variables only */
+/** gets part of objective value of current LP that results from LOOSE variables only */
 SCIP_Real SCIPlpGetLooseObjval(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
@@ -9671,7 +9671,7 @@ SCIP_Real SCIPlpGetLooseObjval(
 
 /** gets current pseudo objective value */
 SCIP_Real SCIPlpGetPseudoObjval(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
@@ -9687,7 +9687,7 @@ SCIP_Real SCIPlpGetPseudoObjval(
 
 /** gets pseudo objective value, if a bound of the given variable would be modified in the given way */
 SCIP_Real SCIPlpGetModifiedPseudoObjval(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             oldbound,           /**< old value for bound */
@@ -9724,7 +9724,7 @@ SCIP_Real SCIPlpGetModifiedPseudoObjval(
  *  perform calculations with interval arithmetic to get an exact lower bound
  */
 SCIP_Real SCIPlpGetModifiedProvedPseudoObjval(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             oldbound,           /**< old value for bound */
@@ -9778,7 +9778,7 @@ SCIP_Real SCIPlpGetModifiedProvedPseudoObjval(
 /** updates current pseudo and loose objective values for a change in a variable's objective value or bounds */
 static
 SCIP_RETCODE lpUpdateVar(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_Real             oldobj,             /**< old objective value of variable */
@@ -9872,7 +9872,7 @@ SCIP_RETCODE lpUpdateVar(
  */
 static
 SCIP_RETCODE lpUpdateVarProved(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_Real             oldobj,             /**< old objective value of variable */
@@ -9985,7 +9985,7 @@ SCIP_RETCODE lpUpdateVarProved(
 
 /** updates current pseudo and loose objective value for a change in a variable's objective value */
 SCIP_RETCODE SCIPlpUpdateVarObj(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_Real             oldobj,             /**< old objective value of variable */
@@ -10017,7 +10017,7 @@ SCIP_RETCODE SCIPlpUpdateVarObj(
 
 /** updates current pseudo and loose objective value for a change in a variable's lower bound */
 SCIP_RETCODE SCIPlpUpdateVarLb(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_Real             oldlb,              /**< old lower bound of variable */
@@ -10049,7 +10049,7 @@ SCIP_RETCODE SCIPlpUpdateVarLb(
 
 /** updates current pseudo objective value for a change in a variable's upper bound */
 SCIP_RETCODE SCIPlpUpdateVarUb(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable that changed */
    SCIP_Real             oldub,              /**< old upper bound of variable */
@@ -10081,7 +10081,7 @@ SCIP_RETCODE SCIPlpUpdateVarUb(
 
 /** informs LP, that given variable was added to the problem */
 SCIP_RETCODE SCIPlpUpdateAddVar(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< variable that is now a LOOSE problem variable */
    )
@@ -10102,7 +10102,7 @@ SCIP_RETCODE SCIPlpUpdateAddVar(
 
 /** informs LP, that given variable is to be deleted from the problem */
 SCIP_RETCODE SCIPlpUpdateDelVar(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< variable that will be deleted from the problem */
    )
@@ -10124,7 +10124,7 @@ SCIP_RETCODE SCIPlpUpdateDelVar(
 /** informs LP, that given formerly loose problem variable is now a column variable */
 static
 SCIP_RETCODE lpUpdateVarColumn(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< problem variable that changed from LOOSE to COLUMN */
    )
@@ -10174,7 +10174,7 @@ SCIP_RETCODE lpUpdateVarColumn(
  */
 static
 SCIP_RETCODE lpUpdateVarColumnProved(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< problem variable that changed from LOOSE to COLUMN */
    )
@@ -10239,7 +10239,7 @@ SCIP_RETCODE lpUpdateVarColumnProved(
 
 /** informs LP, that given formerly loose problem variable is now a column variable */
 SCIP_RETCODE SCIPlpUpdateVarColumn(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< problem variable that changed from LOOSE to COLUMN */
    )
@@ -10261,7 +10261,7 @@ SCIP_RETCODE SCIPlpUpdateVarColumn(
 /** informs LP, that given formerly column problem variable is now again a loose variable */
 static
 SCIP_RETCODE lpUpdateVarLoose(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< problem variable that changed from COLUMN to LOOSE */
    )
@@ -10303,7 +10303,7 @@ SCIP_RETCODE lpUpdateVarLoose(
  */
 static
 SCIP_RETCODE lpUpdateVarLooseProved(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< problem variable that changed from COLUMN to LOOSE */
    )
@@ -10360,7 +10360,7 @@ SCIP_RETCODE lpUpdateVarLooseProved(
 
 /** informs LP, that given formerly column problem variable is now again a loose variable */
 SCIP_RETCODE SCIPlpUpdateVarLoose(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< problem variable that changed from COLUMN to LOOSE */
    )
@@ -10379,9 +10379,9 @@ SCIP_RETCODE SCIPlpUpdateVarLoose(
    return SCIP_OKAY;
 }
 
-/** stores the SCIP_LP solution in the columns and rows */
+/** stores the LP solution in the columns and rows */
 SCIP_RETCODE SCIPlpGetSol(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
@@ -10419,7 +10419,7 @@ SCIP_RETCODE SCIPlpGetSol(
       return SCIP_OKAY;
    lp->validsollp = stat->lpcount;
 
-   SCIPdebugMessage("getting new SCIP_LP solution %d\n", stat->lpcount);
+   SCIPdebugMessage("getting new LP solution %d\n", stat->lpcount);
 
    lpicols = lp->lpicols;
    lpirows = lp->lpirows;
@@ -10514,9 +10514,9 @@ SCIP_RETCODE SCIPlpGetSol(
    return SCIP_OKAY;
 }
 
-/** stores SCIP_LP solution with infinite objective value in the columns and rows */
+/** stores LP solution with infinite objective value in the columns and rows */
 SCIP_RETCODE SCIPlpGetUnboundedSol(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< problem statistics */
    )
@@ -10548,7 +10548,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       return SCIP_OKAY;
    lp->validsollp = stat->lpcount;
 
-   SCIPdebugMessage("getting new unbounded SCIP_LP solution %d\n", stat->lpcount);
+   SCIPdebugMessage("getting new unbounded LP solution %d\n", stat->lpcount);
 
    /* get temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &primsol, lp->nlpicols) );
@@ -10581,7 +10581,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    rayscale = -2*SCIPsetInfinity(set)/rayobjval;
 
    /* calculate the unbounded point: x' = x + rayscale * ray */
-   SCIPdebugMessage("unbounded SCIP_LP solution: rayobjval=%f, rayscale=%f\n", rayobjval, rayscale);
+   SCIPdebugMessage("unbounded LP solution: rayobjval=%f, rayscale=%f\n", rayobjval, rayscale);
 
    for( c = 0; c < nlpicols; ++c )
    {
@@ -10610,7 +10610,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
 
 /** stores the dual farkas multipliers for infeasibility proof in rows */
 SCIP_RETCODE SCIPlpGetDualfarkas(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< problem statistics */
    )
@@ -10656,9 +10656,9 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    return SCIP_OKAY;
 }
 
-/** get number of iterations used in last SCIP_LP solve */
+/** get number of iterations used in last LP solve */
 SCIP_RETCODE SCIPlpGetIterations(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    int*                  iterations          /**< pointer to store the iteration count */
    )
 {
@@ -10673,7 +10673,7 @@ SCIP_RETCODE SCIPlpGetIterations(
  *  resets age of non-zero columns and sharp rows
  */
 SCIP_RETCODE SCIPlpUpdateAges(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_STAT*            stat                /**< problem statistics */
    )
 {
@@ -10692,7 +10692,7 @@ SCIP_RETCODE SCIPlpUpdateAges(
    assert(stat != NULL);
    assert(lp->validsollp == stat->lpcount);
 
-   SCIPdebugMessage("updating SCIP_LP ages\n");
+   SCIPdebugMessage("updating LP ages\n");
 
    lpicols = lp->lpicols;
    lpirows = lp->lpirows;
@@ -10723,10 +10723,10 @@ SCIP_RETCODE SCIPlpUpdateAges(
    return SCIP_OKAY;
 }
 
-/* deletes the marked columns from the SCIP_LP and the SCIP_LP interface */
+/* deletes the marked columns from the LP and the LP interface */
 static
 SCIP_RETCODE lpDelColset(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    int*                  coldstat            /**< deletion status of columns:  1 if column should be deleted, 0 if not */
    )
 {
@@ -10742,10 +10742,10 @@ SCIP_RETCODE lpDelColset(
 
    ncols = lp->ncols;
 
-   /* delete columns in SCIP_LP solver */
+   /* delete columns in LP solver */
    SCIP_CALL( SCIPlpiDelColset(lp->lpi, coldstat) );
 
-   /* update SCIP_LP data respectively */
+   /* update LP data respectively */
    for( c = 0; c < ncols; ++c )
    {
       col = lp->cols[c];
@@ -10757,7 +10757,7 @@ SCIP_RETCODE lpDelColset(
          assert(col != NULL);
          assert(col->removeable);
 
-         /* mark column to be deleted from the SCIP_LPI and update column arrays of all linked rows */
+         /* mark column to be deleted from the LPI and update column arrays of all linked rows */
          markColDeleted(col);
          colUpdateDelLP(col);
          col->lpdepth = -1;
@@ -10781,7 +10781,7 @@ SCIP_RETCODE lpDelColset(
       }
    }
 
-   /* mark SCIP_LP to be unsolved */
+   /* mark LP to be unsolved */
    if( lp->ncols < ncols )
    {
       assert(lp->ncols == lp->nlpicols);
@@ -10802,10 +10802,10 @@ SCIP_RETCODE lpDelColset(
    return SCIP_OKAY;
 }
 
-/* deletes the marked rows from the SCIP_LP and the SCIP_LP interface */
+/* deletes the marked rows from the LP and the LP interface */
 static
 SCIP_RETCODE lpDelRowset(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    int*                  rowdstat            /**< deletion status of rows:  1 if row should be deleted, 0 if not */
@@ -10823,10 +10823,10 @@ SCIP_RETCODE lpDelRowset(
 
    nrows = lp->nrows;
 
-   /* delete rows in SCIP_LP solver */
+   /* delete rows in LP solver */
    SCIP_CALL( SCIPlpiDelRowset(lp->lpi, rowdstat) );
 
-   /* update SCIP_LP data respectively */
+   /* update LP data respectively */
    for( r = 0; r < nrows; ++r )
    {
       row = lp->rows[r];
@@ -10838,7 +10838,7 @@ SCIP_RETCODE lpDelRowset(
          assert(row != NULL);
          assert(row->removeable);
 
-         /* mark row to be deleted from the SCIP_LPI and update row arrays of all linked columns */
+         /* mark row to be deleted from the LPI and update row arrays of all linked columns */
          markRowDeleted(row);
          rowUpdateDelLP(row);
          row->lpdepth = -1;
@@ -10865,7 +10865,7 @@ SCIP_RETCODE lpDelRowset(
       }
    }
 
-   /* mark SCIP_LP to be unsolved */
+   /* mark LP to be unsolved */
    if( lp->nrows < nrows )
    {
       assert(lp->nrows == lp->nlpirows);
@@ -10889,7 +10889,7 @@ SCIP_RETCODE lpDelRowset(
 /** removes all non-basic columns, that are too old, beginning with the given firstcol */
 static
 SCIP_RETCODE lpRemoveObsoleteCols(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    int                   firstcol            /**< first column to check for clean up */
@@ -10945,7 +10945,7 @@ SCIP_RETCODE lpRemoveObsoleteCols(
 
    SCIPdebugMessage("removing %d/%d obsolete columns from LP\n", ndelcols, ncols);
 
-   /* delete the marked columns in the SCIP_LP solver interface, update the SCIP_LP respectively */
+   /* delete the marked columns in the LP solver interface, update the LP respectively */
    if( ndelcols > 0 )
    {
       SCIP_CALL( lpDelColset(lp, coldstat) );
@@ -10961,7 +10961,7 @@ SCIP_RETCODE lpRemoveObsoleteCols(
 /** removes all basic rows, that are too old, beginning with the given firstrow */
 static
 SCIP_RETCODE lpRemoveObsoleteRows(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -11016,7 +11016,7 @@ SCIP_RETCODE lpRemoveObsoleteRows(
 
    SCIPdebugMessage("removing %d/%d obsolete rows from LP\n", ndelrows, nrows);
 
-   /* delete the marked rows in the SCIP_LP solver interface, update the SCIP_LP respectively */
+   /* delete the marked rows in the LP solver interface, update the LP respectively */
    if( ndelrows > 0 )
    {
       SCIP_CALL( lpDelRowset(lp, blkmem, set, rowdstat) );
@@ -11029,9 +11029,9 @@ SCIP_RETCODE lpRemoveObsoleteRows(
    return SCIP_OKAY;
 }
 
-/** removes all non-basic columns and basic rows in the part of the SCIP_LP created at the current node, that are too old */
+/** removes all non-basic columns and basic rows in the part of the LP created at the current node, that are too old */
 SCIP_RETCODE SCIPlpRemoveNewObsoletes(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< problem statistics */
@@ -11060,7 +11060,7 @@ SCIP_RETCODE SCIPlpRemoveNewObsoletes(
 
 /** removes all non-basic columns and basic rows in whole LP, that are too old */
 SCIP_RETCODE SCIPlpRemoveAllObsoletes(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< problem statistics */
@@ -11089,7 +11089,7 @@ SCIP_RETCODE SCIPlpRemoveAllObsoletes(
 /** removes all non-basic columns at 0.0 beginning with the given firstcol */
 static
 SCIP_RETCODE lpCleanupCols(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    int                   firstcol            /**< first column to check for clean up */
@@ -11140,7 +11140,7 @@ SCIP_RETCODE lpCleanupCols(
 
    SCIPdebugMessage("removing %d/%d unused columns from LP\n", ndelcols, ncols);
 
-   /* delete the marked columns in the SCIP_LP solver interface, update the SCIP_LP respectively */
+   /* delete the marked columns in the LP solver interface, update the LP respectively */
    if( ndelcols > 0 )
    {
       SCIP_CALL( lpDelColset(lp, coldstat) );
@@ -11156,7 +11156,7 @@ SCIP_RETCODE lpCleanupCols(
 /** removes all basic rows beginning with the given firstrow */
 static
 SCIP_RETCODE lpCleanupRows(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -11206,7 +11206,7 @@ SCIP_RETCODE lpCleanupRows(
 
    SCIPdebugMessage("removing %d/%d unused rows from LP\n", ndelrows, nrows);
 
-   /* delete the marked rows in the SCIP_LP solver interface, update the SCIP_LP respectively */
+   /* delete the marked rows in the LP solver interface, update the LP respectively */
    if( ndelrows > 0 )
    {
       SCIP_CALL( lpDelRowset(lp, blkmem, set, rowdstat) );
@@ -11219,9 +11219,9 @@ SCIP_RETCODE lpCleanupRows(
    return SCIP_OKAY;
 }
 
-/** removes all non-basic columns at 0.0 and basic rows in the part of the SCIP_LP created at the current node */
+/** removes all non-basic columns at 0.0 and basic rows in the part of the LP created at the current node */
 SCIP_RETCODE SCIPlpCleanupNew(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -11241,7 +11241,7 @@ SCIP_RETCODE SCIPlpCleanupNew(
    cleanupcols = (root ? set->lp_cleanupcolsroot : set->lp_cleanupcols);
    cleanuprows = (root ? set->lp_cleanuprowsroot : set->lp_cleanuprows);
 
-   SCIPdebugMessage("removing unused columns starting with %d/%d (%d), unused rows starting with %d/%d (%d), SCIP_LP algo: %d, basic sol: %d\n",
+   SCIPdebugMessage("removing unused columns starting with %d/%d (%d), unused rows starting with %d/%d (%d), LP algo: %d, basic sol: %d\n",
       lp->firstnewcol, lp->ncols, cleanupcols, lp->firstnewrow, lp->nrows, cleanuprows, lp->lastlpalgo, lp->solisbasic);
 
    if( cleanupcols && lp->firstnewcol < lp->ncols )
@@ -11256,9 +11256,9 @@ SCIP_RETCODE SCIPlpCleanupNew(
    return SCIP_OKAY;
 }
 
-/** removes all non-basic columns at 0.0 and basic rows in the whole SCIP_LP */
+/** removes all non-basic columns at 0.0 and basic rows in the whole LP */
 SCIP_RETCODE SCIPlpCleanupAll(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -11278,7 +11278,7 @@ SCIP_RETCODE SCIPlpCleanupAll(
    cleanupcols = (root ? set->lp_cleanupcolsroot : set->lp_cleanupcols);
    cleanuprows = (root ? set->lp_cleanuprowsroot : set->lp_cleanuprows);
 
-   SCIPdebugMessage("removing all unused columns (%d) and rows (%d), SCIP_LP algo: %d, basic sol: %d\n", 
+   SCIPdebugMessage("removing all unused columns (%d) and rows (%d), LP algo: %d, basic sol: %d\n", 
       cleanupcols, cleanuprows, lp->lastlpalgo, lp->solisbasic);
 
    if( cleanupcols && 0 < lp->ncols )
@@ -11293,9 +11293,9 @@ SCIP_RETCODE SCIPlpCleanupAll(
    return SCIP_OKAY;
 }
 
-/** initiates SCIP_LP diving */
+/** initiates LP diving */
 SCIP_RETCODE SCIPlpStartDive(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
@@ -11308,7 +11308,7 @@ SCIP_RETCODE SCIPlpStartDive(
    assert(lp->divelpistate == NULL);
    assert(set != NULL);
 
-   SCIPdebugMessage("diving started (SCIP_LP flushed: %d, SCIP_LP solved: %d, solstat: %d)\n",
+   SCIPdebugMessage("diving started (LP flushed: %d, LP solved: %d, solstat: %d)\n",
       lp->flushed, lp->solved, SCIPlpGetSolstat(lp));
 
 #ifndef NDEBUG
@@ -11327,7 +11327,7 @@ SCIP_RETCODE SCIPlpStartDive(
    }
 #endif
 
-   /* save current SCIP_LPI state (basis information) */
+   /* save current LPI state (basis information) */
    SCIP_CALL( SCIPlpiGetState(lp->lpi, blkmem, &lp->divelpistate) );
 
    /* switch to diving mode */
@@ -11336,9 +11336,9 @@ SCIP_RETCODE SCIPlpStartDive(
    return SCIP_OKAY;
 }
 
-/** quits SCIP_LP diving and resets bounds and objective values of columns to the current node's values */
+/** quits LP diving and resets bounds and objective values of columns to the current node's values */
 SCIP_RETCODE SCIPlpEndDive(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -11356,7 +11356,7 @@ SCIP_RETCODE SCIPlpEndDive(
    assert(lp->divelpistate != NULL);
    assert(nvars == 0 || vars != NULL);
 
-   SCIPdebugMessage("diving ended (SCIP_LP flushed: %d, solstat: %d)\n",
+   SCIPdebugMessage("diving ended (LP flushed: %d, solstat: %d)\n",
       lp->flushed, SCIPlpGetSolstat(lp));
    
    /* reset all columns' objective values and bounds to its original values */
@@ -11372,22 +11372,22 @@ SCIP_RETCODE SCIPlpEndDive(
       }
    }
 
-   /* reload SCIP_LPI state saved at start of diving, free SCIP_LPI state afterwards */
+   /* reload LPI state saved at start of diving, free LPI state afterwards */
    SCIP_CALL( SCIPlpSetState(lp, blkmem, set, lp->divelpistate) );
    SCIP_CALL( SCIPlpFreeState(lp, blkmem, &lp->divelpistate) );
    assert(lp->divelpistate == NULL);
 
    /**@todo Get rid of resolving after diving: use separate data fields in columns to store all diving
     *       information (bounds, obj, solution values) and create calls SCIPvarGetDiveSol() etc.
-    *       to access this diving SCIP_LP information (not applicable on LOOSE variables).
-    *       Just declare the SCIP_LP to be solved at this point (remember the SCIP_LP solution status beforehand).
+    *       to access this diving LP information (not applicable on LOOSE variables).
+    *       Just declare the LP to be solved at this point (remember the LP solution status beforehand).
     */
-   /* resolve SCIP_LP to reset solution */
+   /* resolve LP to reset solution */
    SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, FALSE, FALSE, &lperror) );
    if( lperror )
    {
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %lld) unresolved numerical troubles while resolving SCIP_LP %d after diving\n", stat->nnodes, stat->nlps);
+         "(node %lld) unresolved numerical troubles while resolving LP %d after diving\n", stat->nnodes, stat->nlps);
    }
 
    /* switch to standard (non-diving) mode */
@@ -11413,9 +11413,9 @@ SCIP_RETCODE SCIPlpEndDive(
    return SCIP_OKAY;
 }
 
-/** informs the SCIP_LP that probing mode was initiated */
+/** informs the LP that probing mode was initiated */
 SCIP_RETCODE SCIPlpStartProbing(
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(lp != NULL);
@@ -11426,9 +11426,9 @@ SCIP_RETCODE SCIPlpStartProbing(
    return SCIP_OKAY;
 }
 
-/** informs the SCIP_LP that probing mode was finished */
+/** informs the LP that probing mode was finished */
 SCIP_RETCODE SCIPlpEndProbing(
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(lp != NULL);
@@ -11441,7 +11441,7 @@ SCIP_RETCODE SCIPlpEndProbing(
 
 /** calculates y*b + min{(c - y*A)*x | lb <= x <= ub} for given vectors y and c;
  *  the vector b is defined with b[i] = lhs[i] if y[i] >= 0, b[i] = rhs[i] if y[i] < 0
- *  Calculating this value in interval arithmetics gives a proved lower SCIP_LP bound for the following reason (assuming,
+ *  Calculating this value in interval arithmetics gives a proved lower LP bound for the following reason (assuming,
  *  we have only left hand sides):
  *           min{cx       |  b <=  Ax, lb <= x <= ub}
  *   >=      min{cx       | yb <= yAx, lb <= x <= ub}   (restriction in minimum is relaxed)
@@ -11451,7 +11451,7 @@ SCIP_RETCODE SCIPlpEndProbing(
  */
 static
 SCIP_RETCODE provedBound(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             usefarkas,          /**< use y = dual farkas and c = 0 instead of y = dual solution and c = obj? */
    SCIP_Real*            bound               /**< result of interval arithmetic minimization */
@@ -11559,9 +11559,9 @@ SCIP_RETCODE provedBound(
    return SCIP_OKAY;
 }
 
-/** gets proven lower (dual) bound of last SCIP_LP solution */
+/** gets proven lower (dual) bound of last LP solution */
 SCIP_RETCODE SCIPlpGetProvedLowerbound(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real*            bound               /**< pointer to store proven dual bound */
    )
@@ -11573,9 +11573,9 @@ SCIP_RETCODE SCIPlpGetProvedLowerbound(
    return SCIP_OKAY;
 }
 
-/** gets proven dual bound of last SCIP_LP solution */
+/** gets proven dual bound of last LP solution */
 SCIP_RETCODE SCIPlpIsInfeasibilityProved(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool*            proved              /**< pointer to store whether infeasibility is proven */
    )
@@ -11593,9 +11593,9 @@ SCIP_RETCODE SCIPlpIsInfeasibilityProved(
    return SCIP_OKAY;
 }
 
-/** writes SCIP_LP to a file */
+/** writes LP to a file */
 SCIP_RETCODE SCIPlpWrite(
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    const char*           fname               /**< file name */
    )
 {
@@ -11698,7 +11698,7 @@ SCIP_RETCODE SCIPlpWrite(
 
 /** gets objective value of column */
 SCIP_Real SCIPcolGetObj(
-   SCIP_COL*             col                 /**< SCIP_LP column */
+   SCIP_COL*             col                 /**< LP column */
    )
 {
    assert(col != NULL);
@@ -11708,7 +11708,7 @@ SCIP_Real SCIPcolGetObj(
 
 /** gets lower bound of column */
 SCIP_Real SCIPcolGetLb(
-   SCIP_COL*             col                 /**< SCIP_LP column */
+   SCIP_COL*             col                 /**< LP column */
    )
 {
    assert(col != NULL);
@@ -11718,7 +11718,7 @@ SCIP_Real SCIPcolGetLb(
 
 /** gets upper bound of column */
 SCIP_Real SCIPcolGetUb(
-   SCIP_COL*             col                 /**< SCIP_LP column */
+   SCIP_COL*             col                 /**< LP column */
    )
 {
    assert(col != NULL);
@@ -11728,7 +11728,7 @@ SCIP_Real SCIPcolGetUb(
 
 /** gets best bound of column with respect to the objective function */
 SCIP_Real SCIPcolGetBestBound(
-   SCIP_COL*             col                 /**< SCIP_LP column */
+   SCIP_COL*             col                 /**< LP column */
    )
 {
    assert(col != NULL);
@@ -11739,9 +11739,9 @@ SCIP_Real SCIPcolGetBestBound(
       return col->ub;
 }
 
-/** gets the primal SCIP_LP solution of a column */
+/** gets the primal LP solution of a column */
 SCIP_Real SCIPcolGetPrimsol(
-   SCIP_COL*             col                 /**< SCIP_LP column */
+   SCIP_COL*             col                 /**< LP column */
    )
 {
    assert(col != NULL);
@@ -11752,11 +11752,11 @@ SCIP_Real SCIPcolGetPrimsol(
       return 0.0;
 }
 
-/** gets the basis status of a column in the SCIP_LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL
+/** gets the basis status of a column in the LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL
  *  and with SCIPisLPSolBasic(scip) == TRUE; returns SCIP_BASESTAT_ZERO for columns not in the current SCIP_LP
  */
 SCIP_BASESTAT SCIPcolGetBasisStatus(
-   SCIP_COL*             col                 /**< SCIP_LP column */
+   SCIP_COL*             col                 /**< LP column */
    )
 {
    assert(col != NULL);
@@ -11767,7 +11767,7 @@ SCIP_BASESTAT SCIPcolGetBasisStatus(
 
 /** gets variable this column represents */
 SCIP_VAR* SCIPcolGetVar(
-   SCIP_COL*             col                 /**< SCIP_LP column */
+   SCIP_COL*             col                 /**< LP column */
    )
 {
    assert(col != NULL);
@@ -11777,7 +11777,7 @@ SCIP_VAR* SCIPcolGetVar(
 
 /** returns whether the associated variable is of integral type (binary, integer, implicit integer) */
 SCIP_Bool SCIPcolIsIntegral(
-   SCIP_COL*             col                 /**< SCIP_LP column */
+   SCIP_COL*             col                 /**< LP column */
    )
 {
    assert(col != NULL);
@@ -11786,9 +11786,9 @@ SCIP_Bool SCIPcolIsIntegral(
    return col->integral;
 }
 
-/** returns TRUE iff column is removeable from the SCIP_LP (due to aging or cleanup) */
+/** returns TRUE iff column is removeable from the LP (due to aging or cleanup) */
 SCIP_Bool SCIPcolIsRemoveable(
-   SCIP_COL*             col                 /**< SCIP_LP column */
+   SCIP_COL*             col                 /**< LP column */
    )
 {
    assert(col != NULL);
@@ -11796,9 +11796,9 @@ SCIP_Bool SCIPcolIsRemoveable(
    return col->removeable;
 }
 
-/** gets position of column in current LP, or -1 if it is not in SCIP_LP */
+/** gets position of column in current LP, or -1 if it is not in LP */
 int SCIPcolGetLPPos(
-   SCIP_COL*             col                 /**< SCIP_LP column */
+   SCIP_COL*             col                 /**< LP column */
    )
 {
    assert(col != NULL);
@@ -11807,9 +11807,9 @@ int SCIPcolGetLPPos(
    return col->lppos;
 }
 
-/** gets depth in the tree where the column entered the LP, or -1 if it is not in SCIP_LP */
+/** gets depth in the tree where the column entered the LP, or -1 if it is not in LP */
 int SCIPcolGetLPDepth(
-   SCIP_COL*             col                 /**< SCIP_LP column */
+   SCIP_COL*             col                 /**< LP column */
    )
 {
    assert(col != NULL);
@@ -11818,9 +11818,9 @@ int SCIPcolGetLPDepth(
    return col->lpdepth;
 }
 
-/** returns TRUE iff column is member of current SCIP_LP */
+/** returns TRUE iff column is member of current LP */
 SCIP_Bool SCIPcolIsInLP(
-   SCIP_COL*             col                 /**< SCIP_LP column */
+   SCIP_COL*             col                 /**< LP column */
    )
 {
    assert(col != NULL);
@@ -11831,7 +11831,7 @@ SCIP_Bool SCIPcolIsInLP(
 
 /** get number of nonzero entries in column vector */
 int SCIPcolGetNNonz(
-   SCIP_COL*             col                 /**< SCIP_LP column */
+   SCIP_COL*             col                 /**< LP column */
    )
 {
    assert(col != NULL);
@@ -11841,10 +11841,10 @@ int SCIPcolGetNNonz(
 
 /** get number of nonzero entries in column vector, that correspond to rows currently in the SCIP_LP;
  *  Warning! This method is only applicable on columns, that are completely linked to their rows (e.g. a column
- *  that is in the current SCIP_LP and the SCIP_LP was solved, or a column that was in a solved SCIP_LP and didn't change afterwards
+ *  that is in the current LP and the LP was solved, or a column that was in a solved LP and didn't change afterwards
  */
 int SCIPcolGetNLPNonz(
-   SCIP_COL*             col                 /**< SCIP_LP column */
+   SCIP_COL*             col                 /**< LP column */
    )
 {
    assert(col != NULL);
@@ -11855,7 +11855,7 @@ int SCIPcolGetNLPNonz(
 
 /** gets array with rows of nonzero entries */
 SCIP_ROW** SCIPcolGetRows(
-   SCIP_COL*             col                 /**< SCIP_LP column */
+   SCIP_COL*             col                 /**< LP column */
    )
 {
    assert(col != NULL);
@@ -11865,7 +11865,7 @@ SCIP_ROW** SCIPcolGetRows(
 
 /** gets array with coefficients of nonzero entries */
 SCIP_Real* SCIPcolGetVals(
-   SCIP_COL*             col                 /**< SCIP_LP column */
+   SCIP_COL*             col                 /**< LP column */
    )
 {
    assert(col != NULL);
@@ -11877,7 +11877,7 @@ SCIP_Real* SCIPcolGetVals(
  *  given column, or -1 if strong branching was never applied to the column in current run
  */
 SCIP_Longint SCIPcolGetStrongbranchNode(
-   SCIP_COL*             col                 /**< SCIP_LP column */
+   SCIP_COL*             col                 /**< LP column */
    )
 {
    assert(col != NULL);
@@ -11887,7 +11887,7 @@ SCIP_Longint SCIPcolGetStrongbranchNode(
 
 /** gets number of times, strong branching was applied in current run on the given column */
 int SCIPcolGetNStrongbranchs(
-   SCIP_COL*             col                 /**< SCIP_LP column */
+   SCIP_COL*             col                 /**< LP column */
    )
 {
    assert(col != NULL);
@@ -11907,7 +11907,7 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
 
 /** get number of nonzero entries in row vector */
 int SCIProwGetNNonz(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -11917,10 +11917,10 @@ int SCIProwGetNNonz(
 
 /** get number of nonzero entries in row vector, that correspond to columns currently in the SCIP_LP;
  *  Warning! This method is only applicable on rows, that are completely linked to their columns (e.g. a row
- *  that is in the current SCIP_LP and the SCIP_LP was solved, or a row that was in a solved SCIP_LP and didn't change afterwards
+ *  that is in the current LP and the LP was solved, or a row that was in a solved LP and didn't change afterwards
  */
 int SCIProwGetNLPNonz(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -11931,7 +11931,7 @@ int SCIProwGetNLPNonz(
 
 /** gets array with columns of nonzero entries */
 SCIP_COL** SCIProwGetCols(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -11941,7 +11941,7 @@ SCIP_COL** SCIProwGetCols(
 
 /** gets array with coefficients of nonzero entries */
 SCIP_Real* SCIProwGetVals(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -11951,7 +11951,7 @@ SCIP_Real* SCIProwGetVals(
 
 /** gets constant shift of row */
 SCIP_Real SCIProwGetConstant(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -11961,7 +11961,7 @@ SCIP_Real SCIProwGetConstant(
 
 /** gets euclidean norm of row vector */
 SCIP_Real SCIProwGetNorm(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -11971,7 +11971,7 @@ SCIP_Real SCIProwGetNorm(
 
 /** gets sum norm of row vector (sum of absolute values of coefficients) */
 SCIP_Real SCIProwGetSumNorm(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -11981,7 +11981,7 @@ SCIP_Real SCIProwGetSumNorm(
 
 /** returns the left hand side of the row */
 SCIP_Real SCIProwGetLhs(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -11991,7 +11991,7 @@ SCIP_Real SCIProwGetLhs(
 
 /** returns the right hand side of the row */
 SCIP_Real SCIProwGetRhs(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -11999,9 +11999,9 @@ SCIP_Real SCIProwGetRhs(
    return row->rhs;
 }
 
-/** gets the dual SCIP_LP solution of a row */
+/** gets the dual LP solution of a row */
 SCIP_Real SCIProwGetDualsol(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -12012,9 +12012,9 @@ SCIP_Real SCIProwGetDualsol(
       return 0.0;
 }
 
-/** gets the dual farkas coefficient of a row in an infeasible SCIP_LP */
+/** gets the dual farkas coefficient of a row in an infeasible LP */
 SCIP_Real SCIProwGetDualfarkas(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -12025,11 +12025,11 @@ SCIP_Real SCIProwGetDualfarkas(
       return 0.0;
 }
 
-/** gets the basis status of a row in the SCIP_LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL
+/** gets the basis status of a row in the LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL
  *  and with SCIPisLPSolBasic(scip) == TRUE; returns SCIP_BASESTAT_BASIC for rows not in the current SCIP_LP
  */
 SCIP_BASESTAT SCIProwGetBasisStatus(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -12040,7 +12040,7 @@ SCIP_BASESTAT SCIProwGetBasisStatus(
 
 /** returns the name of the row */
 const char* SCIProwGetName(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -12050,7 +12050,7 @@ const char* SCIProwGetName(
 
 /** gets unique index of row */
 int SCIProwGetIndex(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -12060,7 +12060,7 @@ int SCIProwGetIndex(
 
 /** returns TRUE iff the activity of the row (without the row's constant) is always integral in a feasible solution */
 SCIP_Bool SCIProwIsIntegral(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -12070,7 +12070,7 @@ SCIP_Bool SCIProwIsIntegral(
 
 /** returns TRUE iff row is only valid locally */
 SCIP_Bool SCIProwIsLocal(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -12080,7 +12080,7 @@ SCIP_Bool SCIProwIsLocal(
 
 /** returns TRUE iff row is modifiable during node processing (subject to column generation) */
 SCIP_Bool SCIProwIsModifiable(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -12088,9 +12088,9 @@ SCIP_Bool SCIProwIsModifiable(
    return row->modifiable;
 }
 
-/** returns TRUE iff row is removeable from the SCIP_LP (due to aging or cleanup) */
+/** returns TRUE iff row is removeable from the LP (due to aging or cleanup) */
 SCIP_Bool SCIProwIsRemoveable(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -12098,9 +12098,9 @@ SCIP_Bool SCIProwIsRemoveable(
    return row->removeable;
 }
 
-/** gets position of row in current LP, or -1 if it is not in SCIP_LP */
+/** gets position of row in current LP, or -1 if it is not in LP */
 int SCIProwGetLPPos(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -12109,9 +12109,9 @@ int SCIProwGetLPPos(
    return row->lppos;
 }
 
-/** gets depth in the tree where the row entered the LP, or -1 if it is not in SCIP_LP */
+/** gets depth in the tree where the row entered the LP, or -1 if it is not in LP */
 int SCIProwGetLPDepth(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -12120,9 +12120,9 @@ int SCIProwGetLPDepth(
    return row->lpdepth;
 }
 
-/** returns TRUE iff row is member of current SCIP_LP */
+/** returns TRUE iff row is member of current LP */
 SCIP_Bool SCIProwIsInLP(
-   SCIP_ROW*             row                 /**< SCIP_LP row */
+   SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
@@ -12131,9 +12131,9 @@ SCIP_Bool SCIProwIsInLP(
    return (row->lppos >= 0);
 }
 
-/** gets array with columns of the SCIP_LP */
+/** gets array with columns of the LP */
 SCIP_COL** SCIPlpGetCols(
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(lp != NULL);
@@ -12141,9 +12141,9 @@ SCIP_COL** SCIPlpGetCols(
    return lp->cols;
 }
 
-/** gets current number of columns in SCIP_LP */
+/** gets current number of columns in LP */
 int SCIPlpGetNCols(
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(lp != NULL);
@@ -12151,9 +12151,9 @@ int SCIPlpGetNCols(
    return lp->ncols;
 }
 
-/** gets array with rows of the SCIP_LP */
+/** gets array with rows of the LP */
 SCIP_ROW** SCIPlpGetRows(
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(lp != NULL);
@@ -12161,9 +12161,9 @@ SCIP_ROW** SCIPlpGetRows(
    return lp->rows;
 }
 
-/** gets current number of rows in SCIP_LP */
+/** gets current number of rows in LP */
 int SCIPlpGetNRows(
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(lp != NULL);
@@ -12173,7 +12173,7 @@ int SCIPlpGetNRows(
 
 /** gets array with newly added columns after the last mark */
 SCIP_COL** SCIPlpGetNewcols(
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(lp != NULL);
@@ -12184,7 +12184,7 @@ SCIP_COL** SCIPlpGetNewcols(
 
 /** gets number of newly added columns after the last mark */
 int SCIPlpGetNNewcols(
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(lp != NULL);
@@ -12195,7 +12195,7 @@ int SCIPlpGetNNewcols(
 
 /** gets array with newly added rows after the last mark */
 SCIP_ROW** SCIPlpGetNewrows(
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(lp != NULL);
@@ -12206,7 +12206,7 @@ SCIP_ROW** SCIPlpGetNewrows(
 
 /** gets number of newly added rows after the last mark */
 int SCIPlpGetNNewrows(
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(lp != NULL);
@@ -12217,7 +12217,7 @@ int SCIPlpGetNNewrows(
 
 /** gets euclidean norm of objective function vector of column variables */
 SCIP_Real SCIPlpGetObjNorm(
-   SCIP_LP*              lp                  /**< SCIP_LP data */
+   SCIP_LP*              lp                  /**< LP data */
    )
 {
    assert(lp != NULL);
@@ -12225,9 +12225,9 @@ SCIP_Real SCIPlpGetObjNorm(
    return SQRT(lp->objsqrnorm);
 }
 
-/** gets the SCIP_LP solver interface */
+/** gets the LP solver interface */
 SCIP_LPI* SCIPlpGetLPI(
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(lp != NULL);
@@ -12235,9 +12235,9 @@ SCIP_LPI* SCIPlpGetLPI(
    return lp->lpi;
 }
 
-/** returns whether the current SCIP_LP is flushed and solved */
+/** returns whether the current LP is flushed and solved */
 SCIP_Bool SCIPlpIsSolved(
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(lp != NULL);
@@ -12245,9 +12245,9 @@ SCIP_Bool SCIPlpIsSolved(
    return lp->flushed && lp->solved;
 }
 
-/** returns whether the current SCIP_LP solution is a basic solution */
+/** returns whether the current LP solution is a basic solution */
 SCIP_Bool SCIPlpIsSolBasic(
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(lp != NULL);
@@ -12255,9 +12255,9 @@ SCIP_Bool SCIPlpIsSolBasic(
    return lp->solisbasic;
 }
 
-/** returns whether the SCIP_LP is in diving mode */
+/** returns whether the LP is in diving mode */
 SCIP_Bool SCIPlpDiving(
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(lp != NULL);
@@ -12265,9 +12265,9 @@ SCIP_Bool SCIPlpDiving(
    return lp->diving;
 }
 
-/** returns whether the SCIP_LP is in diving mode and the objective value of at least one column was changed */
+/** returns whether the LP is in diving mode and the objective value of at least one column was changed */
 SCIP_Bool SCIPlpDivingObjChanged(
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(lp != NULL);
@@ -12275,9 +12275,9 @@ SCIP_Bool SCIPlpDivingObjChanged(
    return lp->divingobjchg;
 }
 
-/** marks the diving SCIP_LP to have a changed objective function */
+/** marks the diving LP to have a changed objective function */
 void SCIPlpMarkDivingObjChanged(
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(lp != NULL);

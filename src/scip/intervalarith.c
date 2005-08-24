@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.12 2005/08/22 18:35:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.13 2005/08/24 17:26:48 bzfpfend Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -149,7 +149,7 @@ ROUNDMODE getRoundingMode(
 
 
 /*
- * SCIP_Interval arithmetic operations
+ * Interval arithmetic operations
  */
 
 /** stores given value as interval */

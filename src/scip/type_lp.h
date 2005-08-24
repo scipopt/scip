@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_lp.h,v 1.10 2005/08/22 18:35:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_lp.h,v 1.11 2005/08/24 17:27:04 bzfpfend Exp $"
 
 /**@file   type_lp.h
- * @brief  type definitions for SCIP_LP management
+ * @brief  type definitions for LP management
  * @author Tobias Achterberg
  */
 
@@ -27,13 +27,13 @@
 #define __SCIP_TYPE_LP_H__
 
 
-/** solution status after solving SCIP_LP */
+/** solution status after solving LP */
 enum SCIP_LPSolStat
 {
-   SCIP_LPSOLSTAT_NOTSOLVED    = 0,     /**< SCIP_LP was not solved, no solution exists */
-   SCIP_LPSOLSTAT_OPTIMAL      = 1,     /**< SCIP_LP was solved to optimality */
-   SCIP_LPSOLSTAT_INFEASIBLE   = 2,     /**< SCIP_LP is primal infeasible */
-   SCIP_LPSOLSTAT_UNBOUNDEDRAY = 3,     /**< SCIP_LP has a primal unbounded ray */
+   SCIP_LPSOLSTAT_NOTSOLVED    = 0,     /**< LP was not solved, no solution exists */
+   SCIP_LPSOLSTAT_OPTIMAL      = 1,     /**< LP was solved to optimality */
+   SCIP_LPSOLSTAT_INFEASIBLE   = 2,     /**< LP is primal infeasible */
+   SCIP_LPSOLSTAT_UNBOUNDEDRAY = 3,     /**< LP has a primal unbounded ray */
    SCIP_LPSOLSTAT_OBJLIMIT     = 4,     /**< objective limit was reached during optimization */
    SCIP_LPSOLSTAT_ITERLIMIT    = 5,     /**< iteration limit was reached during optimization */
    SCIP_LPSOLSTAT_TIMELIMIT    = 6,     /**< time limit was reached during optimization */
@@ -57,7 +57,7 @@ enum SCIP_SideType
 };
 typedef enum SCIP_SideType SCIP_SIDETYPE;
 
-/** type of SCIP_LP algorithm */
+/** type of LP algorithm */
 enum SCIP_LPAlgo
 {
    SCIP_LPALGO_PRIMALSIMPLEX    = 0,    /**< primal simplex */
@@ -67,9 +67,9 @@ enum SCIP_LPAlgo
 };
 typedef enum SCIP_LPAlgo SCIP_LPALGO;
 
-typedef struct SCIP_Col SCIP_COL;                 /**< column of an SCIP_LP */
-typedef struct SCIP_Row SCIP_ROW;                 /**< row of an SCIP_LP */
-typedef struct SCIP_Lp SCIP_LP;                   /**< current SCIP_LP data */
+typedef struct SCIP_Col SCIP_COL;                 /**< column of an LP */
+typedef struct SCIP_Row SCIP_ROW;                 /**< row of an LP */
+typedef struct SCIP_Lp SCIP_LP;                   /**< current LP data */
 
 
 #endif

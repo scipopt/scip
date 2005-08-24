@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.h,v 1.11 2005/08/22 18:35:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.h,v 1.12 2005/08/24 17:26:42 bzfpfend Exp $"
 
 /**@file   cons_varbound.h
  * @brief  constraint handler for varbound constraints
@@ -47,25 +47,25 @@ SCIP_RETCODE SCIPcreateConsVarbound(
    SCIP_Real             vbdcoef,            /**< coefficient c of bounding variable y */
    SCIP_Real             lhs,                /**< left hand side of variable bound inequality */
    SCIP_Real             rhs,                /**< right hand side of variable bound inequality */
-   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
-   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
+   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    );
 
-/** gets the dual solution of the varbound constraint in the current SCIP_LP */
+/** gets the dual solution of the varbound constraint in the current LP */
 extern
 SCIP_Real SCIPgetDualsolVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** gets the dual farkas value of the varbound constraint in the current infeasible SCIP_LP */
+/** gets the dual farkas value of the varbound constraint in the current infeasible LP */
 extern
 SCIP_Real SCIPgetDualfarkasVarbound(
    SCIP*                 scip,               /**< SCIP data structure */

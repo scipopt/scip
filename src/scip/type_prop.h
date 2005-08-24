@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_prop.h,v 1.9 2005/08/22 18:35:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_prop.h,v 1.10 2005/08/24 17:27:05 bzfpfend Exp $"
 
 /**@file   type_prop.h
  * @brief  type definitions for propagators

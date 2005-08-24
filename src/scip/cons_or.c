@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.44 2005/08/22 18:35:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.45 2005/08/24 17:26:42 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -168,7 +168,7 @@ SCIP_RETCODE conshdlrdataFree(
    return SCIP_OKAY;
 }
 
-/** gets number of SCIP_LP rows needed for the SCIP_LP relaxation of the constraint */
+/** gets number of LP rows needed for the LP relaxation of the constraint */
 static
 int consdataGetNRows(
    SCIP_CONSDATA*        consdata            /**< constraint data */
@@ -380,7 +380,7 @@ SCIP_RETCODE consdataCreate(
    return SCIP_OKAY;
 }
 
-/** releases SCIP_LP rows of constraint data and frees rows array */
+/** releases LP rows of constraint data and frees rows array */
 static
 SCIP_RETCODE consdataFreeRows(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -548,7 +548,7 @@ SCIP_RETCODE applyFixings(
    return SCIP_OKAY;
 }
 
-/** creates SCIP_LP rows corresponding to or constraint:
+/** creates LP rows corresponding to or constraint:
  *   - for each operator variable vi:  resvar - vi            >= 0
  *   - one additional row:             resvar - v1 - ... - vn <= 0
  */
@@ -594,7 +594,7 @@ SCIP_RETCODE createRelaxation(
    return SCIP_OKAY;
 }  
 
-/** adds linear relaxation of or constraint to the SCIP_LP */
+/** adds linear relaxation of or constraint to the LP */
 static 
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -626,7 +626,7 @@ SCIP_RETCODE checkCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to check */
    SCIP_SOL*             sol,                /**< solution to check, NULL for current solution */
-   SCIP_Bool             checklprows,        /**< should SCIP_LP rows be checked? */
+   SCIP_Bool             checklprows,        /**< should LP rows be checked? */
    SCIP_Bool*            violated            /**< pointer to store whether the constraint is violated */
    )
 {
@@ -641,7 +641,7 @@ SCIP_RETCODE checkCons(
 
    *violated = FALSE;
 
-   /* check, if we can skip this feasibility check, because all rows are in the SCIP_LP and doesn't have to be checked */
+   /* check, if we can skip this feasibility check, because all rows are in the LP and doesn't have to be checked */
    mustcheck = checklprows;
    mustcheck = mustcheck || (consdata->rows == NULL);
    if( !mustcheck )
@@ -687,7 +687,7 @@ SCIP_RETCODE checkCons(
    return SCIP_OKAY;
 }
 
-/** separates current SCIP_LP solution */
+/** separates current LP solution */
 static
 SCIP_RETCODE separateCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1231,7 +1231,7 @@ SCIP_DECL_CONSTRANS(consTransOr)
 }
 
 
-/** SCIP_LP initialization method of constraint handler */
+/** LP initialization method of constraint handler */
 static
 SCIP_DECL_CONSINITLP(consInitlpOr)
 {  /*lint --e{715}*/
@@ -1273,7 +1273,7 @@ SCIP_DECL_CONSSEPA(consSepaOr)
 }
 
 
-/** constraint enforcing method of constraint handler for SCIP_LP solutions */
+/** constraint enforcing method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSENFOLP(consEnfolpOr)
 {  /*lint --e{715}*/
@@ -1593,15 +1593,15 @@ SCIP_RETCODE SCIPcreateConsOr(
    SCIP_VAR*             resvar,             /**< resultant variable of the operation */
    int                   nvars,              /**< number of operator variables in the constraint */
    SCIP_VAR**            vars,               /**< array with operator variables of constraint */
-   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
-   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
+   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    SCIP_CONSHDLR* conshdlr;

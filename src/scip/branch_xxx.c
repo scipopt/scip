@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_xxx.c,v 1.14 2005/08/22 18:35:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_xxx.c,v 1.15 2005/08/24 17:26:38 bzfpfend Exp $"
 
 /**@file   branch_xxx.c
  * @brief  xxx branching rule
@@ -140,7 +140,7 @@ SCIP_DECL_BRANCHEXITSOL(branchExitsolXxx)
 #endif
 
 
-/** branching execution method for fractional SCIP_LP solutions */
+/** branching execution method for fractional LP solutions */
 #if 0
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpXxx)

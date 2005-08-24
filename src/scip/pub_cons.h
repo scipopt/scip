@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.25 2005/08/22 18:35:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.26 2005/08/24 17:26:53 bzfpfend Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -114,7 +114,7 @@ SCIP_Real SCIPconshdlrGetSepaTime(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** gets time in seconds used for SCIP_LP enforcement in this constraint handler */
+/** gets time in seconds used for LP enforcement in this constraint handler */
 extern
 SCIP_Real SCIPconshdlrGetEnfoLPTime(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
@@ -138,7 +138,7 @@ SCIP_Longint SCIPconshdlrGetNSepaCalls(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** gets number of calls to the constraint handler's SCIP_LP enforcing method */
+/** gets number of calls to the constraint handler's LP enforcing method */
 extern
 SCIP_Longint SCIPconshdlrGetNEnfoLPCalls(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
@@ -435,13 +435,13 @@ SCIP_Real SCIPconsGetAge(
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** returns TRUE iff the SCIP_LP relaxation of constraint should be in the initial SCIP_LP */
+/** returns TRUE iff the LP relaxation of constraint should be in the initial LP */
 extern
 SCIP_Bool SCIPconsIsInitial(
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** returns TRUE iff constraint should be separated during SCIP_LP processing */
+/** returns TRUE iff constraint should be separated during LP processing */
 extern
 SCIP_Bool SCIPconsIsSeparated(
    SCIP_CONS*            cons                /**< constraint */
@@ -489,7 +489,7 @@ SCIP_Bool SCIPconsIsDynamic(
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** returns TRUE iff constraint's relaxation should be removed from the SCIP_LP due to aging or cleanup */
+/** returns TRUE iff constraint's relaxation should be removed from the LP due to aging or cleanup */
 extern
 SCIP_Bool SCIPconsIsRemoveable(
    SCIP_CONS*            cons                /**< constraint */

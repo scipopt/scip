@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.36 2005/08/22 18:35:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.37 2005/08/24 17:27:02 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -61,7 +61,7 @@ struct SCIP_HoleChg
 /** data for branching decision bound changes */
 struct SCIP_BranchingData
 {
-   SCIP_Real             lpsolval;           /**< sol val of var in last SCIP_LP prior to bound change, or SCIP_INVALID if unknown */
+   SCIP_Real             lpsolval;           /**< sol val of var in last LP prior to bound change, or SCIP_INVALID if unknown */
 };
 
 /** data for infered bound changes */
@@ -201,7 +201,7 @@ struct SCIP_Var
    union
    {
       SCIP_ORIGINAL      original;           /**< original variable information */
-      SCIP_COL*          col;                /**< SCIP_LP column (for column variables) */
+      SCIP_COL*          col;                /**< LP column (for column variables) */
       SCIP_AGGREGATE     aggregate;          /**< aggregation information (for aggregated variables) */
       SCIP_MULTAGGR      multaggr;           /**< multiple aggregation information (for multiple aggregated variables) */
       SCIP_NEGATE        negate;             /**< negation information (for negated variables) */
@@ -217,7 +217,7 @@ struct SCIP_Var
    SCIP_VBOUNDS*         vubs;               /**< variable upper bounds x <= b*y + d */
    SCIP_IMPLICS*         implics;            /**< implications y >=/<= b following from x <= 0 and x >= 1 (x binary), or NULL if x is not binary */
    SCIP_CLIQUELIST*      cliquelist;         /**< list of cliques the variable and its negation is member of */
-   SCIP_EVENTFILTER*     eventfilter;        /**< event filter for events concerning this variable; not for SCIP_ORIGINAL vars */
+   SCIP_EVENTFILTER*     eventfilter;        /**< event filter for events concerning this variable; not for ORIGINAL vars */
    SCIP_BDCHGINFO*       lbchginfos;         /**< bound change informations for lower bound changes from root to current node */
    SCIP_BDCHGINFO*       ubchginfos;         /**< bound change informations for upper bound changes from root to current node */
    SCIP_HISTORY*         history;            /**< branching and inference history information */
@@ -239,8 +239,8 @@ struct SCIP_Var
    int                   ubchginfossize;     /**< available slots in ubchginfos array */
    int                   nubchginfos;        /**< number of upper bound changes from root node to current node */
    int                   conflictsetcount;   /**< number of last conflict set, this variable was member of */
-   unsigned int          initial:1;          /**< TRUE iff var's column should be present in the initial root SCIP_LP */
-   unsigned int          removeable:1;       /**< TRUE iff var's column is removeable from the SCIP_LP (due to aging or cleanup) */
+   unsigned int          initial:1;          /**< TRUE iff var's column should be present in the initial root LP */
+   unsigned int          removeable:1;       /**< TRUE iff var's column is removeable from the LP (due to aging or cleanup) */
    unsigned int          deleted:1;          /**< TRUE iff variable was deleted from the problem */
    unsigned int          vartype:2;          /**< type of variable: binary, integer, implicit integer, continuous */
    unsigned int          varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.2 2005/08/22 18:35:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.3 2005/08/24 17:26:46 bzfpfend Exp $"
 
 /**@file   heur_octane.c
  * @brief  octane primal heuristic based on Balas, Ceria, Dawande, Margot, and Pataki
@@ -52,7 +52,7 @@ struct SCIP_HeurData
    SCIP_Bool usefracspace;        /**< use heuristic for the space of fractional variables or for the whole space? */
    SCIP_Bool useobjray;           /**< should the inner normal of the objective be used as one ray direction? */
    SCIP_Bool useavgray;           /**< should the inner normal of the objective be used as one ray direction? */
-   SCIP_Bool usediffray;          /**< should difference between root sol and current SCIP_LP sol be used as one ray direction? */
+   SCIP_Bool usediffray;          /**< should difference between root sol and current LP sol be used as one ray direction? */
    SCIP_Bool usediffbwray;        /**< should difference between current sol and root sol be used as one ray direction?  */
 };
 
@@ -208,7 +208,7 @@ SCIP_RETCODE generateObjectiveRay( SCIP* scip, SCIP_Real* a, SCIP_VAR** subspace
    return SCIP_OKAY;
 }
 
-/** generates the direction of the shooting ray as the difference between the root and the current SCIP_LP solution */
+/** generates the direction of the shooting ray as the difference between the root and the current LP solution */
 static
 SCIP_RETCODE generateDifferenceRay( SCIP* scip, SCIP_Real* a, SCIP_VAR** subspacevars, int nsubspacevars )
 {
@@ -223,7 +223,7 @@ SCIP_RETCODE generateDifferenceRay( SCIP* scip, SCIP_Real* a, SCIP_VAR** subspac
    return SCIP_OKAY;
 }
 
-/** generates the direction of the shooting ray as the difference between the current and the root SCIP_LP solution */
+/** generates the direction of the shooting ray as the difference between the current and the root LP solution */
 static
 SCIP_RETCODE generateDifferenceBackwRay( SCIP* scip, SCIP_Real* a, SCIP_VAR** subspacevars, int nsubspacevars )
 {
@@ -339,7 +339,7 @@ SCIP_RETCODE generateStartingPoint( SCIP* scip, SCIP_Real* x, SCIP_VAR** subspac
    return SCIP_OKAY;
 }
 
-/** translates the inner point of the SCIP_LP to an inner point x of the unit hyper octahedron and 
+/** translates the inner point of the LP to an inner point x of the unit hyper octahedron and 
  *  transforms a and x by reflections stored in sign 
  */
 static
@@ -541,9 +541,9 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    SCIP_SOL** first_sols;     /* stores the first ffirst sols in order to check for common viloation of a row */
 
    SCIP_VAR** vars;           /* the variables of the problem */
-   SCIP_VAR** fracvars;       /* variables, that are fractional in current SCIP_LP solution */
+   SCIP_VAR** fracvars;       /* variables, that are fractional in current LP solution */
    SCIP_VAR** subspacevars;   /* the variables on which the search is performed. Either coinciding with vars or with the
-                          * space of all fractional variables of the current SCIP_LP solution */
+                          * space of all fractional variables of the current LP solution */
 
    SCIP_Real p;               /* n/2 - <delta,x> ( for some facet delta ) */
    SCIP_Real q;               /* <delta,a> */
@@ -561,7 +561,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
 
    int nvars;            /* number of variables  */
    int nbinvars;         /* number of 0-1-variables */
-   int nfracvars;        /* number of fractional variables in current SCIP_LP solution */
+   int nfracvars;        /* number of fractional variables in current LP solution */
    int nsubspacevars;    /* dimension of the subspace on which the search is performed */
    int nfacets;          /* number of facets hidden by the ray that where already found */
    int i;                /* counter */
@@ -581,7 +581,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
 
    *result = SCIP_DELAYED;
 
-   /* only call heuristic, if an optimal SCIP_LP solution is at hand */
+   /* only call heuristic, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
@@ -950,12 +950,12 @@ SCIP_RETCODE SCIPincludeHeurOctane(
 
    SCIP_CALL( SCIPaddBoolParam(scip, 
          "heuristics/octane/usediffray",
-         "should the difference between the root solution and the current SCIP_LP solution be used as one ray direction?",
+         "should the difference between the root solution and the current LP solution be used as one ray direction?",
          &heurdata->usediffray, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, 
          "heuristics/octane/usediffbwray",
-         "should the difference between the current SCIP_LP solution and the root solution be used as one ray direction?",
+         "should the difference between the current LP solution and the root solution be used as one ray direction?",
          &heurdata->usediffbwray, TRUE, NULL, NULL) );
 
    return SCIP_OKAY;

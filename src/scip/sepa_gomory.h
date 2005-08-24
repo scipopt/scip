@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.h,v 1.10 2005/08/22 18:35:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.h,v 1.11 2005/08/24 17:26:57 bzfpfend Exp $"
 
 /**@file   sepa_gomory.h
  * @brief  Gomory MIR Cuts

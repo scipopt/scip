@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.8 2005/08/22 18:35:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.9 2005/08/24 17:26:34 bzfpfend Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for C++ compilation
@@ -34,8 +34,8 @@ extern "C"
 
 static
 SCIP_RETCODE readParams(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< parameter file name, or NULL */
+   SCIP*                      scip,               /**< SCIP data structure */
+   const char*                filename            /**< parameter file name, or NULL */
    )
 {
    if( filename != NULL )
@@ -59,8 +59,8 @@ SCIP_RETCODE readParams(
 
 static
 SCIP_RETCODE fromCommandLine(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< input file name */
+   SCIP*                      scip,               /**< SCIP data structure */
+   const char*                filename            /**< input file name */
    )
 {
    /********************
@@ -100,7 +100,7 @@ SCIP_RETCODE fromCommandLine(
 
 static
 SCIP_RETCODE interactive(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                      scip                /**< SCIP data structure */
    )
 {
    /* start user interactive mode */
@@ -111,8 +111,8 @@ SCIP_RETCODE interactive(
 
 static
 SCIP_RETCODE runSCIP(
-   int                   argc,
-   char**                argv
+   int                        argc,
+   char**                     argv
    )
 {
    SCIP* scip = NULL;
@@ -181,8 +181,8 @@ SCIP_RETCODE runSCIP(
 
 int
 main(
-   int                   argc,
-   char**                argv
+   int                        argc,
+   char**                     argv
    )
 {
    SCIP_RETCODE retcode;

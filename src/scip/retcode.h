@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: retcode.h,v 1.23 2005/08/22 18:35:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: retcode.h,v 1.24 2005/08/24 17:26:56 bzfpfend Exp $"
 
 /**@file   retcode.h
  * @brief  internal methods for return codes for SCIP methods

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_tree.h,v 1.13 2005/08/22 18:35:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_tree.h,v 1.14 2005/08/24 17:27:06 bzfpfend Exp $"
 
 /**@file   type_tree.h
  * @brief  type definitions for branch and bound tree
@@ -35,9 +35,9 @@ enum SCIP_NodeType
    SCIP_NODETYPE_CHILD          =  3,   /**< unsolved child of the focus node */
    SCIP_NODETYPE_LEAF           =  4,   /**< unsolved leaf of the tree, stored in the tree's queue */
    SCIP_NODETYPE_DEADEND        =  5,   /**< temporary type of focus node, if it was solved completely */
-   SCIP_NODETYPE_JUNCTION       =  6,   /**< fork without SCIP_LP solution */
-   SCIP_NODETYPE_FORK           =  7,   /**< fork with solved SCIP_LP and added rows and columns */
-   SCIP_NODETYPE_SUBROOT        =  8,   /**< fork with solved SCIP_LP and arbitrarily changed rows and columns */
+   SCIP_NODETYPE_JUNCTION       =  6,   /**< fork without LP solution */
+   SCIP_NODETYPE_FORK           =  7,   /**< fork with solved LP and added rows and columns */
+   SCIP_NODETYPE_SUBROOT        =  8,   /**< fork with solved LP and arbitrarily changed rows and columns */
    SCIP_NODETYPE_REFOCUSNODE    =  9    /**< junction, fork, or subroot that was refocused for domain propagation */
 };
 typedef enum SCIP_NodeType SCIP_NODETYPE;         /**< type of node */

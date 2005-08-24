@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_dialog.h,v 1.8 2005/08/22 18:35:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_dialog.h,v 1.9 2005/08/24 17:27:03 bzfpfend Exp $"
 
 /**@file   type_dialog.h
  * @brief  type definitions for user interface dialog

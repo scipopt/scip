@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.31 2005/08/22 18:35:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.32 2005/08/24 17:27:03 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -128,7 +128,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *
  *  This method is called before the branch and bound process is freed.
  *  The constraint handler should use this call to clean up its branch and bound data, in particular to release
- *  all SCIP_LP rows that he has created or captured.
+ *  all LP rows that he has created or captured.
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -161,11 +161,11 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  */ 
 #define SCIP_DECL_CONSTRANS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* sourcecons, SCIP_CONS** targetcons)
 
-/** SCIP_LP initialization method of constraint handler
+/** LP initialization method of constraint handler
  *
- *  Puts the SCIP_LP relaxations of all "initial" constraints into the LP. The method should scan the constraints
- *  array for constraints that are marked initial via calls to SCIPconsIsInitial() and put the SCIP_LP relaxation
- *  of all initial constraints to the SCIP_LP with calls to SCIPaddCut().
+ *  Puts the LP relaxations of all "initial" constraints into the LP. The method should scan the constraints
+ *  array for constraints that are marked initial via calls to SCIPconsIsInitial() and put the LP relaxation
+ *  of all initial constraints to the LP with calls to SCIPaddCut().
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -177,8 +177,8 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 
 /** separation method of constraint handler
  *
- *  Separates all constraints of the constraint handler. The method is called in the SCIP_LP solution loop,
- *  which means that a valid SCIP_LP solution exists.
+ *  Separates all constraints of the constraint handler. The method is called in the LP solution loop,
+ *  which means that a valid LP solution exists.
  *
  *  The first nusefulconss constraints are the ones, that are identified to likely be violated. The separation
  *  method should process only the useful constraints in most runs, and only occasionally the remaining
@@ -204,10 +204,10 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 #define SCIP_DECL_CONSSEPA(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, \
       SCIP_RESULT* result)
 
-/** constraint enforcing method of constraint handler for SCIP_LP solutions
+/** constraint enforcing method of constraint handler for LP solutions
  *
- *  The method is called at the end of the node processing loop for a node where the SCIP_LP was solved.
- *  The SCIP_LP solution has to be checked for feasibility. If possible, an infeasibility should be resolved by
+ *  The method is called at the end of the node processing loop for a node where the LP was solved.
+ *  The LP solution has to be checked for feasibility. If possible, an infeasibility should be resolved by
  *  branching, reducing a variable's domain to exclude the solution or separating the solution with a valid
  *  cutting plane.
  *
@@ -247,13 +247,13 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 
 /** constraint enforcing method of constraint handler for pseudo solutions
  *
- *  The method is called at the end of the node processing loop for a node where the SCIP_LP was not solved.
+ *  The method is called at the end of the node processing loop for a node where the LP was not solved.
  *  The pseudo solution has to be checked for feasibility. If possible, an infeasibility should be resolved by
  *  branching, reducing a variable's domain to exclude the solution or adding an additional constraint.
- *  Separation is not possible, since the SCIP_LP is not processed at the current node. All SCIP_LP informations like
- *  SCIP_LP solution, slack values, or reduced costs are invalid and must not be accessed.
+ *  Separation is not possible, since the LP is not processed at the current node. All LP informations like
+ *  LP solution, slack values, or reduced costs are invalid and must not be accessed.
  *
- *  Like in the enforcing method for SCIP_LP solutions, the enforcing methods of the active constraint handlers are
+ *  Like in the enforcing method for LP solutions, the enforcing methods of the active constraint handlers are
  *  called in decreasing order of their enforcing priorities until the first constraint handler returned with
  *  the value SCIP_CUTOFF, SCIP_REDUCEDDOM, SCIP_CONSADDED, SCIP_BRANCHED, or SCIP_SOLVELP.
  *
@@ -300,7 +300,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  check priority greater than zero (e.g. if the check is much faster than testing all variables for
  *  integrality).
  *
- *  In some cases, integrality conditions or rows of the current SCIP_LP don't have to be checked, because their
+ *  In some cases, integrality conditions or rows of the current LP don't have to be checked, because their
  *  feasibility is already checked or implicitly given. In these cases, 'checkintegrality' or
  *  'checklprows' is FALSE.
  *
@@ -311,7 +311,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - nconss          : number of constraints to process
  *  - sol             : the solution to check feasibility for
  *  - checkintegrality: has integrality to be checked?
- *  - checklprows     : have current SCIP_LP rows to be checked?
+ *  - checklprows     : have current LP rows to be checked?
  *  - result          : pointer to store the result of the feasibility checking call
  *
  *  possible return values for *result:

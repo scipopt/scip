@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.177 2005/08/22 18:35:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.178 2005/08/24 17:26:41 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -103,7 +103,7 @@ struct SCIP_ConsData
                                               *   activity, ignoring the coefficients contributing with infinite value */
    SCIP_Real             glbmaxactivity;     /**< maximal value w.r.t. the variable's global bounds for the constraint's
                                               *   activity, ignoring the coefficients contributing with infinite value */
-   SCIP_ROW*             row;                /**< SCIP_LP row, if constraint is already stored in SCIP_LP row format */
+   SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
    SCIP_VAR**            vars;               /**< variables of constraint entries */
    SCIP_Real*            vals;               /**< coefficients of constraint entries */
    SCIP_EVENTDATA**      eventdatas;         /**< event datas for bound change events of the variables */
@@ -1889,7 +1889,7 @@ SCIP_RETCODE chgLhs(
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
 
-   /* update the lhs of the SCIP_LP row */
+   /* update the lhs of the LP row */
    if( consdata->row != NULL )
    {
       SCIP_CALL( SCIPchgRowLhs(scip, consdata->row, lhs) );
@@ -1985,7 +1985,7 @@ SCIP_RETCODE chgRhs(
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
 
-   /* update the rhs of the SCIP_LP row */
+   /* update the rhs of the LP row */
    if( consdata->row != NULL )
    {
       SCIP_CALL( SCIPchgRowRhs(scip, consdata->row, rhs) );
@@ -2072,7 +2072,7 @@ SCIP_RETCODE addCoef(
       consdata->merged = FALSE;
    }
 
-   /* add the new coefficient to the SCIP_LP row */
+   /* add the new coefficient to the LP row */
    if( consdata->row != NULL )
    {
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, var, val) );
@@ -2154,7 +2154,7 @@ SCIP_RETCODE delCoefPos(
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
 
-   /* delete coefficient from the SCIP_LP row */
+   /* delete coefficient from the LP row */
    if( consdata->row != NULL )
    {
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, var, -val) );
@@ -3167,7 +3167,7 @@ SCIP_RETCODE checkCons(
    return SCIP_OKAY;
 }
 
-/** creates an SCIP_LP row in a linear constraint data */
+/** creates an LP row in a linear constraint data */
 static
 SCIP_RETCODE createRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3188,7 +3188,7 @@ SCIP_RETCODE createRow(
    return SCIP_OKAY;
 }
 
-/** adds linear constraint as cut to the SCIP_LP */
+/** adds linear constraint as cut to the LP */
 static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3202,13 +3202,13 @@ SCIP_RETCODE addRelaxation(
    
    if( consdata->row == NULL )
    {
-      /* convert consdata object into SCIP_LP row */
+      /* convert consdata object into LP row */
       SCIP_CALL( createRow(scip, cons) );
    }
    assert(consdata->row != NULL);
    assert(!SCIProwIsInLP(consdata->row));
    
-   /* insert SCIP_LP row as cut */
+   /* insert LP row as cut */
    SCIP_CALL( SCIPaddCut(scip, consdata->row, FALSE) );
 
    return SCIP_OKAY;
@@ -3485,7 +3485,7 @@ SCIP_RETCODE separateRelaxedKnapsack(
    return SCIP_OKAY;
 }
 
-/** separates linear constraint: adds linear constraint as cut, if violated by current SCIP_LP solution */
+/** separates linear constraint: adds linear constraint as cut, if violated by current LP solution */
 static
 SCIP_RETCODE separateCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3508,7 +3508,7 @@ SCIP_RETCODE separateCons(
 
    if( violated )
    {
-      /* insert SCIP_LP row as cut */
+      /* insert LP row as cut */
       SCIP_CALL( addRelaxation(scip, cons) );
       (*ncuts)++;
    }
@@ -3692,7 +3692,7 @@ SCIP_RETCODE tightenSides(
  *      if  minact + ai >= lhs  and  maxact - ai <= rhs:
  *       - a deviation from the lower/upper bound of xi would make the left/right hand side redundant
  *       - ai, lhs and rhs can be changed to have the same redundancy effect and the same results for
- *         xi fixed to its bounds, but with a reduced ai and tightened sides to tighten the SCIP_LP relaxation
+ *         xi fixed to its bounds, but with a reduced ai and tightened sides to tighten the LP relaxation
  *       - change coefficients:
  *           ai'  := max(lhs - minact, maxact - rhs)
  *           lhs' := lhs - (ai - ai')*li
@@ -3701,7 +3701,7 @@ SCIP_RETCODE tightenSides(
  *      if  minact - ai >= lhs  and  maxact + ai <= rhs:
  *       - a deviation from the upper/lower bound of xi would make the left/right hand side redundant
  *       - ai, lhs and rhs can be changed to have the same redundancy effect and the same results for
- *         xi fixed to its bounds, but with a reduced ai and tightened sides to tighten the SCIP_LP relaxation
+ *         xi fixed to its bounds, but with a reduced ai and tightened sides to tighten the LP relaxation
  *       - change coefficients:
  *           ai'  := min(rhs - maxact, minact - lhs)
  *           lhs' := lhs - (ai - ai')*ui
@@ -5144,7 +5144,7 @@ SCIP_DECL_CONSTRANS(consTransLinear)
 
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
-   assert(sourcedata->row == NULL);  /* in original problem, there cannot be SCIP_LP rows */
+   assert(sourcedata->row == NULL);  /* in original problem, there cannot be LP rows */
 
    /* get event handler */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -5166,7 +5166,7 @@ SCIP_DECL_CONSTRANS(consTransLinear)
 }
 
 
-/** SCIP_LP initialization method of constraint handler */
+/** LP initialization method of constraint handler */
 static
 SCIP_DECL_CONSINITLP(consInitlpLinear)
 {  /*lint --e{715}*/
@@ -5239,7 +5239,7 @@ SCIP_DECL_CONSSEPA(consSepaLinear)
 }
 
 
-/** constraint enforcing method of constraint handler for SCIP_LP solutions */
+/** constraint enforcing method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSENFOLP(consEnfolpLinear)
 {  /*lint --e{715}*/
@@ -5257,7 +5257,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinear)
    /*debugMessage("Enfolp method of linear constraints\n");*/
 
    /* check for violated constraints
-    * SCIP_LP is processed at current node -> we can add violated linear constraints to the SCIP_LP
+    * LP is processed at current node -> we can add violated linear constraints to the SCIP_LP
     */
    *result = SCIP_FEASIBLE;
 
@@ -5268,7 +5268,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinear)
       
       if( violated )
       {
-         /* insert SCIP_LP row as cut */
+         /* insert LP row as cut */
          SCIP_CALL( addRelaxation(scip, conss[c]) );
          *result = SCIP_SEPARATED;
       }
@@ -5281,7 +5281,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinear)
 
       if( violated )
       {
-         /* insert SCIP_LP row as cut */
+         /* insert LP row as cut */
          SCIP_CALL( addRelaxation(scip, conss[c]) );
          *result = SCIP_SEPARATED;
       }
@@ -6031,15 +6031,15 @@ SCIP_RETCODE SCIPcreateConsLinear(
    SCIP_Real*            vals,               /**< array with coefficients of constraint entries */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs,                /**< right hand side of constraint */
-   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
-   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
+   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -6215,7 +6215,7 @@ SCIP_Real SCIPgetFeasibilityLinear(
       return consdataGetFeasibility(scip, consdata, sol);
 }
 
-/** gets the dual solution of the linear constraint in the current SCIP_LP */
+/** gets the dual solution of the linear constraint in the current LP */
 SCIP_Real SCIPgetDualsolLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -6238,7 +6238,7 @@ SCIP_Real SCIPgetDualsolLinear(
       return 0.0;
 }
 
-/** gets the dual farkas value of the linear constraint in the current infeasible SCIP_LP */
+/** gets the dual farkas value of the linear constraint in the current infeasible LP */
 SCIP_Real SCIPgetDualfarkasLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -6320,7 +6320,7 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    if( consdata->upgraded )
       return SCIP_OKAY;
 
-   /* check, if the constraint is already stored as SCIP_LP row */
+   /* check, if the constraint is already stored as LP row */
    if( consdata->row != NULL )
    {
       if( SCIProwIsInLP(consdata->row) )

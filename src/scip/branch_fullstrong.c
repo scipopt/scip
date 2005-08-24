@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.43 2005/08/22 18:35:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.44 2005/08/24 17:26:37 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -95,7 +95,7 @@ SCIP_DECL_BRANCHINIT(branchInitFullstrong)
 #define branchExitsolFullstrong NULL
 
 
-/** branching execution method for fractional SCIP_LP solutions */
+/** branching execution method for fractional LP solutions */
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
 {  /*lint --e{715}*/
@@ -130,7 +130,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   /* get current SCIP_LP objective bound of the local sub problem and global cutoff bound */
+   /* get current LP objective bound of the local sub problem and global cutoff bound */
    lpobjval = SCIPgetLPObjval(scip);
    cutoffbound = SCIPgetCutoffbound(scip);
 
@@ -271,7 +271,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
                   SCIP_CALL( SCIPchgVarLb(scip, lpcands[c], SCIPfeasCeil(scip, lpcandssol[c])) );
                   *result = SCIP_REDUCEDDOM;
                   SCIPdebugMessage(" -> variable <%s> is infeasible in downward branch\n", SCIPvarGetName(lpcands[c]));
-                  break; /* terminate initialization loop, because SCIP_LP was changed */
+                  break; /* terminate initialization loop, because LP was changed */
                }
                else
                {
@@ -280,7 +280,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
                   SCIP_CALL( SCIPchgVarUb(scip, lpcands[c], SCIPfeasFloor(scip, lpcandssol[c])) );
                   *result = SCIP_REDUCEDDOM;
                   SCIPdebugMessage(" -> variable <%s> is infeasible in upward branch\n", SCIPvarGetName(lpcands[c]));
-                  break; /* terminate initialization loop, because SCIP_LP was changed */
+                  break; /* terminate initialization loop, because LP was changed */
                }
             }
             else if( allcolsinlp && !exactsolve && downvalid && upvalid )
@@ -403,7 +403,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
  * branching specific interface methods
  */
 
-/** creates the full strong SCIP_LP braching rule and includes it in SCIP */
+/** creates the full strong LP braching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleFullstrong(
    SCIP*                 scip                /**< SCIP data structure */
    )

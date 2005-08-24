@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.h,v 1.12 2005/08/22 18:35:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objreader.h,v 1.13 2005/08/24 17:26:35 bzfpfend Exp $"
 
 /**@file   objreader.h
  * @brief  C++ wrapper for file readers
@@ -81,7 +81,7 @@ public:
     *  - SCIP_SUCCESS    : the reader read the file correctly and created an appropritate problem
     *  - SCIP_DIDNOTRUN  : the reader is not responsible for given input file
     *
-    *  If the reader detected an error in the input file, it should return with SCIP_RETCODE SCIP_READERR or SCIP_NOFILE.
+    *  If the reader detected an error in the input file, it should return with RETCODE SCIP_READERR or SCIP_NOFILE.
     */
    virtual SCIP_RETCODE scip_read(
       SCIP*              scip,               /**< SCIP data structure */

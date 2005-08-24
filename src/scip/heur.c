@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.47 2005/08/22 18:35:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.48 2005/08/24 17:26:45 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -287,8 +287,8 @@ SCIP_RETCODE SCIPheurExec(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PRIMAL*          primal,             /**< primal data */
    int                   depth,              /**< depth of current node */
-   int                   lpforkdepth,        /**< depth of the last node with solved SCIP_LP */
-   SCIP_Bool             currentnodehaslp,   /**< is SCIP_LP being processed in the current node? */
+   int                   lpforkdepth,        /**< depth of the last node with solved LP */
+   SCIP_Bool             currentnodehaslp,   /**< is LP being processed in the current node? */
    SCIP_Bool             plunging,           /**< is the next node to be processed a child or sibling? */
    SCIP_Bool             nodesolved,         /**< is the current node already solved? */
    int*                  ndelayedheurs,      /**< pointer to count the number of delayed heuristics */
@@ -318,8 +318,8 @@ SCIP_RETCODE SCIPheurExec(
    }
    else
    {
-      /* heuristic may only be executed on SCIP_LP nodes: check, if a node matching the execution frequency lies between the
-       * current node and the last SCIP_LP node of the path
+      /* heuristic may only be executed on LP nodes: check, if a node matching the execution frequency lies between the
+       * current node and the last LP node of the path
        */
       execute = (heur->freq > 0
          && ((depth + heur->freq - heur->freqofs) / heur->freq
@@ -335,7 +335,7 @@ SCIP_RETCODE SCIPheurExec(
    /* if the heuristic was delayed, execute it anywas */
    execute = execute || (heur->delaypos >= 0);
    
-   /* execute SCIP_LP heuristics only at SCIP_LP nodes */
+   /* execute LP heuristics only at LP nodes */
    execute = execute && (heur->pseudonodes || currentnodehaslp);
 
    /* execute heuristic, depending on its "afternode" flag */

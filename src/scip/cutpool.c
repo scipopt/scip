@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.44 2005/08/22 18:35:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.45 2005/08/24 17:26:43 bzfpfend Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -162,7 +162,7 @@ SCIP_RETCODE cutpoolEnsureCutsMem(
 
 
 /*
- * SCIP_Cut methods
+ * Cut methods
  */
 
 /** creates a cut and captures the row */
@@ -196,7 +196,7 @@ SCIP_RETCODE cutFree(
    SCIP_CUT**            cut,                /**< pointer to store the cut */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(cut != NULL);
@@ -229,7 +229,7 @@ SCIP_Bool cutIsAged(
 
 
 /*
- * SCIP_Cutpool methods
+ * Cutpool methods
  */
 
 /** creates cut pool */
@@ -267,7 +267,7 @@ SCIP_RETCODE SCIPcutpoolFree(
    SCIP_CUTPOOL**        cutpool,            /**< pointer to store cut pool */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(cutpool != NULL);
@@ -293,7 +293,7 @@ SCIP_RETCODE SCIPcutpoolClear(
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    int i;
@@ -382,7 +382,7 @@ SCIP_RETCODE cutpoolDelCut(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CUT*             cut                 /**< cut to remove */
    )
 {
@@ -427,13 +427,13 @@ SCIP_RETCODE cutpoolDelCut(
    return SCIP_OKAY;
 }
 
-/** removes the SCIP_LP row from the cut pool */
+/** removes the LP row from the cut pool */
 SCIP_RETCODE SCIPcutpoolDelRow(
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_ROW*             row                 /**< row to remove */
    )
 {
@@ -462,7 +462,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_Bool             root,               /**< are we at the root node? */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */

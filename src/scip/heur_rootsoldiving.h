@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rootsoldiving.h,v 1.7 2005/08/22 18:35:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rootsoldiving.h,v 1.8 2005/08/24 17:26:47 bzfpfend Exp $"
 
 /**@file   heur_rootsoldiving.h
- * @brief  SCIP_LP diving heuristic that changes variable's objective values using root SCIP_LP solution as guide
+ * @brief  LP diving heuristic that changes variable's objective values using root LP solution as guide
  * @author Kati Wolter
  */
 

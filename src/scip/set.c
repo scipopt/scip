@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.155 2005/08/22 18:35:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.156 2005/08/24 17:26:58 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -64,13 +64,13 @@
 #define SCIP_DEFAULT_BRANCH_PREFERBINARY  FALSE /**< should branching on binary variables be preferred? */
 
 
-/* SCIP_Conflict Analysis */
+/* Conflict Analysis */
 
 #define SCIP_DEFAULT_CONF_MAXVARSFAC       0.02 /**< maximal fraction of binary variables involved in a conflict clause */
 #define SCIP_DEFAULT_CONF_MINMAXVARS         30 /**< minimal absolute maximum of variables involved in a conflict clause */
 #define SCIP_DEFAULT_CONF_MAXUNFIXED         -1 /**< maximal number of unfixed variables at insertion depth of conflict
                                                       *   clause (-1: no limit) */
-#define SCIP_DEFAULT_CONF_MAXLPLOOPS        100 /**< maximal number of SCIP_LP resolving loops during conflict analysis */
+#define SCIP_DEFAULT_CONF_MAXLPLOOPS        100 /**< maximal number of LP resolving loops during conflict analysis */
 #define SCIP_DEFAULT_CONF_FUIPLEVELS         -1 /**< number of depth levels up to which first UIP's are used in conflict
                                                       *   analysis (-1: use All-FirstUIP rule) */
 #define SCIP_DEFAULT_CONF_INTERCLAUSES        1 /**< maximal number of intermediate conflict clauses generated in conflict
@@ -79,14 +79,14 @@
                                                       *   (-1: use all generated conflict clauses) */
 #define SCIP_DEFAULT_CONF_RECONVCLAUSES    TRUE /**< should reconvergence clauses be created for UIPs of last depth level? */
 #define SCIP_DEFAULT_CONF_USEPROP          TRUE /**< should propagation conflict analysis be used? */
-#define SCIP_DEFAULT_CONF_USELP           FALSE /**< should infeasible SCIP_LP conflict analysis be used? */
+#define SCIP_DEFAULT_CONF_USELP           FALSE /**< should infeasible LP conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USESB           FALSE /**< should infeasible strong branching conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USEPSEUDO        TRUE /**< should pseudo solution conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_ALLOWLOCAL       TRUE /**< should conflict clauses be generated that are only valid locally? */
 #define SCIP_DEFAULT_CONF_REPROPAGATE      TRUE /**< should earlier nodes be repropagated in order to replace branching
                                                       *   decisions by deductions */
 #define SCIP_DEFAULT_CONF_DYNAMIC          TRUE /**< should the conflict constraints be subject to aging? */
-#define SCIP_DEFAULT_CONF_REMOVEABLE       TRUE /**< should the conflict's relaxations be subject to SCIP_LP aging and cleanup? */
+#define SCIP_DEFAULT_CONF_REMOVEABLE       TRUE /**< should the conflict's relaxations be subject to LP aging and cleanup? */
 
 
 /* Constraints */
@@ -103,7 +103,7 @@
 #define SCIP_DEFAULT_DISP_WIDTH             139 /**< maximal number of characters in a node information line */
 #define SCIP_DEFAULT_DISP_FREQ              100 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISP_HEADERFREQ         15 /**< frequency for displaying header lines (every n'th node info line) */
-#define SCIP_DEFAULT_DISP_LPINFO          FALSE /**< should the SCIP_LP solver display status messages? */
+#define SCIP_DEFAULT_DISP_LPINFO          FALSE /**< should the LP solver display status messages? */
 
 
 /* Limits */
@@ -118,30 +118,30 @@
 #define SCIP_DEFAULT_LIMIT_MAXSOL           100 /**< maximal number of solutions to store in the solution storage */
 
 
-/* SCIP_LP */
+/* LP */
 
-#define SCIP_DEFAULT_LP_SOLVEFREQ             1 /**< frequency for solving SCIP_LP at the nodes; -1: never; 0: only root SCIP_LP */
+#define SCIP_DEFAULT_LP_SOLVEFREQ             1 /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
 #define SCIP_DEFAULT_LP_SOLVEDEPTH           -1 /**< maximal depth for solving LPs (-1: no depth limit) */
-#define SCIP_DEFAULT_LP_INITALGORITHM       's' /**< SCIP_LP algorithm for solving initial SCIP_LP relaxations ('s'implex, 'b'arrier,
+#define SCIP_DEFAULT_LP_INITALGORITHM       's' /**< LP algorithm for solving initial LP relaxations ('s'implex, 'b'arrier,
                                                       *   barrier with 'c'rossover) */
-#define SCIP_DEFAULT_LP_RESOLVEALGORITHM    's' /**< SCIP_LP algorithm for resolving SCIP_LP relaxations if a starting basis exists
+#define SCIP_DEFAULT_LP_RESOLVEALGORITHM    's' /**< LP algorithm for resolving LP relaxations if a starting basis exists
                                                       *   ('s'implex, 'b'arrier, barrier with 'c'rossover) */
-#define SCIP_DEFAULT_LP_PRICING             's' /**< SCIP_LP pricing strategy ('a'uto, 'f'ull pricing, 'p'artial,
+#define SCIP_DEFAULT_LP_PRICING             's' /**< LP pricing strategy ('a'uto, 'f'ull pricing, 'p'artial,
                                                       *   's'teepest edge pricing, 'q'uickstart steepest edge pricing,
                                                       *   'd'evex pricing) */
 #define SCIP_DEFAULT_LP_COLAGELIMIT          10 /**< maximum age a dynamic column can reach before it is deleted from SCIP_LP
                                                       *   (-1: don't delete columns due to aging) */
 #define SCIP_DEFAULT_LP_ROWAGELIMIT          10 /**< maximum age a dynamic row can reach before it is deleted from SCIP_LP
                                                       *   (-1: don't delete rows due to aging) */
-#define SCIP_DEFAULT_LP_CLEANUPCOLS       FALSE /**< should new non-basic columns be removed after SCIP_LP solving? */
-#define SCIP_DEFAULT_LP_CLEANUPCOLSROOT   FALSE /**< should new non-basic columns be removed after root SCIP_LP solving? */
-#define SCIP_DEFAULT_LP_CLEANUPROWS        TRUE /**< should new basic rows be removed after SCIP_LP solving? */
-#define SCIP_DEFAULT_LP_CLEANUPROWSROOT    TRUE /**< should new basic rows be removed after root SCIP_LP solving? */
-#define SCIP_DEFAULT_LP_CHECKSTABILITY     TRUE /**< should SCIP_LP solver's return status be checked for stability? */
-#define SCIP_DEFAULT_LP_CHECKFEAS          TRUE /**< should SCIP_LP solutions be checked to resolve SCIP_LP at numerical troubles? */
-#define SCIP_DEFAULT_LP_FASTMIP            TRUE /**< should FASTMIP setting of SCIP_LP solver be used? */
-#define SCIP_DEFAULT_LP_SCALING            TRUE /**< should scaling of SCIP_LP solver be used? */
-#define SCIP_DEFAULT_LP_PRESOLVING         TRUE /**< should presolving of SCIP_LP solver be used? */
+#define SCIP_DEFAULT_LP_CLEANUPCOLS       FALSE /**< should new non-basic columns be removed after LP solving? */
+#define SCIP_DEFAULT_LP_CLEANUPCOLSROOT   FALSE /**< should new non-basic columns be removed after root LP solving? */
+#define SCIP_DEFAULT_LP_CLEANUPROWS        TRUE /**< should new basic rows be removed after LP solving? */
+#define SCIP_DEFAULT_LP_CLEANUPROWSROOT    TRUE /**< should new basic rows be removed after root LP solving? */
+#define SCIP_DEFAULT_LP_CHECKSTABILITY     TRUE /**< should LP solver's return status be checked for stability? */
+#define SCIP_DEFAULT_LP_CHECKFEAS          TRUE /**< should LP solutions be checked to resolve LP at numerical troubles? */
+#define SCIP_DEFAULT_LP_FASTMIP            TRUE /**< should FASTMIP setting of LP solver be used? */
+#define SCIP_DEFAULT_LP_SCALING            TRUE /**< should scaling of LP solver be used? */
+#define SCIP_DEFAULT_LP_PRESOLVING         TRUE /**< should presolving of LP solver be used? */
 
 
 /* Memory */
@@ -171,7 +171,7 @@
                                                       *   preprocessing (0.0: restart only after complete root node evaluation) */
 
 
-/* SCIP_Pricing */
+/* Pricing */
 
 #define SCIP_DEFAULT_PRICE_ABORTFAC         2.0 /**< pricing is aborted, if fac * price_maxvars pricing candidates were
                                                       *   found */
@@ -183,7 +183,7 @@
 
 #define SCIP_DEFAULT_PROP_MAXROUNDS         100 /**< maximal number of propagation rounds per node (-1: unlimited) */
 #define SCIP_DEFAULT_PROP_MAXROUNDSROOT    1000 /**< maximal number of propagation rounds in root node (-1: unlimited) */
-#define SCIP_DEFAULT_PROP_REDCOSTFREQ         1 /**< frequency for reduced cost fixing (-1: never; 0: only root SCIP_LP) */
+#define SCIP_DEFAULT_PROP_REDCOSTFREQ         1 /**< frequency for reduced cost fixing (-1: never; 0: only root LP) */
 
 
 /* Separation */
@@ -191,10 +191,10 @@
 #define SCIP_DEFAULT_SEPA_MAXBOUNDDIST      0.2 /**< maximal relative distance from current node's dual bound to primal 
                                                       *   bound compared to best node's dual bound for applying separation
                                                       *   (0.0: only on current best node, 1.0: on all nodes) */
-#define SCIP_DEFAULT_SEPA_MINEFFICACY      0.05 /**< minimal efficacy for a cut to enter the SCIP_LP */
-#define SCIP_DEFAULT_SEPA_MINEFFICACYROOT  0.01 /**< minimal efficacy for a cut to enter the SCIP_LP in the root node */
-#define SCIP_DEFAULT_SEPA_MINORTHO         0.50 /**< minimal orthogonality for a cut to enter the SCIP_LP */
-#define SCIP_DEFAULT_SEPA_MINORTHOROOT     0.50 /**< minimal orthogonality for a cut to enter the SCIP_LP in the root node */
+#define SCIP_DEFAULT_SEPA_MINEFFICACY      0.05 /**< minimal efficacy for a cut to enter the LP */
+#define SCIP_DEFAULT_SEPA_MINEFFICACYROOT  0.01 /**< minimal efficacy for a cut to enter the LP in the root node */
+#define SCIP_DEFAULT_SEPA_MINORTHO         0.50 /**< minimal orthogonality for a cut to enter the LP */
+#define SCIP_DEFAULT_SEPA_MINORTHOROOT     0.50 /**< minimal orthogonality for a cut to enter the LP in the root node */
 #define SCIP_DEFAULT_SEPA_OBJPARALFAC      0.20 /**< factor to scale objective parallelism of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_ORTHOFAC         1.00 /**< factor to scale orthogonality of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_EFFICACYNORM      'e' /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum,
@@ -218,11 +218,11 @@
 #define SCIP_DEFAULT_TIME_ENABLED          TRUE /**< is timing enabled? */
 
 
-/* SCIP_VBC Tool output */
-#define SCIP_DEFAULT_VBC_FILENAME           "-" /**< name of the SCIP_VBC Tool output file, or "-" if no output should be
+/* VBC Tool output */
+#define SCIP_DEFAULT_VBC_FILENAME           "-" /**< name of the VBC Tool output file, or "-" if no output should be
                                                       *   created */
 #define SCIP_DEFAULT_VBC_REALTIME          TRUE /**< should the real solving time be used instead of a time step counter
-                                                      *   in SCIP_VBC output? */
+                                                      *   in VBC output? */
 
 
 
@@ -262,7 +262,7 @@ SCIP_DECL_PARAMCHGD(paramChgdFeastol)
 
    newfeastol = SCIPparamGetReal(param);
    
-   /* change the feastol through the SCIP call in order to mark the SCIP_LP unsolved */
+   /* change the feastol through the SCIP call in order to mark the LP unsolved */
    SCIP_CALL( SCIPchgFeastol(scip, newfeastol) );
 
    return SCIP_OKAY;
@@ -276,7 +276,7 @@ SCIP_DECL_PARAMCHGD(paramChgdDualfeastol)
 
    newdualfeastol = SCIPparamGetReal(param);
    
-   /* change the dualfeastol through the SCIP call in order to mark the SCIP_LP unsolved */
+   /* change the dualfeastol through the SCIP call in order to mark the LP unsolved */
    SCIP_CALL( SCIPchgDualfeastol(scip, newdualfeastol) );
 
    return SCIP_OKAY;
@@ -290,7 +290,7 @@ SCIP_DECL_PARAMCHGD(paramChgdBarrierconvtol)
 
    newbarrierconvtol = SCIPparamGetReal(param);
    
-   /* change the barrierconvtol through the SCIP call in order to mark the SCIP_LP unsolved */
+   /* change the barrierconvtol through the SCIP call in order to mark the LP unsolved */
    SCIP_CALL( SCIPchgBarrierconvtol(scip, newbarrierconvtol) );
 
    return SCIP_OKAY;
@@ -400,7 +400,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/uselp",
-         "should infeasible SCIP_LP conflict analysis be used?",
+         "should infeasible LP conflict analysis be used?",
          &(*set)->conf_uselp, SCIP_DEFAULT_CONF_USELP,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
@@ -430,7 +430,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "conflict/maxlploops",
-         "maximal number of SCIP_LP resolving loops during conflict analysis",
+         "maximal number of LP resolving loops during conflict analysis",
          &(*set)->conf_maxlploops, SCIP_DEFAULT_CONF_MAXLPLOOPS, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
@@ -470,7 +470,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/removeable",
-         "should the conflict's relaxations be subject to SCIP_LP aging and cleanup?",
+         "should the conflict's relaxations be subject to LP aging and cleanup?",
          &(*set)->conf_removeable, SCIP_DEFAULT_CONF_REMOVEABLE,
          NULL, NULL) );
    
@@ -511,7 +511,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "display/lpinfo",
-         "should the SCIP_LP solver display status messages?",
+         "should the LP solver display status messages?",
          &(*set)->disp_lpinfo, SCIP_DEFAULT_DISP_LPINFO,
          NULL, NULL) );
 
@@ -552,25 +552,25 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->limit_maxsol, SCIP_DEFAULT_LIMIT_MAXSOL, 1, INT_MAX,
          NULL, NULL) );
 
-   /* SCIP_LP parameters */
+   /* LP parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "lp/solvefreq",
-         "frequency for solving SCIP_LP at the nodes (-1: never; 0: only root SCIP_LP)",
+         "frequency for solving LP at the nodes (-1: never; 0: only root LP)",
          &(*set)->lp_solvefreq, SCIP_DEFAULT_LP_SOLVEFREQ, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "lp/solvedepth",
-         "maximal depth for solving SCIP_LP at the nodes (-1: no depth limit)",
+         "maximal depth for solving LP at the nodes (-1: no depth limit)",
          &(*set)->lp_solvedepth, SCIP_DEFAULT_LP_SOLVEDEPTH, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "lp/initalgorithm",
-         "LP algorithm for solving initial SCIP_LP relaxations ('s'implex, 'b'arrier, barrier with 'c'rossover)",
+         "LP algorithm for solving initial LP relaxations ('s'implex, 'b'arrier, barrier with 'c'rossover)",
          &(*set)->lp_initalgorithm, SCIP_DEFAULT_LP_INITALGORITHM, "sbc",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "lp/resolvealgorithm",
-         "LP algorithm for resolving SCIP_LP relaxations if a starting basis exists ('s'implex, 'b'arrier, barrier with 'c'rossover)",
+         "LP algorithm for resolving LP relaxations if a starting basis exists ('s'implex, 'b'arrier, barrier with 'c'rossover)",
          &(*set)->lp_resolvealgorithm, SCIP_DEFAULT_LP_RESOLVEALGORITHM, "sbc",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
@@ -580,57 +580,57 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "lp/colagelimit",
-         "maximum age a dynamic column can reach before it is deleted from the SCIP_LP (-1: don't delete columns due to aging)",
+         "maximum age a dynamic column can reach before it is deleted from the LP (-1: don't delete columns due to aging)",
          &(*set)->lp_colagelimit, SCIP_DEFAULT_LP_COLAGELIMIT, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "lp/rowagelimit",
-         "maximum age a dynamic row can reach before it is deleted from the SCIP_LP (-1: don't delete rows due to aging)",
+         "maximum age a dynamic row can reach before it is deleted from the LP (-1: don't delete rows due to aging)",
          &(*set)->lp_rowagelimit, SCIP_DEFAULT_LP_ROWAGELIMIT, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/cleanupcols",
-         "should new non-basic columns be removed after SCIP_LP solving?",
+         "should new non-basic columns be removed after LP solving?",
          &(*set)->lp_cleanupcols, SCIP_DEFAULT_LP_CLEANUPCOLS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/cleanupcolsroot",
-         "should new non-basic columns be removed after root SCIP_LP solving?",
+         "should new non-basic columns be removed after root LP solving?",
          &(*set)->lp_cleanupcolsroot, SCIP_DEFAULT_LP_CLEANUPCOLSROOT,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/cleanuprows",
-         "should new basic rows be removed after SCIP_LP solving?",
+         "should new basic rows be removed after LP solving?",
          &(*set)->lp_cleanuprows, SCIP_DEFAULT_LP_CLEANUPROWS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/cleanuprowsroot",
-         "should new basic rows be removed after root SCIP_LP solving?",
+         "should new basic rows be removed after root LP solving?",
          &(*set)->lp_cleanuprowsroot, SCIP_DEFAULT_LP_CLEANUPROWSROOT,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/checkstability",
-         "should SCIP_LP solver's return status be checked for stability?",
+         "should LP solver's return status be checked for stability?",
          &(*set)->lp_checkstability, SCIP_DEFAULT_LP_CHECKSTABILITY,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/checkfeas",
-         "should SCIP_LP solutions be checked, resolving SCIP_LP when numerical troubles occur?",
+         "should LP solutions be checked, resolving LP when numerical troubles occur?",
          &(*set)->lp_checkfeas, SCIP_DEFAULT_LP_CHECKFEAS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/fastmip",
-         "should FASTMIP setting of SCIP_LP solver be used?",
+         "should FASTMIP setting of LP solver be used?",
          &(*set)->lp_fastmip, SCIP_DEFAULT_LP_FASTMIP,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/scaling",
-         "should scaling of SCIP_LP solver be used?",
+         "should scaling of LP solver be used?",
          &(*set)->lp_scaling, SCIP_DEFAULT_LP_SCALING,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/presolving",
-         "should presolving of SCIP_LP solver be used?",
+         "should presolving of LP solver be used?",
          &(*set)->lp_presolving, SCIP_DEFAULT_LP_PRESOLVING,
          NULL, NULL) );
 
@@ -787,7 +787,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "propagating/redcostfreq",
-         "frequency for applying reduced cost fixing (-1: never; 0: only root SCIP_LP)",
+         "frequency for applying reduced cost fixing (-1: never; 0: only root LP)",
          &(*set)->prop_redcostfreq, SCIP_DEFAULT_PROP_REDCOSTFREQ, -1, INT_MAX,
          NULL, NULL) );
 
@@ -804,7 +804,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "separating/minefficacyroot",
-         "minimal efficacy for a cut to enter the SCIP_LP in the root node",
+         "minimal efficacy for a cut to enter the LP in the root node",
          &(*set)->sepa_minefficacyroot, SCIP_DEFAULT_SEPA_MINEFFICACYROOT, 0.0, SCIP_INVALID/10.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
@@ -814,7 +814,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "separating/minorthoroot",
-         "minimal orthogonality for a cut to enter the SCIP_LP in the root node",
+         "minimal orthogonality for a cut to enter the LP in the root node",
          &(*set)->sepa_minorthoroot, SCIP_DEFAULT_SEPA_MINORTHOROOT, 0.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
@@ -886,15 +886,15 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->time_enabled, SCIP_DEFAULT_TIME_ENABLED,
          NULL, NULL) );
 
-   /* SCIP_VBC tool parameters */
+   /* VBC tool parameters */
    SCIP_CALL( SCIPsetAddStringParam(*set, blkmem,
          "vbc/filename",
-         "name of the SCIP_VBC Tool output file, or - if no SCIP_VBC Tool output should be created",
+         "name of the VBC Tool output file, or - if no VBC Tool output should be created",
          &(*set)->vbc_filename, SCIP_DEFAULT_VBC_FILENAME, 
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "vbc/realtime",
-         "should the real solving time be used instead of a time step counter in SCIP_VBC output?",
+         "should the real solving time be used instead of a time step counter in VBC output?",
          &(*set)->vbc_realtime, SCIP_DEFAULT_VBC_REALTIME,
          NULL, NULL) );
 
@@ -2585,7 +2585,7 @@ SCIP_RETCODE SCIPsetSetVerbLevel(
    return SCIP_OKAY;
 }
 
-/** sets SCIP_LP feasibility tolerance */
+/** sets LP feasibility tolerance */
 SCIP_RETCODE SCIPsetSetFeastol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             feastol             /**< new feasibility tolerance */
@@ -2598,7 +2598,7 @@ SCIP_RETCODE SCIPsetSetFeastol(
    return SCIP_OKAY;
 }
 
-/** sets SCIP_LP feasibility tolerance for reduced costs */
+/** sets LP feasibility tolerance for reduced costs */
 SCIP_RETCODE SCIPsetSetDualfeastol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             dualfeastol         /**< new reduced costs feasibility tolerance */
@@ -2611,7 +2611,7 @@ SCIP_RETCODE SCIPsetSetDualfeastol(
    return SCIP_OKAY;
 }
 
-/** sets SCIP_LP convergence tolerance used in barrier algorithm */
+/** sets LP convergence tolerance used in barrier algorithm */
 SCIP_RETCODE SCIPsetSetBarrierconvtol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             barrierconvtol      /**< new convergence tolerance used in barrier algorithm */
@@ -2624,7 +2624,7 @@ SCIP_RETCODE SCIPsetSetBarrierconvtol(
    return SCIP_OKAY;
 }
 
-/** returns the maximal number of variables priced into the SCIP_LP per round */
+/** returns the maximal number of variables priced into the LP per round */
 int SCIPsetGetPriceMaxvars(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             root                /**< are we at the root node? */
@@ -3187,7 +3187,7 @@ SCIP_Bool SCIPsetIsFeasNegative(
    return EPSN(val, set->num_feastol);
 }
 
-/** checks, if value is integral within the SCIP_LP feasibility bounds */
+/** checks, if value is integral within the LP feasibility bounds */
 SCIP_Bool SCIPsetIsFeasIntegral(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to process */

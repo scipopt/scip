@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: buffer.h,v 1.16 2005/08/22 18:35:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: buffer.h,v 1.17 2005/08/24 17:26:38 bzfpfend Exp $"
 
 /**@file   buffer.h
  * @brief  internal methods for memory buffers for temporary objects

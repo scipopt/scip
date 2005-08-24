@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_prob.h,v 1.10 2005/08/22 18:35:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_prob.h,v 1.11 2005/08/24 17:27:05 bzfpfend Exp $"
 
 /**@file   type_prob.h
  * @brief  type definitions for storing and manipulating the main problem
@@ -94,7 +94,7 @@ typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by 
 /** solving process deinitialization method of transformed data (called before the branch and bound data is freed)
  *
  *  This method is called before the branch and bound data is freed and should be used to free all data that
- *  was allocated in the solving process initialization method. The user has to make sure, that all SCIP_LP rows associated
+ *  was allocated in the solving process initialization method. The user has to make sure, that all LP rows associated
  *  to the transformed user problem data are released.
  *
  *  input:

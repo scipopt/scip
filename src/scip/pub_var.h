@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.51 2005/08/22 18:35:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.52 2005/08/24 17:26:55 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -276,13 +276,13 @@ SCIP_Bool SCIPvarIsIntegral(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns whether variable's column should be present in the initial root SCIP_LP */
+/** returns whether variable's column should be present in the initial root LP */
 extern
 SCIP_Bool SCIPvarIsInitial(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns whether variable's column is removeable from the SCIP_LP (due to aging or cleanup) */
+/** returns whether variable's column is removeable from the LP (due to aging or cleanup) */
 extern
 SCIP_Bool SCIPvarIsRemoveable(
    SCIP_VAR*             var                 /**< problem variable */
@@ -312,7 +312,7 @@ int SCIPvarGetProbindex(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** gets transformed variable of SCIP_ORIGINAL variable */
+/** gets transformed variable of ORIGINAL variable */
 extern
 SCIP_VAR* SCIPvarGetTransVar(
    SCIP_VAR*             var                 /**< problem variable */
@@ -324,7 +324,7 @@ SCIP_COL* SCIPvarGetCol(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns whether the variable is a COLUMN variable that is member of the current SCIP_LP */
+/** returns whether the variable is a COLUMN variable that is member of the current LP */
 extern
 SCIP_Bool SCIPvarIsInLP(
    SCIP_VAR*             var                 /**< problem variable */
@@ -669,7 +669,7 @@ SCIP_BOUNDTYPE SCIPvarGetWorstBoundType(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** gets primal SCIP_LP solution value of variable */
+/** gets primal LP solution value of variable */
 extern
 SCIP_Real SCIPvarGetLPSol(
    SCIP_VAR*             var                 /**< problem variable */
@@ -681,11 +681,11 @@ SCIP_Real SCIPvarGetPseudoSol(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** gets current SCIP_LP or pseudo solution value of variable */
+/** gets current LP or pseudo solution value of variable */
 extern
 SCIP_Real SCIPvarGetSol(
    SCIP_VAR*             var,                /**< problem variable */
-   SCIP_Bool             getlpval            /**< should the SCIP_LP solution value be returned? */
+   SCIP_Bool             getlpval            /**< should the LP solution value be returned? */
    );
 
 /** returns the solution of the variable in the root node's relaxation, if the root relaxation is not yet completely

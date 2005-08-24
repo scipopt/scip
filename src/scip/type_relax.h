@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_relax.h,v 1.9 2005/08/22 18:35:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_relax.h,v 1.10 2005/08/24 17:27:05 bzfpfend Exp $"
 
 /**@file   type_relax.h
  * @brief  type definitions for relaxators
@@ -81,7 +81,7 @@ typedef struct SCIP_RelaxData SCIP_RELAXDATA;     /**< locally defined relaxator
 /** execution method of relaxator
  *
  *  The method is called in the node processing loop. It solves the current subproblem's relaxation.
- *  Like the SCIP_LP relaxation, the relaxator should only operate on COLUMN variables.
+ *  Like the LP relaxation, the relaxator should only operate on COLUMN variables.
  *
  *  input:
  *  - scip            : SCIP main data structure

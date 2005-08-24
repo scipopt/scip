@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.h,v 1.16 2005/08/22 18:35:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objsepa.h,v 1.17 2005/08/24 17:26:36 bzfpfend Exp $"
 
 /**@file   objsepa.h
  * @brief  C++ wrapper for cut separators
@@ -131,7 +131,7 @@ public:
    
    /** execution method of separator
     *
-    *  Searches for cutting planes. The method is called in the SCIP_LP solving loop.
+    *  Searches for cutting planes. The method is called in the LP solving loop.
     *
     *  possible return values for *result:
     *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off

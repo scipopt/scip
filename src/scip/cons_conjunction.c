@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.21 2005/08/22 18:35:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.22 2005/08/24 17:26:40 bzfpfend Exp $"
 
 /**@file   cons_conjunction.c
  * @brief  constraint handler for conjunction constraints
@@ -213,7 +213,7 @@ SCIP_RETCODE checkAllConss(
    int                   nconss,             /**< number of active conjunction constraints */
    SCIP_SOL*             sol,                /**< solution to check */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current SCIP_LP rows to be checked? */
+   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
@@ -330,7 +330,7 @@ SCIP_DECL_CONSTRANS(consTransConjunction)
 }
 
 
-/** SCIP_LP initialization method of constraint handler */
+/** LP initialization method of constraint handler */
 #define consInitlpConjunction NULL
 
 
@@ -338,7 +338,7 @@ SCIP_DECL_CONSTRANS(consTransConjunction)
 #define consSepaConjunction NULL
 
 
-/** constraint enforcing method of constraint handler for SCIP_LP solutions */
+/** constraint enforcing method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSENFOLP(consEnfolpConjunction)
 {  /*lint --e{715}*/

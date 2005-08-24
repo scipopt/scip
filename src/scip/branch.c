@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.68 2005/08/22 18:35:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.69 2005/08/24 17:26:36 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -146,13 +146,13 @@ SCIP_RETCODE SCIPbranchcandFree(
    return SCIP_OKAY;
 }
 
-/** calculates branching candidates for SCIP_LP solution branching (fractional variables) */
+/** calculates branching candidates for LP solution branching (fractional variables) */
 static
 SCIP_RETCODE branchcandCalcLPCands(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(branchcand != NULL);
@@ -162,10 +162,10 @@ SCIP_RETCODE branchcandCalcLPCands(
    assert(lp->solved);
    assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
 
-   SCIPdebugMessage("calculating SCIP_LP branching candidates: validlp=%d, lpcount=%d\n",
+   SCIPdebugMessage("calculating LP branching candidates: validlp=%d, lpcount=%d\n",
       branchcand->validlpcandslp, stat->lpcount);
 
-   /* check, if the current SCIP_LP branching candidate array is invalid */
+   /* check, if the current LP branching candidate array is invalid */
    if( branchcand->validlpcandslp < stat->lpcount )
    {
       SCIP_COL** cols;
@@ -179,12 +179,12 @@ SCIP_RETCODE branchcandCalcLPCands(
       int c;
       int insertpos;
 
-      SCIPdebugMessage(" -> recalculating SCIP_LP branching candidates\n");
+      SCIPdebugMessage(" -> recalculating LP branching candidates\n");
 
       cols = SCIPlpGetCols(lp);
       ncols = SCIPlpGetNCols(lp);
 
-      /* construct the SCIP_LP branching candidate set, moving the candidates with maximal priority to the front */
+      /* construct the LP branching candidate set, moving the candidates with maximal priority to the front */
       SCIP_CALL( ensureLpcandsSize(branchcand, set, ncols) );
 
       branchcand->lpmaxpriority = INT_MIN;
@@ -208,18 +208,18 @@ SCIP_RETCODE branchcandCalcLPCands(
          assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
          assert(SCIPvarGetCol(var) == col);
          
-         /* SCIP_LP branching candidates are fractional binary and integer variables */
+         /* LP branching candidates are fractional binary and integer variables */
          vartype = SCIPvarGetType(var);
          if( vartype != SCIP_VARTYPE_BINARY && vartype != SCIP_VARTYPE_INTEGER )
             continue;
 
-         /* ignore fixed variables (due to numerics, it is possible, that the SCIP_LP solution of a fixed integer variable
+         /* ignore fixed variables (due to numerics, it is possible, that the LP solution of a fixed integer variable
           * (with large fixed value) is fractional in terms of absolute feasibility measure)
           */
          if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
             continue;
 
-         /* check, if the SCIP_LP solution value is fractional */
+         /* check, if the LP solution value is fractional */
          frac = SCIPsetFeasFrac(set, primsol);
          if( SCIPsetIsFeasFracIntegral(set, frac) )
             continue;
@@ -285,22 +285,21 @@ SCIP_RETCODE branchcandCalcLPCands(
    }
    assert(0 <= branchcand->npriolpcands && branchcand->npriolpcands <= branchcand->nlpcands);
 
-   SCIPdebugMessage(" -> %d fractional variables (%d of maximal priority)\n",
-      branchcand->nlpcands, branchcand->npriolpcands);
+   SCIPdebugMessage(" -> %d fractional variables (%d of maximal priority)\n", branchcand->nlpcands, branchcand->npriolpcands);
 
    return SCIP_OKAY;
 }
 
-/** gets branching candidates for SCIP_LP solution branching (fractional variables) */
+/** gets branching candidates for LP solution branching (fractional variables) */
 SCIP_RETCODE SCIPbranchcandGetLPCands(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
-   SCIP_VAR***           lpcands,            /**< pointer to store the array of SCIP_LP branching candidates, or NULL */
-   SCIP_Real**           lpcandssol,         /**< pointer to store the array of SCIP_LP candidate solution values, or NULL */
-   SCIP_Real**           lpcandsfrac,        /**< pointer to store the array of SCIP_LP candidate fractionalities, or NULL */
-   int*                  nlpcands,           /**< pointer to store the number of SCIP_LP branching candidates, or NULL */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_VAR***           lpcands,            /**< pointer to store the array of LP branching candidates, or NULL */
+   SCIP_Real**           lpcandssol,         /**< pointer to store the array of LP candidate solution values, or NULL */
+   SCIP_Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
+   int*                  nlpcands,           /**< pointer to store the number of LP branching candidates, or NULL */
    int*                  npriolpcands        /**< pointer to store the number of candidates with maximal priority, or NULL */
    )
 {
@@ -751,7 +750,7 @@ SCIP_RETCODE SCIPbranchruleCreate(
    SCIP_DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */
    SCIP_DECL_BRANCHINITSOL((*branchinitsol)),/**< solving process initialization method of branching rule */
    SCIP_DECL_BRANCHEXITSOL((*branchexitsol)),/**< solving process deinitialization method of branching rule */
-   SCIP_DECL_BRANCHEXECLP((*branchexeclp)),  /**< branching execution method for fractional SCIP_LP solutions */
+   SCIP_DECL_BRANCHEXECLP((*branchexeclp)),  /**< branching execution method for fractional LP solutions */
    SCIP_DECL_BRANCHEXECPS((*branchexecps)),  /**< branching execution method for not completely fixed pseudo solutions */
    SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
    )
@@ -926,7 +925,7 @@ SCIP_RETCODE SCIPbranchruleExitsol(
    return SCIP_OKAY;
 }
 
-/** executes branching rule for fractional SCIP_LP solution */
+/** executes branching rule for fractional LP solution */
 SCIP_RETCODE SCIPbranchruleExecLPSol(
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -960,7 +959,7 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
          int oldncutsstored;
          int oldnactiveconss;
 
-         SCIPdebugMessage("executing SCIP_LP branching rule <%s>\n", branchrule->name);
+         SCIPdebugMessage("executing LP branching rule <%s>\n", branchrule->name);
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
@@ -983,13 +982,13 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
             && *result != SCIP_BRANCHED
             && *result != SCIP_DIDNOTRUN )
          {
-            SCIPerrorMessage("branching rule <%s> returned invalid result code <%d> from SCIP_LP solution branching\n",
+            SCIPerrorMessage("branching rule <%s> returned invalid result code <%d> from LP solution branching\n",
                branchrule->name, *result);
             return SCIP_INVALIDRESULT;
          }
          if( *result == SCIP_CONSADDED && !allowaddcons )
          {
-            SCIPerrorMessage("branching rule <%s> added a constraint in SCIP_LP solution branching without permission\n",
+            SCIPerrorMessage("branching rule <%s> added a constraint in LP solution branching without permission\n",
                branchrule->name);
             return SCIP_INVALIDRESULT;
          }
@@ -1215,7 +1214,7 @@ SCIP_Real SCIPbranchruleGetTime(
    return SCIPclockGetTime(branchrule->branchclock);
 }
 
-/** gets the total number of times, the branching rule was called on an SCIP_LP solution */
+/** gets the total number of times, the branching rule was called on an LP solution */
 SCIP_Longint SCIPbranchruleGetNLPCalls(
    SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    )
@@ -1380,7 +1379,7 @@ SCIP_Real SCIPbranchGetScoreMultiple(
    return SCIPbranchGetScore(set, var, min1, min2);
 }
 
-/** calls branching rules to branch on an SCIP_LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN;
+/** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN;
  *  if the branch priority of an unfixed variable is larger than the maximal branch priority of the fractional
  *  variables, pseudo solution branching is applied on the unfixed variables with maximal branch priority
  */
@@ -1389,7 +1388,7 @@ SCIP_RETCODE SCIPbranchExecLP(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -1410,7 +1409,7 @@ SCIP_RETCODE SCIPbranchExecLP(
    assert(0 <= branchcand->npriolpcands && branchcand->npriolpcands <= branchcand->nlpcands);
    assert((branchcand->npriolpcands == 0) == (branchcand->nlpcands == 0));
 
-   SCIPdebugMessage("branching on SCIP_LP solution with %d fractional variables (%d of maximal priority)\n",
+   SCIPdebugMessage("branching on LP solution with %d fractional variables (%d of maximal priority)\n",
       branchcand->nlpcands, branchcand->npriolpcands);
 
    /* do nothing, if no fractional variables exist */
@@ -1484,7 +1483,7 @@ SCIP_RETCODE SCIPbranchExecPseudo(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             cutoffbound,        /**< global upper cutoff bound */

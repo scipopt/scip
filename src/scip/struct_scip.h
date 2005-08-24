@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_scip.h,v 1.18 2005/08/22 18:35:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_scip.h,v 1.19 2005/08/24 17:27:01 bzfpfend Exp $"
 
 /**@file   struct_scip.h
  * @brief  SCIP main data structure
@@ -65,7 +65,7 @@ struct Scip
    SCIP_EVENTFILTER*     eventfilter;        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue;         /**< event queue to cache events and process them later (bound change events) */
    SCIP_BRANCHCAND*      branchcand;         /**< storage for branching candidates */
-   SCIP_LP*              lp;                 /**< SCIP_LP data */
+   SCIP_LP*              lp;                 /**< LP data */
    SCIP_PRIMAL*          primal;             /**< primal data and solution storage */
    SCIP_TREE*            tree;               /**< branch and bound tree */
    SCIP_CONFLICT*        conflict;           /**< conflict analysis data */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.43 2005/08/22 18:35:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.44 2005/08/24 17:26:40 bzfpfend Exp $"
 
 /**@file   cons_integral.c
  * @brief  constraint handler for the integrality constraint
@@ -88,7 +88,7 @@
 #define consTransIntegral NULL
 
 
-/** SCIP_LP initialization method of constraint handler */
+/** LP initialization method of constraint handler */
 #define consInitlpIntegral NULL
 
 
@@ -96,7 +96,7 @@
 #define consSepaIntegral NULL
 
 
-/** constraint enforcing method of constraint handler for SCIP_LP solutions */
+/** constraint enforcing method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
 {  /*lint --e{715}*/
@@ -112,7 +112,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
    /* call branching methods */
    SCIP_CALL( SCIPbranchLP(scip, result) );
 
-   /* if no branching was done, the SCIP_LP solution was not fractional */
+   /* if no branching was done, the LP solution was not fractional */
    if( *result == SCIP_DIDNOTRUN )
       *result = SCIP_FEASIBLE;
 

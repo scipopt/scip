@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.78 2005/08/22 18:35:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.79 2005/08/24 17:26:52 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -215,7 +215,7 @@ SCIP_RETCODE SCIPprobFree(
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_LP*              lp                  /**< current SCIP_LP data (or NULL, if it's the original problem) */
+   SCIP_LP*              lp                  /**< current LP data (or NULL, if it's the original problem) */
    )
 {
    int v;
@@ -300,7 +300,7 @@ SCIP_RETCODE SCIPprobTransform(
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -590,7 +590,7 @@ SCIP_RETCODE SCIPprobAddVar(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -617,7 +617,7 @@ SCIP_RETCODE SCIPprobAddVar(
    /* add variable's name to the namespace */
    SCIP_CALL( SCIPhashtableInsert(prob->varnames, (void*)var) );
 
-   /* update branching candidates and pseudo and loose objective value in the SCIP_LP */
+   /* update branching candidates and pseudo and loose objective value in the LP */
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL )
    {
       SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
@@ -685,7 +685,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp,                 /**< current SCIP_LP data (may be NULL) */
+   SCIP_LP*              lp,                 /**< current LP data (may be NULL) */
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
    )
 {
@@ -704,13 +704,13 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
       {
          SCIPdebugMessage("perform deletion of <%s> [%p]\n", SCIPvarGetName(var), var);
          
-         /* convert column variable back into loose variable, free SCIP_LP column */
+         /* convert column variable back into loose variable, free LP column */
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
          {
             SCIP_CALL( SCIPvarLoose(var, blkmem, set, prob, lp) );
          }
          
-         /* update branching candidates and pseudo and loose objective value in the SCIP_LP */
+         /* update branching candidates and pseudo and loose objective value in the LP */
          if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL )
          {
             SCIP_CALL( SCIPlpUpdateDelVar(lp, set, var) );
@@ -787,7 +787,7 @@ SCIP_RETCODE SCIPprobVarChangedStatus(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      SCIPerrorMessage("variables cannot switch to SCIP_ORIGINAL status\n");
+      SCIPerrorMessage("variables cannot switch to ORIGINAL status\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_LOOSE:
@@ -1119,7 +1119,7 @@ SCIP_RETCODE SCIPprobExitSolve(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    SCIP_VAR* var;
@@ -1261,12 +1261,12 @@ SCIP_CONS* SCIPprobFindCons(
 }
 
 /** returns TRUE iff all columns, i.e. every variable with non-empty column w.r.t. all ever created rows, are present
- *  in the LP, and FALSE, if there are additional already existing columns, that may be added to the SCIP_LP in pricing
+ *  in the LP, and FALSE, if there are additional already existing columns, that may be added to the LP in pricing
  */
 SCIP_Bool SCIPprobAllColsInLP(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current SCIP_LP data */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(SCIPlpGetNCols(lp) <= prob->ncolvars && prob->ncolvars <= prob->nvars);

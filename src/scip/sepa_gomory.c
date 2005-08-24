@@ -14,14 +14,14 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.48 2005/08/22 18:35:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.49 2005/08/24 17:26:57 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
  * @author Tobias Achterberg
  */
 
-/**@todo try k-Gomory-cuts (s. Cornuejols: K-Cuts: A Variation of Gomory Mixed Integer Cuts from the SCIP_LP Tableau) */
+/**@todo try k-Gomory-cuts (s. Cornuejols: K-Cuts: A Variation of Gomory Mixed Integer Cuts from the LP Tableau) */
 /**@todo Gomory cuts don't seem to work with SOPLEX, but c-MIR cuts do! */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -42,7 +42,7 @@
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS          50 /**< maximal number of gomory cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of gomory cuts separated per separation round in root node */
-#define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the SCIP_LP if they are no longer tight? */
+#define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_MAXWEIGHTRANGE    1e+04 /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
 
 #define BOUNDSWITCH              0.9999
@@ -60,7 +60,7 @@ struct SCIP_SepaData
    int                   maxroundsroot;      /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of gomory cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of gomory cuts separated per separation round in root node */
-   SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the SCIP_LP if they are no longer tight? */
+   SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
 };
 
 
@@ -77,7 +77,7 @@ SCIP_RETCODE storeCutInArrays(
    int                   nvars,              /**< number of problem variables */
    SCIP_VAR**            vars,               /**< problem variables */
    SCIP_Real*            cutcoefs,           /**< dense coefficient vector */
-   SCIP_Real*            varsolvals,         /**< dense variable SCIP_LP solution vector */
+   SCIP_Real*            varsolvals,         /**< dense variable LP solution vector */
    char                  normtype,           /**< type of norm to use for efficacy norm calculation */
    SCIP_VAR**            cutvars,            /**< array to store variables of sparse cut vector */
    SCIP_Real*            cutvals,            /**< array to store coefficients of sparse cut vector */
@@ -268,18 +268,18 @@ SCIP_DECL_SEPAEXEC(sepaExecGomory)
       || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
       return SCIP_OKAY;
 
-   /* only call separator, if an optimal SCIP_LP solution is at hand */
+   /* only call separator, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
-   /* only call separator, if the SCIP_LP solution is basic */
+   /* only call separator, if the LP solution is basic */
    if( !SCIPisLPSolBasic(scip) )
       return SCIP_OKAY;
 
    /* get variables data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   /* get SCIP_LP data */
+   /* get LP data */
    SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
    if( ncols == 0 || nrows == 0 )
@@ -359,7 +359,7 @@ SCIP_DECL_SEPAEXEC(sepaExecGomory)
                /* get the row of B^-1 for this basic integer variable with fractional solution value */
                SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow) );
 
-               /* create a MIR cut out of the weighted SCIP_LP rows using the B^-1 row as weights */
+               /* create a MIR cut out of the weighted LP rows using the B^-1 row as weights */
                SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->maxweightrange, MINFRAC,
                      binvrow, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
                assert(ALLOWLOCAL || !cutislocal);
@@ -373,7 +373,7 @@ SCIP_DECL_SEPAEXEC(sepaExecGomory)
                   SCIP_Real cutnorm;
                   int cutlen;
 
-                  /* if this is the first successful cut, get the SCIP_LP solution for all COLUMN variables */
+                  /* if this is the first successful cut, get the LP solution for all COLUMN variables */
                   if( varsolvals == NULL )
                   {
                      int v;
@@ -516,7 +516,7 @@ SCIP_RETCODE SCIPincludeSepaGomory(
          &sepadata->maxweightrange, DEFAULT_MAXWEIGHTRANGE, 1.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/gomory/dynamiccuts",
-         "should generated cuts be removed from the SCIP_LP if they are no longer tight?",
+         "should generated cuts be removed from the LP if they are no longer tight?",
          &sepadata->dynamiccuts, DEFAULT_DYNAMICCUTS, NULL, NULL) );
 
    return SCIP_OKAY;

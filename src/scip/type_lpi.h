@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_lpi.h,v 1.17 2005/08/22 18:35:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_lpi.h,v 1.18 2005/08/24 17:27:04 bzfpfend Exp $"
 
 /**@file   type_lpi.h
- * @brief  type definitions for specific SCIP_LP solvers interface
+ * @brief  type definitions for specific LP solvers interface
  * @author Tobias Achterberg
  */
 
@@ -35,30 +35,30 @@ enum SCIP_ObjSen
 };
 typedef enum SCIP_ObjSen SCIP_OBJSEN;
 
-/** SCIP_LP solver parameters */
+/** LP solver parameters */
 enum SCIP_LPParam
 {
    SCIP_LPPAR_FROMSCRATCH    =  0,      /**< solver should start from scratch at next call? */
-   SCIP_LPPAR_FASTMIP        =  1,      /**< fast mip setting of SCIP_LP solver */
-   SCIP_LPPAR_SCALING        =  2,      /**< should SCIP_LP solver use scaling? */
-   SCIP_LPPAR_PRESOLVING     =  3,      /**< should SCIP_LP solver use presolving? */
+   SCIP_LPPAR_FASTMIP        =  1,      /**< fast mip setting of LP solver */
+   SCIP_LPPAR_SCALING        =  2,      /**< should LP solver use scaling? */
+   SCIP_LPPAR_PRESOLVING     =  3,      /**< should LP solver use presolving? */
    SCIP_LPPAR_PRICING        =  4,      /**< pricing strategy */
-   SCIP_LPPAR_LPINFO         =  5,      /**< should SCIP_LP solver output information to the screen? */
+   SCIP_LPPAR_LPINFO         =  5,      /**< should LP solver output information to the screen? */
    SCIP_LPPAR_FEASTOL        =  6,      /**< feasibility tolerance for primal variables and slacks */
    SCIP_LPPAR_DUALFEASTOL    =  7,      /**< feasibility tolerance for dual variables and reduced costs */
    SCIP_LPPAR_BARRIERCONVTOL =  8,      /**< convergence tolerance used in barrier algorithm */
    SCIP_LPPAR_LOBJLIM        =  9,      /**< lower objective limit */
    SCIP_LPPAR_UOBJLIM        = 10,      /**< upper objective limit */
-   SCIP_LPPAR_LPITLIM        = 11,      /**< SCIP_LP iteration limit */
-   SCIP_LPPAR_LPTILIM        = 12,      /**< SCIP_LP time limit */
+   SCIP_LPPAR_LPITLIM        = 11,      /**< LP iteration limit */
+   SCIP_LPPAR_LPTILIM        = 12,      /**< LP time limit */
    SCIP_LPPAR_MARKOWITZ      = 13       /**< Markowitz tolerance */
 };
 typedef enum SCIP_LPParam SCIP_LPPARAM;
 
-/** SCIP_LP pricing strategy */
+/** LP pricing strategy */
 enum SCIP_Pricing
 {
-   SCIP_PRICING_AUTO        = 0,        /**< the SCIP_LP solver should use its preferred strategy */
+   SCIP_PRICING_AUTO        = 0,        /**< the LP solver should use its preferred strategy */
    SCIP_PRICING_FULL        = 1,        /**< full pricing */
    SCIP_PRICING_PARTIAL     = 2,        /**< partial pricing */
    SCIP_PRICING_STEEP       = 3,        /**< steepest edge pricing */
@@ -77,8 +77,8 @@ enum SCIP_BaseStat
 };
 typedef enum SCIP_BaseStat SCIP_BASESTAT;
 
-typedef struct SCIP_LPi SCIP_LPI;                 /**< solver dependent SCIP_LP interface */
-typedef struct SCIP_LPiState SCIP_LPISTATE;       /**< complete SCIP_LP state (i.e. basis information, dual norms) */
+typedef struct SCIP_LPi SCIP_LPI;                 /**< solver dependent LP interface */
+typedef struct SCIP_LPiState SCIP_LPISTATE;       /**< complete LP state (i.e. basis information, dual norms) */
 
 
 #endif

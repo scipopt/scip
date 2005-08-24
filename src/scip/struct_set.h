@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.55 2005/08/22 18:35:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.56 2005/08/24 17:27:01 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -117,7 +117,7 @@ struct SCIP_Set
    int                   conf_minmaxvars;    /**< minimal absolute maximum of variables involved in a conflict clause */
    int                   conf_maxunfixed;    /**< maximal number of unfixed variables at insertion depth of conflict clause
                                               *   (-1: no limit) */
-   int                   conf_maxlploops;    /**< maximal number of SCIP_LP resolving loops during conflict analysis */
+   int                   conf_maxlploops;    /**< maximal number of LP resolving loops during conflict analysis */
    int                   conf_fuiplevels;    /**< number of depth levels up to which first UIP's are used in conflict
                                               *   analysis (-1: use All-FirstUIP rule) */
    int                   conf_interclauses;  /**< maximal number of intermediate conflict clauses generated in conflict
@@ -126,14 +126,14 @@ struct SCIP_Set
                                               *   (-1: use all generated conflict clauses) */
    SCIP_Bool             conf_reconvclauses; /**< should reconvergence clauses be created for UIPs of last depth level? */
    SCIP_Bool             conf_useprop;       /**< should propagation conflict analysis be used? */
-   SCIP_Bool             conf_uselp;         /**< should infeasible SCIP_LP conflict analysis be used? */
+   SCIP_Bool             conf_uselp;         /**< should infeasible LP conflict analysis be used? */
    SCIP_Bool             conf_usesb;         /**< should infeasible strong branching conflict analysis be used? */
    SCIP_Bool             conf_usepseudo;     /**< should pseudo solution conflict analysis be used? */
    SCIP_Bool             conf_allowlocal;    /**< should conflict clauses be generated that are only valid locally? */
    SCIP_Bool             conf_repropagate;   /**< should earlier nodes be repropagated in order to replace branching
                                               *   decisions by deductions */
    SCIP_Bool             conf_dynamic;       /**< should the conflict constraints be subject to aging? */
-   SCIP_Bool             conf_removeable;    /**< should the conflict's relaxations be subject to SCIP_LP aging and cleanup? */
+   SCIP_Bool             conf_removeable;    /**< should the conflict's relaxations be subject to LP aging and cleanup? */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted
@@ -146,7 +146,7 @@ struct SCIP_Set
    int                   disp_width;         /**< maximal number of characters in a node information line */
    int                   disp_freq;          /**< frequency for displaying node information lines */
    int                   disp_headerfreq;    /**< frequency for displaying header lines (every n'th node information line) */
-   SCIP_Bool             disp_lpinfo;        /**< should the SCIP_LP solver display status messages? */
+   SCIP_Bool             disp_lpinfo;        /**< should the LP solver display status messages? */
 
    /* limit settings */
    SCIP_Real             limit_time;         /**< maximal time in seconds to run */
@@ -158,28 +158,28 @@ struct SCIP_Set
                                               *   (-1: no limit) */
    int                   limit_maxsol;       /**< maximal number of solutions to store in the solution storage */
 
-   /* SCIP_LP settings */
-   int                   lp_solvefreq;       /**< frequency for solving SCIP_LP at the nodes (-1: never; 0: only root SCIP_LP) */
-   int                   lp_solvedepth;      /**< maximal depth for solving SCIP_LP at the nodes (-1: no depth limit) */
-   char                  lp_initalgorithm;   /**< SCIP_LP algorithm for solving initial SCIP_LP relaxations ('s'implex, 'b'arrier,
+   /* LP settings */
+   int                   lp_solvefreq;       /**< frequency for solving LP at the nodes (-1: never; 0: only root LP) */
+   int                   lp_solvedepth;      /**< maximal depth for solving LP at the nodes (-1: no depth limit) */
+   char                  lp_initalgorithm;   /**< LP algorithm for solving initial LP relaxations ('s'implex, 'b'arrier,
                                               *   barrier with 'c'rossover) */
-   char                  lp_resolvealgorithm;/**< SCIP_LP algorithm for resolving SCIP_LP relaxations if a starting basis exists
+   char                  lp_resolvealgorithm;/**< LP algorithm for resolving LP relaxations if a starting basis exists
                                               *   ('s'implex, 'b'arrier, barrier with 'c'rossover) */
-   char                  lp_pricing;         /**< SCIP_LP pricing strategy ('a'uto, 'f'ull pricing, 's'teepest edge pricing,
+   char                  lp_pricing;         /**< LP pricing strategy ('a'uto, 'f'ull pricing, 's'teepest edge pricing,
                                               *   'q'uickstart steepest edge pricing, 'd'evex pricing) */
    int                   lp_colagelimit;     /**< maximum age a column can reach before it is deleted from the SCIP_LP
                                               *   (-1: don't delete columns due to aging) */
-   int                   lp_rowagelimit;     /**< maximum age a row can reach before it is deleted from the SCIP_LP 
+   int                   lp_rowagelimit;     /**< maximum age a row can reach before it is deleted from the LP 
                                               *   (-1: don't delete rows due to aging) */
-   SCIP_Bool             lp_cleanupcols;     /**< should new non-basic columns be removed after SCIP_LP solving? */
-   SCIP_Bool             lp_cleanupcolsroot; /**< should new non-basic columns be removed after root SCIP_LP solving? */
-   SCIP_Bool             lp_cleanuprows;     /**< should new basic rows be removed after SCIP_LP solving? */
-   SCIP_Bool             lp_cleanuprowsroot; /**< should new basic rows be removed after root SCIP_LP solving? */
-   SCIP_Bool             lp_checkstability;  /**< should SCIP_LP solver's return status be checked for stability? */
-   SCIP_Bool             lp_checkfeas;       /**< should SCIP_LP solutions be checked, resolving SCIP_LP when numerical troubles occur? */
-   SCIP_Bool             lp_fastmip;         /**< should FASTMIP setting of SCIP_LP solver be used? */
-   SCIP_Bool             lp_scaling;         /**< should scaling of SCIP_LP solver be used? */
-   SCIP_Bool             lp_presolving;      /**< should presolving of SCIP_LP solver be used? */
+   SCIP_Bool             lp_cleanupcols;     /**< should new non-basic columns be removed after LP solving? */
+   SCIP_Bool             lp_cleanupcolsroot; /**< should new non-basic columns be removed after root LP solving? */
+   SCIP_Bool             lp_cleanuprows;     /**< should new basic rows be removed after LP solving? */
+   SCIP_Bool             lp_cleanuprowsroot; /**< should new basic rows be removed after root LP solving? */
+   SCIP_Bool             lp_checkstability;  /**< should LP solver's return status be checked for stability? */
+   SCIP_Bool             lp_checkfeas;       /**< should LP solutions be checked, resolving LP when numerical troubles occur? */
+   SCIP_Bool             lp_fastmip;         /**< should FASTMIP setting of LP solver be used? */
+   SCIP_Bool             lp_scaling;         /**< should scaling of LP solver be used? */
+   SCIP_Bool             lp_presolving;      /**< should presolving of LP solver be used? */
 
    /* memory settings */
    SCIP_Real             mem_savefac;        /**< fraction of maximal memory usage resulting in switch to memory saving mode */
@@ -220,16 +220,16 @@ struct SCIP_Set
    /* propagation settings */
    int                   prop_maxrounds;     /**< maximal number of propagation rounds per node (-1: unlimited) */
    int                   prop_maxroundsroot; /**< maximal number of propagation rounds in the root node (-1: unlimited) */
-   int                   prop_redcostfreq;   /**< frequency for applying reduced cost fixing (-1: never; 0: only root SCIP_LP) */
+   int                   prop_redcostfreq;   /**< frequency for applying reduced cost fixing (-1: never; 0: only root LP) */
 
    /* separation settings */
    SCIP_Real             sepa_maxbounddist;  /**< maximal relative distance from current node's dual bound to primal bound
                                               *   compared to best node's dual bound for applying separation
                                               *   (0.0: only on current best node, 1.0: on all nodes) */
-   SCIP_Real             sepa_minefficacy;   /**< minimal efficacy for a cut to enter the SCIP_LP */
-   SCIP_Real             sepa_minefficacyroot; /**< minimal efficacy for a cut to enter the SCIP_LP in the root node */
-   SCIP_Real             sepa_minortho;      /**< minimal orthogonality for a cut to enter the SCIP_LP */
-   SCIP_Real             sepa_minorthoroot;  /**< minimal orthogonality for a cut to enter the SCIP_LP in the root node */
+   SCIP_Real             sepa_minefficacy;   /**< minimal efficacy for a cut to enter the LP */
+   SCIP_Real             sepa_minefficacyroot; /**< minimal efficacy for a cut to enter the LP in the root node */
+   SCIP_Real             sepa_minortho;      /**< minimal orthogonality for a cut to enter the LP */
+   SCIP_Real             sepa_minorthoroot;  /**< minimal orthogonality for a cut to enter the LP in the root node */
    SCIP_Real             sepa_objparalfac;   /**< factor to scale objective parallelism of cut in separation score calc. */
    SCIP_Real             sepa_orthofac;      /**< factor to scale orthogonality of cut in separation score calculation */
    char                  sepa_efficacynorm;  /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum, 's'um,
@@ -249,9 +249,9 @@ struct SCIP_Set
    SCIP_CLOCKTYPE        time_clocktype;     /**< default clock type to use */
    SCIP_Bool             time_enabled;       /**< is timing enabled? */
 
-   /* SCIP_VBC tool settings */
-   char*                 vbc_filename;       /**< name of the SCIP_VBC Tool output file, or - if no output should be created */
-   SCIP_Bool             vbc_realtime;       /**< should the real solving time be used instead of time step counter in SCIP_VBC output? */
+   /* VBC tool settings */
+   char*                 vbc_filename;       /**< name of the VBC Tool output file, or - if no output should be created */
+   SCIP_Bool             vbc_realtime;       /**< should the real solving time be used instead of time step counter in VBC output? */
 };
 
 

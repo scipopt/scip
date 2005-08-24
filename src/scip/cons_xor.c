@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.33 2005/08/22 18:35:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.34 2005/08/24 17:26:43 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -58,7 +58,7 @@
 struct SCIP_ConsData
 {
    SCIP_VAR**            vars;               /**< variables (including resultant) in the xor operation */
-   SCIP_VAR*             intvar;             /**< internal variable for SCIP_LP relaxation */
+   SCIP_VAR*             intvar;             /**< internal variable for LP relaxation */
    SCIP_ROW*             row;                /**< row for linear relaxation of xor constraint */
    int                   nvars;              /**< number of variables (including resultant) in xor operation */
    int                   varssize;           /**< size of vars array */
@@ -265,7 +265,7 @@ SCIP_RETCODE consdataCreate(
    return SCIP_OKAY;
 }
 
-/** releases SCIP_LP row of constraint data */
+/** releases LP row of constraint data */
 static
 SCIP_RETCODE consdataFreeRows(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -304,7 +304,7 @@ SCIP_RETCODE consdataFree(
       assert((*consdata)->watchedvar2 == -1);
    }
 
-   /* release SCIP_LP row */
+   /* release LP row */
    SCIP_CALL( consdataFreeRows(scip, *consdata) );
 
    /* release internal variable */
@@ -457,7 +457,7 @@ SCIP_RETCODE applyFixings(
    return SCIP_OKAY;
 }
 
-/** creates SCIP_LP row corresponding to xor constraint: 
+/** creates LP row corresponding to xor constraint: 
  *    resvar + v1 + ... + vn - 2q == 0
  *  with internal integer variable q
  */
@@ -487,8 +487,8 @@ SCIP_RETCODE createRelaxation(
       SCIP_CALL( lockRounding(scip, cons, consdata->intvar) );
    }
 
-   /* create SCIP_LP row (resultant variable is also stored in vars array) */
-   /**@todo change SCIP_LP relaxation! */
+   /* create LP row (resultant variable is also stored in vars array) */
+   /**@todo change LP relaxation! */
    SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons), 0.0, 0.0,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, consdata->intvar, -2.0) );
@@ -497,7 +497,7 @@ SCIP_RETCODE createRelaxation(
    return SCIP_OKAY;
 }  
 
-/** adds linear relaxation of or constraint to the SCIP_LP */
+/** adds linear relaxation of or constraint to the LP */
 static 
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -524,7 +524,7 @@ SCIP_RETCODE checkCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to check */
    SCIP_SOL*             sol,                /**< solution to check, NULL for current solution */
-   SCIP_Bool             checklprows,        /**< should SCIP_LP rows be checked? */
+   SCIP_Bool             checklprows,        /**< should LP rows be checked? */
    SCIP_Bool*            violated            /**< pointer to store whether the constraint is violated */
    )
 {
@@ -565,7 +565,7 @@ SCIP_RETCODE checkCons(
    return SCIP_OKAY;
 }
 
-/** separates current SCIP_LP solution */
+/** separates current LP solution */
 static
 SCIP_RETCODE separateCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -937,7 +937,7 @@ SCIP_DECL_CONSTRANS(consTransXor)
 }
 
 
-/** SCIP_LP initialization method of constraint handler */
+/** LP initialization method of constraint handler */
 static
 SCIP_DECL_CONSINITLP(consInitlpXor)
 {  /*lint --e{715}*/
@@ -979,7 +979,7 @@ SCIP_DECL_CONSSEPA(consSepaXor)
 }
 
 
-/** constraint enforcing method of constraint handler for SCIP_LP solutions */
+/** constraint enforcing method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSENFOLP(consEnfolpXor)
 {  /*lint --e{715}*/
@@ -1372,15 +1372,15 @@ SCIP_RETCODE SCIPcreateConsXor(
    SCIP_VAR*             resvar,             /**< resultant variable of the operation */
    int                   nvars,              /**< number of operator variables in the constraint */
    SCIP_VAR**            vars,               /**< array with operator variables of constraint */
-   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
-   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
+   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    SCIP_CONSHDLR* conshdlr;

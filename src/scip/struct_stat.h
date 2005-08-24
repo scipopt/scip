@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.38 2005/08/22 18:35:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.39 2005/08/24 17:27:02 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -37,12 +37,12 @@
 /** problem and runtime specific statistics */
 struct SCIP_Stat
 {
-   SCIP_Longint          nlpiterations;      /**< total number of SCIP_LP iterations */
+   SCIP_Longint          nlpiterations;      /**< total number of LP iterations */
    SCIP_Longint          nprimallpiterations;/**< number of iterations in primal simplex */
    SCIP_Longint          nduallpiterations;  /**< number of iterations in dual simplex */
    SCIP_Longint          nbarrierlpiterations;/**< number of iterations in barrier algorithm */
-   SCIP_Longint          nprimalresolvelpiterations;  /**< number of primal SCIP_LP iterations with advanced start basis */
-   SCIP_Longint          ndualresolvelpiterations;    /**< number of dual SCIP_LP iterations with advanced start basis */
+   SCIP_Longint          nprimalresolvelpiterations;  /**< number of primal LP iterations with advanced start basis */
+   SCIP_Longint          ndualresolvelpiterations;    /**< number of dual LP iterations with advanced start basis */
    SCIP_Longint          nnodelpiterations;  /**< number of iterations for totally solving node relaxations */
    SCIP_Longint          ninitlpiterations;  /**< number of iterations for solving nodes' initial relaxations */
    SCIP_Longint          ndivinglpiterations;/**< number of iterations in diving and probing */
@@ -60,10 +60,10 @@ struct SCIP_Stat
    SCIP_Longint          nbacktracks;        /**< number of times, the new node was chosen from the leaves queue */
    SCIP_Longint          ndelayedcutoffs;    /**< number of times, the selected node was from a cut off subtree */
    SCIP_Longint          nreprops;           /**< number of times, a solved node is repropagated again */
-   SCIP_Longint          nlpsolsfound;       /**< number of CIP-feasible SCIP_LP solutions found so far */
+   SCIP_Longint          nlpsolsfound;       /**< number of CIP-feasible LP solutions found so far */
    SCIP_Longint          npssolsfound;       /**< number of CIP-feasible pseudo solutions found so far */
    SCIP_Longint          lastdispnode;       /**< last node for which an information line was displayed */
-   SCIP_Longint          lastdivenode;       /**< last node where SCIP_LP diving was applied */
+   SCIP_Longint          lastdivenode;       /**< last node where LP diving was applied */
    SCIP_Longint          domchgcount;        /**< internal counter, where all domain changes are counted */
    SCIP_Longint          nrootboundchgs;     /**< total number of bound changes generated in the root node */
    SCIP_Longint          nrepropboundchgs;   /**< total number of bound changes generated in repropagating nodes */
@@ -72,20 +72,20 @@ struct SCIP_Stat
    SCIP_Real             rootlowerbound;     /**< lower bound of root node */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    SCIP_CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
-   SCIP_CLOCK*           primallptime;       /**< primal SCIP_LP solution time */
-   SCIP_CLOCK*           duallptime;         /**< dual SCIP_LP solution time */
-   SCIP_CLOCK*           barrierlptime;      /**< barrier SCIP_LP solution time */
-   SCIP_CLOCK*           divinglptime;       /**< diving and probing SCIP_LP solution time */
+   SCIP_CLOCK*           primallptime;       /**< primal LP solution time */
+   SCIP_CLOCK*           duallptime;         /**< dual LP solution time */
+   SCIP_CLOCK*           barrierlptime;      /**< barrier LP solution time */
+   SCIP_CLOCK*           divinglptime;       /**< diving and probing LP solution time */
    SCIP_CLOCK*           strongbranchtime;   /**< strong branching time */
-   SCIP_CLOCK*           conflictlptime;     /**< conflict analysis SCIP_LP solution time */
-   SCIP_CLOCK*           lpsoltime;          /**< time needed for storing feasible SCIP_LP solutions */
+   SCIP_CLOCK*           conflictlptime;     /**< conflict analysis LP solution time */
+   SCIP_CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
    SCIP_CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
    SCIP_CLOCK*           redcoststrtime;     /**< time needed for reduced cost strengthening */
    SCIP_CLOCK*           nodeactivationtime; /**< time needed for path switching and activating nodes */
    SCIP_HISTORY*         glbhistory;         /**< global history information over all variables */
    SCIP_HISTORY*         glbhistorycrun;     /**< global history information over all variables for current run */
    SCIP_VAR*             lastbranchvar;      /**< last variable, that was branched on */
-   SCIP_VBC*             vbc;                /**< SCIP_VBC Tool information */
+   SCIP_VBC*             vbc;                /**< VBC Tool information */
    SCIP_STATUS           status;             /**< SCIP solving status */
    SCIP_BRANCHDIR        lastbranchdir;      /**< direction of the last branching */
    int                   nruns;              /**< number of branch and bound runs on current problem, including current run */

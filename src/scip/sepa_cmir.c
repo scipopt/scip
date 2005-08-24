@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.38 2005/08/22 18:35:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.39 2005/08/24 17:26:57 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -54,7 +54,7 @@
 #define DEFAULT_MAXTESTDELTAROOT    100 /**< maximal number of different deltas to try in the root node */
 #define DEFAULT_MAXCONTS             10 /**< maximal number of active continuous variables in aggregated row */
 #define DEFAULT_MAXCONTSROOT         10 /**< maximal number of active continuous variables in aggregated row in the root */
-#define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the SCIP_LP if they are no longer tight? */
+#define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 
 #define BOUNDSWITCH                 0.5
 #define USEVBDS                    TRUE
@@ -89,7 +89,7 @@ struct SCIP_SepaData
    int                   maxtestdeltaroot;   /**< maximal number of different deltas to try in the root node */
    int                   maxconts;	        /**< maximal number of active continuous variables in aggregated row */
    int                   maxcontsroot;       /**< maximal number of active continuous variables in aggregated row in the root */
-   SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the SCIP_LP if they are no longer tight? */
+   SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
 };
 
 
@@ -106,7 +106,7 @@ SCIP_RETCODE storeCutInArrays(
    int                   nvars,              /**< number of problem variables */
    SCIP_VAR**            vars,               /**< problem variables */
    SCIP_Real*            cutcoefs,           /**< dense coefficient vector */
-   SCIP_Real*            varsolvals,         /**< dense variable SCIP_LP solution vector */
+   SCIP_Real*            varsolvals,         /**< dense variable LP solution vector */
    char                  normtype,           /**< type of norm to use for efficacy norm calculation */
    SCIP_VAR**            cutvars,            /**< array to store variables of sparse cut vector */
    SCIP_Real*            cutvals,            /**< array to store coefficients of sparse cut vector */
@@ -207,7 +207,7 @@ SCIP_RETCODE storeCutInArrays(
    return SCIP_OKAY;
 }
 
-/** adds given cut to SCIP_LP if violated */
+/** adds given cut to LP if violated */
 static
 SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -375,12 +375,12 @@ SCIP_Real calcEfficacy(
    return (cutact - cutrhs)/SQRT(sqrnorm);
 }
 
-/** aggregates different single mixed integer constraints by taking linear combinations of the rows of the SCIP_LP  */
+/** aggregates different single mixed integer constraints by taking linear combinations of the rows of the LP  */
 static
 SCIP_RETCODE aggregation(
    SCIP*                 scip,               /**< SCIP data structure */ 
    SCIP_SEPADATA*        sepadata,           /**< separator data */
-   SCIP_Real*            varsolvals,         /**< SCIP_LP solution value of all variables in SCIP_LP */
+   SCIP_Real*            varsolvals,         /**< LP solution value of all variables in LP */
    SCIP_Real*            rowlhsscores,       /**< aggregation scores for left hand sides of row */
    SCIP_Real*            rowrhsscores,       /**< aggregation scores for right hand sides of row */
    int                   startrow,           /**< index of row to start aggregation */ 
@@ -428,7 +428,7 @@ SCIP_RETCODE aggregation(
    assert(rowrhsscores != NULL);
    assert(ncuts != NULL);
 
-   /* get active problem variables and SCIP_LP data */
+   /* get active problem variables and LP data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
    assert(nvars == 0 || vars != NULL);
    SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
@@ -568,7 +568,7 @@ SCIP_RETCODE aggregation(
          testeddeltas[ntesteddeltas] = delta;
          ntesteddeltas++;
          
-         /* create a MIR cut out of the weighted SCIP_LP rows */
+         /* create a MIR cut out of the weighted LP rows */
          SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->maxrowfac, MINFRAC,
                rowweights, delta, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
          assert(ALLOWLOCAL || !cutislocal);
@@ -611,7 +611,7 @@ SCIP_RETCODE aggregation(
             if( tested )
                continue;
 
-            /* create a MIR cut out of the weighted SCIP_LP rows */
+            /* create a MIR cut out of the weighted LP rows */
             SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->maxrowfac, MINFRAC,
                   rowweights, delta, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
             assert(ALLOWLOCAL || !cutislocal);
@@ -681,7 +681,7 @@ SCIP_RETCODE aggregation(
          if( SCIPvarIsIntegral(var) )
             continue;
          
-         /* get minimum distance of SCIP_LP solution value of variable to its bounds */
+         /* get minimum distance of LP solution value of variable to its bounds */
          primsol = SCIPcolGetPrimsol(col);
          lb = SCIPcolGetLb(col);
          ub = SCIPcolGetUb(col);
@@ -722,7 +722,7 @@ SCIP_RETCODE aggregation(
                   SCIProwGetName(nonzrows[r]), rowweights[lppos], lppos, - aggrcoefs[c] / nonzcoefs[r],
                   SCIProwGetLhs(nonzrows[r]), SCIPgetRowLPActivity(scip, nonzrows[r]), SCIProwGetRhs(nonzrows[r]));
                
-               /* take only unmodifiable SCIP_LP rows, that are not yet aggregated */
+               /* take only unmodifiable LP rows, that are not yet aggregated */
                if( rowweights[lppos] != 0.0 || SCIProwIsModifiable(nonzrows[r]) )
                   continue;
                
@@ -902,7 +902,7 @@ SCIP_DECL_SEPAEXEC(sepaExecCmir)
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) ); 
    assert(nrows == 0 || rows != NULL);
 
-   /* nothing to do, if SCIP_LP is empty */
+   /* nothing to do, if LP is empty */
    if( nrows == 0 )
       return SCIP_OKAY;
 
@@ -927,7 +927,7 @@ SCIP_DECL_SEPAEXEC(sepaExecCmir)
    SCIP_CALL( SCIPallocBufferArray(scip, &roworder, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varsolvals, nvars) );
   
-   /* get the SCIP_LP solution for all active variables */
+   /* get the LP solution for all active variables */
    SCIP_CALL( SCIPgetVarSols(scip, nvars, vars, varsolvals) );
 
    /* get the maximal number of cuts allowed in a separation round */
@@ -1006,7 +1006,7 @@ SCIP_DECL_SEPAEXEC(sepaExecCmir)
       roworder[i] = r;
    }
  
-   /* start aggregation heuristic for each row in the SCIP_LP */
+   /* start aggregation heuristic for each row in the LP */
    ncuts = 0;
    ntries = (maxtries >= 0 ? MIN(maxtries, nrows) : nrows);
    for( r = 0; r < ntries && ncuts < maxsepacuts && !SCIPisInfinity(scip, -rowscores[roworder[r]]); r++ )
@@ -1122,7 +1122,7 @@ SCIP_RETCODE SCIPincludeSepaCmir(
          &sepadata->maxcontsroot, DEFAULT_MAXCONTSROOT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/cmir/dynamiccuts",
-         "should generated cuts be removed from the SCIP_LP if they are no longer tight?",
+         "should generated cuts be removed from the LP if they are no longer tight?",
          &sepadata->dynamiccuts, DEFAULT_DYNAMICCUTS, NULL, NULL) );
 
    return SCIP_OKAY;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objeventhdlr.h,v 1.4 2005/08/22 18:35:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objeventhdlr.h,v 1.5 2005/08/24 17:26:34 bzfpfend Exp $"
 
 /**@file   objeventhdlr.h
  * @brief  C++ wrapper for event handlers
@@ -128,7 +128,7 @@ public:
    /** execution method of event handler
     *
     *  Processes the event. The method is called every time an event occurs, for which the event handler
-    *  is responsible. SCIP_Event handlers may declare themselves resposible for events by calling the
+    *  is responsible. Event handlers may declare themselves resposible for events by calling the
     *  corresponding SCIPcatch...() method. This method creates an event filter object to point to the
     *  given event handler and event data.
     */

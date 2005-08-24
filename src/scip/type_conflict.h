@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_conflict.h,v 1.15 2005/08/22 18:35:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_conflict.h,v 1.16 2005/08/24 17:27:03 bzfpfend Exp $"
 
 /**@file   type_conflict.h
  * @brief  type definitions for conflict analysis
@@ -102,7 +102,7 @@ typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data st
  *  - nconflictvars   : number of binary variables in the conflict set
  *  - local           : is the conflict set only valid locally, i.e. should the constraint created as local constraint?
  *  - dynamic         : should the conflict constraint be made subject to aging?
- *  - removeable      : should the conflict's relaxation be made subject to SCIP_LP aging and cleanup?
+ *  - removeable      : should the conflict's relaxation be made subject to LP aging and cleanup?
  *  - resolved        : is the conflict set already used to create a constraint?
  *  - result          : pointer to store the result of the conflict processing call
  *

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.h,v 1.26 2005/08/22 18:35:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.h,v 1.27 2005/08/24 17:26:41 bzfpfend Exp $"
 
 /**@file   cons_knapsack.h
  * @brief  constraint handler for knapsack constraints
@@ -46,15 +46,15 @@ SCIP_RETCODE SCIPcreateConsKnapsack(
    SCIP_VAR**            vars,               /**< array with item variables */
    SCIP_Longint*         weights,            /**< array with item weights */
    SCIP_Longint          capacity,           /**< capacity of knapsack (right hand side of inequality) */
-   SCIP_Bool             initial,            /**< should the SCIP_LP relaxation of constraint be in the initial LP? */
-   SCIP_Bool             separate,           /**< should the constraint be separated during SCIP_LP processing? */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the SCIP_LP due to aging or cleanup? */
+   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    );
 
 /** adds new item to knapsack constraint */
@@ -66,14 +66,14 @@ SCIP_RETCODE SCIPaddCoefKnapsack(
    SCIP_Longint          weight              /**< item weight */
    );
 
-/** gets the dual solution of the knapsack constraint in the current SCIP_LP */
+/** gets the dual solution of the knapsack constraint in the current LP */
 extern
 SCIP_Real SCIPgetDualsolKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** gets the dual farkas value of the knapsack constraint in the current infeasible SCIP_LP */
+/** gets the dual farkas value of the knapsack constraint in the current infeasible LP */
 extern
 SCIP_Real SCIPgetDualfarkasKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -108,16 +108,16 @@ SCIP_RETCODE SCIPliftKnapsackCover(
    int                   nvars,              /**< number of variables in knapsack constraint */
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    SCIP_Longint          capacity,           /**< capacity of knapsack */
-   SCIP_Real*            solvals,            /**< SCIP_LP values of all problem variables */
-   int*                  covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr SCIP_LP val then weight) */
-   int*                  noncovervars,       /**< noncover variables (sorted by non-incr SCIP_LP val then weight) */
+   SCIP_Real*            solvals,            /**< LP values of all problem variables */
+   int*                  covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr LP val then weight) */
+   int*                  noncovervars,       /**< noncover variables (sorted by non-incr LP val then weight) */
    int                   ncovervars,         /**< number of cover variables */
    int                   ncovervarsc1,       /**< number of cover variables in C1 (at the end of covervars) */
    int                   ncovervarsc2,       /**< number of cover variables in C2 (at the beginning of covervars) */
    int                   nnoncovervars,      /**< number of noncover variables */
    int*                  liftcoefs,          /**< pointer to store lifting coefficient of variables in knapsack constraint */
    int*                  liftrhs,            /**< pointer to store right hand side of the lifted cover inequality */
-   SCIP_Real*            liftlpval           /**< pointer to store SCIP_LP solution value of lifted variables */  
+   SCIP_Real*            liftlpval           /**< pointer to store LP solution value of lifted variables */  
    );
 
 /** separates lifted cover inequalities for given knapsack problem */

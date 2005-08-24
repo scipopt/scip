@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_event.h,v 1.9 2005/08/22 18:35:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_event.h,v 1.10 2005/08/24 17:26:53 bzfpfend Exp $"
 
 /**@file   pub_event.h
  * @brief  public methods for managing events
@@ -37,7 +37,7 @@
 
 
 /*
- * SCIP_Event handler methods
+ * Event handler methods
  */
 
 /** gets name of event handler */
@@ -68,7 +68,7 @@ SCIP_Bool SCIPeventhdlrIsInitialized(
 
 
 /*
- * SCIP_Event methods
+ * Event methods
  */
 
 /** gets type of event */
@@ -107,7 +107,7 @@ SCIP_Real SCIPeventGetNewbound(
    SCIP_EVENT*           event               /**< event */
    );
 
-/** gets node for a node or SCIP_LP event */
+/** gets node for a node or LP event */
 extern
 SCIP_NODE* SCIPeventGetNode(
    SCIP_EVENT*           event               /**< event */
