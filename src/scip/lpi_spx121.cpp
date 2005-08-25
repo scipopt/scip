@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.32 2005/08/24 17:26:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.33 2005/08/25 14:29:52 bzfpfend Exp $"
 
 /**@file   lpi_spx121.cpp
  * @brief  LP interface for SOPLEX 1.2.1
@@ -68,10 +68,10 @@ class SPxSCIP : public SoPlex
    SLUFactor        m_slu;              /**< sparse LU factorization */
    SPxSteepPR       m_price;            /**< steepest edge pricer */
    SPxFastRT        m_ratio;            /**< Harris fast ratio tester */
-   char*                 m_probname;         /**< problem name */
+   char*            m_probname;         /**< problem name */
    bool             m_fromscratch;      /**< use old basis indicator */
-   SCIP_Real             m_objLoLimit;       /**< lower objective limit */
-   SCIP_Real             m_objUpLimit;       /**< upper objective limit */
+   Real             m_objLoLimit;       /**< lower objective limit */
+   Real             m_objUpLimit;       /**< upper objective limit */
    Status           m_stat;             /**< solving status */
 
 public:
@@ -119,22 +119,22 @@ public:
       strcpy(m_probname, probname);
    }
 
-   SCIP_Real getObjLoLimit() const
+   Real getObjLoLimit() const
    {
       return m_objLoLimit;
    }
 
-   void setObjLoLimit(SCIP_Real limit)
+   void setObjLoLimit(Real limit)
    {
       m_objLoLimit = limit;
    }
 
-   SCIP_Real getObjUpLimit() const
+   Real getObjUpLimit() const
    {
       return m_objUpLimit;
    }
 
-   void setObjUpLimit(SCIP_Real limit)
+   void setObjUpLimit(Real limit)
    {
       m_objUpLimit = limit;
    }
@@ -150,7 +150,7 @@ public:
 
       if( m_stat == OPTIMAL )
       {
-         SCIP_Real objval = value();
+         Real objval = value();
 
          if( (objval > m_objUpLimit) || (objval < m_objLoLimit) )
             m_stat = ABORT_VALUE;
