@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.100 2005/08/24 17:26:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.101 2005/08/26 14:09:39 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -100,9 +100,9 @@ typedef struct CPXParam CPXPARAM;
 /** LP interface */
 struct SCIP_LPi
 {
-   CPXLPptr         cpxlp;              /**< CPLEX LP pointer */
+   CPXLPptr              cpxlp;              /**< CPLEX LP pointer */
    int                   solstat;            /**< solution status of last optimization call */
-   CPXPARAM         cpxparam;           /**< current parameter values for this LP */
+   CPXPARAM              cpxparam;           /**< current parameter values for this LP */
    char*                 larray;             /**< array with 'L' entries for changing lower bounds */
    char*                 uarray;             /**< array with 'U' entries for changing upper bounds */
    char*                 senarray;           /**< array for storing row senses */
@@ -127,14 +127,14 @@ struct SCIP_LPiState
 {
    int                   ncols;              /**< number of LP columns */
    int                   nrows;              /**< number of LP rows */
-   COLPACKET*       packcstat;          /**< column basis status in compressed form */
-   ROWPACKET*       packrstat;          /**< row basis status in compressed form */
+   COLPACKET*            packcstat;          /**< column basis status in compressed form */
+   ROWPACKET*            packrstat;          /**< row basis status in compressed form */
 };
 
 
-static CPXENVptr    cpxenv = NULL;      /**< CPLEX environment */
-static CPXPARAM     defparam;           /**< default CPLEX parameters */
-static CPXPARAM     curparam;           /**< current CPLEX parameters in the environment */
+static CPXENVptr         cpxenv = NULL;      /**< CPLEX environment */
+static CPXPARAM          defparam;           /**< default CPLEX parameters */
+static CPXPARAM          curparam;           /**< current CPLEX parameters in the environment */
 static int               numlp = 0;          /**< number of open LP objects */
 
 
@@ -408,6 +408,7 @@ void lpistateFree(
  * local methods
  */
 
+/** gets all CPLEX parameters used in LPI */
 static
 SCIP_RETCODE getParameterValues(CPXPARAM* cpxparam)
 {
@@ -429,7 +430,8 @@ SCIP_RETCODE getParameterValues(CPXPARAM* cpxparam)
 
    return SCIP_OKAY;
 }
-   
+
+/** in debug mode, checks validity of CPLEX parameters */
 static
 SCIP_RETCODE checkParameterValues(void)
 {
@@ -447,6 +449,7 @@ SCIP_RETCODE checkParameterValues(void)
    return SCIP_OKAY;
 }
 
+/** sets all CPLEX parameters used in LPI */
 static
 SCIP_RETCODE setParameterValues(const CPXPARAM* cpxparam)
 {
@@ -483,6 +486,7 @@ SCIP_RETCODE setParameterValues(const CPXPARAM* cpxparam)
    return SCIP_OKAY;
 }
 
+/** copies CPLEX parameters from source to dest */
 static
 void copyParameterValues(CPXPARAM* dest, const CPXPARAM* source)
 {
@@ -494,6 +498,7 @@ void copyParameterValues(CPXPARAM* dest, const CPXPARAM* source)
       dest->dblparval[i] = source->dblparval[i];
 }
 
+/** gets a single integer parameter value */
 static
 int getIntParam(SCIP_LPI* lpi, const int param)
 {
@@ -510,6 +515,7 @@ int getIntParam(SCIP_LPI* lpi, const int param)
    return 0;
 }
 
+/** gets a single double parameter value */
 static
 double getDblParam(SCIP_LPI* lpi, const int param)
 {
@@ -526,6 +532,7 @@ double getDblParam(SCIP_LPI* lpi, const int param)
    return 0.0;
 }
 
+/** sets a single integer parameter value */
 static
 void setIntParam(SCIP_LPI* lpi, const int param, int parval)
 {
@@ -544,6 +551,7 @@ void setIntParam(SCIP_LPI* lpi, const int param, int parval)
    SCIPABORT();
 }
 
+/** sets a single double parameter value */
 static
 void setDblParam(SCIP_LPI* lpi, const int param, double parval)
 {
@@ -562,6 +570,7 @@ void setDblParam(SCIP_LPI* lpi, const int param, double parval)
    SCIPABORT();
 }
 
+/** marks the current LP to be unsolved */
 static
 void invalidateSolution(SCIP_LPI* lpi)
 {
@@ -569,6 +578,7 @@ void invalidateSolution(SCIP_LPI* lpi)
    lpi->solstat = -1;
 }
 
+/** converts SCIP's objective sense into CPLEX's objective sense */
 static
 int cpxObjsen(SCIP_OBJSEN objsen)
 {
@@ -2237,6 +2247,16 @@ SCIP_RETCODE SCIPlpiStrongbranch(
 
 /**@name Solution Information Methods */
 /**@{ */
+
+/** returns whether a solve method was called after the last modification of the LP */
+SCIP_Bool SCIPlpiWasSolved(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(lpi != NULL);
+
+   return (lpi->solstat != -1);
+}
 
 /** gets information about primal and dual feasibility of the current LP solution */
 SCIP_RETCODE SCIPlpiGetSolFeasibility(

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.33 2005/08/25 14:29:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.34 2005/08/26 14:09:39 bzfpfend Exp $"
 
 /**@file   lpi_spx121.cpp
  * @brief  LP interface for SOPLEX 1.2.1
@@ -223,11 +223,12 @@ typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of inform
 /** LP interface */
 struct SCIP_LPi
 {
-   SPxSCIP*         spx;                /**< SoPlex solver class */
+   SPxSCIP*              spx;                /**< SoPlex solver class */
    int*                  cstat;              /**< array for storing column basis status */
    int*                  rstat;              /**< array for storing row basis status */
    int                   cstatsize;          /**< size of cstat array */
    int                   rstatsize;          /**< size of rstat array */
+   SCIP_Bool             solved;             /**< was the current LP solved? */
 };
 
 /** LPi state stores basis information */
@@ -235,8 +236,8 @@ struct SCIP_LPiState
 {
    int                   ncols;              /**< number of LP columns */
    int                   nrows;              /**< number of LP rows */
-   COLPACKET*       packcstat;          /**< column basis status in compressed form */
-   ROWPACKET*       packrstat;          /**< row basis status in compressed form */
+   COLPACKET*            packcstat;          /**< column basis status in compressed form */
+   ROWPACKET*            packrstat;          /**< row basis status in compressed form */
 };
 
 
@@ -409,6 +410,14 @@ SPxLP::SPxSense spxObjsen(
    }
 }
 
+/** marks the current LP to be unsolved */
+static
+void invalidateSolution(SCIP_LPI* lpi)
+{
+   assert(lpi != NULL);
+   lpi->solved = FALSE;
+}
+
 
 
 
@@ -467,6 +476,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->rstat = NULL;
    (*lpi)->cstatsize = 0;
    (*lpi)->rstatsize = 0;
+   invalidateSolution(*lpi);
 
    /* set objective sense */
    SCIP_CALL( SCIPlpiChgObjsen(*lpi, objsen) );
@@ -532,6 +542,8 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    assert(lhs != NULL);
    assert(rhs != NULL);
 
+   invalidateSolution(lpi);
+
    SPxSCIP* spx = lpi->spx;
    LPRowSet rows(nrows);
    DSVector emptyVector(0);
@@ -578,6 +590,8 @@ SCIP_RETCODE SCIPlpiAddCols(
    assert(nnonz == 0 || ind != NULL);
    assert(nnonz == 0 || val != NULL);
 
+   invalidateSolution(lpi);
+
    SPxSCIP* spx = lpi->spx;
    LPColSet cols(ncols);
    DSVector colVector(ncols);
@@ -615,6 +629,8 @@ SCIP_RETCODE SCIPlpiDelCols(
    assert(lpi->spx != NULL);
    assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->spx->nCols());
 
+   invalidateSolution(lpi);
+
    lpi->spx->removeColRange(firstcol, lastcol);
 
    return SCIP_OKAY;   
@@ -635,6 +651,8 @@ SCIP_RETCODE SCIPlpiDelColset(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
+
+   invalidateSolution(lpi);
 
    ncols = lpi->spx->nCols();
 
@@ -669,6 +687,8 @@ SCIP_RETCODE SCIPlpiAddRows(
    assert(nnonz == 0 || beg != NULL);
    assert(nnonz == 0 || ind != NULL);
    assert(nnonz == 0 || val != NULL);
+
+   invalidateSolution(lpi);
 
    SPxSCIP* spx = lpi->spx;
    LPRowSet rows(nrows);
@@ -707,6 +727,8 @@ SCIP_RETCODE SCIPlpiDelRows(
    assert(lpi->spx != NULL);
    assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->spx->nRows());
 
+   invalidateSolution(lpi);
+
    lpi->spx->removeRowRange(firstrow, lastrow);
 
    return SCIP_OKAY;   
@@ -728,6 +750,8 @@ SCIP_RETCODE SCIPlpiDelRowset(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
+   invalidateSolution(lpi);
+
    nrows = lpi->spx->nRows();
 
    /* SOPLEX' removeRows() method deletes the rows with dstat[i] < 0, so we have to negate the values */
@@ -748,6 +772,8 @@ SCIP_RETCODE SCIPlpiClear(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
+
+   invalidateSolution(lpi);
 
    lpi->spx->clear();
 
@@ -772,6 +798,8 @@ SCIP_RETCODE SCIPlpiChgBounds(
    assert(ind != NULL);
    assert(lb != NULL);
    assert(ub != NULL);
+
+   invalidateSolution(lpi);
 
    for( i = 0; i < ncols; ++i )
    {
@@ -801,6 +829,8 @@ SCIP_RETCODE SCIPlpiChgSides(
    assert(lhs != NULL);
    assert(rhs != NULL);
 
+   invalidateSolution(lpi);
+
    for( i = 0; i < nrows; ++i )
    {
       assert(0 <= ind[i] && ind[i] < lpi->spx->nRows());
@@ -825,6 +855,8 @@ SCIP_RETCODE SCIPlpiChgCoef(
    assert(0 <= row && row < lpi->spx->nRows());
    assert(0 <= col && col < lpi->spx->nCols());
 
+   invalidateSolution(lpi);
+
    lpi->spx->changeElement(row, col, newval);
 
    return SCIP_OKAY;
@@ -840,6 +872,8 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
+
+   invalidateSolution(lpi);
 
    lpi->spx->changeSense(spxObjsen(objsen));
 
@@ -862,6 +896,8 @@ SCIP_RETCODE SCIPlpiChgObj(
    assert(lpi->spx != NULL);
    assert(ind != NULL);
    assert(obj != NULL);
+
+   invalidateSolution(lpi);
 
    for( i = 0; i < ncols; ++i )
    {
@@ -887,6 +923,8 @@ SCIP_RETCODE SCIPlpiScaleRow(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
    assert(scaleval != 0.0);
+
+   invalidateSolution(lpi);
 
    /* get the row vector and the row's sides */
    SVector rowvec = lpi->spx->rowVector(row);
@@ -939,6 +977,8 @@ SCIP_RETCODE SCIPlpiScaleCol(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
    assert(scaleval != 0.0);
+
+   invalidateSolution(lpi);
 
    /* get the col vector and the col's bounds and objective value */
    SVector colvec = lpi->spx->colVector(col);
@@ -1323,7 +1363,10 @@ SCIP_RETCODE spxSolve(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
+   invalidateSolution(lpi);
+
    SoPlex::Status status = lpi->spx->solve();
+   lpi->solved = TRUE;
 
    switch( status )
    {
@@ -1535,6 +1578,16 @@ SCIP_RETCODE SCIPlpiStrongbranch(
 
 /**@name Solution Information Methods */
 /**@{ */
+
+/** returns whether a solve method was called after the last modification of the LP */
+SCIP_Bool SCIPlpiWasSolved(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(lpi != NULL);
+
+   return lpi->solved;
+}
 
 /** gets information about primal and dual feasibility of the current LP solution */
 SCIP_RETCODE SCIPlpiGetSolFeasibility(
@@ -1992,6 +2045,8 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert(lpi->spx != NULL);
    assert(cstat != NULL);
    assert(rstat != NULL);
+
+   invalidateSolution(lpi);
 
    SoPlex::VarStatus* spxcstat = new SoPlex::VarStatus[lpi->spx->nCols()];
    SoPlex::VarStatus* spxrstat = new SoPlex::VarStatus[lpi->spx->nRows()];

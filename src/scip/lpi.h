@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.56 2005/08/24 17:26:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.57 2005/08/26 14:09:39 bzfpfend Exp $"
 
 /**@file   lpi.h
  * @brief  interface methods for specific LP solvers
@@ -400,6 +400,12 @@ SCIP_RETCODE SCIPlpiStrongbranch(
 
 /**@name Solution Information Methods */
 /**@{ */
+
+/** returns whether a solve method was called after the last modification of the LP */
+extern
+SCIP_Bool SCIPlpiWasSolved(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   );
 
 /** gets information about primal and dual feasibility of the current LP solution */
 extern

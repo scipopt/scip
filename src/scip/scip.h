@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.238 2005/08/24 17:26:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.239 2005/08/26 14:09:40 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -85,6 +85,7 @@
 #include "scip/pub_sol.h"
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
+#include "scip/lpi.h"
 
 
 /* In SCIPdebug mode, we include the SCIP's structure in scip.c, such that no one can access
@@ -3025,6 +3026,23 @@ extern
 SCIP_RETCODE SCIPwriteLP(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           fname               /**< file name */
+   );
+
+/** gets the LP interface of SCIP;
+ *  with the LPI you can use all of the methods defined in scip/lpi.h;
+ *  Warning! You have to make sure, that the full internal state of the LPI does not change or is recovered completely after
+ *  the end of the method that uses the LPI. In particular, if you manipulate the LP or its solution (e.g. by calling one of the
+ *  SCIPlpiAdd...() or one of the SCIPlpiSolve...() methods), you have to check in advance whith SCIPlpiWasSolved() whether the LP
+ *  is currently solved. If this is the case, you have to make sure, the internal solution status is recovered completely at the
+ *  end of your method. This can be achieved by getting the LPI state before applying any LPI manipulations with SCIPlpiGetState()
+ *  and restoring it afterwards with SCIPlpiSetState() and SCIPlpiFreeState(). Additionally you have to resolve the LP with
+ *  the appropriate SCIPlpiSolve...() call in order to reinstall the internal solution status.
+ *  Make also sure, that all parameter values that you have changed are set back to their original values.
+ */
+extern
+SCIP_RETCODE SCIPgetLPI(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LPI**            lpi                 /**< pointer to store the LP interface */
    );
 
 /**@} */
