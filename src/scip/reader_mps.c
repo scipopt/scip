@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.58 2005/08/24 17:26:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.59 2005/08/26 13:01:24 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  mps file reader
@@ -55,8 +55,8 @@ typedef enum MpsSection MPSSECTION;
 
 struct MpsInput
 {
-   MPSSECTION      section;
-   SCIPFILE*       fp;
+   MPSSECTION           section;
+   SCIPFILE*            fp;
    int                  lineno;
    SCIP_OBJSENSE        objsense;
    SCIP_Bool            haserror;
@@ -79,8 +79,8 @@ typedef struct MpsInput MPSINPUT;
 static
 SCIP_RETCODE mpsinputCreate(
    SCIP*                 scip,
-   MPSINPUT**       mpsi,
-   SCIPFILE*        fp
+   MPSINPUT**            mpsi,
+   SCIPFILE*             fp
    )
 {
    assert(mpsi != NULL);
@@ -111,7 +111,7 @@ SCIP_RETCODE mpsinputCreate(
 static
 void mpsinputFree(
    SCIP*                 scip,
-   MPSINPUT**       mpsi
+   MPSINPUT**            mpsi
    )
 {
    SCIPfreeMemory(scip, mpsi);
@@ -119,7 +119,7 @@ void mpsinputFree(
 
 static
 MPSSECTION mpsinputSection(
-   const MPSINPUT*  mpsi
+   const MPSINPUT*       mpsi
    )
 {
    assert(mpsi != NULL);
@@ -130,7 +130,7 @@ MPSSECTION mpsinputSection(
 #if 0
 static
 int mpsinputLineno(
-   const MPSINPUT*  mpsi
+   const MPSINPUT*       mpsi
    )
 {
    assert(mpsi != NULL);
@@ -141,7 +141,7 @@ int mpsinputLineno(
 
 static
 const char* mpsinputField0(
-   const MPSINPUT*  mpsi
+   const MPSINPUT*       mpsi
    )
 {
    assert(mpsi != NULL);
@@ -151,7 +151,7 @@ const char* mpsinputField0(
 
 static
 const char* mpsinputField1(
-   const MPSINPUT*  mpsi
+   const MPSINPUT*       mpsi
    )
 {
    assert(mpsi != NULL);
@@ -161,7 +161,7 @@ const char* mpsinputField1(
 
 static
 const char* mpsinputField2(
-   const MPSINPUT*  mpsi
+   const MPSINPUT*       mpsi
    )
 {
    assert(mpsi != NULL);
@@ -171,7 +171,7 @@ const char* mpsinputField2(
 
 static
 const char* mpsinputField3(
-   const MPSINPUT*  mpsi
+   const MPSINPUT*       mpsi
    )
 {
    assert(mpsi != NULL);
@@ -181,7 +181,7 @@ const char* mpsinputField3(
 
 static
 const char* mpsinputField4(
-   const MPSINPUT*  mpsi
+   const MPSINPUT*       mpsi
    )
 {
    assert(mpsi != NULL);
@@ -191,7 +191,7 @@ const char* mpsinputField4(
 
 static
 const char* mpsinputField5(
-   const MPSINPUT*  mpsi
+   const MPSINPUT*       mpsi
    )
 {
    assert(mpsi != NULL);
@@ -202,7 +202,7 @@ const char* mpsinputField5(
 #if 0
 static
 const char* mpsinputProbname(
-   const MPSINPUT*  mpsi
+   const MPSINPUT*       mpsi
    )
 {
    assert(mpsi != NULL);
@@ -213,7 +213,7 @@ const char* mpsinputProbname(
 
 static
 const char* mpsinputObjname(
-   const MPSINPUT*  mpsi
+   const MPSINPUT*       mpsi
    )
 {
    assert(mpsi != NULL);
@@ -223,7 +223,7 @@ const char* mpsinputObjname(
 
 static
 SCIP_OBJSENSE mpsinputObjsense(
-   const MPSINPUT*  mpsi
+   const MPSINPUT*       mpsi
    )
 {
    assert(mpsi != NULL);
@@ -233,7 +233,7 @@ SCIP_OBJSENSE mpsinputObjsense(
 
 static
 SCIP_Bool mpsinputHasError(
-   const MPSINPUT*  mpsi
+   const MPSINPUT*       mpsi
    )
 {
    assert(mpsi != NULL);
@@ -243,7 +243,7 @@ SCIP_Bool mpsinputHasError(
 
 static
 SCIP_Bool mpsinputIsInteger(
-   const MPSINPUT*  mpsi
+   const MPSINPUT*       mpsi
    )
 {
    assert(mpsi != NULL);
@@ -253,8 +253,8 @@ SCIP_Bool mpsinputIsInteger(
 
 static
 void mpsinputSetSection(
-   MPSINPUT*        mpsi,
-   MPSSECTION       section
+   MPSINPUT*             mpsi,
+   MPSSECTION            section
    )
 {
    assert(mpsi != NULL);
@@ -264,7 +264,7 @@ void mpsinputSetSection(
 
 static
 void mpsinputSetProbname(
-   MPSINPUT*        mpsi,
+   MPSINPUT*             mpsi,
    const char*           probname
    )
 {
@@ -277,7 +277,7 @@ void mpsinputSetProbname(
 
 static
 void mpsinputSetObjname(
-   MPSINPUT*        mpsi, 
+   MPSINPUT*             mpsi, 
    const char*           objname
    )
 {
@@ -290,7 +290,7 @@ void mpsinputSetObjname(
 
 static
 void mpsinputSetObjsense(
-   MPSINPUT*        mpsi,
+   MPSINPUT*             mpsi,
    SCIP_OBJSENSE         sense
    )
 {
@@ -301,7 +301,7 @@ void mpsinputSetObjsense(
 
 static
 void mpsinputSyntaxerror(
-   MPSINPUT*        mpsi
+   MPSINPUT*             mpsi
    ) 
 {
    assert(mpsi != NULL);
@@ -314,7 +314,7 @@ void mpsinputSyntaxerror(
 static
 void mpsinputEntryIgnored(
    SCIP*                 scip,               /**< SCIP data structure */
-   MPSINPUT*        mpsi, 
+   MPSINPUT*             mpsi, 
    const char*           what, 
    const char*           what_name, 
    const char*           entity, 
@@ -372,14 +372,14 @@ void patchField(
  */
 static
 SCIP_Bool mpsinputReadLine(
-   MPSINPUT*        mpsi
+   MPSINPUT*             mpsi
    )
 {
    unsigned int len;
    unsigned int i;
-   int        space;
+   int space;
    char* s;
-   SCIP_Bool  is_marker;
+   SCIP_Bool is_marker;
 
    do
    {
@@ -546,7 +546,7 @@ SCIP_Bool mpsinputReadLine(
  */
 static
 void mpsinputInsertName(
-   MPSINPUT*        mpsi,
+   MPSINPUT*             mpsi,
    const char*           name,
    SCIP_Bool             second
    )
@@ -571,7 +571,7 @@ void mpsinputInsertName(
  */
 static
 SCIP_RETCODE readName(
-   MPSINPUT*        mpsi
+   MPSINPUT*             mpsi
    )
 {
    assert(mpsi != NULL);
@@ -615,7 +615,7 @@ SCIP_RETCODE readName(
  */
 static
 SCIP_RETCODE readObjsen(
-   MPSINPUT*        mpsi
+   MPSINPUT*             mpsi
    )
 {
    assert(mpsi != NULL);
@@ -661,7 +661,7 @@ SCIP_RETCODE readObjsen(
  */
 static
 SCIP_RETCODE readObjname(
-   MPSINPUT*        mpsi
+   MPSINPUT*             mpsi
    )
 {
    assert(mpsi != NULL);
@@ -696,7 +696,7 @@ SCIP_RETCODE readObjname(
  */
 static 
 SCIP_RETCODE readRows(
-   MPSINPUT*        mpsi,
+   MPSINPUT*             mpsi,
    SCIP*                 scip                /**< SCIP data structure */   
    )
 {
@@ -762,7 +762,7 @@ SCIP_RETCODE readRows(
  */
 static
 SCIP_RETCODE readCols(
-   MPSINPUT*        mpsi,
+   MPSINPUT*             mpsi,
    SCIP*                 scip                /**< SCIP data structure */   
    ) 
 {
@@ -872,7 +872,7 @@ SCIP_RETCODE readCols(
  */
 static
 SCIP_RETCODE readRhs(
-   MPSINPUT*        mpsi,
+   MPSINPUT*             mpsi,
    SCIP*                 scip                /**< SCIP data structure */   
    )
 {
@@ -986,7 +986,7 @@ SCIP_RETCODE readRhs(
  */
 static
 SCIP_RETCODE readRanges(
-   MPSINPUT*        mpsi,
+   MPSINPUT*             mpsi,
    SCIP*                 scip                /**< SCIP data structure */   
    )
 {
@@ -1113,7 +1113,7 @@ SCIP_RETCODE readRanges(
  */
 static
 SCIP_RETCODE readBounds(
-   MPSINPUT*        mpsi,
+   MPSINPUT*             mpsi,
    SCIP*                 scip                /**< SCIP data structure */   
    )
 {
