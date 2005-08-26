@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.1 2005/08/26 13:01:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.2 2005/08/26 13:03:39 bzfpfend Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -518,6 +518,11 @@ SCIP_DECL_READERREAD(readerReadZpl)
 
    /* call ZIMPL parser */
    error = (SCIP_Bool)zimpl_exec_prog(zimpl, filename);
+
+   /* free ZIMPL data */
+   zimpl_free(zimpl);
+
+   /* evaluate result */
    if( error || readerror_ )
    {
       SCIPwarningMessage("error reading ZIMPL file <%s>\n", filename);
