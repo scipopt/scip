@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.22 2005/08/24 17:26:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.23 2005/08/26 14:18:45 bzfpfend Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -49,16 +49,17 @@ extern "C"
 /** LP interface for Clp */
 struct SCIP_LPi
 {
-   ClpSimplex*      clp;                 /**< Clp simiplex solver class */
-   int*                  cstat;               /**< array for storing column basis status */
-   int*                  rstat;               /**< array for storing row basis status */
-   int                   cstatsize;           /**< size of cstat array */
-   int                   rstatsize;           /**< size of rstat array */
-   bool             startscratch;        /**< start from scratch? */
-   bool             presolving;          /**< preform preprocessing? */
-   int                   pricing;             /**< scip pricing setting  */
-   bool             validFactorization;  /**< whether we have a valid factorization in clp */
-   bool	            scaledFactorization; /**< whether the last stored factorization was scaled */
+   ClpSimplex*           clp;                /**< Clp simiplex solver class */
+   int*                  cstat;              /**< array for storing column basis status */
+   int*                  rstat;              /**< array for storing row basis status */
+   int                   cstatsize;          /**< size of cstat array */
+   int                   rstatsize;          /**< size of rstat array */
+   bool                  startscratch;       /**< start from scratch? */
+   bool                  presolving;         /**< preform preprocessing? */
+   int                   pricing;            /**< scip pricing setting  */
+   bool                  validFactorization; /**< whether we have a valid factorization in clp */
+   bool	                 scaledFactorization;/**< whether the last stored factorization was scaled */
+   SCIP_Bool             solved;             /**< was the current LP solved? */
 };
 
 
@@ -77,8 +78,8 @@ struct SCIP_LPiState
 {
    int                   ncols;              /**< number of LP columns */
    int                   nrows;              /**< number of LP rows */
-   COLPACKET*       packcstat;          /**< column basis status in compressed form */
-   ROWPACKET*       packrstat;          /**< row basis status in compressed form */
+   COLPACKET*            packcstat;          /**< column basis status in compressed form */
+   ROWPACKET*            packrstat;          /**< row basis status in compressed form */
 };
 
 
@@ -231,6 +232,21 @@ void lpistateFree(
 
 
 /*
+ * local methods
+ */
+
+/** marks the current LP to be unsolved */
+static
+void invalidateSolution(SCIP_LPI* lpi)
+{
+   assert(lpi != NULL);
+   lpi->solved = FALSE;
+}
+
+
+
+
+/*
  * LP Interface Methods
  */
 
@@ -288,6 +304,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->pricing = SCIP_PRICING_AUTO;
    (*lpi)->validFactorization = false;
    (*lpi)->scaledFactorization = false;
+   invalidateSolution(*lpi);
 
    // set pricing routines
 
@@ -380,6 +397,8 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    assert(rhs != 0);
    assert( nnonz > beg[ncols-1] );
 
+   invalidateSolution(lpi);
+
    ClpSimplex* clp = lpi->clp;
 
    // copy beg-array
@@ -441,6 +460,8 @@ SCIP_RETCODE SCIPlpiAddCols(
    assert(nnonz == 0 || ind != 0);
    assert(nnonz == 0 || val != 0);
 
+   invalidateSolution(lpi);
+
    // store number of columns for later
    int numCols = lpi->clp->getNumCols(); 
 
@@ -479,6 +500,8 @@ SCIP_RETCODE SCIPlpiDelCols(
    assert(lpi->clp != 0);
    assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->clp->numberColumns());
 
+   invalidateSolution(lpi);
+
    // Clp can't delete a range of columns; we have to use deleteColumns (see SCIPlpiDelColset)
    int num = lastcol-firstcol+1;
    int* which = new int [num];
@@ -506,6 +529,8 @@ SCIP_RETCODE SCIPlpiDelColset(
    assert(lpi != 0);
    assert(lpi->clp != 0);
    assert(dstat != 0);
+
+   invalidateSolution(lpi);
 
    // transform dstat information
    int ncols = lpi->clp->getNumCols(); 
@@ -559,6 +584,8 @@ SCIP_RETCODE SCIPlpiAddRows(
    assert(nnonz == 0 || ind != 0);
    assert(nnonz == 0 || val != 0);
 
+   invalidateSolution(lpi);
+
    // store number of rows for later use
    int numRows = lpi->clp->getNumRows(); 
 
@@ -608,6 +635,8 @@ SCIP_RETCODE SCIPlpiDelRows(
    assert(lpi->clp != 0);
    assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->clp->numberRows());
 
+   invalidateSolution(lpi);
+
    // Clp can't delete a range of rows; we have to use deleteRows (see SCIPlpiDelRowset)
    int num = lastrow-firstrow+1;
    int* which = new int [num];
@@ -635,6 +664,8 @@ SCIP_RETCODE SCIPlpiDelRowset(
    assert(lpi != 0);
    assert(lpi->clp != 0);
    assert(dstat != 0);
+
+   invalidateSolution(lpi);
 
    // transform dstat information
    int nrows = lpi->clp->getNumRows(); 
@@ -675,6 +706,8 @@ SCIP_RETCODE SCIPlpiClear(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
+   invalidateSolution(lpi);
+
    // We use the resize(0,0) to get rid of the model but keep all other settings
    lpi->clp->resize(0,0);
 
@@ -698,6 +731,8 @@ SCIP_RETCODE SCIPlpiChgBounds(
    assert(ind != 0);
    assert(lb != 0);
    assert(ub != 0);
+
+   invalidateSolution(lpi);
 
    ClpSimplex* clp = lpi->clp;
 
@@ -737,6 +772,8 @@ SCIP_RETCODE SCIPlpiChgSides(
    assert(lhs != 0);
    assert(rhs != 0);
 
+   invalidateSolution(lpi);
+
    ClpSimplex* clp = lpi->clp;
 
    /* OLD code
@@ -773,6 +810,8 @@ SCIP_RETCODE SCIPlpiChgCoef(
    assert(0 <= row && row < lpi->clp->numberRows());
    assert(0 <= col && col < lpi->clp->numberColumns());
 
+   invalidateSolution(lpi);
+
    lpi->clp->matrix()->modifyCoefficient(row, col, newval);
 
    return SCIP_OKAY;
@@ -789,6 +828,8 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 
    assert(lpi != 0);
    assert(lpi->clp != 0);
+
+   invalidateSolution(lpi);
 
    // set objective sense: SCIP values are the same as the ones for Clp
    lpi->clp->setOptimizationDirection(objsen);
@@ -811,6 +852,8 @@ SCIP_RETCODE SCIPlpiChgObj(
    assert(lpi->clp != 0);
    assert(ind != 0);
    assert(obj != 0);
+
+   invalidateSolution(lpi);
 
    ClpSimplex* clp = lpi->clp;
 
@@ -844,6 +887,8 @@ SCIP_RETCODE SCIPlpiScaleRow(
    assert(lpi->clp != 0);
    assert(scaleval != 0.0);
    assert(0 <= row && row <= lpi->clp->numberRows() );
+
+   invalidateSolution(lpi);
 
    // Note: if the scaling should be performed because of numerical stability,
    // there are other more effective methods in Clp to adjust the scaling values
@@ -915,6 +960,8 @@ SCIP_RETCODE SCIPlpiScaleCol(
    assert(lpi->clp != 0);
    assert(scaleval != 0.0);
    assert(0 <= col && col <= lpi->clp->numberColumns() );
+
+   invalidateSolution(lpi);
 
    // Note: if the scaling should be performed because of numerical stability,
    // there are other more effective methods in Clp to adjust the scaling values
@@ -1339,6 +1386,8 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
+   invalidateSolution(lpi);
+
    int scaling = lpi->clp->scalingFlag();
 
    if ( lpi->startscratch )
@@ -1355,6 +1404,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    int status = lpi->clp->primal(0, lpi->validFactorization ? 3 : 1);
    lpi->validFactorization = true;
    lpi->scaledFactorization = (scaling != 0);
+   lpi->solved = TRUE;
 
    // Unfortunately the status of Clp is hard coded ...
    // 0 - optimal
@@ -1381,6 +1431,8 @@ SCIP_RETCODE SCIPlpiSolveDual(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
+   invalidateSolution(lpi);
+
    int scaling = lpi->clp->scalingFlag();
 
    if ( lpi->startscratch )
@@ -1397,6 +1449,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    int status = lpi->clp->dual(0, lpi->validFactorization ? 3 : 1);
    lpi->validFactorization = true;
    lpi->scaledFactorization = (scaling != 0);
+   lpi->solved = TRUE;
 
    // Unfortunately the status of Clp is hard coded ...
    // 0 - optimal
@@ -1424,6 +1477,8 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
+   invalidateSolution(lpi);
+
    // Check whether we have a factorization, if yes destroy it (Clp doesn't like it ...)
    /*
    if (lpi->haveFactorization)
@@ -1432,6 +1487,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 
    // Call barrier
    int status = lpi->clp->barrier(crossover);
+   lpi->solved = TRUE;
 
    // We may need to call ClpModel::status()
 
@@ -1537,6 +1593,16 @@ SCIP_RETCODE SCIPlpiStrongbranch(
 
 /**@name Solution Information Methods */
 /**@{ */
+
+/** returns whether a solve method was called after the last modification of the LP */
+SCIP_Bool SCIPlpiWasSolved(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(lpi != NULL);
+
+   return lpi->solved;
+}
 
 /** gets information about primal and dual feasibility of the current LP solution */
 SCIP_RETCODE SCIPlpiGetSolFeasibility(
@@ -2045,6 +2111,8 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert(lpi->clp != 0);
    assert(cstat != 0);
    assert(rstat != 0);
+
+   invalidateSolution(lpi);
 
    // Adapted from OsiClpSolverInterface::setBasisStatus
 
