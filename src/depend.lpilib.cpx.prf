@@ -5,7 +5,7 @@ $(LIBOBJDIR)/scip/lpi_cpx.o: src/scip/lpi_cpx.c lib/cpxinc/cplex.h src/scip/bite
 $(LIBOBJDIR)/scip/bitencode.o: src/scip/bitencode.c src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
   src/scip/pub_message.h src/scip/bitencode.h
-$(LIBOBJDIR)/scip/memory.o: src/blockmemshell/memory.c src/scip/def.h \
+$(LIBOBJDIR)/blockmemshell/memory.o: src/blockmemshell/memory.c src/scip/def.h \
   src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
   src/scip/struct_message.h src/scip/pub_message.h \
   src/blockmemshell/memory.h

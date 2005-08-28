@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.120 2005/08/28 12:23:58 bzfpfend Exp $
+# $Id: Makefile,v 1.121 2005/08/28 13:49:39 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -126,7 +126,7 @@ LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc 
 LPSLDFLAGS	=	-lsoplex.$(OSTYPE).$(ARCH).$(COMP)
 LPILIBOBJ	=	scip/lpi_spx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
-LPILIBSRC	=	src/scip/lpi_spx.cpp src/scip/bitencode.c src/scip/memory.c src/scip/message.c
+LPILIBSRC	=	src/scip/lpi_spx.cpp src/scip/bitencode.c src/blockmemshell/memory.c src/scip/message.c
 endif
 
 ifeq ($(LPS),spxdbg)
@@ -134,7 +134,7 @@ LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc 
 LPSLDFLAGS	=	-lsoplexdbg.$(OSTYPE).$(ARCH).$(COMP)
 LPILIBOBJ	=	scip/lpi_spx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
-LPILIBSRC	=	src/scip/lpi_spx.cpp src/scip/bitencode.c src/scip/memory.c src/scip/message.c
+LPILIBSRC	=	src/scip/lpi_spx.cpp src/scip/bitencode.c src/blockmemshell/memory.c src/scip/message.c
 endif
 
 ifeq ($(LPS),spx121)
@@ -142,7 +142,7 @@ LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spx121inc 
 LPSLDFLAGS	=	-lsoplex121.$(OSTYPE).$(ARCH).$(COMP)
 LPILIBOBJ	=	scip/lpi_spx121.o scip/bitencode.o blockmemshell/memory.o scip/message.o
-LPILIBSRC	=	src/scip/lpi_spx121.cpp src/scip/bitencode.c src/scip/memory.c src/scip/message.c
+LPILIBSRC	=	src/scip/lpi_spx121.cpp src/scip/bitencode.c src/blockmemshell/memory.c src/scip/message.c
 endif
 
 ifeq ($(LPS),clp)
@@ -151,7 +151,7 @@ FLAGS		+=	-I$(LIBDIR)/clpinc
 #LPSLDFLAGS	=	-lclp.$(OSTYPE).$(ARCH).$(COMP) -lcoin.$(OSTYPE).$(ARCH).$(COMP)
 LPSLDFLAGS	=	-L$(LIBDIR)/clpinc/../lib -Wl,-rpath,$(LIBDIR)/clpinc/../lib -lClp -lCoin
 LPILIBOBJ	=	scip/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/message.o
-LPILIBSRC	=	src/scip/lpi_clp.cpp src/scip/bitencode.c src/scip/memory.c src/scip/message.c
+LPILIBSRC	=	src/scip/lpi_clp.cpp src/scip/bitencode.c src/blockmemshell/memory.c src/scip/message.c
 endif
 
 ifeq ($(LPS),clpdbg)
@@ -159,7 +159,7 @@ LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/clpinc
 LPSLDFLAGS	=	-lclpdbg.$(OSTYPE).$(ARCH).$(COMP) -lcoindbg.$(OSTYPE).$(ARCH).$(COMP)
 LPILIBOBJ	=	scip/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/message.o
-LPILIBSRC	=	src/scip/lpi_clp.cpp src/scip/bitencode.c src/scip/memory.c src/scip/message.c
+LPILIBSRC	=	src/scip/lpi_clp.cpp src/scip/bitencode.c src/blockmemshell/memory.c src/scip/message.c
 endif
 
 LPILIB		=	$(LPILIBNAME).$(BASE)
@@ -373,24 +373,33 @@ clean:
 lpidepend:
 ifeq ($(LINKER),C)
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(LPILIBSRC) \
-		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(LIBOBJDIR\)/scip/\1.o|g'\'' \
+		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(LPILIBDEP)'
 endif
 ifeq ($(LINKER),CPP)
 		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(LPILIBSRC) \
-		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(LIBOBJDIR\)/scip/\1.o|g'\'' \
+		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(LPILIBDEP)'
 endif
 
-depend:		lpidepend
+maindepend:
+ifeq ($(LINKER),C)
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(MAINSRC) \
-		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(BINOBJDIR\)/\1.o|g'\'' \
+		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(MAINDEP)'
+endif
+ifeq ($(LINKER),CPP)
+		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(MAINSRC) \
+		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
+		>$(MAINDEP)'
+endif
+
+depend:		lpidepend maindepend
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(SCIPLIBSRC) \
-		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(LIBOBJDIR\)/scip/\1.o|g'\'' \
+		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(SCIPLIBDEP)'
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(OBJSCIPLIBSRC) \
-		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(LIBOBJDIR\)/objscip/\1.o|g'\'' \
+		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(OBJSCIPLIBDEP)'
 
 -include	$(MAINDEP)

@@ -1931,21 +1931,21 @@ $(LIBOBJDIR)/scip/sepa_strongcg.o: src/scip/sepa_strongcg.c src/scip/sepa_strong
   src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
   src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
   src/scip/pub_var.h src/scip/type_history.h src/scip/lpi.h
-$(LIBOBJDIR)/scip/memory.o: src/blockmemshell/memory.c src/scip/def.h \
+$(LIBOBJDIR)/blockmemshell/memory.o: src/blockmemshell/memory.c src/scip/def.h \
   src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
   src/scip/struct_message.h src/scip/pub_message.h \
   src/blockmemshell/memory.h
-$(LIBOBJDIR)/scip/tclique_branch.o: src/tclique/tclique_branch.c src/tclique/tclique.h \
+$(LIBOBJDIR)/tclique/tclique_branch.o: src/tclique/tclique_branch.c src/tclique/tclique.h \
   src/tclique/tclique_def.h src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
   src/scip/pub_message.h src/tclique/tclique_coloring.h \
   src/blockmemshell/memory.h
-$(LIBOBJDIR)/scip/tclique_coloring.o: src/tclique/tclique_coloring.c src/tclique/tclique.h \
+$(LIBOBJDIR)/tclique/tclique_coloring.o: src/tclique/tclique_coloring.c src/tclique/tclique.h \
   src/tclique/tclique_def.h src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
   src/scip/pub_message.h src/tclique/tclique_coloring.h \
   src/blockmemshell/memory.h
-$(LIBOBJDIR)/scip/tclique_graph.o: src/tclique/tclique_graph.c src/tclique/tclique.h \
+$(LIBOBJDIR)/tclique/tclique_graph.o: src/tclique/tclique_graph.c src/tclique/tclique.h \
   src/tclique/tclique_def.h src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
   src/scip/pub_message.h src/blockmemshell/memory.h
