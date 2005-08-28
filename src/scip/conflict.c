@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.101 2005/08/24 17:26:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.102 2005/08/28 11:03:06 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -3157,24 +3157,28 @@ SCIP_RETCODE undoBdchgsDualfarkas(
          }
 #endif
 
+         /* add row side to farkas row lhs: dualfarkas > 0 -> lhs, dualfarkas < 0 -> rhs */
+         if( dualfarkas[r] > 0.0 )
+         {
+            /* check if sign of dual farkas value is valid */
+            if( SCIPsetIsInfinity(set, -row->lhs) )
+               continue;
+            farkaslhs += dualfarkas[r] * (row->lhs - row->constant);
+         }
+         else
+         {
+            /* check if sign of dual farkas value is valid */
+            if( SCIPsetIsInfinity(set, row->rhs) )
+               continue;
+            farkaslhs += dualfarkas[r] * (row->rhs - row->constant);
+         }
+
          /* add row coefficients to farkas row */
          for( i = 0; i < row->len; ++i )
          {
             v = SCIPvarGetProbindex(SCIPcolGetVar(row->cols[i]));
             assert(0 <= v && v < nvars);
             farkascoefs[v] += dualfarkas[r] * row->vals[i];
-         }
-
-         /* add row side to farkas row lhs: dualfarkas > 0 -> lhs, dualfarkas < 0 -> rhs */
-         if( dualfarkas[r] > 0.0 )
-         {
-            assert(!SCIPsetIsInfinity(set, -row->lhs));
-            farkaslhs += dualfarkas[r] * (row->lhs - row->constant);
-         }
-         else
-         {
-            assert(!SCIPsetIsInfinity(set, row->rhs));
-            farkaslhs += dualfarkas[r] * (row->rhs - row->constant);
          }
       }
 #if 0
@@ -3369,12 +3373,11 @@ SCIP_RETCODE undoBdchgsDualsol(
       assert(row == lp->lpirows[r]);
 
       /* ignore dual solution values of 0.0 (in this case: y_i == z_i == 0) */
-      if( SCIPsetIsFeasZero(set, dualsols[r]) )
+      if( SCIPsetIsZero(set, dualsols[r]) )
          continue;
 
       /* check dual feasibility */
-      if( (SCIPsetIsInfinity(set, -row->lhs) && SCIPsetIsFeasPositive(set, dualsols[r]))
-         || (SCIPsetIsInfinity(set, row->rhs) && SCIPsetIsFeasNegative(set, dualsols[r])) )
+      if( (SCIPsetIsInfinity(set, -row->lhs) && dualsols[r] > 0.0) || (SCIPsetIsInfinity(set, row->rhs) && dualsols[r] < 0.0) )
       {
          SCIPdebugMessage(" -> infeasible dual solution %g in row <%s>: lhs=%g, rhs=%g\n",
             dualsols[r], SCIProwGetName(row), row->lhs, row->rhs);

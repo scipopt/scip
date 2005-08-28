@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.79 2005/08/24 17:26:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.80 2005/08/28 11:03:06 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -1322,6 +1322,13 @@ SCIP_RETCODE SCIPprobPrint(
 
    SCIPmessageFPrintInfo(file, "STATISTICS\n");
    SCIPprobPrintStatistics(prob, file);
+
+   SCIPmessageFPrintInfo(file, "OBJECTIVE\n");
+   SCIPmessageFPrintInfo(file, "  Sense            : %s\n", prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
+   if( !SCIPsetIsZero(set, prob->objoffset) )
+   {
+      SCIPmessageFPrintInfo(file, "  Offset           : %+g\n", prob->objoffset);
+   }
 
    if( prob->nvars > 0 )
    {

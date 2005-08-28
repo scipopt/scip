@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.178 2005/08/24 17:26:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.179 2005/08/28 11:03:06 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2409,7 +2409,7 @@ SCIP_RETCODE normalizeCons(
    {
       /* scale the constraint with -1 */
       SCIPdebugMessage("multiply linear constraint with -1.0\n");
-      SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
+      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
       SCIP_CALL( scaleCons(scip, cons, -1.0) );
    }
 
@@ -2433,7 +2433,7 @@ SCIP_RETCODE normalizeCons(
    {
       /* scale the constraint with the smallest common multiple of all denominators */
       SCIPdebugMessage("scale linear constraint with %lld to make coefficients integral\n", scm);
-      SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
+      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
       SCIP_CALL( scaleCons(scip, cons, (SCIP_Real)scm) );
    }
 
@@ -2456,7 +2456,7 @@ SCIP_RETCODE normalizeCons(
       {
          /* divide the constaint by the greatest common divisor of the coefficients */
          SCIPdebugMessage("divide linear constraint by greatest common divisor %lld\n", gcd);
-         SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
+         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
          SCIP_CALL( scaleCons(scip, cons, 1.0/(SCIP_Real)gcd) );
       }
    }
@@ -2465,7 +2465,7 @@ SCIP_RETCODE normalizeCons(
    consdata->normalized = TRUE;
 
    SCIPdebugMessage("normalized constraint:\n");
-   SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
+   SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
 
    return SCIP_OKAY;
 }
@@ -2547,7 +2547,7 @@ SCIP_RETCODE applyFixings(
    if( !consdata->removedfixings )
    {
       SCIPdebugMessage("applying fixings:\n");
-      SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
+      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
 
       v = 0;
       while( v < consdata->nvars )
@@ -2618,7 +2618,7 @@ SCIP_RETCODE applyFixings(
       consdata->removedfixings = TRUE;
 
       SCIPdebugMessage("after fixings:\n");
-      SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
+      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
 
       /* if aggregated variables have been replaced, multiple entries of the same variable are possible and we have
        * to clean up the constraint
@@ -2626,7 +2626,7 @@ SCIP_RETCODE applyFixings(
       SCIP_CALL( mergeMultiples(scip, cons) );
    
       SCIPdebugMessage("after merging:\n");
-      SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
+      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
    }
    assert(consdata->removedfixings);
 
@@ -3129,7 +3129,7 @@ SCIP_RETCODE checkCons(
    assert(violated != NULL);
 
    SCIPdebugMessage("checking linear constraint <%s>\n", SCIPconsGetName(cons));
-   SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
+   SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -4040,7 +4040,7 @@ SCIP_RETCODE convertLongEquality(
    if( integral && !SCIPisFeasIntegral(scip, consdata->rhs) )
    {
       SCIPdebugMessage("linear equality <%s> is integer infeasible\n", SCIPconsGetName(cons));
-      SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
+      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
       *cutoff = TRUE;
       return SCIP_OKAY;
    }
@@ -4405,8 +4405,8 @@ SCIP_RETCODE aggregateConstraints(
       SCIPdebugMessage("aggregate linear constraints <%s> := %g*<%s> + %g*<%s>  ->  nvars: %d -> %d, weight: %d -> %d\n",
          SCIPconsGetName(cons0), a, SCIPconsGetName(cons0), b, SCIPconsGetName(cons1),
          consdata0->nvars, bestnvars, commonidxweight + diffidx0minus1weight, bestvarweight);
-      SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons0, NULL) ));
-      SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons1, NULL) ));
+      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ));
+      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ));
 
       /* get temporary memory for creating the new linear constraint */
       SCIP_CALL( SCIPallocBufferArray(scip, &newvars, bestnvars) );
@@ -4490,7 +4490,7 @@ SCIP_RETCODE aggregateConstraints(
       if( consdataGetMaxAbsval(SCIPconsGetData(newcons)) <= maxaggrnormscale * consdataGetMaxAbsval(consdata0) )
       {
          SCIPdebugMessage(" -> aggregated to <%s>\n", SCIPconsGetName(newcons));
-         SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, newcons, NULL) ));
+         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ));
 
          /* update the statistics: we changed all coefficients */
          if( !consdata0->upgraded )
@@ -4654,10 +4654,10 @@ SCIP_RETCODE preprocessConstraintPairs(
       /* check consdata0 against consdata1 for redundancy, or ranged row accumulation */
       coefsequal = TRUE;
       coefsnegated = TRUE;
-      cons0dominateslhs = !SCIPisInfinity(scip, -consdata1->lhs) && SCIPisGE(scip, consdata0->lhs, consdata1->lhs);
-      cons1dominateslhs = !SCIPisInfinity(scip, -consdata0->lhs) && SCIPisGE(scip, consdata1->lhs, consdata0->lhs);
-      cons0dominatesrhs = !SCIPisInfinity(scip, consdata1->rhs) && SCIPisLE(scip, consdata0->rhs, consdata1->rhs);
-      cons1dominatesrhs = !SCIPisInfinity(scip, consdata0->rhs) && SCIPisLE(scip, consdata1->rhs, consdata0->rhs);
+      cons0dominateslhs = SCIPisGE(scip, consdata0->lhs, consdata1->lhs);
+      cons1dominateslhs = SCIPisGE(scip, consdata1->lhs, consdata0->lhs);
+      cons0dominatesrhs = SCIPisLE(scip, consdata0->rhs, consdata1->rhs);
+      cons1dominatesrhs = SCIPisLE(scip, consdata1->rhs, consdata0->rhs);
       nvarscommon = 0;
       commonidxweight = 0;
       nvars0minus1 = 0;
@@ -4765,189 +4765,103 @@ SCIP_RETCODE preprocessConstraintPairs(
        */
       if( cons1dominateslhs && (!cons0isequality || cons1dominatesrhs || SCIPisInfinity(scip, consdata0->rhs) ) )
       {
-         assert(!SCIPisInfinity(scip, -consdata0->lhs));
-
          /* left hand side is dominated by consdata1: delete left hand side of consdata0 */
          SCIPdebugMessage("left hand side of linear constraint <%s> is dominated by <%s>:\n",
             SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-         SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons0, NULL) ));
-         SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons1, NULL) ));
+         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ));
+         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ));
 
          /* check for infeasibility */
          if( SCIPisFeasGT(scip, consdata1->lhs, consdata0->rhs) )
          {
-            SCIPdebugMessage("linear constraint <%s> is infeasible\n", SCIPconsGetName(cons0));
+            SCIPdebugMessage("linear constraints <%s> and <%s> are infeasible\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1));
             *cutoff = TRUE;
             break;
          }
-         SCIP_CALL( chgLhs(scip, cons0, -SCIPinfinity(scip)) );
-         cons0isequality = FALSE;
-         if( !consdata0->upgraded )
-            (*nchgsides)++;
+
+         /* remove redundant left hand side */
+         if( !SCIPisInfinity(scip, -consdata0->lhs) )
+         {
+            SCIP_CALL( chgLhs(scip, cons0, -SCIPinfinity(scip)) );
+            cons0isequality = FALSE;
+            if( !consdata0->upgraded )
+               (*nchgsides)++;
+         }
       }
       else if( cons0dominateslhs && (!cons1isequality || cons0dominatesrhs || SCIPisInfinity(scip, consdata1->rhs)) )
       {
-         assert(!SCIPisInfinity(scip, -consdata1->lhs));
-
          /* left hand side is dominated by consdata0: delete left hand side of consdata1 */
          SCIPdebugMessage("left hand side of linear constraint <%s> is dominated by <%s>:\n",
             SCIPconsGetName(cons1), SCIPconsGetName(cons0));
-         SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons1, NULL) ));
-         SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons0, NULL) ));
+         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ));
+         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ));
 
          /* check for infeasibility */
          if( SCIPisFeasGT(scip, consdata0->lhs, consdata1->rhs) )
          {
-            SCIPdebugMessage("linear constraint <%s> is infeasible\n", SCIPconsGetName(cons1));
+            SCIPdebugMessage("linear constraints <%s> and <%s> are infeasible\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1));
             *cutoff = TRUE;
             break;
          }
-         SCIP_CALL( chgLhs(scip, cons1, -SCIPinfinity(scip)) );
-         cons1isequality = FALSE;
-         if( !consdata1->upgraded )
-            (*nchgsides)++;
-      }
-      if( cons1dominatesrhs && (!cons0isequality || cons1dominateslhs || SCIPisInfinity(scip, -consdata0->rhs)) )
-      {
-         assert(!SCIPisInfinity(scip, consdata0->rhs));
 
+         /* remove redundant left hand side */
+         if( !SCIPisInfinity(scip, -consdata1->lhs) )
+         {
+            SCIP_CALL( chgLhs(scip, cons1, -SCIPinfinity(scip)) );
+            cons1isequality = FALSE;
+            if( !consdata1->upgraded )
+               (*nchgsides)++;
+         }
+      }
+      if( cons1dominatesrhs && (!cons0isequality || cons1dominateslhs || SCIPisInfinity(scip, -consdata0->lhs)) )
+      {
          /* right hand side is dominated by consdata1: delete right hand side of consdata0 */
          SCIPdebugMessage("right hand side of linear constraint <%s> is dominated by <%s>:\n",
             SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-         SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons0, NULL) ));
-         SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons1, NULL) ));
+         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ));
+         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ));
 
          /* check for infeasibility */
          if( SCIPisFeasLT(scip, consdata1->rhs, consdata0->lhs) )
          {
-            SCIPdebugMessage("linear constraint <%s> is infeasible\n", SCIPconsGetName(cons0));
+            SCIPdebugMessage("linear constraints <%s> and <%s> are infeasible\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1));
             *cutoff = TRUE;
             break;
          }
-         SCIP_CALL( chgRhs(scip, cons0, SCIPinfinity(scip)) );
-         cons0isequality = FALSE;
-         if( !consdata0->upgraded )
-            (*nchgsides)++;
-      }
-      else if( cons0dominatesrhs && (!cons1isequality || cons0dominateslhs || SCIPisInfinity(scip, -consdata1->rhs)) )
-      {
-         assert(!SCIPisInfinity(scip, consdata1->rhs));
 
+         /* remove redundant right hand side */
+         if( !SCIPisInfinity(scip, consdata0->rhs) )
+         {
+            SCIP_CALL( chgRhs(scip, cons0, SCIPinfinity(scip)) );
+            cons0isequality = FALSE;
+            if( !consdata0->upgraded )
+               (*nchgsides)++;
+         }
+      }
+      else if( cons0dominatesrhs && (!cons1isequality || cons0dominateslhs || SCIPisInfinity(scip, -consdata1->lhs)) )
+      {
          /* right hand side is dominated by consdata0: delete right hand side of consdata1 */
          SCIPdebugMessage("right hand side of linear constraint <%s> is dominated by <%s>:\n",
             SCIPconsGetName(cons1), SCIPconsGetName(cons0));
-         SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons1, NULL) ));
-         SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons0, NULL) ));
+         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ));
+         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ));
 
          /* check for infeasibility */
          if( SCIPisFeasLT(scip, consdata0->rhs, consdata1->lhs) )
          {
-            SCIPdebugMessage("linear constraint <%s> is infeasible\n", SCIPconsGetName(cons1));
+            SCIPdebugMessage("linear constraints <%s> and <%s> are infeasible\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1));
             *cutoff = TRUE;
             break;
          }
-         SCIP_CALL( chgRhs(scip, cons1, SCIPinfinity(scip)) );
-         cons1isequality = FALSE;
-         if( !consdata1->upgraded )
-            (*nchgsides)++;
-      }
 
-      /* check for disaggregated ranged rows */
-      if( coefsequal )
-      {
-         SCIP_Real lhs;
-         SCIP_Real rhs;
-
-         /* the coefficients of both rows are equal: use best left and right hand sides in cons0, and delete cons1 */
-         SCIPdebugMessage("aggregate linear constraints <%s> and <%s> into single ranged row\n",
-            SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-         SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons0, NULL) ));
-         SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons1, NULL) ));
-
-         lhs = MAX(consdata0->lhs, consdata1->lhs);
-         rhs = MIN(consdata0->rhs, consdata1->rhs);
-         if( SCIPisFeasLT(scip, rhs, lhs) )
-         {
-            SCIPdebugMessage("aggregated linear constraint <%s> is infeasible\n", SCIPconsGetName(cons0));
-            *cutoff = TRUE;
-            break;
-         }
-         if( SCIPisGT(scip, lhs, consdata0->lhs) )
-         {
-            SCIP_CALL( chgLhs(scip, cons0, lhs) );
-            if( !consdata0->upgraded )
-               (*nchgsides)++;
-         }
-         if( SCIPisLT(scip, rhs, consdata0->rhs) )
-         {
-            SCIP_CALL( chgRhs(scip, cons0, rhs) );
-            if( !consdata0->upgraded )
-               (*nchgsides)++;
-         }
-         if( !SCIPisInfinity(scip, -consdata0->lhs) )
-         {
-            SCIP_CALL( chgLhs(scip, cons1, -SCIPinfinity(scip)) );
-            if( !consdata0->upgraded )
-               (*nchgsides)++;
-         }
-         if( !SCIPisInfinity(scip, consdata0->rhs) )
+         /* remove redundant right hand side */
+         if( !SCIPisInfinity(scip, consdata1->rhs) )
          {
             SCIP_CALL( chgRhs(scip, cons1, SCIPinfinity(scip)) );
-            if( !consdata0->upgraded )
+            cons1isequality = FALSE;
+            if( !consdata1->upgraded )
                (*nchgsides)++;
          }
-         cons0isequality = SCIPisEQ(scip, lhs, rhs);
-         cons1isequality = FALSE;
-
-         SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons0, NULL) ));
-      }
-      if( coefsnegated )
-      {
-         SCIP_Real lhs;
-         SCIP_Real rhs;
-
-         /* the coefficients of both rows are negations: use best left and right hand sides in cons0, and delete cons1 */
-         SCIPdebugMessage("aggregate negated linear constraints <%s> and <%s> into single ranged row\n",
-            SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-         SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons0, NULL) ));
-         SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons1, NULL) ));
-
-         lhs = MAX(consdata0->lhs, -consdata1->rhs);
-         rhs = MIN(consdata0->rhs, -consdata1->lhs);
-         if( SCIPisFeasLT(scip, rhs, lhs) )
-         {
-            SCIPdebugMessage("aggregated linear constraint <%s> is infeasible\n", SCIPconsGetName(cons0));
-            *cutoff = TRUE;
-            break;
-         }
-         if( SCIPisGT(scip, lhs, consdata0->lhs) )
-         {
-            SCIP_CALL( chgLhs(scip, cons0, lhs) );
-            if( !consdata0->upgraded )
-               (*nchgsides)++;
-         }
-         if( SCIPisLT(scip, rhs, consdata0->rhs) )
-         {
-            SCIP_CALL( chgRhs(scip, cons0, rhs) );
-            if( !consdata0->upgraded )
-               (*nchgsides)++;
-         }
-         if( !SCIPisInfinity(scip, -consdata0->lhs) )
-         {
-            SCIP_CALL( chgLhs(scip, cons1, -SCIPinfinity(scip)) );
-            if( !consdata0->upgraded )
-               (*nchgsides)++;
-         }
-         if( !SCIPisInfinity(scip, consdata0->rhs) )
-         {
-            SCIP_CALL( chgRhs(scip, cons1, SCIPinfinity(scip)) );
-            if( !consdata0->upgraded )
-               (*nchgsides)++;
-         }
-         cons0isequality = SCIPisEQ(scip, lhs, rhs);
-         cons1isequality = FALSE;
-
-         SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons0, NULL) ));
       }
 
       /* check for now redundant constraints */
@@ -4967,6 +4881,62 @@ SCIP_RETCODE preprocessConstraintPairs(
          SCIP_CALL( SCIPdelCons(scip, cons1) );
          if( !consdata1->upgraded )
             (*ndelconss)++;
+         continue;
+      }
+
+      /* check for disaggregated ranged rows */
+      if( coefsequal || coefsnegated )
+      {
+         SCIP_CONS* newcons;
+         SCIP_Real lhs;
+         SCIP_Real rhs;
+         char name[SCIP_MAXSTRLEN];
+
+         /* the coefficients in both rows are either equal or negated: create a new constraint with same coeffients and
+          * best left and right hand sides; delete the old constraints afterwards
+          */
+         SCIPdebugMessage("aggregate linear constraints <%s> and <%s> with %s coefficients into single ranged row\n",
+            SCIPconsGetName(cons0), SCIPconsGetName(cons1), coefsequal ? "equal" : "negated");
+         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ));
+         SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ));
+
+         if( coefsequal )
+         {
+            /* the coefficients of both rows are equal */
+            lhs = MAX(consdata0->lhs, consdata1->lhs);
+            rhs = MIN(consdata0->rhs, consdata1->rhs);
+         }
+         else
+         {
+            /* the coefficients of both rows are negations */
+            lhs = MAX(consdata0->lhs, -consdata1->rhs);
+            rhs = MIN(consdata0->rhs, -consdata1->lhs);
+         }
+         if( SCIPisFeasLT(scip, rhs, lhs) )
+         {
+            SCIPdebugMessage("aggregated linear constraint <%s> is infeasible\n", SCIPconsGetName(cons0));
+            *cutoff = TRUE;
+            break;
+         }
+
+         /* create the new linear constraint */
+         sprintf(name, "%s_%s", SCIPconsGetName(cons0), SCIPconsGetName(cons1));
+         SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, name, consdata0->nvars, consdata0->vars, consdata0->vals, lhs, rhs,
+               SCIPconsIsInitial(cons0) || SCIPconsIsInitial(cons1), SCIPconsIsSeparated(cons0) || SCIPconsIsSeparated(cons1),
+               SCIPconsIsEnforced(cons0) || SCIPconsIsEnforced(cons1), SCIPconsIsChecked(cons0) || SCIPconsIsChecked(cons1),
+               SCIPconsIsPropagated(cons0) || SCIPconsIsPropagated(cons1), SCIPconsIsLocal(cons0) || SCIPconsIsLocal(cons1),
+               SCIPconsIsModifiable(cons0) || SCIPconsIsModifiable(cons1), 
+               SCIPconsIsDynamic(cons0) && SCIPconsIsDynamic(cons1), SCIPconsIsRemoveable(cons0) && SCIPconsIsRemoveable(cons1)) );
+         
+         /* normalize the new constraint */
+         SCIP_CALL( normalizeCons(scip, newcons) );
+
+         /* delete old constraints and add new one */
+         SCIP_CALL( SCIPdelCons(scip, cons0) );
+         SCIP_CALL( SCIPdelCons(scip, cons1) );
+         SCIP_CALL( SCIPaddCons(scip, newcons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+         (*ndelconss)++;
          continue;
       }
 
@@ -5492,7 +5462,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       assert(SCIPconsIsActive(cons));
 
       SCIPdebugMessage("presolving linear constraint <%s>\n", SCIPconsGetName(cons));
-      SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
+      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
 
       /* apply presolving as long as possible on the single constraint */
       while( !consdata->presolved )

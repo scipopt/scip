@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.108 2005/08/24 17:26:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.109 2005/08/28 11:03:06 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -2440,7 +2440,7 @@ SCIP_RETCODE applyFixings(
    assert(consdata->onesweightsum == 0);
 
    SCIPdebugMessage("after fixings:\n");
-   SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
+   SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
 
    /* if aggregated variables have been replaced, multiple entries of the same variable are possible and we have
     * to clean up the constraint
@@ -2448,7 +2448,7 @@ SCIP_RETCODE applyFixings(
    SCIP_CALL( mergeMultiples(scip, cons) );
    
    SCIPdebugMessage("after merging:\n");
-   SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
+   SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
 
    return SCIP_OKAY;
 }
@@ -3457,7 +3457,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          continue;
 
       SCIPdebugMessage("presolving knapsack constraint <%s>\n", SCIPconsGetName(cons));
-      SCIPdebug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
+      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
 
       consdata->presolved = TRUE;
 

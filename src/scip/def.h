@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.83 2005/08/24 17:26:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.84 2005/08/28 11:03:06 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -171,39 +171,39 @@
 
 #define SCIPABORT() assert(FALSE)
 
-#define SCIP_CALL_ABORT_QUIET(x) do { if( (x) != SCIP_OKAY ) SCIPABORT(); } while( FALSE )
-#define SCIP_CALL_QUIET(x)  do { SCIP_RETCODE _restat_; if( (_restat_ = (x)) != SCIP_OKAY ) return _restat_; } while( FALSE )
+#define SCIP_CALL_ABORT_QUIET(x)  do { if( (x) != SCIP_OKAY ) SCIPABORT(); } while( FALSE )
+#define SCIP_CALL_QUIET(x)        do { SCIP_RETCODE _restat_; if( (_restat_ = (x)) != SCIP_OKAY ) return _restat_; } while( FALSE )
 #define SCIP_ALLOC_ABORT_QUIET(x) do { if( NULL == (x) ) SCIPABORT(); } while( FALSE )
-#define SCIP_ALLOC_QUIET(x)  do { if( NULL == (x) ) return SCIP_NOMEMORY; } while( FALSE )
+#define SCIP_ALLOC_QUIET(x)       do { if( NULL == (x) ) return SCIP_NOMEMORY; } while( FALSE )
 
-#define SCIP_CALL_ABORT(x) do                                                                                     \
+#define SCIP_CALL_ABORT(x) do                                                                                 \
                        {                                                                                      \
-                          SCIP_RETCODE _restat_;                                                                   \
+                          SCIP_RETCODE _restat_;                                                              \
                           if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
                           {                                                                                   \
-                             SCIPerrorMessage("Error <%d> in function call\n", _restat_);                         \
+                             SCIPerrorMessage("Error <%d> in function call\n", _restat_);                     \
                              SCIPABORT();                                                                     \
                           }                                                                                   \
                        }                                                                                      \
                        while( FALSE )
 
-#define SCIP_ALLOC_ABORT(x) do                                                                                     \
+#define SCIP_ALLOC_ABORT(x) do                                                                                \
                        {                                                                                      \
                           if( NULL == (x) )                                                                   \
                           {                                                                                   \
-                             SCIPerrorMessage("No memory in function call\n", __FILE__, __LINE__);                \
+                             SCIPerrorMessage("No memory in function call\n", __FILE__, __LINE__);            \
                              SCIPABORT();                                                                     \
                           }                                                                                   \
                        }                                                                                      \
                        while( FALSE )
 
 #ifndef NDEBUG
-#define SCIP_CALL(x)  do                                                                                     \
+#define SCIP_CALL(x)   do                                                                                     \
                        {                                                                                      \
-                          SCIP_RETCODE _restat_;                                                                   \
+                          SCIP_RETCODE _restat_;                                                              \
                           if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
                           {                                                                                   \
-                             SCIPerrorMessage("Error <%d> in function call\n", _restat_);                         \
+                             SCIPerrorMessage("Error <%d> in function call\n", _restat_);                     \
                              return _restat_;                                                                 \
                            }                                                                                  \
                        }                                                                                      \
@@ -213,13 +213,13 @@
                        {                                                                                      \
                           if( NULL == (x) )                                                                   \
                           {                                                                                   \
-                             SCIPerrorMessage("No memory in function call\n");                                    \
+                             SCIPerrorMessage("No memory in function call\n");                                \
                              return SCIP_NOMEMORY;                                                            \
                           }                                                                                   \
                        }                                                                                      \
                        while( FALSE )
 #else
-#define SCIP_CALL(x)  SCIP_CALL_QUIET(x)
+#define SCIP_CALL(x)   SCIP_CALL_QUIET(x)
 #define SCIP_ALLOC(x)  SCIP_ALLOC_QUIET(x)
 #endif
 
