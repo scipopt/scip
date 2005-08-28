@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.156 2005/08/24 17:26:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.157 2005/08/28 12:29:08 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -2658,7 +2658,7 @@ int SCIPsetGetSepaMaxcuts(
  * simple functions implemented as defines
  */
 
-/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
+/* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  * In optimized mode, the methods are implemented as defines to improve performance.
  * However, we want to have them in the library anyways, so we have to undef the defines.

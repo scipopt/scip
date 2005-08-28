@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.156 2005/08/24 17:27:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.157 2005/08/28 12:29:09 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4105,7 +4105,7 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
  * simple functions implemented as defines
  */
 
-/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
+/* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  * In optimized mode, the methods are implemented as defines to improve performance.
  * However, we want to have them in the library anyways, so we have to undef the defines.

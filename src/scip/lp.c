@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.205 2005/08/24 17:26:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.206 2005/08/28 12:29:07 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -11634,7 +11634,7 @@ SCIP_RETCODE SCIPlpWrite(
  * simple functions implemented as defines
  */
 
-/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
+/* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  * In optimized mode, the methods are implemented as defines to improve performance.
  * However, we want to have them in the library anyways, so we have to undef the defines.

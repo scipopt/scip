@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.181 2005/08/24 17:27:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.182 2005/08/28 12:29:09 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -9080,7 +9080,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
  * simple functions implemented as defines
  */
 
-/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
+/* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  * In optimized mode, the methods are implemented as defines to improve performance.
  * However, we want to have them in the library anyways, so we have to undef the defines.

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.c,v 1.23 2005/08/24 17:26:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.c,v 1.24 2005/08/28 12:29:06 bzfpfend Exp $"
 
 /**@file   history.c
  * @brief  methods for branching and inference history
@@ -182,7 +182,7 @@ void SCIPhistoryUpdatePseudocost(
  * simple functions implemented as defines
  */
 
-/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
+/* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  * In optimized mode, the methods are implemented as defines to improve performance.
  * However, we want to have them in the library anyways, so we have to undef the defines.

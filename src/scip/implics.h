@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.h,v 1.9 2005/08/28 12:24:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.h,v 1.10 2005/08/28 12:29:07 bzfpfend Exp $"
 
 /**@file   implics.h
  * @brief  methods for implications, variable bounds, and cliques
@@ -86,7 +86,7 @@ void SCIPvboundsShrink(
 
 #ifndef NDEBUG
 
-/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
+/* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
 
@@ -181,7 +181,7 @@ SCIP_Bool SCIPimplicsContainsImpl(
 
 #ifndef NDEBUG
 
-/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
+/* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
 
@@ -362,7 +362,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 
 #ifndef NDEBUG
 
-/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
+/* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.110 2005/08/28 12:24:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.111 2005/08/28 12:29:07 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -1047,7 +1047,7 @@ SCIP_RETCODE SCIPlpWrite(
 
 #ifndef NDEBUG
 
-/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
+/* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
 

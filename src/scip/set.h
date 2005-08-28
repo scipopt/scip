@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.89 2005/08/28 12:24:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.90 2005/08/28 12:29:08 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -637,7 +637,7 @@ int SCIPsetGetSepaMaxcuts(
 
 #ifndef NDEBUG
 
-/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
+/* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_tree.h,v 1.16 2005/08/24 17:26:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_tree.h,v 1.17 2005/08/28 12:29:08 bzfpfend Exp $"
 
 /**@file   pub_tree.h
  * @brief  public methods for branch and bound tree
@@ -47,7 +47,7 @@ SCIP_DECL_SORTPTRCOMP(SCIPnodeCompLowerbound);
 
 #ifndef NDEBUG
 
-/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
+/* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
 

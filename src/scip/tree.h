@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.83 2005/08/28 12:24:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.84 2005/08/28 12:29:09 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -414,7 +414,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
 
 #ifndef NDEBUG
 
-/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
+/* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
 

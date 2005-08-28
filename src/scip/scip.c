@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.307 2005/08/26 14:09:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.308 2005/08/28 12:29:08 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -71,7 +71,7 @@
 #include "scip/prop.h"
 
 
-/* In SCIPdebug mode, we include the SCIP's structure in scip.c, such that no one can access
+/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
  * this structure except the interface methods in scip.c.
  * In optimized mode, the structure is included in scip.h, because some of the methods
  * are implemented as defines for performance reasons (e.g. the numerical comparisons)
@@ -13182,7 +13182,7 @@ void SCIPprintMemoryDiagnostic(
  * simple functions implemented as defines
  */
 
-/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
+/* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  * In optimized mode, the methods are implemented as defines to improve performance.
  * However, we want to have them in the library anyways, so we have to undef the defines.

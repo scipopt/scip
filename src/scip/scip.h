@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.240 2005/08/28 12:24:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.241 2005/08/28 12:29:08 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -88,7 +88,7 @@
 #include "scip/lpi.h"
 
 
-/* In SCIPdebug mode, we include the SCIP's structure in scip.c, such that no one can access
+/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
  * this structure except the interface methods in scip.c.
  * In optimized mode, the structure is included in scip.h, because some of the methods
  * are implemented as defines for performance reasons (e.g. the numerical comparisons).
@@ -4946,7 +4946,7 @@ SCIP_RETCODE SCIPchgBarrierconvtol(
 
 #ifndef NDEBUG
 
-/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
+/* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
 
@@ -5544,7 +5544,7 @@ void SCIPprintMemoryDiagnostic(
 
 #ifndef NDEBUG
 
-/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
+/* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
 

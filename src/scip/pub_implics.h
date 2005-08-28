@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_implics.h,v 1.4 2005/08/24 17:26:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_implics.h,v 1.5 2005/08/28 12:29:07 bzfpfend Exp $"
 
 /**@file   implics.h
  * @brief  public methods for implications, variable bounds, and cliques
@@ -62,7 +62,7 @@ SCIP_Bool SCIPcliqueHasVar(
 
 #ifndef NDEBUG
 
-/* In SCIPdebug mode, the following methods are implemented as function calls to ensure
+/* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
 

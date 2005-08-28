@@ -13,14 +13,11 @@ $(LIBOBJDIR)/scip/lpi_clp.o: src/scip/lpi_clp.cpp lib/clpinc/ClpSimplex.hpp \
   lib/clpinc/ClpFactorization.hpp lib/clpinc/CoinFactorization.hpp \
   lib/clpinc/ClpSimplexDual.hpp src/scip/lpi.h src/scip/def.h \
   src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
-  src/scip/struct_message.h src/scip/pub_message.h src/scip/memory.h \
-  src/scip/type_lpi.h src/scip/bitencode.h
+  src/scip/struct_message.h src/scip/pub_message.h \
+  src/blockmemshell/memory.h src/scip/type_lpi.h src/scip/bitencode.h
 $(LIBOBJDIR)/scip/bitencode.o: src/scip/bitencode.c src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
   src/scip/pub_message.h src/scip/bitencode.h
-$(LIBOBJDIR)/scip/memory.o: src/scip/memory.c src/scip/def.h src/scip/type_retcode.h \
-  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
-  src/scip/pub_message.h src/scip/memory.h
 $(LIBOBJDIR)/scip/message.o: src/scip/message.c src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
-  src/scip/pub_message.h src/scip/memory.h
+  src/scip/pub_message.h src/blockmemshell/memory.h
