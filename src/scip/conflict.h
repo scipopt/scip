@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.33 2005/08/24 17:26:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.34 2005/08/28 12:23:59 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -28,7 +28,7 @@
 
 
 #include "scip/def.h"
-#include "scip/memory.h"
+#include "blockmemshell/memory.h"
 #include "scip/type_retcode.h"
 #include "scip/type_set.h"
 #include "scip/type_stat.h"

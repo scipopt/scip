@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.82 2005/08/24 17:27:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.83 2005/08/28 12:24:03 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -28,7 +28,7 @@
 
 
 #include "scip/def.h"
-#include "scip/memory.h"
+#include "blockmemshell/memory.h"
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
 #include "scip/type_event.h"

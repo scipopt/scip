@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.10 2005/08/24 17:26:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.11 2005/08/28 12:23:59 bzfpfend Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -29,7 +29,7 @@
 
 #include "scip/def.h"
 #include "scip/message.h"
-#include "scip/memory.h"
+#include "blockmemshell/memory.h"
 #include "scip/set.h"
 #include "scip/misc.h"
 #include "scip/lp.h"

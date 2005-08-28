@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.h,v 1.12 2005/08/24 17:26:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: relax.h,v 1.13 2005/08/28 12:24:01 bzfpfend Exp $"
 
 /**@file   relax.h
  * @brief  internal methods for relaxators
@@ -28,7 +28,7 @@
 
 
 #include "scip/def.h"
-#include "scip/memory.h"
+#include "blockmemshell/memory.h"
 #include "scip/type_retcode.h"
 #include "scip/type_result.h"
 #include "scip/type_set.h"

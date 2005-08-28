@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.23 2005/08/26 14:18:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.24 2005/08/28 12:24:00 bzfpfend Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -1565,8 +1565,8 @@ SCIP_RETCODE SCIPlpiStrongbranch(
 
    *down += objval;
    *up += objval;
-   *downvalid = TRUE;
-   *upvalid = TRUE;
+   *downvalid = FALSE; /* ?????? we don't trust CLP's strong branching call - there seem to be numerical difficulties (see flugpl.mps) */
+   *upvalid = FALSE; /* ?????? we don't trust CLP's strong branching call - there seem to be numerical difficulties (see flugpl.mps) */
 
    if (iter)
       *iter = outputIterations[0] + outputIterations[1];

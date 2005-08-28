@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.119 2005/08/22 18:35:28 bzfpfend Exp $
+# $Id: Makefile,v 1.120 2005/08/28 12:23:58 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -64,7 +64,7 @@ LINT		=	flexelint
 DOXY		=	doxygen
 CPLEX		=	cplex
 
-FLAGS		=	-I$(SRCDIR)
+FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF
 OFLAGS		=
 CFLAGS		=	
 CXXFLAGS	=	
@@ -89,7 +89,7 @@ BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LINK)
 OBJDIR		=	obj/O.$(BASE)
 BINOBJDIR	=	$(OBJDIR)/bin
 LIBOBJDIR	=	$(OBJDIR)/lib
-LIBOBJSUBDIRS	=	scip objscip
+LIBOBJSUBDIRS	=	scip objscip blockmemshell tclique
 SRCDIR		=	src
 BINDIR		=	bin
 LIBDIR		=	lib
@@ -117,7 +117,7 @@ LPILIBNAME	=	lpi$(LPS)
 ifeq ($(LPS),cpx)
 FLAGS		+=	-I$(LIBDIR)/cpxinc
 LPSLDFLAGS	=	-lcplex.$(OSTYPE).$(ARCH).$(COMP)
-LPILIBOBJ	=	scip/lpi_cpx.o scip/bitencode.o scip/memory.o scip/message.o
+LPILIBOBJ	=	scip/lpi_cpx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 endif
 
@@ -125,7 +125,7 @@ ifeq ($(LPS),spx)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc 
 LPSLDFLAGS	=	-lsoplex.$(OSTYPE).$(ARCH).$(COMP)
-LPILIBOBJ	=	scip/lpi_spx.o scip/bitencode.o scip/memory.o scip/message.o
+LPILIBOBJ	=	scip/lpi_spx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	src/scip/lpi_spx.cpp src/scip/bitencode.c src/scip/memory.c src/scip/message.c
 endif
 
@@ -133,7 +133,7 @@ ifeq ($(LPS),spxdbg)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc 
 LPSLDFLAGS	=	-lsoplexdbg.$(OSTYPE).$(ARCH).$(COMP)
-LPILIBOBJ	=	scip/lpi_spx.o scip/bitencode.o scip/memory.o scip/message.o
+LPILIBOBJ	=	scip/lpi_spx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	src/scip/lpi_spx.cpp src/scip/bitencode.c src/scip/memory.c src/scip/message.c
 endif
 
@@ -141,7 +141,7 @@ ifeq ($(LPS),spx121)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spx121inc 
 LPSLDFLAGS	=	-lsoplex121.$(OSTYPE).$(ARCH).$(COMP)
-LPILIBOBJ	=	scip/lpi_spx121.o scip/bitencode.o scip/memory.o scip/message.o
+LPILIBOBJ	=	scip/lpi_spx121.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	src/scip/lpi_spx121.cpp src/scip/bitencode.c src/scip/memory.c src/scip/message.c
 endif
 
@@ -150,7 +150,7 @@ LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/clpinc
 #LPSLDFLAGS	=	-lclp.$(OSTYPE).$(ARCH).$(COMP) -lcoin.$(OSTYPE).$(ARCH).$(COMP)
 LPSLDFLAGS	=	-L$(LIBDIR)/clpinc/../lib -Wl,-rpath,$(LIBDIR)/clpinc/../lib -lClp -lCoin
-LPILIBOBJ	=	scip/lpi_clp.o scip/bitencode.o scip/memory.o scip/message.o
+LPILIBOBJ	=	scip/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	src/scip/lpi_clp.cpp src/scip/bitencode.c src/scip/memory.c src/scip/message.c
 endif
 
@@ -158,7 +158,7 @@ ifeq ($(LPS),clpdbg)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/clpinc
 LPSLDFLAGS	=	-lclpdbg.$(OSTYPE).$(ARCH).$(COMP) -lcoindbg.$(OSTYPE).$(ARCH).$(COMP)
-LPILIBOBJ	=	scip/lpi_clp.o scip/bitencode.o scip/memory.o scip/message.o
+LPILIBOBJ	=	scip/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	src/scip/lpi_clp.cpp src/scip/bitencode.c src/scip/memory.c src/scip/message.c
 endif
 
@@ -190,7 +190,6 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/intervalarith.o \
 			scip/lp.o \
 			scip/mem.o \
-			scip/memory.o \
 			scip/message.o \
 			scip/misc.o \
 			scip/nodesel.o \
@@ -264,9 +263,10 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/sepa_impliedbounds.o \
 			scip/sepa_intobj.o \
 			scip/sepa_strongcg.o \
-			scip/tclique_branch.o \
-			scip/tclique_coloring.o \
-			scip/tclique_graph.o
+			blockmemshell/memory.o \
+			tclique/tclique_branch.o \
+			tclique/tclique_coloring.o \
+			tclique/tclique_graph.o
 
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).$(LIBEXT)

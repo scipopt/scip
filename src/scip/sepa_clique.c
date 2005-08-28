@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.16 2005/08/24 17:26:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.17 2005/08/28 12:24:02 bzfpfend Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -27,7 +27,7 @@
 #include <assert.h>
 
 #include "scip/sepa_clique.h"
-#include "scip/tclique.h"
+#include "tclique/tclique.h"
 
 
 #define SEPA_NAME              "clique"

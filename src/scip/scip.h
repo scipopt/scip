@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.239 2005/08/26 14:09:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.240 2005/08/28 12:24:01 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -33,7 +33,7 @@
 #include <stdio.h>
 
 #include "scip/def.h"
-#include "scip/memory.h"
+#include "blockmemshell/memory.h"
 #include "scip/type_retcode.h"
 #include "scip/type_result.h"
 #include "scip/type_clock.h"

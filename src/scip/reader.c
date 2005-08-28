@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.29 2005/08/24 17:26:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.30 2005/08/28 12:24:01 bzfpfend Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -28,7 +28,7 @@
 #include <strings.h>
 
 #include "scip/def.h"
-#include "scip/memory.h"
+#include "blockmemshell/memory.h"
 #include "scip/set.h"
 #include "scip/misc.h"
 #include "scip/reader.h"

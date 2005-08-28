@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.57 2005/08/26 14:09:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.58 2005/08/28 12:24:00 bzfpfend Exp $"
 
 /**@file   lpi.h
  * @brief  interface methods for specific LP solvers
@@ -28,7 +28,7 @@
 
 
 #include "scip/def.h"
-#include "scip/memory.h"
+#include "blockmemshell/memory.h"
 #include "scip/type_retcode.h"
 #include "scip/type_lpi.h"
 

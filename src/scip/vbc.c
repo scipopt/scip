@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.16 2005/08/24 17:27:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.17 2005/08/28 12:24:04 bzfpfend Exp $"
 
 /**@file   vbc.c
  * @brief  methods for VBC Tool output
@@ -26,7 +26,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "scip/memory.h"
+#include "blockmemshell/memory.h"
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/clock.h"

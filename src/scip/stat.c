@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.65 2005/08/24 17:26:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.66 2005/08/28 12:24:02 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -26,7 +26,7 @@
 #include <assert.h>
 
 #include "scip/def.h"
-#include "scip/memory.h"
+#include "blockmemshell/memory.h"
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/clock.h"

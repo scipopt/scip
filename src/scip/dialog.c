@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.24 2005/08/24 17:26:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.25 2005/08/28 12:23:59 bzfpfend Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -35,7 +35,7 @@
 
 #include "scip/def.h"
 #include "scip/message.h"
-#include "scip/memory.h"
+#include "blockmemshell/memory.h"
 #include "scip/set.h"
 #include "scip/dialog.h"
 

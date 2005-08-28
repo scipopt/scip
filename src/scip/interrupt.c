@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: interrupt.c,v 1.19 2005/08/24 17:26:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: interrupt.c,v 1.20 2005/08/28 12:24:00 bzfpfend Exp $"
 
 /**@file   interrupt.c
  * @brief  methods and datastructures for catching the user CTRL-C interrupt
@@ -30,7 +30,7 @@
 
 #include "scip/def.h"
 #include "scip/message.h"
-#include "scip/memory.h"
+#include "blockmemshell/memory.h"
 #include "scip/interrupt.h"
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.c,v 1.19 2005/08/24 17:26:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: message.c,v 1.20 2005/08/28 12:24:00 bzfpfend Exp $"
 
 /**@file   message.c
  * @brief  message output methods
@@ -28,7 +28,7 @@
 #include <assert.h>
 
 #include "scip/def.h"
-#include "scip/memory.h"
+#include "blockmemshell/memory.h"
 #include "scip/message.h"
 
 

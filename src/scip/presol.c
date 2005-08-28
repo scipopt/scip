@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.31 2005/08/24 17:26:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.32 2005/08/28 12:24:01 bzfpfend Exp $"
 
 /**@file   presol.c
  * @brief  methods for presolvers
@@ -27,7 +27,7 @@
 #include <string.h>
 
 #include "scip/def.h"
-#include "scip/memory.h"
+#include "blockmemshell/memory.h"
 #include "scip/set.h"
 #include "scip/clock.h"
 #include "scip/paramset.h"
