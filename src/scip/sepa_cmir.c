@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.39 2005/08/24 17:26:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.40 2005/08/29 21:02:39 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -85,9 +85,9 @@ struct SCIP_SepaData
    int                   maxaggrsroot;       /**< maximal number of aggreagtions for each row per round in the root node */
    int                   maxsepacuts;        /**< maximal number of cmir cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of cmir cuts separated per separation round in root node */
-   int                   maxtestdelta;	/**< maximal number of different deltas to try */
+   int                   maxtestdelta;	     /**< maximal number of different deltas to try */
    int                   maxtestdeltaroot;   /**< maximal number of different deltas to try in the root node */
-   int                   maxconts;	        /**< maximal number of active continuous variables in aggregated row */
+   int                   maxconts;	     /**< maximal number of active continuous variables in aggregated row */
    int                   maxcontsroot;       /**< maximal number of active continuous variables in aggregated row in the root */
    SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
 };
@@ -386,8 +386,8 @@ SCIP_RETCODE aggregation(
    int                   startrow,           /**< index of row to start aggregation */ 
    int                   maxaggrs,           /**< maximal number of aggregations */
    SCIP_Real             maxslack,           /**< maximal slack of rows to be used in aggregation */
-   int                   maxtestdelta,	/**< maximal number of different deltas to try */
-   int                   maxconts,	        /**< maximal number of active continuous variables in aggregated row */
+   int                   maxtestdelta,       /**< maximal number of different deltas to try */
+   int                   maxconts,           /**< maximal number of active continuous variables in aggregated row */
    char                  normtype,           /**< type of norm to use for efficacy norm calculation */
    int*                  ncuts               /**< pointer to count the number of generated cuts */
    )
@@ -396,6 +396,11 @@ SCIP_RETCODE aggregation(
    SCIP_Real* rowweights;      /* weight of rows in all aggregations */ 
    SCIP_Real* testeddeltas;
    SCIP_Real maxweight;
+   int* aggrnonzidxs;
+   int* aggrintnonzposs;
+   int naggrintnonzs;
+   int* aggrcontnonzposs;
+   int naggrcontnonzs;
 
    int nstartnonzcols;    /* number of nonzero columns of startrow */
    SCIP_COL** startnonzcols;   /* columns with nonzero coefficients of startrow */
@@ -441,6 +446,9 @@ SCIP_RETCODE aggregation(
 
    /* get temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrcoefs, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &aggrnonzidxs, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &aggrintnonzposs, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &aggrcontnonzposs, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rowweights, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &testeddeltas, ncols) );
@@ -465,6 +473,8 @@ SCIP_RETCODE aggregation(
    
    /* for all columns of startrow store coefficient as coefficient in aggregated row */ 
    BMSclearMemoryArray(aggrcoefs, ncols);
+   naggrintnonzs = 0;
+   naggrcontnonzs = 0;
    nconts = 0;
    nactiveconts = 0;
    for( c = 0; c < nstartnonzcols; c++ )
@@ -475,9 +485,21 @@ SCIP_RETCODE aggregation(
       var = SCIPcolGetVar(startnonzcols[c]);
       pos = SCIPcolGetLPPos(startnonzcols[c]);
       assert(pos >= 0); 
+      assert(!SCIPisZero(scip, startnonzcoefs[c]));
       aggrcoefs[pos] = rowweights[startrow] * startnonzcoefs[c];
       if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+      {
          updateNConts(scip, startnonzcols[c], +1, &nconts, &nactiveconts);
+         aggrnonzidxs[pos] = naggrcontnonzs;
+         aggrcontnonzposs[naggrcontnonzs] = pos;
+         naggrcontnonzs++;
+      }
+      else
+      {
+         aggrnonzidxs[pos] = naggrintnonzs;
+         aggrintnonzposs[naggrintnonzs] = pos;
+         naggrintnonzs++;
+      }
    }
 
    /* try to generate cut from the current aggregated row 
@@ -494,11 +516,13 @@ SCIP_RETCODE aggregation(
       SCIP_ROW* bestrow;          
       SCIP_COL** bestrownonzcols;     /* columns with nonzero coefficients in best row to add */
       SCIP_Real* bestrownonzcoefs;    /* nonzero coefficients of columns in best row to add */
-      int nbestrownonzcols;      /* number of columns with nonzero coefficients in best row to add */
+      int nbestrownonzcols;           /* number of columns with nonzero coefficients in best row to add */
       SCIP_Real bestbounddist;
       SCIP_Real bestscore;
       SCIP_Real aggrfac;
       SCIP_Real absaggrfac;
+      SCIP_Real maxaggrcoef;
+      int nzi;
 
 #ifdef SCIP_DEBUG
       SCIPdebugMessage("aggregation of startrow %d and %d additional rows with %d continuous variables (%d active):\n",
@@ -520,41 +544,45 @@ SCIP_RETCODE aggregation(
       ntesteddeltas = 0;
       bestdelta = 0.0;
       bestefficacy = 0.0;
-      for( c = 0; c < ncols && ntesteddeltas < maxtestdelta; c++ )
+      maxaggrcoef = 0.0;
+      for( nzi = 0; nzi < naggrintnonzs; ++nzi )
       {
-         SCIP_VAR* var;
          SCIP_Real primsol;
          SCIP_Real lb;
          SCIP_Real ub;
          SCIP_Real delta;
          SCIP_Real cutact;
          SCIP_Real efficacy;
+         SCIP_Real absaggrcoef;
          SCIP_Bool tested;
          int i;
 
-         /* ignore variables not existing in current aggregation (or with close to zero coefficients) */
-         if( SCIPisZero(scip, aggrcoefs[c]) )
-            continue;
+         c = aggrintnonzposs[nzi];
+         assert(0 <= c && c < ncols);
+         assert(aggrnonzidxs[c] == nzi);
+         assert(!SCIPisZero(scip, aggrcoefs[c]));
+         assert(SCIPvarIsIntegral(SCIPcolGetVar(cols[c])));
+         assert(SCIPvarGetType(SCIPcolGetVar(cols[c])) != SCIP_VARTYPE_CONTINUOUS);
 
-         /* ignore continuous variables */
-         var = SCIPcolGetVar(cols[c]);
-         if( !SCIPvarIsIntegral(var) )
-            continue;
+         /* update maximum aggregation coefficient */
+         absaggrcoef = REALABS(aggrcoefs[c]);
+         maxaggrcoef = MAX(maxaggrcoef, absaggrcoef);
+         if( ntesteddeltas >= maxtestdelta )
+            continue; /* remaining loop is only for maxaggrcoef calculations */
 
-         assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
          primsol = SCIPcolGetPrimsol(cols[c]);
          lb = SCIPcolGetLb(cols[c]);
          ub = SCIPcolGetUb(cols[c]);
-         assert(SCIPisEQ(scip, primsol, varsolvals[SCIPvarGetProbindex(var)]));
-         assert(SCIPisEQ(scip, lb, SCIPvarGetLbLocal(var)));
-         assert(SCIPisEQ(scip, ub, SCIPvarGetUbLocal(var)));
+         assert(SCIPisEQ(scip, primsol, varsolvals[SCIPvarGetProbindex(SCIPcolGetVar(cols[c]))]));
+         assert(SCIPisEQ(scip, lb, SCIPvarGetLbLocal(SCIPcolGetVar(cols[c]))));
+         assert(SCIPisEQ(scip, ub, SCIPvarGetUbLocal(SCIPcolGetVar(cols[c]))));
 
          /* ignore variables with current solution value on its bounds */
          if( SCIPisEQ(scip, primsol, lb) || SCIPisEQ(scip, primsol, ub) )
             continue;
 
          /* try to divide the aggregation by this coefficient */
-         delta = 1 / REALABS(aggrcoefs[c]);
+         delta = 1 / absaggrcoef;
          if( SCIPisFeasZero(scip, delta) )
             continue;
 
@@ -587,7 +615,38 @@ SCIP_RETCODE aggregation(
             }
          }
       }
-  
+
+      /* try additional delta: maximum coefficient of all integer variables plus one */
+      if( maxaggrcoef > 0.0 )
+      {
+         SCIP_Real delta;
+         SCIP_Real cutact;
+         SCIP_Real efficacy;
+
+         delta = 1.0/(maxaggrcoef + 1.0);
+         if( !SCIPisFeasZero(scip, delta) )
+         {
+            /* create a MIR cut out of the weighted LP rows */
+            SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->maxrowfac, MINFRAC,
+                  rowweights, delta, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
+            assert(ALLOWLOCAL || !cutislocal);
+            SCIPdebugMessage("delta = %g -> success: %d\n", delta, success);
+         
+            /* delta generates cut which is more violated */
+            if( success )
+            {
+               efficacy = calcEfficacy(nvars, cutcoefs, cutrhs, cutact);
+               SCIPdebugMessage("act = %g  rhs = %g  eff = %g, old besteff = %g\n", 
+                  cutact, cutrhs, efficacy, bestefficacy);
+               if( efficacy > bestefficacy )
+               {
+                  bestdelta = delta;
+                  bestefficacy = efficacy;
+               }
+            }
+         }
+      }
+
       /* delta found */
       if( SCIPisEfficacious(scip, bestefficacy) )
       {
@@ -659,9 +718,8 @@ SCIP_RETCODE aggregation(
       bestscore = -SCIPinfinity(scip);
       bestrow = NULL;
       aggrfac = 0.0;
-      for( c = 0; c < ncols; c++ )
+      for( nzi = 0; nzi < naggrcontnonzs; ++nzi )
       {
-         SCIP_VAR* var;
          SCIP_COL* col;
          SCIP_Real primsol;
          SCIP_Real lb;
@@ -669,18 +727,15 @@ SCIP_RETCODE aggregation(
          SCIP_Real distlower;
          SCIP_Real distupper;
          SCIP_Real bounddist;
-         
-         /* ignore columns not in current aggregation */
-         if( aggrcoefs[c] == 0.0 )
-            continue;
+
+         c = aggrcontnonzposs[nzi];
+         assert(0 <= c && c < ncols);
+         assert(aggrnonzidxs[c] == nzi);
+         assert(!SCIPisZero(scip, aggrcoefs[c]));
 
          col = cols[c];
-         var = SCIPcolGetVar(col);
-         
-         /* ignore integral variables */
-         if( SCIPvarIsIntegral(var) )
-            continue;
-         
+         assert(!SCIPvarIsIntegral(SCIPcolGetVar(col)));
+
          /* get minimum distance of LP solution value of variable to its bounds */
          primsol = SCIPcolGetPrimsol(col);
          lb = SCIPcolGetLb(col);
@@ -696,7 +751,8 @@ SCIP_RETCODE aggregation(
             SCIP_Real* nonzcoefs;
             int nnonzrows;
             
-            SCIPdebugMessage("     -> col <%s>[%g,%g]: sol=%g, dist=%g\n", SCIPvarGetName(var), lb, ub, primsol, bounddist);
+            SCIPdebugMessage("     -> col <%s>[%g,%g]: sol=%g, dist=%g\n", 
+               SCIPvarGetName(SCIPcolGetVar(col)), lb, ub, primsol, bounddist);
             
             /* look for "best" row to add (minimal slack), but don't add rows again,
              * that are already involved in aggregation
@@ -760,7 +816,7 @@ SCIP_RETCODE aggregation(
          }
       }
       assert((bestcol == NULL) == (bestrow == NULL));
-         
+
       /* abort, if no row can be added to remove an additional active continuous variable */
       if( bestcol == NULL )
          break;
@@ -788,20 +844,69 @@ SCIP_RETCODE aggregation(
       {
          SCIP_VAR* var;
          int pos;
+         SCIP_Bool iscont;
+         SCIP_Bool waszero;
+         SCIP_Bool iszero;
 
          var = SCIPcolGetVar(bestrownonzcols[c]);
          pos = SCIPcolGetLPPos(bestrownonzcols[c]);
          assert(pos >= 0);
+         assert(!SCIPisZero(scip, bestrownonzcoefs[c]));
 
-         if( aggrcoefs[pos] != 0.0 && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-            updateNConts(scip, bestrownonzcols[c], -1, &nconts, &nactiveconts);
+         iscont = (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+         waszero = (aggrcoefs[pos] == 0.0);
          aggrcoefs[pos] += bestrownonzcoefs[c] * aggrfac;
-         if( SCIPisZero(scip, aggrcoefs[pos]) )
+         iszero = SCIPisZero(scip, aggrcoefs[pos]);
+
+         if( iszero )
+         {
             aggrcoefs[pos] = 0.0;
-         else if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-            updateNConts(scip, bestrownonzcols[c], +1, &nconts, &nactiveconts);
+            if( !waszero )
+            {
+               /* coefficient switched from non-zero to zero */
+               if( iscont )
+               {
+                  nzi = aggrnonzidxs[pos];
+                  assert(0 <= nzi && nzi < naggrcontnonzs);
+                  assert(aggrcontnonzposs[nzi] == pos);
+                  aggrcontnonzposs[nzi] = aggrcontnonzposs[naggrcontnonzs-1];
+                  aggrnonzidxs[aggrcontnonzposs[nzi]] = nzi;
+                  naggrcontnonzs--;
+                  updateNConts(scip, bestrownonzcols[c], -1, &nconts, &nactiveconts);
+               }
+               else
+               {
+                  nzi = aggrnonzidxs[pos];
+                  assert(0 <= nzi && nzi < naggrintnonzs);
+                  assert(aggrintnonzposs[nzi] == pos);
+                  aggrintnonzposs[nzi] = aggrintnonzposs[naggrintnonzs-1];
+                  aggrnonzidxs[aggrintnonzposs[nzi]] = nzi;
+                  naggrintnonzs--;
+               }
+            }
+         }
+         else if( waszero )
+         {
+            /* coefficient switched from zero to non-zero */
+            if( iscont )
+            {
+               assert(naggrcontnonzs < ncols);
+               aggrnonzidxs[pos] = naggrcontnonzs;
+               aggrcontnonzposs[naggrcontnonzs] = pos;
+               naggrcontnonzs++;
+               updateNConts(scip, bestrownonzcols[c], +1, &nconts, &nactiveconts);
+            }
+            else
+            {
+               assert(naggrintnonzs < ncols);
+               aggrnonzidxs[pos] = naggrintnonzs;
+               aggrintnonzposs[naggrintnonzs] = pos;
+               naggrintnonzs++;
+            }
+         }
       }
       naggrs++;
+      assert(nconts == naggrcontnonzs);
 
       SCIPdebugMessage(" -> %d continuous variables left (%d/%d active), %d/%d aggregations\n", 
          nconts, nactiveconts, maxconts, naggrs, maxaggrs);
@@ -811,6 +916,9 @@ SCIP_RETCODE aggregation(
    SCIPfreeBufferArray(scip, &testeddeltas);
    SCIPfreeBufferArray(scip, &cutcoefs);
    SCIPfreeBufferArray(scip, &rowweights);
+   SCIPfreeBufferArray(scip, &aggrcontnonzposs);
+   SCIPfreeBufferArray(scip, &aggrintnonzposs);
+   SCIPfreeBufferArray(scip, &aggrnonzidxs);
    SCIPfreeBufferArray(scip, &aggrcoefs);
 
    return SCIP_OKAY; 

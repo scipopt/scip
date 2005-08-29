@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.45 2005/08/24 17:26:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.46 2005/08/29 21:02:39 bzfpfend Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -252,6 +252,7 @@ SCIP_RETCODE SCIPcutpoolCreate(
    (*cutpool)->cuts = NULL;
    (*cutpool)->cutssize = 0;
    (*cutpool)->ncuts = 0;
+   (*cutpool)->nremoveablecuts = 0;
    (*cutpool)->agelimit = agelimit;
    (*cutpool)->processedlp = -1;
    (*cutpool)->firstunprocessed = 0;
@@ -307,6 +308,7 @@ SCIP_RETCODE SCIPcutpoolClear(
       SCIP_CALL( cutFree(&cutpool->cuts[i], blkmem, set, lp) );
    }
    cutpool->ncuts = 0;
+   cutpool->nremoveablecuts = 0;
 
    return SCIP_OKAY;
 }
@@ -365,6 +367,8 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
    cutpool->cuts[cutpool->ncuts] = cut;
    cutpool->ncuts++;
    cutpool->maxncuts = MAX(cutpool->maxncuts, cutpool->ncuts);
+   if( SCIProwIsRemoveable(row) )
+      cutpool->nremoveablecuts++;
 
    /* insert cut in the hash table */
    SCIP_CALL( SCIPhashtableInsert(cutpool->hashtable, (void*)cut) );
@@ -399,6 +403,12 @@ SCIP_RETCODE cutpoolDelCut(
    pos = cut->pos;
    assert(0 <= pos && pos < cutpool->ncuts);
    assert(cutpool->cuts[pos] == cut);
+
+   /* decrease the number of removeable cuts counter (row might have changed its removeable status -> counting might not
+    * be correct
+    */
+   if( SCIProwIsRemoveable(cut->row) && cutpool->nremoveablecuts > 0 )
+      cutpool->nremoveablecuts--;
 
    /* unlock the row */
    SCIProwUnlock(cut->row);
@@ -481,8 +491,8 @@ SCIP_RETCODE SCIPcutpoolSeparate(
 
    *result = SCIP_DIDNOTRUN;
 
-   /* don't separate cut pool in the root node */
-   if( root )
+   /* don't separate cut pool in the root node, if there are no removeable cuts */
+   if( root && cutpool->nremoveablecuts == 0 )
       return SCIP_OKAY;
 
    if( cutpool->processedlp < stat->lpcount )

@@ -94,6 +94,8 @@ features:
 - improved knapsack cover separation
 - changed linear constraint presolving s.t. redundant sides are not removed if constraint is an equality
 - incorporated clique and implication information in knapsack constraint presolving
+- improved performance of c-MIR separator
+- cut pool is now also separated in root node (to find cuts again that were removed from the LP due to aging)
 
 fixed bugs:
 - LP primal feasibility for bounds is now defined as absolute measure (was relative to the bound before);
