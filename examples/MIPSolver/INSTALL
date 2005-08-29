@@ -36,12 +36,21 @@ compilation settings:
 - $(OPT):    the optimization level of compilation
              "dbg", "opt", or "prf"
 
-For example, if you want to install SCIP on a Linux system with a x86 processor
-using the gnu compiler in debug mode, you would have the following names:
+- $(LINK):   the library linking type
+             "static", "shared"
+
+- $(LPS):    the LP solver to use
+             "spx", "spx121", "clp", "cpx"
+
+For example, if you want to compile the example on a Linux system with a x86 processor
+using the gnu compiler in debug mode with static linking, and using Soplex version >= 1.2.2
+as LP solver, you would have the following names:
 - $(OSTYPE) = linux
 - $(ARCH)   = x86
 - $(COMP)   = gnu
 - $(OPT)    = dbg
+- $(LINK)   = static
+- $(LPS)    = spx
 
 -----------------------------------------------------------------------------
 
@@ -57,20 +66,22 @@ running:
      (e.g. "ln -s /scip lib/scip")
 
 3. Compile the example project:
-   In the example's main directory, enter "make OPT=<...> LPS=<...> COMP=<...>" with
+   In the example's main directory, enter "make OPT=<...> LPS=<...> COMP=<...> LINK=<...>" with
    the following options:
-   - "OPT=dbg"     to use debug compilation mode (default)
-   - "OPT=opt"     to use optimized compilation mode
-   - "OPT=prf"     to use performance analysis compilation mode
-   - "LPS=cpx"     to use CPLEX as LP solver (default)
-   - "LPS=spx"     to use SOPLEX Version >= 1.2.2 as LP solver
-   - "LPS=spx121"  to use SOPLEX Version <= 1.2.1 as LP solver
-   - "LPS=clp"     to use CLP as LP solver
-   - "COMP=gnu"    to use GNU c/c++ compiler (default)
+   - "OPT=opt"       to use optimized compilation mode (default)
+   - "OPT=dbg"       to use debug compilation mode
+   - "OPT=prf"       to use performance analysis compilation mode
+   - "LPS=cpx"       to use CPLEX as LP solver (default)
+   - "LPS=spx"       to use SOPLEX Version >= 1.2.2 as LP solver
+   - "LPS=spx121"    to use SOPLEX Version <= 1.2.1 as LP solver
+   - "LPS=clp"       to use CLP as LP solver
+   - "COMP=gnu"      to use GNU c/c++ compiler (default)
    - other compilers are available (see make/ directory)
+   - "LINK=static"   to use static libraries (default)
+   - "LINK=dynamic"  to use dynamic libraries
 
-3. To run the program enter "bin/example.$(OSTYPE).$(ARCH).$(COMP).$(OPT)"
-   (e.g. "bin/example.linux.x86.gnu.dbg.cpx")
+3. To run the program enter "bin/example.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LINK).$(LPS)"
+   (e.g. "bin/example.linux.x86.gnu.dbg.static.cpx")
 
 4. To generate the documentation, you need to have doxygen installed, and
    enter "make doc"

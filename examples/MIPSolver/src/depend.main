@@ -3,7 +3,7 @@ $(OBJDIR)/cppmain.o: src/cppmain.cpp lib/scip/src/objscip/objscip.h \
   lib/scip/src/scip/def.h lib/scip/src/scip/type_retcode.h \
   lib/scip/src/scip/message.h lib/scip/src/scip/type_message.h \
   lib/scip/src/scip/struct_message.h lib/scip/src/scip/pub_message.h \
-  lib/scip/src/scip/memory.h lib/scip/src/scip/type_result.h \
+  lib/scip/src/blockmemshell/memory.h lib/scip/src/scip/type_result.h \
   lib/scip/src/scip/type_clock.h lib/scip/src/scip/type_misc.h \
   lib/scip/src/scip/type_paramset.h lib/scip/src/scip/type_scip.h \
   lib/scip/src/scip/type_event.h lib/scip/src/scip/type_lp.h \
@@ -30,10 +30,11 @@ $(OBJDIR)/cppmain.o: src/cppmain.cpp lib/scip/src/objscip/objscip.h \
   lib/scip/src/scip/pub_sepa.h lib/scip/src/scip/pub_prop.h \
   lib/scip/src/scip/pub_sol.h lib/scip/src/scip/pub_tree.h \
   lib/scip/src/scip/pub_var.h lib/scip/src/scip/type_history.h \
-  lib/scip/src/objscip/objconshdlr.h lib/scip/src/objscip/objeventhdlr.h \
-  lib/scip/src/objscip/objheur.h lib/scip/src/objscip/objmessagehdlr.h \
-  lib/scip/src/objscip/objnodesel.h lib/scip/src/objscip/objpresol.h \
-  lib/scip/src/objscip/objpricer.h lib/scip/src/objscip/objprobdata.h \
-  lib/scip/src/objscip/objprop.h lib/scip/src/objscip/objreader.h \
-  lib/scip/src/objscip/objrelax.h lib/scip/src/objscip/objsepa.h \
-  lib/scip/src/objscip/objvardata.h lib/scip/src/scip/scipdefplugins.h
+  lib/scip/src/scip/lpi.h lib/scip/src/objscip/objconshdlr.h \
+  lib/scip/src/objscip/objeventhdlr.h lib/scip/src/objscip/objheur.h \
+  lib/scip/src/objscip/objmessagehdlr.h lib/scip/src/objscip/objnodesel.h \
+  lib/scip/src/objscip/objpresol.h lib/scip/src/objscip/objpricer.h \
+  lib/scip/src/objscip/objprobdata.h lib/scip/src/objscip/objprop.h \
+  lib/scip/src/objscip/objreader.h lib/scip/src/objscip/objrelax.h \
+  lib/scip/src/objscip/objsepa.h lib/scip/src/objscip/objvardata.h \
+  lib/scip/src/scip/scipdefplugins.h
