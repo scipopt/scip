@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.308 2005/08/28 12:29:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.309 2005/08/29 16:51:07 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -394,7 +394,7 @@ void SCIPprintVersion(
 #else
    SCIPmessageFPrintInfo(file, " [mode: optimized]");
 #endif
-   SCIPmessageFPrintInfo(file, " [SCIP_LP solver: %s]\n", SCIPlpiGetSolverName());
+   SCIPmessageFPrintInfo(file, " [LP solver: %s]\n", SCIPlpiGetSolverName());
 }
 
 /** prints error message for the given SCIP return code */
