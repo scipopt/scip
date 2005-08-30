@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.h,v 1.19 2005/08/24 17:26:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objheur.h,v 1.20 2005/08/30 14:13:29 bzfpfend Exp $"
 
 /**@file   objheur.h
  * @brief  C++ wrapper for primal heuristics
@@ -67,6 +67,9 @@ public:
    /** call heuristic during plunging? */
    const SCIP_Bool scip_duringplunging_;
 
+   /** call heuristic during the LP price-and-cut loop? */
+   const SCIP_Bool scip_duringlploop_;
+
    /** call heuristic after or before the current node was solved? */
    const SCIP_Bool scip_afternode_;
 
@@ -81,6 +84,7 @@ public:
       int                maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
       SCIP_Bool          pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
       SCIP_Bool          duringplunging,     /**< call heuristic during plunging? */
+      SCIP_Bool          duringlploop,       /**< call heuristic during the LP price-and-cut loop? */
       SCIP_Bool          afternode           /**< call heuristic after or before the current node was solved? */
       )
       : scip_name_(name),
@@ -92,6 +96,7 @@ public:
         scip_maxdepth_(maxdepth),
         scip_pseudonodes_(pseudonodes),
         scip_duringplunging_(duringplunging),
+        scip_duringlploop_(duringlploop),
         scip_afternode_(afternode)
    {
    }

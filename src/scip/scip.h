@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.241 2005/08/28 12:29:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.242 2005/08/30 14:13:31 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -907,6 +907,7 @@ SCIP_RETCODE SCIPincludeHeur(
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
    SCIP_Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
    SCIP_Bool             duringplunging,     /**< call heuristic during plunging? */
+   SCIP_Bool             duringlploop,       /**< call heuristic during the LP price-and-cut loop? */
    SCIP_Bool             afternode,          /**< call heuristic after or before the current node was solved? */
    SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    SCIP_DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */

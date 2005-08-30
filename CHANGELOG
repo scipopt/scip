@@ -39,6 +39,7 @@ interface:
 - new event SCIP_EVENTTYPE_IMPLADDED
 - new method SCIPgetLPI() which makes all methods in scip/lpi.h available to the user
 - put block memory shell and tclique algorithm into separate subdirectories
+- new parameter "duringlploop" of SCIPincludeHeur() - heuristics can now run during the price-and-cut loop at a node
 
 plugins:
 - added command "write solution" to default dialog

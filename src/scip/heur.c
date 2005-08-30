@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.48 2005/08/24 17:26:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.49 2005/08/30 14:13:29 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -95,6 +95,7 @@ SCIP_RETCODE SCIPheurCreate(
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
    SCIP_Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
    SCIP_Bool             duringplunging,     /**< call heuristic during plunging? */
+   SCIP_Bool             duringlploop,       /**< call heuristic during the LP price-and-cut loop? */
    SCIP_Bool             afternode,          /**< call heuristic after or before the current node was solved? */
    SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    SCIP_DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
@@ -126,6 +127,7 @@ SCIP_RETCODE SCIPheurCreate(
    (*heur)->delaypos = -1;
    (*heur)->pseudonodes = pseudonodes;
    (*heur)->duringplunging = duringplunging;
+   (*heur)->duringlploop = duringlploop;
    (*heur)->afternode = afternode;
    (*heur)->heurfree = heurfree;
    (*heur)->heurinit = heurinit;
@@ -291,6 +293,7 @@ SCIP_RETCODE SCIPheurExec(
    SCIP_Bool             currentnodehaslp,   /**< is LP being processed in the current node? */
    SCIP_Bool             plunging,           /**< is the next node to be processed a child or sibling? */
    SCIP_Bool             nodesolved,         /**< is the current node already solved? */
+   SCIP_Bool             inlploop,           /**< are we currently in the LP solving loop? */
    int*                  ndelayedheurs,      /**< pointer to count the number of delayed heuristics */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -334,12 +337,12 @@ SCIP_RETCODE SCIPheurExec(
    
    /* if the heuristic was delayed, execute it anywas */
    execute = execute || (heur->delaypos >= 0);
-   
+
    /* execute LP heuristics only at LP nodes */
    execute = execute && (heur->pseudonodes || currentnodehaslp);
 
-   /* execute heuristic, depending on its "afternode" flag */
-   execute = execute && (heur->afternode == nodesolved);
+   /* execute heuristic, depending on its "afternode" and "duringlploop" flags */
+   execute = execute && ((heur->afternode == nodesolved) || (heur->duringlploop && inlploop));
 
    if( execute )
    {
