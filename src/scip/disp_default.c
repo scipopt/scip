@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.57 2005/08/24 17:26:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.58 2005/08/30 20:35:04 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -105,7 +105,7 @@
 #define DISP_DESC_NFRAC         "number of fractional variables in the current solution"
 #define DISP_HEAD_NFRAC         "frac"
 #define DISP_WIDT_NFRAC         5
-#define DISP_PRIO_NFRAC         40
+#define DISP_PRIO_NFRAC         700
 #define DISP_POSI_NFRAC         2500
 #define DISP_STRI_NFRAC         TRUE
 
@@ -201,7 +201,7 @@
 #define DISP_DESC_AVGDUALBOUND  "average dual bound of all unprocessed nodes"
 #define DISP_HEAD_AVGDUALBOUND  "avgdualbound"
 #define DISP_WIDT_AVGDUALBOUND  14
-#define DISP_PRIO_AVGDUALBOUND  700
+#define DISP_PRIO_AVGDUALBOUND  40
 #define DISP_POSI_AVGDUALBOUND  8000
 #define DISP_STRI_AVGDUALBOUND  TRUE
 

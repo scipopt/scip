@@ -78,6 +78,7 @@ parameters:
 - new parameters separating/cmir/maxfails, separating/cmir/maxfailsroot and separating/cmir/trynegscaling
 - number of fractional variables included in parameter separating/maxstallrounds
 - changed default value of separating/maxstallrounds to 5
+- new parameter presolving/probing/maxtotaluseless
 
 features:
 - reactivated multiaggregation in cons_linear.c on binary variables again (possible due to bug fix below)

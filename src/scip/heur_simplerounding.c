@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.22 2005/08/30 14:13:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.23 2005/08/30 20:35:04 bzfpfend Exp $"
 
 /**@file   heur_simplerounding.c
  * @brief  simple and fast LP rounding heuristic
@@ -46,6 +46,7 @@
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
+   SCIP_Longint          lastlp;             /**< last LP number where the heuristic was applied */
 };
 
 
@@ -65,14 +66,13 @@ SCIP_DECL_HEURINIT(heurInitSimplerounding) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
-   assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(SCIPheurGetData(heur) == NULL);
-   assert(scip != NULL);
 
    /* create heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
+   heurdata->lastlp = -1;
    SCIPheurSetData(heur, heurdata);
 
    return SCIP_OKAY;
@@ -85,9 +85,7 @@ SCIP_DECL_HEUREXIT(heurExitSimplerounding) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
-   assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-   assert(scip != NULL);
 
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -101,7 +99,19 @@ SCIP_DECL_HEUREXIT(heurExitSimplerounding) /*lint --e{715}*/
 
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#define heurInitsolSimplerounding NULL
+static
+SCIP_DECL_HEURINITSOL(heurInitsolSimplerounding)
+{
+   SCIP_HEURDATA* heurdata;
+
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+   heurdata->lastlp = -1;
+
+   return SCIP_OKAY;
+}
 
 
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
@@ -116,12 +126,11 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
    SCIP_SOL* sol;
    SCIP_VAR** lpcands;
    SCIP_Real* lpcandssol;
+   SCIP_Longint nlps;
    int nlpcands;
    int c;
 
-   assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-   assert(scip != NULL);
    assert(result != NULL);
    assert(SCIPhasCurrentNodeLP(scip));
 
@@ -130,6 +139,16 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
    /* only call heuristic, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* don't call heuristic, if we have already processed the current LP solution */
+   nlps = SCIPgetNLPs(scip);
+   if( nlps == heurdata->lastlp )
+      return SCIP_OKAY;
+   heurdata->lastlp = nlps;
 
    /* get fractional variables, that should be integral */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL) );
@@ -143,8 +162,6 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
    SCIPdebugMessage("executing simple rounding heuristic: %d fractionals\n", nlpcands);
 
    /* get the working solution from heuristic's local data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
    sol = heurdata->sol;
    assert(sol != NULL);
 

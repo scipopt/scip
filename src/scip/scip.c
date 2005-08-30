@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.311 2005/08/30 14:13:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.312 2005/08/30 20:35:04 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3748,7 +3748,7 @@ SCIP_RETCODE exitPresolve(
    /* replace variables in variable bounds with active problem variables, and 
     * check, whether the objective value is always integral
     */
-   SCIP_CALL( SCIPprobExitPresolve(scip->transprob, scip->set, scip->stat) );
+   SCIP_CALL( SCIPprobExitPresolve(scip->transprob, scip->set) );
    assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
  
    /* free temporary presolving root node */
@@ -6287,6 +6287,7 @@ SCIP_RETCODE SCIPaddVarImplication(
 SCIP_RETCODE SCIPaddClique(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   SCIP_Bool*            values,             /**< values of the variables in the clique; NULL to use TRUE for all vars */
    int                   nvars,              /**< number of variables in the clique */
    SCIP_Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
    int*                  nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
@@ -6300,17 +6301,31 @@ SCIP_RETCODE SCIPaddClique(
 
    if( nvars == 2 )
    {
+      SCIP_Bool val0;
+      SCIP_Bool val1;
+
       assert(vars != NULL);
+      if( values == NULL )
+      {
+         val0 = TRUE;
+         val1 = TRUE;
+      }
+      else
+      {
+         val0 = values[0];
+         val1 = values[1];
+      }
 
       /* add the implications instead of the clique */
       SCIP_CALL( SCIPvarAddImplic(vars[0], scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->cliquetable,
-            scip->branchcand, scip->eventqueue, TRUE, vars[1], SCIP_BOUNDTYPE_UPPER, 0.0, TRUE, infeasible, nbdchgs) );
+            scip->branchcand, scip->eventqueue, val0, vars[1], val1 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
+            val1 ? 0.0 : 1.0, TRUE, infeasible, nbdchgs) );
    }
    else if( nvars >= 3 )
    {
       /* add the clique to the clique table */
       SCIP_CALL( SCIPcliquetableAdd(scip->cliquetable, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
-            scip->branchcand, scip->eventqueue, vars, NULL, nvars, infeasible, nbdchgs) );
+            scip->branchcand, scip->eventqueue, vars, values, nvars, infeasible, nbdchgs) );
    }
 
    return SCIP_OKAY;

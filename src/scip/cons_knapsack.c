@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.109 2005/08/28 11:03:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.110 2005/08/30 20:35:03 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -54,6 +54,8 @@
 #define LINCONSUPGD_PRIORITY    +100000
 
 #define MAX_DYNPROG_CAPACITY      10000 /**< maximal capacity of knapsack to apply dynamic programming */
+#define MAX_USECLIQUES_SIZE        1000 /**< maximal number of items in knapsack where clique information is used */
+#define MAX_ZEROITEMS_SIZE      1000000 /**< maximal number of items to store in the zero list in preprocessing */
 
 #define DEFAULT_SEPACARDFREQ         10 /**< multiplier on separation frequency, how often cardinality cuts are separated */
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of separation rounds per node (-1: unlimited) */
@@ -2515,7 +2517,8 @@ SCIP_RETCODE insertZerolist(
    int                   probindex,          /**< problem index of variable y in implication y == v -> x == 0 */
    SCIP_Bool             value,              /**< value v of variable y in implication */
    int                   knapsackidx,        /**< index of variable x in knapsack */
-   SCIP_Longint          knapsackweight      /**< weight of variable x in knapsack */
+   SCIP_Longint          knapsackweight,     /**< weight of variable x in knapsack */
+   SCIP_Bool*            memlimitreached     /**< pointer to store whether the memory limit was reached */
    )
 {
    assert(liftcands != NULL);
@@ -2531,15 +2534,28 @@ SCIP_RETCODE insertZerolist(
    assert(nzeroitems != NULL);
    assert(*nzeroitems <= *zeroitemssize);
    assert(0 <= probindex && probindex < SCIPgetNBinVars(scip));
+   assert(memlimitreached != NULL);
 
    /* allocate enough memory */
    if( *nzeroitems == *zeroitemssize )
    {
+      /* we explicitly construct the complete implication graph where the knapsack variables are involved;
+       * this can be too huge - abort on memory limit
+       */
+      if( *zeroitemssize >= MAX_ZEROITEMS_SIZE )
+      {
+         SCIPdebugMessage("memory limit of %d bytes reached in knapsack preprocessing - abort collecting zero items\n",
+            *zeroitemssize);
+         *memlimitreached = TRUE;
+         return SCIP_OKAY;
+      }
       *zeroitemssize *= 2;
+      *zeroitemssize = MIN(*zeroitemssize, MAX_ZEROITEMS_SIZE);
       SCIP_CALL( SCIPreallocBufferArray(scip, zeroitems, *zeroitemssize) );
       SCIP_CALL( SCIPreallocBufferArray(scip, nextidxs, *zeroitemssize) );
    }
    assert(*nzeroitems < *zeroitemssize);
+   *memlimitreached = FALSE;
 
    /* insert element */
    (*zeroitems)[*nzeroitems] = knapsackidx;
@@ -2583,6 +2599,8 @@ SCIP_RETCODE tightenWeightsLift(
    int* nextidxs;              /* next index in zeroitems for the same binary variable, or zero for end of list */
    int zeroitemssize;
    int nzeroitems;
+   SCIP_Bool* zeroiteminserted[2];
+   SCIP_Bool memlimitreached;
    int nliftcands[2];
    SCIP_Bool* cliqueused;
    SCIP_Bool* itemremoved;
@@ -2603,6 +2621,10 @@ SCIP_RETCODE tightenWeightsLift(
    assert(consdata->weightsum > consdata->capacity); /* otherwise, the constraint is redundant */
    assert(consdata->nvars > 0);
    assert(consdata->merged);
+
+   /* check if the knapsack has too many items for applying this costly method */
+   if( consdata->nvars > MAX_USECLIQUES_SIZE )
+      return SCIP_OKAY;
 
    /* sort items, s.t. the heaviest one is in the first position */
    sortItems(consdata);
@@ -2632,10 +2654,15 @@ SCIP_RETCODE tightenWeightsLift(
    nliftcands[1] = 0;
 
    /* identify all binary variable/value pairs that would fix a knapsack item to zero */
-   for( i = 0; i < consdata->nvars; ++i )
+   SCIP_CALL( SCIPallocBufferArray(scip, &zeroiteminserted[0], nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &zeroiteminserted[1], nbinvars) );
+   memlimitreached = FALSE;
+   for( i = 0; i < consdata->nvars && !memlimitreached; ++i )
    {
       SCIP_VAR* var;
+      SCIP_Longint weight;
       SCIP_Bool value;
+      int varprobindex;
       SCIP_VAR** implvars;
       SCIP_BOUNDTYPE* impltypes;
       int nimpls;
@@ -2645,12 +2672,18 @@ SCIP_RETCODE tightenWeightsLift(
 
       /* get corresponding active problem variable */
       var = consdata->vars[i];
+      weight = consdata->weights[i];
       value = TRUE;
       SCIP_CALL( SCIPvarGetProbvarBinary(&var, &value) );
-      assert(0 <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < nbinvars);
+      varprobindex = SCIPvarGetProbindex(var);
+      assert(0 <= varprobindex && varprobindex < nbinvars);
 
       /* update the zeroweightsum */
-      zeroweightsums[!value][SCIPvarGetProbindex(var)] += consdata->weights[i];
+      zeroweightsums[!value][varprobindex] += weight;
+
+      /* initialize the arrays of inserted zero items */
+      BMSclearMemoryArray(zeroiteminserted[0], nbinvars);
+      BMSclearMemoryArray(zeroiteminserted[1], nbinvars);
 
       /* get implications of the knapsack item fixed to one: x == 1 -> y == (1-v);
        * the negation of these implications (y == v -> x == 0) are the ones that we are interested in
@@ -2658,7 +2691,7 @@ SCIP_RETCODE tightenWeightsLift(
       nimpls = SCIPvarGetNBinImpls(var, value);
       implvars = SCIPvarGetImplVars(var, value);
       impltypes = SCIPvarGetImplTypes(var, value);
-      for( j = 0; j < nimpls; ++j )
+      for( j = 0; j < nimpls && !memlimitreached; ++j )
       {
          int probindex;
          SCIP_Bool implvalue;
@@ -2669,35 +2702,53 @@ SCIP_RETCODE tightenWeightsLift(
          implvalue = (impltypes[j] == SCIP_BOUNDTYPE_UPPER); /* the negation of the implication */
          
          /* insert the item into the list of the implied variable/value */
-         SCIP_CALL( insertZerolist(scip, liftcands, nliftcands, firstidxs, zeroweightsums,
-               &zeroitems, &nextidxs, &zeroitemssize, &nzeroitems, probindex, implvalue, i, consdata->weights[i]) );
+         if( !zeroiteminserted[implvalue][probindex] )
+         {
+            SCIP_CALL( insertZerolist(scip, liftcands, nliftcands, firstidxs, zeroweightsums,
+                  &zeroitems, &nextidxs, &zeroitemssize, &nzeroitems, probindex, implvalue, i, weight,
+                  &memlimitreached) );
+            zeroiteminserted[implvalue][probindex] = TRUE;
+         }
       }
 
       /* get the cliques where the knapsack item is member of with value 1 */
       ncliques = SCIPvarGetNCliques(var, value);
       cliques = SCIPvarGetCliques(var, value);
-      for( j = 0; j < ncliques; ++j )
+      for( j = 0; j < ncliques && !memlimitreached; ++j )
       {
          SCIP_VAR** cliquevars;
          SCIP_Bool* cliquevalues;
          int ncliquevars;
          int k;
-
+         
          ncliquevars = SCIPcliqueGetNVars(cliques[j]);
          cliquevars = SCIPcliqueGetVars(cliques[j]);
          cliquevalues = SCIPcliqueGetValues(cliques[j]);
-         for( k = 0; k < ncliquevars; ++k )
+         for( k = 0; k < ncliquevars && !memlimitreached; ++k )
          {
             if( cliquevars[k] != var )
             {
+               int probindex;
+               SCIP_Bool implvalue;
+               
+               probindex = SCIPvarGetProbindex(cliquevars[k]);
+               assert(0 <= probindex && probindex < nbinvars);
+               implvalue = cliquevalues[k];
+               
                /* insert the item into the list of the clique variable/value */
-               SCIP_CALL( insertZerolist(scip, liftcands, nliftcands, firstidxs, zeroweightsums,
-                     &zeroitems, &nextidxs, &zeroitemssize, &nzeroitems,
-                     SCIPvarGetProbindex(cliquevars[k]), cliquevalues[k], i, consdata->weights[i]) );
+               if( !zeroiteminserted[implvalue][probindex] )
+               {
+                  SCIP_CALL( insertZerolist(scip, liftcands, nliftcands, firstidxs, zeroweightsums,
+                        &zeroitems, &nextidxs, &zeroitemssize, &nzeroitems, probindex, implvalue, i, weight,
+                        &memlimitreached) );
+                  zeroiteminserted[implvalue][probindex] = TRUE;
+               }
             }
          }
       }
    }
+   SCIPfreeBufferArray(scip, &zeroiteminserted[1]);
+   SCIPfreeBufferArray(scip, &zeroiteminserted[0]);
 
    /* calculate the clique partition and the maximal sum of weights using the clique information */
    assert(consdata->sorted);
@@ -2917,8 +2968,8 @@ SCIP_RETCODE tightenWeights(
    if( consdata->weightsum <= consdata->capacity )
       return SCIP_OKAY;
 
-   /* apply rule (2) */
-   if( conshdlrdata->disaggregation )
+   /* apply rule (2) (don't apply, if the knapsack has too many items for applying this costly method) */
+   if( conshdlrdata->disaggregation && consdata->nvars <= MAX_USECLIQUES_SIZE )
    {
       SCIP_Longint* maxcliqueweights;
       SCIP_Longint cliqueweightsum;

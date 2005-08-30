@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.80 2005/08/28 11:03:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.81 2005/08/30 20:35:04 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -1069,15 +1069,11 @@ void SCIPprobStoreRootSol(
 /** informs problem, that the presolving process was finished, and updates all internal data structures */
 SCIP_RETCODE SCIPprobExitPresolve(
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    /* check, wheter objective value is always integral */
    SCIPprobCheckObjIntegral(prob, set);
-
-   /* reset implication counter */
-   SCIPstatResetImplications(stat);
 
    return SCIP_OKAY;
 }

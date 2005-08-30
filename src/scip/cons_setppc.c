@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.91 2005/08/24 17:26:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.92 2005/08/30 20:35:03 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -2225,7 +2225,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
             SCIP_Bool infeasible;
             int ncliquebdchgs;
 
-            SCIP_CALL( SCIPaddClique(scip, consdata->vars, consdata->nvars, &infeasible, &ncliquebdchgs) );
+            SCIP_CALL( SCIPaddClique(scip, consdata->vars, NULL, consdata->nvars, &infeasible, &ncliquebdchgs) );
             *nchgbds += ncliquebdchgs;
             consdata->cliqueadded = TRUE;
             if( infeasible )

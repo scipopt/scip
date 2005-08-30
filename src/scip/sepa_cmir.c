@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.41 2005/08/30 12:38:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.42 2005/08/30 20:35:05 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -42,7 +42,7 @@
 #define DEFAULT_MAXTRIESROOT         -1 /**< maximal number of rows to start aggregation with per round in the root node
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXFAILS             20 /**< maximal number of consecutive unsuccesful aggregation tries (-1: unlimited) */
-#define DEFAULT_MAXFAILSROOT         40 /**< maximal number of consecutive unsuccesful aggregation tries in the root node
+#define DEFAULT_MAXFAILSROOT        100 /**< maximal number of consecutive unsuccesful aggregation tries in the root node
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXAGGRS              3 /**< maximal number of aggregations for each row per separation round */
 #define DEFAULT_MAXAGGRSROOT          6 /**< maximal number of aggreagtions for each row per round in the root node */
@@ -412,15 +412,16 @@ SCIP_RETCODE aggregation(
    int naggrcontnonzs;
    int maxaggrnonzs;
 
-   int nstartnonzcols;    /* number of nonzero columns of startrow */
+   int nstartnonzcols;         /* number of nonzero columns of startrow */
    SCIP_COL** startnonzcols;   /* columns with nonzero coefficients of startrow */
    SCIP_Real* startnonzcoefs;  /* nonzero coefficients of startrow */    
    SCIP_Real startrowact;      /* activity of startrow */
 
-   SCIP_Real* cutcoefs;         /* coefficients of variables in cut */
-   SCIP_Real cutrhs;            /* right hand side of the cut */
+   SCIP_Real* cutcoefs;        /* coefficients of variables in cut */
+   SCIP_Real cutrhs;           /* right hand side of the cut */
    SCIP_Bool success;
    SCIP_Bool cutislocal;
+   SCIP_Bool hasfractional;
 
    int naggrs;
    int nactiveconts;
@@ -469,8 +470,7 @@ SCIP_RETCODE aggregation(
    SCIP_CALL( SCIPallocBufferArray(scip, &testeddeltas, ncols) );
 
    /* initialize weights of rows in aggregation */
-   for( r = 0; r < nrows; r++ )
-      rowweights[r] = 0.0;
+   BMSclearMemoryArray(rowweights, nrows);
    startrowact = SCIPgetRowActivity(scip, rows[startrow]);
    if( startrowact <= 0.5 * SCIProwGetLhs(rows[startrow]) + 0.5 * SCIProwGetRhs(rows[startrow]) )
       rowweights[startrow] = -1.0;
@@ -491,6 +491,7 @@ SCIP_RETCODE aggregation(
    naggrintnonzs = 0;
    naggrcontnonzs = 0;
    nactiveconts = 0;
+   hasfractional = FALSE;
    for( c = 0; c < nstartnonzcols; c++ )
    {
       SCIP_VAR* var;
@@ -513,14 +514,19 @@ SCIP_RETCODE aggregation(
          aggrnonzidxs[pos] = naggrintnonzs;
          aggrintnonzposs[naggrintnonzs] = pos;
          naggrintnonzs++;
+         if( !hasfractional )
+         {
+            SCIP_Real primsol;
+
+            primsol = SCIPcolGetPrimsol(startnonzcols[c]);
+            hasfractional = !SCIPisIntegral(scip, primsol);
+         }
       }
    }
 
-#if 0 /*??????????*/
-   /* don't try aggregation if there is no integer variable */
-   if( naggrintnonzs == 0 )
+   /* don't try aggregation if there is no integer variable with fractional value */
+   if( !hasfractional )
       maxaggrs = -1;
-#endif
 
    /* try to generate cut from the current aggregated row 
     * add cut if found, otherwise add another row to aggregated row 
@@ -1009,6 +1015,7 @@ SCIP_DECL_SEPAEXEC(sepaExecCmir)
    SCIP_Real* rowscores;
    int* roworder;
    SCIP_Real maxslack;
+   SCIP_Real objnorm;
    int nvars;
    int nrows;
    int ntries;
@@ -1094,6 +1101,8 @@ SCIP_DECL_SEPAEXEC(sepaExecCmir)
    }
 
    /* calculate aggregation scores for both sides of all rows, and sort rows by nonincreasing maximal score */
+   objnorm = SCIPgetObjNorm(scip);
+   objnorm = MAX(objnorm, 1.0);
    for( r = 0; r < nrows; r++ )
    {
       int nnonz;
@@ -1129,22 +1138,22 @@ SCIP_DECL_SEPAEXEC(sepaExecCmir)
          assert(SCIPisPositive(scip, rownorm));
 
          slack = (activity - lhs)/rownorm;
-         dualscore = MAX(dualsol, 0.0001);
+         dualscore = MAX(dualsol/objnorm, 0.0001);
          if( !SCIPisInfinity(scip, -lhs) && SCIPisLE(scip, slack, maxslack)
             && (ALLOWLOCAL || !SCIProwIsLocal(rows[r])) /*lint !e506 !e774*/
             && rowdensity <= sepadata->maxrowdensity
             && rowdensity <= sepadata->maxaggdensity )  /*lint !e774*/
-            rowlhsscores[r] = dualscore * (1.0-rowdensity) - sepadata->slackscore * slack;
+            rowlhsscores[r] = dualscore + (1.0-rowdensity) - sepadata->slackscore * slack;
          else
             rowlhsscores[r] = -SCIPinfinity(scip);
 
          slack = (rhs - activity)/rownorm;
-         dualscore = MAX(-dualsol, 0.0001);
+         dualscore = MAX(-dualsol/objnorm, 0.0001);
          if( !SCIPisInfinity(scip, rhs) && SCIPisLE(scip, slack, maxslack)
             && (ALLOWLOCAL || !SCIProwIsLocal(rows[r])) /*lint !e506 !e774*/
             && rowdensity <= sepadata->maxrowdensity
             && rowdensity <= sepadata->maxaggdensity )  /*lint !e774*/
-            rowrhsscores[r] = dualscore * (1.0-rowdensity) - sepadata->slackscore * slack;
+            rowrhsscores[r] = dualscore + (1.0-rowdensity) - sepadata->slackscore * slack;
          else
             rowrhsscores[r] = -SCIPinfinity(scip);
       }

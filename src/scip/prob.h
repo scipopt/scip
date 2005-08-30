@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.51 2005/08/28 12:24:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.52 2005/08/30 20:35:04 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -245,8 +245,7 @@ void SCIPprobStoreRootSol(
 extern
 SCIP_RETCODE SCIPprobExitPresolve(
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** initializes problem for branch and bound process */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.85 2005/08/29 21:02:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.86 2005/08/30 20:35:04 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -198,7 +198,6 @@
                        }                                                                                      \
                        while( FALSE )
 
-#ifndef NDEBUG
 #define SCIP_CALL(x)   do                                                                                     \
                        {                                                                                      \
                           SCIP_RETCODE _restat_;                                                              \
@@ -219,10 +218,6 @@
                           }                                                                                   \
                        }                                                                                      \
                        while( FALSE )
-#else
-#define SCIP_CALL(x)   SCIP_CALL_QUIET(x)
-#define SCIP_ALLOC(x)  SCIP_ALLOC_QUIET(x)
-#endif
 
 
 #endif

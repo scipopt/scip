@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.49 2005/08/30 14:13:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.50 2005/08/30 20:35:04 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -363,7 +363,7 @@ SCIP_RETCODE SCIPheurExec(
          SCIPclockStart(heur->heurclock, set);
 
          /* call external method */
-         SCIP_CALL( heur->heurexec(set->scip, heur, result) );
+         SCIP_CALL( heur->heurexec(set->scip, heur, plunging, inlploop, result) );
 
          /* stop timing */
          SCIPclockStop(heur->heurclock, set);

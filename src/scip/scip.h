@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.242 2005/08/30 14:13:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.243 2005/08/30 20:35:05 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2177,6 +2177,7 @@ extern
 SCIP_RETCODE SCIPaddClique(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   SCIP_Bool*            values,             /**< values of the variables in the clique; NULL to use TRUE for all vars */
    int                   nvars,              /**< number of variables in the clique */
    SCIP_Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
    int*                  nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */

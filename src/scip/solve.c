@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.187 2005/08/30 14:13:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.188 2005/08/30 20:35:05 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -775,15 +775,17 @@ SCIP_RETCODE primalHeuristics(
 {
    SCIP_RESULT result;
    SCIP_Bool plunging;
+   SCIP_Longint oldnbestsolsfound;
    int ndelayedheurs;
    int depth;
    int lpforkdepth;
    int h;
 
    assert(set != NULL);
+   assert(primal != NULL);
    assert(tree != NULL);
    assert(!nodesolved || (nextnode == NULL) == (SCIPtreeGetNNodes(tree) == 0));
-   assert(!nodesolved || !inseparation);
+   assert(!nodesolved || !inlploop);
    assert(foundsol != NULL);
 
    *foundsol = FALSE;
@@ -806,13 +808,15 @@ SCIP_RETCODE primalHeuristics(
 
    /* call heuristics */
    ndelayedheurs = 0;
+   oldnbestsolsfound = primal->nbestsolsfound;
    for( h = 0; h < set->nheurs; ++h )
    {
       SCIP_CALL( SCIPheurExec(set->heurs[h], set, primal, depth, lpforkdepth, SCIPtreeHasFocusNodeLP(tree), 
             plunging, nodesolved, inlploop, &ndelayedheurs, &result) );
-      *foundsol = *foundsol || (result == SCIP_FOUNDSOL);
    }
    assert(0 <= ndelayedheurs && ndelayedheurs <= set->nheurs);
+
+   *foundsol = (primal->nbestsolsfound > oldnbestsolsfound);
 
    return SCIP_OKAY;
 }
@@ -1024,9 +1028,6 @@ SCIP_RETCODE priceAndCutLoop(
       assert(lp->flushed);
       assert(lp->solved);
 
-      /* call primal heuristics that are applicable during node processing loop */
-      SCIP_CALL( primalHeuristics(set, primal, tree, NULL, FALSE, TRUE, &foundsol) );
-
       /* if the LP is unbounded, we don't need to price */
       mustprice = mustprice && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
 
@@ -1124,8 +1125,11 @@ SCIP_RETCODE priceAndCutLoop(
          SCIPdebugMessage(" -> error solving LP. keeping old bound: %g\n", SCIPnodeGetLowerbound(focusnode));
       }
 
+      /* call primal heuristics that are applicable during node processing loop */
+      SCIP_CALL( primalHeuristics(set, primal, tree, NULL, FALSE, TRUE, &foundsol) );
+
       /* display node information line for root node */
-      if( root && (SCIP_VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_HIGH )
+      if( !foundsol && root && (SCIP_VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_HIGH )
       {
          SCIP_CALL( SCIPdispPrintLine(set, stat, NULL, TRUE) );
       }
@@ -1265,7 +1269,8 @@ SCIP_RETCODE priceAndCutLoop(
 
                      SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nfracs, NULL) );
                      lpobjval = SCIPlpGetObjval(lp, set);
-                     if( SCIPsetIsFeasGT(set, lpobjval, oldlpobjval) || nfracs < minnfracs )
+                     if( SCIPsetIsFeasGT(set, lpobjval, oldlpobjval)
+                        || nfracs <= (0.9 - 0.1 * nsepastallrounds) * minnfracs )
                      {
                         nsepastallrounds = 0;
                         minnfracs = nfracs;

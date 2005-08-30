@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.179 2005/08/28 11:03:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.180 2005/08/30 20:35:03 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -129,6 +129,7 @@ struct SCIP_ConsData
    unsigned int          upgraded:1;         /**< is the constraint upgraded and will it be removed after preprocessing? */
    unsigned int          sorted:1;           /**< are the constraint's variables sorted? */
    unsigned int          merged:1;           /**< are the constraint's equal variables already merged? */
+   unsigned int          cliquesadded:1;     /**< were the cliques of the constraint already extracted? */
 };
 
 /** event data for bound change event */
@@ -648,6 +649,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->upgraded = FALSE;
    (*consdata)->sorted = (nvars <= 1);
    (*consdata)->merged = (nvars <= 1);
+   (*consdata)->cliquesadded = FALSE;
 
    if( SCIPisTransformed(scip) )
    {
@@ -1713,15 +1715,25 @@ static
 SCIP_DECL_SORTINDCOMP(consdataCompVar)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata = (SCIP_CONSDATA*)dataptr;
+   int cmp;
 
    assert(consdata != NULL);
    assert(0 <= ind1 && ind1 < consdata->nvars);
    assert(0 <= ind2 && ind2 < consdata->nvars);
-   
-   return SCIPvarCompare(consdata->vars[ind1], consdata->vars[ind2]);
+   assert(SCIP_VARTYPE_BINARY < SCIP_VARTYPE_INTEGER);
+   assert(SCIP_VARTYPE_INTEGER < SCIP_VARTYPE_IMPLINT);
+   assert(SCIP_VARTYPE_IMPLINT < SCIP_VARTYPE_CONTINUOUS);
+
+   cmp = (int)SCIPvarGetType(consdata->vars[ind1]) - (int)SCIPvarGetType(consdata->vars[ind2]);
+   if( cmp == 0 )
+      return SCIPvarCompare(consdata->vars[ind1], consdata->vars[ind2]);
+   else
+      return cmp;
 }
 
-/** sorts linear constraint's variables */
+/** sorts linear constraint's variables by binaries, integers, implicit integers, and continuous variables,
+ *  and sorts the variables of the same type by non-decreasing variable index
+ */
 static
 SCIP_RETCODE consdataSort(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1888,6 +1900,7 @@ SCIP_RETCODE chgLhs(
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
+   consdata->cliquesadded = FALSE;
 
    /* update the lhs of the LP row */
    if( consdata->row != NULL )
@@ -1984,6 +1997,7 @@ SCIP_RETCODE chgRhs(
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
+   consdata->cliquesadded = FALSE;
 
    /* update the rhs of the LP row */
    if( consdata->row != NULL )
@@ -2060,6 +2074,7 @@ SCIP_RETCODE addCoef(
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
+   consdata->cliquesadded = FALSE;
    if( consdata->nvars == 1 )
    {
       consdata->sorted = TRUE;
@@ -2153,6 +2168,7 @@ SCIP_RETCODE delCoefPos(
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
+   consdata->cliquesadded = FALSE;
 
    /* delete coefficient from the LP row */
    if( consdata->row != NULL )
@@ -2215,6 +2231,7 @@ SCIP_RETCODE chgCoefPos(
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
+   consdata->cliquesadded = FALSE;
 
    return SCIP_OKAY;
 }
@@ -2235,6 +2252,7 @@ SCIP_RETCODE scaleCons(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->row == NULL);
+   assert(!SCIPisEQ(scip, scalar, 1.0));
 
    /* scale the coefficients */
    for( i = 0; i < consdata->nvars; ++i )
@@ -2281,6 +2299,7 @@ SCIP_RETCODE scaleCons(
    }
 
    consdataInvalidateActivities(consdata);
+   consdata->cliquesadded = FALSE;
 
    return SCIP_OKAY;
 }
@@ -3637,7 +3656,80 @@ SCIP_RETCODE propagateCons(
  * Presolving methods
  */
 
-/* tightens left and right hand side of constraint due to integrality */
+/** extracts cliques of the constraint and adds them to SCIP */
+static
+SCIP_RETCODE extractCliques(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< linear constraint */
+   SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
+   int*                  nchgbds             /**< pointer to count the total number of tightened bounds */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool lhsclique;
+   SCIP_Bool rhsclique;
+   int i;
+   int nposcoefs;
+   int nnegcoefs;
+
+   assert(cutoff != NULL);
+   assert(nchgbds != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* check if we already added the cliques of the constraints */
+   if( consdata->cliquesadded )
+      return SCIP_OKAY;
+
+   consdata->cliquesadded = TRUE;
+
+   /* sort variables by variable type */
+   SCIP_CALL( consdataSort(scip, consdata) );
+
+   /* currently, we only check whether the constraint is a set packing / partitioning constraint */
+   /**@todo extract more cliques from linear constraints */
+   if( SCIPvarGetType(consdata->vars[consdata->nvars-1]) != SCIP_VARTYPE_BINARY )
+      return SCIP_OKAY;
+
+   /* all variables are binary: check, if the coefficients are +1 or -1, and if the right hand side is equal
+    * to 1 - number of negative coefficients, or if the left hand side is equal to number of positive coefficients - 1
+    */
+   nposcoefs = 0;
+   nnegcoefs = 0;
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      if( SCIPisEQ(scip, consdata->vals[i], +1.0) )
+         nposcoefs++;
+      else if( SCIPisEQ(scip, consdata->vals[i], -1.0) )
+         nnegcoefs++;
+      else
+         return SCIP_OKAY;
+   }
+   lhsclique = SCIPisEQ(scip, consdata->lhs, (SCIP_Real)nposcoefs - 1.0);
+   rhsclique = SCIPisEQ(scip, consdata->rhs, 1.0 - (SCIP_Real)nnegcoefs);
+   if( lhsclique || rhsclique )
+   {
+      SCIP_Bool* values;
+      SCIP_Bool infeasible;
+      int nbdchgs;
+
+      SCIPdebugMessage("linear constraint <%s>: adding clique with %d vars (%d pos, %d neg)\n",
+         SCIPconsGetName(cons), consdata->nvars, nposcoefs, nnegcoefs);
+      SCIP_CALL( SCIPallocBufferArray(scip, &values, consdata->nvars) );
+      for( i = 0; i < consdata->nvars; ++i )
+         values[i] = (rhsclique == (consdata->vals[i] > 0.0));
+      SCIP_CALL( SCIPaddClique(scip, consdata->vars, values, consdata->nvars, &infeasible, &nbdchgs) );
+      if( infeasible )
+         *cutoff = TRUE;
+      *nchgbds += nbdchgs;
+      SCIPfreeBufferArray(scip, &values);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** tightens left and right hand side of constraint due to integrality */
 static
 SCIP_RETCODE tightenSides(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5535,6 +5627,11 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          }
          assert(consdata->nvars >= 1); /* otherwise, it should be redundant or infeasible */
 
+         /* extract cliques from constraint */
+         SCIP_CALL( extractCliques(scip, cons, &cutoff, nchgbds) );
+         if( cutoff )
+            break;
+
          /* reduce big-M coefficients, that make the constraint redundant if the variable is on a bound */
          SCIP_CALL( consdataTightenCoefs(scip, cons, nchgcoefs, nchgsides) );
       }
@@ -6426,8 +6523,7 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    if( *upgdcons != NULL )
    {
       SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-      conshdlr = SCIPconsGetHdlr(*upgdcons);
-      SCIPdebugMessage(" -> upgraded to constraint type <%s>\n", SCIPconshdlrGetName(conshdlr));
+      SCIPdebugMessage(" -> upgraded to constraint type <%s>\n", SCIPconshdlrGetName(SCIPconsGetHdlr(*upgdcons)));
       SCIP_CALL( SCIPprintCons(scip, *upgdcons, NULL) );
    }
 #endif

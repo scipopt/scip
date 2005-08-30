@@ -794,9 +794,13 @@ presolving/probing/proprounds = -1
 # [type: int, range: [0,2147483647], default: 10]
 presolving/probing/maxfixings = 10
 
-# maximal number of successive useless probings, until probing is aborted (0: don't abort)
+# maximal number of successive probings without fixings, until probing is aborted (0: don't abort)
 # [type: int, range: [0,2147483647], default: 2000]
 presolving/probing/maxuseless = 2000
+
+# maximal number of successive probings without fixings and implications, until probing is aborted (0: don't abort)
+# [type: int, range: [0,2147483647], default: 100]
+presolving/probing/maxtotaluseless = 100
 
 # priority of presolver <trivial>
 # [type: int, range: [-2147483648,2147483647], default: 9000000]
@@ -1515,8 +1519,8 @@ separating/cmir/maxtriesroot = -1
 separating/cmir/maxfails = 20
 
 # maximal number of consecutive unsuccesful aggregation tries in the root node (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: 40]
-separating/cmir/maxfailsroot = 40
+# [type: int, range: [-1,2147483647], default: 100]
+separating/cmir/maxfailsroot = 100
 
 # maximal number of aggregations for each row per separation round
 # [type: int, range: [0,2147483647], default: 3]

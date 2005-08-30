@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_heur.h,v 1.13 2005/08/24 17:27:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_heur.h,v 1.14 2005/08/30 20:35:05 bzfpfend Exp $"
 
 /**@file   type_heur.h
  * @brief  type definitions for primal heuristics
@@ -85,6 +85,8 @@ typedef struct SCIP_HeurData SCIP_HEURDATA;       /**< locally defined primal he
  *  input:
  *  - scip            : SCIP main data structure
  *  - heur            : the primal heuristic itself
+ *  - inplunging      : is the next node to be processed a child or sibling?
+ *  - inlploop        : are we currently in the LP price-and-cut loop?
  *  - result          : pointer to store the result of the heuristic call
  *
  *  possible return values for *result:
@@ -94,7 +96,8 @@ typedef struct SCIP_HeurData SCIP_HEURDATA;       /**< locally defined primal he
  *  - SCIP_DELAYED    : the heuristic was skipped, but should be called again as soon as possible, disregarding
  *                      its frequency
  */
-#define SCIP_DECL_HEUREXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_HEUR* heur, SCIP_RESULT* result)
+#define SCIP_DECL_HEUREXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_HEUR* heur, SCIP_Bool inplunging, SCIP_Bool inlploop, \
+      SCIP_RESULT* result)
 
 
 
