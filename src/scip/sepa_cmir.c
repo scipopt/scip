@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.42 2005/08/30 20:35:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.43 2005/08/30 20:59:19 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -353,13 +353,11 @@ void decreaseRowScore(
 {
    assert(rowlhsscores != NULL);
    assert(rowrhsscores != NULL);
-   assert(rowlhsscores[rowidx] < 0.0);
-   assert(rowrhsscores[rowidx] < 0.0);
+   assert(rowlhsscores[rowidx] >= 0.0);
+   assert(rowrhsscores[rowidx] >= 0.0);
 
-   if( !SCIPisInfinity(scip, -rowlhsscores[rowidx]) )
-      rowlhsscores[rowidx] *= 1.1;
-   if( !SCIPisInfinity(scip, -rowrhsscores[rowidx]) )
-      rowrhsscores[rowidx] *= 1.1;
+   rowlhsscores[rowidx] *= 0.9;
+   rowrhsscores[rowidx] *= 0.9;
 }
 
 /** calculates efficacy of the given cut */
@@ -753,7 +751,7 @@ SCIP_RETCODE aggregation(
        */
       bestcol = NULL;
       bestbounddist = 0.0;
-      bestscore = -SCIPinfinity(scip);
+      bestscore = 0.0;
       bestrow = NULL;
       aggrfac = 0.0;
       for( nzi = 0; nzi < naggrcontnonzs; ++nzi )
@@ -836,11 +834,10 @@ SCIP_RETCODE aggregation(
                   continue;
                
                /* choose row with best aggregation score */
-               assert(!SCIPisInfinity(scip, -SCIProwGetLhs(nonzrows[r])) || SCIPisInfinity(scip, -rowlhsscores[lppos]));
-               assert(!SCIPisInfinity(scip, SCIProwGetRhs(nonzrows[r])) || SCIPisInfinity(scip, -rowrhsscores[lppos]));
+               assert(!SCIPisInfinity(scip, -SCIProwGetLhs(nonzrows[r])) || rowlhsscores[lppos] == 0.0);
+               assert(!SCIPisInfinity(scip, SCIProwGetRhs(nonzrows[r])) || rowrhsscores[lppos] == 0.0);
                score = (factor < 0.0 ? rowlhsscores[lppos] : rowrhsscores[lppos]);
-               if( !SCIPisInfinity(scip, -score)
-                  && (bounddist > bestbounddist + 0.1 || score > bestscore) )
+               if( score > 0.0 && (bounddist > bestbounddist + 0.1 || score > bestscore) )
                {
                   bestbounddist = bounddist;
                   bestscore = score; 
@@ -1114,8 +1111,8 @@ SCIP_DECL_SEPAEXEC(sepaExecCmir)
       if( nnonz == 0 )
       {
          /* ignore empty rows */
-         rowlhsscores[r] = -SCIPinfinity(scip);
-         rowrhsscores[r] = -SCIPinfinity(scip);
+         rowlhsscores[r] = 0.0;
+         rowrhsscores[r] = 0.0;
       }
       else
       {
@@ -1143,9 +1140,12 @@ SCIP_DECL_SEPAEXEC(sepaExecCmir)
             && (ALLOWLOCAL || !SCIProwIsLocal(rows[r])) /*lint !e506 !e774*/
             && rowdensity <= sepadata->maxrowdensity
             && rowdensity <= sepadata->maxaggdensity )  /*lint !e774*/
-            rowlhsscores[r] = dualscore + (1.0-rowdensity) - sepadata->slackscore * slack;
+         {
+            rowlhsscores[r] = dualscore + (1.0-rowdensity) + sepadata->slackscore * MAX(1.0 - slack, 0.0);
+            assert(rowlhsscores[r] > 0.0);
+         }
          else
-            rowlhsscores[r] = -SCIPinfinity(scip);
+            rowlhsscores[r] = 0.0;
 
          slack = (rhs - activity)/rownorm;
          dualscore = MAX(-dualsol/objnorm, 0.0001);
@@ -1153,9 +1153,12 @@ SCIP_DECL_SEPAEXEC(sepaExecCmir)
             && (ALLOWLOCAL || !SCIProwIsLocal(rows[r])) /*lint !e506 !e774*/
             && rowdensity <= sepadata->maxrowdensity
             && rowdensity <= sepadata->maxaggdensity )  /*lint !e774*/
-            rowrhsscores[r] = dualscore + (1.0-rowdensity) - sepadata->slackscore * slack;
+         {
+            rowrhsscores[r] = dualscore + (1.0-rowdensity) - sepadata->slackscore * MAX(1.0 - slack, 0.0);
+            assert(rowrhsscores[r] > 0.0);
+         }
          else
-            rowrhsscores[r] = -SCIPinfinity(scip);
+            rowrhsscores[r] = 0.0;
       }
       rowscores[r] = MAX(rowlhsscores[r], rowrhsscores[r]);
       for( i = r; i > 0 && rowscores[r] > rowscores[roworder[i-1]]; --i )
@@ -1174,8 +1177,7 @@ SCIP_DECL_SEPAEXEC(sepaExecCmir)
       maxfails += maxfails - 2*SCIPgetNSepaRounds(scip); /* allow up to double as many fails in early separounds of root node */
    ntries = 0;
    nfails = 0;
-   for( r = 0; r < nrows && ntries < maxtries && ncuts < maxsepacuts && !SCIPisInfinity(scip, -rowscores[roworder[r]]);
-        r++ )
+   for( r = 0; r < nrows && ntries < maxtries && ncuts < maxsepacuts && rowscores[roworder[r]] > 0.0; r++ )
    {
       SCIP_Bool wastried;
       int oldncuts;
