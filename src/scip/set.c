@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.157 2005/08/28 12:29:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.158 2005/08/30 13:42:55 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -60,7 +60,7 @@
 
 #define SCIP_DEFAULT_BRANCH_SCOREFUNC       'p' /**< branching score function ('s'um, 'p'roduct) */
 #define SCIP_DEFAULT_BRANCH_SCOREFAC      0.167 /**< branching score factor to weigh downward and upward gain prediction
-                                                      *   in sum score function */
+                                                 *   in sum score function */
 #define SCIP_DEFAULT_BRANCH_PREFERBINARY  FALSE /**< should branching on binary variables be preferred? */
 
 
@@ -69,14 +69,14 @@
 #define SCIP_DEFAULT_CONF_MAXVARSFAC       0.02 /**< maximal fraction of binary variables involved in a conflict clause */
 #define SCIP_DEFAULT_CONF_MINMAXVARS         30 /**< minimal absolute maximum of variables involved in a conflict clause */
 #define SCIP_DEFAULT_CONF_MAXUNFIXED         -1 /**< maximal number of unfixed variables at insertion depth of conflict
-                                                      *   clause (-1: no limit) */
+                                                 *   clause (-1: no limit) */
 #define SCIP_DEFAULT_CONF_MAXLPLOOPS        100 /**< maximal number of LP resolving loops during conflict analysis */
 #define SCIP_DEFAULT_CONF_FUIPLEVELS         -1 /**< number of depth levels up to which first UIP's are used in conflict
-                                                      *   analysis (-1: use All-FirstUIP rule) */
+                                                 *   analysis (-1: use All-FirstUIP rule) */
 #define SCIP_DEFAULT_CONF_INTERCLAUSES        1 /**< maximal number of intermediate conflict clauses generated in conflict
-                                                      *   graph (-1: use every intermediate clause) */
+                                                 *   graph (-1: use every intermediate clause) */
 #define SCIP_DEFAULT_CONF_MAXCLAUSES         10 /**< maximal number of conflict clauses accepted at an infeasible node
-                                                      *   (-1: use all generated conflict clauses) */
+                                                 *   (-1: use all generated conflict clauses) */
 #define SCIP_DEFAULT_CONF_RECONVCLAUSES    TRUE /**< should reconvergence clauses be created for UIPs of last depth level? */
 #define SCIP_DEFAULT_CONF_USEPROP          TRUE /**< should propagation conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USELP           FALSE /**< should infeasible LP conflict analysis be used? */
@@ -84,7 +84,7 @@
 #define SCIP_DEFAULT_CONF_USEPSEUDO        TRUE /**< should pseudo solution conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_ALLOWLOCAL       TRUE /**< should conflict clauses be generated that are only valid locally? */
 #define SCIP_DEFAULT_CONF_REPROPAGATE      TRUE /**< should earlier nodes be repropagated in order to replace branching
-                                                      *   decisions by deductions */
+                                                 *   decisions by deductions */
 #define SCIP_DEFAULT_CONF_DYNAMIC          TRUE /**< should the conflict constraints be subject to aging? */
 #define SCIP_DEFAULT_CONF_REMOVEABLE       TRUE /**< should the conflict's relaxations be subject to LP aging and cleanup? */
 
@@ -92,9 +92,9 @@
 /* Constraints */
 
 #define SCIP_DEFAULT_CONS_AGELIMIT            0 /**< maximum age an unnecessary constraint can reach before it is deleted
-                                                      *   (0: dynamic adjustment, -1: constraints are never deleted) */
+                                                 *   (0: dynamic adjustment, -1: constraints are never deleted) */
 #define SCIP_DEFAULT_CONS_OBSOLETEAGE         0 /**< age of a constraint after which it is marked obsolete
-                                                      *   (0: dynamic adjustment, -1: constraints are never marked obsolete) */
+                                                 *   (0: dynamic adjustment, -1: constraints are never marked obsolete) */
 
 
 /* Display */
@@ -114,7 +114,7 @@
 #define SCIP_DEFAULT_LIMIT_NODES           -1LL /**< maximal number of nodes to process (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_SOLUTIONS         -1 /**< solving stops, if given number of sols were found (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_BESTSOL           -1 /**< solving stops, if given number of solution improvements were found
-                                                      *   (-1: no limit) */
+                                                 *   (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_MAXSOL           100 /**< maximal number of solutions to store in the solution storage */
 
 
@@ -123,16 +123,16 @@
 #define SCIP_DEFAULT_LP_SOLVEFREQ             1 /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
 #define SCIP_DEFAULT_LP_SOLVEDEPTH           -1 /**< maximal depth for solving LPs (-1: no depth limit) */
 #define SCIP_DEFAULT_LP_INITALGORITHM       's' /**< LP algorithm for solving initial LP relaxations ('s'implex, 'b'arrier,
-                                                      *   barrier with 'c'rossover) */
+                                                 *   barrier with 'c'rossover) */
 #define SCIP_DEFAULT_LP_RESOLVEALGORITHM    's' /**< LP algorithm for resolving LP relaxations if a starting basis exists
-                                                      *   ('s'implex, 'b'arrier, barrier with 'c'rossover) */
+                                                 *   ('s'implex, 'b'arrier, barrier with 'c'rossover) */
 #define SCIP_DEFAULT_LP_PRICING             's' /**< LP pricing strategy ('a'uto, 'f'ull pricing, 'p'artial,
-                                                      *   's'teepest edge pricing, 'q'uickstart steepest edge pricing,
-                                                      *   'd'evex pricing) */
+                                                 *   's'teepest edge pricing, 'q'uickstart steepest edge pricing,
+                                                 *   'd'evex pricing) */
 #define SCIP_DEFAULT_LP_COLAGELIMIT          10 /**< maximum age a dynamic column can reach before it is deleted from SCIP_LP
-                                                      *   (-1: don't delete columns due to aging) */
+                                                 *   (-1: don't delete columns due to aging) */
 #define SCIP_DEFAULT_LP_ROWAGELIMIT          10 /**< maximum age a dynamic row can reach before it is deleted from SCIP_LP
-                                                      *   (-1: don't delete rows due to aging) */
+                                                 *   (-1: don't delete rows due to aging) */
 #define SCIP_DEFAULT_LP_CLEANUPCOLS       FALSE /**< should new non-basic columns be removed after LP solving? */
 #define SCIP_DEFAULT_LP_CLEANUPCOLSROOT   FALSE /**< should new non-basic columns be removed after root LP solving? */
 #define SCIP_DEFAULT_LP_CLEANUPROWS        TRUE /**< should new basic rows be removed after LP solving? */
@@ -164,17 +164,17 @@
 /* Presolving */
 
 #define SCIP_DEFAULT_PRESOL_ABORTFAC      1e-04 /**< abort presolve, if at most this fraction of the problem was changed
-                                                      *   in last presolve round */
+                                                 *   in last presolve round */
 #define SCIP_DEFAULT_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds (-1: unlimited) */
 #define SCIP_DEFAULT_PRESOL_MAXRESTARTS      -1 /**< maximal number of restarts (-1: unlimited) */
 #define SCIP_DEFAULT_PRESOL_RESTARTFAC      0.0 /**< fraction of bounds that changed in the root node triggering a restart with
-                                                      *   preprocessing (0.0: restart only after complete root node evaluation) */
+                                                 *   preprocessing (0.0: restart only after complete root node evaluation) */
 
 
 /* Pricing */
 
 #define SCIP_DEFAULT_PRICE_ABORTFAC         2.0 /**< pricing is aborted, if fac * price_maxvars pricing candidates were
-                                                      *   found */
+                                                 *   found */
 #define SCIP_DEFAULT_PRICE_MAXVARS          100 /**< maximal number of variables priced in per pricing round */
 #define SCIP_DEFAULT_PRICE_MAXVARSROOT     2000 /**< maximal number of priced variables at the root node */
 
@@ -189,8 +189,8 @@
 /* Separation */
 
 #define SCIP_DEFAULT_SEPA_MAXBOUNDDIST      0.2 /**< maximal relative distance from current node's dual bound to primal 
-                                                      *   bound compared to best node's dual bound for applying separation
-                                                      *   (0.0: only on current best node, 1.0: on all nodes) */
+                                                 *   bound compared to best node's dual bound for applying separation
+                                                 *   (0.0: only on current best node, 1.0: on all nodes) */
 #define SCIP_DEFAULT_SEPA_MINEFFICACY      0.05 /**< minimal efficacy for a cut to enter the LP */
 #define SCIP_DEFAULT_SEPA_MINEFFICACYROOT  0.01 /**< minimal efficacy for a cut to enter the LP in the root node */
 #define SCIP_DEFAULT_SEPA_MINORTHO         0.50 /**< minimal orthogonality for a cut to enter the LP */
@@ -198,17 +198,17 @@
 #define SCIP_DEFAULT_SEPA_OBJPARALFAC      0.20 /**< factor to scale objective parallelism of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_ORTHOFAC         1.00 /**< factor to scale orthogonality of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_EFFICACYNORM      'e' /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum,
-                                                      *   's'um, 'd'iscrete) */
+                                                 *   's'um, 'd'iscrete) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDS           5 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDSROOT      -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXADDROUNDS        1 /**< maximal additional number of separation rounds in subsequent
-                                                      *   price-and-cut loops (-1: no additional restriction) */
-#define SCIP_DEFAULT_SEPA_MAXSTALLROUNDS    100 /**< maximal number of consecutive separation rounds without objective
-                                                      *   improvement (-1: no additional restriction) */
+                                                 *   price-and-cut loops (-1: no additional restriction) */
+#define SCIP_DEFAULT_SEPA_MAXSTALLROUNDS      5 /**< maximal number of consecutive separation rounds without objective
+                                                 *   or integrality improvement (-1: no additional restriction) */
 #define SCIP_DEFAULT_SEPA_MAXCUTS           100 /**< maximal number of cuts separated per separation round */
 #define SCIP_DEFAULT_SEPA_MAXCUTSROOT      2000 /**< maximal separated cuts at the root node */
 #define SCIP_DEFAULT_SEPA_CUTAGELIMIT       100 /**< maximum age a cut can reach before it is deleted from global cut pool
-                                                      *   (-1: cuts are never deleted from the global cut pool) */
+                                                 *   (-1: cuts are never deleted from the global cut pool) */
 #define SCIP_DEFAULT_SEPA_POOLFREQ            5 /**< separation frequency for the global cut pool */
 
 
@@ -220,9 +220,9 @@
 
 /* VBC Tool output */
 #define SCIP_DEFAULT_VBC_FILENAME           "-" /**< name of the VBC Tool output file, or "-" if no output should be
-                                                      *   created */
+                                                 *   created */
 #define SCIP_DEFAULT_VBC_REALTIME          TRUE /**< should the real solving time be used instead of a time step counter
-                                                      *   in VBC output? */
+                                                 *   in VBC output? */
 
 
 
@@ -849,7 +849,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "separating/maxstallrounds",
-         "maximal number of consecutive separation rounds without objective improvement (-1: no additional restriction)",
+         "maximal number of consecutive separation rounds without objective or integrality improvement (-1: no additional restriction)",
          &(*set)->sepa_maxstallrounds, SCIP_DEFAULT_SEPA_MAXSTALLROUNDS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,

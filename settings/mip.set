@@ -346,9 +346,9 @@ separating/maxroundsroot = -1
 # [type: int, range: [-1,2147483647], default: 1]
 separating/maxaddrounds = 1
 
-# maximal number of consecutive separation rounds without objective improvement (-1: no additional restriction)
-# [type: int, range: [-1,2147483647], default: 100]
-separating/maxstallrounds = 100
+# maximal number of consecutive separation rounds without objective or integrality improvement (-1: no additional restriction)
+# [type: int, range: [-1,2147483647], default: 5]
+separating/maxstallrounds = 5
 
 # maximal number of cuts separated per separation round (0: disable local separation)
 # [type: int, range: [0,2147483647], default: 100]

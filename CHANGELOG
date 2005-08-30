@@ -75,6 +75,8 @@ parameters:
 - changed default value of separating/strongcg/maxroundsroot to 20
 - changed default value of separating/cmir/maxroundsroot to 10
 - new parameters separating/cmir/maxfails, separating/cmir/maxfailsroot and separating/cmir/trynegscaling
+- number of fractional variables included in parameter separating/maxstallrounds
+- changed default value of separating/maxstallrounds to 5
 
 features:
 - reactivated multiaggregation in cons_linear.c on binary variables again (possible due to bug fix below)

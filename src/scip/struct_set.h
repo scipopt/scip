@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.56 2005/08/24 17:27:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.57 2005/08/30 13:42:55 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -239,7 +239,7 @@ struct SCIP_Set
    int                   sepa_maxaddrounds;  /**< maximal additional number of separation rounds in subsequent price-and-cut
                                               *   loops (-1: no additional restriction) */
    int                   sepa_maxstallrounds;/**< maximal number of consecutive separation rounds without objective
-                                              *   improvement (-1: no additional restriction) */
+                                              *   or integrality improvement (-1: no additional restriction) */
    int                   sepa_maxcuts;       /**< maximal number of cuts separated per separation round */
    int                   sepa_maxcutsroot;   /**< maximal number of separated cuts at the root node */
    int                   sepa_cutagelimit;   /**< maximum age a cut can reach before it is deleted from the global cut pool */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.185 2005/08/24 17:26:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.186 2005/08/30 13:42:55 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -904,6 +904,7 @@ SCIP_RETCODE priceAndCutLoop(
    int maxseparounds;
    int nsepastallrounds;
    int maxnsepastallrounds;
+   int minnfracs;
    int actdepth;
    int npricedcolvars;
 
@@ -958,6 +959,7 @@ SCIP_RETCODE priceAndCutLoop(
    *cutoff = FALSE;
    *unbounded = FALSE;
    nsepastallrounds = 0;
+   minnfracs = INT_MAX;
    while( !(*cutoff) && !(*lperror) && (mustprice || mustsepa || delayedsepa) )
    {
       SCIPdebugMessage("-------- node solving loop --------\n");
@@ -1198,9 +1200,15 @@ SCIP_RETCODE priceAndCutLoop(
 
                   if( !(*lperror) )
                   {
+                     int nfracs;
+
+                     SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nfracs, NULL) );
                      lpobjval = SCIPlpGetObjval(lp, set);
-                     if( SCIPsetIsFeasGT(set, lpobjval, oldlpobjval) )
+                     if( SCIPsetIsFeasGT(set, lpobjval, oldlpobjval) || nfracs < minnfracs )
+                     {
                         nsepastallrounds = 0;
+                        minnfracs = nfracs;
+                     }
                      else
                         nsepastallrounds++;
                   }
