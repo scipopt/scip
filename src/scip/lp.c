@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.206 2005/08/28 12:29:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.207 2005/08/30 12:38:39 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6614,7 +6614,7 @@ void sumMIRRow(
    assert(prob != NULL);
    assert(lp != NULL);
    assert(weights != NULL);
-   assert(SCIPsetIsPositive(set, scale));
+   assert(!SCIPsetIsZero(set, scale));
    assert(maxweightrange >= 1.0);
    assert(mircoef != NULL);
    assert(mirrhs != NULL);
@@ -7285,7 +7285,7 @@ void substituteMIRRow(
 
    assert(lp != NULL);
    assert(weights != NULL);
-   assert(SCIPsetIsPositive(set, scale));
+   assert(!SCIPsetIsZero(set, scale));
    assert(mircoef != NULL);
    assert(mirrhs != NULL);
    assert(slacksign != NULL);
@@ -7443,7 +7443,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
    assert(lp->solved);
    assert(prob != NULL);
    assert(weights != NULL);
-   assert(SCIPsetIsPositive(set, scale));
+   assert(!SCIPsetIsZero(set, scale));
    assert(mircoef != NULL);
    assert(mirrhs != NULL);
    assert(cutactivity != NULL);
@@ -7604,7 +7604,7 @@ void sumStrongCGRow(
    assert(prob != NULL);
    assert(lp != NULL);
    assert(weights != NULL);
-   assert(SCIPsetIsPositive(set, scale));
+   assert(!SCIPsetIsZero(set, scale));
    assert(maxweightrange >= 1.0);
    assert(strongcgcoef != NULL);
    assert(strongcgrhs != NULL);
@@ -8112,7 +8112,7 @@ void substituteStrongCGRow(
 
    assert(lp != NULL);
    assert(weights != NULL);
-   assert(SCIPsetIsPositive(set, scale));
+   assert(!SCIPsetIsZero(set, scale));
    assert(strongcgcoef != NULL);
    assert(strongcgrhs != NULL);
    assert(slacksign != NULL);
@@ -8263,7 +8263,7 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    assert(lp->solved);
    assert(prob != NULL);
    assert(weights != NULL);
-   assert(SCIPsetIsPositive(set, scale));
+   assert(!SCIPsetIsZero(set, scale));
    assert(strongcgcoef != NULL);
    assert(strongcgrhs != NULL);
    assert(cutactivity != NULL);

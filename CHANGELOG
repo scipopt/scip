@@ -72,6 +72,9 @@ parameters:
 - changed default values of constraints/agelimit and constraints/obsoleteage to 0
 - changed default values of heuristics/objpscostdiving/maxsols and heuristics/rootsoldiving/maxsols to -1
 - new parameter constraints/knapsack/disaggregation
+- changed default value of separating/strongcg/maxroundsroot to 20
+- changed default value of separating/cmir/maxroundsroot to 10
+- new parameters separating/cmir/maxfails, separating/cmir/maxfailsroot and separating/cmir/trynegscaling
 
 features:
 - reactivated multiaggregation in cons_linear.c on binary variables again (possible due to bug fix below)
