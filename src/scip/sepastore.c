@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.42 2005/08/24 17:26:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.43 2005/09/01 18:19:20 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -119,6 +119,7 @@ SCIP_RETCODE SCIPsepastoreCreate(
    (*sepastore)->cutssize = 0;
    (*sepastore)->bdchgssize = 0;
    (*sepastore)->ncuts = 0;
+   (*sepastore)->nforcedcuts = 0;
    (*sepastore)->nbdchgs = 0;
    (*sepastore)->ncutsfound = 0;
    (*sepastore)->ncutsfoundround = 0;
@@ -264,6 +265,7 @@ SCIP_RETCODE sepastoreAddCut(
    int j;
 
    assert(sepastore != NULL);
+   assert(sepastore->nforcedcuts <= sepastore->ncuts);
    assert(set != NULL);
    assert(cut != NULL);
    assert(!SCIProwIsInLP(cut));
@@ -282,7 +284,8 @@ SCIP_RETCODE sepastoreAddCut(
       && sepastoreIsCutRedundant(sepastore, set, stat, sepastore->cuts[0]) )
    {
       SCIP_CALL( SCIProwRelease(&sepastore->cuts[0], blkmem, set, lp) );
-      sepastore->ncuts--;
+      sepastore->ncuts = 0;
+      sepastore->nforcedcuts = 0;
    }
 
    /* get maximum of separated cuts at this node:
@@ -313,6 +316,7 @@ SCIP_RETCODE sepastoreAddCut(
    {
       cutefficacy = SCIProwGetEfficacy(cut, set, stat, lp);
       cutscore = cutefficacy + set->sepa_objparalfac * cutobjparallelism + set->sepa_orthofac * cutorthogonality;
+      assert(!SCIPsetIsInfinity(set, cutscore));
    }
 
    /* check, if cut has potential to belong to the best "maxsepacuts" separation cuts */
@@ -332,25 +336,25 @@ SCIP_RETCODE sepastoreAddCut(
    SCIPdebug(SCIProwPrint(cut, NULL));
 
    /* search the correct position of the cut in the cuts array */
-   for( c = 0; c < sepastore->ncuts && cutscore <= sepastore->scores[c]; ++c )
+   for( c = sepastore->nforcedcuts; c < sepastore->ncuts && cutscore <= sepastore->scores[c]; ++c )
    {
-      /* update the minimal orthogonality of the cut and it's score */
-      if( !forcecut )
-      {
-         SCIP_Real thisortho;
+      SCIP_Real thisortho;
          
-         assert(!SCIPsetIsInfinity(set, cutscore));
-         thisortho = SCIProwGetOrthogonality(cut, sepastore->cuts[c]);
-         if( thisortho < cutorthogonality )
-         {
-            cutorthogonality = thisortho;
-            cutscore = cutefficacy + set->sepa_objparalfac * cutobjparallelism + set->sepa_orthofac * cutorthogonality;
-            
-            /* check, if the cut (after regarding orthogonality) is still good enough */
-            if( (sepastore->ncuts >= maxsepacuts && cutscore <= sepastore->scores[maxsepacuts-1])
-               || cutorthogonality < mincutorthogonality )
-               return SCIP_OKAY;
-         }
+      assert(!SCIPsetIsInfinity(set, sepastore->scores[c]));
+      assert(!SCIPsetIsInfinity(set, cutscore));
+      assert(!forcecut);
+
+      /* update the minimal orthogonality of the cut and it's score */
+      thisortho = SCIProwGetOrthogonality(cut, sepastore->cuts[c]);
+      if( thisortho < cutorthogonality )
+      {
+         cutorthogonality = thisortho;
+         cutscore = cutefficacy + set->sepa_objparalfac * cutobjparallelism + set->sepa_orthofac * cutorthogonality;
+         
+         /* check, if the cut (after regarding orthogonality) is still good enough */
+         if( (sepastore->ncuts >= maxsepacuts && cutscore <= sepastore->scores[maxsepacuts-1])
+            || cutorthogonality < mincutorthogonality )
+            return SCIP_OKAY;
       }
    }
    assert(c <= sepastore->ncuts);
@@ -433,8 +437,11 @@ SCIP_RETCODE sepastoreAddCut(
    sepastore->orthogonalities[c] = cutorthogonality;
    sepastore->scores[c] = cutscore;
    sepastore->ncuts++;
+   if( forcecut )
+      sepastore->nforcedcuts++;
    assert(c == 0 || sepastore->scores[c-1] >= sepastore->scores[c]);
    assert(c == sepastore->ncuts-1 || sepastore->scores[c] >= sepastore->scores[c+1]);
+   assert(SCIPsetIsInfinity(set, cutscore) == forcecut);
 
    /* capture the cut */
    SCIProwCapture(cut);
@@ -443,6 +450,7 @@ SCIP_RETCODE sepastoreAddCut(
    if( sepastore->ncuts > maxsepacuts )
    {
       assert(sepastore->ncuts == maxsepacuts+1);
+      assert(!SCIPsetIsInfinity(set, sepastore->scores[sepastore->ncuts-1]));
       SCIP_CALL( SCIProwRelease(&sepastore->cuts[sepastore->ncuts-1], blkmem, set, lp) );
       sepastore->ncuts--;
    }
@@ -485,7 +493,8 @@ SCIP_RETCODE sepastoreAddBdchg(
       && sepastoreIsCutRedundant(sepastore, set, stat, sepastore->cuts[0]) )
    {
       SCIP_CALL( SCIProwRelease(&sepastore->cuts[0], blkmem, set, lp) );
-      sepastore->ncuts--;
+      sepastore->ncuts = 0;
+      sepastore->nforcedcuts = 0;
    }
 
    /* get enough memory to store the cut */
@@ -711,6 +720,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
 
    /* clear the separation storage */
    sepastore->ncuts = 0;
+   sepastore->nforcedcuts = 0;
    sepastore->nbdchgs = 0;
    sepastore->ncutsfoundround = 0;
    sepastore->ncutsstored = 0;
@@ -740,6 +750,7 @@ SCIP_RETCODE SCIPsepastoreClearCuts(
 
    /* clear the separation storage */
    sepastore->ncuts = 0;
+   sepastore->nforcedcuts = 0;
    sepastore->nbdchgs = 0;
    sepastore->ncutsfoundround = 0;
    sepastore->ncutsstored = 0;

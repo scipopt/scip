@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.10 2005/08/28 12:29:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.11 2005/09/01 18:19:19 bzfpfend Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -1498,6 +1498,9 @@ SCIP_RETCODE SCIPcliquetableCreate(
    (*cliquetable)->ncliques = 0;
    (*cliquetable)->size = 0;
    (*cliquetable)->ncreatedcliques = 0;
+   (*cliquetable)->ncleanupfixedvars = 0;
+   (*cliquetable)->ncleanupaggrvars = 0;
+   (*cliquetable)->ncleanupcliques = 0;
 
    return SCIP_OKAY;
 }
@@ -1667,9 +1670,16 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    int i;
 
    assert(cliquetable != NULL);
+   assert(stat != NULL);
    assert(infeasible != NULL);
 
    *infeasible = FALSE;
+
+   /* check if we have anything to do */
+   if( stat->npresolfixedvars == cliquetable->ncleanupfixedvars
+      && stat->npresolaggrvars == cliquetable->ncleanupaggrvars
+      && cliquetable->ncliques == cliquetable->ncleanupcliques )
+      return SCIP_OKAY;
 
    /* create hash table to test for multiple cliques */
    SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, SCIP_HASHSIZE_CLIQUES, 
@@ -1714,6 +1724,11 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 
    /* free hash table */
    SCIPhashtableFree(&hashtable);
+
+   /* remember the number of fixed variables and cliques in order to avoid unnecessary cleanups */
+   cliquetable->ncleanupfixedvars = stat->npresolfixedvars;
+   cliquetable->ncleanupaggrvars = stat->npresolaggrvars;
+   cliquetable->ncleanupcliques = cliquetable->ncliques;
    
    return SCIP_OKAY;
 }

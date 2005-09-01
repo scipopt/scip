@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.188 2005/08/30 20:35:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.189 2005/09/01 18:19:20 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -956,6 +956,7 @@ SCIP_RETCODE priceAndCutLoop(
    SCIP_EVENT event;
    SCIP_Real loclowerbound;
    SCIP_Real glblowerbound;
+   SCIP_Real stalllpobjval;
    SCIP_Bool separate;
    SCIP_Bool mustprice;
    SCIP_Bool mustsepa;
@@ -964,7 +965,7 @@ SCIP_RETCODE priceAndCutLoop(
    int maxseparounds;
    int nsepastallrounds;
    int maxnsepastallrounds;
-   int minnfracs;
+   int stallnfracs;
    int actdepth;
    int npricedcolvars;
 
@@ -1019,7 +1020,8 @@ SCIP_RETCODE priceAndCutLoop(
    *cutoff = FALSE;
    *unbounded = FALSE;
    nsepastallrounds = 0;
-   minnfracs = INT_MAX;
+   stalllpobjval = SCIPlpGetObjval(lp, set);
+   stallnfracs = INT_MAX;
    while( !(*cutoff) && !(*lperror) && (mustprice || mustsepa || delayedsepa) )
    {
       SCIP_Bool foundsol;
@@ -1126,7 +1128,10 @@ SCIP_RETCODE priceAndCutLoop(
       }
 
       /* call primal heuristics that are applicable during node processing loop */
-      SCIP_CALL( primalHeuristics(set, primal, tree, NULL, FALSE, TRUE, &foundsol) );
+      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+      {
+         SCIP_CALL( primalHeuristics(set, primal, tree, NULL, FALSE, TRUE, &foundsol) );
+      }
 
       /* display node information line for root node */
       if( !foundsol && root && (SCIP_VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_HIGH )
@@ -1159,7 +1164,6 @@ SCIP_RETCODE priceAndCutLoop(
       if( !(*cutoff) && !(*lperror) && mustsepa )
       {
          SCIP_Longint olddomchgcount;
-         SCIP_Real oldlpobjval;
          SCIP_Bool separateagain;
          SCIP_Bool enoughcuts;
 
@@ -1168,7 +1172,6 @@ SCIP_RETCODE priceAndCutLoop(
          assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
 
          olddomchgcount = stat->domchgcount;
-         oldlpobjval = SCIPlpGetObjval(lp, set);
 
          mustsepa = FALSE;
          enoughcuts = (SCIPsetGetSepaMaxcuts(set, root) == 0);
@@ -1263,17 +1266,19 @@ SCIP_RETCODE priceAndCutLoop(
                   assert(lp->flushed);
                   assert(lp->solved || lperror);
 
-                  if( !(*lperror) )
+                  if( !(*lperror) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
                   {
+                     SCIP_Real objreldiff;
                      int nfracs;
 
                      SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nfracs, NULL) );
                      lpobjval = SCIPlpGetObjval(lp, set);
-                     if( SCIPsetIsFeasGT(set, lpobjval, oldlpobjval)
-                        || nfracs <= (0.9 - 0.1 * nsepastallrounds) * minnfracs )
+                     objreldiff = SCIPrelDiff(lpobjval, stalllpobjval);
+                     if( objreldiff > 1e-03 || nfracs <= (0.9 - 0.1 * nsepastallrounds) * stallnfracs )
                      {
                         nsepastallrounds = 0;
-                        minnfracs = nfracs;
+                        stalllpobjval = lpobjval;
+                        stallnfracs = nfracs;
                      }
                      else
                         nsepastallrounds++;

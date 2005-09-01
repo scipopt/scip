@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.312 2005/08/30 20:35:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.313 2005/09/01 18:19:20 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3717,6 +3717,23 @@ SCIP_RETCODE initPresolve(
    /* delete the variables from the problems that were marked to be deleted */
    SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, scip->branchcand) );
 
+   /* remove empty and single variable cliques from the clique table, and convert all two variable cliques
+    * into implications
+    */
+   if( !(*unbounded) && !(*infeasible) )
+   {
+      SCIP_Bool infeas;
+
+      SCIP_CALL( SCIPcliquetableCleanup(scip->cliquetable, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, &infeas) );
+      if( infeas )
+      {
+         *infeasible = TRUE;
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "clique table cleanup detected infeasibility\n");
+      }
+   }
+
    return SCIP_OKAY;
 }
 
@@ -3744,6 +3761,23 @@ SCIP_RETCODE exitPresolve(
 
    /* delete the variables from the problems that were marked to be deleted */
    SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, scip->branchcand) );
+
+   /* remove empty and single variable cliques from the clique table, and convert all two variable cliques
+    * into implications
+    */
+   if( !(*unbounded) && !(*infeasible) )
+   {
+      SCIP_Bool infeas;
+
+      SCIP_CALL( SCIPcliquetableCleanup(scip->cliquetable, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, &infeas) );
+      if( infeas )
+      {
+         *infeasible = TRUE;
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "clique table cleanup detected infeasibility\n");
+      }
+   }
 
    /* replace variables in variable bounds with active problem variables, and 
     * check, whether the objective value is always integral
@@ -3776,6 +3810,8 @@ SCIP_Bool isPresolveFinished(
    int                   lastnupgdconss,     /**< number of upgraded constraints in last presolving round */
    int                   lastnchgcoefs,      /**< number of changed coefficients in last presolving round */
    int                   lastnchgsides,      /**< number of changed sides in last presolving round */
+   int                   lastnimplications,  /**< number of implications in last presolving round */
+   int                   lastncliques,       /**< number of cliques in last presolving round */
    SCIP_Bool             unbounded,          /**< has presolving detected unboundness? */
    SCIP_Bool             infeasible          /**< has presolving detected infeasibility? */
    )
@@ -3811,6 +3847,11 @@ SCIP_Bool isPresolveFinished(
          || (scip->stat->npresolchgcoefs - lastnchgcoefs
             <= abortfac * 0.2 * scip->transprob->nvars * scip->transprob->nconss));
 
+   /* don't abort, if enough new implications or cliques were found (assume 100 implications per variable) */
+   finished = finished
+      && (scip->stat->nimplications - lastnimplications <= abortfac * 100 * scip->transprob->nbinvars)
+      && (SCIPcliquetableGetNCliques(scip->cliquetable) - lastncliques <= abortfac * scip->transprob->nbinvars);
+
    /* abort if problem is infeasible or unbounded */
    finished = finished || unbounded || infeasible;
 
@@ -3832,6 +3873,7 @@ SCIP_RETCODE presolveRound(
 {
    SCIP_RESULT result;
    SCIP_EVENT event;
+   SCIP_Bool aborted;
    int i;
 
    assert(scip != NULL);
@@ -3843,9 +3885,10 @@ SCIP_RETCODE presolveRound(
    *delayed = FALSE;
    *unbounded = FALSE;
    *infeasible = FALSE;
+   aborted = FALSE;
 
    /* call included presolvers with nonnegative priority */
-   for( i = 0; i < scip->set->npresols && !(*unbounded) && !(*infeasible); ++i )
+   for( i = 0; i < scip->set->npresols && !(*unbounded) && !(*infeasible) && !aborted; ++i )
    {
       if( SCIPpresolGetPriority(scip->set->presols[i]) < 0 )
          continue;
@@ -3880,12 +3923,12 @@ SCIP_RETCODE presolveRound(
       if( onlydelayed && (result == SCIP_SUCCESS || result == SCIP_DELAYED) )
       {
          *delayed = TRUE;
-         return SCIP_OKAY;
+         aborted = TRUE;
       }
    }
 
    /* call presolve methods of constraint handlers */
-   for( i = 0; i < scip->set->nconshdlrs && !(*unbounded) && !(*infeasible); ++i )
+   for( i = 0; i < scip->set->nconshdlrs && !(*unbounded) && !(*infeasible) && !aborted; ++i )
    {
       if( onlydelayed && !SCIPconshdlrWasPresolvingDelayed(scip->set->conshdlrs[i]) )
          continue;
@@ -3919,12 +3962,12 @@ SCIP_RETCODE presolveRound(
       if( onlydelayed && (result == SCIP_SUCCESS || result == SCIP_DELAYED) )
       {
          *delayed = TRUE;
-         return SCIP_OKAY;
+         aborted = TRUE;
       }
    }
 
    /* call included presolvers with negative priority */
-   for( i = 0; i < scip->set->npresols && !(*unbounded) && !(*infeasible); ++i )
+   for( i = 0; i < scip->set->npresols && !(*unbounded) && !(*infeasible) && !aborted; ++i )
    {
       if( SCIPpresolGetPriority(scip->set->presols[i]) >= 0 )
          continue;
@@ -3959,7 +4002,24 @@ SCIP_RETCODE presolveRound(
       if( onlydelayed && (result == SCIP_SUCCESS || result == SCIP_DELAYED) )
       {
          *delayed = TRUE;
-         return SCIP_OKAY;
+         aborted = TRUE;
+      }
+   }
+
+   /* remove empty and single variable cliques from the clique table, and convert all two variable cliques
+    * into implications
+    */
+   if( !(*unbounded) && !(*infeasible) )
+   {
+      SCIP_Bool infeas;
+
+      SCIP_CALL( SCIPcliquetableCleanup(scip->cliquetable, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, &infeas) );
+      if( infeas )
+      {
+         *infeasible = TRUE;
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "clique table cleanup detected infeasibility\n");
       }
    }
 
@@ -3983,15 +4043,6 @@ SCIP_RETCODE presolve(
    SCIP_Bool stopped;
    SCIP_Real abortfac;
    int maxnrounds;
-   int lastnfixedvars;
-   int lastnaggrvars;
-   int lastnchgvartypes;
-   int lastnchgbds;
-   int lastnaddholes;
-   int lastndelconss;
-   int lastnupgdconss;
-   int lastnchgcoefs;
-   int lastnchgsides;
 
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -4046,6 +4097,18 @@ SCIP_RETCODE presolve(
    /* perform presolving rounds */
    while( !finished && !stopped )
    {
+      int lastnfixedvars;
+      int lastnaggrvars;
+      int lastnchgvartypes;
+      int lastnchgbds;
+      int lastnaddholes;
+      int lastndelconss;
+      int lastnupgdconss;
+      int lastnchgcoefs;
+      int lastnchgsides;
+      int lastnimplications;
+      int lastncliques;
+
       lastnfixedvars = scip->stat->npresolfixedvars;
       lastnaggrvars = scip->stat->npresolaggrvars;
       lastnchgvartypes = scip->stat->npresolchgvartypes;
@@ -4055,6 +4118,8 @@ SCIP_RETCODE presolve(
       lastnupgdconss = scip->stat->npresolupgdconss;
       lastnchgcoefs = scip->stat->npresolchgcoefs;
       lastnchgsides = scip->stat->npresolchgsides;
+      lastnimplications = scip->stat->nimplications;
+      lastncliques = SCIPcliquetableGetNCliques(scip->cliquetable);
 
       /* sort presolvers by priority */
       SCIPsetSortPresols(scip->set);
@@ -4067,7 +4132,7 @@ SCIP_RETCODE presolve(
       /* check, if we should abort presolving due to not enough changes in the last round */
       finished = isPresolveFinished(scip, abortfac, maxnrounds, lastnfixedvars, lastnaggrvars, lastnchgvartypes,
          lastnchgbds, lastnaddholes, lastndelconss, lastnupgdconss, lastnchgcoefs, lastnchgsides,
-         *unbounded, *infeasible);
+         lastnimplications, lastncliques, *unbounded, *infeasible);
 
       /* if the presolving will be terminated, call the delayed presolvers */
       while( delayed && finished && !(*unbounded) && !(*infeasible) )
@@ -4078,7 +4143,7 @@ SCIP_RETCODE presolve(
          /* check again, if we should abort presolving due to not enough changes in the last round */
          finished = isPresolveFinished(scip, abortfac, maxnrounds, lastnfixedvars, lastnaggrvars, lastnchgvartypes,
             lastnchgbds, lastnaddholes, lastndelconss, lastnupgdconss, lastnchgcoefs, lastnchgsides,
-            *unbounded, *infeasible);
+            lastnimplications, lastncliques, *unbounded, *infeasible);
       }
 
       /* increase round number */
@@ -4087,12 +4152,12 @@ SCIP_RETCODE presolve(
       if( !finished )
       {
          /* print presolving statistics */
-         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "(round %d)", scip->stat->npresolrounds);
          SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-            " %d del vars, %d del conss, %d chg bounds, %d add holes, %d chg sides, %d chg coeffs, %d upgd conss\n",
-            scip->stat->npresolfixedvars + scip->stat->npresolaggrvars, scip->stat->npresoldelconss, 
-            scip->stat->npresolchgbds, scip->stat->npresoladdholes, scip->stat->npresolchgsides, 
-            scip->stat->npresolchgcoefs, scip->stat->npresolupgdconss);
+            "(round %d) %d del vars, %d del conss, %d chg bounds, %d chg sides, %d chg coeffs, %d upgd conss, %d impls, %d clqs\n",
+            scip->stat->npresolrounds, scip->stat->npresolfixedvars + scip->stat->npresolaggrvars,
+            scip->stat->npresoldelconss, scip->stat->npresolchgbds, scip->stat->npresolchgsides,
+            scip->stat->npresolchgcoefs, scip->stat->npresolupgdconss,
+            scip->stat->nimplications, SCIPcliquetableGetNCliques(scip->cliquetable));
       }
 
       /* abort if time limit was reached or user interrupted */
@@ -4107,29 +4172,17 @@ SCIP_RETCODE presolve(
 
       SCIP_CALL( exitPresolve(scip, &unbd, &infeas) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
-      if( infeas )
+      if( infeas && !(*infeasible) )
       {
          *infeasible = TRUE;
          SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "presolve deinitialization detected infeasibility\n");
       }
-      else if( unbd )
+      else if( unbd && !(*infeasible) && !(*unbounded) )
       {
          *unbounded = TRUE;
          SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "presolve deinitialization detected unboundness\n");
-      }
-
-      /* remove empty and single variable cliques from the clique table, and convert all two variable cliques
-       * into implications
-       */
-      SCIP_CALL( SCIPcliquetableCleanup(scip->cliquetable, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
-            scip->branchcand, scip->eventqueue, &infeas) );
-      if( infeas )
-      {
-         *infeasible = TRUE;
-         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolve deinitialization detected infeasibility\n");
       }
    }
    assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.17 2005/08/28 12:24:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.18 2005/09/01 18:19:20 bzfpfend Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -38,7 +38,8 @@
 
 #define DEFAULT_SCALEVAL         1000.0 /**< factor for scaling weights */
 #define DEFAULT_MAXTREENODES         -1 /**< maximal number of nodes in branch and bound tree (-1: no limit) */
-
+#define DEFAULT_MAXSEPACUTS          10 /**< maximal number of clique cuts separated per separation round (-1: no limit) */
+#define DEFAULT_MAXZEROEXTENSIONS  1000 /**< maximal number of zero-valued variables extending the clique (-1: no limit) */
 
 
 
@@ -54,6 +55,8 @@ struct SCIP_SepaData
    SCIP_Real*            varsolvals;         /**< LP solution of binary variables (contained in a 3-clique in implgraph) */
    SCIP_Real             scaleval;           /**< factor for scaling weights */
    int                   maxtreenodes;       /**< maximal number of nodes in branch and bound tree (-1: no limit) */
+   int                   maxsepacuts;        /**< maximal number of clique cuts separated per separation round (-1: no limit) */
+   int                   maxzeroextensions;  /**< maximal number of zero-valued variables extending the clique (-1: no limit) */
    int                   ncuts;              /**< number of cuts found */
    SCIP_Bool             tcliquegraphloaded; /**< TRUE if tcliquegraph is allready loaded (tcliquegraph can be NULL),
                                               *   FALSE otherwise */ 
@@ -63,14 +66,14 @@ struct SCIP_SepaData
 struct TCLIQUE_Graph
 {
    SCIP_VAR**            vars;               /**< active problem variables (or negated variables) the nodes belong to */
-   TCLIQUE_WEIGHT*  weights;	        /**< weight of nodes */
+   TCLIQUE_WEIGHT*       weights;            /**< weight of nodes */
    int*                  adjnodesidxs;       /**< indices in adjnodes array of first adjacent nodes for each node */
    int*                  cliqueidsidxs;      /**< indices in cliqueids array of first clique the node is contained in */
-   int*                  adjnodes;	        /**< adjacent nodes of edges */
+   int*                  adjnodes;           /**< adjacent nodes of edges */
    int*                  cliqueids;          /**< unique ids of cliques */
    int                   adjnodessize;       /**< size of adjnodes array */
    int                   cliqueidssize;      /**< size of cliqueids array */
-   int                   nnodes;		/**< number of nodes in graph */
+   int                   nnodes;             /**< number of nodes in graph */
 };
 
 
@@ -891,8 +894,8 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
    *stopsolving = FALSE;
 
    /* slightly increase the minimal weight for additional cliques */
-   minweightinc = (cliqueweight - *minweight)/MIN(1, (int)(sepadata->scaleval/10.0));
-   minweightinc = MIN(minweightinc, 1);
+   minweightinc = (cliqueweight - *minweight)/10;
+   minweightinc = MAX(minweightinc, 1);
    *minweight += minweightinc;
 
    /* adds cut if weight of the clique is greater than 1 */
@@ -911,14 +914,14 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
       unscaledweight = 0.0;
       for( i = 0; i < ncliquenodes; i++ )
          unscaledweight += varsolvals[cliquenodes[i]];
-      
+
       if( SCIPisEfficacious(scip, unscaledweight - 1.0) )
       {
          SCIP_VAR** vars;
          int nvars;
          SCIP_ROW* cut;
          char cutname[SCIP_MAXSTRLEN];
-      
+
          nvars = sepadata->tcliquegraph->nnodes; 
          vars = sepadata->tcliquegraph->vars; 
          assert(nvars > 0);
@@ -949,6 +952,14 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          
          /* release the row */
          SCIP_CALL_ABORT( SCIPreleaseRow(scip, &cut) );
+
+         /* if we found more than half the cuts we are allowed to generate, we accept the clique as new incumbent,
+          * such that only more violated cuts are generated afterwards
+          */
+         if( sepadata->ncuts > sepadata->maxsepacuts/2 )
+            *acceptsol = TRUE;
+         if( sepadata->ncuts >= sepadata->maxsepacuts )
+            *stopsolving = TRUE;
       }
    }
 }
@@ -1020,6 +1031,7 @@ SCIP_DECL_SEPAEXEC(sepaExecClique)
    TCLIQUE_WEIGHT cliqueweight;    
    int ncliquenodes;	        
    int maxtreenodes;
+   int maxzeroextensions;
 
    assert(scip != NULL);
    
@@ -1061,14 +1073,16 @@ SCIP_DECL_SEPAEXEC(sepaExecClique)
    SCIP_CALL( SCIPgetVarSols(scip, tcliquegraph->nnodes, tcliquegraph->vars, sepadata->varsolvals) );
    updateTcliquegraph(scip, sepadata);
 
-   /* get maximal number of tree nodes */
+   /* get maximal number of tree nodes and maximal zero-extensions */
    maxtreenodes = (sepadata->maxtreenodes == -1 ? INT_MAX : sepadata->maxtreenodes);
+   maxzeroextensions = (sepadata->maxzeroextensions == -1 ? INT_MAX : sepadata->maxzeroextensions);
 
    /* finds maximum weight clique in tclique */
    SCIP_CALL( SCIPallocBufferArray(scip, &cliquenodes, tcliquegraph->nnodes) );
    tcliqueMaxClique(tcliqueGetnnodesClique, tcliqueGetweightsClique, tcliqueIsedgeClique, tcliqueSelectadjnodesClique, 
       tcliquegraph, tcliqueNewsolClique, (TCLIQUE_DATA*)sepadata,
-      cliquenodes, &ncliquenodes, &cliqueweight, (int)sepadata->scaleval-1, (int)sepadata->scaleval+1, maxtreenodes);
+      cliquenodes, &ncliquenodes, &cliqueweight, (int)sepadata->scaleval-1, (int)sepadata->scaleval+1, 
+      maxtreenodes, maxzeroextensions);
 
    /* frees data structures */
    SCIPfreeBufferArray(scip, &cliquenodes);
@@ -1117,6 +1131,14 @@ SCIP_RETCODE SCIPincludeSepaClique(
          "separating/clique/maxtreenodes",
          "maximal number of nodes in branch and bound tree (-1: no limit)",
          &sepadata->maxtreenodes, DEFAULT_MAXTREENODES, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "separating/clique/maxsepacuts",
+         "maximal number of clique cuts separated per separation round (-1: no limit)",
+         &sepadata->maxsepacuts, DEFAULT_MAXSEPACUTS, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "separating/clique/maxzeroextensions",
+         "maximal number of zero-valued variables extending the clique (-1: no limit)",
+         &sepadata->maxzeroextensions, DEFAULT_MAXZEROEXTENSIONS, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

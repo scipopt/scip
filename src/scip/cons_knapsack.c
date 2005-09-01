@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.110 2005/08/30 20:35:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.111 2005/09/01 18:19:18 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -3071,9 +3071,9 @@ SCIP_RETCODE tightenWeights(
                   }
                   sprintf(name, "%s_clq_%lld_%d", SCIPconsGetName(cons), consdata->capacity, i);
                   SCIP_CALL( SCIPcreateConsSetpack(scip, &cliquecons, name, ncliquevars, cliquevars,
-                        FALSE /*SCIPconsIsInitial(cons)*/, TRUE /*SCIPconsIsSeparated(cons)*/, SCIPconsIsEnforced(cons),
-                        SCIPconsIsChecked(cons), TRUE /*SCIPconsIsPropagated(cons)*/, SCIPconsIsLocal(cons),
-                        FALSE, SCIPconsIsDynamic(cons), SCIPconsIsRemoveable(cons)) );
+                        SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+                        SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+                        SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemoveable(cons)) );
                   SCIPdebugMessage(" -> adding clique constraint: ");
                   SCIPdebug(SCIPprintCons(scip, cliquecons, NULL));
                   SCIP_CALL( SCIPaddCons(scip, cliquecons) );

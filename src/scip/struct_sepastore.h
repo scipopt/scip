@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sepastore.h,v 1.17 2005/08/24 17:27:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_sepastore.h,v 1.18 2005/09/01 18:19:21 bzfpfend Exp $"
 
 /**@file   struct_sepastore.h
  * @brief  datastructures for storing separated cuts
@@ -49,6 +49,7 @@ struct SCIP_SepaStore
    SCIP_BOUNDTYPE*       bdchgtypes;         /**< type of bounds to change */
    int                   cutssize;           /**< size of cuts and score arrays */
    int                   ncuts;              /**< number of separated cuts (max. is set->sepa_maxcuts) */
+   int                   nforcedcuts;        /**< number of forced separated cuts */
    int                   bdchgssize;         /**< size of bdchgvars, bdchgvals, and bdchgtypes arrays */
    int                   nbdchgs;            /**< number of bound changes */
    int                   ncutsfound;         /**< total number of cuts (and bound changes) found so far */

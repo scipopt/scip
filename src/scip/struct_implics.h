@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_implics.h,v 1.6 2005/08/24 17:27:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_implics.h,v 1.7 2005/09/01 18:19:20 bzfpfend Exp $"
 
 /**@file   struct_implics.h
  * @brief  datastructures for implications, variable bounds, and cliques
@@ -86,6 +86,9 @@ struct SCIP_CliqueTable
    int                   ncliques;           /**< number of cliques stored in the table */
    int                   size;               /**< size of cliques array */
    int                   ncreatedcliques;    /**< number of ever created cliques */
+   int                   ncleanupfixedvars;  /**< number of fixed variables when the last cleanup was performed */
+   int                   ncleanupaggrvars;   /**< number of aggregated variables when the last cleanup was performed */
+   int                   ncleanupcliques;    /**< number of cliques stored when the last cleanup was performed */
 };
 
 

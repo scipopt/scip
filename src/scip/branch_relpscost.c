@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.38 2005/08/24 17:26:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.39 2005/09/01 18:19:18 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -438,7 +438,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
          inititer = (int)(2*nlpiterations / nlps);
          inititer = (int)((SCIP_Real)inititer * (1.0 + 20.0/nodenum));
          inititer = MAX(inititer, 10);
-         inititer = MIN(inititer, 10000);
+         inititer = MIN(inititer, 500 /*??????????????10000*/);
       }
       
       SCIPdebugMessage("strong branching (reliable=%g, %d/%d cands, %d uninit, maxcands=%d, maxlookahead=%g, inititer=%d, iters:%lld/%lld, basic:%d)\n",

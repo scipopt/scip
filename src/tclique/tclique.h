@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique.h,v 1.1 2005/08/30 08:36:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique.h,v 1.2 2005/09/01 18:19:21 bzfpfend Exp $"
 
 /**@file   tclique.h
  * @brief  tclique user interface
@@ -262,7 +262,8 @@ void tcliqueMaxClique(
    TCLIQUE_WEIGHT   maxfirstnodeweight, /**< maximum weight of branching nodes in level 0; 0 if not used 
                                          *   for cliques with at least one fractional node) */
    TCLIQUE_WEIGHT   minweight,          /**< lower bound for weight of generated cliques */
-   int              maxtreenodes 	/**< maximum number of nodes of b&b tree */
+   int              maxntreenodes,	/**< maximal number of nodes of b&b tree */
+   int              maxnzeroextensions  /**< maximal number of zero-valued variables extending the clique */
    );
 
 #endif

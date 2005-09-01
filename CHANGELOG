@@ -79,6 +79,7 @@ parameters:
 - number of fractional variables included in parameter separating/maxstallrounds
 - changed default value of separating/maxstallrounds to 5
 - new parameter presolving/probing/maxtotaluseless
+- changed default value of presolving/probing/maxfixings to 50
 
 features:
 - reactivated multiaggregation in cons_linear.c on binary variables again (possible due to bug fix below)
@@ -103,6 +104,9 @@ features:
 - incorporated clique and implication information in knapsack constraint presolving
 - improved performance of c-MIR separator
 - cut pool is now also separated in root node (to find cuts again that were removed from the LP due to aging)
+- improved preprocessing of variable bounds constraints
+- removed transitive clique generation, because this produces way too many cliques
+- improved preprocessing abort criteria
 
 fixed bugs:
 - LP primal feasibility for bounds is now defined as absolute measure (was relative to the bound before);
@@ -143,6 +147,9 @@ fixed bugs:
 - fixed bug that if diving heuristic that changes the objective values finds a solution, the cutoff is reinstalled in
   the LP solver (although the objective value has no meaning due to the objective function modification)
 - fixed bug in knapsack constraint presolving with tightening coefficients and capacity
+- fixed bug with modifiable constraints in linear constraint handler preprocessing
+- fixed bug in clique separator that reduced performance
+- increased performance of clique separator by allowing only a certain number of zero-weighted fill ins
 
 
 SCIP version 0.79

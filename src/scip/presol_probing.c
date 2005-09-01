@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.24 2005/08/30 20:35:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.25 2005/09/01 18:19:19 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -45,7 +45,8 @@
 
 #define DEFAULT_MAXRUNS              1  /**< maximal number of runs, probing participates in (-1: no limit) */
 #define DEFAULT_PROPROUNDS          -1  /**< maximal number of propagation rounds in probing subproblems */
-#define DEFAULT_MAXFIXINGS          10  /**< maximal number of fixings found, until probing is aborted (0: don't abort) */
+#define DEFAULT_MAXFIXINGS          50  /**< maximal number of fixings found, until probing is interrupted
+                                         *   (0: don't interrupt) */
 #define DEFAULT_MAXUSELESS        2000  /**< maximal number of successive probings without fixings,
                                          *   until probing is aborted (0: don't abort) */
 #define DEFAULT_MAXTOTALUSELESS    100  /**< maximal number of successive probings without fixings and implications,
@@ -66,7 +67,8 @@ struct SCIP_PresolData
    int                   nsortedbinvars;     /**< number of binary problem variables */
    int                   maxruns;            /**< maximal number of runs, probing participates in (-1: no limit) */
    int                   proprounds;         /**< maximal number of propagation rounds in probing subproblems */
-   int                   maxfixings;         /**< maximal number of fixings found, until probing is aborted (0: don't abort) */
+   int                   maxfixings;         /**< maximal number of fixings found, until probing is interrupted
+                                              *   (0: don't interrupt) */
    int                   maxuseless;         /**< maximal number of successive probings without fixings,
                                               *   until probing is aborted (0: don't abort) */
    int                   maxtotaluseless;    /**< maximal number of successive probings without fixings and implications,
@@ -76,6 +78,8 @@ struct SCIP_PresolData
    int                   naggregations;      /**< total number of aggregations found in probing */
    int                   nimplications;      /**< total number of implications found in probing */
    int                   nbdchgs;            /**< total number of bound changes found in probing */
+   int                   nuseless;           /**< current number of useless probings */
+   int                   ntotaluseless;      /**< current number of totally useless probings */
    SCIP_Bool             called;             /**< was probing applied at least once? */
 };
 
@@ -249,6 +253,8 @@ SCIP_DECL_PRESOLINIT(presolInitProbing)
    presoldata->naggregations = 0;
    presoldata->nimplications = 0;
    presoldata->nbdchgs = 0;
+   presoldata->nuseless = 0;
+   presoldata->ntotaluseless = 0;
 
    return SCIP_OKAY;
 }
@@ -328,11 +334,10 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
    int maxfixings;
    int maxuseless;
    int maxtotaluseless;
-   int nuseless;
-   int ntotaluseless;
    int oldnfixedvars;
    int oldnaggrvars;
    int oldnchgbds;
+   int oldnimplications;
    int i;
    SCIP_Bool cutoff;
 
@@ -348,10 +353,13 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
    if( presoldata->maxruns >= 0 && SCIPgetNRuns(scip) > presoldata->maxruns )
       return SCIP_OKAY;
 
-   /* if no domains, sides, or coefficients changed since the last call, we don't need to probe */
-   if( presoldata->called && nnewfixedvars == 0 && nnewaggrvars == 0 && nnewchgbds == 0 && nnewholes == 0
-      && nnewchgcoefs == 0 && nnewchgsides == 0 )
+   /* if no domains changed since the last call, we don't need to probe */
+   if( presoldata->called && nnewfixedvars == 0 && nnewaggrvars == 0 && nnewchgbds == 0 && nnewholes == 0 )
       return SCIP_OKAY;
+
+   /* allow some additional probings */
+   presoldata->nuseless /= 2;
+   presoldata->ntotaluseless /= 2;
 
    /* get variable data */
    if( presoldata->sortedvars == NULL )
@@ -404,6 +412,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
    assert(nbinvars > 0);
 
    *result = SCIP_DIDNOTFIND;
+   presoldata->called = TRUE;
 
    maxfixings = (presoldata->maxfixings > 0 ? presoldata->maxfixings : INT_MAX);
    maxuseless = (presoldata->maxuseless > 0 ? presoldata->maxuseless : INT_MAX);
@@ -411,6 +420,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
    oldnfixedvars = *nfixedvars;
    oldnaggrvars = *naggrvars;
    oldnchgbds = *nchgbds;
+   oldnimplications = presoldata->nimplications;
 
    /* get temporary memory for storing probing results */
    SCIP_CALL( SCIPallocBufferArray(scip, &zeroimpllbs, nvars) );
@@ -424,11 +434,9 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
 
    /* for each binary variable, probe fixing the variable to zero and one */
    cutoff = FALSE;
-   nuseless = 0;
-   ntotaluseless = 0;
    for( i = presoldata->startidx; i < nbinvars && !cutoff && !SCIPpressedCtrlC(scip)
            && *nfixedvars - oldnfixedvars + *naggrvars - oldnaggrvars < maxfixings
-           && nuseless < maxuseless && ntotaluseless < maxtotaluseless; ++i )
+           && presoldata->nuseless < maxuseless && presoldata->ntotaluseless < maxtotaluseless; ++i )
    {
       SCIP_Bool localcutoff;
       int j;
@@ -450,8 +458,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
          || SCIPvarGetLbGlobal(vars[i]) > 0.5 || SCIPvarGetUbGlobal(vars[i]) < 0.5 )
          continue;
 
-      nuseless++;
-      ntotaluseless++;
+      presoldata->nuseless++;
+      presoldata->ntotaluseless++;
 
       /* apply probing for fixing the variable to zero */
       SCIP_CALL( applyProbing(scip, presoldata, vars, nvars, i, FALSE, zeroimpllbs, zeroimplubs, zeroproplbs, zeropropubs,
@@ -467,8 +475,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
          assert(fixed);
          (*nfixedvars)++;
          presoldata->nfixings++;
-         nuseless = 0;
-         ntotaluseless = 0;
+         presoldata->nuseless = 0;
+         presoldata->ntotaluseless = 0;
          continue; /* don't try upwards direction, because the variable is already fixed */
       }
 
@@ -486,8 +494,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
          assert(fixed);
          (*nfixedvars)++;
          presoldata->nfixings++;
-         nuseless = 0;
-         ntotaluseless = 0;
+         presoldata->nuseless = 0;
+         presoldata->ntotaluseless = 0;
          continue; /* don't analyze probing deductions, because the variable is already fixed */
       }
 
@@ -512,16 +520,16 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
 
             /* in both probings, variable j is deduced to 0: fix variable to 0 */
             fixval = SCIPselectSimpleValue(newlb, newub, MAXDNOM);
-            SCIPdebugMessage("fixing variable <%s> to %g due to probing on <%s> with nlocks=(%d/%d)\n",
-               SCIPvarGetName(vars[j]), fixval, 
-               SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
             SCIP_CALL( SCIPfixVar(scip, vars[j], fixval, &cutoff, &fixed) );
             if( fixed )
             {
+               SCIPdebugMessage("fixed variable <%s> to %g due to probing on <%s> with nlocks=(%d/%d)\n",
+                  SCIPvarGetName(vars[j]), fixval, 
+                  SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
                (*nfixedvars)++;
                presoldata->nfixings++;
-               nuseless = 0;
-               ntotaluseless = 0;
+               presoldata->nuseless = 0;
+               presoldata->ntotaluseless = 0;
             }
             continue;
          }
@@ -540,16 +548,16 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
                /* variable j is always deduced to the same value as probing variable i:
                 * both variables can be aggregated with x_i - x_j == 0
                 */
-               SCIPdebugMessage("aggregating variables <%s> == <%s>, nlocks=(%d/%d)\n",
-                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), 
-                  SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
                SCIP_CALL( SCIPaggregateVars(scip, vars[i], vars[j], 1.0, -1.0, 0.0, &cutoff, &redundant, &aggregated) );
                if( aggregated )
                {
+                  SCIPdebugMessage("aggregated variables <%s> == <%s>, nlocks=(%d/%d)\n",
+                     SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), 
+                     SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
                   (*naggrvars)++;
                   presoldata->naggregations++;
-                  nuseless = 0;
-                  ntotaluseless = 0;
+                  presoldata->nuseless = 0;
+                  presoldata->ntotaluseless = 0;
                }
             }
             else if( zeroproplbs[j] > 0.5 && onepropubs[j] < 0.5 )
@@ -557,16 +565,16 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
                /* variable j is always deduced to the opposite value of probing variable i:
                 * both variables can be aggregated with x_i + x_j == 1
                 */
-               SCIPdebugMessage("aggregating variables <%s> == 1 - <%s>, nlocks=(%d/%d)\n",
-                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]),
-                  SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
                SCIP_CALL( SCIPaggregateVars(scip, vars[i], vars[j], 1.0, 1.0, 1.0, &cutoff, &redundant, &aggregated) );
                if( aggregated )
                {
+                  SCIPdebugMessage("aggregated variables <%s> == 1 - <%s>, nlocks=(%d/%d)\n",
+                     SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]),
+                     SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
                   (*naggrvars)++;
                   presoldata->naggregations++;
-                  nuseless = 0;
-                  ntotaluseless = 0;
+                  presoldata->nuseless = 0;
+                  presoldata->ntotaluseless = 0;
                }
             }
             else if( zeropropubs[j] < 0.5 && zeroimplubs[j] > 0.5 ) /* ignore already existing implications */
@@ -579,7 +587,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
                presoldata->nimplications++;
                (*nchgbds) += nboundchanges;
                presoldata->nbdchgs += nboundchanges;
-               ntotaluseless = 0;
+               presoldata->ntotaluseless = 0;
             }
             else if( zeroproplbs[j] > 0.5 && zeroimpllbs[j] < 0.5 ) /* ignore already existing implications */
             {
@@ -591,7 +599,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
                presoldata->nimplications++;
                (*nchgbds) += nboundchanges;
                presoldata->nbdchgs += nboundchanges;
-               ntotaluseless = 0;
+               presoldata->ntotaluseless = 0;
             }
             else if( onepropubs[j] < 0.5 && oneimplubs[j] > 0.5 ) /* ignore already existing implications */
             {
@@ -603,7 +611,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
                presoldata->nimplications++;
                (*nchgbds) += nboundchanges;
                presoldata->nbdchgs += nboundchanges;
-               ntotaluseless = 0;
+               presoldata->ntotaluseless = 0;
             }
             else if( oneproplbs[j] > 0.5 && oneimpllbs[j] < 0.5 ) /* ignore already existing implications */
             {
@@ -615,7 +623,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
                presoldata->nimplications++;
                (*nchgbds) += nboundchanges;
                presoldata->nbdchgs += nboundchanges;
-               ntotaluseless = 0;
+               presoldata->ntotaluseless = 0;
             }
          }
          else
@@ -633,31 +641,31 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
             if( SCIPisLbBetter(scip, newlb, oldlb) )
             {
                /* in both probings, variable j is deduced to be at least newlb: tighten lower bound */
-               SCIPdebugMessage("tighten lower bound of variable <%s>[%g,%g] to %g due to probing on <%s> with nlocks=(%d/%d)\n",
-                  SCIPvarGetName(vars[j]), oldlb, oldub, newlb,
-                  SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
                SCIP_CALL( SCIPtightenVarLb(scip, vars[j], newlb, &cutoff, &tightened) );
                if( tightened )
                {
+                  SCIPdebugMessage("tightened lower bound of variable <%s>[%g,%g] to %g due to probing on <%s> with nlocks=(%d/%d)\n",
+                     SCIPvarGetName(vars[j]), oldlb, oldub, newlb,
+                     SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
                   (*nchgbds)++;
                   presoldata->nbdchgs++;
-                  nuseless = 0;
-                  ntotaluseless = 0;
+                  presoldata->nuseless = 0;
+                  presoldata->ntotaluseless = 0;
                }
             }
             if( SCIPisUbBetter(scip, newub, oldub) && !cutoff )
             {
                /* in both probings, variable j is deduced to be at most newub: tighten upper bound */
-               SCIPdebugMessage("tighten upper bound of variable <%s>[%g,%g] to %g due to probing on <%s> with nlocks=(%d/%d)\n",
-                  SCIPvarGetName(vars[j]), oldlb, oldub, newub,
-                  SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
                SCIP_CALL( SCIPtightenVarUb(scip, vars[j], newub, &cutoff, &tightened) );
                if( tightened )
                {
+                  SCIPdebugMessage("tightened upper bound of variable <%s>[%g,%g] to %g due to probing on <%s> with nlocks=(%d/%d)\n",
+                     SCIPvarGetName(vars[j]), oldlb, oldub, newub,
+                     SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
                   (*nchgbds)++;
                   presoldata->nbdchgs++;
-                  nuseless = 0;
-                  ntotaluseless = 0;
+                  presoldata->nuseless = 0;
+                  presoldata->ntotaluseless = 0;
                }
             }
 
@@ -672,7 +680,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
                presoldata->nimplications++;
                (*nchgbds) += nboundchanges;
                presoldata->nbdchgs += nboundchanges;
-               ntotaluseless = 0;
+               presoldata->ntotaluseless = 0;
             }
             if( zeroproplbs[j] > newlb + 0.5 && zeroproplbs[j] > zeroimpllbs[j] && !cutoff )
             {
@@ -684,7 +692,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
                presoldata->nimplications++;
                (*nchgbds) += nboundchanges;
                presoldata->nbdchgs += nboundchanges;
-               ntotaluseless = 0;
+               presoldata->ntotaluseless = 0;
             }
             if( onepropubs[j] < newub - 0.5 && onepropubs[j] < oneimplubs[j] && !cutoff )
             {
@@ -696,7 +704,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
                presoldata->nimplications++;
                (*nchgbds) += nboundchanges;
                presoldata->nbdchgs += nboundchanges;
-               ntotaluseless = 0;
+               presoldata->ntotaluseless = 0;
             }
             if( oneproplbs[j] > newlb + 0.5 && oneproplbs[j] > oneimpllbs[j] && !cutoff )
             {
@@ -708,7 +716,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
                presoldata->nimplications++;
                (*nchgbds) += nboundchanges;
                presoldata->nbdchgs += nboundchanges;
-               ntotaluseless = 0;
+               presoldata->ntotaluseless = 0;
             }
          }
       }
@@ -728,7 +736,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
    /* adjust result code */
    if( cutoff )
       *result = SCIP_CUTOFF;
-   else if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars )
+   else if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars || *nchgbds > oldnchgbds
+      || presoldata->nimplications > oldnimplications )
       *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
@@ -769,7 +778,7 @@ SCIP_RETCODE SCIPincludePresolProbing(
          &presoldata->proprounds, DEFAULT_PROPROUNDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/probing/maxfixings",
-         "maximal number of fixings found, until probing is aborted (0: don't abort)",
+         "maximal number of fixings found, until probing is interrupted (0: don't iterrupt)",
          &presoldata->maxfixings, DEFAULT_MAXFIXINGS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/probing/maxuseless",

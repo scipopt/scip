@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.182 2005/08/28 12:29:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.183 2005/09/01 18:19:21 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -5478,8 +5478,10 @@ SCIP_RETCODE varAddTransitiveImplic(
       SCIP_BOUNDTYPE* impltypes;
       SCIP_Real* implbounds;
       int nimpls;
+#if 0
       SCIP_CLIQUE** cliques;
       int ncliques;
+#endif
       SCIP_Bool implvarfixing;
       int i;
 
@@ -5505,6 +5507,7 @@ SCIP_RETCODE varAddTransitiveImplic(
          }
       }
 
+#if 0 /* this may produce way too many cliques in the clique table - and they are unnecessary */
       /* binary variable: cliques of implvar */
       ncliques = SCIPcliquelistGetNCliques(implvar->cliquelist, implvarfixing);
       cliques = SCIPcliquelistGetCliques(implvar->cliquelist, implvarfixing);
@@ -5544,6 +5547,7 @@ SCIP_RETCODE varAddTransitiveImplic(
          SCIPsetFreeBufferArray(set, &newcliquevalues);
          SCIPsetFreeBufferArray(set, &newcliquevars);
       }
+#endif
    }
    else
    {

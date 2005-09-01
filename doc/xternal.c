@@ -25,6 +25,7 @@
 /**@mainpage SCIP (Solving Constraint Integer Programs)
  * @version  0.79d
  * @author   Tobias Achterberg
+ * @author   Timo Berthold
  * @author   Thorsten Koch
  * @author   Alexander Martin
  * @author   Kati Wolter

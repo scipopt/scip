@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_coloring.h,v 1.1 2005/08/30 08:36:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_coloring.h,v 1.2 2005/09/01 18:19:21 bzfpfend Exp $"
 
 /**@file   tclique_coloring.h
  * @brief  coloring part of algorithm for maximum cliques
@@ -58,7 +58,7 @@ TCLIQUE_WEIGHT tcliqueColoring(
    TCLIQUE_GETWEIGHTS((*getweights)),   /**< user function to get the node weights */
    TCLIQUE_SELECTADJNODES((*selectadjnodes)), /**< user function to select adjacent edges */
    TCLIQUE_GRAPH*   tcliquegraph,       /**< pointer to graph data structure */
-   BMS_CHKMEM*           mem,                /**< block memory */
+   BMS_CHKMEM*      mem,                /**< block memory */
    int*             buffer,             /**< buffer of size nnodes */
    int*             V,                  /**< non-zero weighted nodes for branching */
    int              nV,                 /**< number of non-zero weighted nodes for branching */

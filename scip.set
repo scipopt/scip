@@ -790,9 +790,9 @@ presolving/probing/maxruns = 1
 # [type: int, range: [-1,2147483647], default: -1]
 presolving/probing/proprounds = -1
 
-# maximal number of fixings found, until probing is aborted (0: don't abort)
-# [type: int, range: [0,2147483647], default: 10]
-presolving/probing/maxfixings = 10
+# maximal number of fixings found, until probing is interrupted (0: don't iterrupt)
+# [type: int, range: [0,2147483647], default: 50]
+presolving/probing/maxfixings = 50
 
 # maximal number of successive probings without fixings, until probing is aborted (0: don't abort)
 # [type: int, range: [0,2147483647], default: 2000]
@@ -1485,6 +1485,14 @@ separating/clique/scaleval = 1000
 # maximal number of nodes in branch and bound tree (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 separating/clique/maxtreenodes = -1
+
+# maximal number of clique cuts separated per separation round (-1: no limit)
+# [type: int, range: [-1,2147483647], default: 10]
+separating/clique/maxsepacuts = 10
+
+# maximal number of zero-valued variables extending the clique (-1: no limit)
+# [type: int, range: [-1,2147483647], default: 1000]
+separating/clique/maxzeroextensions = 1000
 
 # priority of separator <cmir>
 # [type: int, range: [-2147483648,2147483647], default: -3000]

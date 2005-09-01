@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.180 2005/08/30 20:35:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.181 2005/09/01 18:19:19 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -5682,6 +5682,11 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       for( c = firstupgradetry; c < nconss; ++c )
       {
          cons = conss[c];
+
+         /* don't upgrade modifiable constraints */
+         if( SCIPconsIsModifiable(cons) )
+            continue;
+
          consdata = SCIPconsGetData(cons);
          assert(consdata != NULL);
 
