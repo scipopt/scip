@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.33 2005/09/01 18:19:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.34 2005/09/01 18:20:08 bzfpfend Exp $"
 
 /**@file   presol.c
  * @brief  methods for presolvers
@@ -355,7 +355,7 @@ SCIP_RETCODE SCIPpresolExec(
    assert(oldnaggrvars >= 0);
    assert(oldnchgvartypes >= 0);
    assert(oldnchgbds >= 0);
-   assert(oldnholes >= 0);
+   assert(oldnaddholes >= 0);
    assert(oldndelconss >= 0);
    assert(oldnupgdconss >= 0);
    assert(oldnchgcoefs >= 0);
