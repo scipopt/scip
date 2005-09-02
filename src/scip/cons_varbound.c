@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.37 2005/09/01 18:19:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.38 2005/09/02 19:45:03 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -815,9 +815,9 @@ SCIP_RETCODE applyFixings(
             consdata->lhs = -consdata->rhs;
             consdata->rhs = -lhs;
             if( !SCIPisInfinity(scip, -consdata->lhs) )
-               consdata->lhs = (consdata->lhs - varconstant)/(-varscalar);
+               consdata->lhs = (consdata->lhs + varconstant)/(-varscalar);
             if( !SCIPisInfinity(scip, consdata->rhs) )
-               consdata->rhs = (consdata->rhs - varconstant)/(-varscalar);
+               consdata->rhs = (consdata->rhs + varconstant)/(-varscalar);
             consdata->vbdcoef /= varscalar;
          }
          consdata->var = var;
