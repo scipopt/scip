@@ -68,7 +68,7 @@ Here is what you have to do to get SCIP running:
        - ln -s <file libsoplex.[...].a> lib/libsoplex.$(OSTYPE).$(ARCH).$(COMP).a
          for each operating system and architecture to use
          (e.g. "ln -s /soplex/lib/libsoplex.linux.x86.gnu.opt.a lib/libsoplex.linux.x86.gnu.a")
-         Warning! The ".opt" in the name of the SOPLEX library does not appear in the name of the soft-link.
+         Warning! The ".opt.static" in the name of the SOPLEX library does not appear in the name of the soft-link.
    (c) to use SOPLEX (Version <= 1.2.1)
        - ln -s <path to SOPLEX' *.h files> lib/spx121inc
        - ln -s <file libsoplex.[...].a> lib/libsoplex121.$(OSTYPE).$(ARCH).$(COMP).a

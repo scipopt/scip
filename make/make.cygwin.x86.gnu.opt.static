@@ -1,7 +1,7 @@
-#--- $Id: make.cygwin.x86.gnu.opt.static,v 1.1 2005/09/05 14:01:46 bzfpfend Exp $
+#--- $Id: make.cygwin.x86.gnu.opt.static,v 1.2 2005/09/05 14:36:13 bzfpfend Exp $
 FLAGS		+=	-DNDEBUG -DWITH_READLINE -DWITH_ZLIB
 OFLAGS		+=	-O3 -march=pentiumpro -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
 ARFLAGS		=	crs
-LDFLAGS		+=	-lreadline -lz -lncurses # -static
+LDFLAGS		+=	-lreadline -lz # -static
