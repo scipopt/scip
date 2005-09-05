@@ -28,6 +28,7 @@ compilation settings:
               - "i?86" is replaced by "x86"
               - "IP??" is replaced by "mips"
               - "9000????" is replaced by "hppa"
+              - "Power Macintosh" is replaced by "ppc"
               - "00??????????" is replaced by "pwr4"
 
 - $(COMP):   the compiler
