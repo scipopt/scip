@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.122 2005/09/05 12:44:56 bzfpfend Exp $
+# $Id: Makefile,v 1.123 2005/09/05 14:12:41 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -93,6 +93,7 @@ LIBOBJSUBDIRS	=	scip objscip blockmemshell tclique
 SRCDIR		=	src
 BINDIR		=	bin
 LIBDIR		=	lib
+EXEEXTENSION	=
 
 
 #-----------------------------------------------------------------------------
@@ -319,7 +320,7 @@ MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.cpp))
 MAINDEP		=	src/depend.cppmain.$(OPT)
 endif
 
-MAIN		=	$(MAINNAME).$(BASE).$(LPS)
+MAIN		=	$(MAINNAME).$(BASE).$(LPS)$(EXEEXTENSION)
 MAINFILE	=	$(BINDIR)/$(MAIN)
 MAINOBJFILES	=	$(addprefix $(BINOBJDIR)/,$(MAINOBJ))
 
