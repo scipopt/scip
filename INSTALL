@@ -100,13 +100,23 @@ Here is what you have to do to get SCIP running:
    - "LINK=static"   to use static libraries (default)
    - "LINK=dynamic"  to use dynamic libraries
 
+   On some machines, you should use gmake instead of make.
+
+   If you get an error message of the type
+   "make: *** No rule to make target `make/make.?.?.?.?.?'.  Stop.",
+   the corresponding machine dependent makefile for your architecture and compiler is missing.
+   Create one of the given name in the make subdirectory. You may take
+   "make/make.linux.x86.gnu.opt.static" or any other file in the make subdirectory as example.
+
+   If you encounter compiler or linker errors, you should recompile with
+   "make VERBOSE=true ..." in order to get the full compiler invocation. This might help to
+   fix the corresponding machine dependent makefile in the make subdirectory.
+
 3. To run the program enter "bin/scip.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LINK).$(LPS)"
-   (e.g. "bin/scip.linux.x86.gnu.dbg.static.cpx")
+   (e.g. "bin/scip.linux.x86.gnu.opt.static.cpx")
 
 4. To generate the documentation, you need to have doxygen installed, and
    enter "make doc"
 
 5. To check the code with lint, you need to have flexelint installed, and
    enter "make lint"
-
-On some machines, you should use gmake instead of make.
