@@ -472,7 +472,7 @@ constraints/and/delaypresol = FALSE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
-constraints/conjunction/sepafreq = 0
+constraints/conjunction/sepafreq = -1
 
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -556,7 +556,7 @@ constraints/knapsack/delaypresol = FALSE
 
 # multiplier on separation frequency, how often cardinality cuts are separated (-1: never, 0: only at root)
 # [type: int, range: [-1,2147483647], default: 1]
-constraints/knapsack/sepacardfreq = 0
+constraints/knapsack/sepacardfreq = 1
 
 # maximal number of separation rounds per node (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: 5]
