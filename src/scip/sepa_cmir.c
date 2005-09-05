@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.43 2005/08/30 20:59:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.44 2005/09/05 15:27:17 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -32,7 +32,7 @@
 #define SEPA_NAME              "cmir"
 #define SEPA_DESC              "complemented mixed integer rounding cuts separator (Marchand's version)"
 #define SEPA_PRIORITY             -3000
-#define SEPA_FREQ                    20
+#define SEPA_FREQ                     0
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXROUNDS             3 /**< maximal number of cmir separation rounds per node (-1: unlimited) */

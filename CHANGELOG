@@ -80,6 +80,26 @@ parameters:
 - changed default value of separating/maxstallrounds to 5
 - new parameter presolving/probing/maxtotaluseless
 - changed default value of presolving/probing/maxfixings to 50
+- changed default parameter values to MIP settings:
+  - conflict/useprop = FALSE
+  - conflict/usepseudo = FALSE
+  - display/verblevel = 4
+  - separating/poolfreq = 0
+  - constraints/linear/sepafreq = 0
+  - constraints/and/sepafreq = 0
+  - constraints/conjunction/sepafreq = 0
+  - constraints/knapsack/sepafreq = 0
+  - constraints/knapsack/sepacardfreq = 0
+  - constraints/logicor/sepafreq = 0
+  - constraints/or/sepafreq = 0
+  - constraints/setppc/sepafreq = 0
+  - constraints/varbound/sepafreq = 0
+  - constraints/xor/sepafreq = 0
+  - separating/clique/freq = 0
+  - separating/cmir/freq = 0
+  - separating/gomory/freq = 0
+  - separating/impliedbounds/freq = 0
+  - separating/strongcg/freq = 0
 
 features:
 - reactivated multiaggregation in cons_linear.c on binary variables again (possible due to bug fix below)

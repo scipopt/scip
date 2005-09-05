@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.18 2005/09/01 18:19:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.19 2005/09/05 15:27:17 bzfpfend Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -33,7 +33,7 @@
 #define SEPA_NAME              "clique"
 #define SEPA_DESC              "clique separator of stable set relaxation"
 #define SEPA_PRIORITY             -5000
-#define SEPA_FREQ                    10
+#define SEPA_FREQ                     0
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_SCALEVAL         1000.0 /**< factor for scaling weights */
