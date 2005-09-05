@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.101 2005/08/26 14:09:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.102 2005/09/05 10:29:41 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -2225,7 +2225,15 @@ SCIP_RETCODE SCIPlpiStrongbranch(
    }
    else
    {
-      CHECK_ZERO( CPXstrongbranch(cpxenv, lpi->cpxlp, &col, 1, down, up, itlim) );
+      int retval;
+
+      retval = CPXstrongbranch(cpxenv, lpi->cpxlp, &col, 1, down, up, itlim);
+      if( retval == CPXERR_NEED_OPT_SOLN )
+      {
+         SCIPdebugMessage(" -> no optimal solution available\n");
+         return SCIP_LPERROR;
+      }
+      CHECK_ZERO( retval );
       SCIPdebugMessage(" -> down: %g, up:%g\n", *down, *up);
 
       /* CPLEX is not able to return the iteration counts in strong branching */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.102 2005/08/28 11:03:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.103 2005/09/05 10:29:41 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -4365,7 +4365,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
 
          /* resolve the LP */
          retcode = SCIPlpiSolveDual(lp->lpi);
-            
+
          /* stop LP timer */
          SCIPclockStop(stat->conflictlptime, set);
 

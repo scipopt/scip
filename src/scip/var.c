@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.183 2005/09/01 18:19:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.184 2005/09/05 10:29:41 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -5492,7 +5492,13 @@ SCIP_RETCODE varAddTransitiveImplic(
       implvars = SCIPimplicsGetVars(implvar->implics, implvarfixing);
       impltypes = SCIPimplicsGetTypes(implvar->implics, implvarfixing);
       implbounds = SCIPimplicsGetBounds(implvar->implics, implvarfixing);
-      for( i = 0; i < nimpls && !(*infeasible); ++i )
+      /* we have to iterate from back to front, because in varAddImplic() it may happen that a conflict is detected and
+       * implvars[i] is fixed, s.t. the implication y == varfixing -> z <= b / z >= b is deleted; this affects the
+       * array over which we currently iterate; the only thing that can happen, is that elements of the array are
+       * deleted; in this case, the subsequent elements are moved to the front; if we iterate from back to front, the
+       * only thing that can happen is that we add the same implication twice - this does no harm
+       */
+      for( i = nimpls-1; i >= 0 && !(*infeasible); --i )
       {
          assert(implvars[i] != implvar);
 
@@ -5503,7 +5509,9 @@ SCIP_RETCODE varAddTransitiveImplic(
          {
             SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
                   varfixing, implvars[i], impltypes[i], implbounds[i], infeasible, nbdchgs) );
-            assert(SCIPimplicsGetNImpls(implvar->implics, implvarfixing) == nimpls);
+            assert(SCIPimplicsGetNImpls(implvar->implics, implvarfixing) <= nimpls);
+            nimpls = SCIPimplicsGetNImpls(implvar->implics, implvarfixing);
+            i = MIN(i, nimpls); /* some elements from the array could have been removed */
          }
       }
 

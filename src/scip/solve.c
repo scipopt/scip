@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.189 2005/09/01 18:19:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.190 2005/09/05 10:29:41 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1020,7 +1020,7 @@ SCIP_RETCODE priceAndCutLoop(
    *cutoff = FALSE;
    *unbounded = FALSE;
    nsepastallrounds = 0;
-   stalllpobjval = SCIPlpGetObjval(lp, set);
+   stalllpobjval = SCIP_REAL_MAX;
    stallnfracs = INT_MAX;
    while( !(*cutoff) && !(*lperror) && (mustprice || mustsepa || delayedsepa) )
    {
