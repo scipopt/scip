@@ -1,7 +1,7 @@
-#--- $Id: make.linux.x86.intel.dbg.static,v 1.1 2005/07/15 17:19:59 bzfpfend Exp $
+#--- $Id: make.linux.x86.intel.dbg.static,v 1.2 2005/09/05 14:01:48 bzfpfend Exp $
 CC		=	icc
 CXX		=	icc
-FLAGS		+=	-DROUNDING_FE
+FLAGS		+=	-DWITH_READLINE -DWITH_ZLIB # -DROUNDING_FE
 OFLAGS		+=	-g -mp -w2 -wd279,383,444,810,981 #-Xc
 CFLAGS		+=
 CXXFLAGS	+=

@@ -1,5 +1,5 @@
-#--- $Id: make.osf1.alpha.gnu.dbg.static,v 1.1 2005/07/15 17:20:00 bzfpfend Exp $
-FLAGS		+=	# -DWITH_READLINE
+#--- $Id: make.osf1.alpha.gnu.dbg.static,v 1.2 2005/09/05 14:01:48 bzfpfend Exp $
+FLAGS		+=	-DWITH_ZLIB # -DWITH_READLINE
 OFLAGS		+=	-O -g
 CFLAGS		+=	$(GCCWARN)
 CXXFLAGS	+=	$(GXXWARN)

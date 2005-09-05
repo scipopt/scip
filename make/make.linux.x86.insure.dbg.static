@@ -1,7 +1,7 @@
-#--- $Id: make.linux.x86.insure.dbg.static,v 1.1 2005/07/15 17:19:59 bzfpfend Exp $
+#--- $Id: make.linux.x86.insure.dbg.static,v 1.2 2005/09/05 14:01:48 bzfpfend Exp $
 CC		=	insure gcc
 CXX		=	insure g++
-FLAGS		+=	-DROUNDING_FE -DWITH_READLINE
+FLAGS		+=	-DWITH_READLINE -DWITH_ZLIB # -DROUNDING_FE
 OFLAGS		+=	-O0 -g
 CFLAGS		+=	$(GCCWARN)
 CXXFLAGS	+=	$(GXXWARN)

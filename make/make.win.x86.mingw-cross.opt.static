@@ -1,0 +1,8 @@
+#--- $Id: make.win.x86.mingw-cross.opt.static,v 1.1 2005/09/05 14:01:49 bzfpfend Exp $
+FLAGS		+=	-DNDEBUG -DWITH_READLINE -DWITH_ZLIB # -DROUNDING_FE
+CFLAGS		=	-O6 -march=pentiumpro
+CFLAGS		+=	$(GCCWARN)
+CXXFLAGS	+=	$(GXXWARN)
+ARFLAGS		=	crs
+LDFLAGS		+=	-lreadline -lz -lncurses -lm -static
+EXEEXTENSION	=	.exe
