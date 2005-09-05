@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.181 2005/09/01 18:19:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.182 2005/09/05 14:28:38 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -1660,7 +1660,7 @@ SCIP_Real consdataGetActivity(
    )
 {
    SCIP_Real activity;
-   SCIP_Real infinity;
+   SCIP_Real scipinf;
 
    assert(consdata != NULL);
 
@@ -1686,9 +1686,9 @@ SCIP_Real consdataGetActivity(
       SCIPdebugMessage("activity of linear constraint: %g\n", activity);
    }
 
-   infinity = SCIPinfinity(scip);
-   activity = MAX(activity, -infinity);
-   activity = MIN(activity, +infinity);
+   scipinf = SCIPinfinity(scip);
+   activity = MAX(activity, -scipinf);
+   activity = MIN(activity, +scipinf);
 
    return activity;
 }

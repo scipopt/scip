@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.4 2005/08/30 14:13:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.5 2005/09/05 14:28:38 bzfpfend Exp $"
 
 /**@file   heur_octane.c
  * @brief  octane primal heuristic based on Balas, Ceria, Dawande, Margot, and Pataki
@@ -48,8 +48,8 @@
 struct SCIP_HeurData
 {
    SCIP_SOL* sol;                 /**< working solution */
-   int fmax;                 /**< {0,1}-points to be checked */
-   int ffirst;               /**< {0,1}-points to be generated at first in order to check whether restart is neccessary */
+   int f_max;                     /**< {0,1}-points to be checked */
+   int f_first;                   /**< {0,1}-points to be generated at first in order to check whether restart is neccessary */
    SCIP_Bool usefracspace;        /**< use heuristic for the space of fractional variables or for the whole space? */
    SCIP_Bool useobjray;           /**< should the inner normal of the objective be used as one ray direction? */
    SCIP_Bool useavgray;           /**< should the inner normal of the objective be used as one ray direction? */
@@ -95,7 +95,7 @@ void swapbool(SCIP_Bool* arr, int i, int j)
  *  where perm should be used to store the sorting permutation
  */
 static 
-void resortCoords( SCIP_Real* v, SCIP_Real* a, SCIP_Real* x, SCIP_Bool* sign, SCIP_VAR** subspacevars, int l, int r)
+void resortCoords(SCIP_Real* v, SCIP_Real* a, SCIP_Real* x, SCIP_Bool* sign, SCIP_VAR** subspacevars, int l, int r)
 {
    int i;
    int j;
@@ -141,22 +141,23 @@ void resortCoords( SCIP_Real* v, SCIP_Real* a, SCIP_Real* x, SCIP_Bool* sign, SC
 
 /** tries to insert the facet obtained from facet i flipped in component j into the list of the fmax nearest facets */
 static 
-void tryToInsert( SCIP* scip, SCIP_Bool** facets, SCIP_Real* lambda, int i, int j, int fmax, int nsubspacevars, SCIP_Real lam, int* nfacets )
+void tryToInsert(SCIP* scip, SCIP_Bool** facets, SCIP_Real* lambda, int i, int j, int f_max, int nsubspacevars,
+   SCIP_Real lam, int* nfacets)
 {
    SCIP_Bool* lastfacet;
    int k;
 
-   if( SCIPisFeasGE(scip,lam, lambda[fmax-1]) || lam < 0.0 )
+   if( SCIPisFeasGE(scip,lam, lambda[f_max-1]) || lam < 0.0 )
       return;
    
    /* shifting lam through lambda, lambda keeps increasingly sorted */
-   lastfacet = facets[fmax];
-   for( k = fmax; k > 0 && SCIPisFeasGT(scip, lambda[k-1],  lam); k-- )
+   lastfacet = facets[f_max];
+   for( k = f_max; k > 0 && SCIPisFeasGT(scip, lambda[k-1],  lam); k-- )
    {
       lambda[k] = lambda[k-1];
       facets[k] = facets[k-1];
    }
-   assert(i < k && k < fmax );
+   assert(i < k && k < f_max );
 
    /* inserting new facet into list, new facet is facet at position i flipped in coordinate j, new distance lam */
    facets[k] = lastfacet;
@@ -168,7 +169,8 @@ void tryToInsert( SCIP* scip, SCIP_Bool** facets, SCIP_Real* lambda, int i, int 
 
 /** constructs a solution from a given facet paying attention to the transformations made at the beginning of OCTANE */
 static 
-SCIP_RETCODE getSolFromFacet( SCIP* scip, SCIP_Bool* facet, SCIP_SOL* sol, SCIP_Bool* sign, SCIP_VAR** subspacevars, int nsubspacevars)
+SCIP_RETCODE getSolFromFacet(SCIP* scip, SCIP_Bool* facet, SCIP_SOL* sol, SCIP_Bool* sign, SCIP_VAR** subspacevars, 
+   int nsubspacevars)
 {
    int i;
 
@@ -196,7 +198,7 @@ SCIP_RETCODE getSolFromFacet( SCIP* scip, SCIP_Bool* facet, SCIP_SOL* sol, SCIP_
 
 /** generates the direction of the shooting ray as th inner normal of the objective function */
 static
-SCIP_RETCODE generateObjectiveRay( SCIP* scip, SCIP_Real* a, SCIP_VAR** subspacevars, int nsubspacevars )
+SCIP_RETCODE generateObjectiveRay(SCIP* scip, SCIP_Real* a, SCIP_VAR** subspacevars, int nsubspacevars)
 {
    int i;
      
@@ -211,7 +213,7 @@ SCIP_RETCODE generateObjectiveRay( SCIP* scip, SCIP_Real* a, SCIP_VAR** subspace
 
 /** generates the direction of the shooting ray as the difference between the root and the current LP solution */
 static
-SCIP_RETCODE generateDifferenceRay( SCIP* scip, SCIP_Real* a, SCIP_VAR** subspacevars, int nsubspacevars )
+SCIP_RETCODE generateDifferenceRay(SCIP* scip, SCIP_Real* a, SCIP_VAR** subspacevars, int nsubspacevars)
 {
    int i;
      
@@ -226,7 +228,7 @@ SCIP_RETCODE generateDifferenceRay( SCIP* scip, SCIP_Real* a, SCIP_VAR** subspac
 
 /** generates the direction of the shooting ray as the difference between the current and the root LP solution */
 static
-SCIP_RETCODE generateDifferenceBackwRay( SCIP* scip, SCIP_Real* a, SCIP_VAR** subspacevars, int nsubspacevars )
+SCIP_RETCODE generateDifferenceBackwRay(SCIP* scip, SCIP_Real* a, SCIP_VAR** subspacevars, int nsubspacevars)
 {
    int i;
      
@@ -241,7 +243,7 @@ SCIP_RETCODE generateDifferenceBackwRay( SCIP* scip, SCIP_Real* a, SCIP_VAR** su
 
 /** generates the direction of the shooting ray as the average of the normalized non-basic vars and rows */
 static
-SCIP_RETCODE generateAverageRay( SCIP* scip, SCIP_Real* a, int* fracspace, SCIP_VAR** subspacevars, int nsubspacevars )
+SCIP_RETCODE generateAverageRay(SCIP* scip, SCIP_Real* a, int* fracspace, SCIP_VAR** subspacevars, int nsubspacevars)
 {
    SCIP_ROW** rows;
    SCIP_COL** cols;
@@ -327,7 +329,7 @@ SCIP_RETCODE generateAverageRay( SCIP* scip, SCIP_Real* a, int* fracspace, SCIP_
 
 /** generates the starting point for the shooting ray in original coordinates */
 static
-SCIP_RETCODE generateStartingPoint( SCIP* scip, SCIP_Real* x, SCIP_VAR** subspacevars, int nsubspacevars )
+SCIP_RETCODE generateStartingPoint(SCIP* scip, SCIP_Real* x, SCIP_VAR** subspacevars, int nsubspacevars)
 {
    int i;
 
@@ -344,7 +346,7 @@ SCIP_RETCODE generateStartingPoint( SCIP* scip, SCIP_Real* x, SCIP_VAR** subspac
  *  transforms a and x by reflections stored in sign 
  */
 static
-void flipCoords( SCIP_Real* x, SCIP_Real* a, SCIP_Bool* sign, int nsubspacevars )
+void flipCoords(SCIP_Real* x, SCIP_Real* a, SCIP_Bool* sign, int nsubspacevars)
 {  
    int i;
    assert(x != NULL);
@@ -368,7 +370,7 @@ void flipCoords( SCIP_Real* x, SCIP_Real* a, SCIP_Bool* sign, int nsubspacevars 
  *  or a nonincreasing - to + flip and tests whether they are among the fmax nearest ones
  */
 static
-void generateNeighborFacets(SCIP* scip, SCIP_Bool** facets, SCIP_Real* lambda, SCIP_Real* x, SCIP_Real* a, SCIP_Real* v, int nsubspacevars, int fmax, int i, int* nfacets)
+void generateNeighborFacets(SCIP* scip, SCIP_Bool** facets, SCIP_Real* lambda, SCIP_Real* x, SCIP_Real* a, SCIP_Real* v, int nsubspacevars, int f_max, int i, int* nfacets)
 {
    SCIP_Real p;
    SCIP_Real q;
@@ -383,7 +385,7 @@ void generateNeighborFacets(SCIP* scip, SCIP_Bool** facets, SCIP_Real* lambda, S
    assert(a != NULL);
    assert(v != NULL);
    assert(nfacets != 0);
-   assert(0 <= i && i < fmax);
+   assert(0 <= i && i < f_max);
 
    /* determine the p and q values of the next facet to fix as a closest one */
    p = 0.5 * nsubspacevars;
@@ -426,7 +428,7 @@ void generateNeighborFacets(SCIP* scip, SCIP_Bool** facets, SCIP_Real* lambda, S
       if( SCIPisFeasPositive(scip, q + 2*a[j]) )
       {
          lam = (p - 2*x[j]) / (q + 2*a[j]);
-         tryToInsert(scip,facets, lambda, i, j, fmax, nsubspacevars, lam, nfacets);
+         tryToInsert(scip,facets, lambda, i, j, f_max, nsubspacevars, lam, nfacets);
       }
    }
 
@@ -438,18 +440,18 @@ void generateNeighborFacets(SCIP* scip, SCIP_Bool** facets, SCIP_Real* lambda, S
       {
          lam = (p + 2*x[j]) / (q - 2*a[j]);
          if( v[minplus] <= lam )
-            tryToInsert(scip, facets, lambda, i, j, fmax, nsubspacevars, lam, nfacets);
+            tryToInsert(scip, facets, lambda, i, j, f_max, nsubspacevars, lam, nfacets);
       }
    }
 #ifndef NDEBUG
-   for( j = 1; j < fmax; j++)
+   for( j = 1; j < f_max; j++)
       assert(SCIPisFeasGE(scip, lambda[j], lambda[j-1]));
 #endif
 }
 
 /** tests, whether an array is completly zero */
 static
-SCIP_Bool isZero( SCIP* scip, SCIP_Real* a, int nsubspacevars )
+SCIP_Bool isZero(SCIP* scip, SCIP_Real* a, int nsubspacevars)
 {
    int i;
    for( i = 0; i < nsubspacevars; i++)
@@ -567,8 +569,8 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    int nfacets;          /* number of facets hidden by the ray that where already found */
    int i;                /* counter */
    int j;                /* counter */
-   int fmax;             /* {0,1}-points to be checked */
-   int ffirst;           /* {0,1}-points to be generated at first in order to check whether a restart is neccessary */     
+   int f_max;             /* {0,1}-points to be checked */
+   int f_first;           /* {0,1}-points to be generated at first in order to check whether a restart is neccessary */     
    int nrun;             /* counter */
 
    int* perm;            /* stores the way in which the coordinates were permuted */
@@ -605,8 +607,8 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    assert( heurdata != NULL );
    sol = heurdata->sol;
    assert( sol != NULL );
-   fmax = heurdata->fmax;  
-   ffirst = heurdata->ffirst;
+   f_max = heurdata->f_max;  
+   f_first = heurdata->f_first;
    usefracspace = heurdata->usefracspace;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &fracspace, nvars) );
@@ -639,9 +641,9 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    if(nsubspacevars < 30)
    {
       /* at most 2^(n-1) facets can be hit */
-      fmax = MIN(fmax, 1 << (nsubspacevars-1) ); 
-      fmax = MAX(1,fmax);
-      ffirst = MIN(ffirst,fmax); 
+      f_max = MIN(f_max, 1 << (nsubspacevars-1) ); 
+      f_max = MAX(1,f_max);
+      f_first = MIN(f_first,f_max); 
    }
 
    /* memory allociation */
@@ -650,13 +652,13 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    SCIP_CALL( SCIPallocBufferArray(scip, &v, nsubspacevars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sign, nsubspacevars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, nsubspacevars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &lambda, fmax+1) );  
-   SCIP_CALL( SCIPallocBufferArray(scip, &facets, fmax+1) );
-   for( i = 0; i <= fmax; i++)
+   SCIP_CALL( SCIPallocBufferArray(scip, &lambda, f_max+1) );  
+   SCIP_CALL( SCIPallocBufferArray(scip, &facets, f_max+1) );
+   for( i = 0; i <= f_max; i++)
    {  
       SCIP_CALL( SCIPallocBufferArray(scip, &facets[i], nsubspacevars) );
    }
-   SCIP_CALL( SCIPallocBufferArray(scip, &first_sols, ffirst) ); 
+   SCIP_CALL( SCIPallocBufferArray(scip, &first_sols, f_first) ); 
    
    *result = SCIP_DIDNOTFIND;
 
@@ -717,7 +719,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       /* coord. transformation such that a >= 0 */
       flipCoords(x,a,sign,nsubspacevars);
 
-      for( i = 0; i < fmax; i++)
+      for( i = 0; i < f_max; i++)
          lambda[i] = SCIP_REAL_MAX;
 
       /* calculate v, initialize perm, facets[0], p, and q */
@@ -771,14 +773,14 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       nfacets = 1;
 
       /* find the first facets hit by the ray */
-      for( i = 0; i < ffirst; i++)
+      for( i = 0; i < f_first; i++)
          if( i < nfacets )
-            generateNeighborFacets(scip, facets, lambda, x, a, v, nsubspacevars, fmax, i, &nfacets);
+            generateNeighborFacets(scip, facets, lambda, x, a, v, nsubspacevars, f_max, i, &nfacets);
     
     
  
       /* construct the first ffirst possible solutions */
-      for( i = 0; i < ffirst; i++ )
+      for( i = 0; i < f_first; i++ )
       { 
          if( i < nfacets )
          {
@@ -825,7 +827,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
             if( lhs > rowval )
             {
                cons_viol = TRUE;
-               for( k = 1; k < ffirst && k < nfacets && cons_viol; k++)
+               for( k = 1; k < f_first && k < nfacets && cons_viol; k++)
                {
                   rowval = constant;
                   for( j = 0; j < nnonzerovars; j++)
@@ -838,7 +840,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
             else if( rhs < rowval )
             {
                cons_viol = TRUE;
-               for( k = 1; k < ffirst && k < nfacets && cons_viol; k++)
+               for( k = 1; k < f_first && k < nfacets && cons_viol; k++)
                {
                   rowval = constant;
                   for( j = 0; j < nnonzerovars; j++)
@@ -857,7 +859,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       if( !cons_viol )
       {
          /* if there was no row violated by all solutions, try whether one or more of them are feasible */
-         for( i = 0; i < ffirst && i < nfacets; i++)
+         for( i = 0; i < f_first && i < nfacets; i++)
          {
             assert(first_sols[i] != NULL);
             SCIP_CALL( SCIPtrySol(scip, first_sols[i], TRUE, FALSE, TRUE, &success) );
@@ -865,11 +867,11 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
                *result = SCIP_FOUNDSOL; 
          }
          /* search for further facets and construct and try solutions out of facets fixed as closest ones */
-         for( i = ffirst; i < fmax; i++)
+         for( i = f_first; i < f_max; i++)
          {
             if( i >= nfacets )
                break;
-            generateNeighborFacets(scip, facets, lambda, x, a, v, nsubspacevars, fmax, i, &nfacets);
+            generateNeighborFacets(scip, facets, lambda, x, a, v, nsubspacevars, f_max, i, &nfacets);
             SCIP_CALL( getSolFromFacet(scip, facets[i], sol, sign, subspacevars, nsubspacevars) );
             SCIP_CALL( SCIPtrySol(scip, sol, TRUE, FALSE, TRUE, &success) );
             if( success )
@@ -878,7 +880,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       }
 
       /* finished OCTANE */
-      for( i = 0; i < ffirst  && i < nfacets; i++ )
+      for( i = 0; i < f_first  && i < nfacets; i++ )
       {
          SCIP_CALL( SCIPfreeSol(scip, &first_sols[i]) );
       }
@@ -887,7 +889,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &first_sols);
-   for( i = fmax; i >= 0; i-- )
+   for( i = f_max; i >= 0; i-- )
       SCIPfreeBufferArray(scip, &facets[i]);
    SCIPfreeBufferArray(scip, &facets);
    SCIPfreeBufferArray(scip, &lambda);
@@ -927,12 +929,12 @@ SCIP_RETCODE SCIPincludeHeurOctane(
    SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/octane/fmax", 
          "number of 0-1-points to be tested as possible solutions by OCTANE",
-         &heurdata->fmax, DEFAULT_FMAX, 1, INT_MAX, NULL, NULL) );
+         &heurdata->f_max, DEFAULT_FMAX, 1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/octane/ffirst", 
          "number of 0-1-points to be tested at first whether they violate a common row",
-         &heurdata->ffirst, DEFAULT_FFIRST, 1, INT_MAX, NULL, NULL) );
+         &heurdata->f_first, DEFAULT_FFIRST, 1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "heuristics/octane/usefracspace", 

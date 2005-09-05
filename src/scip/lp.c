@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.207 2005/08/30 12:38:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.208 2005/09/05 14:28:39 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -5095,7 +5095,7 @@ SCIP_RETCODE lpFlushAddCols(
    SCIP_Real* val;
    char** name;
    SCIP_COL* col;
-   SCIP_Real infinity;
+   SCIP_Real lpiinf;
    int c;
    int pos;
    int nnonz;
@@ -5119,7 +5119,7 @@ SCIP_RETCODE lpFlushAddCols(
    SCIP_CALL( ensureLpicolsSize(lp, set, lp->ncols) );
 
    /* get the solver's infinity value */
-   infinity = SCIPlpiInfinity(lp->lpi);
+   lpiinf = SCIPlpiInfinity(lp->lpi);
 
    /* count the (maximal) number of added coefficients, calculate the number of added columns */
    naddcols = lp->ncols - lp->nlpicols;
@@ -5176,11 +5176,11 @@ SCIP_RETCODE lpFlushAddCols(
       col->coefchanged = FALSE;
       obj[pos] = col->obj;
       if( SCIPsetIsInfinity(set, -col->lb) )
-         lb[pos] = -infinity;
+         lb[pos] = -lpiinf;
       else
          lb[pos] = col->lb;
       if( SCIPsetIsInfinity(set, col->ub) )
-         ub[pos] = infinity;
+         ub[pos] = lpiinf;
       else
          ub[pos] = col->ub;
       beg[pos] = nnonz;
@@ -5318,7 +5318,7 @@ SCIP_RETCODE lpFlushAddRows(
    SCIP_Real* val;
    char** name;
    SCIP_ROW* row;
-   SCIP_Real infinity;
+   SCIP_Real lpiinf;
    int r;
    int pos;
    int nnonz;
@@ -5341,7 +5341,7 @@ SCIP_RETCODE lpFlushAddRows(
    SCIP_CALL( ensureLpirowsSize(lp, set, lp->nrows) );
 
    /* get the solver's infinity value */
-   infinity = SCIPlpiInfinity(lp->lpi);
+   lpiinf = SCIPlpiInfinity(lp->lpi);
 
    /* count the (maximal) number of added coefficients, calculate the number of added rows */
    naddrows = lp->nrows - lp->nlpirows;
@@ -5387,11 +5387,11 @@ SCIP_RETCODE lpFlushAddRows(
       row->rhschanged = FALSE;
       row->coefchanged = FALSE;
       if( SCIPsetIsInfinity(set, -row->lhs) )
-         lhs[pos] = -infinity;
+         lhs[pos] = -lpiinf;
       else
          lhs[pos] = row->lhs - row->constant;
       if( SCIPsetIsInfinity(set, row->rhs) )
-         rhs[pos] = infinity;
+         rhs[pos] = lpiinf;
       else
          rhs[pos] = row->rhs - row->constant;
       beg[pos] = nnonz;
@@ -5463,7 +5463,7 @@ SCIP_RETCODE lpFlushChgCols(
    SCIP_Real* obj;
    SCIP_Real* lb;
    SCIP_Real* ub;
-   SCIP_Real infinity;
+   SCIP_Real lpiinf;
    int nobjchg;
    int nbdchg;
    int i;
@@ -5474,7 +5474,7 @@ SCIP_RETCODE lpFlushChgCols(
       return SCIP_OKAY;
 
    /* get the solver's infinity value */
-   infinity = SCIPlpiInfinity(lp->lpi);
+   lpiinf = SCIPlpiInfinity(lp->lpi);
 
    /* get temporary memory for changes */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &objind, lp->ncols) );
@@ -5528,8 +5528,8 @@ SCIP_RETCODE lpFlushChgCols(
             SCIP_Real newlb;
             SCIP_Real newub;
 
-            newlb = (SCIPsetIsInfinity(set, -col->lb) ? -infinity : col->lb);
-            newub = (SCIPsetIsInfinity(set, col->ub) ? infinity : col->ub);
+            newlb = (SCIPsetIsInfinity(set, -col->lb) ? -lpiinf : col->lb);
+            newub = (SCIPsetIsInfinity(set, col->ub) ? lpiinf : col->ub);
             if( col->flushedlb != newlb || col->flushedub != newub ) /*lint !e777*/
             {
                assert(nbdchg < lp->ncols);
@@ -5595,7 +5595,7 @@ SCIP_RETCODE lpFlushChgRows(
    int* ind;
    SCIP_Real* lhs;
    SCIP_Real* rhs;
-   SCIP_Real infinity;
+   SCIP_Real lpiinf;
    int i;
    int nchg;
 
@@ -5607,7 +5607,7 @@ SCIP_RETCODE lpFlushChgRows(
    assert(!lp->diving);
 
    /* get the solver's infinity value */
-   infinity = SCIPlpiInfinity(lp->lpi);
+   lpiinf = SCIPlpiInfinity(lp->lpi);
 
    /* get temporary memory for changes */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &ind, lp->nrows) );
@@ -5636,8 +5636,8 @@ SCIP_RETCODE lpFlushChgRows(
             SCIP_Real newlhs;
             SCIP_Real newrhs;
 
-            newlhs = (SCIPsetIsInfinity(set, -row->lhs) ? -infinity : row->lhs - row->constant);
-            newrhs = (SCIPsetIsInfinity(set, row->rhs) ? infinity : row->rhs - row->constant);
+            newlhs = (SCIPsetIsInfinity(set, -row->lhs) ? -lpiinf : row->lhs - row->constant);
+            newrhs = (SCIPsetIsInfinity(set, row->rhs) ? lpiinf : row->rhs - row->constant);
             if( row->flushedlhs != newlhs || row->flushedrhs != newrhs ) /*lint !e777*/
             {
                assert(nchg < lp->nrows);
