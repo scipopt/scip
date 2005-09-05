@@ -1,7 +1,7 @@
-#--- $Id: make.linux.x86.gnu.dbg.static,v 1.2 2005/07/20 16:35:12 bzfpfend Exp $
-FLAGS		+=	-DWITH_READLINE -DROUNDING_FE -DWITH_ZLIB
+#--- $Id: make.linux.x86.gnu.dbg.static,v 1.3 2005/09/05 12:44:56 bzfpfend Exp $
+FLAGS		+=	-DWITH_READLINE -DROUNDING_FE -DWITH_ZLIB # -DWITH_ZIMPL -Ilib/zimplinc
 OFLAGS		+=	-O0 -g
 CFLAGS		+=	$(GCCWARN)
 CXXFLAGS	+=	$(GXXWARN)
 ARFLAGS		=	crs
-LDFLAGS		+=	-lreadline -lz -lncurses # -static
+LDFLAGS		+=	-lreadline -lz -lncurses # -lzimpl.linux.x86.gnu -lgmp -static

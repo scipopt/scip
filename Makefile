@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.121 2005/08/28 13:49:39 bzfpfend Exp $
+# $Id: Makefile,v 1.122 2005/09/05 12:44:56 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -31,7 +31,7 @@ ARCH            :=      $(shell uname -m | \
 			-e s/9000..../hppa/ \
 			-e s/Power\ Macintosh/ppc/ \
 			-e s/00........../pwr4/)
-OSTYPE		:=	$(shell uname -s | tr '[:upper:]' '[:lower:]' | sed -e s/irix../irix/ )
+OSTYPE		:=	$(shell uname -s | tr '[:upper:]' '[:lower:]' | sed -e s/cygwin.*/cygwin/ -e s/irix../irix/ )
 HOSTNAME	:=	$(shell uname -n | tr '[:upper:]' '[:lower:]')
 
 
@@ -257,6 +257,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/prop_pseudoobj.o \
 			scip/reader_cnf.o \
 			scip/reader_mps.o \
+			scip/reader_zpl.o \
 			scip/sepa_clique.o \
 			scip/sepa_cmir.o \
 			scip/sepa_gomory.o \

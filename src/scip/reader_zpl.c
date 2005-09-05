@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.2 2005/08/26 13:03:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.3 2005/09/05 12:44:56 bzfpfend Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -30,6 +30,22 @@
 #include "scip/reader_zpl.h"
 
 
+#ifdef WITH_ZIMPL
+
+/* include the ZIMPL headers necessary to define the LP construction interface */
+#include "zimpl/bool.h"
+#include "zimpl/ratlptypes.h"
+#include "zimpl/mme.h"
+#include "zimpl/xlpglue.h"
+
+int verbose = VERB_QUIET;
+extern int yydebug;
+extern int yy_flex_debug;
+extern
+void zimpl_read(const char* filename);
+
+
+
 #define READER_NAME             "zplreader"
 #define READER_DESC             "zpl file reader"
 #define READER_EXTENSION        "zpl"
@@ -38,134 +54,66 @@
 
 
 /*
- * Data structures
+ * LP construction interface of ZIMPL
  */
-
-/* TODO: (optional) fill in the necessary reader data */
-
-/** data for zpl reader */
-struct SCIP_ReaderData
-{
-};
-
-
-
-
-/*
- * Local methods
- */
-
-/* put your local methods here, and declare them static */
-
-
-
-
-/*
- * Callback methods of ZIMPL
- */
-
-typedef double Numb;
-typedef double Bound;
-typedef unsigned int Bool;
-typedef int LpFormat;
-typedef int ConType;
-typedef int VarClass;
-typedef void Sos;
-typedef void Var;
-typedef void Con;
-
-#define ZIMPL_DECL_XLP_ALLOC(x) void x(const char* name);
-#define ZIMPL_DECL_XLP_FREE(x) void x(void);
-#define ZIMPL_DECL_XLP_STAT(x) void x(void);
-#define ZIMPL_DECL_XLP_SCALE(x) void x(void);
-#define ZIMPL_DECL_XLP_WRITE(x) void x(FILE* fp, LpFormat format);
-#define ZIMPL_DECL_XLP_TRANSTABLE(x) void x(FILE* fp, LpFormat format);
-#define ZIMPL_DECL_XLP_ORDERFILE(x) void x(FILE* fp, LpFormat format);
-#define ZIMPL_DECL_XLP_MSTFILE(x) void x(FILE* fp, LpFormat format);
-#define ZIMPL_DECL_XLP_SOSFILE(x) void x(FILE* fp, LpFormat format);
-#define ZIMPL_DECL_XLP_CONNAME_EXISTS(x) Bool x(const char* conname);
-#define ZIMPL_DECL_XLP_ADDCON(x) Con* x(const char* name, ConType type, const Numb* lhs, const Numb* rhs, unsigned int flags);
-#define ZIMPL_DECL_XLP_ADDVAR(x) Var* x(const char* name, VarClass usevarclass, const Bound* lower, const Bound* upper, const Numb* priority, const Numb* startval);
-#define ZIMPL_DECL_XLP_ADDSOS(x) Sos* x(const char* name, SosType type, const Numb* priority);
-#define ZIMPL_DECL_XLP_ADDTOSOS(x) void x(Sos* sos, Var* var, const Numb* weight);
-#define ZIMPL_DECL_XLP_GETCLASS(x) VarClass x(const Var* var);
-#define ZIMPL_DECL_XLP_GETLOWER(x) Bound* x(const Var* var);
-#define ZIMPL_DECL_XLP_GETUPPER(x) Bound* x(const Var* var);
-#define ZIMPL_DECL_XLP_OBJNAME(x) void x(const char* name);
-#define ZIMPL_DECL_XLP_SETDIR(x) void x(Bool minimize);
-#define ZIMPL_DECL_XLP_ADDTONZO(x) void x(Var* var, Con* con, const Numb* numb);
-#define ZIMPL_DECL_XLP_ADDTOCOST(x) void x(Var* var, const Numb* cost);
-#define ZIMPL_DECL_XLP_PRESOLVE(x) void x(void);
-#define ZIMPL_DECL_XLP_HASSOS(x) Bool x(void);
 
 /* ZIMPL does not support user data in callbacks - we have to use a static variables */
 static SCIP* scip_ = NULL;
 static SCIP_Bool issuedbranchpriowarning_ = FALSE;
 static SCIP_Bool readerror_ = FALSE;
 
-static
-ZIMPL_DECL_XLP_ALLOC(zimplXlpAlloc)
+void xlp_alloc(const char* name)
 {
    /* create problem */
-   SCIP_CALL_ABORT( SCIPcreateProb(scip, name, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL_ABORT( SCIPcreateProb(scip_, name, NULL, NULL, NULL, NULL, NULL, NULL) );
 }
 
-static
-ZIMPL_DECL_XLP_FREE(zimplXlpFree)
+void xlp_free(void)
 {
-   /* nothing to be done */
+   /* nothing to be done here */
 }
 
-static
-ZIMPL_DECL_XLP_STAT(zimplXlpStat)
+void xlp_stat(void)
 {
-   /* nothing to be done */
+   /* nothing to be done here */
 }
 
-static
-ZIMPL_DECL_XLP_SCALE(zimplXlpScale)
+void xlp_scale(void)
 {
-   /* nothing to be done */
+   /* nothing to be done here */
 }
 
-static
-ZIMPL_DECL_XLP_WRITE(zimplXlpWrite)
+void xlp_write(FILE* fp, LpFormat format)
 {
-   /* nothing to be done */
+   /* nothing to be done here */
 }
 
-static
-ZIMPL_DECL_XLP_TRANSTABLE(zimplXlpTranstable)
+void xlp_transtable(FILE* fp, LpFormat format)
 {
-   /* nothing to be done */
+   /* nothing to be done here */
 }
 
-static
-ZIMPL_DECL_XLP_ORDERFILE(zimplXlpOrderfile)
+void xlp_orderfile(FILE* fp, LpFormat format)
 {
-   /* nothing to be done */
+   /* nothing to be done here */
 }
 
-static
-ZIMPL_DECL_XLP_MSTFILE(zimplXlpMstfile)
+void xlp_mstfile(FILE* fp, LpFormat format)
 {
-   /* nothing to be done */
+   /* nothing to be done here */
 }
 
-static
-ZIMPL_DECL_XLP_SOSFILE(zimplXlpSosfile)
+void xlp_sosfile(FILE* fp, LpFormat format)
 {
-   /* nothing to be done */
+   /* nothing to be done here */
 }
 
-static
-ZIMPL_DECL_XLP_CONNAME_EXISTS(zimplXlpConname_Exists)
+Bool xlp_conname_exists(const char* conname)
 {
    return (SCIPfindCons(scip_, conname) != NULL);
 }
 
-static
-ZIMPL_DECL_XLP_ADDCON(zimplXlpAddcon)
+Con* xlp_addcon(const char* name, ConType type, const Numb* lhs, const Numb* rhs, unsigned int flags)
 {
    SCIP_CONS* cons;
    SCIP_Real sciplhs;
@@ -232,8 +180,7 @@ ZIMPL_DECL_XLP_ADDCON(zimplXlpAddcon)
    return zplcon;
 }
 
-static
-ZIMPL_DECL_XLP_ADDVAR(zimplXlpAddvar)
+Var* xlp_addvar(const char* name, VarClass usevarclass, const Bound* lower, const Bound* upper, const Numb* priority, const Numb* startval)
 {
    SCIP_VAR* var;
    SCIP_Real lb;
@@ -245,7 +192,7 @@ ZIMPL_DECL_XLP_ADDVAR(zimplXlpAddvar)
    Var* zplvar;
    int branchpriority;
 
-   SCIP_CALL( SCIPgetBoolParam(scip_, "reading/zplreader/dynamiccols", &dynamiccols) );
+   SCIP_CALL_ABORT( SCIPgetBoolParam(scip_, "reading/zplreader/dynamiccols", &dynamiccols) );
 
    lb = (SCIP_Real)numb_todbl(bound_get_value(lower));
    ub = (SCIP_Real)numb_todbl(bound_get_value(upper));
@@ -275,8 +222,8 @@ ZIMPL_DECL_XLP_ADDVAR(zimplXlpAddvar)
    {
       if( !issuedbranchpriowarning_ )
       {
-         SCIP_CALL_ABORT( SCIPverbMessage(scip_, SCIP_VERBLEVEL_MINIMAL, NULL,
-               "ZIMPL reader: fractional branching priorities in input - rounding down to integer values\n") );
+         SCIPverbMessage(scip_, SCIP_VERBLEVEL_MINIMAL, NULL,
+            "ZIMPL reader: fractional branching priorities in input - rounding down to integer values\n");
          issuedbranchpriowarning_ = TRUE;
       }
       branchpriority = (int)numb_todbl(priority);
@@ -292,8 +239,7 @@ ZIMPL_DECL_XLP_ADDVAR(zimplXlpAddvar)
    return zplvar;
 }
 
-static
-ZIMPL_DECL_XLP_ADDSOS(zimplXlpAddsos)
+Sos* xlp_addsos(const char* name, SosType type, const Numb* priority)
 {
    SCIP_CONS* cons;
    SCIP_Bool initial;
@@ -339,11 +285,10 @@ ZIMPL_DECL_XLP_ADDSOS(zimplXlpAddsos)
    SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
    SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
 
-   return zplcon;
+   return zplsos;
 }
 
-static
-ZIMPL_DECL_XLP_ADDTOSOS(zimplXlpAddtosos)
+void xlp_addtosos(Sos* sos, Var* var, const Numb* weight)
 {
    SCIP_CONS* scipcons;
    SCIP_VAR* scipvar;
@@ -354,8 +299,7 @@ ZIMPL_DECL_XLP_ADDTOSOS(zimplXlpAddtosos)
    SCIP_CALL_ABORT( SCIPaddCoefSetppc(scip_, scipcons, scipvar) );
 }
 
-static
-ZIMPL_DECL_XLP_GETCLASS(zimplXlpGetclass)
+VarClass xlp_getclass(const Var* var)
 {
    SCIP_VAR* scipvar;
 
@@ -378,8 +322,7 @@ ZIMPL_DECL_XLP_GETCLASS(zimplXlpGetclass)
    return VAR_CON;
 }
 
-static
-ZIMPL_DECL_XLP_GETLOWER(zimplXlpGetlower)
+Bound* xlp_getlower(const Var* var)
 {
    SCIP_VAR* scipvar;
    SCIP_Real lb;
@@ -404,8 +347,7 @@ ZIMPL_DECL_XLP_GETLOWER(zimplXlpGetlower)
    return bound;
 }
 
-static
-ZIMPL_DECL_XLP_GETUPPER(zimplXlpGetupper)
+Bound* xlp_getupper(const Var* var)
 {
    SCIP_VAR* scipvar;
    SCIP_Real ub;
@@ -430,14 +372,12 @@ ZIMPL_DECL_XLP_GETUPPER(zimplXlpGetupper)
    return bound;
 }
 
-static
-ZIMPL_DECL_XLP_OBJNAME(zimplXlpObjname)
+void xlp_objname(const char* name)
 {
    /* nothing to be done */
 }
 
-static
-ZIMPL_DECL_XLP_SETDIR(zimplXlpSetdir)
+void xlp_setdir(Bool minimize)
 {
    SCIP_OBJSENSE objsense;
 
@@ -445,12 +385,11 @@ ZIMPL_DECL_XLP_SETDIR(zimplXlpSetdir)
    SCIP_CALL_ABORT( SCIPsetObjsense(scip_, objsense) );
 }
 
-static
-ZIMPL_DECL_XLP_ADDTONZO(zimplXlpAddtonzo)
+void xlp_addtonzo(Var* var, Con* con, const Numb* numb)
 {
    SCIP_CONS* scipcons;
    SCIP_VAR* scipvar;
-   SCIP_REAL scipval;
+   SCIP_Real scipval;
 
    scipcons = (SCIP_CONS*)con;
    scipvar = (SCIP_VAR*)var;
@@ -459,11 +398,10 @@ ZIMPL_DECL_XLP_ADDTONZO(zimplXlpAddtonzo)
    SCIP_CALL_ABORT( SCIPaddCoefLinear(scip_, scipcons, scipvar, scipval) );
 }
 
-static
-ZIMPL_DECL_XLP_ADDTOCOST(zimplXlpAddtocost)
+void xlp_addtocost(Var* var, const Numb* cost)
 {
    SCIP_VAR* scipvar;
-   SCIP_REAL scipval;
+   SCIP_Real scipval;
 
    scipvar = (SCIP_VAR*)var;
    scipval = numb_todbl(cost);
@@ -471,14 +409,12 @@ ZIMPL_DECL_XLP_ADDTOCOST(zimplXlpAddtocost)
    SCIP_CALL_ABORT( SCIPchgVarObj(scip_, scipvar, scipval) );
 }
 
-static
-ZIMPL_DECL_XLP_PRESOLVE(zimplXlpPresolve)
+void xlp_presolve(void)
 {
    /* nothing to be done */
 }
 
-static
-ZIMPL_DECL_XLP_HASSOS(zimplXlpHassos)
+Bool xlp_hassos(void)
 {
    return TRUE;
 }
@@ -498,41 +434,20 @@ ZIMPL_DECL_XLP_HASSOS(zimplXlpHassos)
 static
 SCIP_DECL_READERREAD(readerReadZpl)
 {  /*lint --e{715}*/
-   ZIMPL* zimpl;
-   SCIP_Bool error;
-
    /* set static variables (ZIMPL callbacks do not support user data) */
    scip_ = scip;
    issuedbranchpriowarning_ = FALSE;
    readerror_ = FALSE;
 
-   /* create ZIMPL data */
-   SCIP_ALLOC( zimpl = zimpl_create() );
-   
-   /* install ZIMPL callbacks */
-   zimpl_install_xlp_callbacks(zimpl, zimplXlpAlloc, zimplXlpFree, zimplXlpStat, zimplXlpScale,
-      zimplXlpWrite, zimplXlpTranstable, zimplXlpOrderfile, zimplXlpMstfile, zimplXlpSosfile,
-      zimplXlpConname_Exists, zimplXlpAddcon, zimplXlpAddvar, zimplXlpAddsos, zimplXlpAddtosos,
-      zimplXlpGetclass, zimplXlpGetlower, zimplXlpGetupper, zimplXlpObjname, zimplXlpSetdir,
-      zimplXlpAddtonzo, zimplXlpAddtocost, zimplXlpPresolve, zimplXlpHassos);
-
    /* call ZIMPL parser */
-   error = (SCIP_Bool)zimpl_exec_prog(zimpl, filename);
-
-   /* free ZIMPL data */
-   zimpl_free(zimpl);
-
-   /* evaluate result */
-   if( error || readerror_ )
-   {
-      SCIPwarningMessage("error reading ZIMPL file <%s>\n", filename);
-      return SCIP_READERROR;
-   }
+   zimpl_read(filename);
    
    *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }
+
+#endif
 
 
 
@@ -546,7 +461,11 @@ SCIP_RETCODE SCIPincludeReaderZpl(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+#ifdef WITH_ZIMPL
    SCIP_READERDATA* readerdata;
+
+   yydebug       = 0;
+   yy_flex_debug = 0;
 
    /* create zpl reader data */
    readerdata = NULL;
@@ -559,6 +478,7 @@ SCIP_RETCODE SCIPincludeReaderZpl(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/zplreader/dynamiccols", "should columns be added and removed dynamically to the LP?",
          NULL, FALSE, NULL, NULL) );
+#endif
 
    return SCIP_OKAY;
 }
