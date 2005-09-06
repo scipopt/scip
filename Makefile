@@ -14,14 +14,12 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.126 2005/09/06 17:10:49 bzfpfend Exp $
+# $Id: Makefile,v 1.127 2005/09/06 17:28:58 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
 #@author  Thorsten Koch
 #@author  Tobias Achterberg
-
-.PHONY:		depend lpidepend clean lint doc test testcplex
 
 ARCH            :=      $(shell uname -m | \
                         sed \

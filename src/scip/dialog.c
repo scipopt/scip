@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.26 2005/09/06 17:08:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.27 2005/09/06 17:29:05 bzfpfend Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -94,6 +94,8 @@ SCIP_RETCODE removeHistory(
    )
 {
 #ifndef NO_REMOVE_HISTORY
+   HIST_ENTRY* entry;
+   
    entry = remove_history(pos);
 #endif
 

@@ -14,14 +14,12 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.7 2005/08/24 17:57:00 bzfpfend Exp $
+# $Id: Makefile,v 1.8 2005/09/06 17:28:59 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ example project using SCIP as a callable library
 #@author  Thorsten Koch
 #@author  Tobias Achterberg
-
-.PHONY:		depend clean lint doc test
 
 ARCH            :=      $(shell uname -m | \
                         sed \
@@ -29,9 +27,10 @@ ARCH            :=      $(shell uname -m | \
 			-e s/i.86/x86/ \
 			-e s/IP../mips/ \
 			-e s/9000..../hppa/ \
+			-e s/Power\ Macintosh/ppc/ \
 			-e s/00........../pwr4/)
-OSTYPE		:=	$(shell uname -s | tr A-Z a-z)
-MACHINENAME	:=	$(shell uname -n | tr A-Z a-z)
+OSTYPE		:=	$(shell uname -s | tr '[:upper:]' '[:lower:]' | sed -e s/cygwin.*/cygwin/ -e s/irix../irix/ )
+HOSTNAME	:=	$(shell uname -n | tr '[:upper:]' '[:lower:]')
 
 
 #-----------------------------------------------------------------------------
@@ -51,6 +50,10 @@ COMP		=	gnu
 LINK		=	static
 LINKER  	=	CPP
 
+READLINE	=	true
+ZLIB		=	true
+ZIMPL		=	false
+
 CC		=	gcc
 CXX		=	g++
 DCC		=	gcc
@@ -63,7 +66,7 @@ DOXY		=	doxygen
 FLAGS		=	-I$(SRCDIR) -I$(LIBDIR)/scip/src
 CFLAGS		=	
 CXXFLAGS	=	
-LDFLAGS		=	-lpthread -lm -lz
+LDFLAGS		=	-lpthread -lm
 ARFLAGS		=	cr
 DFLAGS		=	-MM
 
@@ -98,6 +101,32 @@ include make/make.$(BASE)
 
 #FLAGS		+=	-DNOSAFEMEM
 #FLAGS		+=	-DNOBLOCKMEM
+
+
+#-----------------------------------------------------------------------------
+# External Libraries
+#-----------------------------------------------------------------------------
+
+ifeq ($(ZLIB_LDFLAGS),)
+ZLIB		=	false
+endif
+ifeq ($(ZLIB),true)
+FLAGS		+=	-DWITH_ZLIB $(ZLIB_FLAGS)
+LDFLAGS		+=	$(ZLIB_LDFLAGS)
+endif
+
+ifeq ($(READLINE_LDFLAGS),)
+READLINE	=	false
+endif
+ifeq ($(READLINE),true)
+FLAGS		+=	-DWITH_READLINE $(READLINE_FLAGS)
+LDFLAGS		+=	$(READLINE_LDFLAGS)
+endif
+
+ifeq ($(ZIMPL),true)
+FLAGS		+=	-DWITH_ZIMPL -Ilib/scip/lib/zimplinc
+LDFLAGS		+=	-lzimpl.$(OSTYPE).$(ARCH).$(COMP) -lgmp -lz
+endif
 
 
 #-----------------------------------------------------------------------------
@@ -155,15 +184,19 @@ OBJSCIPLIBFILE	=	$(LIBDIR)/scip/lib/lib$(OBJSCIPLIB).a
 # Rules
 #-----------------------------------------------------------------------------
 
+.PHONY: all
 all:            $(MAINFILE)
 
+.PHONY: lint
 lint:		$(MAINSRC)
 		$(LINT) lint/$(MAINNAME).lnt -os\(lint.out\) \
 		$(FLAGS) -UNDEBUG $^
 
+.PHONY: doc
 doc:		
 		cd doc; $(DOXY) $(MAINNAME).dxy
 
+.PHONY: test
 test:		
 		cd check; \
 		/bin/sh ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(MAIN).$(MACHINENAME) $(TIME) $(NODES) $(MEM);
@@ -177,9 +210,11 @@ $(LIBDIR):
 $(BINDIR):
 		-mkdir -p $(BINDIR)
 
+.PHONY: clean
 clean:
 		-rm -rf $(OBJDIR)/* $(MAINFILE)
 
+.PHONY: depend
 depend:
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(MAINSRC) \
 		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/\1.o|g'\'' \
@@ -219,7 +254,7 @@ $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 ifeq ($(VERBOSE), true)
 		$(CC) $(FLAGS) $(CFLAGS) -c $< -o $@
 else
-		$(CC) $(FLAGS) $(CFLAGS) -c $< -o $@
+		@$(CC) $(FLAGS) $(CFLAGS) -c $< -o $@
 endif
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
@@ -227,7 +262,7 @@ $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
 ifeq ($(VERBOSE), true)
 		$(CXX) $(FLAGS) $(CXXFLAGS) -c $< -o $@
 else
-		$(CXX) $(FLAGS) $(CXXFLAGS) -c $< -o $@
+		@$(CXX) $(FLAGS) $(CXXFLAGS) -c $< -o $@
 endif
 
 # --- EOF ---------------------------------------------------------------------
