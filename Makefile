@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.123 2005/09/05 14:12:41 bzfpfend Exp $
+# $Id: Makefile,v 1.124 2005/09/06 10:48:07 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -53,6 +53,7 @@ COMP		=	gnu
 LINK		=	static
 LIBEXT		=	a
 LINKER  	=	C
+ZIMPL		=	false
 
 CC		=	gcc
 CXX		=	g++
@@ -167,6 +168,16 @@ LPILIB		=	$(LPILIBNAME).$(BASE)
 LPILIBFILE	=	$(LIBDIR)/lib$(LPILIB).$(LIBEXT)
 LPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(LPILIBOBJ))
 LPILIBDEP	=	src/depend.lpilib.$(LPS).$(OPT)
+
+
+#-----------------------------------------------------------------------------
+# ZIMPL
+#-----------------------------------------------------------------------------
+
+ifeq ($(ZIMPL),true)
+FLAGS		+=	-DWITH_ZIMPL -Ilib/zimplinc
+LDFLAGS		+=	-lzimpl.$(OSTYPE).$(ARCH).$(COMP) -lgmp
+endif
 
 
 #-----------------------------------------------------------------------------
