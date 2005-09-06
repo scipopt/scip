@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cnf.c,v 1.28 2005/08/24 17:26:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_cnf.c,v 1.29 2005/09/06 17:08:01 bzfpfend Exp $"
 
 /**@file   reader_cnf.c
  * @brief  cnf file reader
@@ -62,7 +62,7 @@ void readWarning(
 /** reads the next non-empty non-comment line of a cnf file */
 static
 SCIP_RETCODE readCnfLine(
-   SCIPFILE*        file,               /**< input file */
+   SCIP_FILE*            file,               /**< input file */
    char*                 buffer,             /**< buffer for storing the input line */
    int                   size,               /**< size of the buffer */
    int*                  linecount           /**< pointer to the line number counter */
@@ -119,7 +119,7 @@ SCIP_RETCODE readCnfLine(
 static
 SCIP_RETCODE readCnf(
    SCIP*                 scip,               /**< SCIP data structure */   
-   SCIPFILE*        file                /**< input file */
+   SCIP_FILE*            file                /**< input file */
    )
 {
    SCIP_RETCODE retcode;
@@ -321,7 +321,7 @@ SCIP_RETCODE readCnf(
 static
 SCIP_DECL_READERREAD(readerReadCnf)
 {  /*lint --e{715}*/
-   SCIPFILE* f;
+   SCIP_FILE* f;
    SCIP_RETCODE retcode;
 
    assert(reader != NULL);

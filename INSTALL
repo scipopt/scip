@@ -85,21 +85,39 @@ Here is what you have to do to get SCIP running:
        - ln -s <file libCoin.a> lib/libcoin.$(OSTYPE).$(ARCH).$(COMP).a
          for each operating system and architecture to use
          (e.g. "ln -s /COIN/lib/libCoin.a lib/libcoin.linux.x86.gnu.a")
+   (e) to use ZIMPL as additional file reader for reading *.zpl files
+       - mkdir lib/zimplinc
+       - ln -s <path to ZIMPL's *.h files> lib/zimplinc/zimpl
+       - ln -s <file libzimpl-<version>.<options>.a> lib/libzimpl.$(OSTYPE).$(ARCH).$(COMP).a
 
 2. Compile the library and the solver program:
-   In your SCIP main directory, enter "make OPT=<...> LPS=<...> COMP=<...> LINK=<...>" with
-   the following options:
-   - "OPT=opt"       to use optimized compilation mode (default)
-   - "OPT=dbg"       to use debug compilation mode
-   - "OPT=prf"       to use performance analysis compilation mode
-   - "LPS=cpx"       to use CPLEX as LP solver (default)
-   - "LPS=spx"       to use SOPLEX Version >= 1.2.2 as LP solver
-   - "LPS=spx121"    to use SOPLEX Version <= 1.2.1 as LP solver
-   - "LPS=clp"       to use CLP as LP solver
-   - "COMP=gnu"      to use GNU c/c++ compiler (default)
+   In your SCIP main directory, enter "make [options]" with the following options:
+   - "OPT=opt"         to use optimized compilation mode (default)
+   - "OPT=dbg"         to use debug compilation mode
+   - "OPT=prf"         to use performance analysis compilation mode
+
+   - "LPS=cpx"         to use CPLEX as LP solver (default)
+   - "LPS=spx"         to use SOPLEX Version >= 1.2.2 as LP solver
+   - "LPS=spx121"      to use SOPLEX Version <= 1.2.1 as LP solver
+   - "LPS=clp"         to use CLP as LP solver
+
+   - "COMP=gnu"        to use GNU c/c++ compiler (default)
    - other compilers are available (see make/ directory)
-   - "LINK=static"   to use static libraries (default)
-   - "LINK=dynamic"  to use dynamic libraries
+
+   - "LINK=static"     to use static libraries (default)
+   - "LINK=dynamic"    to use dynamic libraries
+
+   - "ZLIB=true"       to use zlib and enable reading of compressed files (default)
+   - "ZLIB=false"      disable zlib usage
+
+   - "READLINE=true"   to enable readline library for interactive shell (default)
+   - "READLINE=false"  to disable readline library
+
+   - "ZIMPL=false"     to disable ZIMPL file reader (default)
+   - "ZIMPL=true"      to enable ZIMPL file reader (needs ZIMPL to be installed, see 1. (e))
+
+   - "VERBOSE=false"   to suppress display of compiler and linker invocations (default)
+   - "VERBOSE=true"    to display compiler and linker invocations
 
    On some machines, you should use gmake instead of make.
 
@@ -109,7 +127,12 @@ Here is what you have to do to get SCIP running:
    Create one of the given name in the make subdirectory. You may take
    "make/make.linux.x86.gnu.opt.static" or any other file in the make subdirectory as example.
 
-   If you encounter compiler or linker errors, you should recompile with
+   The readline library seems to differ sligtly on different OS distributions. Some versions
+   do not support the remove_history() call. If this is the case, you have to add
+   "-DNO_REMOVE_HISTORY" to the FLAGS in the appropriate make/make.* file.
+   If this doesn't work either, disable the readline library with "make READLINE=false".
+
+   If you encounter other compiler or linker errors, you should recompile with
    "make VERBOSE=true ..." in order to get the full compiler invocation. This might help to
    fix the corresponding machine dependent makefile in the make subdirectory.
 

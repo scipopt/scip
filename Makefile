@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.124 2005/09/06 10:48:07 bzfpfend Exp $
+# $Id: Makefile,v 1.125 2005/09/06 17:07:58 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -53,6 +53,9 @@ COMP		=	gnu
 LINK		=	static
 LIBEXT		=	a
 LINKER  	=	C
+
+READLINE	=	true
+ZLIB		=	true
 ZIMPL		=	false
 
 CC		=	gcc
@@ -96,6 +99,7 @@ BINDIR		=	bin
 LIBDIR		=	lib
 EXEEXTENSION	=
 
+LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
 #-----------------------------------------------------------------------------
 include make/make.$(BASE)
@@ -128,7 +132,7 @@ LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc 
 LPSLDFLAGS	=	-lsoplex.$(OSTYPE).$(ARCH).$(COMP)
 LPILIBOBJ	=	scip/lpi_spx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
-LPILIBSRC	=	src/scip/lpi_spx.cpp src/scip/bitencode.c src/blockmemshell/memory.c src/scip/message.c
+LPILIBSRC	=	$(SRCDIR)/scip/lpi_spx.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 endif
 
 ifeq ($(LPS),spxdbg)
@@ -136,7 +140,7 @@ LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc 
 LPSLDFLAGS	=	-lsoplexdbg.$(OSTYPE).$(ARCH).$(COMP)
 LPILIBOBJ	=	scip/lpi_spx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
-LPILIBSRC	=	src/scip/lpi_spx.cpp src/scip/bitencode.c src/blockmemshell/memory.c src/scip/message.c
+LPILIBSRC	=	$(SRCDIR)/scip/lpi_spx.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 endif
 
 ifeq ($(LPS),spx121)
@@ -144,7 +148,7 @@ LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spx121inc 
 LPSLDFLAGS	=	-lsoplex121.$(OSTYPE).$(ARCH).$(COMP)
 LPILIBOBJ	=	scip/lpi_spx121.o scip/bitencode.o blockmemshell/memory.o scip/message.o
-LPILIBSRC	=	src/scip/lpi_spx121.cpp src/scip/bitencode.c src/blockmemshell/memory.c src/scip/message.c
+LPILIBSRC	=	$(SRCDIR)/scip/lpi_spx121.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 endif
 
 ifeq ($(LPS),clp)
@@ -153,7 +157,7 @@ FLAGS		+=	-I$(LIBDIR)/clpinc
 #LPSLDFLAGS	=	-lclp.$(OSTYPE).$(ARCH).$(COMP) -lcoin.$(OSTYPE).$(ARCH).$(COMP)
 LPSLDFLAGS	=	-L$(LIBDIR)/clpinc/../lib -Wl,-rpath,$(LIBDIR)/clpinc/../lib -lClp -lCoin
 LPILIBOBJ	=	scip/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/message.o
-LPILIBSRC	=	src/scip/lpi_clp.cpp src/scip/bitencode.c src/blockmemshell/memory.c src/scip/message.c
+LPILIBSRC	=	$(SRCDIR)/scip/lpi_clp.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 endif
 
 ifeq ($(LPS),clpdbg)
@@ -161,22 +165,41 @@ LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/clpinc
 LPSLDFLAGS	=	-lclpdbg.$(OSTYPE).$(ARCH).$(COMP) -lcoindbg.$(OSTYPE).$(ARCH).$(COMP)
 LPILIBOBJ	=	scip/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/message.o
-LPILIBSRC	=	src/scip/lpi_clp.cpp src/scip/bitencode.c src/blockmemshell/memory.c src/scip/message.c
+LPILIBSRC	=	$(SRCDIR)/scip/lpi_clp.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 endif
 
 LPILIB		=	$(LPILIBNAME).$(BASE)
 LPILIBFILE	=	$(LIBDIR)/lib$(LPILIB).$(LIBEXT)
 LPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(LPILIBOBJ))
-LPILIBDEP	=	src/depend.lpilib.$(LPS).$(OPT)
+LPILIBDEP	=	$(SRCDIR)/depend.lpilib.$(LPS).$(OPT)
 
 
 #-----------------------------------------------------------------------------
-# ZIMPL
+# External Libraries
 #-----------------------------------------------------------------------------
 
+ZLIBDEP		=	$(SRCDIR)/depend.zlib
+ifeq ($(ZLIB_LDFLAGS),)
+ZLIB		=	false
+endif
+ifeq ($(ZLIB),true)
+FLAGS		+=	-DWITH_ZLIB $(ZLIB_FLAGS)
+LDFLAGS		+=	$(ZLIB_LDFLAGS)
+endif
+
+READLINEDEP	=	$(SRCDIR)/depend.readline
+ifeq ($(READLINE_LDFLAGS),)
+READLINE	=	false
+endif
+ifeq ($(READLINE),true)
+FLAGS		+=	-DWITH_READLINE $(READLINE_FLAGS)
+LDFLAGS		+=	$(READLINE_LDFLAGS)
+endif
+
+ZIMPLDEP	=	$(SRCDIR)/depend.zimpl
 ifeq ($(ZIMPL),true)
 FLAGS		+=	-DWITH_ZIMPL -Ilib/zimplinc
-LDFLAGS		+=	-lzimpl.$(OSTYPE).$(ARCH).$(COMP) -lgmp
+LDFLAGS		+=	-lzimpl.$(OSTYPE).$(ARCH).$(COMP) -lgmp -lz
 endif
 
 
@@ -195,6 +218,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/dialog.o \
 			scip/disp.o \
 			scip/event.o \
+			scip/fileio.o \
 			scip/heur.o \
 			scip/history.o \
 			scip/implics.o \
@@ -285,7 +309,7 @@ SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).$(LIBEXT)
 SCIPLIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SCIPLIBOBJ))
 SCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(SCIPLIBOBJ:.o=.c))
-SCIPLIBDEP	=	src/depend.sciplib.$(OPT)
+SCIPLIBDEP	=	$(SRCDIR)/depend.sciplib.$(OPT)
 
 
 #-----------------------------------------------------------------------------
@@ -311,7 +335,7 @@ OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
 OBJSCIPLIBFILE	=	$(LIBDIR)/lib$(OBJSCIPLIB).$(LIBEXT)
 OBJSCIPLIBOBJFILES=	$(addprefix $(LIBOBJDIR)/,$(OBJSCIPLIBOBJ))
 OBJSCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(OBJSCIPLIBOBJ:.o=.cpp))
-OBJSCIPLIBDEP	=	src/depend.objsciplib.$(OPT)
+OBJSCIPLIBDEP	=	$(SRCDIR)/depend.objsciplib.$(OPT)
 
 
 #-----------------------------------------------------------------------------
@@ -323,12 +347,12 @@ MAINNAME	=	scip
 ifeq ($(LINKER),C)
 MAINOBJ		=	cmain.o
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
-MAINDEP		=	src/depend.cmain.$(OPT)
+MAINDEP		=	$(SRCDIR)/depend.cmain.$(OPT)
 endif
 ifeq ($(LINKER),CPP)
 MAINOBJ		=	cppmain.o
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.cpp))
-MAINDEP		=	src/depend.cppmain.$(OPT)
+MAINDEP		=	$(SRCDIR)/depend.cppmain.$(OPT)
 endif
 
 MAIN		=	$(MAINNAME).$(BASE).$(LPS)$(EXEEXTENSION)
@@ -340,8 +364,10 @@ MAINOBJFILES	=	$(addprefix $(BINOBJDIR)/,$(MAINOBJ))
 # Rules
 #-----------------------------------------------------------------------------
 
+.PHONY: all
 all:            $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE)
 
+.PHONY: lint
 lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(MAINSRC)
 		-rm -f lint.out
 		$(SHELL) -ec 'for i in $^; \
@@ -351,13 +377,16 @@ lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(MAINSRC)
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
 
+.PHONY: doc
 doc:		
 		cd doc; $(DOXY) $(MAINNAME).dxy
 
+.PHONY: test
 test:		
 		cd check; \
 		/bin/sh ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(MAIN).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL);
 
+.PHONY: testcplex
 testcplex:		
 		cd check; \
 		/bin/sh ./check_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL);
@@ -380,9 +409,11 @@ $(LIBDIR):
 $(BINDIR):
 		@-mkdir -p $(BINDIR)
 
+.PHONY: clean
 clean:
 		-rm -rf $(OBJDIR)/* $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE)
 
+.PHONY: lpidepend
 lpidepend:
 ifeq ($(LINKER),C)
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(LPILIBSRC) \
@@ -395,6 +426,7 @@ ifeq ($(LINKER),CPP)
 		>$(LPILIBDEP)'
 endif
 
+.PHONY: maindepend
 maindepend:
 ifeq ($(LINKER),C)
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(MAINSRC) \
@@ -407,13 +439,17 @@ ifeq ($(LINKER),CPP)
 		>$(MAINDEP)'
 endif
 
-depend:		lpidepend maindepend
+.PHONY: depend
+depend:		lpidepend maindepend externaldepend
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(SCIPLIBSRC) \
 		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(SCIPLIBDEP)'
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(OBJSCIPLIBSRC) \
 		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(OBJSCIPLIBDEP)'
+		@grep -rl "WITH_ZLIB" $(SRCDIR)/* > $(ZLIBDEP)
+		@grep -rl "WITH_READLINE" $(SRCDIR)/* > $(READLINEDEP)
+		@grep -rl "WITH_ZIMPL" $(SRCDIR)/* > $(ZIMPLDEP)
 
 -include	$(MAINDEP)
 -include	$(SCIPLIBDEP)
@@ -445,7 +481,7 @@ else
 endif
 endif
 
-$(SCIPLIBFILE):	$(LIBOBJSUBDIRS) $(LIBDIR) $(SCIPLIBOBJFILES) 
+$(SCIPLIBFILE):	$(LIBOBJSUBDIRS) $(LIBDIR) touchexternal $(SCIPLIBOBJFILES) 
 		@echo "-> generating library $@"
 ifeq ($(VERBOSE), true)
 		-rm -f $@
@@ -524,5 +560,27 @@ ifeq ($(VERBOSE), true)
 else
 		@$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) -c $< -o $@
 endif
+
+
+-include $(LASTSETTINGS)
+
+.PHONY: touchexternal
+touchexternal:	$(ZLIBDEP) $(READLINEDEP) $(ZIMPLDEP)
+ifneq ($(ZLIB),$(LAST_ZLIB))
+		@-touch `cat $(ZLIBDEP)`
+endif
+ifneq ($(READLINE),$(LAST_READLINE))
+		@-touch `cat $(READLINEDEP)`
+endif
+ifneq ($(ZIMPL),$(LAST_ZIMPL))
+		@-touch `cat $(ZIMPLDEP)`
+endif
+		@-rm -f $(LASTSETTINGS)
+		@echo "LAST_ZLIB=$(ZLIB)" >> $(LASTSETTINGS)
+		@echo "LAST_READLINE=$(READLINE)" >> $(LASTSETTINGS)
+		@echo "LAST_ZIMPL=$(ZIMPL)" >> $(LASTSETTINGS)
+
+
+
 
 # --- EOF ---------------------------------------------------------------------

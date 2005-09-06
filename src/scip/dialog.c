@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.25 2005/08/28 12:23:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.26 2005/09/06 17:08:01 bzfpfend Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -93,12 +93,8 @@ SCIP_RETCODE removeHistory(
    int                   pos                 /**< list position of history entry to remove */
    )
 {
-   HIST_ENTRY* entry;
-
+#ifndef NO_REMOVE_HISTORY
    entry = remove_history(pos);
-#if 0 /* free_history_entry() seems to be not available in most readline installations */
-   if( entry != NULL )
-      free_history_entry(entry);
 #endif
 
    return SCIP_OKAY;

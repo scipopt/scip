@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.59 2005/08/26 13:01:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.60 2005/09/06 17:08:01 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  mps file reader
@@ -56,7 +56,7 @@ typedef enum MpsSection MPSSECTION;
 struct MpsInput
 {
    MPSSECTION           section;
-   SCIPFILE*            fp;
+   SCIP_FILE*           fp;
    int                  lineno;
    SCIP_OBJSENSE        objsense;
    SCIP_Bool            haserror;
@@ -80,7 +80,7 @@ static
 SCIP_RETCODE mpsinputCreate(
    SCIP*                 scip,
    MPSINPUT**            mpsi,
-   SCIPFILE*             fp
+   SCIP_FILE*            fp
    )
 {
    assert(mpsi != NULL);
@@ -1257,9 +1257,9 @@ SCIP_RETCODE readMps(
    const char*           filename            /**< name of the input file */
    )
 {
-   SCIPFILE* fp;
+   SCIP_FILE* fp;
    MPSINPUT* mpsi;
-   SCIP_Bool      error;
+   SCIP_Bool error;
 
    assert(scip != NULL);
    assert(filename != NULL);

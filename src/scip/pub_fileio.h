@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_fileio.h,v 1.1 2005/07/15 17:20:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_fileio.h,v 1.2 2005/09/06 17:08:01 bzfpfend Exp $"
 
 /**@file   pub_fileio.h
- * @brief  wrapper header to map file i/o to standard or zlib file i/o
+ * @brief  wrapper functions to map file i/o to standard or zlib file i/o
  * @author Tobias Achterberg
  */
 
@@ -26,52 +26,25 @@
 #ifndef __SCIP_PUB_FILEIO_H__
 #define __SCIP_PUB_FILEIO_H__
 
+#include <stddef.h>
 
-#ifdef WITH_ZLIB
+typedef struct SCIP_File SCIP_FILE;          /**< file data structure */
 
-/* file i/o using zlib */
-#include <zlib.h>
-
-#define SCIPFILE                             gzFile
-#define SCIPfopen                            gzopen
-#define SCIPfdopen                           gzdopen
-#define SCIPfread(ptr,size,nmemb,stream)     gzread(stream,ptr,(size)*(nmemb))
-#define SCIPfwrite(ptr,size,nmemb,stream)    gzwrite(stream,ptr,(size)*(nmemb))
-#define SCIPfprintf                          gzprintf
-#define SCIPfputs(s,stream)                  gzputs(stream,s)
-#define SCIPfgets(s,size,stream)             gzgets(stream,s,size)
-#define SCIPfputc(c,stream)                  gzputc(stream,c)
-#define SCIPfgetc                            gzgetc
-#define SCIPfflush(stream)                   gzflush(stream,Z_SYNC_FLUSH)
-#define SCIPfseek                            gzseek
-#define SCIPrewind                           gzrewind
-#define SCIPftell                            gztell
-#define SCIPfeof                             gzeof
-#define SCIPfclose                           gzclose
-
-#else
-
-/* file i/o using standard i/o */
-#include <stdio.h>
-
-#define SCIPFILE      FILE
-#define SCIPfopen     fopen
-#define SCIPfdopen    fdopen
-#define SCIPfread     fread
-#define SCIPfwrite    fwrite
-#define SCIPfprintf   fprintf
-#define SCIPfputs     fputs
-#define SCIPfgets     fgets
-#define SCIPfputc     fputc
-#define SCIPfgetc     fgetc
-#define SCIPfflush    fflush
-#define SCIPfseek     fseek
-#define SCIPrewind    rewind
-#define SCIPftell     ftell
-#define SCIPfeof      feof
-#define SCIPfclose    fclose
-
-#endif
+extern SCIP_FILE* SCIPfopen(const char *path, const char *mode);
+extern SCIP_FILE* SCIPfdopen(int fildes, const char *mode);
+extern size_t SCIPfread(void *ptr, size_t size, size_t nmemb, SCIP_FILE *stream);
+extern size_t SCIPfwrite(const void *ptr, size_t size, size_t nmemb, SCIP_FILE *stream);
+extern int SCIPfprintf(SCIP_FILE *stream, const char *format, ...);
+extern int SCIPfputc(int c, SCIP_FILE *stream);
+extern int SCIPfputs(const char *s, SCIP_FILE *stream);
+extern int SCIPfgetc(SCIP_FILE *stream);
+extern char* SCIPfgets(char *s, int size, SCIP_FILE *stream);
+extern int SCIPfflush(SCIP_FILE *stream);
+extern int SCIPfseek(SCIP_FILE *stream, long offset, int whence);
+extern void SCIPrewind(SCIP_FILE *stream);
+extern long SCIPftell(SCIP_FILE *stream);
+extern int SCIPfeof(SCIP_FILE *stream);
+extern int SCIPfclose(SCIP_FILE *fp);
 
 
 #endif

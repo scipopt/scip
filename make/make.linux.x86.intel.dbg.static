@@ -1,9 +1,13 @@
-#--- $Id: make.linux.x86.intel.dbg.static,v 1.2 2005/09/05 14:01:48 bzfpfend Exp $
+#--- $Id: make.linux.x86.intel.dbg.static,v 1.3 2005/09/06 17:08:00 bzfpfend Exp $
 CC		=	icc
 CXX		=	icc
-FLAGS		+=	-DWITH_READLINE -DWITH_ZLIB # -DROUNDING_FE
+FLAGS		+=	# -DROUNDING_FE
 OFLAGS		+=	-g -mp -w2 -wd279,383,444,810,981 #-Xc
 CFLAGS		+=
 CXXFLAGS	+=
 ARFLAGS		=	crs
-LDFLAGS		+=	-lreadline -lz -lncurses # -static
+LDFLAGS		+=	-lncurses # -static
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline
