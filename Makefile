@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.125 2005/09/06 17:07:58 bzfpfend Exp $
+# $Id: Makefile,v 1.126 2005/09/06 17:10:49 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -440,7 +440,7 @@ ifeq ($(LINKER),CPP)
 endif
 
 .PHONY: depend
-depend:		lpidepend maindepend externaldepend
+depend:		lpidepend maindepend
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(SCIPLIBSRC) \
 		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(SCIPLIBDEP)'
