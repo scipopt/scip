@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.3 2005/09/05 12:44:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.4 2005/09/06 08:59:51 bzfpfend Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -38,17 +38,28 @@
 #include "zimpl/mme.h"
 #include "zimpl/xlpglue.h"
 
-int verbose = VERB_QUIET;
-extern int yydebug;
-extern int yy_flex_debug;
 extern
-void zimpl_read(const char* filename);
+void zpl_read(const char* filename);
 
 
 
 #define READER_NAME             "zplreader"
 #define READER_DESC             "zpl file reader"
 #define READER_EXTENSION        "zpl"
+
+
+
+
+/*
+ * Data structures
+ */
+
+/* TODO: (optional) fill in the necessary reader data */
+
+/** data for zpl reader */
+struct SCIP_ReaderData
+{
+};
 
 
 
@@ -440,7 +451,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
    readerror_ = FALSE;
 
    /* call ZIMPL parser */
-   zimpl_read(filename);
+   zpl_read(filename);
    
    *result = SCIP_SUCCESS;
 
@@ -463,9 +474,6 @@ SCIP_RETCODE SCIPincludeReaderZpl(
 {
 #ifdef WITH_ZIMPL
    SCIP_READERDATA* readerdata;
-
-   yydebug       = 0;
-   yy_flex_debug = 0;
 
    /* create zpl reader data */
    readerdata = NULL;

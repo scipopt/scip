@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.24 2005/08/28 12:24:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.25 2005/09/06 08:59:51 bzfpfend Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -1318,7 +1318,7 @@ SCIP_RETCODE SCIPlpiGetSides(
       if (lhss != 0)
 	 lhss[i-firstrow] = rowLower[i];
       if (rhss != 0)
-	 rhss[i-firstrow] = rowLower[i];
+	 rhss[i-firstrow] = rowUpper[i];
    }
 
    return SCIP_OKAY;
@@ -1558,7 +1558,7 @@ SCIP_RETCODE SCIPlpiStrongbranch(
    // bool stopOnFirstInfeasible=true,
    // bool alwaysFinish=false);
    // int startFinishOptions
-   int retval = clp->strongBranching(1, &col, up, down, outputSolution, outputStatus, outputIterations, false, true, lpi->validFactorization ? 3 : 1);
+   (void)clp->strongBranching(1, &col, up, down, outputSolution, outputStatus, outputIterations, false, true, lpi->validFactorization ? 3 : 1);
    clp->scaling(scaling);
    lpi->scaledFactorization = false;
    lpi->validFactorization = true;
@@ -2056,18 +2056,30 @@ SCIP_RETCODE SCIPlpiGetBase(
       {
 	 switch ( clp->getRowStatus(i) )
 	 {
-	 case ClpSimplex::isFree: rstat[i] = SCIP_BASESTAT_ZERO; break;
-	 case ClpSimplex::basic:  rstat[i] = SCIP_BASESTAT_BASIC; break;
-	 case ClpSimplex::atUpperBound: rstat[i] = SCIP_BASESTAT_UPPER; break;
-	 case ClpSimplex::atLowerBound:  rstat[i] = SCIP_BASESTAT_LOWER; break;
-	 case ClpSimplex::superBasic: rstat[i] = SCIP_BASESTAT_ZERO; break;
+	 case ClpSimplex::isFree:
+            rstat[i] = SCIP_BASESTAT_ZERO;
+            break;
+	 case ClpSimplex::basic:  
+            rstat[i] = SCIP_BASESTAT_BASIC; 
+            break;
+	 case ClpSimplex::atUpperBound: 
+            rstat[i] = SCIP_BASESTAT_UPPER; 
+            break;
+	 case ClpSimplex::atLowerBound:  
+            rstat[i] = SCIP_BASESTAT_LOWER; 
+            break;
+	 case ClpSimplex::superBasic: 
+            rstat[i] = SCIP_BASESTAT_ZERO; 
+            break;
 	 case ClpSimplex::isFixed:    
 	    if (clp->getRowPrice()[i] > 0.0)
 	       rstat[i] = SCIP_BASESTAT_LOWER; 
 	    else
 	       rstat[i] = SCIP_BASESTAT_UPPER; 
 	    break;
-	 default: SCIPerrorMessage("invalid basis status\n");  SCIPABORT();
+	 default: 
+            SCIPerrorMessage("invalid basis status\n");  
+            SCIPABORT();
 	 }
       }
    }
@@ -2078,11 +2090,21 @@ SCIP_RETCODE SCIPlpiGetBase(
       {
 	 switch ( clp->getColumnStatus(j) )
 	 {
-	 case ClpSimplex::isFree: cstat[j] = SCIP_BASESTAT_ZERO; break;
-	 case ClpSimplex::basic:  cstat[j] = SCIP_BASESTAT_BASIC; break;
-	 case ClpSimplex::atUpperBound: cstat[j] = SCIP_BASESTAT_UPPER; break;
-	 case ClpSimplex::atLowerBound:  cstat[j] = SCIP_BASESTAT_LOWER; break;
-	 case ClpSimplex::superBasic: cstat[j] = SCIP_BASESTAT_ZERO; break;
+	 case ClpSimplex::isFree: 
+            cstat[j] = SCIP_BASESTAT_ZERO; 
+            break;
+	 case ClpSimplex::basic:  
+            cstat[j] = SCIP_BASESTAT_BASIC; 
+            break;
+	 case ClpSimplex::atUpperBound: 
+            cstat[j] = SCIP_BASESTAT_UPPER; 
+            break;
+	 case ClpSimplex::atLowerBound:  
+            cstat[j] = SCIP_BASESTAT_LOWER; 
+            break;
+	 case ClpSimplex::superBasic: 
+            cstat[j] = SCIP_BASESTAT_ZERO; 
+            break;
 	 case ClpSimplex::isFixed: 
 	    if (clp->getReducedCost()[j] > 0.0)
 	       cstat[j] = SCIP_BASESTAT_LOWER; 
@@ -2136,15 +2158,21 @@ SCIP_RETCODE SCIPlpiSetBase(
 	 else
 	    clp->setRowStatus(i, ClpSimplex::superBasic);
 	 break;
-      case SCIP_BASESTAT_BASIC: clp->setRowStatus(i, ClpSimplex::basic); break;
-      case SCIP_BASESTAT_UPPER: clp->setRowStatus(i, ClpSimplex::atUpperBound); break;
+      case SCIP_BASESTAT_BASIC:
+         clp->setRowStatus(i, ClpSimplex::basic);
+         break;
+      case SCIP_BASESTAT_UPPER:
+         clp->setRowStatus(i, ClpSimplex::atUpperBound);
+         break;
       case SCIP_BASESTAT_LOWER: 
-	 if ( EPSGE(rhs[i], lhs[i], 1e-6) )   // if bounds are equal (or rhs > lhs)
+	 if ( EPSEQ(rhs[i], lhs[i], 1e-6) )   // if bounds are equal
 	    clp->setRowStatus(i, ClpSimplex::isFixed);
 	 else
 	    clp->setRowStatus(i, ClpSimplex::atLowerBound); 
 	 break;
-      default: SCIPerrorMessage("invalid basis status\n");  SCIPABORT();
+      default:
+         SCIPerrorMessage("invalid basis status\n");
+         SCIPABORT();
       }
    }
 
@@ -2165,15 +2193,21 @@ SCIP_RETCODE SCIPlpiSetBase(
 	 else
 	    clp->setColumnStatus(j, ClpSimplex::superBasic);
 	 break;
-      case SCIP_BASESTAT_BASIC: clp->setColumnStatus(j, ClpSimplex::basic); break;
-      case SCIP_BASESTAT_UPPER: clp->setColumnStatus(j, ClpSimplex::atUpperBound); break;
+      case SCIP_BASESTAT_BASIC:
+         clp->setColumnStatus(j, ClpSimplex::basic);
+         break;
+      case SCIP_BASESTAT_UPPER:
+         clp->setColumnStatus(j, ClpSimplex::atUpperBound); 
+         break;
       case SCIP_BASESTAT_LOWER: 
-	 if ( EPSGE(ub[j], lb[j], 1e-6) )
+	 if ( EPSEQ(ub[j], lb[j], 1e-6) )
 	    clp->setColumnStatus(j, ClpSimplex::isFixed);
 	 else
 	    clp->setColumnStatus(j, ClpSimplex::atLowerBound); 
 	 break;
-      default: SCIPerrorMessage("invalid basis status\n");  SCIPABORT();
+      default:
+         SCIPerrorMessage("invalid basis status\n");
+         SCIPABORT();
       }
    }
    
