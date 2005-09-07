@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.48 2005/09/07 12:57:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.49 2005/09/07 15:52:10 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -581,33 +581,19 @@ SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqString)
    return (strcmp(string1, string2) == 0);
 }
 
-static
-const int strhashshift[28] = { 
-   0, 16,  8, 24,  4, 20, 12, /*28, */
-   2, 18, 10, 26,  6, 22, 14, /*30, */
-   1, 17,  9, 25,  5, 21, 13, /*29, */
-   3, 19, 11, 27,  7, 23, 15  /*31  */
-};
-
 /** returns the hash value of the key (i.e. string) */
 SCIP_DECL_HASHKEYVAL(SCIPhashKeyValString)
 {  /*lint --e{715}*/
-   const char* string = (const char*)key;
+   const char* str;
    unsigned int sum;
-   unsigned int val;
-   int i;
 
+   str = (const char*)key;
    sum = 0;
-   i = 0;
-   while( *string != '\0' )
+   while( *str != '\0' )
    {
-      assert(0 <= i && i < 28);
-      val = (unsigned int)(*string); /*lint !e571*/
-      val <<= strhashshift[i];
-      sum += val;
-      i++;
-      i %= 28;
-      string++;
+      sum *= 31;
+      sum += (unsigned int)(*str); /*lint !e571*/
+      str++;
    }
 
    return sum;

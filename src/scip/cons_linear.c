@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.183 2005/09/05 15:27:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.184 2005/09/07 15:52:10 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -272,8 +272,7 @@ static
 SCIP_RETCODE consdataEnsureVarsSize(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< linear constraint data */
-   int                   num,                /**< minimum number of entries to store */
-   SCIP_Bool             transformed         /**< is constraint from transformed problem? */
+   int                   num                 /**< minimum number of entries to store */
    )
 {
    assert(consdata != NULL);
@@ -286,12 +285,10 @@ SCIP_RETCODE consdataEnsureVarsSize(
       newsize = SCIPcalcMemGrowSize(scip, num);
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->vars, consdata->varssize, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->vals, consdata->varssize, newsize) );
-      if( transformed )
+      if( consdata->eventdatas != NULL )
       {
          SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->eventdatas, consdata->varssize, newsize) );
       }
-      else
-         assert(consdata->eventdatas == NULL);
       consdata->varssize = newsize;
    }
    assert(num <= consdata->varssize);
@@ -518,6 +515,7 @@ SCIP_RETCODE consdataDropEvent(
    assert(eventhdlr != NULL);
    assert(0 <= pos && pos < consdata->nvars);
    assert(consdata->vars[pos] != NULL);
+   assert(consdata->eventdatas != NULL);
    assert(consdata->eventdatas[pos] != NULL);
    assert(consdata->eventdatas[pos]->consdata == consdata);
    assert(consdata->eventdatas[pos]->varpos == pos);
@@ -542,6 +540,12 @@ SCIP_RETCODE consdataCatchAllEvents(
    int i;
 
    assert(consdata != NULL);
+   assert(consdata->eventdatas == NULL);
+
+   /* allocate eventdatas array */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->eventdatas, consdata->varssize) );
+   assert(consdata->eventdatas != NULL);
+   BMSclearMemoryArray(consdata->eventdatas, consdata->nvars);
 
    /* catch event for every single variable */
    for( i = 0; i < consdata->nvars; ++i )
@@ -563,6 +567,7 @@ SCIP_RETCODE consdataDropAllEvents(
    int i;
 
    assert(consdata != NULL);
+   assert(consdata->eventdatas != NULL);
 
    /* drop event of every single variable */
    for( i = 0; i < consdata->nvars; ++i )
@@ -570,10 +575,23 @@ SCIP_RETCODE consdataDropAllEvents(
       SCIP_CALL( consdataDropEvent(scip, consdata, eventhdlr, i) );
    }
 
+   /* free eventdatas array */
+   SCIPfreeBlockMemoryArray(scip, &consdata->eventdatas, consdata->varssize);
+   assert(consdata->eventdatas == NULL);
+
    return SCIP_OKAY;
 }
 
-/** creates a linear constraint data of the original problem */
+/** returns whether we are in a stage, where the variable events should be catched */
+static
+SCIP_Bool needEvents(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   return (SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVED && SCIPgetStage(scip) <= SCIP_STAGE_FREESOLVE);
+}
+
+/** creates a linear constraint data */
 static
 SCIP_RETCODE consdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -653,19 +671,15 @@ SCIP_RETCODE consdataCreate(
 
    if( SCIPisTransformed(scip) )
    {
-      /* allocate the additional needed eventdatas array */
-      assert((*consdata)->eventdatas == NULL);
-      if( (*consdata)->varssize > 0 )
-      {
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->eventdatas, (*consdata)->varssize) );
-         BMSclearMemoryArray((*consdata)->eventdatas, (*consdata)->nvars);
-      }
-      
       /* get transformed variables */
       SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
 
       /* catch bound change events of variables */
-      SCIP_CALL( consdataCatchAllEvents(scip, *consdata, eventhdlr) );
+      if( needEvents(scip) )
+      {
+         SCIP_CALL( consdataCatchAllEvents(scip, *consdata, eventhdlr) );
+         assert((*consdata)->eventdatas != NULL);
+      }
    }
 
    return SCIP_OKAY;
@@ -694,9 +708,6 @@ SCIP_RETCODE consdataFree(
    {
       /* drop bound change events of variables */
       SCIP_CALL( consdataDropAllEvents(scip, *consdata, eventhdlr) );
-
-      /* free additional eventdatas array */
-      SCIPfreeBlockMemoryArray(scip, &(*consdata)->eventdatas, (*consdata)->varssize);
    }
    assert((*consdata)->eventdatas == NULL);
 
@@ -1761,13 +1772,15 @@ SCIP_RETCODE consdataSort(
       SCIPbsort((void*)consdata, consdata->nvars, consdataCompVar, perm);
 
       /* permute the variables in the linear constraint according to the resulting permutation */
+      eventdatav = NULL;
       for( v = 0; v < consdata->nvars; ++v )
       {
          if( perm[v] != v )
          {
             varv = consdata->vars[v];
             valv = consdata->vals[v];
-            eventdatav = consdata->eventdatas[v];
+            if( consdata->eventdatas != NULL )
+               eventdatav = consdata->eventdatas[v];
             i = v;
             do
             {
@@ -1775,8 +1788,11 @@ SCIP_RETCODE consdataSort(
                assert(perm[i] != i);
                consdata->vars[i] = consdata->vars[perm[i]];
                consdata->vals[i] = consdata->vals[perm[i]];
-               consdata->eventdatas[i] = consdata->eventdatas[perm[i]];
-               consdata->eventdatas[i]->varpos = i;
+               if( consdata->eventdatas != NULL )
+               {
+                  consdata->eventdatas[i] = consdata->eventdatas[perm[i]];
+                  consdata->eventdatas[i]->varpos = i;
+               }
                nexti = perm[i];
                perm[i] = i;
                i = nexti;
@@ -1784,8 +1800,11 @@ SCIP_RETCODE consdataSort(
             while( perm[i] != v );
             consdata->vars[i] = varv;
             consdata->vals[i] = valv;
-            consdata->eventdatas[i] = eventdatav;
-            consdata->eventdatas[i]->varpos = i;
+            if( consdata->eventdatas != NULL )
+            {
+               consdata->eventdatas[i] = eventdatav;
+               consdata->eventdatas[i]->varpos = i;
+            }
             perm[i] = i;
          }
       }
@@ -1797,7 +1816,7 @@ SCIP_RETCODE consdataSort(
       {
          assert(v == consdata->nvars-1 || SCIPvarCompare(consdata->vars[v], consdata->vars[v+1]) <= 0);
          assert(perm[v] == v);
-         assert(consdata->eventdatas[v]->varpos == v);
+         assert(consdata->eventdatas == NULL || consdata->eventdatas[v]->varpos == v);
       }
 #endif
 
@@ -2037,7 +2056,7 @@ SCIP_RETCODE addCoef(
    assert(var != NULL);
    assert(transformed == SCIPvarIsTransformed(var));
 
-   SCIP_CALL( consdataEnsureVarsSize(scip, consdata, consdata->nvars+1, transformed) );
+   SCIP_CALL( consdataEnsureVarsSize(scip, consdata, consdata->nvars+1) );
    consdata->vars[consdata->nvars] = var;
    consdata->vals[consdata->nvars] = val;
    consdata->nvars++;
@@ -2045,20 +2064,23 @@ SCIP_RETCODE addCoef(
    /* if we are in transformed problem, the variable needs an additional event data */
    if( transformed )
    {
-      SCIP_CONSHDLR* conshdlr;
-      SCIP_CONSHDLRDATA* conshdlrdata;
+      if( consdata->eventdatas != NULL )
+      {
+         SCIP_CONSHDLR* conshdlr;
+         SCIP_CONSHDLRDATA* conshdlrdata;
 
-      /* get event handler */
-      conshdlr = SCIPconsGetHdlr(cons);
-      conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert(conshdlrdata != NULL);
-      assert(conshdlrdata->eventhdlr != NULL);
+         /* get event handler */
+         conshdlr = SCIPconsGetHdlr(cons);
+         conshdlrdata = SCIPconshdlrGetData(conshdlr);
+         assert(conshdlrdata != NULL);
+         assert(conshdlrdata->eventhdlr != NULL);
+         
+         /* initialize eventdatas array */
+         consdata->eventdatas[consdata->nvars-1] = NULL;
 
-      /* initialize eventdatas array */
-      consdata->eventdatas[consdata->nvars-1] = NULL;
-
-      /* catch bound change events of variable */
-      SCIP_CALL( consdataCatchEvent(scip, consdata, conshdlrdata->eventhdlr, consdata->nvars-1) );
+         /* catch bound change events of variable */
+         SCIP_CALL( consdataCatchEvent(scip, consdata, conshdlrdata->eventhdlr, consdata->nvars-1) );
+      }
 
       /* update minimum and maximum activities */
       consdataUpdateAddCoef(scip, consdata, var, val);
@@ -2139,8 +2161,11 @@ SCIP_RETCODE delCoefPos(
       consdataUpdateDelCoef(scip, consdata, var, val);
 
       /* drop bound change events of variable */
-      SCIP_CALL( consdataDropEvent(scip, consdata, conshdlrdata->eventhdlr, pos) );
-      assert(consdata->eventdatas[pos] == NULL);
+      if( consdata->eventdatas != NULL )
+      {
+         SCIP_CALL( consdataDropEvent(scip, consdata, conshdlrdata->eventhdlr, pos) );
+         assert(consdata->eventdatas[pos] == NULL);
+      }
    }
 
    /* move the last variable to the free slot */
@@ -2148,7 +2173,7 @@ SCIP_RETCODE delCoefPos(
    consdata->vals[pos] = consdata->vals[consdata->nvars-1];
    if( pos != consdata->nvars-1 )
    {
-      if( transformed )
+      if( consdata->eventdatas != NULL )
       {
          consdata->eventdatas[pos] = consdata->eventdatas[consdata->nvars-1];
          assert(consdata->eventdatas[pos] != NULL);
@@ -5098,11 +5123,67 @@ SCIP_DECL_CONSFREE(consFreeLinear)
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#define consInitLinear NULL
+static
+SCIP_DECL_CONSINIT(consInitLinear)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int c;
+
+   /* get event handler */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->eventhdlr != NULL);
+   
+   /* catch events for the constraints */
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONSDATA* consdata;
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+      assert(consdata->eventdatas == NULL);
+
+      /* catch all events */
+      SCIP_CALL( consdataCatchAllEvents(scip, consdata, conshdlrdata->eventhdlr) );
+      assert(consdata->eventdatas != NULL);
+   }
+
+   return SCIP_OKAY;
+
+}
 
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitLinear NULL
+static
+SCIP_DECL_CONSEXIT(consExitLinear)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int c;
+
+   /* get event handler */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->eventhdlr != NULL);
+   
+   /* drop events for the constraints */
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONSDATA* consdata;
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      if( consdata->eventdatas != NULL )
+      {
+         /* drop all events */
+         SCIP_CALL( consdataDropAllEvents(scip, consdata, conshdlrdata->eventhdlr) );
+         assert(consdata->eventdatas == NULL);
+      }
+   }
+
+   return SCIP_OKAY;
+
+}
 
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
@@ -5113,7 +5194,6 @@ SCIP_DECL_CONSFREE(consFreeLinear)
 static
 SCIP_DECL_CONSEXITPRE(consExitpreLinear)
 {  /*lint --e{715}*/
-   SCIP_CONSDATA* consdata;
    int c;
 
    /* delete all linear constraints that were upgraded to a more specific constraint type;
@@ -5121,6 +5201,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreLinear)
     */
    for( c = 0; c < nconss; ++c )
    {
+      SCIP_CONSDATA* consdata;
+
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
@@ -5148,12 +5230,13 @@ SCIP_DECL_CONSEXITPRE(consExitpreLinear)
 static
 SCIP_DECL_CONSEXITSOL(consExitsolLinear)
 {  /*lint --e{715}*/
-   SCIP_CONSDATA* consdata;
    int c;
 
    /* release the rows of all constraints */
    for( c = 0; c < nconss; ++c )
    {
+      SCIP_CONSDATA* consdata;
+
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 

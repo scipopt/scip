@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.190 2005/09/05 10:29:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.191 2005/09/07 15:52:10 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1132,6 +1132,8 @@ SCIP_RETCODE priceAndCutLoop(
       {
          SCIP_CALL( primalHeuristics(set, primal, tree, NULL, FALSE, TRUE, &foundsol) );
       }
+      else
+         foundsol = FALSE;
 
       /* display node information line for root node */
       if( !foundsol && root && (SCIP_VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_HIGH )
