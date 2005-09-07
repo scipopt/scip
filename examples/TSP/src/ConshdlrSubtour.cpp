@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.3 2005/08/24 17:57:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.4 2005/09/07 12:02:10 bzfpfend Exp $"
 
 /**@file   ConshdlrSubtour.cpp
  * @brief  C++ file reader for TSP data files
@@ -632,7 +632,7 @@ SCIP_RETCODE ConshdlrSubtour::scip_print(
    g = consdata->graph;
    assert(g != NULL);
 
-   fprintf(file, "subtour of Graph G with %d nodes and %d edges", g->nnodes, g->nedges);
+   SCIPinfoMessage(scip, file, "subtour of Graph G with %d nodes and %d edges\n", g->nnodes, g->nedges);
 
    return SCIP_OKAY;
 }

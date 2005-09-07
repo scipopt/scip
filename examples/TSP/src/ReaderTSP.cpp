@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ReaderTSP.cpp,v 1.3 2005/08/24 17:57:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: ReaderTSP.cpp,v 1.4 2005/09/07 12:02:10 bzfpfend Exp $"
 
 /**@file   ReaderTSP.cpp
  * @brief  C++ file reader for TSP data files
@@ -147,7 +147,7 @@ SCIP_RETCODE ReaderTSP::scip_read(
    double y;
 
    int nnodes = 0;
-   int nedges;
+   int nedges = 0;
    int i;
    int j;
 

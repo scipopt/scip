@@ -3,18 +3,18 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2004 Tobias Achterberg                              *
+#*    Copyright (C) 2002-2005 Tobias Achterberg                              *
 #*                                                                           *
-#*                  2002-2004 Konrad-Zuse-Zentrum                            *
+#*                  2002-2005 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the ZIB Academic License.         *
+#*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
 #*                                                                           *
 #*  You should have received a copy of the ZIB Academic License              *
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.6 2005/09/06 17:29:02 bzfpfend Exp $
+# $Id: Makefile,v 1.7 2005/09/07 12:02:10 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ TSP example using SCIP as a callable library
@@ -40,7 +40,8 @@ HOSTNAME	:=	$(shell uname -n | tr '[:upper:]' '[:lower:]')
 TIME     	=  	3600
 NODES           =       2100000000
 MEM		=	1024
-TEST		=	
+FEASTOL		=	default
+TEST		=	miplib
 SETTINGS        =       default
 
 VERBOSE		=	false
@@ -48,7 +49,7 @@ OPT		=	opt
 LPS		=	cpx
 COMP		=	gnu
 LINK		=	static
-LINKER  	=	CPP
+LIBEXT		=	a
 
 READLINE	=	true
 ZLIB		=	true
@@ -62,8 +63,10 @@ AR		=	ar
 RANLIB		=	ranlib
 LINT		=	flexelint
 DOXY		=	doxygen
+CPLEX		=	cplex
 
 FLAGS		=	-I$(SRCDIR) -I$(LIBDIR)/scip/src
+OFLAGS		=
 CFLAGS		=	
 CXXFLAGS	=	
 LDFLAGS		=	-lpthread -lm
@@ -88,11 +91,19 @@ OBJDIR		=	obj/O.$(BASE)
 SRCDIR		=	src
 BINDIR		=	bin
 LIBDIR		=	lib
-
+EXEEXTENSION	=
 
 #-----------------------------------------------------------------------------
 include make/make.$(BASE)
 #-----------------------------------------------------------------------------
+
+FLAGS		+=	$(USRFLAGS)
+OFLAGS		+=	$(USROFLAGS)
+CFLAGS		+=	$(USRCFLAGS)
+CXXFLAGS	+=	$(USRCXXFLAGS)
+LDFLAGS		+=	$(USRLDFLAGS)
+ARFLAGS		+=	$(USRARFLAGS)
+DFLAGS		+=	$(USRDFLAGS)
 
 
 #-----------------------------------------------------------------------------
@@ -101,6 +112,40 @@ include make/make.$(BASE)
 
 #FLAGS		+=	-DNOSAFEMEM
 #FLAGS		+=	-DNOBLOCKMEM
+
+
+#-----------------------------------------------------------------------------
+# LP Solver Interface
+#-----------------------------------------------------------------------------
+
+LPILIBNAME	=	lpi$(LPS)
+
+ifeq ($(LPS),cpx)
+LPSLDFLAGS	=	-lcplex.$(OSTYPE).$(ARCH).$(COMP)
+endif
+
+ifeq ($(LPS),spx)
+LPSLDFLAGS	=	-lsoplex.$(OSTYPE).$(ARCH).$(COMP)
+endif
+
+ifeq ($(LPS),spxdbg)
+LPSLDFLAGS	=	-lsoplexdbg.$(OSTYPE).$(ARCH).$(COMP)
+endif
+
+ifeq ($(LPS),spx121)
+LPSLDFLAGS	=	-lsoplex121.$(OSTYPE).$(ARCH).$(COMP)
+endif
+
+ifeq ($(LPS),clp)
+LPSLDFLAGS	=	-L$(LIBDIR)/clpinc/../lib -Wl,-rpath,$(LIBDIR)/clpinc/../lib -lClp -lCoin
+endif
+
+ifeq ($(LPS),clpdbg)
+LPSLDFLAGS	=	-lclpdbg.$(OSTYPE).$(ARCH).$(COMP) -lcoindbg.$(OSTYPE).$(ARCH).$(COMP)
+endif
+
+LPILIB		=	$(LPILIBNAME).$(BASE)
+LPILIBFILE	=	$(LIBDIR)/scip/lib/lib$(LPILIB).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
@@ -130,6 +175,24 @@ endif
 
 
 #-----------------------------------------------------------------------------
+# SCIP Library
+#-----------------------------------------------------------------------------
+
+SCIPLIBNAME	=	scip
+SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
+SCIPLIBFILE	=	$(LIBDIR)/scip/lib/lib$(SCIPLIB).$(LIBEXT)
+
+
+#-----------------------------------------------------------------------------
+# OBJSCIP Library
+#-----------------------------------------------------------------------------
+
+OBJSCIPLIBNAME	=	objscip
+OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
+OBJSCIPLIBFILE	=	$(LIBDIR)/scip/lib/lib$(OBJSCIPLIB).$(LIBEXT)
+
+
+#-----------------------------------------------------------------------------
 # Main Program
 #-----------------------------------------------------------------------------
 
@@ -142,49 +205,12 @@ MAINOBJ		=	cppmain.o \
 			EventhdlrNewSol.o \
 			HeurFarthestInsert.o \
 			Heur2opt.o
-
-MAIN		=	$(MAINNAME).$(BASE).$(LPS)
-MAINFILE	=	$(BINDIR)/$(MAIN)
-MAINXXX		=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.cpp))
-MAINDEP		=	src/depend.main
+MAINDEP		=	$(SRCDIR)/depend.cppmain.$(OPT)
 
-
-#-----------------------------------------------------------------------------
-# LP Solver Interface
-#-----------------------------------------------------------------------------
-
-LPILIBNAME	=	lpi$(LPS)
-
-ifeq ($(LPS),cpx)
-LPSLIB		=	cplex.$(OSTYPE).$(ARCH).$(COMP)
-endif
-
-ifeq ($(LPS),spx)
-LINKER		=	CPP
-LPSLIB		=	soplex.$(OSTYPE).$(ARCH).$(COMP)
-endif
-
-LPILIB		=	$(LPILIBNAME).$(BASE)
-LPILIBFILE	=	$(LIBDIR)/scip/lib/lib$(LPILIB).a
-
-
-#-----------------------------------------------------------------------------
-# SCIP Library
-#-----------------------------------------------------------------------------
-
-SCIPLIBNAME	=	scip
-SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
-SCIPLIBFILE	=	$(LIBDIR)/scip/lib/lib$(SCIPLIB).a
-
-
-#-----------------------------------------------------------------------------
-# OBJSCIP Library
-#-----------------------------------------------------------------------------
-
-OBJSCIPLIBNAME	=	objscip
-OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
-OBJSCIPLIBFILE	=	$(LIBDIR)/scip/lib/lib$(OBJSCIPLIB).a
+MAIN		=	$(MAINNAME).$(BASE).$(LPS)$(EXEEXTENSION)
+MAINFILE	=	$(BINDIR)/$(MAIN)
+MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
 
 
 #-----------------------------------------------------------------------------
@@ -196,26 +222,26 @@ all:            $(MAINFILE)
 
 .PHONY: lint
 lint:		$(MAINSRC)
-		$(LINT) lint/$(MAINNAME).lnt -os\(lint.out\) \
-		$(FLAGS) -UNDEBUG $^
+		-rm -f lint.out
+		$(SHELL) -ec 'for i in $^; \
+			do \
+			echo $$i; \
+			$(LINT) lint/$(MAINNAME).lnt +os\(lint.out\) -u -zero \
+			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
+			done'
 
 .PHONY: doc
 doc:		
 		cd doc; $(DOXY) $(MAINNAME).dxy
 
-.PHONY: test
-test:		
-		cd check; \
-		/bin/sh ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(MAIN).$(MACHINENAME) $(TIME) $(NODES) $(MEM);
-
 $(OBJDIR):	
-		-mkdir -p $(OBJDIR)
+		@-mkdir -p $(OBJDIR)
 
 $(LIBDIR):
-		-mkdir -p $(LIBDIR)
+		@-mkdir -p $(LIBDIR)
 
 $(BINDIR):
-		-mkdir -p $(BINDIR)
+		@-mkdir -p $(BINDIR)
 
 .PHONY: clean
 clean:
@@ -223,53 +249,39 @@ clean:
 
 .PHONY: depend
 depend:
-		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(MAINSRC) \
-		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/\1.o|g'\'' \
+		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(MAINSRC) \
+		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(MAINDEP)'
 
 -include	$(MAINDEP)
 
-ifeq ($(LINKER),C)
-$(MAINFILE):	$(OBJDIR) $(BINDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINXXX)
+$(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
 ifeq ($(VERBOSE), true)
-		$(CC) $(CFLAGS) $(MAINXXX) \
-		-L$(LIBDIR)/scip/lib -l$(SCIPLIB) -l$(LPILIB) -l$(LPSLIB) -L$(LIBDIR) \
+		$(CXX) $(MAINOBJFILES) \
+		-L$(LIBDIR)/scip/lib -l$(SCIPLIB) -l$(OBJSCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) -o $@
 else
-		@$(CC) $(CFLAGS) $(MAINXXX) \
-		-L$(LIBDIR)/scip/lib -l$(SCIPLIB) -l$(LPILIB) -l$(LPSLIB) -L$(LIBDIR) \
+		@$(CXX) $(MAINOBJFILES) \
+		-L$(LIBDIR)/scip/lib -l$(SCIPLIB) -l$(OBJSCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) -o $@
-endif
-endif
-ifeq ($(LINKER),CPP)
-$(MAINFILE):	$(OBJDIR) $(BINDIR) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINXXX)
-		@echo "-> linking $@"
-ifeq ($(VERBOSE), true)
-		$(CXX) $(CXXFLAGS) $(MAINXXX) \
-		-L$(LIBDIR)/scip/lib -l$(SCIPLIB) -l$(OBJSCIPLIB) -l$(LPILIB) -l$(LPSLIB) -L$(LIBDIR) \
-		$(LDFLAGS) -o $@
-else
-		@$(CXX) $(CXXFLAGS) $(MAINXXX) \
-		-L$(LIBDIR)/scip/lib -l$(SCIPLIB) -l$(OBJSCIPLIB) -l$(LPILIB) -l$(LPSLIB) -L$(LIBDIR) \
-		$(LDFLAGS) -o $@
-endif
 endif
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
 ifeq ($(VERBOSE), true)
-		$(CC) $(FLAGS) $(CFLAGS) -c $< -o $@
+		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< -o $@
 else
-		@$(CC) $(FLAGS) $(CFLAGS) -c $< -o $@
+		@$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< -o $@
 endif
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
 		@echo "-> compiling $@"
 ifeq ($(VERBOSE), true)
-		$(CXX) $(FLAGS) $(CXXFLAGS) -c $< -o $@
+		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< -o $@
 else
-		@$(CXX) $(FLAGS) $(CXXFLAGS) -c $< -o $@
+		@$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< -o $@
 endif
+
 
 # --- EOF ---------------------------------------------------------------------

@@ -11,8 +11,8 @@ branching/scorefac = 0.167
 branching/preferbinary = FALSE
 
 # should propagation conflict analysis be used?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-conflict/useprop = TRUE
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+conflict/useprop = FALSE
 
 # should infeasible LP conflict analysis be used?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -23,8 +23,8 @@ conflict/uselp = FALSE
 conflict/usesb = FALSE
 
 # should pseudo solution conflict analysis be used?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-conflict/usepseudo = TRUE
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+conflict/usepseudo = FALSE
 
 # maximal fraction of binary variables involved in a conflict clause
 # [type: real, range: [0,1.79769313486232e+308], default: 0.02]
@@ -76,14 +76,14 @@ conflict/removeable = TRUE
 
 # maximum age an unnecessary constraint can reach before it is deleted (0: dynamic, -1: keep all constraints)
 # [type: int, range: [-1,2147483647], default: 0]
-constraints/agelimit = 200
+constraints/agelimit = 0
 
 # age of a constraint after which it is marked obsolete (0: dynamic, -1 do not mark constraints obsolete)
 # [type: int, range: [-1,2147483647], default: 0]
-constraints/obsoleteage = 100
+constraints/obsoleteage = 0
 
 # verbosity level of output
-# [type: int, range: [0,5], default: 3]
+# [type: int, range: [0,5], default: 4]
 display/verblevel = 4
 
 # maximal number of characters in a node information line
@@ -148,7 +148,7 @@ lp/resolvealgorithm = s
 
 # LP pricing strategy ('a'uto, 'f'ull pricing, 'p'artial, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)
 # [type: char, range: {afpsqd}, default: s]
-lp/pricing = a
+lp/pricing = s
 
 # maximum age a dynamic column can reach before it is deleted from the LP (-1: don't delete columns due to aging)
 # [type: int, range: [-1,2147483647], default: 10]
@@ -346,9 +346,9 @@ separating/maxroundsroot = -1
 # [type: int, range: [-1,2147483647], default: 1]
 separating/maxaddrounds = 1
 
-# maximal number of consecutive separation rounds without objective improvement (-1: no additional restriction)
-# [type: int, range: [-1,2147483647], default: 100]
-separating/maxstallrounds = 100
+# maximal number of consecutive separation rounds without objective or integrality improvement (-1: no additional restriction)
+# [type: int, range: [-1,2147483647], default: 5]
+separating/maxstallrounds = 5
 
 # maximal number of cuts separated per separation round (0: disable local separation)
 # [type: int, range: [0,2147483647], default: 100]
@@ -363,8 +363,8 @@ separating/maxcutsroot = 2000
 separating/cutagelimit = 100
 
 # separation frequency for the global cut pool (-1: disable global cut pool, 0: only separate pool at the root)
-# [type: int, range: [-1,2147483647], default: 5]
-separating/poolfreq = 5
+# [type: int, range: [-1,2147483647], default: 0]
+separating/poolfreq = 1
 
 # default clock type (1: CPU user seconds, 2: wall clock time)
 # [type: int, range: [1,2], default: 1]
@@ -451,8 +451,8 @@ heuristics/2opt/maxdepth = -1
 conflict/linear/priority = -1000000
 
 # frequency for separating cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 5]
-constraints/linear/sepafreq = 5
+# [type: int, range: [-1,2147483647], default: 0]
+constraints/linear/sepafreq = 0
 
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 5]
@@ -507,8 +507,8 @@ constraints/linear/maxsepacutsroot = 200
 constraints/linear/maxpresolaggrrounds = -1
 
 # frequency for separating cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 1]
-constraints/and/sepafreq = 1
+# [type: int, range: [-1,2147483647], default: 0]
+constraints/and/sepafreq = 0
 
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -591,8 +591,8 @@ constraints/integral/delayprop = FALSE
 constraints/integral/delaypresol = FALSE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 1]
-constraints/knapsack/sepafreq = 1
+# [type: int, range: [-1,2147483647], default: 0]
+constraints/knapsack/sepafreq = 0
 
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -619,8 +619,8 @@ constraints/knapsack/delayprop = FALSE
 constraints/knapsack/delaypresol = FALSE
 
 # multiplier on separation frequency, how often cardinality cuts are separated (-1: never, 0: only at root)
-# [type: int, range: [-1,2147483647], default: 10]
-constraints/knapsack/sepacardfreq = 10
+# [type: int, range: [-1,2147483647], default: 1]
+constraints/knapsack/sepacardfreq = 1
 
 # maximal number of separation rounds per node (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: 5]
@@ -651,8 +651,8 @@ constraints/knapsack/disaggregation = TRUE
 conflict/logicor/priority = 800000
 
 # frequency for separating cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 5]
-constraints/logicor/sepafreq = 5
+# [type: int, range: [-1,2147483647], default: 0]
+constraints/logicor/sepafreq = 0
 
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -679,8 +679,8 @@ constraints/logicor/delayprop = FALSE
 constraints/logicor/delaypresol = FALSE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 1]
-constraints/or/sepafreq = 1
+# [type: int, range: [-1,2147483647], default: 0]
+constraints/or/sepafreq = 0
 
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -711,8 +711,8 @@ constraints/or/delaypresol = FALSE
 conflict/setppc/priority = 700000
 
 # frequency for separating cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 5]
-constraints/setppc/sepafreq = 5
+# [type: int, range: [-1,2147483647], default: 0]
+constraints/setppc/sepafreq = 0
 
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -743,8 +743,8 @@ constraints/setppc/delaypresol = FALSE
 constraints/setppc/npseudobranches = 2
 
 # frequency for separating cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 1]
-constraints/varbound/sepafreq = 1
+# [type: int, range: [-1,2147483647], default: 0]
+constraints/varbound/sepafreq = 0
 
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -771,8 +771,8 @@ constraints/varbound/delayprop = FALSE
 constraints/varbound/delaypresol = FALSE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 5]
-constraints/xor/sepafreq = 5
+# [type: int, range: [-1,2147483647], default: 0]
+constraints/xor/sepafreq = 0
 
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -854,13 +854,17 @@ presolving/probing/maxruns = 1
 # [type: int, range: [-1,2147483647], default: -1]
 presolving/probing/proprounds = -1
 
-# maximal number of fixings found, until probing is aborted (0: don't abort)
-# [type: int, range: [0,2147483647], default: 10]
-presolving/probing/maxfixings = 10
+# maximal number of fixings found, until probing is interrupted (0: don't iterrupt)
+# [type: int, range: [0,2147483647], default: 50]
+presolving/probing/maxfixings = 50
 
-# maximal number of successive useless probings, until probing is aborted (0: don't abort)
+# maximal number of successive probings without fixings, until probing is aborted (0: don't abort)
 # [type: int, range: [0,2147483647], default: 2000]
 presolving/probing/maxuseless = 2000
+
+# maximal number of successive probings without fixings and implications, until probing is aborted (0: don't abort)
+# [type: int, range: [0,2147483647], default: 100]
+presolving/probing/maxtotaluseless = 100
 
 # priority of presolver <trivial>
 # [type: int, range: [-2147483648,2147483647], default: 9000000]
@@ -1012,7 +1016,7 @@ branching/relpscost/maxbounddist = 1
 
 # minimal value for minimum pseudo cost size to regard pseudo cost value as reliable
 # [type: real, range: [0,1.79769313486232e+308], default: 1]
-branching/relpscost/minreliable = 8
+branching/relpscost/minreliable = 1
 
 # maximal value for minimum pseudo cost size to regard pseudo cost value as reliable
 # [type: real, range: [0,1.79769313486232e+308], default: 8]
@@ -1028,7 +1032,7 @@ branching/relpscost/sbiterofs = 100000
 
 # maximal number of further variables evaluated without better score
 # [type: int, range: [1,2147483647], default: 8]
-branching/relpscost/maxlookahead = 4
+branching/relpscost/maxlookahead = 8
 
 # maximal number of candidates initialized with strong branching per node
 # [type: int, range: [0,2147483647], default: 100]
@@ -1068,7 +1072,7 @@ heuristics/coefdiving/maxreldepth = 1
 
 # maximal fraction of diving LP iterations compared to node LP iterations
 # [type: real, range: [0,1.79769313486232e+308], default: 0.05]
-heuristics/coefdiving/maxlpiterquot = 0.02
+heuristics/coefdiving/maxlpiterquot = 0.05
 
 # additional number of allowed LP iterations
 # [type: int, range: [0,2147483647], default: 1000]
@@ -1080,7 +1084,7 @@ heuristics/coefdiving/maxdiveubquot = 0.8
 
 # maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
-heuristics/coefdiving/maxdiveavgquot = 4
+heuristics/coefdiving/maxdiveavgquot = 0
 
 # maximal UBQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1], default: 0.1]
@@ -1088,7 +1092,7 @@ heuristics/coefdiving/maxdiveubquotnosol = 0.1
 
 # maximal AVGQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
-heuristics/coefdiving/maxdiveavgquotnosol = 8
+heuristics/coefdiving/maxdiveavgquotnosol = 0
 
 # priority of heuristic <feaspump>
 # [type: int, range: [-2147483648,2147483647], default: -1000000]
@@ -1096,7 +1100,7 @@ heuristics/feaspump/priority = -1000000
 
 # frequency for calling primal heuristic <feaspump> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 20]
-heuristics/feaspump/freq = 10
+heuristics/feaspump/freq = 20
 
 # frequency offset for calling primal heuristic <feaspump>
 # [type: int, range: [0,2147483647], default: 0]
@@ -1188,7 +1192,7 @@ heuristics/fracdiving/maxreldepth = 1
 
 # maximal fraction of diving LP iterations compared to node LP iterations
 # [type: real, range: [0,1.79769313486232e+308], default: 0.05]
-heuristics/fracdiving/maxlpiterquot = 0.02
+heuristics/fracdiving/maxlpiterquot = 0.05
 
 # additional number of allowed LP iterations
 # [type: int, range: [0,2147483647], default: 1000]
@@ -1200,7 +1204,7 @@ heuristics/fracdiving/maxdiveubquot = 0.8
 
 # maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
-heuristics/fracdiving/maxdiveavgquot = 4
+heuristics/fracdiving/maxdiveavgquot = 0
 
 # maximal UBQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1], default: 0.1]
@@ -1208,7 +1212,7 @@ heuristics/fracdiving/maxdiveubquotnosol = 0.1
 
 # maximal AVGQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
-heuristics/fracdiving/maxdiveavgquotnosol = 8
+heuristics/fracdiving/maxdiveavgquotnosol = 0
 
 # priority of heuristic <guideddiving>
 # [type: int, range: [-2147483648,2147483647], default: -1007000]
@@ -1236,7 +1240,7 @@ heuristics/guideddiving/maxreldepth = 1
 
 # maximal fraction of diving LP iterations compared to node LP iterations
 # [type: real, range: [0,1.79769313486232e+308], default: 0.05]
-heuristics/guideddiving/maxlpiterquot = 0.02
+heuristics/guideddiving/maxlpiterquot = 0.05
 
 # additional number of allowed LP iterations
 # [type: int, range: [0,2147483647], default: 1000]
@@ -1248,7 +1252,7 @@ heuristics/guideddiving/maxdiveubquot = 0.8
 
 # maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
-heuristics/guideddiving/maxdiveavgquot = 4
+heuristics/guideddiving/maxdiveavgquot = 0
 
 # priority of heuristic <linesearchdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1006000]
@@ -1276,7 +1280,7 @@ heuristics/linesearchdiving/maxreldepth = 1
 
 # maximal fraction of diving LP iterations compared to node LP iterations
 # [type: real, range: [0,1.79769313486232e+308], default: 0.05]
-heuristics/linesearchdiving/maxlpiterquot = 0.02
+heuristics/linesearchdiving/maxlpiterquot = 0.05
 
 # additional number of allowed LP iterations
 # [type: int, range: [0,2147483647], default: 1000]
@@ -1288,7 +1292,7 @@ heuristics/linesearchdiving/maxdiveubquot = 0.8
 
 # maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
-heuristics/linesearchdiving/maxdiveavgquot = 4
+heuristics/linesearchdiving/maxdiveavgquot = 0
 
 # maximal UBQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1], default: 0.1]
@@ -1296,7 +1300,7 @@ heuristics/linesearchdiving/maxdiveubquotnosol = 0.1
 
 # maximal AVGQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
-heuristics/linesearchdiving/maxdiveavgquotnosol = 8
+heuristics/linesearchdiving/maxdiveavgquotnosol = 0
 
 # priority of heuristic <objpscostdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1004000]
@@ -1304,7 +1308,7 @@ heuristics/objpscostdiving/priority = -1004000
 
 # frequency for calling primal heuristic <objpscostdiving> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 20]
-heuristics/objpscostdiving/freq = 10
+heuristics/objpscostdiving/freq = 20
 
 # frequency offset for calling primal heuristic <objpscostdiving>
 # [type: int, range: [0,2147483647], default: 4]
@@ -1332,7 +1336,7 @@ heuristics/objpscostdiving/maxlpiterofs = 1000
 
 # total number of feasible solutions found up to which heuristic is called (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
-heuristics/objpscostdiving/maxsols = 5
+heuristics/objpscostdiving/maxsols = -1
 
 # maximal diving depth: number of binary/integer variables times depthfac
 # [type: real, range: [0,1.79769313486232e+308], default: 0.5]
@@ -1412,7 +1416,7 @@ heuristics/pscostdiving/maxreldepth = 1
 
 # maximal fraction of diving LP iterations compared to node LP iterations
 # [type: real, range: [0,1.79769313486232e+308], default: 0.05]
-heuristics/pscostdiving/maxlpiterquot = 0.02
+heuristics/pscostdiving/maxlpiterquot = 0.05
 
 # additional number of allowed LP iterations
 # [type: int, range: [0,2147483647], default: 1000]
@@ -1424,7 +1428,7 @@ heuristics/pscostdiving/maxdiveubquot = 0.8
 
 # maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
-heuristics/pscostdiving/maxdiveavgquot = 4
+heuristics/pscostdiving/maxdiveavgquot = 0
 
 # maximal UBQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1], default: 0.1]
@@ -1432,7 +1436,7 @@ heuristics/pscostdiving/maxdiveubquotnosol = 0.1
 
 # maximal AVGQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
-heuristics/pscostdiving/maxdiveavgquotnosol = 8
+heuristics/pscostdiving/maxdiveavgquotnosol = 0
 
 # priority of heuristic <rootsoldiving>
 # [type: int, range: [-2147483648,2147483647], default: -1005000]
@@ -1440,7 +1444,7 @@ heuristics/rootsoldiving/priority = -1005000
 
 # frequency for calling primal heuristic <rootsoldiving> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 20]
-heuristics/rootsoldiving/freq = 10
+heuristics/rootsoldiving/freq = 20
 
 # frequency offset for calling primal heuristic <rootsoldiving>
 # [type: int, range: [0,2147483647], default: 5]
@@ -1468,7 +1472,7 @@ heuristics/rootsoldiving/maxlpiterofs = 1000
 
 # total number of feasible solutions found up to which heuristic is called (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
-heuristics/rootsoldiving/maxsols = 5
+heuristics/rootsoldiving/maxsols = -1
 
 # maximal diving depth: number of binary/integer variables times depthfac
 # [type: real, range: [0,1.79769313486232e+308], default: 0.5]
@@ -1531,7 +1535,7 @@ propagating/pseudoobj/maxcands = 100
 separating/clique/priority = -5000
 
 # frequency for calling separator <clique> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 10]
+# [type: int, range: [-1,2147483647], default: 0]
 separating/clique/freq = 10
 
 # should separator be delayed, if other separators found cuts?
@@ -1544,14 +1548,22 @@ separating/clique/scaleval = 1000
 
 # maximal number of nodes in branch and bound tree (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
-separating/clique/maxtreenodes = 100
+separating/clique/maxtreenodes = -1
+
+# maximal number of clique cuts separated per separation round (-1: no limit)
+# [type: int, range: [-1,2147483647], default: 10]
+separating/clique/maxsepacuts = 10
+
+# maximal number of zero-valued variables extending the clique (-1: no limit)
+# [type: int, range: [-1,2147483647], default: 1000]
+separating/clique/maxzeroextensions = 1000
 
 # priority of separator <cmir>
 # [type: int, range: [-2147483648,2147483647], default: -3000]
 separating/cmir/priority = -3000
 
 # frequency for calling separator <cmir> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 20]
+# [type: int, range: [-1,2147483647], default: 0]
 separating/cmir/freq = 20
 
 # should separator be delayed, if other separators found cuts?
@@ -1563,8 +1575,8 @@ separating/cmir/delay = FALSE
 separating/cmir/maxrounds = 3
 
 # maximal number of cmir separation rounds in the root node (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: -1]
-separating/cmir/maxroundsroot = -1
+# [type: int, range: [-1,2147483647], default: 10]
+separating/cmir/maxroundsroot = 10
 
 # maximal number of rows to start aggregation with per separation round (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: 100]
@@ -1573,6 +1585,14 @@ separating/cmir/maxtries = 100
 # maximal number of rows to start aggregation with per separation round in the root node (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: -1]
 separating/cmir/maxtriesroot = -1
+
+# maximal number of consecutive unsuccesful aggregation tries (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 20]
+separating/cmir/maxfails = 20
+
+# maximal number of consecutive unsuccesful aggregation tries in the root node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 100]
+separating/cmir/maxfailsroot = 100
 
 # maximal number of aggregations for each row per separation round
 # [type: int, range: [0,2147483647], default: 3]
@@ -1602,8 +1622,12 @@ separating/cmir/maxslackroot = 0.1
 # [type: real, range: [0,1.79769313486232e+308], default: 0.001]
 separating/cmir/slackscore = 0.001
 
+# maximal density of aggregated row
+# [type: real, range: [0,1], default: 0.2]
+separating/cmir/maxaggdensity = 0.2
+
 # maximal density of row to be used in aggregation
-# [type: real, range: [0,1.79769313486232e+308], default: 0.05]
+# [type: real, range: [0,1], default: 0.05]
 separating/cmir/maxrowdensity = 0.05
 
 # maximal row aggregation factor
@@ -1626,6 +1650,10 @@ separating/cmir/maxconts = 10
 # [type: int, range: [0,2147483647], default: 10]
 separating/cmir/maxcontsroot = 10
 
+# should negative values also be tested in scaling?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/cmir/trynegscaling = TRUE
+
 # should generated cuts be removed from the LP if they are no longer tight?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/cmir/dynamiccuts = TRUE
@@ -1635,7 +1663,7 @@ separating/cmir/dynamiccuts = TRUE
 separating/gomory/priority = -1000
 
 # frequency for calling separator <gomory> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 10]
+# [type: int, range: [-1,2147483647], default: 0]
 separating/gomory/freq = 10
 
 # should separator be delayed, if other separators found cuts?
@@ -1671,7 +1699,7 @@ separating/gomory/dynamiccuts = TRUE
 separating/impliedbounds/priority = -50
 
 # frequency for calling separator <impliedbounds> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 10]
+# [type: int, range: [-1,2147483647], default: 0]
 separating/impliedbounds/freq = 10
 
 # should separator be delayed, if other separators found cuts?
@@ -1695,7 +1723,7 @@ separating/intobj/delay = FALSE
 separating/strongcg/priority = -2000
 
 # frequency for calling separator <strongcg> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 10]
+# [type: int, range: [-1,2147483647], default: 0]
 separating/strongcg/freq = 10
 
 # should separator be delayed, if other separators found cuts?
@@ -1707,8 +1735,8 @@ separating/strongcg/delay = FALSE
 separating/strongcg/maxrounds = 5
 
 # maximal number of strong CG separation rounds in the root node (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: -1]
-separating/strongcg/maxroundsroot = -1
+# [type: int, range: [-1,2147483647], default: 20]
+separating/strongcg/maxroundsroot = 20
 
 # maximal number of strong CG cuts separated per separation round
 # [type: int, range: [0,2147483647], default: 50]

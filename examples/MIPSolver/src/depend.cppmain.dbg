@@ -1,4 +1,4 @@
-$(OBJDIR)/cppmain.o: src/cppmain.cpp lib/scip/src/objscip/objscip.h \
+$(LIBOBJDIR)/cppmain.o: src/cppmain.cpp lib/scip/src/objscip/objscip.h \
   lib/scip/src/objscip/objbranchrule.h lib/scip/src/scip/scip.h \
   lib/scip/src/scip/def.h lib/scip/src/scip/type_retcode.h \
   lib/scip/src/scip/message.h lib/scip/src/scip/type_message.h \

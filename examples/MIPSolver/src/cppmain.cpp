@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.6 2005/08/24 17:57:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.7 2005/09/07 12:02:10 bzfpfend Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for C++ example project using SCIP as a callable library
@@ -49,10 +49,10 @@ SCIP_RETCODE readParams(
       else
          std::cout << "parameter file <" << filename << "> not found - using default parameters" << std::endl;
    }
-   else if( SCIPfileExists("example.set") )
+   else if( SCIPfileExists("scipmip.set") )
    {
-      std::cout << "reading parameter file <example.set>" << std::endl;
-      SCIP_CALL( SCIPreadParams(scip, "example.set") );
+      std::cout << "reading parameter file <scipmip.set>" << std::endl;
+      SCIP_CALL( SCIPreadParams(scip, "scipmip.set") );
    }
 
    return SCIP_OKAY;
@@ -151,7 +151,7 @@ SCIP_RETCODE runSCIP(
    {
       SCIP_CALL( readParams(scip, NULL) );
    }
-   /*CHECK_OKAY( SCIPwriteParams(scip, "example.set", TRUE) );*/
+   /*CHECK_OKAY( SCIPwriteParams(scip, "scipmip.set", TRUE) );*/
 
 
    /**************
