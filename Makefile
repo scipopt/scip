@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.128 2005/09/07 10:58:23 bzfpfend Exp $
+# $Id: Makefile,v 1.129 2005/09/07 11:02:11 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -101,8 +101,15 @@ LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
 #-----------------------------------------------------------------------------
 include make/make.$(BASE)
-FLAGS		+=	$(USRFLAGS)
 #-----------------------------------------------------------------------------
+
+FLAGS		+=	$(USRFLAGS)
+OFLAGS		+=	$(USROFLAGS)
+CFLAGS		+=	$(USRCFLAGS)
+CXXFLAGS	+=	$(USRCXXFLAGS)
+LDFLAGS		+=	$(USRLDFLAGS)
+ARFLAGS		+=	$(USRARFLAGS)
+DFLAGS		+=	$(USRDFLAGS)
 
 
 #-----------------------------------------------------------------------------
