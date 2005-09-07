@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.46 2005/08/28 12:29:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.47 2005/09/07 12:43:04 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -26,6 +26,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "scip/def.h"
 #include "scip/message.h"
@@ -3539,6 +3540,67 @@ SCIP_Real SCIPselectSimpleValue(
    }
    
    return val;
+}
+
+
+
+
+/*
+ * Random Numbers
+ */
+
+#ifdef NO_RAND_R
+
+#define SCIP_RAND_MAX 32767
+/** returns a random number between 0 and SCIP_RAND_MAX */
+static
+int getRand(
+   unsigned int*         seedp               /**< pointer to seed value */
+   )
+{
+   SCIP_Longint nextseed;
+
+   assert(seedp != NULL);
+
+   nextseed = (*seedp) * 1103515245 + 12345;
+   *seedp = (unsigned int)nextseed;
+
+   return (int)((unsigned int)(nextseed/(2*(SCIP_RAND_MAX+1))) % (SCIP_RAND_MAX+1));
+}
+
+#else
+
+#define SCIP_RAND_MAX RAND_MAX
+
+/** returns a random number between 0 and SCIP_RAND_MAX */
+static
+int getRand(
+   unsigned int*         seedp               /**< pointer to seed value */
+   )
+{
+   return rand_r(seedp);
+}
+
+#endif
+
+/** returns a random integer between minrandval and maxrandval */
+int SCIPgetRandomInt(
+   int                   minrandval,         /**< minimal value to return */
+   int                   maxrandval,         /**< maximal value to return */
+   unsigned int*         seedp               /**< pointer to seed value */
+   )
+{
+   return minrandval + (int) ((maxrandval - minrandval + 1)*(SCIP_Real)getRand(seedp)/(SCIP_RAND_MAX+1.0));
+}
+
+/** returns a random real between minrandval and maxrandval */
+SCIP_Real SCIPgetRandomReal(
+   SCIP_Real             minrandval,         /**< minimal value to return */
+   SCIP_Real             maxrandval,         /**< maximal value to return */
+   unsigned int*         seedp               /**< pointer to seed value */
+   )
+{
+   return minrandval + (maxrandval - minrandval)*(SCIP_Real)getRand(seedp)/(SCIP_Real)SCIP_RAND_MAX;
 }
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.20 2005/08/28 12:29:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.21 2005/09/07 12:43:04 bzfpfend Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -409,6 +409,29 @@ SCIP_Real SCIPrelDiff(
 #define SCIPrelDiff(val1, val2)         ( ((val1)-(val2))/(MAX3(1.0,REALABS(val1),REALABS(val2))) )
 
 #endif
+
+
+
+
+/*
+ * Random Numbers
+ */
+
+/** returns a random integer between minrandval and maxrandval */
+extern
+int SCIPgetRandomInt(
+   int                   minrandval,         /**< minimal value to return */
+   int                   maxrandval,         /**< maximal value to return */
+   unsigned int*         seedp               /**< pointer to seed value */
+   );
+
+/** returns a random real between minrandval and maxrandval */
+extern
+SCIP_Real SCIPgetRandomReal(
+   SCIP_Real             minrandval,         /**< minimal value to return */
+   SCIP_Real             maxrandval,         /**< maximal value to return */
+   unsigned int*         seedp               /**< pointer to seed value */
+   );
 
 
 

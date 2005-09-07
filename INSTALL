@@ -128,9 +128,21 @@ Here is what you have to do to get SCIP running:
    "make/make.linux.x86.gnu.opt.static" or any other file in the make subdirectory as example.
 
    The readline library seems to differ sligtly on different OS distributions. Some versions
-   do not support the remove_history() call. If this is the case, you have to add
-   "-DNO_REMOVE_HISTORY" to the FLAGS in the appropriate make/make.* file.
+   do not support the remove_history() call.
+   In this case, you have to either add "-DNO_REMOVE_HISTORY" to the FLAGS in the
+   appropriate make/make.* file, or to compile with "make USRFLAGS=-DNO_REMOVE_HISTORY".
+   Make sure, the file "src/scip/dialog.c" is recompiled.
    If this doesn't work either, disable the readline library with "make READLINE=false".
+
+   On some systems, the sigaction() method is not available.
+   In this case, you have to either add "-DNO_SIGACTION" to the FLAGS in the
+   appropriate make/make.* file, or to compile with "make USRFLAGS=-DNO_SIGACTION".
+   Make sure, the file "src/scip/interrupt.c" is recompiled.
+
+   On some systems, the rand_r() method is not available.
+   In this case, you have to either add "-DNO_RAND_R" to the FLAGS in the
+   appropriate make/make.* file, or to compile with "make USRFLAGS=-DNO_RAND_R".
+   Make sure, the file "src/scip/misc.c" is recompiled.
 
    If you encounter other compiler or linker errors, you should recompile with
    "make VERBOSE=true ..." in order to get the full compiler invocation. This might help to

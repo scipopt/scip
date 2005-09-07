@@ -40,6 +40,7 @@ interface:
 - new method SCIPgetLPI() which makes all methods in scip/lpi.h available to the user
 - put block memory shell and tclique algorithm into separate subdirectories
 - new parameter "duringlploop" of SCIPincludeHeur() - heuristics can now run during the price-and-cut loop at a node
+- new methods SCIPgetRandomInt() and SCIPgetRandomReal()
 
 plugins:
 - added command "write solution" to default dialog
@@ -127,6 +128,9 @@ features:
 - improved preprocessing of variable bounds constraints
 - removed transitive clique generation, because this produces way too many cliques
 - improved preprocessing abort criteria
+- added flags READLINE=true/false, ZLIB=true/false, ZIMPL=true/false to Makefile
+- added possibility to disable certain features by using "make USRFLAGS=-DNO_REMOVE_HISTORY",
+  "make USRFLAGS=-DNO_SIGACTION", or "make USRFLAGS=-DNO_RAND_R"
 
 fixed bugs:
 - LP primal feasibility for bounds is now defined as absolute measure (was relative to the bound before);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.36 2005/08/30 14:13:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.37 2005/09/07 12:43:04 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -23,7 +23,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <stdlib.h>
 #include <assert.h>
 #include <string.h>
 
@@ -191,7 +190,7 @@ SCIP_RETCODE handleCycle(
       solval = SCIPvarGetLPSol(var);   
       orgobjcoeff = SCIPvarGetObj(var);
       frac = SCIPfeasFrac(scip, solval);
-      flipprob = -0.3 + ((SCIP_Real)(rand_r(&heurdata->randseed) % 1000000))/1000000.0 ;
+      flipprob = -0.3 + SCIPgetRandomReal(0.0, 1.0, &heurdata->randseed);
 
       /* flip, iff the sum of the randomized number and the fractionality is big enough */
       if( MIN(frac, 1.0-frac) + MAX(flipprob, 0.0) > 0.5 )
@@ -444,7 +443,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->roundedsol) );
 
       /* randomly choose maximum number of variables to flip in current pumping round in case of a 1-cycle */
-      maxnflipcands = heurdata->minflips + rand_r(&heurdata->randseed) % (maxflips - heurdata->minflips + 1);
+      maxnflipcands = SCIPgetRandomInt(heurdata->minflips, maxflips, &heurdata->randseed);
       nflipcands = 0;
 
       /* check, whether there is the possibility of j-cycling */
