@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: interrupt.c,v 1.20 2005/08/28 12:24:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: interrupt.c,v 1.21 2005/09/07 10:58:24 bzfpfend Exp $"
 
 /**@file   interrupt.c
  * @brief  methods and datastructures for catching the user CTRL-C interrupt
@@ -35,16 +35,28 @@
 
 
 static volatile
-int                 ninterrupts = 0;    /**< static variable counting the number of CTRL-C interrupts */
+int                      ninterrupts = 0;    /**< static variable counting the number of CTRL-C interrupts */
 
+
+#ifdef NO_SIGACTION
+typedef void (*SigHdlr)(int);
 
 /** CTRL-C interrupt data */
 struct SCIP_Interrupt
 {
-   struct sigaction oldsigaction;       /**< old CTRL-C interrupt handler */
+   SigHdlr               oldsighdlr;         /**< old CTRL-C interrupt handler */
    int                   nuses;              /**< number of times, the interrupt is captured */
 };
 
+#else
+
+/** CTRL-C interrupt data */
+struct SCIP_Interrupt
+{
+   struct sigaction      oldsigaction;       /**< old CTRL-C interrupt handler */
+   int                   nuses;              /**< number of times, the interrupt is captured */
+};
+#endif
 
 /** interrupt handler for CTRL-C interrupts */
 static
@@ -95,6 +107,9 @@ void SCIPinterruptCapture(
 
    if( interrupt->nuses == 0 )
    {
+#ifdef NO_SIGACTION
+      interrupt->oldsighdlr = signal(SIGINT, interruptHandler);
+#else
       struct sigaction newaction;
       
       /* initialize new signal action */
@@ -104,6 +119,7 @@ void SCIPinterruptCapture(
       
       /* set new signal action, and remember old one */
       (void)sigaction(SIGINT, &newaction, &interrupt->oldsigaction);
+#endif
    }
    interrupt->nuses++;
    ninterrupts = 0;
@@ -121,7 +137,13 @@ void SCIPinterruptRelease(
    {
       interrupt->nuses--;
       if( interrupt->nuses == 0 )
+      {
+#ifdef NO_SIGACTION
+         (void)signal(SIGINT, interrupt->oldsighdlr);
+#else
          (void)sigaction(SIGINT, &interrupt->oldsigaction, NULL);
+#endif
+      }
    }
 }
 
