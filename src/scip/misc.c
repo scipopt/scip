@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.47 2005/09/07 12:43:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.48 2005/09/07 12:57:00 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -3601,6 +3601,27 @@ SCIP_Real SCIPgetRandomReal(
    )
 {
    return minrandval + (maxrandval - minrandval)*(SCIP_Real)getRand(seedp)/(SCIP_Real)SCIP_RAND_MAX;
+}
+
+
+
+
+/*
+ * Strings
+ */
+
+/** extracts tokens from strings - wrapper method for strtok_r() */
+char* SCIPstrtok(
+   char*                 s,                  /**< string to parse */
+   const char*           delim,              /**< delimiters for parsing */
+   char**                ptrptr              /**< pointer to working char pointer - must stay the same while parsing */
+   )
+{
+#ifdef NO_STRTOK_R
+   return strtok(s, delim);
+#else
+   return strtok_r(s, delim, ptrptr);
+#endif
 }
 
 

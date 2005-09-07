@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.60 2005/09/06 17:08:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.61 2005/09/07 12:57:01 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  mps file reader
@@ -380,6 +380,7 @@ SCIP_Bool mpsinputReadLine(
    int space;
    char* s;
    SCIP_Bool is_marker;
+   char* nexttok;
 
    do
    {
@@ -413,11 +414,11 @@ SCIP_Bool mpsinputReadLine(
        */
       if (*mpsi->buf != BLANK)
       {
-         mpsi->f0 = strtok(&mpsi->buf[0], " ");
+         mpsi->f0 = SCIPstrtok(&mpsi->buf[0], " ", &nexttok);
 
          assert(mpsi->f0 != 0);
 
-         mpsi->f1 = strtok(NULL, " ");
+         mpsi->f1 = SCIPstrtok(NULL, " ", &nexttok);
 
          return TRUE;
       }
@@ -490,10 +491,10 @@ SCIP_Bool mpsinputReadLine(
        */
       do
       {
-         if (NULL == (mpsi->f1 = strtok(s, " ")))
+         if (NULL == (mpsi->f1 = SCIPstrtok(s, " ", &nexttok)))
             break;
          
-         if ((NULL == (mpsi->f2 = strtok(NULL, " "))) || (*mpsi->f2 == '$'))
+         if ((NULL == (mpsi->f2 = SCIPstrtok(NULL, " ", &nexttok))) || (*mpsi->f2 == '$'))
          {
             mpsi->f2 = 0;
             break;      
@@ -501,7 +502,7 @@ SCIP_Bool mpsinputReadLine(
          if (!strcmp(mpsi->f2, "'MARKER'"))
             is_marker = TRUE;
             
-         if ((NULL == (mpsi->f3 = strtok(NULL, " "))) || (*mpsi->f3 == '$'))
+         if ((NULL == (mpsi->f3 = SCIPstrtok(NULL, " ", &nexttok))) || (*mpsi->f3 == '$'))
          {
             mpsi->f3 = 0;
             break;      
@@ -518,7 +519,7 @@ SCIP_Bool mpsinputReadLine(
          if (!strcmp(mpsi->f3, "'MARKER'"))
             is_marker = TRUE;
 
-         if ((NULL == (mpsi->f4 = strtok(NULL, " "))) || (*mpsi->f4 == '$'))
+         if ((NULL == (mpsi->f4 = SCIPstrtok(NULL, " ", &nexttok))) || (*mpsi->f4 == '$'))
          {
             mpsi->f4 = 0;
             break;      
@@ -532,7 +533,7 @@ SCIP_Bool mpsinputReadLine(
             else
                break; /* unknown marker */
          }
-         if ((NULL == (mpsi->f5 = strtok(NULL, " "))) || (*mpsi->f5 == '$'))
+         if ((NULL == (mpsi->f5 = SCIPstrtok(NULL, " ", &nexttok))) || (*mpsi->f5 == '$'))
             mpsi->f5 = 0;
       }
       while(FALSE);

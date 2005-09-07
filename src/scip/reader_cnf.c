@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cnf.c,v 1.29 2005/09/06 17:08:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_cnf.c,v 1.30 2005/09/07 12:57:01 bzfpfend Exp $"
 
 /**@file   reader_cnf.c
  * @brief  cnf file reader
@@ -213,7 +213,7 @@ SCIP_RETCODE readCnf(
 
       if( *line != '\0' && *line != '%' )
       {
-         tok = strtok_r(line, " \f\n\r\t", &nexttok);
+         tok = SCIPstrtok(line, " \f\n\r\t", &nexttok);
          while( tok != NULL )
          {
             /* parse literal and check for errors */
@@ -272,7 +272,7 @@ SCIP_RETCODE readCnf(
             }
 
             /* get next token */
-            tok = strtok_r(NULL, " \f\n\r\t", &nexttok);
+            tok = SCIPstrtok(NULL, " \f\n\r\t", &nexttok);
          }
       }
    }
