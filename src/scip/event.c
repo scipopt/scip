@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.54 2005/09/08 19:46:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.55 2005/09/08 20:53:00 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -1533,7 +1533,12 @@ SCIP_RETCODE SCIPeventqueueAdd(
       case SCIP_EVENTTYPE_IMPLADDED:
          var = (*event)->data.eventimpladd.var;
          assert(var != NULL);
-         if( !var->eventqueueimpl )
+         if( var->eventqueueimpl )
+         {
+            /* free the event that is of no use any longer */
+            SCIP_CALL( SCIPeventFree(event, blkmem) );
+         }
+         else
          {
             var->eventqueueimpl = TRUE;
             SCIP_CALL( eventqueueAppend(eventqueue, set, event) );

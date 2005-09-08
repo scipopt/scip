@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.6 2005/09/08 19:46:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.7 2005/09/08 20:53:00 bzfpfend Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -23,6 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include <unistd.h>
+#include <string.h>
 #include <assert.h>
 
 #include "scip/cons_linear.h"
@@ -191,8 +193,40 @@ Var* xlp_addvar(const char* name, VarClass usevarclass, const Bound* lower, cons
 
    SCIP_CALL_ABORT( SCIPgetBoolParam(scip_, "reading/zplreader/dynamiccols", &dynamiccols) );
 
-   lb = (SCIP_Real)numb_todbl(bound_get_value(lower));
-   ub = (SCIP_Real)numb_todbl(bound_get_value(upper));
+   switch( bound_get_type(lower) )
+   {
+   case BOUND_VALUE:
+      lb = (SCIP_Real)numb_todbl(bound_get_value(lower));
+      break;
+   case BOUND_INFTY:
+      lb = SCIPinfinity(scip_);
+      break;
+   case BOUND_MINUS_INFTY:
+      lb = -SCIPinfinity(scip_);
+      break;
+   default:
+      SCIPerrorMessage("invalid lower bound type <%d> in ZIMPL reader\n", bound_get_type(lower));
+      lb = 0.0;
+      break;
+   }
+
+   switch( bound_get_type(upper) )
+   {
+   case BOUND_VALUE:
+      ub = (SCIP_Real)numb_todbl(bound_get_value(upper));
+      break;
+   case BOUND_INFTY:
+      ub = SCIPinfinity(scip_);
+      break;
+   case BOUND_MINUS_INFTY:
+      ub = -SCIPinfinity(scip_);
+      break;
+   default:
+      SCIPerrorMessage("invalid upper bound type <%d> in ZIMPL reader\n", bound_get_type(upper));
+      ub = 0.0;
+      break;
+   }
+
    switch( usevarclass )
    {
    case VAR_CON:
@@ -431,13 +465,50 @@ Bool xlp_hassos(void)
 static
 SCIP_DECL_READERREAD(readerReadZpl)
 {  /*lint --e{715}*/
+   char oldpath[SCIP_MAXSTRLEN];
+   char buffer[SCIP_MAXSTRLEN];
+   char namewithoutpath[SCIP_MAXSTRLEN];
+   char compextension[SCIP_MAXSTRLEN];
+   char* path;
+   char* name;
+   char* extension;
+   char* compression;
+
+   /* change to the directory of the ZIMPL file, s.t. paths of data files read by the ZIMPL model are relative to
+    * the location of the ZIMPL file
+    */
+   strncpy(buffer, filename, SCIP_MAXSTRLEN-1);
+   buffer[SCIP_MAXSTRLEN-1] = '\0';
+   SCIPsplitFilename(buffer, &path, &name, &extension, &compression);
+   if( compression != NULL )
+      sprintf(compextension, ".%s", compression);
+   else
+      *compextension = '\0';
+   sprintf(namewithoutpath, "%s.%s%s", name, extension, compextension);
+   if( getcwd(oldpath, SCIP_MAXSTRLEN) == NULL )
+   {
+      SCIPerrorMessage("error getting the current path\n");
+      return SCIP_READERROR;
+   }
+   if( chdir(path) != 0 )
+   {
+      SCIPerrorMessage("error changing to directory <%s>\n", path);
+      return SCIP_NOFILE;
+   }
+
    /* set static variables (ZIMPL callbacks do not support user data) */
    scip_ = scip;
    issuedbranchpriowarning_ = FALSE;
    readerror_ = FALSE;
 
    /* call ZIMPL parser */
-   zpl_read(filename);
+   zpl_read(namewithoutpath);
+
+   /* change directory back to old path */
+   if( chdir(oldpath) != 0 )
+   {
+      SCIPwarningMessage("error changing back to directory <%s>\n", oldpath);
+   }
    
    *result = SCIP_SUCCESS;
 

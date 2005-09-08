@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.185 2005/09/08 19:46:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.186 2005/09/08 20:52:59 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -5641,13 +5641,17 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       if( SCIPconsIsModifiable(cons) )
          continue;
 
+      /* remember the first changed constraint to begin the next aggregation round with */
+      if( firstchange == INT_MAX && consdata->changed )
+         firstchange = c;
+
+      /* remember the first constraint that was not yet tried to be upgraded, to begin the next upgrading round with */
+      if( firstupgradetry == INT_MAX && !consdata->upgradetried )
+         firstupgradetry = c;
+
       /* check, if constraint is already preprocessed */
       if( consdata->presolved )
-      {
-         assert(!consdata->changed);
-         assert(consdata->upgradetried);
          continue;
-      }
 
       assert(SCIPconsIsActive(cons));
 

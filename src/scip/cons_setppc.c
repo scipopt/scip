@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.94 2005/09/08 19:46:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.95 2005/09/08 20:53:00 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -819,25 +819,40 @@ SCIP_RETCODE applyFixings(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_VAR* var;
    int v;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /**@todo replace aggregated variables with active problem variables or their negation */
-
-   if( consdata->nfixedzeros >= 1 )
+   v = 0;
+   while( v < consdata->nvars )
    {
-      assert(consdata->vars != NULL);
+      SCIP_VAR* var;
 
-      v = 0;
-      while( v < consdata->nvars )
+      var = consdata->vars[v];
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+
+      if( SCIPvarGetUbGlobal(var) < 0.5 )
       {
-         var = consdata->vars[v];
-         if( SCIPisZero(scip, SCIPvarGetUbGlobal(var)) )
+         assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
+         SCIP_CALL( delCoefPos(scip, cons, v) );
+      }
+      else
+      {
+         SCIP_VAR* repvar;
+         SCIP_Bool negated;
+         
+         /* get binary representative of variable */
+         SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &repvar, &negated) );
+
+         /* check, if the variable should be replaced with the representative */
+         if( repvar != var )
          {
+            /* delete old (aggregated) variable */
             SCIP_CALL( delCoefPos(scip, cons, v) );
+
+            /* add representative instead */
+            SCIP_CALL( addCoef(scip, cons, repvar) );
          }
          else
             ++v;
@@ -2481,6 +2496,7 @@ static
 SCIP_DECL_CONSPRESOL(consPresolSetppc)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   int oldnfixedvars;
    int firstchange;
    int firstclique;
    int lastclique;
@@ -2492,6 +2508,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
    assert(result != NULL);
 
    *result = SCIP_DIDNOTFIND;
+   oldnfixedvars = *nfixedvars;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -2515,7 +2532,10 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       /*SCIPdebugMessage("presolving set partitioning / packing / covering constraint <%s>\n", SCIPconsGetName(cons));*/
 
       /* remove all variables that are fixed to zero */
-      SCIP_CALL( applyFixings(scip, cons) );
+      if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || *nfixedvars > oldnfixedvars )
+      {
+         SCIP_CALL( applyFixings(scip, cons) );
+      }
 
       /**@todo find pairs of negated variables in constraint:
        *       partitioning/packing: all other variables must be zero, constraint is redundant
