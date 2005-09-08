@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.37 2005/08/24 17:27:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.38 2005/09/08 19:46:14 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -246,6 +246,7 @@ struct SCIP_Var
    unsigned int          varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */
    unsigned int          pseudocostflag:2;   /**< temporary flag used in pseudo cost update */
    unsigned int          branchdirection:2;  /**< preferred branching direction of the variable (downwards, upwards, auto) */
+   unsigned int          eventqueueimpl:1;   /**< is an IMPLADDED event on this variable currently in the event queue? */
 };
 
 

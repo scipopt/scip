@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.25 2005/09/06 08:59:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.26 2005/09/08 19:46:13 bzfpfend Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -1402,7 +1402,11 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    }
 
    int status = lpi->clp->primal(0, lpi->validFactorization ? 3 : 1);
+#if 0 /*?????????????*/
    lpi->validFactorization = true;
+#else
+   lpi->validFactorization = !scaling;
+#endif
    lpi->scaledFactorization = (scaling != 0);
    lpi->solved = TRUE;
 
@@ -1435,19 +1439,23 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
    int scaling = lpi->clp->scalingFlag();
 
-   if ( lpi->startscratch )
+   if( lpi->startscratch )
    {
       lpi->clp->allSlackBasis(true);   // reset basis
       lpi->validFactorization = false;
    }
    else
    {
-      if ( lpi->scaledFactorization != (scaling != 0) )
+      if( lpi->scaledFactorization != (scaling != 0) )
 	 lpi->validFactorization = false;
    }
 
    int status = lpi->clp->dual(0, lpi->validFactorization ? 3 : 1);
+#if 0 /*?????????????*/
    lpi->validFactorization = true;
+#else
+   lpi->validFactorization = !scaling;
+#endif
    lpi->scaledFactorization = (scaling != 0);
    lpi->solved = TRUE;
 

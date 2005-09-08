@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.11 2005/09/01 18:19:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.12 2005/09/08 19:46:13 bzfpfend Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -982,7 +982,8 @@ SCIP_RETCODE cliqueCreate(
    }
    (*clique)->nvars = 0;
    (*clique)->size = size;
-   (*clique)->id = id;
+   (*clique)->id = (unsigned int)id;
+   (*clique)->eventsissued = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1141,6 +1142,7 @@ SCIP_RETCODE SCIPcliqueAddVar(
       clique->values[i] = clique->values[i-1];
    clique->values[i] = value;
    clique->nvars++;
+   clique->eventsissued = FALSE;
 
    /* check whether the variable is contained twice in the clique */
    for( i--; i >= 0 && clique->vars[i] == var; --i )
@@ -1681,6 +1683,9 @@ SCIP_RETCODE SCIPcliquetableCleanup(
       && cliquetable->ncliques == cliquetable->ncleanupcliques )
       return SCIP_OKAY;
 
+   /* delay events */
+   SCIP_CALL( SCIPeventqueueDelay(eventqueue) );
+
    /* create hash table to test for multiple cliques */
    SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, SCIP_HASHSIZE_CLIQUES, 
          hashgetkeyClique, hashkeyeqClique, hashkeyvalClique) );
@@ -1719,6 +1724,20 @@ SCIP_RETCODE SCIPcliquetableCleanup(
       {
          SCIP_CALL( SCIPhashtableInsert(hashtable, (void*)clique) );
          i++;
+         if( !clique->eventsissued )
+         {
+            int j;
+
+            /* issue IMPLADDED event on each variable in the clique */
+            for( j = 0; j < clique->nvars; ++j )
+            {
+               SCIP_EVENT* event;
+
+               SCIP_CALL( SCIPeventCreateImplAdded(&event, blkmem, clique->vars[j]) );
+               SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, &event) );
+            }
+            clique->eventsissued = TRUE;
+         }
       }
    }
 
@@ -1729,6 +1748,9 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    cliquetable->ncleanupfixedvars = stat->npresolfixedvars;
    cliquetable->ncleanupaggrvars = stat->npresolaggrvars;
    cliquetable->ncleanupcliques = cliquetable->ncliques;
+
+   /* process events */
+   SCIP_CALL( SCIPeventqueueProcess(eventqueue, blkmem, set, NULL, NULL, NULL, NULL) );
    
    return SCIP_OKAY;
 }

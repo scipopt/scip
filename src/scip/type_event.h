@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_event.h,v 1.19 2005/08/24 17:27:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_event.h,v 1.20 2005/09/08 19:46:14 bzfpfend Exp $"
 
 /**@file   type_event.h
  * @brief  type definitions for managing events
@@ -37,7 +37,8 @@
 #define SCIP_EVENTTYPE_VARADDED       0x00000001 /**< a variable has been added to the transformed problem */
 #define SCIP_EVENTTYPE_VARDELETED     0x00000002 /**< a variable will be deleted from the transformed problem */
 #define SCIP_EVENTTYPE_VARFIXED       0x00000004 /**< a variable has been fixed, aggregated, or multiaggregated */
-#define SCIP_EVENTTYPE_LOCKSCHANGED   0x00000008 /**< the number of rounding locks of a variable changed */
+#define SCIP_EVENTTYPE_VARUNLOCKED    0x00000008 /**< the number of rounding locks of a variable was reduced to zero or
+                                                  *   one */
 #define SCIP_EVENTTYPE_OBJCHANGED     0x00000010 /**< the objective value of a variable has been changed */
 #define SCIP_EVENTTYPE_LBTIGHTENED    0x00000020 /**< the lower bound of a variable has been increased */
 #define SCIP_EVENTTYPE_LBRELAXED      0x00000040 /**< the lower bound of a variable has been decreased */
@@ -46,7 +47,7 @@
 #define SCIP_EVENTTYPE_HOLEADDED      0x00000200 /**< ??? TODO: a hole has been added to the hole list of a variable's domain */
 #define SCIP_EVENTTYPE_HOLEREMOVED    0x00000400 /**< ??? TODO: a hole has been removed from the hole list of a variable's domain */
 #define SCIP_EVENTTYPE_IMPLADDED      0x00000800 /**< the variable's implication list, variable bound or clique information
-                                                       *   was extended */
+                                                  *   was extended */
 
 /* presolving events */
 #define SCIP_EVENTTYPE_PRESOLVEROUND  0x00001000 /**< a presolving round has been finished */
@@ -73,8 +74,8 @@
 #define SCIP_EVENTTYPE_BOUNDCHANGED   (SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBCHANGED)
 #define SCIP_EVENTTYPE_HOLECHANGED    (SCIP_EVENTTYPE_HOLEADDED | SCIP_EVENTTYPE_HOLEREMOVED)
 #define SCIP_EVENTTYPE_DOMCHANGED     (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_HOLECHANGED)
-#define SCIP_EVENTTYPE_VARCHANGED     (SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_OBJCHANGED | SCIP_EVENTTYPE_DOMCHANGED \
-                                       | SCIP_EVENTTYPE_LOCKSCHANGED | SCIP_EVENTTYPE_IMPLADDED)
+#define SCIP_EVENTTYPE_VARCHANGED     (SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED | SCIP_EVENTTYPE_OBJCHANGED \
+                                       | SCIP_EVENTTYPE_DOMCHANGED | SCIP_EVENTTYPE_IMPLADDED)
 #define SCIP_EVENTTYPE_VAREVENT       (SCIP_EVENTTYPE_VARCREATED | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_VARCHANGED)
    
 /* event masks for node events */
@@ -98,7 +99,7 @@ typedef struct SCIP_Event SCIP_EVENT;             /**< event data structure */
 typedef struct SCIP_EventVarAdded SCIP_EVENTVARADDED; /**< data for variable addition events */
 typedef struct SCIP_EventVarDeleted SCIP_EVENTVARDELETED; /**< data for variable deletion events */
 typedef struct SCIP_EventVarFixed SCIP_EVENTVARFIXED; /**< data for variable fixing events */
-typedef struct SCIP_EventLocksChg SCIP_EVENTLOCKSCHG; /**< data for locks change events */
+typedef struct SCIP_EventVarUnlocked SCIP_EVENTVARUNLOCKED; /**< data for variable unlocked events */
 typedef struct SCIP_EventObjChg SCIP_EVENTOBJCHG; /**< data for objective value change events */
 typedef struct SCIP_EventBdChg SCIP_EVENTBDCHG;   /**< data for bound change events */
 typedef struct SCIP_EventImplAdd SCIP_EVENTIMPLADD; /**< data for implication added events */

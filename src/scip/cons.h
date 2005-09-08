@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.97 2005/08/28 12:23:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.98 2005/09/08 19:46:12 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -415,10 +415,64 @@ SCIP_RETCODE SCIPconsTransform(
    SCIP_CONS**           transcons           /**< pointer to store the transformed constraint */
    );
 
-/** marks the constraint to be globally valid */
+/** sets the initial flag of the given constraint */
 extern
-void SCIPconsSetGlobal(
-   SCIP_CONS*            cons                /**< constraint */
+void SCIPconsSetInitial(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             initial             /**< new value */
+   );
+
+/** sets the separate flag of the given constraint */
+extern
+SCIP_RETCODE SCIPconsSetSeparated(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             separate            /**< new value */
+   );
+
+/** sets the enforce flag of the given constraint */
+extern
+SCIP_RETCODE SCIPconsSetEnforced(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             enforce             /**< new value */
+   );
+
+/** sets the check flag of the given constraint */
+extern
+SCIP_RETCODE SCIPconsSetChecked(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             check               /**< new value */
+   );
+
+/** sets the propagate flag of the given constraint */
+extern
+SCIP_RETCODE SCIPconsSetPropagated(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             propagate           /**< new value */
+   );
+
+/** sets the local flag of the given constraint */
+extern
+void SCIPconsSetLocal(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             local               /**< new value */
+   );
+
+/** sets the dynamic flag of the given constraint */
+extern
+void SCIPconsSetDynamic(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             dynamic             /**< new value */
+   );
+
+/** sets the removeable flag of the given constraint */
+extern
+void SCIPconsSetRemoveable(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             removeable          /**< new value */
    );
 
 /** gets associated transformed constraint of an original constraint, or NULL if no associated transformed constraint
@@ -570,13 +624,6 @@ SCIP_RETCODE SCIPconsCheck(
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
-   );
-
-/** marks the constraint to be essential for feasibility */
-extern
-SCIP_RETCODE SCIPconsSetChecked(
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 

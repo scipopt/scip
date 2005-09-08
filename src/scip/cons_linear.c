@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.184 2005/09/07 15:52:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.185 2005/09/08 19:46:12 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -137,6 +137,7 @@ struct SCIP_EventData
 {
    SCIP_CONSDATA*        consdata;           /**< linear constraint data to process the bound change for */
    int                   varpos;             /**< position of variable in vars array */
+   int                   filterpos;          /**< position of event in variable's event filter */
 };
 
 /** constraint handler data */
@@ -496,8 +497,8 @@ SCIP_RETCODE consdataCatchEvent(
    consdata->eventdatas[pos]->varpos = pos;
 
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[pos], 
-         SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_LOCKSCHANGED,
-         eventhdlr, consdata->eventdatas[pos], NULL) );
+         SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED,
+         eventhdlr, consdata->eventdatas[pos], &consdata->eventdatas[pos]->filterpos) );
 
    return SCIP_OKAY;
 }
@@ -521,8 +522,8 @@ SCIP_RETCODE consdataDropEvent(
    assert(consdata->eventdatas[pos]->varpos == pos);
    
    SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos],
-         SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_LOCKSCHANGED,
-         eventhdlr, consdata->eventdatas[pos], -1) );
+         SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED,
+         eventhdlr, consdata->eventdatas[pos], consdata->eventdatas[pos]->filterpos) );
 
    SCIPfreeBlockMemory(scip, &consdata->eventdatas[pos]);
 
@@ -588,7 +589,7 @@ SCIP_Bool needEvents(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   return (SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVED && SCIPgetStage(scip) <= SCIP_STAGE_FREESOLVE);
+   return (SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED && SCIPgetStage(scip) < SCIP_STAGE_FREETRANS);
 }
 
 /** creates a linear constraint data */
@@ -4647,36 +4648,15 @@ SCIP_RETCODE preprocessConstraintPairs(
    )
 {
    SCIP_CONS* cons0;
-   SCIP_CONS* cons1;
    SCIP_CONSDATA* consdata0;
-   SCIP_CONSDATA* consdata1;
-   SCIP_VAR* var;
    int* commonidx0;
    int* commonidx1;
    int* diffidx0minus1;
    int* diffidx1minus0;
-   SCIP_Real val0;
-   SCIP_Real val1;
    SCIP_Bool cons0changed;
-   SCIP_Bool cons0dominateslhs;
-   SCIP_Bool cons1dominateslhs;
-   SCIP_Bool cons0dominatesrhs;
-   SCIP_Bool cons1dominatesrhs;
    SCIP_Bool cons0isequality;
-   SCIP_Bool cons1isequality;
-   SCIP_Bool coefsequal;
-   SCIP_Bool coefsnegated;
    int diffidx1minus0size;
-   int nvarscommon;
-   int nvars0minus1;
-   int nvars1minus0;
-   int commonidxweight;
-   int diffidx0minus1weight;
-   int diffidx1minus0weight;
-   int varcmp;
    int c;
-   int v0;
-   int v1;
 
    assert(conss != NULL);
    assert(firstchange <= chkind);
@@ -4709,8 +4689,25 @@ SCIP_RETCODE preprocessConstraintPairs(
    consdata0->changed = FALSE;
    for( c = (cons0changed ? 0 : firstchange); c < chkind && !(*cutoff) && SCIPconsIsActive(cons0); ++c )
    {
+      SCIP_CONS* cons1;
+      SCIP_CONSDATA* consdata1;
+      SCIP_Bool cons0dominateslhs;
+      SCIP_Bool cons1dominateslhs;
+      SCIP_Bool cons0dominatesrhs;
+      SCIP_Bool cons1dominatesrhs;
+      SCIP_Bool cons1isequality;
+      SCIP_Bool coefsequal;
+      SCIP_Bool coefsnegated;
+      int nvarscommon;
+      int nvars0minus1;
+      int nvars1minus0;
+      int commonidxweight;
+      int diffidx0minus1weight;
+      int diffidx1minus0weight;
+      int v0;
+      int v1;
+
       cons1 = conss[c];
-      assert(cons1 != NULL);
 
       /* ignore inactive and modifiable constraints */
       if( !SCIPconsIsActive(cons1) || SCIPconsIsModifiable(cons1) )
@@ -4787,6 +4784,11 @@ SCIP_RETCODE preprocessConstraintPairs(
          && (cons0dominateslhs || cons1dominateslhs || cons0dominatesrhs || cons1dominatesrhs
             || coefsequal || coefsnegated || cons0isequality || cons1isequality) )
       {
+         SCIP_VAR* var;
+         SCIP_Real val0;
+         SCIP_Real val1;
+         int varcmp;
+
          /* test, if variable appears in only one or in both constraints */
          if( v0 < consdata0->nvars && v1 < consdata1->nvars )
             varcmp = SCIPvarCompare(consdata0->vars[v0], consdata1->vars[v1]);
@@ -5004,10 +5006,8 @@ SCIP_RETCODE preprocessConstraintPairs(
       /* check for disaggregated ranged rows */
       if( coefsequal || coefsnegated )
       {
-         SCIP_CONS* newcons;
          SCIP_Real lhs;
          SCIP_Real rhs;
-         char name[SCIP_MAXSTRLEN];
 
          /* the coefficients in both rows are either equal or negated: create a new constraint with same coeffients and
           * best left and right hand sides; delete the old constraints afterwards
@@ -5036,23 +5036,42 @@ SCIP_RETCODE preprocessConstraintPairs(
             break;
          }
 
-         /* create the new linear constraint */
-         sprintf(name, "%s_%s", SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-         SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, name, consdata0->nvars, consdata0->vars, consdata0->vals, lhs, rhs,
-               SCIPconsIsInitial(cons0) || SCIPconsIsInitial(cons1), SCIPconsIsSeparated(cons0) || SCIPconsIsSeparated(cons1),
-               SCIPconsIsEnforced(cons0) || SCIPconsIsEnforced(cons1), SCIPconsIsChecked(cons0) || SCIPconsIsChecked(cons1),
-               SCIPconsIsPropagated(cons0) || SCIPconsIsPropagated(cons1), SCIPconsIsLocal(cons0) || SCIPconsIsLocal(cons1),
-               SCIPconsIsModifiable(cons0) || SCIPconsIsModifiable(cons1), 
-               SCIPconsIsDynamic(cons0) && SCIPconsIsDynamic(cons1), SCIPconsIsRemoveable(cons0) && SCIPconsIsRemoveable(cons1)) );
-         
-         /* normalize the new constraint */
-         SCIP_CALL( normalizeCons(scip, newcons) );
+         /* update the sides of cons0 */
+         SCIP_CALL( chgLhs(scip, cons0, lhs) );
+         SCIP_CALL( chgRhs(scip, cons0, lhs) );
 
-         /* delete old constraints and add new one */
-         SCIP_CALL( SCIPdelCons(scip, cons0) );
+         /* update the flags of cons0 */
+         if( SCIPconsIsInitial(cons1) )
+         {
+            SCIP_CALL( SCIPsetConsInitial(scip, cons0, TRUE) );
+         }
+         if( SCIPconsIsSeparated(cons1) )
+         {
+            SCIP_CALL( SCIPsetConsSeparated(scip, cons0, TRUE) );
+         }
+         if( SCIPconsIsEnforced(cons1) )
+         {
+            SCIP_CALL( SCIPsetConsEnforced(scip, cons0, TRUE) );
+         }
+         if( SCIPconsIsChecked(cons1) )
+         {
+            SCIP_CALL( SCIPsetConsChecked(scip, cons0, TRUE) );
+         }
+         if( SCIPconsIsPropagated(cons1) )
+         {
+            SCIP_CALL( SCIPsetConsPropagated(scip, cons0, TRUE) );
+         }
+         if( !SCIPconsIsDynamic(cons1) )
+         {
+            SCIP_CALL( SCIPsetConsDynamic(scip, cons0, FALSE) );
+         }
+         if( !SCIPconsIsRemoveable(cons1) )
+         {
+            SCIP_CALL( SCIPsetConsRemoveable(scip, cons0, FALSE) );
+         }
+
+         /* delete cons1 */
          SCIP_CALL( SCIPdelCons(scip, cons1) );
-         SCIP_CALL( SCIPaddCons(scip, newcons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
          (*ndelconss)++;
          continue;
       }
@@ -5614,14 +5633,6 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       assert(SCIPgetNRuns(scip) > 0 || nrounds > 0 || !consdata->presolved);
       assert(consdata->propagated || !consdata->presolved);
 
-      /* remember the first changed constraint to begin the next aggregation round with */
-      if( firstchange == INT_MAX && consdata->changed )
-         firstchange = c;
-
-      /* remember the first constraint that was not yet tried to be upgraded, to begin the next upgrading round with */
-      if( firstupgradetry == INT_MAX && !consdata->upgradetried )
-         firstupgradetry = c;
-
       /* incorporate fixings and aggregations in constraint */
       SCIP_CALL( applyFixings(scip, cons) );
       assert(consdata->removedfixings);
@@ -5632,7 +5643,11 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
 
       /* check, if constraint is already preprocessed */
       if( consdata->presolved )
+      {
+         assert(!consdata->changed);
+         assert(consdata->upgradetried);
          continue;
+      }
 
       assert(SCIPconsIsActive(cons));
 
@@ -5728,6 +5743,14 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
 
          SCIP_CALL( convertEquality(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
       }
+
+      /* remember the first changed constraint to begin the next aggregation round with */
+      if( firstchange == INT_MAX && consdata->changed )
+         firstchange = c;
+
+      /* remember the first constraint that was not yet tried to be upgraded, to begin the next upgrading round with */
+      if( firstupgradetry == INT_MAX && !consdata->upgradetried )
+         firstupgradetry = c;
    }
 
    /* process pairs of constraints: check them for redundancy and try to aggregate them;
@@ -6000,11 +6023,12 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       consdata->removedfixings = FALSE;
    }
 
-   if( (eventtype & SCIP_EVENTTYPE_LOCKSCHANGED) != 0 )
+   if( (eventtype & SCIP_EVENTTYPE_VARUNLOCKED) != 0 )
    {
-      /* if there is only one lock left, we may multiaggregate the variable as slack of an equation */
-      if( SCIPvarGetNLocksDown(var) <= 1 && SCIPvarGetNLocksUp(var) <= 1 )
-         consdata->presolved = FALSE;
+      /* there is only one lock left: we may multiaggregate the variable as slack of an equation */
+      assert(SCIPvarGetNLocksDown(var) <= 1);
+      assert(SCIPvarGetNLocksUp(var) <= 1);
+      consdata->presolved = FALSE;
    }
 
    return SCIP_OKAY;

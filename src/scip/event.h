@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.h,v 1.41 2005/08/28 12:23:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.h,v 1.42 2005/09/08 19:46:13 bzfpfend Exp $"
 
 /**@file   event.h
  * @brief  internal methods for managing events
@@ -138,12 +138,12 @@ SCIP_RETCODE SCIPeventCreateVarFixed(
    SCIP_VAR*             var                 /**< variable that was fixed */
    );
 
-/** creates an event for a change in the number of locks of a variable */
+/** creates an event for a change in the number of locks of a variable down to zero or one */
 extern
-SCIP_RETCODE SCIPeventCreateLocksChanged(
+SCIP_RETCODE SCIPeventCreateVarUnlocked(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_VAR*             var                 /**< variable that was fixed */
+   SCIP_VAR*             var                 /**< variable that changed the number of locks */
    );
 
 /** creates an event for a change in the objective value of a variable */
@@ -196,6 +196,13 @@ extern
 SCIP_RETCODE SCIPeventChgType(
    SCIP_EVENT*           event,              /**< event */
    SCIP_EVENTTYPE        eventtype           /**< new event type */
+   );
+
+/** sets variable for a variable event */
+extern
+SCIP_RETCODE SCIPeventChgVar(
+   SCIP_EVENT*           event,              /**< event */
+   SCIP_VAR*             var                 /**< new variable */
    );
 
 /** sets node for a node or LP event */

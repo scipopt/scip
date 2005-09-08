@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.53 2005/08/24 17:26:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.54 2005/09/08 19:46:13 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -312,11 +312,11 @@ SCIP_RETCODE SCIPeventCreateVarFixed(
    return SCIP_OKAY;
 }
 
-/** creates an event for a change in the number of locks of a variable */
-SCIP_RETCODE SCIPeventCreateLocksChanged(
+/** creates an event for a change in the number of locks of a variable down to zero or one */
+SCIP_RETCODE SCIPeventCreateVarUnlocked(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_VAR*             var                 /**< variable that was fixed */
+   SCIP_VAR*             var                 /**< variable that changed the number of locks */
    )
 {
    assert(event != NULL);
@@ -327,8 +327,8 @@ SCIP_RETCODE SCIPeventCreateLocksChanged(
 
    /* create event data */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, event) );
-   (*event)->eventtype = SCIP_EVENTTYPE_LOCKSCHANGED;
-   (*event)->data.eventlockschg.var = var;
+   (*event)->eventtype = SCIP_EVENTTYPE_VARUNLOCKED;
+   (*event)->data.eventvarunlocked.var = var;
 
    return SCIP_OKAY;
 }
@@ -496,9 +496,9 @@ SCIP_VAR* SCIPeventGetVar(
       assert(event->data.eventvarfixed.var != NULL);
       return event->data.eventvarfixed.var;
 
-   case SCIP_EVENTTYPE_LOCKSCHANGED:
-      assert(event->data.eventlockschg.var != NULL);
-      return event->data.eventlockschg.var;
+   case SCIP_EVENTTYPE_VARUNLOCKED:
+      assert(event->data.eventvarunlocked.var != NULL);
+      return event->data.eventvarunlocked.var;
 
    case SCIP_EVENTTYPE_OBJCHANGED:
       assert(event->data.eventobjchg.var != NULL);
@@ -530,6 +530,70 @@ SCIP_VAR* SCIPeventGetVar(
       SCIPABORT();
       return NULL;
    }  /*lint !e788*/
+}
+
+/** sets variable for a variable event */
+SCIP_RETCODE SCIPeventChgVar(
+   SCIP_EVENT*           event,              /**< event */
+   SCIP_VAR*             var                 /**< new variable */
+   )
+{
+   assert(event != NULL);
+
+   switch( event->eventtype )
+   {  
+   case SCIP_EVENTTYPE_VARADDED:
+      assert(event->data.eventvaradded.var != NULL);
+      event->data.eventvaradded.var = var;
+      break;
+
+   case SCIP_EVENTTYPE_VARDELETED:
+      assert(event->data.eventvardeleted.var != NULL);
+      event->data.eventvardeleted.var = var;
+      break;
+
+   case SCIP_EVENTTYPE_VARFIXED:
+      assert(event->data.eventvarfixed.var != NULL);
+      event->data.eventvarfixed.var = var;
+      break;
+
+   case SCIP_EVENTTYPE_VARUNLOCKED:
+      assert(event->data.eventvarunlocked.var != NULL);
+      event->data.eventvarunlocked.var = var;
+      break;
+
+   case SCIP_EVENTTYPE_OBJCHANGED:
+      assert(event->data.eventobjchg.var != NULL);
+      event->data.eventobjchg.var = var;
+      break;
+
+   case SCIP_EVENTTYPE_LBTIGHTENED:
+   case SCIP_EVENTTYPE_LBRELAXED:
+   case SCIP_EVENTTYPE_UBTIGHTENED:
+   case SCIP_EVENTTYPE_UBRELAXED:
+      assert(event->data.eventbdchg.var != NULL);
+      event->data.eventbdchg.var = var;
+      break;
+
+   case SCIP_EVENTTYPE_HOLEADDED:
+      SCIPerrorMessage("HOLEADDED event not implemented yet\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_EVENTTYPE_HOLEREMOVED:
+      SCIPerrorMessage("HOLEREMOVED event not implemented yet\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_EVENTTYPE_IMPLADDED:
+      assert(event->data.eventimpladd.var != NULL);
+      event->data.eventimpladd.var = var;
+      break;
+
+   default:
+      SCIPerrorMessage("event does not belong to a variable\n");
+      return SCIP_INVALIDDATA;
+   }  /*lint !e788*/
+
+   return SCIP_OKAY;
 }
 
 /** gets old objective value for an objective value change event */
@@ -721,8 +785,8 @@ SCIP_RETCODE SCIPeventProcess(
       SCIP_CALL( SCIPeventfilterProcess(var->eventfilter, set, event) );
       break;
 
-   case SCIP_EVENTTYPE_LOCKSCHANGED:
-      var = event->data.eventlockschg.var;
+   case SCIP_EVENTTYPE_VARUNLOCKED:
+      var = event->data.eventvarunlocked.var;
       assert(var != NULL);
 
       /* process variable's event filter */
@@ -809,6 +873,7 @@ SCIP_RETCODE SCIPeventProcess(
    case SCIP_EVENTTYPE_IMPLADDED:
       var = event->data.eventimpladd.var;
       assert(var != NULL);
+      assert(!var->eventqueueimpl);
 
       /* process variable's event filter */
       SCIP_CALL( SCIPeventfilterProcess(var->eventfilter, set, event) );
@@ -1304,8 +1369,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
       case SCIP_EVENTTYPE_VARADDED:
       case SCIP_EVENTTYPE_VARDELETED:
       case SCIP_EVENTTYPE_VARFIXED:
-      case SCIP_EVENTTYPE_LOCKSCHANGED:
-      case SCIP_EVENTTYPE_IMPLADDED:
+      case SCIP_EVENTTYPE_VARUNLOCKED:
       case SCIP_EVENTTYPE_PRESOLVEROUND:
       case SCIP_EVENTTYPE_NODEFOCUSED:
       case SCIP_EVENTTYPE_NODEFEASIBLE:
@@ -1466,6 +1530,16 @@ SCIP_RETCODE SCIPeventqueueAdd(
          SCIPerrorMessage("HOLEREMOVED event not implemented yet\n");
          SCIPABORT();
 
+      case SCIP_EVENTTYPE_IMPLADDED:
+         var = (*event)->data.eventimpladd.var;
+         assert(var != NULL);
+         if( !var->eventqueueimpl )
+         {
+            var->eventqueueimpl = TRUE;
+            SCIP_CALL( eventqueueAppend(eventqueue, set, event) );
+         }
+         break;
+
       default:
          SCIPerrorMessage("unknown event type <%d>\n", (*event)->eventtype);
          return SCIP_INVALIDDATA;
@@ -1524,7 +1598,9 @@ SCIP_RETCODE SCIPeventqueueProcess(
 
       SCIPdebugMessage("processing event %d of %d events in queue: eventtype=0x%x\n", i, eventqueue->nevents, event->eventtype);
 
-      /* unmark the event queue index of a variable with changed objective value or bounds */
+      /* unmark the event queue index of a variable with changed objective value or bounds, and unmark the event queue
+       * member flag of a variable with added implication
+       */
       if( (event->eventtype & SCIP_EVENTTYPE_OBJCHANGED) != 0 )
       {
          assert(event->data.eventobjchg.var->eventqueueindexobj == i);
@@ -1539,6 +1615,11 @@ SCIP_RETCODE SCIPeventqueueProcess(
       {
          assert(event->data.eventbdchg.var->eventqueueindexub == i);
          event->data.eventbdchg.var->eventqueueindexub = -1;
+      }
+      else if( (event->eventtype & SCIP_EVENTTYPE_IMPLADDED) != 0 )
+      {
+         assert(event->data.eventimpladd.var->eventqueueimpl);
+         event->data.eventimpladd.var->eventqueueimpl = FALSE;
       }
 
       /* process event */

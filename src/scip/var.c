@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.184 2005/09/05 10:29:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.185 2005/09/08 19:46:14 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1685,6 +1685,7 @@ SCIP_RETCODE varCreate(
    (*var)->deleted = FALSE;
    (*var)->vartype = vartype; /*lint !e641*/
    (*var)->pseudocostflag = FALSE;
+   (*var)->eventqueueimpl = FALSE;
 
    /* create branching and inference history entries */
    SCIP_CALL( SCIPhistoryCreate(&(*var)->history, blkmem) );
@@ -2158,9 +2159,9 @@ void SCIPvarPrint(
    SCIPmessageFPrintInfo(file, "\n");
 }
 
-/** issues a LOCKSCHANGED event on the given variable */
+/** issues a VARUNLOCKED event on the given variable */
 static
-SCIP_RETCODE varEventLocksChanged(
+SCIP_RETCODE varEventVarUnlocked(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -2170,9 +2171,10 @@ SCIP_RETCODE varEventLocksChanged(
    SCIP_EVENT* event;
 
    assert(var != NULL);
+   assert(var->nlocksdown <= 1 && var->nlocksup <= 1);
 
-   /* issue LOCKSCHANGED event on variable */
-   SCIP_CALL( SCIPeventCreateLocksChanged(&event, blkmem, var) );
+   /* issue VARUNLOCKED event on variable */
+   SCIP_CALL( SCIPeventCreateVarUnlocked(&event, blkmem, var) );
    SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, &event) );
 
    return SCIP_OKAY;
@@ -2219,7 +2221,10 @@ SCIP_RETCODE SCIPvarAddLocks(
    case SCIP_VARSTATUS_FIXED:
       var->nlocksdown += addnlocksdown;
       var->nlocksup += addnlocksup;
-      SCIP_CALL( varEventLocksChanged(var, blkmem, set, eventqueue) );
+      if( var->nlocksdown <= 1 && var->nlocksup <= 1 )
+      {
+         SCIP_CALL( varEventVarUnlocked(var, blkmem, set, eventqueue) );
+      }
       break;
 
    case SCIP_VARSTATUS_AGGREGATED:
@@ -5120,7 +5125,7 @@ SCIP_RETCODE varEventImplAdded(
 
    assert(var != NULL);
 
-   /* issue LOCKSCHANGED event on variable */
+   /* issue IMPLADDED event on variable */
    SCIP_CALL( SCIPeventCreateImplAdded(&event, blkmem, var) );
    SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, &event) );
 
@@ -5276,23 +5281,25 @@ SCIP_RETCODE varAddImplic(
    SCIP_BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
    SCIP_Real             implbound,          /**< bound b    in implication y <= b or y >= b */
    SCIP_Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
-   int*                  nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
+   int*                  nbdchgs,            /**< pointer to count the number of performed bound changes, or NULL */
+   SCIP_Bool*            added               /**< pointer to store whether an implication was added */
    )
 {
    SCIP_Bool redundant;
    SCIP_Bool conflict;
-   SCIP_Bool added;
 
    assert(SCIPvarIsActive(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
    assert(SCIPvarIsActive(implvar));
    assert(infeasible != NULL);
+   assert(added != NULL);
 
    /* check implication on debugging solution */
    SCIP_CALL( SCIPdebugCheckImplic(set, var, varfixing, implvar, impltype, implbound) ); /*lint !e506 !e774*/
 
    *infeasible = FALSE;
+   *added = FALSE;
 
    /* check, if the implication is redundant or infeasible */
    checkImplic(set, implvar, impltype, implbound, &redundant, &conflict);
@@ -5332,11 +5339,9 @@ SCIP_RETCODE varAddImplic(
          SCIPvarGetName(var), varfixing,
          SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_UPPER ? "<=" : ">=", implbound);
       SCIP_CALL( SCIPimplicsAdd(&var->implics, blkmem, set, stat, varfixing, implvar, impltype, implbound,
-            &conflict, &added) );
+            &conflict, added) );
    }
-   else
-      added = FALSE;
-   assert(!conflict || !added);
+   assert(!conflict || !(*added));
 
    /* on conflict, fix the variable to the opposite value */
    if( conflict )
@@ -5356,14 +5361,22 @@ SCIP_RETCODE varAddImplic(
 
       return SCIP_OKAY;
    }
-
-   /* if the implication was redundant, the inverse is also redundant */
-   if( !added )
+   else if( *added )
+   {
+      /* issue IMPLADDED event */
+      SCIP_CALL( varEventImplAdded(var, blkmem, set, eventqueue) );
+   }
+   else
+   {
+      /* the implication was redundant: the inverse is also redundant */
       return SCIP_OKAY;
+   }
 
    /* check, whether implied variable is binary */
    if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
    {
+      SCIP_Bool inverseadded;
+
       assert(SCIPsetIsEQ(set, implbound, 0.0) == (impltype == SCIP_BOUNDTYPE_UPPER));
       assert(SCIPsetIsEQ(set, implbound, 1.0) == (impltype == SCIP_BOUNDTYPE_LOWER));
 
@@ -5377,8 +5390,8 @@ SCIP_RETCODE varAddImplic(
          SCIPvarGetName(implvar), (impltype == SCIP_BOUNDTYPE_UPPER), SCIPvarGetName(var), !varfixing);
       SCIP_CALL( SCIPimplicsAdd(&implvar->implics, blkmem, set, stat, 
             (impltype == SCIP_BOUNDTYPE_UPPER), var, varfixing ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER, 
-            varfixing ? 0.0 : 1.0, &conflict, &added) );
-      assert(added == !conflict); /* if there is no conflict, the implication must not be redundant */
+            varfixing ? 0.0 : 1.0, &conflict, &inverseadded) );
+      assert(inverseadded == !conflict); /* if there is no conflict, the implication must not be redundant */
 
       /* on conflict, fix the variable to the opposite value */
       if( conflict )
@@ -5403,6 +5416,11 @@ SCIP_RETCODE varAddImplic(
          }
          if( nbdchgs != NULL )
             (*nbdchgs)++;
+      }
+      else if( inverseadded )
+      {
+         /* issue IMPLADDED event */
+         SCIP_CALL( varEventImplAdded(implvar, blkmem, set, eventqueue) );
       }
    }
    else
@@ -5458,6 +5476,8 @@ SCIP_RETCODE varAddTransitiveImplic(
    int*                  nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
    )
 {
+   SCIP_Bool added;
+
    assert(var != NULL);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
    assert(SCIPvarIsActive(var));
@@ -5467,8 +5487,8 @@ SCIP_RETCODE varAddTransitiveImplic(
 
    /* add implication x == varfixing -> y <= b / y >= b to the implications list of x */
    SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
-         varfixing, implvar, impltype, implbound, infeasible, nbdchgs) );
-   if( *infeasible || var == implvar || !transitive )
+         varfixing, implvar, impltype, implbound, infeasible, nbdchgs, &added) );
+   if( *infeasible || var == implvar || !transitive || !added )
       return SCIP_OKAY;
 
    /* add transitive closure */
@@ -5508,7 +5528,7 @@ SCIP_RETCODE varAddTransitiveImplic(
          if( SCIPvarIsActive(implvars[i]) )
          {
             SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
-                  varfixing, implvars[i], impltypes[i], implbounds[i], infeasible, nbdchgs) );
+                  varfixing, implvars[i], impltypes[i], implbounds[i], infeasible, nbdchgs, &added) );
             assert(SCIPimplicsGetNImpls(implvar->implics, implvarfixing) <= nimpls);
             nimpls = SCIPimplicsGetNImpls(implvar->implics, implvarfixing);
             i = MIN(i, nimpls); /* some elements from the array could have been removed */
@@ -5590,13 +5610,13 @@ SCIP_RETCODE varAddTransitiveImplic(
                {
                   vbimplbound = adjustedUb(set, SCIPvarGetType(vlbvars[i]), vbimplbound);
                   SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
-                        varfixing, vlbvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, infeasible, nbdchgs) );
+                        varfixing, vlbvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, infeasible, nbdchgs, &added) );
                }
                else
                {
                   vbimplbound = adjustedLb(set, SCIPvarGetType(vlbvars[i]), vbimplbound);
                   SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
-                        varfixing, vlbvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, infeasible, nbdchgs) );
+                        varfixing, vlbvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, infeasible, nbdchgs, &added) );
                }
                assert(SCIPvboundsGetNVbds(implvar->vlbs) == nvlbvars);
             }
@@ -5634,22 +5654,19 @@ SCIP_RETCODE varAddTransitiveImplic(
                {
                   vbimplbound = adjustedLb(set, SCIPvarGetType(vubvars[i]), vbimplbound);
                   SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
-                        varfixing, vubvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, infeasible, nbdchgs) );
+                        varfixing, vubvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, infeasible, nbdchgs, &added) );
                }
                else
                {
                   vbimplbound = adjustedUb(set, SCIPvarGetType(vubvars[i]), vbimplbound);
                   SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
-                        varfixing, vubvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, infeasible, nbdchgs) );
+                        varfixing, vubvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, infeasible, nbdchgs, &added) );
                }
                assert(SCIPvboundsGetNVbds(implvar->vubs) == nvubvars);
             }
          }
       }
    }
-
-   /* issue IMPLADDED event */
-   SCIP_CALL( varEventImplAdded(var, blkmem, set, eventqueue) );
 
    return SCIP_OKAY;
 }
@@ -6355,9 +6372,6 @@ SCIP_RETCODE SCIPvarAddClique(
       /* check consistency of cliquelist */
       SCIPcliquelistCheck(var->cliquelist, var);
 
-      /* issue IMPLADDED event */
-      SCIP_CALL( varEventImplAdded(var, blkmem, set, eventqueue) );
-
       /* if the variable now appears twice with the same value in the clique, it can be fixed to the opposite value */
       if( doubleentry )
       {
@@ -6848,6 +6862,12 @@ int SCIPvarCompare(
       assert(var1 == var2);
       return 0;
    }
+}
+
+/** comparison method for sorting variables by non-decreasing index */
+SCIP_DECL_SORTPTRCOMP(SCIPvarComp)
+{
+   return SCIPvarCompare((SCIP_VAR*)elem1, (SCIP_VAR*)elem2);
 }
 
 /** gets corresponding active, fixed, or multi-aggregated problem variable of a variable */

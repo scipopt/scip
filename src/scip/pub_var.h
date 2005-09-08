@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.53 2005/08/28 12:29:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.54 2005/09/08 19:46:13 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -29,6 +29,7 @@
 
 #include "scip/def.h"
 #include "scip/type_retcode.h"
+#include "scip/type_misc.h"
 #include "scip/type_history.h"
 #include "scip/type_var.h"
 #include "scip/type_implics.h"
@@ -78,6 +79,10 @@ int SCIPvarCompare(
    SCIP_VAR*             var1,               /**< first problem variable */
    SCIP_VAR*             var2                /**< second problem variable */
    );
+
+/** comparison method for sorting variables by non-decreasing index */
+extern
+SCIP_DECL_SORTPTRCOMP(SCIPvarComp);
 
 /** gets corresponding active, fixed, or multi-aggregated problem variable of a variable */
 extern

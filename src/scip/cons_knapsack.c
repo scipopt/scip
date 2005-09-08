@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.112 2005/09/05 15:27:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.113 2005/09/08 19:46:12 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -112,6 +112,7 @@ struct SCIP_EventData
 {
    SCIP_CONSDATA*        consdata;           /**< knapsack constraint data to process the bound change for */
    SCIP_Longint          weight;             /**< weight of variable */
+   int                   filterpos;          /**< position of event in variable's event filter */
 };
 
 
@@ -272,7 +273,7 @@ SCIP_RETCODE catchEvents(
       SCIP_CALL( eventdataCreate(scip, &consdata->eventdatas[i], consdata, consdata->weights[i]) );
       SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[i], 
             SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_IMPLADDED,
-            eventhdlr, consdata->eventdatas[i], NULL) );
+            eventhdlr, consdata->eventdatas[i], &consdata->eventdatas[i]->filterpos) );
    }
 
    return SCIP_OKAY;
@@ -297,7 +298,7 @@ SCIP_RETCODE dropEvents(
    {
       SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[i],
             SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_IMPLADDED,
-            eventhdlr, consdata->eventdatas[i], -1) );
+            eventhdlr, consdata->eventdatas[i], consdata->eventdatas[i]->filterpos) );
       SCIP_CALL( eventdataFree(scip, &consdata->eventdatas[i]) );
    }
 
@@ -2201,7 +2202,8 @@ SCIP_RETCODE addCoef(
          SCIP_CALL( eventdataCreate(scip, &consdata->eventdatas[consdata->nvars-1], consdata, weight) );
          SCIP_CALL( SCIPcatchVarEvent(scip, var,
                SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_IMPLADDED,
-               conshdlrdata->eventhdlr, consdata->eventdatas[consdata->nvars-1], NULL) );
+               conshdlrdata->eventhdlr, consdata->eventdatas[consdata->nvars-1],
+               &consdata->eventdatas[consdata->nvars-1]->filterpos) );
       }
 
       /* update weight sums */
@@ -2252,7 +2254,7 @@ SCIP_RETCODE delCoefPos(
       assert(conshdlrdata != NULL);
       SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos],
             SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_IMPLADDED,
-            conshdlrdata->eventhdlr, consdata->eventdatas[pos], -1) );
+            conshdlrdata->eventhdlr, consdata->eventdatas[pos], consdata->eventdatas[pos]->filterpos) );
       SCIP_CALL( eventdataFree(scip, &consdata->eventdatas[pos]) );
    }
 

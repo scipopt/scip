@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.243 2005/08/30 20:35:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.244 2005/09/08 19:46:14 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2668,6 +2668,70 @@ SCIP_RETCODE SCIPreleaseCons(
    SCIP_CONS**           cons                /**< pointer to constraint */
    );
 
+/** sets the initial flag of the given constraint */
+extern
+SCIP_RETCODE SCIPsetConsInitial(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             initial             /**< new value */
+   );
+
+/** sets the separate flag of the given constraint */
+extern
+SCIP_RETCODE SCIPsetConsSeparated(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             separate            /**< new value */
+   );
+
+/** sets the enforce flag of the given constraint */
+extern
+SCIP_RETCODE SCIPsetConsEnforced(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             enforce             /**< new value */
+   );
+
+/** sets the check flag of the given constraint */
+extern
+SCIP_RETCODE SCIPsetConsChecked(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             check               /**< new value */
+   );
+
+/** sets the propagate flag of the given constraint */
+extern
+SCIP_RETCODE SCIPsetConsPropagated(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             propagate           /**< new value */
+   );
+
+/** sets the local flag of the given constraint */
+extern
+SCIP_RETCODE SCIPsetConsLocal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             local               /**< new value */
+   );
+
+/** sets the dynamic flag of the given constraint */
+extern
+SCIP_RETCODE SCIPsetConsDynamic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             dynamic             /**< new value */
+   );
+
+/** sets the removeable flag of the given constraint */
+extern
+SCIP_RETCODE SCIPsetConsRemoveable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             removeable          /**< new value */
+   );
+
 /** gets and captures transformed constraint of a given constraint; if the constraint is not yet transformed,
  *  a new transformed constraint for this constraint is created
  */
@@ -2827,13 +2891,6 @@ SCIP_RETCODE SCIPcheckCons(
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
-   );
-
-/** marks the constraint to be essential for feasibility */
-extern
-SCIP_RETCODE SCIPsetConsChecked(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** outputs constraint information to file stream */

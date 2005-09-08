@@ -134,6 +134,7 @@ features:
   "make USRFLAGS=-DNO_SIGACTION", "make USRFLAGS=-DNO_RAND_R", or "make USRFLAGS=-DNO_STRTOK_R"
 - linear constraint handler now catches events of variables after the problem was completely transformed in order
   to avoid the whole bunch of LOCKSCHANGED events that are generated at problem transformation stage
+- added redundancy detection for pairs of constraints in setppc constraint handler
 
 fixed bugs:
 - LP primal feasibility for bounds is now defined as absolute measure (was relative to the bound before);

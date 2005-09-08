@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_implics.h,v 1.7 2005/09/01 18:19:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_implics.h,v 1.8 2005/09/08 19:46:14 bzfpfend Exp $"
 
 /**@file   struct_implics.h
  * @brief  datastructures for implications, variable bounds, and cliques
@@ -68,7 +68,8 @@ struct SCIP_Clique
    SCIP_Bool*            values;             /**< values of the variables in the clique */
    int                   nvars;              /**< number of variables in the clique */
    int                   size;               /**< size of vars and values arrays */
-   int                   id;                 /**< unique identifier of clique */
+   unsigned int          id:31;              /**< unique identifier of clique */
+   unsigned int          eventsissued:1;     /**< were the IMPLADDED events on the variables already issued? */
 };
 
 /** list of cliques for a single variable */

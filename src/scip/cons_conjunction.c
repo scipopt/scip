@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.22 2005/08/24 17:26:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.23 2005/09/08 19:46:12 bzfpfend Exp $"
 
 /**@file   cons_conjunction.c
  * @brief  constraint handler for conjunction constraints
@@ -406,7 +406,7 @@ SCIP_DECL_CONSPRESOL(consPresolConjunction)
       for( i = 0; i < consdata->nconss; ++i )
       {
          /* make sure, the constraint is checked for feasibility */
-         SCIP_CALL( SCIPsetConsChecked(scip, consdata->conss[i]) );
+         SCIP_CALL( SCIPsetConsChecked(scip, consdata->conss[i], TRUE) );
 
          /* add constraint, if it is not active yet */
          if( !SCIPconsIsActive(consdata->conss[i]) )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.131 2005/08/28 12:29:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.132 2005/09/08 19:46:12 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1094,7 +1094,7 @@ SCIP_RETCODE conshdlrEnableCons(
    {
       SCIP_CALL( conshdlrAddSepacons(conshdlr, set, cons) );
    }
-      
+
    /* add constraint to the enforcement array */
    if( cons->enforce )
    {
@@ -4192,15 +4192,177 @@ SCIP_RETCODE SCIPconsTransform(
    return SCIP_OKAY;
 }
 
-/** marks the constraint to be globally valid */
-void SCIPconsSetGlobal(
-   SCIP_CONS*            cons                /**< constraint */
+/** sets the initial flag of the given constraint */
+void SCIPconsSetInitial(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             initial             /**< new value */
    )
 {
    assert(cons != NULL);
 
-   cons->local = FALSE;
-   cons->validdepth = 0;
+   cons->initial = initial;
+}
+
+/** sets the separate flag of the given constraint */
+SCIP_RETCODE SCIPconsSetSeparated(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             separate            /**< new value */
+   )
+{
+   assert(cons != NULL);
+
+   if( cons->separate != separate )
+   {
+      cons->separate = separate;
+      if( cons->enabled && cons->sepaenabled )
+      {
+         if( cons->separate )
+         {
+            SCIP_CALL( conshdlrAddSepacons(cons->conshdlr, set, cons) );
+         }
+         else
+         {
+            conshdlrDelSepacons(cons->conshdlr, cons);
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** sets the enforce flag of the given constraint */
+SCIP_RETCODE SCIPconsSetEnforced(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             enforce             /**< new value */
+   )
+{
+   assert(cons != NULL);
+
+   if( cons->enforce != enforce )
+   {
+      cons->enforce = enforce;
+      if( cons->enabled )
+      {
+         if( cons->enforce )
+         {
+            SCIP_CALL( conshdlrAddEnfocons(cons->conshdlr, set, cons) );
+         }
+         else
+         {
+            conshdlrDelEnfocons(cons->conshdlr, cons);
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** sets the check flag of the given constraint */
+SCIP_RETCODE SCIPconsSetChecked(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             check               /**< new value */
+   )
+{
+   assert(cons != NULL);
+
+   if( cons->check != check )
+   {
+      cons->check = check;
+
+      /* if constraint is a problem constraint, update variable roundings locks */
+      if( cons->addconssetchg == NULL && cons->addarraypos >= 0 )
+      {
+         if( cons->check )
+         {
+            SCIP_CALL( SCIPconsAddLocks(cons, set, +1, 0) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPconsAddLocks(cons, set, -1, 0) );
+         }
+      }
+
+      /* if constraint is active, update the chckconss array of the constraint handler */
+      if( cons->active )
+      {
+         if( cons->check )
+         {
+            SCIP_CALL( conshdlrAddCheckcons(cons->conshdlr, set, cons) );
+         }
+         else
+         {
+            conshdlrDelCheckcons(cons->conshdlr, cons);
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** sets the propagate flag of the given constraint */
+SCIP_RETCODE SCIPconsSetPropagated(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             propagate           /**< new value */
+   )
+{
+   assert(cons != NULL);
+
+   if( cons->propagate != propagate )
+   {
+      cons->propagate = propagate;
+      if( cons->enabled && cons->propenabled )
+      {
+         if( cons->propagate )
+         {
+            SCIP_CALL( conshdlrAddPropcons(cons->conshdlr, set, cons) );
+         }
+         else
+         {
+            conshdlrDelPropcons(cons->conshdlr, cons);
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** sets the local flag of the given constraint */
+void SCIPconsSetLocal(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             local               /**< new value */
+   )
+{
+   assert(cons != NULL);
+
+   cons->local = local;
+   if( !local )
+      cons->validdepth = 0;
+}
+
+/** sets the dynamic flag of the given constraint */
+void SCIPconsSetDynamic(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             dynamic             /**< new value */
+   )
+{
+   assert(cons != NULL);
+
+   cons->dynamic = dynamic;
+}
+
+/** sets the removeable flag of the given constraint */
+void SCIPconsSetRemoveable(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             removeable          /**< new value */
+   )
+{
+   assert(cons != NULL);
+
+   cons->removeable = removeable;
 }
 
 /** gets associated transformed constraint of an original constraint, or NULL if no associated transformed constraint
@@ -4699,34 +4861,6 @@ SCIP_RETCODE SCIPconsCheck(
       SCIPerrorMessage("feasibility check of constraint handler <%s> on constraint <%s> returned invalid result <%d>\n", 
          conshdlr->name, cons->name, *result);
       return SCIP_INVALIDRESULT;
-   }
-
-   return SCIP_OKAY;
-}
-
-/** marks the constraint to be essential for feasibility */
-SCIP_RETCODE SCIPconsSetChecked(
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   assert(cons != NULL);
-
-   if( !cons->check )
-   {
-      cons->check = TRUE;
-
-      /* if constraint is a problem constraint, lock variable roundings */
-      if( cons->addconssetchg == NULL && cons->addarraypos >= 0 )
-      {
-         SCIP_CALL( SCIPconsAddLocks(cons, set, +1, 0) );
-      }
-
-      /* if constraint is active, add it to the chckconss array of the constraint handler */
-      if( cons->active )
-      {
-         SCIP_CALL( conshdlrAddCheckcons(cons->conshdlr, set, cons) );
-      }
    }
 
    return SCIP_OKAY;

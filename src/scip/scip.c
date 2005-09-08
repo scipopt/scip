@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.313 2005/09/01 18:19:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.314 2005/09/08 19:46:13 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3221,7 +3221,7 @@ SCIP_RETCODE SCIPaddCons(
    case SCIP_STAGE_SOLVING:
       assert(SCIPtreeGetCurrentDepth(scip->tree) >= 0);
       if( SCIPtreeGetCurrentDepth(scip->tree) == 0 )
-         SCIPconsSetGlobal(cons);
+         SCIPconsSetLocal(cons, FALSE);
       if( SCIPconsIsGlobal(cons) )
       {
          SCIP_CALL( SCIPprobAddCons(scip->transprob, scip->set, scip->stat, cons) );
@@ -3354,7 +3354,7 @@ SCIP_RETCODE SCIPaddConsNode(
          return SCIP_INVALIDDATA;
       }
       if( validdepth == 0 )
-         SCIPconsSetGlobal(cons);
+         SCIPconsSetLocal(cons, FALSE);
       else
          cons->validdepth = validdepth;
    }
@@ -3362,7 +3362,7 @@ SCIP_RETCODE SCIPaddConsNode(
    if( SCIPnodeGetDepth(node) == 0 )
    {
       assert(node == scip->tree->root);
-      SCIPconsSetGlobal(cons);
+      SCIPconsSetLocal(cons, FALSE);
       SCIP_CALL( SCIPprobAddCons(scip->transprob, scip->set, scip->stat, cons) );
    }
    else
@@ -7773,6 +7773,118 @@ SCIP_RETCODE SCIPreleaseCons(
    }  /*lint !e788*/
 }
 
+/** sets the initial flag of the given constraint */
+SCIP_RETCODE SCIPsetConsInitial(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             initial             /**< new value */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConsInitial", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPconsSetInitial(cons, initial);
+
+   return SCIP_OKAY;
+}
+
+/** sets the separate flag of the given constraint */
+SCIP_RETCODE SCIPsetConsSeparated(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             separate            /**< new value */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConsSeparated", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconsSetSeparated(cons, scip->set, separate) );
+
+   return SCIP_OKAY;
+}
+
+/** sets the enforce flag of the given constraint */
+SCIP_RETCODE SCIPsetConsEnforced(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             enforce             /**< new value */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConsEnforced", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconsSetEnforced(cons, scip->set, enforce) );
+
+   return SCIP_OKAY;
+}
+
+/** sets the check flag of the given constraint */
+SCIP_RETCODE SCIPsetConsChecked(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             check               /**< new value */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConsChecked", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconsSetChecked(cons, scip->set, check) );
+
+   return SCIP_OKAY;
+}
+
+/** sets the propagate flag of the given constraint */
+SCIP_RETCODE SCIPsetConsPropagated(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             propagate           /**< new value */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConsPropagated", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconsSetPropagated(cons, scip->set, propagate) );
+
+   return SCIP_OKAY;
+}
+
+/** sets the local flag of the given constraint */
+SCIP_RETCODE SCIPsetConsLocal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             local               /**< new value */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConsLocal", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPconsSetLocal(cons, local);
+
+   return SCIP_OKAY;
+}
+
+/** sets the dynamic flag of the given constraint */
+SCIP_RETCODE SCIPsetConsDynamic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             dynamic             /**< new value */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConsDynamic", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPconsSetDynamic(cons, dynamic);
+
+   return SCIP_OKAY;
+}
+
+/** sets the removeable flag of the given constraint */
+SCIP_RETCODE SCIPsetConsRemoveable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             removeable          /**< new value */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConsRemoveable", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPconsSetRemoveable(cons, removeable);
+
+   return SCIP_OKAY;
+}
+
 /** gets and captures transformed constraint of a given constraint; if the constraint is not yet transformed,
  *  a new transformed constraint for this constraint is created
  */
@@ -8062,19 +8174,6 @@ SCIP_RETCODE SCIPcheckCons(
    SCIP_CALL( checkStage(scip, "SCIPcheckCons", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconsCheck(cons, scip->set, sol, checkintegrality, checklprows, result) );
-
-   return SCIP_OKAY;
-}
-
-/** marks the constraint to be essential for feasibility */
-SCIP_RETCODE SCIPsetConsChecked(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPsetConsChecked", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-   
-   SCIP_CALL( SCIPconsSetChecked(cons, scip->set) );
 
    return SCIP_OKAY;
 }
