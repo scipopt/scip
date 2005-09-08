@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.186 2005/09/08 20:52:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.187 2005/09/08 21:48:53 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -103,6 +103,8 @@ struct SCIP_ConsData
                                               *   activity, ignoring the coefficients contributing with infinite value */
    SCIP_Real             glbmaxactivity;     /**< maximal value w.r.t. the variable's global bounds for the constraint's
                                               *   activity, ignoring the coefficients contributing with infinite value */
+   SCIP_Longint          possignature;       /**< bit signature of coefficients that may take a positive value */
+   SCIP_Longint          negsignature;       /**< bit signature of coefficients that may take a negative value */
    SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
    SCIP_VAR**            vars;               /**< variables of constraint entries */
    SCIP_Real*            vals;               /**< coefficients of constraint entries */
@@ -123,6 +125,7 @@ struct SCIP_ConsData
    unsigned int          boundstightened:1;  /**< is constraint already propagated with bound tightening? */
    unsigned int          presolved:1;        /**< is constraint already presolved? */
    unsigned int          removedfixings:1;   /**< are all fixed variables removed from the constraint? */
+   unsigned int          validsignature:1;   /**< is the bit signature valid? */
    unsigned int          changed:1;          /**< was constraint changed since last aggregation round in preprocessing? */
    unsigned int          normalized:1;       /**< is the constraint in normalized form? */
    unsigned int          upgradetried:1;     /**< was the constraint already tried to be upgraded? */
@@ -654,6 +657,8 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->glbminactivityposinf = -1;
    (*consdata)->glbmaxactivityneginf = -1;
    (*consdata)->glbmaxactivityposinf = -1;
+   (*consdata)->possignature = 0;
+   (*consdata)->negsignature = 0;
    (*consdata)->varssize = nvars;
    (*consdata)->nvars = nvars;
    (*consdata)->validmaxabsval = FALSE;
@@ -662,6 +667,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->boundstightened = FALSE;
    (*consdata)->presolved = FALSE;
    (*consdata)->removedfixings = FALSE;
+   (*consdata)->validsignature = FALSE;
    (*consdata)->changed = TRUE;
    (*consdata)->normalized = FALSE;
    (*consdata)->upgradetried = FALSE;
@@ -1722,6 +1728,63 @@ SCIP_Real consdataGetFeasibility(
    return MIN(consdata->rhs - activity, activity - consdata->lhs);
 }
 
+/** returns the signature bitmask for the given variable */
+static
+SCIP_Longint getVarSignature(
+   SCIP_VAR*             var                 /**< variable */
+   )
+{
+   int sigidx;
+
+   sigidx = SCIPvarGetIndex(var) % (8*sizeof(SCIP_Longint));
+   return ((SCIP_Longint)1) << sigidx;
+}
+
+/** updates bit signatures after adding a single coefficient */
+static
+void consdataUpdateSignatures(
+   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+   int                   pos                 /**< position of coefficient to update signatures for */
+   )
+{
+   SCIP_Longint varsignature;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Real val;
+   
+   assert(consdata != NULL);
+   assert(consdata->validsignature);
+
+   varsignature = getVarSignature(consdata->vars[pos]);
+   lb = SCIPvarGetLbGlobal(consdata->vars[pos]);
+   ub = SCIPvarGetUbGlobal(consdata->vars[pos]);
+   val = consdata->vals[pos];
+   if( (val > 0.0 && ub > 0.0) || (val < 0.0 && lb < 0.0) )
+      consdata->possignature |= varsignature;
+   if( (val > 0.0 && lb < 0.0) || (val < 0.0 && ub > 0.0) )
+      consdata->negsignature |= varsignature;
+}
+
+/** calculates the bit signatures of the given constraint data */
+static
+void consdataCalcSignatures(
+   SCIP_CONSDATA*        consdata            /**< linear constraint data */
+   )
+{
+   assert(consdata != NULL);
+
+   if( !consdata->validsignature )
+   {
+      int i;
+
+      consdata->validsignature = TRUE;
+      consdata->possignature = 0;
+      consdata->negsignature = 0;
+      for( i = 0; i < consdata->nvars; ++i )
+         consdataUpdateSignatures(consdata, i);
+   }
+}
+
 /** index comparison method of linear constraints: compares two indices of the variable set in the linear constraint */
 static
 SCIP_DECL_SORTINDCOMP(consdataCompVar)
@@ -2094,6 +2157,8 @@ SCIP_RETCODE addCoef(
    consdata->boundstightened = FALSE;
    consdata->presolved = FALSE;
    consdata->removedfixings = consdata->removedfixings || !SCIPvarIsActive(var);
+   if( consdata->validsignature )
+      consdataUpdateSignatures(consdata, consdata->nvars-1);
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
@@ -2191,6 +2256,7 @@ SCIP_RETCODE delCoefPos(
    consdata->propagated = FALSE;
    consdata->boundstightened = FALSE;
    consdata->presolved = FALSE;
+   consdata->validsignature = FALSE;
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
@@ -2254,6 +2320,7 @@ SCIP_RETCODE chgCoefPos(
    consdata->propagated = FALSE;
    consdata->boundstightened = FALSE;
    consdata->presolved = FALSE;
+   consdata->validsignature = consdata->validsignature && (newval * val > 0.0);
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
@@ -4653,6 +4720,8 @@ SCIP_RETCODE preprocessConstraintPairs(
    int* commonidx1;
    int* diffidx0minus1;
    int* diffidx1minus0;
+   SCIP_Longint possignature0;
+   SCIP_Longint negsignature0;
    SCIP_Bool cons0changed;
    SCIP_Bool cons0isequality;
    int diffidx1minus0size;
@@ -4677,6 +4746,11 @@ SCIP_RETCODE preprocessConstraintPairs(
    /* sort the constraint */
    SCIP_CALL( consdataSort(scip, consdata0) );
 
+   /* calculate bit signatures of cons0 for potentially positive and negative coefficients */
+   consdataCalcSignatures(consdata0);
+   possignature0 = consdata0->possignature;
+   negsignature0 = consdata0->negsignature;
+
    /* get temporary memory for indices of common variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &commonidx0, consdata0->nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &commonidx1, consdata0->nvars) );
@@ -4691,6 +4765,8 @@ SCIP_RETCODE preprocessConstraintPairs(
    {
       SCIP_CONS* cons1;
       SCIP_CONSDATA* consdata1;
+      SCIP_Longint possignature1;
+      SCIP_Longint negsignature1;
       SCIP_Bool cons0dominateslhs;
       SCIP_Bool cons1dominateslhs;
       SCIP_Bool cons0dominatesrhs;
@@ -4735,7 +4811,30 @@ SCIP_RETCODE preprocessConstraintPairs(
       /* sort the constraint */
       SCIP_CALL( consdataSort(scip, consdata1) );
 
+      /* calculate bit signatures of cons1 for potentially positive and negative coefficients */
+      consdataCalcSignatures(consdata1);
+      possignature1 = consdata1->possignature;
+      negsignature1 = consdata1->negsignature;
+
+      /* the signatures give a quick test to check for domination and equality of coefficients */
+      coefsequal = (possignature0 == possignature1) && (negsignature0 == negsignature1);
+      coefsnegated = (possignature0 == negsignature1) && (negsignature0 == possignature1);
+      cons0dominateslhs = SCIPisGE(scip, consdata0->lhs, consdata1->lhs)
+         && ((possignature0 | possignature1) == possignature1)  /* possignature0 <= possignature1 (as bit vector) */
+         && ((negsignature0 | negsignature1) == negsignature0); /* negsignature0 >= negsignature1 (as bit vector) */
+      cons1dominateslhs = SCIPisGE(scip, consdata1->lhs, consdata0->lhs)
+         && ((possignature0 | possignature1) == possignature0)  /* possignature0 >= possignature1 (as bit vector) */
+         && ((negsignature0 | negsignature1) == negsignature1); /* negsignature0 <= negsignature1 (as bit vector) */
+      cons0dominatesrhs = SCIPisLE(scip, consdata0->rhs, consdata1->rhs)
+         && ((possignature0 | possignature1) == possignature0)  /* possignature0 >= possignature1 (as bit vector) */
+         && ((negsignature0 | negsignature1) == negsignature1); /* negsignature0 <= negsignature1 (as bit vector) */
+      cons1dominatesrhs = SCIPisLE(scip, consdata1->rhs, consdata0->rhs)
+         && ((possignature0 | possignature1) == possignature1)  /* possignature0 <= possignature1 (as bit vector) */
+         && ((negsignature0 | negsignature1) == negsignature0); /* negsignature0 >= negsignature1 (as bit vector) */
       cons1isequality = SCIPisEQ(scip, consdata1->lhs, consdata1->rhs);
+      if( !cons0dominateslhs && !cons1dominateslhs && !cons0dominatesrhs && !cons1dominatesrhs
+         && !coefsequal && !coefsnegated && !cons0isequality && !cons1isequality )
+         continue;
       
       /* make sure, we have enough memory for the index set of V_1 \ V_0 */
       if( consdata1->nvars > diffidx1minus0size )
@@ -4766,12 +4865,6 @@ SCIP_RETCODE preprocessConstraintPairs(
        */
 
       /* check consdata0 against consdata1 for redundancy, or ranged row accumulation */
-      coefsequal = TRUE;
-      coefsnegated = TRUE;
-      cons0dominateslhs = SCIPisGE(scip, consdata0->lhs, consdata1->lhs);
-      cons1dominateslhs = SCIPisGE(scip, consdata1->lhs, consdata0->lhs);
-      cons0dominatesrhs = SCIPisLE(scip, consdata0->rhs, consdata1->rhs);
-      cons1dominatesrhs = SCIPisLE(scip, consdata1->rhs, consdata0->rhs);
       nvarscommon = 0;
       commonidxweight = 0;
       nvars0minus1 = 0;
