@@ -104,6 +104,8 @@ parameters:
   - separating/gomory/freq = 0
   - separating/impliedbounds/freq = 0
   - separating/strongcg/freq = 0
+- replaced parameter constraints/linear/maxpresolaggrrounds with constraints/linear/maxpresolpairrounds
+- changed default value of constraints/linear/maxaggrnormscale to 0.0, which means to not apply aggregation
 
 features:
 - reactivated multiaggregation in cons_linear.c on binary variables again (possible due to bug fix below)

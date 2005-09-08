@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.187 2005/09/08 21:48:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.188 2005/09/08 22:24:00 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -65,9 +65,6 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define DEFAULT_TIGHTENBOUNDSFREQ     1 /**< multiplier on propagation frequency, how often the bounds are tightened */
-#define DEFAULT_MAXAGGRNORMSCALE    5.0 /**< maximal allowed relative gain in maximum norm for constraint aggregation */
-
 #define EVENTHDLR_NAME         "linear"
 #define EVENTHDLR_DESC         "bound change event handler for linear constraints"
 
@@ -75,11 +72,15 @@
 #define CONFLICTHDLR_DESC      "conflict handler creating linear constraints"
 #define CONFLICTHDLR_PRIORITY  -1000000
 
+#define DEFAULT_TIGHTENBOUNDSFREQ     1 /**< multiplier on propagation frequency, how often the bounds are tightened */
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS          50 /**< maximal number of cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     200 /**< maximal number of cuts separated per separation round in root node */
-#define DEFAULT_MAXPRESOLAGGRROUNDS  -1 /**< maximal number of presolving aggregation rounds (-1: no limit) */
+#define DEFAULT_MAXPRESOLPAIRROUNDS  -1 /**< maximal number of presolving rounds with pairwise constraint comparison
+                                         *   (-1: no limit) */
+#define DEFAULT_MAXAGGRNORMSCALE    0.0 /**< maximal allowed relative gain in maximum norm for constraint aggregation
+                                         *   (0.0: disable constraint aggregation) */
 
 #define KNAPSACKRELAX_MAXDELTA      0.1 /**< maximal allowed rounding distance for scaling in knapsack relaxation */
 #define KNAPSACKRELAX_MAXDNOM    1000LL /**< maximal allowed denominator in knapsack rational relaxation */
@@ -148,7 +149,8 @@ struct SCIP_ConshdlrData
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
    SCIP_LINCONSUPGRADE** linconsupgrades;    /**< linear constraint upgrade methods for specializing linear constraints */
-   SCIP_Real             maxaggrnormscale;   /**< maximal allowed relative gain in maximum norm for constraint aggregation */
+   SCIP_Real             maxaggrnormscale;   /**< maximal allowed relative gain in maximum norm for constraint aggregation
+                                              *   (0.0: disable constraint aggregation) */
    int                   linconsupgradessize;/**< size of linconsupgrade array */
    int                   nlinconsupgrades;   /**< number of linear constraint upgrade methods */
    int                   tightenboundsfreq;  /**< multiplier on propagation frequency, how often the bounds are tightened */
@@ -156,7 +158,8 @@ struct SCIP_ConshdlrData
    int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of cuts separated per separation round in root node */
-   int                   maxpresolaggrrounds;/**< maximal number of presolving aggregation rounds (-1: no limit) */
+   int                   maxpresolpairrounds;/**< maximal number of presolving rounds with pairwise constraint comparison
+                                              *   (-1: no limit) */
 };
 
 /** linear constraint update method */
@@ -4774,6 +4777,7 @@ SCIP_RETCODE preprocessConstraintPairs(
       SCIP_Bool cons1isequality;
       SCIP_Bool coefsequal;
       SCIP_Bool coefsnegated;
+      SCIP_Bool tryaggregation;
       int nvarscommon;
       int nvars0minus1;
       int nvars1minus0;
@@ -4832,12 +4836,13 @@ SCIP_RETCODE preprocessConstraintPairs(
          && ((possignature0 | possignature1) == possignature1)  /* possignature0 <= possignature1 (as bit vector) */
          && ((negsignature0 | negsignature1) == negsignature0); /* negsignature0 >= negsignature1 (as bit vector) */
       cons1isequality = SCIPisEQ(scip, consdata1->lhs, consdata1->rhs);
+      tryaggregation = (cons0isequality || cons1isequality) && (maxaggrnormscale > 0.0);
       if( !cons0dominateslhs && !cons1dominateslhs && !cons0dominatesrhs && !cons1dominatesrhs
-         && !coefsequal && !coefsnegated && !cons0isequality && !cons1isequality )
+         && !coefsequal && !coefsnegated && !tryaggregation )
          continue;
       
       /* make sure, we have enough memory for the index set of V_1 \ V_0 */
-      if( consdata1->nvars > diffidx1minus0size )
+      if( tryaggregation && consdata1->nvars > diffidx1minus0size )
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, &diffidx1minus0, consdata1->nvars) );
          diffidx1minus0size = consdata1->nvars;
@@ -4875,7 +4880,7 @@ SCIP_RETCODE preprocessConstraintPairs(
       v1 = 0;
       while( (v0 < consdata0->nvars || v1 < consdata1->nvars)
          && (cons0dominateslhs || cons1dominateslhs || cons0dominatesrhs || cons1dominatesrhs
-            || coefsequal || coefsnegated || cons0isequality || cons1isequality) )
+            || coefsequal || coefsnegated || tryaggregation) )
       {
          SCIP_VAR* var;
          SCIP_Real val0;
@@ -4897,9 +4902,12 @@ SCIP_RETCODE preprocessConstraintPairs(
             var = consdata0->vars[v0];
             val0 = consdata0->vals[v0];
             val1 = 0.0;
-            diffidx0minus1[nvars0minus1] = v0;
-            nvars0minus1++;
-            diffidx0minus1weight += getVarWeight(var);
+            if( tryaggregation )
+            {
+               diffidx0minus1[nvars0minus1] = v0;
+               nvars0minus1++;
+               diffidx0minus1weight += getVarWeight(var);
+            }
             v0++;
             coefsequal = FALSE;
             coefsnegated = FALSE;
@@ -4910,9 +4918,12 @@ SCIP_RETCODE preprocessConstraintPairs(
             var = consdata1->vars[v1];
             val0 = 0.0;
             val1 = consdata1->vals[v1];
-            diffidx1minus0[nvars1minus0] = v1;
-            nvars1minus0++;
-            diffidx1minus0weight += getVarWeight(var);
+            if( tryaggregation )
+            {
+               diffidx1minus0[nvars1minus0] = v1;
+               nvars1minus0++;
+               diffidx1minus0weight += getVarWeight(var);
+            }
             v1++;
             coefsequal = FALSE;
             coefsnegated = FALSE;
@@ -4924,10 +4935,13 @@ SCIP_RETCODE preprocessConstraintPairs(
             var = consdata0->vars[v0];
             val0 = consdata0->vals[v0];
             val1 = consdata1->vals[v1];
-            commonidx0[nvarscommon] = v0;
-            commonidx1[nvarscommon] = v1;
-            nvarscommon++;
-            commonidxweight += getVarWeight(var);
+            if( tryaggregation )
+            {
+               commonidx0[nvarscommon] = v0;
+               commonidx1[nvarscommon] = v1;
+               nvarscommon++;
+               commonidxweight += getVarWeight(var);
+            }
             v0++;
             v1++;
             coefsequal = coefsequal && (SCIPisEQ(scip, val0, val1));
@@ -5172,7 +5186,7 @@ SCIP_RETCODE preprocessConstraintPairs(
       /* check, if we want to aggregate an (in)equality with an equality:
        *   consdata0 := a * consdata0 + b * consdata1  or  consdata1 := a * consdata1 + b * consdata0
        */
-      if( cons0isequality || cons1isequality )
+      if( tryaggregation )
       {
          SCIP_Bool aggregated;
 
@@ -5858,7 +5872,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       && *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars && *nchgbds == oldnchgbds && *ndelconss == oldndelconss
       && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides )
    {
-      if( conshdlrdata->maxpresolaggrrounds == -1 || nrounds < conshdlrdata->maxpresolaggrrounds )
+      if( conshdlrdata->maxpresolpairrounds == -1 || nrounds < conshdlrdata->maxpresolpairrounds )
       {
          for( c = firstchange; c < nconss && !cutoff && !SCIPpressedCtrlC(scip); ++c )
          {
@@ -5925,7 +5939,8 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
                 * delete upgraded equalities, if we don't need it anymore for aggregation and redundancy checking
                 */
                if( SCIPisLT(scip, consdata->lhs, consdata->rhs)
-                  || (conshdlrdata->maxpresolaggrrounds != -1 && nrounds > conshdlrdata->maxpresolaggrrounds) )
+                  || (conshdlrdata->maxpresolpairrounds != -1 && nrounds > conshdlrdata->maxpresolpairrounds)
+                  || (conshdlrdata->maxaggrnormscale == 0.0) )
                {
                   SCIP_CALL( SCIPdelCons(scip, cons) );
                }
@@ -6236,10 +6251,6 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          "constraints/linear/tightenboundsfreq",
          "multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)",
          &conshdlrdata->tightenboundsfreq, DEFAULT_TIGHTENBOUNDSFREQ, -1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "constraints/linear/maxaggrnormscale",
-         "maximal allowed relative gain in maximum norm for constraint aggregation",
-         &conshdlrdata->maxaggrnormscale, DEFAULT_MAXAGGRNORMSCALE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/linear/maxrounds",
          "maximal number of separation rounds per node (-1: unlimited)",
@@ -6257,9 +6268,13 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          "maximal number of cuts separated per separation round in the root node",
          &conshdlrdata->maxsepacutsroot, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/linear/maxpresolaggrrounds",
-         "maximal number of presolving aggregation rounds (-1: no limit)",
-         &conshdlrdata->maxpresolaggrrounds, DEFAULT_MAXPRESOLAGGRROUNDS, -1, INT_MAX, NULL, NULL) );
+         "constraints/linear/maxpresolpairrounds",
+         "maximal number of presolving rounds with pairwise constraint comparison (-1: no limit)",
+         &conshdlrdata->maxpresolpairrounds, DEFAULT_MAXPRESOLPAIRROUNDS, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "constraints/linear/maxaggrnormscale",
+         "maximal allowed relative gain in maximum norm for constraint aggregation (0.0: disable constraint aggregation)",
+         &conshdlrdata->maxaggrnormscale, DEFAULT_MAXAGGRNORMSCALE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
