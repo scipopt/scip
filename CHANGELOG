@@ -42,6 +42,8 @@ interface:
 - new parameter "duringlploop" of SCIPincludeHeur() - heuristics can now run during the price-and-cut loop at a node
 - new methods SCIPgetRandomInt() and SCIPgetRandomReal()
 - new method SCIPstrtok()
+- new methods SCIPsetConsInitial(), SCIPsetConsSeparated(), SCIPsetConsEnforced(), SCIPsetConsChecked(),
+  SCIPsetConsPropagated(), SCIPsetConsLocal(), SCIPsetConsDynamic(), SCIPsetConsRemoveable()
 
 plugins:
 - added command "write solution" to default dialog
