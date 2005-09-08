@@ -418,10 +418,6 @@ constraints/linear/delaypresol = FALSE
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/linear/tightenboundsfreq = 1
 
-# maximal allowed relative gain in maximum norm for constraint aggregation
-# [type: real, range: [0,1.79769313486232e+308], default: 5]
-constraints/linear/maxaggrnormscale = 5
-
 # maximal number of separation rounds per node (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: 5]
 constraints/linear/maxrounds = 5
@@ -438,9 +434,13 @@ constraints/linear/maxsepacuts = 50
 # [type: int, range: [0,2147483647], default: 200]
 constraints/linear/maxsepacutsroot = 200
 
-# maximal number of presolving aggregation rounds (-1: no limit)
+# maximal number of presolving rounds with pairwise constraint comparison (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
-constraints/linear/maxpresolaggrrounds = -1
+constraints/linear/maxpresolpairrounds = -1
+
+# maximal allowed relative gain in maximum norm for constraint aggregation (0.0: disable constraint aggregation)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+constraints/linear/maxaggrnormscale = 0
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
@@ -757,6 +757,10 @@ reading/mpsreader/dynamiccols = FALSE
 # should rows be added and removed dynamically to the LP?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 reading/mpsreader/dynamicrows = FALSE
+
+# should columns be added and removed dynamically to the LP?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reading/zplreader/dynamiccols = FALSE
 
 # priority of presolver <dualfix>
 # [type: int, range: [-2147483648,2147483647], default: 100000]
