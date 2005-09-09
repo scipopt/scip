@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.95 2005/09/08 20:53:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.96 2005/09/09 12:34:27 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -967,8 +967,8 @@ SCIP_RETCODE processFixings(
    *addcut = FALSE;
    *mustcheck = TRUE;
 
-   SCIPdebugMessage("processing constraint <%s> with respect to fixed variables (%d fixed to 0.0, %d fixed to 1.0)\n",
-      SCIPconsGetName(cons), consdata->nfixedzeros, consdata->nfixedones);
+   /*SCIPdebugMessage("processing constraint <%s> with respect to fixed variables (%d fixed to 0.0, %d fixed to 1.0)\n",
+     SCIPconsGetName(cons), consdata->nfixedzeros, consdata->nfixedones);*/
 
    if( consdata->nfixedones == 1 )
    {

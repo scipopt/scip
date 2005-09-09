@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.188 2005/09/08 22:24:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.189 2005/09/09 12:34:27 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -5145,7 +5145,7 @@ SCIP_RETCODE preprocessConstraintPairs(
 
          /* update the sides of cons0 */
          SCIP_CALL( chgLhs(scip, cons0, lhs) );
-         SCIP_CALL( chgRhs(scip, cons0, lhs) );
+         SCIP_CALL( chgRhs(scip, cons0, rhs) );
 
          /* update the flags of cons0 */
          if( SCIPconsIsInitial(cons1) )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.11 2005/08/28 12:23:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.12 2005/09/09 12:34:27 bzfpfend Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -87,7 +87,7 @@ SCIP_RETCODE readSolfile(
       nread = sscanf(buf, "%s %lf %s\n", name, &val, objstring);
       if( nread < 2 )
       {
-         printf("invalid input line %d in solution file <%s>: <%s>\n", *nvals, DEBUG_SOLUTION, name);
+         printf("invalid input line %d in solution file <%s>: <%s>\n", *nvals, SCIP_DEBUG_SOLUTION, name);
          fclose(file);
          return SCIP_READERROR;
       }
@@ -134,7 +134,7 @@ SCIP_RETCODE readSolution(
    if( nsolvals > 0 )
       return SCIP_OKAY;
 
-   SCIP_CALL( readSolfile(DEBUG_SOLUTION, &solnames, &solvals, &nsolvals) );
+   SCIP_CALL( readSolfile(SCIP_DEBUG_SOLUTION, &solnames, &solvals, &nsolvals) );
 
    return SCIP_OKAY;
 }
