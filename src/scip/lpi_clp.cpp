@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.26 2005/09/08 19:46:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.27 2005/09/12 07:43:57 bzfpfend Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -328,6 +328,9 @@ SCIP_RETCODE SCIPlpiCreate(
 
    // set objective sense: SCIP values are the same as the ones for Clp
    (*lpi)->clp->setOptimizationDirection(objsen);
+
+   // deactivate scaling
+   (*lpi)->clp->scaling(0);    // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later));
 
    // turn off output by default
    (*lpi)->clp->setLogLevel(0);
@@ -1402,11 +1405,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    }
 
    int status = lpi->clp->primal(0, lpi->validFactorization ? 3 : 1);
-#if 0 /*?????????????*/
    lpi->validFactorization = true;
-#else
-   lpi->validFactorization = !scaling;
-#endif
    lpi->scaledFactorization = (scaling != 0);
    lpi->solved = TRUE;
 
@@ -1451,11 +1450,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    }
 
    int status = lpi->clp->dual(0, lpi->validFactorization ? 3 : 1);
-#if 0 /*?????????????*/
    lpi->validFactorization = true;
-#else
-   lpi->validFactorization = !scaling;
-#endif
    lpi->scaledFactorization = (scaling != 0);
    lpi->solved = TRUE;
 
@@ -2542,8 +2537,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->startscratch = ival;
       break;
    case SCIP_LPPAR_SCALING:
-      lpi->clp->scaling(ival == TRUE ? 3 : 0);    // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later));
-      break;
+      return SCIP_PARAMETERUNKNOWN;
+      // currently, using scaling is not a good idea, because keeping the factorization seems to be not working correctly
+      //lpi->clp->scaling(ival == TRUE ? 3 : 0);    // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later));
+      //break;
    case SCIP_LPPAR_PRICING:
       SCIPABORT();
    case SCIP_LPPAR_LPINFO:

@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.sh,v 1.13 2005/07/21 09:12:11 bzfpfend Exp $
+# $Id: check_cplex.sh,v 1.14 2005/09/12 07:43:57 bzfpfend Exp $
 TSTNAME=$1
 CPLEXBIN=$2
 SETTINGS=$3
@@ -42,7 +42,7 @@ do
     then
 	echo @01 $i ===========
 	echo @01 $i ===========                 >> $ERRFILE
-	if [ $SETTINGS != "" ]
+	if [ $SETTINGS != "default" ]
 	then
 	    cp $SETTINGS $TMPFILE
 	else
