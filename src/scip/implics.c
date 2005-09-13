@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.12 2005/09/08 19:46:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.13 2005/09/13 11:02:58 bzfdixan Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -32,6 +32,7 @@
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/misc.h"
+#include "scip/event.h"
 #include "scip/var.h"
 #include "scip/implics.h"
 
