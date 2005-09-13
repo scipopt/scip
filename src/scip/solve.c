@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.191 2005/09/07 15:52:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.192 2005/09/13 10:58:41 bzfdixan Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1273,7 +1273,12 @@ SCIP_RETCODE priceAndCutLoop(
                      SCIP_Real objreldiff;
                      int nfracs;
 
-                     SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nfracs, NULL) );
+		     if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+		     {
+			SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nfracs, NULL) );
+		     }
+		     else
+			nfracs = INT_MAX;
                      lpobjval = SCIPlpGetObjval(lp, set);
                      objreldiff = SCIPrelDiff(lpobjval, stalllpobjval);
                      if( objreldiff > 1e-03 || nfracs <= (0.9 - 0.1 * nsepastallrounds) * stallnfracs )

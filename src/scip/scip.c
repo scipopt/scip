@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.314 2005/09/08 19:46:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.315 2005/09/13 10:58:40 bzfdixan Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -9824,7 +9824,7 @@ int SCIPgetNLPBranchCands(
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLPBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_OPTIMAL )
+   if( SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_OPTIMAL && SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY )
    {
       SCIPerrorMessage("LP not solved to optimality\n");
       SCIPABORT();
@@ -9845,7 +9845,7 @@ int SCIPgetNPrioLPBranchCands(
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPrioLPBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_OPTIMAL )
+   if( SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_OPTIMAL && SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY )
    {
       SCIPerrorMessage("LP not solved to optimality\n");
       SCIPABORT();
