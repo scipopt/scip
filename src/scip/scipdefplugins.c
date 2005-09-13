@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.43 2005/09/05 12:44:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.44 2005/09/13 11:30:05 bzfberth Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -48,9 +48,11 @@
 #include "scip/heur_fracdiving.h"
 #include "scip/heur_guideddiving.h"
 #include "scip/heur_linesearchdiving.h"
+#include "scip/heur_localbranching.h"
 #include "scip/heur_objpscostdiving.h"
 #include "scip/heur_octane.h"
 #include "scip/heur_pscostdiving.h"
+#include "scip/heur_rins.h"
 #include "scip/heur_rootsoldiving.h"
 #include "scip/heur_rounding.h"
 #include "scip/heur_simplerounding.h"
@@ -125,9 +127,11 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurFracdiving(scip) );
    SCIP_CALL( SCIPincludeHeurGuideddiving(scip) );
    SCIP_CALL( SCIPincludeHeurLinesearchdiving(scip) );
+   SCIP_CALL( SCIPincludeHeurLocalbranching(scip) );
    SCIP_CALL( SCIPincludeHeurObjpscostdiving(scip) );
    SCIP_CALL( SCIPincludeHeurOctane(scip) );
    SCIP_CALL( SCIPincludeHeurPscostdiving(scip) );
+   SCIP_CALL( SCIPincludeHeurRins(scip) );
    SCIP_CALL( SCIPincludeHeurRootsoldiving(scip) );
    SCIP_CALL( SCIPincludeHeurRounding(scip) );
    SCIP_CALL( SCIPincludeHeurSimplerounding(scip) );
