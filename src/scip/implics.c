@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.13 2005/09/13 11:02:58 bzfdixan Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.14 2005/09/13 18:07:58 bzfpfend Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -1751,7 +1751,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    cliquetable->ncleanupcliques = cliquetable->ncliques;
 
    /* process events */
-   SCIP_CALL( SCIPeventqueueProcess(eventqueue, blkmem, set, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPeventqueueProcess(eventqueue, blkmem, set, NULL, lp, branchcand, NULL) );
    
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.189 2005/09/09 12:34:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.190 2005/09/13 18:07:58 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2292,6 +2292,7 @@ SCIP_RETCODE chgCoefPos(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(0 <= pos && pos < consdata->nvars);
+   assert(!SCIPisZero(scip, newval));
 
    var = consdata->vars[pos];
    val = consdata->vals[pos];
@@ -2301,8 +2302,7 @@ SCIP_RETCODE chgCoefPos(
    if( SCIPconsIsTransformed(cons) )
    {
       /* update minimum and maximum activities */
-      consdataUpdateDelCoef(scip, consdata, var, val);
-      consdataUpdateAddCoef(scip, consdata, var, newval);
+      consdataUpdateChgCoef(scip, consdata, var, val, newval);
    }
 
    /* if necessary, update the rounding locks of the variable */
@@ -3960,8 +3960,15 @@ SCIP_RETCODE consdataTightenCoefs(
                   minactivity, maxactivity, consdata->lhs, consdata->rhs);
 
                /* update the coefficient and the activity bounds */
-               consdata->vals[i] = newval;
-               consdataUpdateChgCoef(scip, consdata, var, val, newval);
+               if( SCIPisZero(scip, newval) )
+               {
+                  SCIP_CALL( delCoefPos(scip, cons, i) );
+                  i--;
+               }
+               else
+               {
+                  SCIP_CALL( chgCoefPos(scip, cons, i, newval) );
+               }
                (*nchgcoefs)++;
 
                /* get the new minimal and maximal activity of the constraint */
@@ -4005,8 +4012,15 @@ SCIP_RETCODE consdataTightenCoefs(
                   minactivity, maxactivity, consdata->lhs, consdata->rhs);
 
                /* update the coefficient and the activity bounds */
-               consdata->vals[i] = newval;
-               consdataUpdateChgCoef(scip, consdata, var, val, newval);
+               if( SCIPisZero(scip, newval) )
+               {
+                  SCIP_CALL( delCoefPos(scip, cons, i) );
+                  i--;
+               }
+               else
+               {
+                  SCIP_CALL( chgCoefPos(scip, cons, i, newval) );
+               }
                (*nchgcoefs)++;
 
                /* get the new minimal and maximal activity of the constraint */
@@ -5776,7 +5790,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
 
          /* normalize constraint */
          SCIP_CALL( normalizeCons(scip, cons) );
-         
+
          /* tighten left and right hand side due to integrality */
          SCIP_CALL( tightenSides(scip, cons, nchgsides) );
 

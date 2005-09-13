@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rins.c,v 1.1 2005/09/13 11:30:05 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_rins.c,v 1.2 2005/09/13 18:07:58 bzfpfend Exp $"
 
 /**@file   heur_rins.c
  * @brief  RINS primal heuristic
@@ -345,6 +345,11 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    /* use pseudo cost branching without strong branching */
    SCIP_CALL( SCIPsetIntParam(subscip, "branching/pscost/priority", INT_MAX) );
 
+   /* disable expensive presolving */
+   SCIP_CALL( SCIPsetIntParam(subscip, "presolving/probing/maxrounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "constraints/linear/maxpresolpairrounds", 0) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "constraints/linear/maxaggrnormscale", 0.0) );
+
    /* disable conflict analysis */
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) ); 
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/uselp", FALSE) ); 
@@ -358,7 +363,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    bestsol = SCIPgetBestSol(scip);
    assert( bestsol != NULL );
    SCIP_CALL( SCIPsetObjlimit(subscip, SCIPgetSolTransObj(scip, bestsol) - SCIPepsilon(scip)) );
-   
+
    /* solve the subproblem */
    SCIP_CALL( SCIPsolve(subscip) );
    heurdata->usednodes += SCIPgetNNodes(subscip);

@@ -758,10 +758,6 @@ reading/mpsreader/dynamiccols = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 reading/mpsreader/dynamicrows = FALSE
 
-# should columns be added and removed dynamically to the LP?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-reading/zplreader/dynamiccols = FALSE
-
 # priority of presolver <dualfix>
 # [type: int, range: [-2147483648,2147483647], default: 100000]
 presolving/dualfix/priority = 100000

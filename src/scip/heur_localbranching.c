@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.1 2005/09/13 11:30:05 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.2 2005/09/13 18:07:58 bzfpfend Exp $"
 
 /**@file   heur_localbranching.c
  * @brief  localbranching primal heuristic
@@ -429,8 +429,9 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIP_CALL( SCIPsetIntParam(subscip, "branching/pscost/priority", INT_MAX) );
 
    /* disable expensive presolving */
-   SCIP_CALL( SCIPsetIntParam(subscip, "presolving/probing/maxrounds",0) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "constraints/linear/maxpresolaggrrounds",0) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "presolving/probing/maxrounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "constraints/linear/maxpresolpairrounds", 0) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "constraints/linear/maxaggrnormscale", 0.0) );
 
    /* disable conflict analysis */
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) ); 
