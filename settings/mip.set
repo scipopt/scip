@@ -1242,6 +1242,42 @@ heuristics/linesearchdiving/maxdiveubquotnosol = 0.1
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/linesearchdiving/maxdiveavgquotnosol = 0
 
+# priority of heuristic <localbranching>
+# [type: int, range: [-2147483648,2147483647], default: -1010000]
+heuristics/localbranching/priority = -1010000
+
+# frequency for calling primal heuristic <localbranching> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/localbranching/freq = -1
+
+# frequency offset for calling primal heuristic <localbranching>
+# [type: int, range: [0,2147483647], default: 9]
+heuristics/localbranching/freqofs = 9
+
+# maximal depth level to call primal heuristic <localbranching> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/localbranching/maxdepth = -1
+
+# number of nodes added to the contingent of the total nodes
+# [type: int, range: [0,2147483647], default: 5000]
+heuristics/localbranching/nodesofs = 5000
+
+# radius (using Manhattan metric) of the incumbent's neighbourhood to be searched
+# [type: int, range: [1,2147483647], default: 18]
+heuristics/localbranching/neighbourhoodsize = 18
+
+# contingent of sub problem nodes in relation to the number of nodes of the original problem
+# [type: real, range: [0,1], default: 0.05]
+heuristics/localbranching/nodesquot = 0.05
+
+# minimum number of nodes required to start the subproblem
+# [type: int, range: [0,2147483647], default: 1000]
+heuristics/localbranching/minnodes = 1000
+
+# maximum number of nodes to regard in the subproblem
+# [type: int, range: [0,2147483647], default: 10000]
+heuristics/localbranching/maxnodes = 10000
+
 # priority of heuristic <objpscostdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1004000]
 heuristics/objpscostdiving/priority = -1004000
@@ -1377,6 +1413,38 @@ heuristics/pscostdiving/maxdiveubquotnosol = 0.1
 # maximal AVGQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/pscostdiving/maxdiveavgquotnosol = 0
+
+# priority of heuristic <rins>
+# [type: int, range: [-2147483648,2147483647], default: -1009000]
+heuristics/rins/priority = -1009000
+
+# frequency for calling primal heuristic <rins> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/rins/freq = -1
+
+# frequency offset for calling primal heuristic <rins>
+# [type: int, range: [0,2147483647], default: 8]
+heuristics/rins/freqofs = 8
+
+# maximal depth level to call primal heuristic <rins> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/rins/maxdepth = -1
+
+# number of nodes added to the contingent of the total nodes
+# [type: int, range: [0,2147483647], default: 1000]
+heuristics/rins/nodesofs = 1000
+
+# maximum number of nodes to regard in the subproblem
+# [type: int, range: [0,2147483647], default: 5000]
+heuristics/rins/maxnodes = 5000
+
+# minimum number of nodes required to start the subproblem
+# [type: int, range: [0,2147483647], default: 500]
+heuristics/rins/minnodes = 500
+
+# contingent of sub problem nodes in relation to the number of nodes of the original problem
+# [type: real, range: [0,1], default: 0.1]
+heuristics/rins/nodesquot = 0.1
 
 # priority of heuristic <rootsoldiving>
 # [type: int, range: [-2147483648,2147483647], default: -1005000]
