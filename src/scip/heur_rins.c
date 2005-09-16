@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rins.c,v 1.2 2005/09/13 18:07:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rins.c,v 1.3 2005/09/16 14:07:43 bzfpfend Exp $"
 
 /**@file   heur_rins.c
  * @brief  RINS primal heuristic
@@ -42,10 +42,13 @@
 #define HEUR_DURINGLPLOOP     FALSE     /* call heuristic during the LP price-and-cut loop? */
 #define HEUR_AFTERNODE        TRUE      /* call heuristic after or before the current node was solved?   */
 
-#define DEFAULT_NODESOFS      1000      /* number of nodes added to the contingent of the total nodes    */
+#define DEFAULT_NODESOFS      500       /* number of nodes added to the contingent of the total nodes    */
 #define DEFAULT_MAXNODES      5000      /* maximum number of nodes to regard in the subproblem           */
 #define DEFAULT_MINNODES      500       /* minimum number of nodes to regard in the subproblem           */
 #define DEFAULT_NODESQUOT     0.1       /* subproblem nodes in relation to nodes of the original problem */
+
+
+
 
 /*
  * Data structures
@@ -303,7 +306,8 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    maxnnodes = heurdata->nodesquot * SCIPgetNNodes(scip);
 
    /* reward RINS if it succeeded often */
-   maxnnodes *= 1.0 + 2.0 * ( SCIPheurGetNSolsFound(heur) + 1.0 )  / ( SCIPheurGetNCalls(heur) + 1.0 )  ;
+   maxnnodes *= 1.0 + 2.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0);
+   maxnnodes -= 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-MIP as 100 nodes */
    maxnnodes += heurdata->nodesofs;
 
    /* determine the node limit for the current process */
@@ -330,7 +334,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) ); 
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 3) );
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit - SCIPgetTotalTime(scip) + 10 ) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit - SCIPgetTotalTime(scip) + 10.0) );
 
    /* forbid recursive call of rins as well as usage of local branching */
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) ); 
@@ -362,16 +366,17 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    /* add an objective cutoff */
    bestsol = SCIPgetBestSol(scip);
    assert( bestsol != NULL );
-   SCIP_CALL( SCIPsetObjlimit(subscip, SCIPgetSolTransObj(scip, bestsol) - SCIPepsilon(scip)) );
+   SCIP_CALL( SCIPsetObjlimit(subscip, SCIPgetSolTransObj(scip, bestsol) - SCIPsumepsilon(scip)) );
 
    /* solve the subproblem */
    SCIP_CALL( SCIPsolve(subscip) );
    heurdata->usednodes += SCIPgetNNodes(subscip);
-   
+
    /* check, whether a solution was found */
    if( SCIPgetNSols(subscip) > 0 )
    {
       SCIP_Bool success;
+
       success = FALSE;
       SCIP_CALL( createNewSol(scip, subscip, heur, &success) );
       if( success )

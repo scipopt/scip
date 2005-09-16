@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_heur.h,v 1.12 2005/08/24 17:26:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_heur.h,v 1.13 2005/09/16 14:07:43 bzfpfend Exp $"
 
 /**@file   pub_heur.h
  * @brief  public methods for primal heuristics
@@ -101,6 +101,12 @@ SCIP_Longint SCIPheurGetNCalls(
 /** gets the number of primal feasible solutions found by this heuristic */
 extern
 SCIP_Longint SCIPheurGetNSolsFound(
+   SCIP_HEUR*            heur                /**< primal heuristic */
+   );
+
+/** gets the number of new best primal feasible solutions found by this heuristic */
+extern
+SCIP_Longint SCIPheurGetNBestSolsFound(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 

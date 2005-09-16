@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_heur.h,v 1.17 2005/08/30 14:13:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_heur.h,v 1.18 2005/09/16 14:07:43 bzfpfend Exp $"
 
 /**@file   struct_heur.h
  * @brief  datastructures for primal heuristics
@@ -37,6 +37,7 @@ struct SCIP_Heur
 {
    SCIP_Longint          ncalls;             /**< number of times, this heuristic was called */
    SCIP_Longint          nsolsfound;         /**< number of feasible primal solutions found so far by this heuristic */
+   SCIP_Longint          nbestsolsfound;     /**< number of new best primal CIP solutions found so far by this heuristic */
    char*                 name;               /**< name of primal heuristic */
    char*                 desc;               /**< description of primal heuristic */
    SCIP_DECL_HEURFREE    ((*heurfree));      /**< destructor of primal heuristic */

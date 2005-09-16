@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.50 2005/08/30 20:35:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.51 2005/09/16 14:07:42 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -139,6 +139,7 @@ SCIP_RETCODE SCIPheurCreate(
    SCIP_CALL( SCIPclockCreate(&(*heur)->heurclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*heur)->ncalls = 0;
    (*heur)->nsolsfound = 0;
+   (*heur)->nbestsolsfound = 0;
    (*heur)->initialized = FALSE;
 
    /* add parameters */
@@ -207,6 +208,7 @@ SCIP_RETCODE SCIPheurInit(
 
    heur->ncalls = 0;
    heur->nsolsfound = 0;
+   heur->nbestsolsfound = 0;
 
    if( heur->heurinit != NULL )
    {
@@ -354,10 +356,12 @@ SCIP_RETCODE SCIPheurExec(
       else
       {
          SCIP_Longint oldnsolsfound;
+         SCIP_Longint oldnbestsolsfound;
          
          SCIPdebugMessage("executing primal heuristic <%s> in depth %d (delaypos: %d)\n", heur->name, depth, heur->delaypos);
 
          oldnsolsfound = primal->nsolsfound;
+         oldnbestsolsfound = primal->nbestsolsfound;
 
          /* start timing */
          SCIPclockStart(heur->heurclock, set);
@@ -381,6 +385,7 @@ SCIP_RETCODE SCIPheurExec(
          if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
             heur->ncalls++;
          heur->nsolsfound += primal->nsolsfound - oldnsolsfound;
+         heur->nbestsolsfound += primal->nbestsolsfound - oldnbestsolsfound;
 
          /* update delay position of heuristic */
          if( *result != SCIP_DELAYED && heur->delaypos != -1 )
@@ -534,6 +539,16 @@ SCIP_Longint SCIPheurGetNSolsFound(
    assert(heur != NULL);
 
    return heur->nsolsfound;
+}
+
+/** gets the number of new best primal feasible solutions found by this heuristic */
+SCIP_Longint SCIPheurGetNBestSolsFound(
+   SCIP_HEUR*            heur                /**< primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   return heur->nbestsolsfound;
 }
 
 /** is primal heuristic initialized? */
