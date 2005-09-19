@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rins.c,v 1.3 2005/09/16 14:07:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rins.c,v 1.4 2005/09/19 11:05:25 bzfpfend Exp $"
 
 /**@file   heur_rins.c
  * @brief  RINS primal heuristic
@@ -35,7 +35,7 @@
 #define HEUR_DISPCHAR         'N'
 #define HEUR_PRIORITY         -1009000
 #define HEUR_FREQ             -1
-#define HEUR_FREQOFS          8
+#define HEUR_FREQOFS          5
 #define HEUR_MAXDEPTH         -1
 #define HEUR_PSEUDONODES      FALSE     /* call heuristic at nodes where only a pseudo solution exist?   */
 #define HEUR_DURINGPLUNGING   TRUE      /* call heuristic during plunging?                               */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.65 2005/08/28 12:29:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.66 2005/09/19 11:05:26 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -1068,7 +1068,7 @@ SCIP_RETCODE SCIPsolPrint(
          else if( SCIPsetIsInfinity(set, -solval) )
             SCIPmessageFPrintInfo(file, " -infinity");
          else
-            SCIPmessageFPrintInfo(file, " %f", solval);
+            SCIPmessageFPrintInfo(file, " % 20.9g", solval);
          SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(prob->fixedvars[v]));
       }
    }
@@ -1084,7 +1084,7 @@ SCIP_RETCODE SCIPsolPrint(
          else if( SCIPsetIsInfinity(set, -solval) )
             SCIPmessageFPrintInfo(file, " -infinity");
          else
-            SCIPmessageFPrintInfo(file, " %f", solval);
+            SCIPmessageFPrintInfo(file, " % 20.9g", solval);
          SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(prob->vars[v]));
       }
    }
@@ -1108,7 +1108,7 @@ SCIP_RETCODE SCIPsolPrint(
             else if( SCIPsetIsInfinity(set, -solval) )
                SCIPmessageFPrintInfo(file, " -infinity");
             else
-               SCIPmessageFPrintInfo(file, " %f", solval);
+               SCIPmessageFPrintInfo(file, " % 20.9g", solval);
             SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(transprob->fixedvars[v]));
          }
       }
@@ -1127,7 +1127,7 @@ SCIP_RETCODE SCIPsolPrint(
             else if( SCIPsetIsInfinity(set, -solval) )
                SCIPmessageFPrintInfo(file, " -infinity");
             else
-               SCIPmessageFPrintInfo(file, " %f", solval);
+               SCIPmessageFPrintInfo(file, " % 20.9g", solval);
             SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(transprob->vars[v]));
          }
       }

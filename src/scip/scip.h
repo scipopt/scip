@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.244 2005/09/08 19:46:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.245 2005/09/19 11:05:26 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -5440,8 +5440,10 @@ SCIP_Bool SCIPisSumRelGE(
 extern
 void SCIPprintReal(
    SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_Real             val,                /**< value to print */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   int                   width,              /**< width of the field */
+   int                   precision           /**< number of significant digits printed */
    );
 
 /**@} */

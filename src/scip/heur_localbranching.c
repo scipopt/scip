@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.3 2005/09/16 14:07:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.4 2005/09/19 11:05:25 bzfpfend Exp $"
 
 /**@file   heur_localbranching.c
  * @brief  localbranching primal heuristic
@@ -34,7 +34,7 @@
 #define HEUR_DISPCHAR         'L'
 #define HEUR_PRIORITY         -1010000
 #define HEUR_FREQ             -1
-#define HEUR_FREQOFS          9
+#define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_PSEUDONODES      TRUE      /* call heuristic at nodes where only a pseudo solution exist?              */
 #define HEUR_DURINGPLUNGING   TRUE      /* call heuristic during plunging?                                          */

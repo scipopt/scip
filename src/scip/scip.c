@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.315 2005/09/13 10:58:40 bzfdixan Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.316 2005/09/19 11:05:25 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -10492,8 +10492,8 @@ SCIP_RETCODE SCIPprintSol(
    }
 
    SCIPmessageFPrintInfo(file, "objective value:                 ");
-   SCIPprintReal(scip, SCIPprobExternObjval(scip->transprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob)),
-      file);
+   SCIPprintReal(scip, file, 
+      SCIPprobExternObjval(scip->transprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob)), 20, 9);
    SCIPmessageFPrintInfo(file, "\n");
 
    SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->stat, scip->origprob, scip->transprob, file) );
@@ -10533,7 +10533,7 @@ SCIP_RETCODE SCIPprintTransSol(
    }
 
    SCIPmessageFPrintInfo(file, "objective value:                 ");
-   SCIPprintReal(scip, SCIPsolGetObj(sol, scip->set, scip->transprob), file);
+   SCIPprintReal(scip, file, SCIPsolGetObj(sol, scip->set, scip->transprob), 20, 9);
    SCIPmessageFPrintInfo(file, "\n");
 
    SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->stat, scip->transprob, NULL, file) );
@@ -13156,18 +13156,28 @@ SCIP_RETCODE SCIPchgBarrierconvtol(
 /** outputs a real number, or "+infinity", or "-infinity" to a file */
 void SCIPprintReal(
    SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_Real             val,                /**< value to print */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   int                   width,              /**< width of the field */
+   int                   precision           /**< number of significant digits printed */
    )
 {
+   char s[SCIP_MAXSTRLEN];
+   char strformat[SCIP_MAXSTRLEN];
+
    assert(scip != NULL);
 
    if( SCIPsetIsInfinity(scip->set, val) )
-      SCIPmessageFPrintInfo(file, "+infinity");
+      sprintf(s, "+infinity");
    else if( SCIPsetIsInfinity(scip->set, -val) )
-      SCIPmessageFPrintInfo(file, "-infinity");
+      sprintf(s, "-infinity");
    else
-      SCIPmessageFPrintInfo(file, "%f", val);
+   {
+      sprintf(strformat, "%%.%dg", precision);
+      sprintf(s, strformat, val);
+   }
+   sprintf(strformat, "%%%ds", width);
+   SCIPmessageFPrintInfo(file, strformat, s);
 }
 
 
