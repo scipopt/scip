@@ -420,7 +420,9 @@ WARN_LOGFILE           =
 INPUT                  = . \
                          ../src \
                          ../src/scip \
-                         ../src/objscip
+                         ../src/objscip \
+                         ../src/tclique \
+                         ../src/blockmemshell
 
 # If the value of the INPUT tag contains directories, you can use the 
 # FILE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp 
