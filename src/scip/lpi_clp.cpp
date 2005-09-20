@@ -14,13 +14,13 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.27 2005/09/12 07:43:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.28 2005/09/20 09:30:49 bzfpfend Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
  * @author Marc Pfetsch
+ * @author John Forrest
  */
-
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 
@@ -328,9 +328,6 @@ SCIP_RETCODE SCIPlpiCreate(
 
    // set objective sense: SCIP values are the same as the ones for Clp
    (*lpi)->clp->setOptimizationDirection(objsen);
-
-   // deactivate scaling
-   (*lpi)->clp->scaling(0);    // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later));
 
    // turn off output by default
    (*lpi)->clp->setLogLevel(0);
@@ -1446,13 +1443,15 @@ SCIP_RETCODE SCIPlpiSolveDual(
    else
    {
       if( lpi->scaledFactorization != (scaling != 0) )
-	 lpi->validFactorization = false;
+         lpi->validFactorization = false;
    }
 
    int status = lpi->clp->dual(0, lpi->validFactorization ? 3 : 1);
    lpi->validFactorization = true;
    lpi->scaledFactorization = (scaling != 0);
    lpi->solved = TRUE;
+   if( !lpi->clp->usingAuxiliaryModel() )
+      lpi->clp->auxiliaryModel(63-2);
 
    // Unfortunately the status of Clp is hard coded ...
    // 0 - optimal
@@ -2266,6 +2265,15 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    assert( 0 <= r && r <= lpi->clp->numberRows() );
 
    ClpSimplex* clp = lpi->clp;
+   if( clp->usingAuxiliaryModel() )
+   {
+      int status;
+
+      clp->deleteAuxiliaryModel();
+      status = clp->dual(0,3);
+      if( status != 0 )
+         return SCIP_LPERROR;
+   }
    clp->getBInvRow(r, coef);
 
    return SCIP_OKAY;
@@ -2290,6 +2298,15 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    // WARNING:  binvrow is not used at the moment!  ?????????????
 
    ClpSimplex* clp = lpi->clp;
+   if( clp->usingAuxiliaryModel() )
+   {
+      int status;
+
+      clp->deleteAuxiliaryModel();
+      status = clp->dual(0,3);
+      if( status != 0 )
+         return SCIP_LPERROR;
+   }
    clp->getBInvARow(r, val, 0);
   
    return SCIP_OKAY;
@@ -2537,10 +2554,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->startscratch = ival;
       break;
    case SCIP_LPPAR_SCALING:
-      return SCIP_PARAMETERUNKNOWN;
-      // currently, using scaling is not a good idea, because keeping the factorization seems to be not working correctly
-      //lpi->clp->scaling(ival == TRUE ? 3 : 0);    // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later));
-      //break;
+      lpi->clp->scaling(ival == TRUE ? 3 : 0);    // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later));
+      break;
    case SCIP_LPPAR_PRICING:
       SCIPABORT();
    case SCIP_LPPAR_LPINFO:
