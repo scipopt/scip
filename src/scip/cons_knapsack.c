@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.113 2005/09/08 19:46:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.114 2005/09/20 17:56:37 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -2883,8 +2883,8 @@ SCIP_RETCODE tightenWeightsLift(
  *          cliqueweightsum := sum(W(C))
  *      if cliqueweightsum - W(C) < capacity:
  *      - not using any item of C would make the knapsack constraint redundant
- *      - weights wi, i \in C, and capacity can be changed to have the same redundancy effect and the same results for
- *        fixing xi, i \in C, to zero or one, but with a reduced wi and tightened capacity to tighten the LP relaxation
+ *      - weights wi, i in C, and capacity can be changed to have the same redundancy effect and the same results for
+ *        fixing xi, i in C, to zero or one, but with a reduced wi and tightened capacity to tighten the LP relaxation
  *      - change coefficients:
  *          delta     := capacity - (cliqueweightsum - W(C))
  *          wi'       := max(wi - delta, 0)
