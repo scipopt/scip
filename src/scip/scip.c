@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.317 2005/09/20 12:17:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.318 2005/09/20 17:58:32 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -382,7 +382,7 @@ void SCIPprintVersion(
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
-   SCIPmessageFPrintInfo(file, "SCIP version %g%s [precision: %d byte]",
+   SCIPmessageFPrintInfo(file, "SCIP version %.2f%s [precision: %d byte]",
       SCIPversion(), SCIPsubversion(), (int)sizeof(SCIP_Real));
 #ifndef BMS_NOBLOCKMEM
    SCIPmessageFPrintInfo(file, " [memory: block]");
