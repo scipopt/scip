@@ -748,6 +748,18 @@ reading/cnfreader/dynamicrows = FALSE
 
 # should model constraints be subject to aging?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
+reading/lpreader/dynamicconss = TRUE
+
+# should columns be added and removed dynamically to the LP?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reading/lpreader/dynamiccols = FALSE
+
+# should rows be added and removed dynamically to the LP?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reading/lpreader/dynamicrows = FALSE
+
+# should model constraints be subject to aging?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
 reading/mpsreader/dynamicconss = TRUE
 
 # should columns be added and removed dynamically to the LP?
@@ -1247,7 +1259,7 @@ heuristics/localbranching/priority = -1010000
 heuristics/localbranching/freq = -1
 
 # frequency offset for calling primal heuristic <localbranching>
-# [type: int, range: [0,2147483647], default: 9]
+# [type: int, range: [0,2147483647], default: 0]
 heuristics/localbranching/freqofs = 9
 
 # maximal depth level to call primal heuristic <localbranching> (-1: no limit)
@@ -1255,12 +1267,12 @@ heuristics/localbranching/freqofs = 9
 heuristics/localbranching/maxdepth = -1
 
 # number of nodes added to the contingent of the total nodes
-# [type: int, range: [0,2147483647], default: 5000]
-heuristics/localbranching/nodesofs = 5000
+# [type: int, range: [0,2147483647], default: 1000]
+heuristics/localbranching/nodesofs = 1000
 
-# radius (using Manhattan metric) of the incumbent's neighbourhood to be searched
+# radius (using Manhattan metric) of the incumbent's neighborhood to be searched
 # [type: int, range: [1,2147483647], default: 18]
-heuristics/localbranching/neighbourhoodsize = 18
+heuristics/localbranching/neighborhoodsize = 18
 
 # contingent of sub problem nodes in relation to the number of nodes of the original problem
 # [type: real, range: [0,1], default: 0.05]
@@ -1419,7 +1431,7 @@ heuristics/rins/priority = -1009000
 heuristics/rins/freq = -1
 
 # frequency offset for calling primal heuristic <rins>
-# [type: int, range: [0,2147483647], default: 8]
+# [type: int, range: [0,2147483647], default: 5]
 heuristics/rins/freqofs = 8
 
 # maximal depth level to call primal heuristic <rins> (-1: no limit)
@@ -1427,8 +1439,8 @@ heuristics/rins/freqofs = 8
 heuristics/rins/maxdepth = -1
 
 # number of nodes added to the contingent of the total nodes
-# [type: int, range: [0,2147483647], default: 1000]
-heuristics/rins/nodesofs = 1000
+# [type: int, range: [0,2147483647], default: 500]
+heuristics/rins/nodesofs = 500
 
 # maximum number of nodes to regard in the subproblem
 # [type: int, range: [0,2147483647], default: 5000]

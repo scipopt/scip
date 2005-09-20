@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.316 2005/09/19 11:05:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.317 2005/09/20 12:17:53 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2355,7 +2355,14 @@ SCIP_RETCODE SCIPreadProb(
    result = SCIP_DIDNOTRUN;
    for( i = 0; i < scip->set->nreaders && result == SCIP_DIDNOTRUN; ++i )
    {
-      SCIP_CALL( SCIPreaderRead(scip->set->readers[i], scip->set, filename, &result) );
+      SCIP_RETCODE retcode;
+
+      retcode = SCIPreaderRead(scip->set->readers[i], scip->set, filename, &result);
+
+      /* check for reader errors */
+      if( retcode == SCIP_READERROR || retcode == SCIP_NOFILE || retcode == SCIP_PARSEERROR )
+         return retcode;
+      SCIP_CALL( retcode );
    }
 
    switch( result )
@@ -6635,7 +6642,7 @@ SCIP_RETCODE SCIPchgVarType(
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
-   }  /*lint !e788*/   
+   }  /*lint !e788*/
 }
 
 /** in problem creation and solving stage, both bounds of the variable are set to the given value;

@@ -14,26 +14,25 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.h,v 1.14 2005/09/20 12:17:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_lp.h,v 1.1 2005/09/20 12:17:53 bzfpfend Exp $"
 
-/**@file   reader_mps.h
- * @brief  MPS file reader
- * @author Thorsten Koch
+/**@file   reader_lp.h
+ * @brief  LP file reader
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_READER_MPS_H__
-#define __SCIP_READER_MPS_H__
+#ifndef __SCIP_READER_LP_H__
+#define __SCIP_READER_LP_H__
 
 
 #include "scip/scip.h"
 
 
-/** includes the mps file reader into SCIP */
+/** includes the lp file reader into SCIP */
 extern
-SCIP_RETCODE SCIPincludeReaderMps(
+SCIP_RETCODE SCIPincludeReaderLp(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

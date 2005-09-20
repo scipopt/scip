@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.30 2005/08/28 12:24:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.31 2005/09/20 12:17:52 bzfpfend Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -111,6 +111,7 @@ SCIP_RETCODE SCIPreaderRead(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
+   SCIP_RETCODE retcode;
    char* tmpfilename;
    char* path;
    char* name;
@@ -131,12 +132,21 @@ SCIP_RETCODE SCIPreaderRead(
    if( readerIsApplicable(reader, extension) )
    {
       /* call reader to read problem */
-      SCIP_CALL( reader->readerread(set->scip, reader, filename, result) );
+      retcode = reader->readerread(set->scip, reader, filename, result);
    }
    else
+   {
       *result = SCIP_DIDNOTRUN;
+      retcode = SCIP_OKAY;
+   }
 
    BMSfreeMemoryArray(&tmpfilename);
+
+   /* check for reader errors */
+   if( retcode == SCIP_READERROR || retcode == SCIP_NOFILE || retcode == SCIP_PARSEERROR )
+      return retcode;
+
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }

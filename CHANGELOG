@@ -65,6 +65,7 @@ plugins:
 - new Message Handler plugin
 - added commands "write problem" and "write transproblem" to default dialog
 - modified probing presolver to not add implications that are already included in the implication graph and clique table
+- added file reader for LP format
 
 parameters:
 - replaced parameter presolving/restartbdchgs with parameters presolving/maxrestarts and presolving/restartfac

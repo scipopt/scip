@@ -748,6 +748,18 @@ reading/cnfreader/dynamicrows = FALSE
 
 # should model constraints be subject to aging?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
+reading/lpreader/dynamicconss = TRUE
+
+# should columns be added and removed dynamically to the LP?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reading/lpreader/dynamiccols = FALSE
+
+# should rows be added and removed dynamically to the LP?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reading/lpreader/dynamicrows = FALSE
+
+# should model constraints be subject to aging?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
 reading/mpsreader/dynamicconss = TRUE
 
 # should columns be added and removed dynamically to the LP?
