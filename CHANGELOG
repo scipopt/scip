@@ -45,6 +45,7 @@ interface:
 - new methods SCIPsetConsInitial(), SCIPsetConsSeparated(), SCIPsetConsEnforced(), SCIPsetConsChecked(),
   SCIPsetConsPropagated(), SCIPsetConsLocal(), SCIPsetConsDynamic(), SCIPsetConsRemoveable()
 - new method SCIPheurGetNBestSolsFound()
+- new event types SCIP_EVENTTYPE_GLBCHANGED and SCIP_EVENTTYPE_GUBCHANGED
 
 plugins:
 - added command "write solution" to default dialog
@@ -184,6 +185,7 @@ fixed bugs:
 - fixed bug with modifiable constraints in linear constraint handler preprocessing
 - fixed bug in clique separator that reduced performance
 - increased performance of clique separator by allowing only a certain number of zero-weighted fill ins
+- fixed bug in linear constraint handler that global activities are not updated after global bound changes
 
 
 SCIP version 0.79

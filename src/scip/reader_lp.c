@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.1 2005/09/20 12:17:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.2 2005/09/20 13:29:41 bzfpfend Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -107,10 +107,22 @@ void syntaxError(
    const char*           msg                 /**< error message */
    )
 {
+   char formatstr[255];
+
    assert(lpinput != NULL);
 
    SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error in line %d: %s ('%s')\n",
       lpinput->linenumber, msg, lpinput->token);
+   if( lpinput->linebuf[strlen(lpinput->linebuf)-1] == '\n' )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s", lpinput->linebuf);
+   }
+   else
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s\n", lpinput->linebuf);
+   }
+   sprintf(formatstr, "         %%%ds\n", lpinput->linepos);
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, formatstr, "^");
    lpinput->section  = LP_END;
    lpinput->haserror = TRUE;
 }
@@ -761,19 +773,20 @@ SCIP_RETCODE readObjective(
    SCIP_VAR** vars;
    SCIP_Real* coefs;
    int ncoefs;
-   int i;
 
    assert(lpinput != NULL);
 
    /* read the objective coefficients */
    SCIP_CALL( readCoefficients(scip, lpinput, name, &vars, &coefs, &ncoefs) );
-   if( hasError(lpinput) )
-      return SCIP_OKAY;
-
-   /* set the objective values */
-   for( i = 0; i < ncoefs; ++i )
+   if( !hasError(lpinput) )
    {
-      SCIP_CALL( SCIPchgVarObj(scip, vars[i], coefs[i]) );
+      int i;
+
+      /* set the objective values */
+      for( i = 0; i < ncoefs; ++i )
+      {
+         SCIP_CALL( SCIPchgVarObj(scip, vars[i], coefs[i]) );
+      }
    }
 
    /* free memory */
@@ -816,22 +829,22 @@ SCIP_RETCODE readConstraints(
    /* read the objective coefficients */
    SCIP_CALL( readCoefficients(scip, lpinput, name, &vars, &coefs, &ncoefs) );
    if( hasError(lpinput) )
-      return SCIP_OKAY;
+      goto TERMINATE;
    if( ncoefs == 0 && lpinput->section != LP_CONSTRAINTS )
-      return SCIP_OKAY;
+      goto TERMINATE;
 
    /* read the constraint sense */
    if( !getNextToken(lpinput) || !isSense(lpinput, &sense) )
    {
       syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='");
-      return SCIP_OKAY;
+      goto TERMINATE;
    }
 
    /* read the right hand side */
    if( !getNextToken(lpinput) || !isValue(scip, lpinput, &sidevalue) )
    {
       syntaxError(scip, lpinput, "expected value as right hand side");
-      return SCIP_OKAY;
+      goto TERMINATE;
    }
 
    /* assign the left and right hand side, depending on the constraint sense */
@@ -874,6 +887,7 @@ SCIP_RETCODE readConstraints(
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
+ TERMINATE:
    /* free memory */
    SCIPfreeMemoryArrayNull(scip, &vars);
    SCIPfreeMemoryArrayNull(scip, &coefs);

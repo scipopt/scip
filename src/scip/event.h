@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.h,v 1.42 2005/09/08 19:46:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.h,v 1.43 2005/09/20 13:29:41 bzfpfend Exp $"
 
 /**@file   event.h
  * @brief  internal methods for managing events
@@ -154,6 +154,26 @@ SCIP_RETCODE SCIPeventCreateObjChanged(
    SCIP_VAR*             var,                /**< variable whose objective value changed */
    SCIP_Real             oldobj,             /**< old objective value before value changed */
    SCIP_Real             newobj              /**< new objective value after value changed */
+   );
+
+/** creates an event for a change in the global lower bound of a variable */
+extern
+SCIP_RETCODE SCIPeventCreateGlbChanged(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             var,                /**< variable whose bound changed */
+   SCIP_Real             oldbound,           /**< old bound before bound changed */
+   SCIP_Real             newbound            /**< new bound after bound changed */
+   );
+
+/** creates an event for a change in the global upper bound of a variable */
+extern
+SCIP_RETCODE SCIPeventCreateGubChanged(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             var,                /**< variable whose bound changed */
+   SCIP_Real             oldbound,           /**< old bound before bound changed */
+   SCIP_Real             newbound            /**< new bound after bound changed */
    );
 
 /** creates an event for a change in the lower bound of a variable */

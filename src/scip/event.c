@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.55 2005/09/08 20:53:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.56 2005/09/20 13:29:41 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -356,6 +356,52 @@ SCIP_RETCODE SCIPeventCreateObjChanged(
    return SCIP_OKAY;
 }
 
+/** creates an event for a change in the global lower bound of a variable */
+SCIP_RETCODE SCIPeventCreateGlbChanged(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             var,                /**< variable whose bound changed */
+   SCIP_Real             oldbound,           /**< old bound before bound changed */
+   SCIP_Real             newbound            /**< new bound after bound changed */
+   )
+{
+   assert(event != NULL);
+   assert(blkmem != NULL);
+   assert(oldbound != newbound); /*lint !e777*/
+
+   /* create event data */
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, event) );
+   (*event)->eventtype = SCIP_EVENTTYPE_GLBCHANGED;
+   (*event)->data.eventbdchg.var = var;
+   (*event)->data.eventbdchg.oldbound = oldbound;
+   (*event)->data.eventbdchg.newbound = newbound;
+
+   return SCIP_OKAY;
+}
+
+/** creates an event for a change in the global upper bound of a variable */
+SCIP_RETCODE SCIPeventCreateGubChanged(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             var,                /**< variable whose bound changed */
+   SCIP_Real             oldbound,           /**< old bound before bound changed */
+   SCIP_Real             newbound            /**< new bound after bound changed */
+   )
+{
+   assert(event != NULL);
+   assert(blkmem != NULL);
+   assert(oldbound != newbound); /*lint !e777*/
+
+   /* create event data */
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, event) );
+   (*event)->eventtype = SCIP_EVENTTYPE_GUBCHANGED;
+   (*event)->data.eventbdchg.var = var;
+   (*event)->data.eventbdchg.oldbound = oldbound;
+   (*event)->data.eventbdchg.newbound = newbound;
+
+   return SCIP_OKAY;
+}
+
 /** creates an event for a change in the lower bound of a variable */
 SCIP_RETCODE SCIPeventCreateLbChanged(
    SCIP_EVENT**          event,              /**< pointer to store the event */
@@ -504,6 +550,8 @@ SCIP_VAR* SCIPeventGetVar(
       assert(event->data.eventobjchg.var != NULL);
       return event->data.eventobjchg.var;
 
+   case SCIP_EVENTTYPE_GLBCHANGED:
+   case SCIP_EVENTTYPE_GUBCHANGED:
    case SCIP_EVENTTYPE_LBTIGHTENED:
    case SCIP_EVENTTYPE_LBRELAXED:
    case SCIP_EVENTTYPE_UBTIGHTENED:
@@ -567,6 +615,8 @@ SCIP_RETCODE SCIPeventChgVar(
       event->data.eventobjchg.var = var;
       break;
 
+   case SCIP_EVENTTYPE_GLBCHANGED:
+   case SCIP_EVENTTYPE_GUBCHANGED:
    case SCIP_EVENTTYPE_LBTIGHTENED:
    case SCIP_EVENTTYPE_LBRELAXED:
    case SCIP_EVENTTYPE_UBTIGHTENED:
@@ -637,6 +687,8 @@ SCIP_Real SCIPeventGetOldbound(
 
    switch( event->eventtype )
    {  
+   case SCIP_EVENTTYPE_GLBCHANGED:
+   case SCIP_EVENTTYPE_GUBCHANGED:
    case SCIP_EVENTTYPE_LBTIGHTENED:
    case SCIP_EVENTTYPE_LBRELAXED:
    case SCIP_EVENTTYPE_UBTIGHTENED:
@@ -659,6 +711,8 @@ SCIP_Real SCIPeventGetNewbound(
 
    switch( event->eventtype )
    {  
+   case SCIP_EVENTTYPE_GLBCHANGED:
+   case SCIP_EVENTTYPE_GUBCHANGED:
    case SCIP_EVENTTYPE_LBTIGHTENED:
    case SCIP_EVENTTYPE_LBRELAXED:
    case SCIP_EVENTTYPE_UBTIGHTENED:
@@ -811,6 +865,15 @@ SCIP_RETCODE SCIPeventProcess(
 
       /* inform all existing primal solutions about the objective change */
       SCIPprimalUpdateVarObj(primal, var, event->data.eventobjchg.oldobj, event->data.eventobjchg.newobj);
+
+      /* process variable's event filter */
+      SCIP_CALL( SCIPeventfilterProcess(var->eventfilter, set, event) );
+      break;
+
+   case SCIP_EVENTTYPE_GLBCHANGED:
+   case SCIP_EVENTTYPE_GUBCHANGED:
+      var = event->data.eventbdchg.var;
+      assert(var != NULL);
 
       /* process variable's event filter */
       SCIP_CALL( SCIPeventfilterProcess(var->eventfilter, set, event) );
@@ -1370,6 +1433,8 @@ SCIP_RETCODE SCIPeventqueueAdd(
       case SCIP_EVENTTYPE_VARDELETED:
       case SCIP_EVENTTYPE_VARFIXED:
       case SCIP_EVENTTYPE_VARUNLOCKED:
+      case SCIP_EVENTTYPE_GLBCHANGED:
+      case SCIP_EVENTTYPE_GUBCHANGED:
       case SCIP_EVENTTYPE_PRESOLVEROUND:
       case SCIP_EVENTTYPE_NODEFOCUSED:
       case SCIP_EVENTTYPE_NODEFEASIBLE:

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.190 2005/09/13 18:07:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.191 2005/09/20 13:29:41 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -503,7 +503,7 @@ SCIP_RETCODE consdataCatchEvent(
    consdata->eventdatas[pos]->varpos = pos;
 
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[pos], 
-         SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED,
+         SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED | SCIP_EVENTTYPE_GBDCHANGED,
          eventhdlr, consdata->eventdatas[pos], &consdata->eventdatas[pos]->filterpos) );
 
    return SCIP_OKAY;
@@ -528,7 +528,7 @@ SCIP_RETCODE consdataDropEvent(
    assert(consdata->eventdatas[pos]->varpos == pos);
    
    SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos],
-         SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED,
+         SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED | SCIP_EVENTTYPE_GBDCHANGED,
          eventhdlr, consdata->eventdatas[pos], consdata->eventdatas[pos]->filterpos) );
 
    SCIPfreeBlockMemory(scip, &consdata->eventdatas[pos]);
@@ -6079,8 +6079,6 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
 
-   /*debugMessage("Exec method of bound change event handler for linear constraints\n");*/
-
    consdata = eventdata->consdata;
    assert(consdata != NULL);
 
@@ -6100,12 +6098,9 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       newbound = SCIPeventGetNewbound(event);
       assert(var != NULL);
       assert(consdata->vars[varpos] == var);
-      
-      /*debugMessage(" -> eventtype=0x%x, var=<%s>, oldbound=%g, newbound=%g => activity: [%g,%g]", 
-        eventtype, SCIPvarGetName(consdatadata->vars[varpos]), oldbound, newbound, consdatadata->minactivity, 
-        consdatadata->maxactivity);*/
-
       val = consdata->vals[varpos];
+      
+      /* update the activity values */
       if( (eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
          consdataUpdateChgLb(scip, consdata, var, oldbound, newbound, val);
       else
@@ -6113,7 +6108,6 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
          assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0);
          consdataUpdateChgUb(scip, consdata, var, oldbound, newbound, val);
       }
-      /*debugPrintf(" -> [%g,%g]\n", consdatadata->minactivity, consdatadata->maxactivity);*/
 
       consdata->presolved = FALSE;
 
@@ -6155,6 +6149,31 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       assert(SCIPvarGetNLocksDown(var) <= 1);
       assert(SCIPvarGetNLocksUp(var) <= 1);
       consdata->presolved = FALSE;
+   }
+
+   if( (eventtype & SCIP_EVENTTYPE_GLBCHANGED) != 0 )
+   {
+      SCIP_Real oldbound;
+      SCIP_Real newbound;
+      SCIP_Real val;
+      int varpos;
+
+      varpos = eventdata->varpos;
+      assert(0 <= varpos && varpos < consdata->nvars);
+      oldbound = SCIPeventGetOldbound(event);
+      newbound = SCIPeventGetNewbound(event);
+      assert(var != NULL);
+      assert(consdata->vars[varpos] == var);
+      val = consdata->vals[varpos];
+      
+      /* update the activity values */
+      if( (eventtype & SCIP_EVENTTYPE_GLBCHANGED) != 0 )
+         consdataUpdateChgGlbLb(scip, consdata, var, oldbound, newbound, val);
+      else
+      {
+         assert((eventtype & SCIP_EVENTTYPE_GUBCHANGED) != 0);
+         consdataUpdateChgGlbUb(scip, consdata, var, oldbound, newbound, val);
+      }
    }
 
    return SCIP_OKAY;
