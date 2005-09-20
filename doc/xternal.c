@@ -35,6 +35,7 @@
  * - \ref CODE    "Coding style guidlines"
  * - \ref DOC     "How to search the documentation for interface methods"
  * - \ref CONS    "How to add constraint handlers"
+ * - \ref PRICER  "How to add variable pricers"
  * - \ref PRESOL  "How to add presolvers"
  * - \ref SEPA    "How to add separators"
  * - \ref PROP    "How to add propagators"
@@ -687,6 +688,12 @@
  * In later versions of SCIP, the constraint handlers should also be able to parse (i.e., read) constraints
  * which are given in CIP format.
  *
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page PRICER How to add variable pricers
+ *
+ * This page is not yet written. Here we will explain how to add variable pricers to SCIP.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
