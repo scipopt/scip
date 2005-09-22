@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.208 2005/09/05 14:28:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.209 2005/09/22 13:05:31 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -4980,6 +4980,12 @@ void SCIProwPrint(
    int i;
 
    assert(row != NULL);
+
+   /* print row name */
+   if( row->name != NULL && row->name[0] != '\0' )
+   {
+      SCIPmessageFPrintInfo(file, "%s: ", row->name);
+   }
 
    /* print left hand side */
    SCIPmessageFPrintInfo(file, "%g <= ", row->lhs);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.43 2005/09/01 18:19:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.44 2005/09/22 13:05:31 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -70,32 +70,6 @@ SCIP_RETCODE sepastoreEnsureCutsMem(
    return SCIP_OKAY;
 }
 
-/** resizes bdchgvars, bdchgvals, and bdchgtypes arrays to be able to store at least num entries */
-static
-SCIP_RETCODE sepastoreEnsureBdchgsMem(
-   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   int                   num                 /**< minimal number of slots in array */
-   )
-{
-   assert(sepastore != NULL);
-   assert(set != NULL);
-
-   if( num > sepastore->bdchgssize )
-   {
-      int newsize;
-
-      newsize = SCIPsetCalcMemGrowSize(set, num);
-      SCIP_ALLOC( BMSreallocMemoryArray(&sepastore->bdchgvars, newsize) );
-      SCIP_ALLOC( BMSreallocMemoryArray(&sepastore->bdchgvals, newsize) );
-      SCIP_ALLOC( BMSreallocMemoryArray(&sepastore->bdchgtypes, newsize) );
-      sepastore->bdchgssize = newsize;
-   }
-   assert(num <= sepastore->bdchgssize);
-
-   return SCIP_OKAY;
-}
-
 
 
 
@@ -113,14 +87,9 @@ SCIP_RETCODE SCIPsepastoreCreate(
    (*sepastore)->objparallelisms = NULL;
    (*sepastore)->orthogonalities = NULL;
    (*sepastore)->scores = NULL;
-   (*sepastore)->bdchgvars = NULL;
-   (*sepastore)->bdchgvals = NULL;
-   (*sepastore)->bdchgtypes = NULL;
    (*sepastore)->cutssize = 0;
-   (*sepastore)->bdchgssize = 0;
    (*sepastore)->ncuts = 0;
    (*sepastore)->nforcedcuts = 0;
-   (*sepastore)->nbdchgs = 0;
    (*sepastore)->ncutsfound = 0;
    (*sepastore)->ncutsfoundround = 0;
    (*sepastore)->ncutsstored = 0;
@@ -139,16 +108,12 @@ SCIP_RETCODE SCIPsepastoreFree(
    assert(sepastore != NULL);
    assert(*sepastore != NULL);
    assert((*sepastore)->ncuts == 0);
-   assert((*sepastore)->nbdchgs == 0);
 
    BMSfreeMemoryArrayNull(&(*sepastore)->cuts);
    BMSfreeMemoryArrayNull(&(*sepastore)->efficacies);
    BMSfreeMemoryArrayNull(&(*sepastore)->objparallelisms);
    BMSfreeMemoryArrayNull(&(*sepastore)->orthogonalities);
    BMSfreeMemoryArrayNull(&(*sepastore)->scores);
-   BMSfreeMemoryArrayNull(&(*sepastore)->bdchgvars);
-   BMSfreeMemoryArrayNull(&(*sepastore)->bdchgvals);
-   BMSfreeMemoryArrayNull(&(*sepastore)->bdchgtypes);
    BMSfreeMemory(sepastore);
 
    return SCIP_OKAY;
@@ -162,7 +127,6 @@ void SCIPsepastoreStartInitialLP(
    assert(sepastore != NULL);
    assert(!sepastore->initiallp);
    assert(sepastore->ncuts == 0);
-   assert(sepastore->nbdchgs == 0);
 
    sepastore->initiallp = TRUE;
 }
@@ -175,7 +139,6 @@ void SCIPsepastoreEndInitialLP(
    assert(sepastore != NULL);
    assert(sepastore->initiallp);
    assert(sepastore->ncuts == 0);
-   assert(sepastore->nbdchgs == 0);
 
    sepastore->initiallp = FALSE;
 }
@@ -274,14 +237,13 @@ SCIP_RETCODE sepastoreAddCut(
    /* check cut for redundancy
     * in each separation round, make sure that at least one (even redundant) cut enters the LP to avoid cycling
     */
-   if( !forcecut && sepastore->ncuts + sepastore->nbdchgs > 0 && sepastoreIsCutRedundant(sepastore, set, stat, cut) )
+   if( !forcecut && sepastore->ncuts > 0 && sepastoreIsCutRedundant(sepastore, set, stat, cut) )
       return SCIP_OKAY;
 
    /* if only one cut is currently present in the cut store, it could be redundant; in this case, it can now be removed
     * again, because now a non redundant cut enters the store
     */
-   if( sepastore->ncuts == 1 && sepastore->nbdchgs == 0
-      && sepastoreIsCutRedundant(sepastore, set, stat, sepastore->cuts[0]) )
+   if( sepastore->ncuts == 1 && sepastoreIsCutRedundant(sepastore, set, stat, sepastore->cuts[0]) )
    {
       SCIP_CALL( SCIProwRelease(&sepastore->cuts[0], blkmem, set, lp) );
       sepastore->ncuts = 0;
@@ -470,49 +432,6 @@ SCIP_RETCODE sepastoreAddCut(
    return SCIP_OKAY;
 }
 
-/** adds cut stored as bound change to separation storage */
-static
-SCIP_RETCODE sepastoreAddBdchg(
-   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_LP*              lp,                 /**< LP data */
-   SCIP_VAR*             var,                /**< variable to change the bound for */
-   SCIP_Real             newbound,           /**< new bound value */
-   SCIP_BOUNDTYPE        boundtype           /**< type of bound to change */
-   )
-{
-   SCIPdebugMessage("adding bound change to separation storage: variable <%s>, new %s bound: %g\n",
-      SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound);
-
-   /* if only one cut is currently present in the cut store, it could be redundant; in this case, it can now be removed
-    * again, because now a non redundant cut enters the store
-    */
-   if( sepastore->ncuts == 1 && sepastore->nbdchgs == 0
-      && sepastoreIsCutRedundant(sepastore, set, stat, sepastore->cuts[0]) )
-   {
-      SCIP_CALL( SCIProwRelease(&sepastore->cuts[0], blkmem, set, lp) );
-      sepastore->ncuts = 0;
-      sepastore->nforcedcuts = 0;
-   }
-
-   /* get enough memory to store the cut */
-   SCIP_CALL( sepastoreEnsureBdchgsMem(sepastore, set, sepastore->nbdchgs+1) );
-   assert(sepastore->nbdchgs < sepastore->bdchgssize);
-
-   /* insert bound change in last slot of bdchgs arrays */
-   sepastore->bdchgvars[sepastore->nbdchgs] = var;
-   sepastore->bdchgvals[sepastore->nbdchgs] = newbound;
-   sepastore->bdchgtypes[sepastore->nbdchgs] = boundtype;
-   sepastore->nbdchgs++;
-
-   /* count the bound change as stored cut (bound changes are always good enough to keep) */
-   sepastore->ncutsstored++;
-
-   return SCIP_OKAY;
-}
-
 /** adds cut to separation storage and captures it;
  *  if the cut should be forced to enter the LP, an infinite score has to be used
  */
@@ -542,78 +461,164 @@ SCIP_RETCODE SCIPsepastoreAddCut(
       sepastore->ncutsfoundround++;
    }
 
-   /* check, if the cut is a bound change (i.e. a row with only one variable) */
-   if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 )
+   /* if the cut is a bound change (i.e. a row with only one variable), it should be forced to be applied */
+   forcecut = forcecut || (!SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1);
+
+   /* add LP row cut to separation storage */
+   SCIP_CALL( sepastoreAddCut(sepastore, blkmem, set, stat, lp, cut, forcecut, root) );
+
+   return SCIP_OKAY;
+}
+
+/** applies a lower bound change */
+static
+SCIP_RETCODE sepastoreApplyLb(
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             bound,              /**< new lower bound of variable */
+   SCIP_Bool*            cutoff              /**< pointer to store TRUE, if an infeasibility has been detected */
+   )
+{
+   assert(sepastore != NULL);
+   assert(cutoff != NULL);
+
+   if( SCIPsetIsGT(set, bound, SCIPvarGetLbLocal(var)) )
    {
-      SCIP_COL** cols;
-      SCIP_VAR* var;
-      SCIP_Real* vals;
-      SCIP_Real lhs;
-      SCIP_Real rhs;
-      SCIP_Real bound;
+      SCIPdebugMessage(" -> applying bound change: <%s>: [%g,%g] -> [%g,%g]\n", 
+         SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bound, SCIPvarGetUbLocal(var));
 
-      /* get the single variable and its coefficient of the cut */
-      cols = SCIProwGetCols(cut);
-      assert(cols != NULL);
-      var = SCIPcolGetVar(cols[0]);
-      vals = SCIProwGetVals(cut);
-      assert(vals != NULL);
-      assert(!SCIPsetIsZero(set, vals[0]));
-
-      /* get the left hand side of the cut and convert it to a bound */
-      lhs = SCIProwGetLhs(cut);
-      if( !SCIPsetIsInfinity(set, -lhs) )
+      if( SCIPsetIsLE(set, bound, SCIPvarGetUbLocal(var)) )
       {
-         lhs -= SCIProwGetConstant(cut);
-         if( vals[0] > 0.0 )
-         {
-            /* coefficient is positive -> lhs corresponds to lower bound */
-            bound = lhs/vals[0];
-            if( SCIPsetIsGT(set, bound, SCIPvarGetLbLocal(var)) )
-            {
-               SCIP_CALL( sepastoreAddBdchg(sepastore, blkmem, set, stat, lp, var, bound, SCIP_BOUNDTYPE_LOWER) );
-            }
-         }
-         else
-         {
-            /* coefficient is negative -> lhs corresponds to upper bound */
-            bound = lhs/vals[0];
-            if( SCIPsetIsLT(set, bound, SCIPvarGetUbLocal(var)) )
-            {
-               SCIP_CALL( sepastoreAddBdchg(sepastore, blkmem, set, stat, lp, var, bound, SCIP_BOUNDTYPE_UPPER) );
-            }
-         }
+         SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, tree, lp, branchcand, eventqueue,
+               var, bound, SCIP_BOUNDTYPE_LOWER, FALSE) );
       }
+      else
+         *cutoff = TRUE;
 
-      /* get the right hand side of the cut and convert it to a bound */
-      rhs = SCIProwGetRhs(cut);
-      if( !SCIPsetIsInfinity(set, rhs) )
+      if( !sepastore->initiallp )
+         sepastore->ncutsapplied++;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** applies an upper bound change */
+static
+SCIP_RETCODE sepastoreApplyUb(
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             bound,              /**< new upper bound of variable */
+   SCIP_Bool*            cutoff              /**< pointer to store TRUE, if an infeasibility has been detected */
+   )
+{
+   assert(sepastore != NULL);
+   assert(cutoff != NULL);
+
+   if( SCIPsetIsLT(set, bound, SCIPvarGetUbLocal(var)) )
+   {
+      SCIPdebugMessage(" -> applying bound change: <%s>: [%g,%g] -> [%g,%g]\n", 
+         SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var), bound);
+      
+      if( SCIPsetIsGE(set, bound, SCIPvarGetLbLocal(var)) )
       {
-         rhs -= SCIProwGetConstant(cut);
-         if( vals[0] > 0.0 )
-         {
-            /* coefficient is positive -> rhs corresponds to upper bound */
-            bound = rhs/vals[0];
-            if( SCIPsetIsLT(set, bound, SCIPvarGetUbLocal(var)) )
-            {
-               SCIP_CALL( sepastoreAddBdchg(sepastore, blkmem, set, stat, lp, var, bound, SCIP_BOUNDTYPE_UPPER) );
-            }
-         }
-         else
-         {
-            /* coefficient is negative -> rhs corresponds to lower bound */
-            bound = rhs/vals[0];
-            if( SCIPsetIsGT(set, bound, SCIPvarGetLbLocal(var)) )
-            {
-               SCIP_CALL( sepastoreAddBdchg(sepastore, blkmem, set, stat, lp, var, bound, SCIP_BOUNDTYPE_LOWER) );
-            }
-         }
+         SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, tree, lp, branchcand, eventqueue,
+               var, bound, SCIP_BOUNDTYPE_UPPER, FALSE) );
+      }
+      else
+         *cutoff = TRUE;
+      
+      if( !sepastore->initiallp )
+         sepastore->ncutsapplied++;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** applies a cut that is a bound change directly as bound change instead of adding it as row to the LP */
+static
+SCIP_RETCODE sepastoreApplyBdchg(
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_ROW*             cut,                /**< cut with a single variable */
+   SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
+   )
+{
+   SCIP_COL** cols;
+   SCIP_Real* vals;
+   SCIP_VAR* var;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+
+   assert(!SCIProwIsModifiable(cut));
+   assert(SCIProwGetNNonz(cut) == 1);
+   assert(cutoff != NULL);
+
+   *cutoff = FALSE;
+
+   /* get the single variable and its coefficient of the cut */
+   cols = SCIProwGetCols(cut);
+   assert(cols != NULL);
+   var = SCIPcolGetVar(cols[0]);
+   vals = SCIProwGetVals(cut);
+   assert(vals != NULL);
+   assert(!SCIPsetIsZero(set, vals[0]));
+
+   /* get the left hand side of the cut and convert it to a bound */
+   lhs = SCIProwGetLhs(cut);
+   if( !SCIPsetIsInfinity(set, -lhs) )
+   {
+      lhs -= SCIProwGetConstant(cut);
+      if( vals[0] > 0.0 )
+      {
+         /* coefficient is positive -> lhs corresponds to lower bound */
+         SCIP_CALL( sepastoreApplyLb(sepastore, blkmem, set, stat, tree, lp, branchcand, eventqueue,
+               var, lhs/vals[0], cutoff) );
+      }
+      else
+      {
+         /* coefficient is negative -> lhs corresponds to upper bound */
+         SCIP_CALL( sepastoreApplyUb(sepastore, blkmem, set, stat, tree, lp, branchcand, eventqueue,
+               var, lhs/vals[0], cutoff) );
       }
    }
-   else
+
+   /* get the right hand side of the cut and convert it to a bound */
+   rhs = SCIProwGetRhs(cut);
+   if( !SCIPsetIsInfinity(set, rhs) )
    {
-      /* add LP row cut to separation storage */
-      SCIP_CALL( sepastoreAddCut(sepastore, blkmem, set, stat, lp, cut, forcecut, root) );
+      rhs -= SCIProwGetConstant(cut);
+      if( vals[0] > 0.0 )
+      {
+         /* coefficient is positive -> rhs corresponds to upper bound */
+         SCIP_CALL( sepastoreApplyUb(sepastore, blkmem, set, stat, tree, lp, branchcand, eventqueue,
+               var, rhs/vals[0], cutoff) );
+      }
+      else
+      {
+         /* coefficient is negative -> rhs corresponds to lower bound */
+         SCIP_CALL( sepastoreApplyLb(sepastore, blkmem, set, stat, tree, lp, branchcand, eventqueue,
+               var, rhs/vals[0], cutoff) );
+      }
    }
 
    return SCIP_OKAY;
@@ -633,8 +638,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    )
 {
    SCIP_NODE* node;
-   SCIP_VAR* var;
-   SCIP_Real val;
+   int nodedepth;
    int i;
 
    assert(sepastore != NULL);
@@ -643,73 +647,42 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    assert(lp != NULL);
    assert(cutoff != NULL);
 
+   *cutoff = FALSE;
+
    /**@todo avoid applying redundant cuts (see sepastoreAddCut()) */
-   SCIPdebugMessage("applying %d bound changes and %d cuts\n", sepastore->nbdchgs, sepastore->ncuts);
+   SCIPdebugMessage("applying %d cuts\n", sepastore->ncuts);
 
    node = SCIPtreeGetCurrentNode(tree);
    assert(node != NULL);
+   nodedepth = SCIPnodeGetDepth(node);
 
-   /* apply cuts stored as bound changes */
-   *cutoff = FALSE;
-   for( i = 0; i < sepastore->nbdchgs && !(*cutoff); ++i )
+   /* apply cuts */
+   for( i = 0; i < sepastore->ncuts && !(*cutoff); ++i )
    {
-      var = sepastore->bdchgvars[i];
-      val = sepastore->bdchgvals[i];
-      if( sepastore->bdchgtypes[i] == SCIP_BOUNDTYPE_LOWER )
-      {
-         if( SCIPsetIsGT(set, val, SCIPvarGetLbLocal(var)) )
-         {
-            SCIPdebugMessage(" -> applying bound change: <%s>: [%g,%g] -> [%g,%g]\n", 
-               SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), val, SCIPvarGetUbLocal(var));
+      SCIP_ROW* cut;
 
-            if( SCIPsetIsLE(set, val, SCIPvarGetUbLocal(var)) )
-            {
-               SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, tree, lp, branchcand, eventqueue,
-                     var, val, SCIP_BOUNDTYPE_LOWER, FALSE) );
-            }
-            else
-               *cutoff = TRUE;
+      cut = sepastore->cuts[i];
 
-            if( !sepastore->initiallp )
-               sepastore->ncutsapplied++;
-         }
-      }
-      else
-      {
-         if( SCIPsetIsLT(set, val, SCIPvarGetUbLocal(var)) )
-         {
-            SCIPdebugMessage(" -> applying bound change: <%s>: [%g,%g] -> [%g,%g]\n", 
-               SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var), val);
-
-            if( SCIPsetIsGE(set, val, SCIPvarGetLbLocal(var)) )
-            {
-               SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, tree, lp, branchcand, eventqueue,
-                     var, val, SCIP_BOUNDTYPE_UPPER, FALSE) );
-            }
-            else
-               *cutoff = TRUE;
-
-            if( !sepastore->initiallp )
-               sepastore->ncutsapplied++;
-         }
-      }
-   }
-
-   /* apply cuts stored as LP rows */
-   for( i = 0; i < sepastore->ncuts; ++i )
-   {
       /* a row could have been added twice to the separation store; add it only once! */
-      if( !SCIProwIsInLP(sepastore->cuts[i]) )
+      if( !SCIProwIsInLP(cut) )
       {
          SCIPdebugMessage(" -> applying cut %d/%d (efficacy=%g, objparallelism=%g, orthogonality=%g, score=%g)\n",
             i, sepastore->ncuts, sepastore->efficacies[i], sepastore->objparallelisms[i], 
             sepastore->orthogonalities[i], sepastore->scores[i]);
-         /*debug(SCIProwPrint(sepastore->cuts[i], NULL));*/
+         SCIPdebug(SCIProwPrint(cut, NULL));
          assert(i == 0 || sepastore->scores[i] <= sepastore->scores[i-1]);
 
-         /* add cut to the LP and capture it */
-         SCIP_CALL( SCIPlpAddRow(lp, set, sepastore->cuts[i], SCIPnodeGetDepth(node)) );
-         
+         /* if the cut is a bound change (i.e. a row with only one variable), add it as bound change instead of LP row */
+         if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 )
+         {
+            SCIP_CALL( sepastoreApplyBdchg(sepastore, blkmem, set, stat, tree, lp, branchcand, eventqueue, cut, cutoff) );
+         }
+         else
+         {
+            /* add cut to the LP and capture it */
+            SCIP_CALL( SCIPlpAddRow(lp, set, cut, nodedepth) );
+         }
+
          /* release the row */
          SCIP_CALL( SCIProwRelease(&sepastore->cuts[i], blkmem, set, lp) );
          
@@ -721,7 +694,6 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    /* clear the separation storage */
    sepastore->ncuts = 0;
    sepastore->nforcedcuts = 0;
-   sepastore->nbdchgs = 0;
    sepastore->ncutsfoundround = 0;
    sepastore->ncutsstored = 0;
 
@@ -751,7 +723,6 @@ SCIP_RETCODE SCIPsepastoreClearCuts(
    /* clear the separation storage */
    sepastore->ncuts = 0;
    sepastore->nforcedcuts = 0;
-   sepastore->nbdchgs = 0;
    sepastore->ncutsfoundround = 0;
    sepastore->ncutsstored = 0;
 
@@ -765,7 +736,7 @@ int SCIPsepastoreGetNCuts(
 {
    assert(sepastore != NULL);
 
-   return sepastore->ncuts + sepastore->nbdchgs;
+   return sepastore->ncuts;
 }
 
 /** get total number of cuts found so far */
