@@ -143,9 +143,10 @@
  * This string is printed as description of the constraint handler in the interactive shell.
  *
  * \par CONSHDLR_SEPAPRIORITY: the priority of the constraint handler for separation.
- * In each separation round during the price-and-cut loop of the subproblem processing, the separators and
- * separation methods of the constraint handlers are called in a predefined order, which is given by the
- * priorities of the separators and the separation priorities of the constraint handlers.
+ * In each separation round during the price-and-cut loop of the subproblem processing or the separation loop
+ * of the primal solution separation, the separators and separation methods of the constraint handlers are called in
+ * a predefined order, which is given by the priorities of the separators and the separation priorities of the
+ * constraint handlers.
  * First, the separators with non-negative priority are called in the order of decreasing priority.
  * Next, the separation methods of the different constraint handlers are called in the order of decreasing separation
  * priority.
@@ -155,7 +156,7 @@
  * algorithm and the impact of the resulting cuts:
  * Constraint handlers that provide fast algorithms that usually have a high impact (i.e., cut off a large portion of
  * the LP relaxation) should have a high priority.
- * See \ref CONSSEPA for further details of the separation callback.
+ * See \ref CONSSEPALP and \ref CONSSEPASOL for further details of the separation callbacks.
  *
  * \par CONSHDLR_ENFOPRIORITY: the priority of the constraint handler for constraint enforcing.
  * Like the separation priority, the enforcement priorities define the order in which the different constraint handlers
@@ -180,8 +181,8 @@
  * That means, constraint handlers with negative checking priorities only have to deal with integral solutions.
  * 
  * \par CONSHDLR_SEPAFREQ: the default frequency for separating cuts.
- * The separation frequency define the depth levels at which the constraint handler's separation method \ref CONSSEPA
- * is called.
+ * The separation frequency define the depth levels at which the constraint handler's separation methods \ref CONSSEPALP
+ * and \ref CONSSEPASOL are called.
  * For example, a separation frequency of 7 means, that the separation callback is executed for subproblems that are
  * in depth 0, 7, 14, ... of the branching tree.
  * A separation frequency of 0 means, that the separation method is only called at the root node.
@@ -585,17 +586,39 @@
  * array for constraints that are marked initial via calls to SCIPconsIsInitial() and put the LP relaxation
  * of all initial constraints to the LP with calls to SCIPaddCut().
  * 
- * @subsection CONSSEPA
+ * @subsection CONSSEPALP
  *
- * The CONSSEPA callback is executed during the price-and-cut loop of the subproblem processing.
- * It should try to generate cutting planes for the constraints of the constraint handler.
+ * The CONSSEPALP callback is executed during the price-and-cut loop of the subproblem processing.
+ * It should try to generate cutting planes for the constraints of the constraint handler in order to separate
+ * the current LP solution.
  * The method is called in the LP solution loop, which means that a valid LP solution exists.
  *
  * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddCut().
  * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
  * However, the callback may also produce domain reductions or add other constraints.
  *
- * The CONSSEPA callback has the following options:
+ * The CONSSEPALP callback has the following options:
+ *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
+ *  - adding an additional constraint (result SCIP_CONSADDED)
+ *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
+ *  - adding a cutting plane to the LP (result SCIP_SEPARATED)
+ *  - stating that the separator searched, but did not find domain reductions, cutting planes, or cut constraints
+ *    (result SCIP_DIDNOTFIND)
+ *  - stating that the separator was skipped (result SCIP_DIDNOTRUN)
+ *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
+ * 
+ * @subsection CONSSEPASOL
+ *
+ * The CONSSEPASOL callback is executed during separation loop on arbitrary primal solutions.
+ * It should try to generate cutting planes for the constraints of the constraint handler in order to separate
+ * the given primal solution.
+ * The method is not called in the LP solution loop, which means that there is no valid LP solution.
+ *
+ * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddCut().
+ * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
+ * However, the callback may also produce domain reductions or add other constraints.
+ *
+ * The CONSSEPASOL callback has the following options:
  *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
  *  - adding an additional constraint (result SCIP_CONSADDED)
  *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
