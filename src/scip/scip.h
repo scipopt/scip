@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.247 2005/09/22 17:33:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.248 2005/09/22 19:02:21 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3492,7 +3492,8 @@ SCIP_RETCODE SCIPseparateCutpool(
  *  separation methods;
  *  the generated cuts are stored in the separation storage and can be accessed with the methods SCIPgetCuts() and
  *  SCIPgetNCuts();
- *  after evaluating the cuts, you have to call SCIPclearCuts() in order to remove the cuts from the separation storage;
+ *  after evaluating the cuts, you have to call SCIPclearCuts() in order to remove the cuts from the
+ *  separation storage;
  *  it is possible to call SCIPseparateSol() multiple times with different solutions and evaluate the found cuts
  *  afterwards
  */

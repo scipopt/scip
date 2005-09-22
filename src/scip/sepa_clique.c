@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.21 2005/09/22 17:33:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.22 2005/09/22 19:02:22 bzfpfend Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -52,11 +52,13 @@ struct SCIP_SepaData
 {
    TCLIQUE_GRAPH*        tcliquegraph;       /**< tclique graph data structure */
    SCIP*                 scip;               /**< SCIP data structure */
+   SCIP_SOL*             sol;                /**< primal solution that is currently separated */
    SCIP_Real*            varsolvals;         /**< LP solution of binary variables (contained in a 3-clique in implgraph) */
    SCIP_Real             scaleval;           /**< factor for scaling weights */
    int                   maxtreenodes;       /**< maximal number of nodes in branch and bound tree (-1: no limit) */
    int                   maxsepacuts;        /**< maximal number of clique cuts separated per separation round (-1: no limit) */
    int                   maxzeroextensions;  /**< maximal number of zero-valued variables extending the clique (-1: no limit) */
+   int                   ncalls;             /**< number of calls to the clique separator */
    int                   ncuts;              /**< number of cuts found */
    SCIP_Bool             tcliquegraphloaded; /**< TRUE if tcliquegraph is allready loaded (tcliquegraph can be NULL),
                                               *   FALSE otherwise */ 
@@ -928,7 +930,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          assert(vars != NULL);
 
          /* create the cut */
-         sprintf(cutname, "clique%d_%d", SCIPgetNLPs(scip), sepadata->ncuts);
+         sprintf(cutname, "clique%d_%d", sepadata->ncalls, sepadata->ncuts);
          SCIP_CALL_ABORT( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
 
          SCIP_CALL_ABORT( SCIPcacheRowExtensions(scip, cut) );
@@ -946,7 +948,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          SCIPdebugMessage("found clique cut (act=%g): ", unscaledweight);
          SCIPdebug(SCIPprintRow(scip, cut, NULL));
 
-         SCIP_CALL_ABORT( SCIPaddCut(scip, NULL, cut, FALSE) );
+         SCIP_CALL_ABORT( SCIPaddCut(scip, sepadata->sol, cut, FALSE) );
          SCIP_CALL_ABORT( SCIPaddPoolCut(scip, cut) );
          sepadata->ncuts++;
          
@@ -996,6 +998,8 @@ SCIP_RETCODE separateCuts(
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
    
+   sepadata->sol = sol;
+   sepadata->ncalls = SCIPsepaGetNCalls(sepa);
    sepadata->ncuts = 0;
 
    /* if we already detected that no implications between binary variables exist, nothing has to be done */
@@ -1046,6 +1050,9 @@ SCIP_RETCODE separateCuts(
    /* adjust result code */
    if( sepadata->ncuts > 0 )
       *result = SCIP_SEPARATED;
+
+   /* better reset the sol pointer in sepadata to avoid having an invalid pointer */
+   sepadata->sol = NULL;
 
    return SCIP_OKAY;
 }
@@ -1146,7 +1153,9 @@ SCIP_RETCODE SCIPincludeSepaClique(
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
    sepadata->tcliquegraph = NULL;
    sepadata->scip = scip;
+   sepadata->sol = NULL;
    sepadata->varsolvals = NULL; 
+   sepadata->ncalls = 0;
    sepadata->ncuts = 0;
    sepadata->tcliquegraphloaded = FALSE;
 

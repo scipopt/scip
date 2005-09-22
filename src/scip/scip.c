@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.320 2005/09/22 17:33:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.321 2005/09/22 19:02:21 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -9244,7 +9244,8 @@ SCIP_RETCODE SCIPseparateCutpool(
  *  separation methods;
  *  the generated cuts are stored in the separation storage and can be accessed with the methods SCIPgetCuts() and
  *  SCIPgetNCuts();
- *  after evaluating the cuts, you have to call SCIPclearCuts() in order to remove the cuts from the separation storage;
+ *  after evaluating the cuts, you have to call SCIPclearCuts() in order to remove the cuts from the
+ *  separation storage;
  *  it is possible to call SCIPseparateSol() multiple times with different solutions and evaluate the found cuts
  *  afterwards
  */
@@ -9302,6 +9303,37 @@ SCIP_RETCODE SCIPclearCuts(
 
    return SCIP_OKAY;
 }
+
+#if 0
+/**@todo make this method available; implement methods SCIPaddProbingRow() and SCIPaddProbingCol();
+ *       -> the probing node needs a counter (like the fork) on the number of added rows and cols,
+ *          and treeBacktrackProbing() needs to shrink the LP;
+ *       this is useful, e.g., for the feaspump heuristic, s.t. it can temporarily add the auxiliary columns
+ *       needed to represent the objective function for integer variables not on one of their bounds
+ */
+/** applies the cuts in the separation storage to the LP and clears the storage afterwards;
+ *  this method can only be applied during probing; the user should resolve the probing LP afterwards
+ *  in order to get a new solution
+ */
+SCIP_RETCODE SCIPapplyCuts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPapplyCuts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPtreeProbing(scip->tree) )
+   {
+      SCIPerrorMessage("not in probing mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIP_CALL( SCIPsepastoreApplyCuts(scip->sepastore, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp,
+         scip->branchcand, scip->eventqueue, cutoff) );
+
+   return SCIP_OKAY;
+}
+#endif
 
 
 
