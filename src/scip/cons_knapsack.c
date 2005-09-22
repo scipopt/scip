@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.115 2005/09/22 14:43:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.116 2005/09/22 17:33:52 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -521,7 +521,7 @@ SCIP_RETCODE addRelaxation(
    SCIPdebugMessage("adding relaxation of knapsack constraint <%s> (capacity %lld): ", 
       SCIPconsGetName(cons), consdata->capacity);
    SCIPdebug( SCIProwPrint(consdata->row, NULL) );
-   SCIP_CALL( SCIPaddCut(scip, consdata->row, FALSE) );
+   SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -1960,7 +1960,7 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
             
             /* check, if cut is violated enough */
-            if( SCIPisCutEfficacious(scip, row) )
+            if( SCIPisCutEfficacious(scip, NULL, row) )
             {         
 #ifdef CUTOUT
                printf("lifted cover cut for knapsack constraint <%s> round j=%d: ", SCIPconsGetName(cons), j);
@@ -1970,7 +1970,7 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
 
 #endif               
                SCIP_CALL( SCIPresetConsAge(scip, cons) );
-               SCIP_CALL( SCIPaddCut(scip, row, FALSE) );
+               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
                (*ncuts)++;
             }
             SCIP_CALL( SCIPreleaseRow(scip, &row) );

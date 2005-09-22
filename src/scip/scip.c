@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.319 2005/09/22 14:43:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.320 2005/09/22 17:33:54 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -9004,12 +9004,7 @@ SCIP_Real SCIPgetRowSolActivity(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetRowSolActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    if( sol != NULL )
-   {
-      SCIP_Real activity;
-
-      SCIP_CALL_ABORT( SCIProwGetSolActivity(row, scip->set, scip->stat, sol, &activity) );
-      return activity;
-   }
+      return SCIProwGetSolActivity(row, scip->set, scip->stat, sol);
    else if( SCIPtreeHasCurrentNodeLP(scip->tree) )
       return SCIProwGetLPActivity(row, scip->stat, scip->lp);
    else
@@ -9026,12 +9021,7 @@ SCIP_Real SCIPgetRowSolFeasibility(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetRowSolFeasibility", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    if( sol != NULL )
-   {
-      SCIP_Real feasibility;
-
-      SCIP_CALL_ABORT( SCIProwGetSolFeasibility(row, scip->set, scip->stat, sol, &feasibility) );
-      return feasibility;
-   }
+      return SCIProwGetSolFeasibility(row, scip->set, scip->stat, sol);
    else if( SCIPtreeHasCurrentNodeLP(scip->tree) )
       return SCIProwGetLPFeasibility(row, scip->stat, scip->lp);
    else
@@ -9061,26 +9051,38 @@ SCIP_RETCODE SCIPprintRow(
  * cutting plane methods
  */
 
-/** returns efficacy of the cut with respect to the current LP solution: e = -feasibility/norm */
+/** returns efficacy of the cut with respect to the given primal solution or the current LP solution:
+ *  e = -feasibility/norm
+ */
 SCIP_Real SCIPgetCutEfficacy(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution, or NULL for current LP solution */
    SCIP_ROW*             cut                 /**< separated cut */
    )
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetCutEfficacy", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIProwGetEfficacy(cut, scip->set, scip->stat, scip->lp);
+   if( sol == NULL )
+      return SCIProwGetLPEfficacy(cut, scip->set, scip->stat, scip->lp);
+   else
+      return SCIProwGetSolEfficacy(cut, scip->set, scip->stat, sol);
 }
 
-/** returns whether the cut's efficacy with respect to the current LP solution is greater than the minimal cut efficacy */
+/** returns whether the cut's efficacy with respect to the given primal solution or the current LP solution is greater
+ *  than the minimal cut efficacy
+ */
 SCIP_Bool SCIPisCutEfficacious(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution, or NULL for current LP solution */
    SCIP_ROW*             cut                 /**< separated cut */
    )
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPisCutEfficacious", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIProwIsEfficacious(cut, scip->set, scip->stat, scip->lp, (SCIPtreeGetCurrentDepth(scip->tree) == 0));
+   if( sol == NULL )
+      return SCIProwIsLPEfficacious(cut, scip->set, scip->stat, scip->lp, (SCIPtreeGetCurrentDepth(scip->tree) == 0));
+   else
+      return SCIProwIsSolEfficacious(cut, scip->set, scip->stat, sol, (SCIPtreeGetCurrentDepth(scip->tree) == 0));
 }
 
 /** checks, if the given cut's efficacy is larger than the minimal cut efficacy */
@@ -9097,6 +9099,7 @@ SCIP_Bool SCIPisEfficacious(
 /** adds cut to separation storage */
 SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut            /**< should the cut be forced to enter the LP? */
    )
@@ -9105,42 +9108,10 @@ SCIP_RETCODE SCIPaddCut(
 
    assert(SCIPtreeGetCurrentNode(scip->tree) != NULL);
 
-   SCIP_CALL( SCIPsepastoreAddCut(scip->sepastore, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+   SCIP_CALL( SCIPsepastoreAddCut(scip->sepastore, scip->mem->solvemem, scip->set, scip->stat, scip->lp, sol,
          cut, forcecut, (SCIPtreeGetCurrentDepth(scip->tree) == 0)) );
    
    return SCIP_OKAY;
-}
-
-/** clears the separation storage */
-SCIP_RETCODE SCIPclearCuts(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPclearCuts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-   
-   SCIP_CALL( SCIPsepastoreClearCuts(scip->sepastore, scip->mem->solvemem, scip->set, scip->lp) );
-
-   return SCIP_OKAY;
-}
-
-/** gets the array of cuts currently stored in the separation storage */
-SCIP_ROW** SCIPgetCuts(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetCuts", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
-
-   return SCIPsepastoreGetCuts(scip->sepastore);
-}
-
-/** get current number of cuts in the separation storage */
-int SCIPgetNCuts(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNCuts", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
-
-   return SCIPsepastoreGetNCuts(scip->sepastore);
 }
 
 /** if not already existing, adds row to global cut pool */
@@ -9254,7 +9225,7 @@ SCIP_RETCODE SCIPseparateCutpool(
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPaddCut", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPseparateCutpool", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    assert(SCIPtreeGetCurrentNode(scip->tree) != NULL);
 
@@ -9266,6 +9237,69 @@ SCIP_RETCODE SCIPseparateCutpool(
    
    SCIP_CALL( SCIPcutpoolSeparate(cutpool, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->sepastore,
          (SCIPtreeGetCurrentDepth(scip->tree) == 0), result) );
+   return SCIP_OKAY;
+}
+
+/** separates the given primal solution or the current LP solution by calling the separators and constraint handlers'
+ *  separation methods;
+ *  the generated cuts are stored in the separation storage and can be accessed with the methods SCIPgetCuts() and
+ *  SCIPgetNCuts();
+ *  after evaluating the cuts, you have to call SCIPclearCuts() in order to remove the cuts from the separation storage;
+ *  it is possible to call SCIPseparateSol() multiple times with different solutions and evaluate the found cuts
+ *  afterwards
+ */
+SCIP_RETCODE SCIPseparateSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution that should be separated, or NULL for LP solution */
+   SCIP_Bool             pretendroot,        /**< should the cut separators be called as if we are at the root node? */
+   SCIP_Bool             onlydelayed,        /**< should only separators be called that were delayed in the previous round? */
+   SCIP_Bool*            delayed,            /**< pointer to store whether a separator was delayed */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+   )
+{
+   int actdepth;
+
+   SCIP_CALL( checkStage(scip, "SCIPseparateCuts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* get current depth */
+   actdepth = (pretendroot ? 0 : SCIPtreeGetCurrentDepth(scip->tree));
+
+   /* apply separation round */
+   SCIP_CALL( SCIPseparationRound(scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->sepastore, sol,
+         actdepth, onlydelayed, delayed, cutoff) );
+
+   return SCIP_OKAY;
+}
+
+/** gets the array of cuts currently stored in the separation storage */
+SCIP_ROW** SCIPgetCuts(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetCuts", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPsepastoreGetCuts(scip->sepastore);
+}
+
+/** get current number of cuts in the separation storage */
+int SCIPgetNCuts(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNCuts", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPsepastoreGetNCuts(scip->sepastore);
+}
+
+/** clears the separation storage */
+SCIP_RETCODE SCIPclearCuts(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPclearCuts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   
+   SCIP_CALL( SCIPsepastoreClearCuts(scip->sepastore, scip->mem->solvemem, scip->set, scip->lp) );
+
    return SCIP_OKAY;
 }
 

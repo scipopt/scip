@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.159 2005/09/05 15:27:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.160 2005/09/22 17:33:56 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -333,6 +333,8 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->pricerssize = 0;
    (*set)->pricerssorted = FALSE;
    (*set)->conshdlrs = NULL;
+   (*set)->conshdlrs_sepa = NULL;
+   (*set)->conshdlrs_enfo = NULL;
    (*set)->nconshdlrs = 0;
    (*set)->conshdlrssize = 0;
    (*set)->conflicthdlrs = NULL;
@@ -937,6 +939,8 @@ SCIP_RETCODE SCIPsetFree(
       SCIP_CALL( SCIPconshdlrFree(&(*set)->conshdlrs[i], *set) );
    }
    BMSfreeMemoryArrayNull(&(*set)->conshdlrs);
+   BMSfreeMemoryArrayNull(&(*set)->conshdlrs_sepa);
+   BMSfreeMemoryArrayNull(&(*set)->conshdlrs_enfo);
 
    /* free conflict handlers */
    for( i = 0; i < (*set)->nconflicthdlrs; ++i )
@@ -1459,27 +1463,47 @@ SCIP_RETCODE SCIPsetIncludeConshdlr(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {
-   int checkpriority;
+   int priority;
    int i;
 
    assert(set != NULL);
    assert(conshdlr != NULL);
    assert(!SCIPconshdlrIsInitialized(conshdlr));
 
+   /* allocate memory */
    if( set->nconshdlrs >= set->conshdlrssize )
    {
       set->conshdlrssize = SCIPsetCalcMemGrowSize(set, set->nconshdlrs+1);
       SCIP_ALLOC( BMSreallocMemoryArray(&set->conshdlrs, set->conshdlrssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->conshdlrs_sepa, set->conshdlrssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->conshdlrs_enfo, set->conshdlrssize) );
    }
    assert(set->nconshdlrs < set->conshdlrssize);
 
-   checkpriority = SCIPconshdlrGetCheckPriority(conshdlr);
-   for( i = set->nconshdlrs; i > 0 && SCIPconshdlrGetCheckPriority(set->conshdlrs[i-1]) < checkpriority; --i )
+   /* sort constraint handler into conshdlrs array sorted by check priority */
+   priority = SCIPconshdlrGetCheckPriority(conshdlr);
+   for( i = set->nconshdlrs; i > 0 && SCIPconshdlrGetCheckPriority(set->conshdlrs[i-1]) < priority; --i )
    {
       set->conshdlrs[i] = set->conshdlrs[i-1];
    }
-
    set->conshdlrs[i] = conshdlr;
+
+   /* sort constraint handler into conshdlrs_sepa array sorted by sepa priority */
+   priority = SCIPconshdlrGetSepaPriority(conshdlr);
+   for( i = set->nconshdlrs; i > 0 && SCIPconshdlrGetSepaPriority(set->conshdlrs[i-1]) < priority; --i )
+   {
+      set->conshdlrs_sepa[i] = set->conshdlrs_sepa[i-1];
+   }
+   set->conshdlrs_sepa[i] = conshdlr;
+
+   /* sort constraint handler into conshdlrs_enfo array sorted by enfo priority */
+   priority = SCIPconshdlrGetEnfoPriority(conshdlr);
+   for( i = set->nconshdlrs; i > 0 && SCIPconshdlrGetEnfoPriority(set->conshdlrs[i-1]) < priority; --i )
+   {
+      set->conshdlrs_enfo[i] = set->conshdlrs_enfo[i-1];
+   }
+   set->conshdlrs_enfo[i] = conshdlr;
+
    set->nconshdlrs++;
 
    return SCIP_OKAY;

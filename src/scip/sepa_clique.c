@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.20 2005/09/22 14:43:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.21 2005/09/22 17:33:55 bzfpfend Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -946,7 +946,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          SCIPdebugMessage("found clique cut (act=%g): ", unscaledweight);
          SCIPdebug(SCIPprintRow(scip, cut, NULL));
 
-         SCIP_CALL_ABORT( SCIPaddCut(scip, cut, FALSE) );
+         SCIP_CALL_ABORT( SCIPaddCut(scip, NULL, cut, FALSE) );
          SCIP_CALL_ABORT( SCIPaddPoolCut(scip, cut) );
          sepadata->ncuts++;
          
@@ -964,6 +964,91 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
    }
 }
 
+
+
+
+/*
+ * main separation method
+ */
+
+/** searches and adds clique cuts that separate the given primal solution */
+static
+SCIP_RETCODE separateCuts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< the cut separator itself */
+   SCIP_SOL*             sol,                /**< primal solution that should be separated, or NULL for LP solution */
+   SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
+   )
+{  /*lint --e{715}*/
+   SCIP_SEPADATA* sepadata;
+   TCLIQUE_GRAPH* tcliquegraph;
+   int* cliquenodes; 	        
+   TCLIQUE_WEIGHT cliqueweight;    
+   int ncliquenodes;	        
+   int maxtreenodes;
+   int maxzeroextensions;
+
+   assert(scip != NULL);
+   
+   *result = SCIP_DIDNOTRUN;
+
+   /* get separator data */
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+   
+   sepadata->ncuts = 0;
+
+   /* if we already detected that no implications between binary variables exist, nothing has to be done */
+   if( sepadata->tcliquegraph == NULL && sepadata->tcliquegraphloaded )
+      return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTFIND;
+      
+   /* load tclique data structure */
+   if( !sepadata->tcliquegraphloaded )
+   {
+      assert(sepadata->tcliquegraph == NULL);
+
+      SCIP_CALL( loadTcliquegraph(scip, sepadata) );
+      sepadata->tcliquegraphloaded = TRUE;
+   
+      if( sepadata->tcliquegraph == NULL )
+      {
+         /* we did not find any variables that are contained in a clique with at least 3 variables in the
+          * implication graph or in the clique table -> nothing has to be done
+          */
+         return SCIP_OKAY;
+      }
+   }
+   tcliquegraph = sepadata->tcliquegraph;
+   assert(tcliquegraph != NULL);
+   
+   /* store LP-solution in sepadata and update weights in tclique data structure */
+   SCIP_CALL( SCIPallocBufferArray(scip, &sepadata->varsolvals, tcliquegraph->nnodes) );
+   SCIP_CALL( SCIPgetSolVals(scip, sol, tcliquegraph->nnodes, tcliquegraph->vars, sepadata->varsolvals) );
+   updateTcliquegraph(scip, sepadata);
+
+   /* get maximal number of tree nodes and maximal zero-extensions */
+   maxtreenodes = (sepadata->maxtreenodes == -1 ? INT_MAX : sepadata->maxtreenodes);
+   maxzeroextensions = (sepadata->maxzeroextensions == -1 ? INT_MAX : sepadata->maxzeroextensions);
+
+   /* finds maximum weight clique in tclique */
+   SCIP_CALL( SCIPallocBufferArray(scip, &cliquenodes, tcliquegraph->nnodes) );
+   tcliqueMaxClique(tcliqueGetnnodesClique, tcliqueGetweightsClique, tcliqueIsedgeClique, tcliqueSelectadjnodesClique, 
+      tcliquegraph, tcliqueNewsolClique, (TCLIQUE_DATA*)sepadata,
+      cliquenodes, &ncliquenodes, &cliqueweight, (int)sepadata->scaleval-1, (int)sepadata->scaleval+1, 
+      maxtreenodes, maxzeroextensions);
+
+   /* frees data structures */
+   SCIPfreeBufferArray(scip, &cliquenodes);
+   SCIPfreeBufferArray(scip, &sepadata->varsolvals);
+
+   /* adjust result code */
+   if( sepadata->ncuts > 0 )
+      *result = SCIP_SEPARATED;
+
+   return SCIP_OKAY;
+}
 
 
 
@@ -1025,80 +1110,23 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolClique)
 /** LP solution separation method of separator */
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpClique)
-{  /*lint --e{715}*/
-   SCIP_SEPADATA* sepadata;
-   TCLIQUE_GRAPH* tcliquegraph;
-   int* cliquenodes; 	        
-   TCLIQUE_WEIGHT cliqueweight;    
-   int ncliquenodes;	        
-   int maxtreenodes;
-   int maxzeroextensions;
-
-   assert(scip != NULL);
-   
-   *result = SCIP_DIDNOTRUN;
-
-   /* get separator data */
-   sepadata = SCIPsepaGetData(sepa);
-   assert(sepadata != NULL);
-   
-   sepadata->ncuts = 0;
-
-   /* if we already detected that no implications between binary variables exist, nothing has to be done */
-   if( sepadata->tcliquegraph == NULL && sepadata->tcliquegraphloaded )
-      return SCIP_OKAY;
-
-   *result = SCIP_DIDNOTFIND;
-      
-   /* load tclique data structure */
-   if( !sepadata->tcliquegraphloaded )
-   {
-      assert(sepadata->tcliquegraph == NULL);
-
-      SCIP_CALL( loadTcliquegraph(scip, sepadata) );
-      sepadata->tcliquegraphloaded = TRUE;
-   
-      if( sepadata->tcliquegraph == NULL )
-      {
-         /* we did not find any variables that are contained in a clique with at least 3 variables in the
-          * implication graph or in the clique table -> nothing has to be done
-          */
-         return SCIP_OKAY;
-      }
-   }
-   tcliquegraph = sepadata->tcliquegraph;
-   assert(tcliquegraph != NULL);
-   
-   /* store LP-solution in sepadata and update weights in tclique data structure */
-   SCIP_CALL( SCIPallocBufferArray(scip, &sepadata->varsolvals, tcliquegraph->nnodes) );
-   SCIP_CALL( SCIPgetVarSols(scip, tcliquegraph->nnodes, tcliquegraph->vars, sepadata->varsolvals) );
-   updateTcliquegraph(scip, sepadata);
-
-   /* get maximal number of tree nodes and maximal zero-extensions */
-   maxtreenodes = (sepadata->maxtreenodes == -1 ? INT_MAX : sepadata->maxtreenodes);
-   maxzeroextensions = (sepadata->maxzeroextensions == -1 ? INT_MAX : sepadata->maxzeroextensions);
-
-   /* finds maximum weight clique in tclique */
-   SCIP_CALL( SCIPallocBufferArray(scip, &cliquenodes, tcliquegraph->nnodes) );
-   tcliqueMaxClique(tcliqueGetnnodesClique, tcliqueGetweightsClique, tcliqueIsedgeClique, tcliqueSelectadjnodesClique, 
-      tcliquegraph, tcliqueNewsolClique, (TCLIQUE_DATA*)sepadata,
-      cliquenodes, &ncliquenodes, &cliqueweight, (int)sepadata->scaleval-1, (int)sepadata->scaleval+1, 
-      maxtreenodes, maxzeroextensions);
-
-   /* frees data structures */
-   SCIPfreeBufferArray(scip, &cliquenodes);
-   SCIPfreeBufferArray(scip, &sepadata->varsolvals);
-
-   /* adjust result code */
-   if( sepadata->ncuts > 0 )
-      *result = SCIP_SEPARATED;
+{
+   /* separate cuts on the LP solution */
+   SCIP_CALL( separateCuts(scip, sepa, NULL, result) );
 
    return SCIP_OKAY;
 }
 
 
 /** arbitrary primal solution separation method of separator */
-#define sepaExecsolClique NULL /*???????????????*/
+static
+SCIP_DECL_SEPAEXECSOL(sepaExecsolClique)
+{
+   /* separate cuts on the given primal solution */
+   SCIP_CALL( separateCuts(scip, sepa, sol, result) );
+
+   return SCIP_OKAY;
+}
 
 
 

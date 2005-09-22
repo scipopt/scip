@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.45 2005/09/22 14:43:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.46 2005/09/22 17:33:55 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -271,17 +271,17 @@ SCIP_RETCODE addCut(
       SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
 
       SCIPdebugMessage(" -> found potential c-mir cut <%s>: activity=%f, rhs=%f, norm=%f, eff=%f\n",
-         cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut));
+         cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, NULL, cut));
       SCIPdebug(SCIPprintRow(scip, cut, NULL));
       
 #if 0
       /* try to scale the cut to integral values */
       SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
             10, 100.0, MAKECONTINTEGRAL, &success) );
-      if( success && !SCIPisCutEfficacious(scip, cut) )
+      if( success && !SCIPisCutEfficacious(scip, NULL, cut) )
       {
          SCIPdebugMessage(" -> c-mir cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
-            cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut));
+            cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, NULL, cut));
          SCIPdebug(SCIPprintRow(scip, cut, NULL));
          success = FALSE;
       }
@@ -293,11 +293,11 @@ SCIP_RETCODE addCut(
       if( success ) /*lint !e774*/ /* Boolean within 'if' always evaluates to True */
       {
          SCIPdebugMessage(" -> found c-mir cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%g)\n",
-            cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut),
+            cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, NULL, cut),
             SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
             SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
          SCIPdebug(SCIPprintRow(scip, cut, NULL));
-         SCIP_CALL( SCIPaddCut(scip, cut, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
          if( !cutislocal )
          {
             SCIP_CALL( SCIPaddPoolCut(scip, cut) );

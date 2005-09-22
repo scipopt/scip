@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.39 2005/08/28 12:24:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.40 2005/09/22 17:33:56 bzfpfend Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -66,6 +66,21 @@ SCIP_RETCODE SCIPpropagateDomains(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    int                   depth,              /**< depth level to use for propagator frequency checks */
    int                   maxrounds,          /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+   );
+
+/** applies one round of separation on the given primal solution or on the LP solution */
+extern
+SCIP_RETCODE SCIPseparationRound(
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_SOL*             sol,                /**< primal solution that should be separated, or NULL for LP solution */
+   int                   actdepth,           /**< current depth in the tree */
+   SCIP_Bool             onlydelayed,        /**< should only delayed separators be called? */
+   SCIP_Bool*            delayed,            /**< pointer to store whether a separator was delayed */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    );
 

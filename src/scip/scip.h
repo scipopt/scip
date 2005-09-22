@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.246 2005/09/22 14:43:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.247 2005/09/22 17:33:55 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3385,17 +3385,23 @@ SCIP_RETCODE SCIPprintRow(
 /**@name Cutting Plane Methods */
 /**@{ */
 
-/** returns efficacy of the cut with respect to the current LP solution: e = -feasibility/norm */
+/** returns efficacy of the cut with respect to the given primal solution or the current LP solution:
+ *  e = -feasibility/norm
+ */
 extern
 SCIP_Real SCIPgetCutEfficacy(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution, or NULL for current LP solution */
    SCIP_ROW*             cut                 /**< separated cut */
    );
 
-/** returns whether the cut's efficacy with respect to the current LP solution is greater than the minimal cut efficacy */
+/** returns whether the cut's efficacy with respect to the given primal solution or the current LP solution is greater
+ *  than the minimal cut efficacy
+ */
 extern
 SCIP_Bool SCIPisCutEfficacious(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution, or NULL for current LP solution */
    SCIP_ROW*             cut                 /**< separated cut */
    );
 
@@ -3410,26 +3416,9 @@ SCIP_Bool SCIPisEfficacious(
 extern
 SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut            /**< should the cut be forced to enter the LP? */
-   );
-
-/** clears the separation storage */
-extern
-SCIP_RETCODE SCIPclearCuts(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** gets the array of cuts currently stored in the separation storage */
-extern
-SCIP_ROW** SCIPgetCuts(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** get current number of cuts in the separation storage */
-extern
-int SCIPgetNCuts(
-   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** if not already existing, adds row to global cut pool */
@@ -3497,6 +3486,42 @@ SCIP_RETCODE SCIPseparateCutpool(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
+   );
+
+/** separates the given primal solution or the current LP solution by calling the separators and constraint handlers'
+ *  separation methods;
+ *  the generated cuts are stored in the separation storage and can be accessed with the methods SCIPgetCuts() and
+ *  SCIPgetNCuts();
+ *  after evaluating the cuts, you have to call SCIPclearCuts() in order to remove the cuts from the separation storage;
+ *  it is possible to call SCIPseparateSol() multiple times with different solutions and evaluate the found cuts
+ *  afterwards
+ */
+extern
+SCIP_RETCODE SCIPseparateSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution that should be separated, or NULL for LP solution */
+   SCIP_Bool             pretendroot,        /**< should the cut separators be called as if we are at the root node? */
+   SCIP_Bool             onlydelayed,        /**< should only separators be called that were delayed in the previous round? */
+   SCIP_Bool*            delayed,            /**< pointer to store whether a separator was delayed */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+   );
+
+/** gets the array of cuts currently stored in the separation storage */
+extern
+SCIP_ROW** SCIPgetCuts(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** get current number of cuts in the separation storage */
+extern
+int SCIPgetNCuts(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** clears the separation storage */
+extern
+SCIP_RETCODE SCIPclearCuts(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /**@} */

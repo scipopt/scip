@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.209 2005/09/22 13:05:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.210 2005/09/22 17:33:54 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -4632,56 +4632,51 @@ SCIP_Real SCIProwGetPseudoFeasibility(
 }
 
 /** returns the activity of a row for a given solution */
-SCIP_RETCODE SCIProwGetSolActivity(
+SCIP_Real SCIProwGetSolActivity(
    SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Real*            solactivity         /**< pointer to store the row's activity for the solution */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
    SCIP_COL* col;
    SCIP_Real inf;
+   SCIP_Real activity;
    int i;
 
    assert(row != NULL);
-   assert(solactivity != NULL);
 
-   *solactivity = row->constant;
+   activity = row->constant;
    for( i = 0; i < row->len; ++i )
    {
       col = row->cols[i];
       assert(col != NULL);
       assert((i < row->nlpcols) == (row->linkpos[i] >= 0 && col->lppos >= 0));
-      (*solactivity) += row->vals[i] * SCIPsolGetVal(sol, set, stat, col->var);
+      activity += row->vals[i] * SCIPsolGetVal(sol, set, stat, col->var);
    }
 
    inf = SCIPsetInfinity(set);
-   *solactivity = MAX(*solactivity, -inf);
-   *solactivity = MIN(*solactivity, +inf);
+   activity = MAX(activity, -inf);
+   activity = MIN(activity, +inf);
 
-   return SCIP_OKAY;
+   return activity;
 }
 
 /** returns the feasibility of a row for the given solution */
-SCIP_RETCODE SCIProwGetSolFeasibility(
+SCIP_Real SCIProwGetSolFeasibility(
    SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Real*            solfeasibility      /**< pointer to store the row's feasibility for the solution */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    )
 {
-   SCIP_Real solactivity;
+   SCIP_Real activity;
 
    assert(row != NULL);
-   assert(solfeasibility != NULL);
 
-   SCIP_CALL( SCIProwGetSolActivity(row, set, stat, sol, &solactivity) );
+   activity = SCIProwGetSolActivity(row, set, stat, sol);
 
-   *solfeasibility = MIN(row->rhs - solactivity, solactivity - row->lhs);
-
-   return SCIP_OKAY;
+   return MIN(row->rhs - activity, activity - row->lhs);
 }
 
 /** calculates minimal and maximal activity of row w.r.t. the column's bounds */
@@ -4818,7 +4813,7 @@ SCIP_Real SCIProwGetMinval(
 }
 
 /** returns row's efficacy with respect to the current LP solution: e = -feasibility/norm */
-SCIP_Real SCIProwGetEfficacy(
+SCIP_Real SCIProwGetLPEfficacy(
    SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -4859,7 +4854,7 @@ SCIP_Real SCIProwGetEfficacy(
 }
 
 /** returns whether the row's efficacy with respect to the current LP solution is greater than the minimal cut efficacy */
-SCIP_Bool SCIProwIsEfficacious(
+SCIP_Bool SCIProwIsLPEfficacious(
    SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -4869,7 +4864,66 @@ SCIP_Bool SCIProwIsEfficacious(
 {
    SCIP_Real efficacy;
 
-   efficacy = SCIProwGetEfficacy(row, set, stat, lp);
+   efficacy = SCIProwGetLPEfficacy(row, set, stat, lp);
+
+   return SCIPsetIsEfficacious(set, root, efficacy);
+}
+
+/** returns row's efficacy with respect to the given primal solution: e = -feasibility/norm */
+SCIP_Real SCIProwGetSolEfficacy(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   SCIP_Real norm;
+   SCIP_Real feasibility;
+   SCIP_Real eps;
+
+   assert(set != NULL);
+
+   switch( set->sepa_efficacynorm )
+   {
+   case 'e':
+      norm = SCIProwGetNorm(row);
+      break;
+   case 'm':
+      norm = SCIProwGetMaxval(row, set);
+      break;
+   case 's':
+      norm = SCIProwGetSumNorm(row);
+      break;
+   case 'd':
+      norm = (row->len == 0 ? 0.0 : 1.0);
+      break;
+   default:
+      SCIPerrorMessage("invalid efficacy norm parameter '%c'\n", set->sepa_efficacynorm);
+      SCIPABORT();
+      norm = 0.0;
+   }
+
+   eps = SCIPsetSumepsilon(set);
+   norm = MAX(norm, eps);
+   feasibility = SCIProwGetSolFeasibility(row, set, stat, sol);
+
+   return -feasibility / norm;
+}
+
+/** returns whether the row's efficacy with respect to the given primal solution is greater than the minimal cut
+ *  efficacy
+ */
+SCIP_Bool SCIProwIsSolEfficacious(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Bool             root                /**< should the root's minimal cut efficacy be used? */
+   )
+{
+   SCIP_Real efficacy;
+
+   efficacy = SCIProwGetSolEfficacy(row, set, stat, sol);
 
    return SCIPsetIsEfficacious(set, root, efficacy);
 }

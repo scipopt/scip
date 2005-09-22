@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.17 2005/09/22 14:43:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.18 2005/09/22 17:33:55 bzfpfend Exp $"
 
 /**@file   sepa_strongcg.c
  * @brief  Strong CG Cuts (Letchford & Lodi)
@@ -415,11 +415,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
 
                      if( success )
                      {
-                        if( !SCIPisCutEfficacious(scip, cut) )
+                        if( !SCIPisCutEfficacious(scip, NULL, cut) )
                         {
                            SCIPdebugMessage(" -> strong CG cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
                               cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-                              SCIPgetCutEfficacy(scip, cut));
+                              SCIPgetCutEfficacy(scip, NULL, cut));
                            SCIPdebug(SCIPprintRow(scip, cut, NULL));
                            success = FALSE;
                         }
@@ -427,10 +427,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                         {
                            SCIPdebugMessage(" -> found strong CG cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
                               cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-                              SCIPgetCutEfficacy(scip, cut), SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
+                              SCIPgetCutEfficacy(scip, NULL, cut),
+                              SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                               SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
                            SCIPdebug(SCIPprintRow(scip, cut, NULL));
-                           SCIP_CALL( SCIPaddCut(scip, cut, FALSE) );
+                           SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
                            if( !cutislocal )
                            {
                               SCIP_CALL( SCIPaddPoolCut(scip, cut) );
@@ -442,7 +443,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                      else
                      {
                         SCIPdebugMessage(" -> strong CG cut <%s> couldn't be scaled to integral coefficients: act=%f, rhs=%f, norm=%f, eff=%f\n",
-                           cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut));
+                           cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, NULL, cut));
                      }
 
                      /* release the row */

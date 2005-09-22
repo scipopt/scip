@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.51 2005/09/22 14:43:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.52 2005/09/22 17:33:55 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -416,11 +416,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
                      if( success )
                      {
-                        if( !SCIPisCutEfficacious(scip, cut) )
+                        if( !SCIPisCutEfficacious(scip, NULL, cut) )
                         {
                            SCIPdebugMessage(" -> gomory cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
                               cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-                              SCIPgetCutEfficacy(scip, cut));
+                              SCIPgetCutEfficacy(scip, NULL, cut));
                            SCIPdebug(SCIPprintRow(scip, cut, NULL));
                            success = FALSE;
                         }
@@ -428,10 +428,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                         {
                            SCIPdebugMessage(" -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
                               cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-                              SCIPgetCutEfficacy(scip, cut), SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
+                              SCIPgetCutEfficacy(scip, NULL, cut),
+                              SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                               SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
                            SCIPdebug(SCIPprintRow(scip, cut, NULL));
-                           SCIP_CALL( SCIPaddCut(scip, cut, FALSE) );
+                           SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
                            if( !cutislocal )
                            {
                               SCIP_CALL( SCIPaddPoolCut(scip, cut) );
@@ -443,7 +444,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                      else
                      {
                         SCIPdebugMessage(" -> gomory cut <%s> couldn't be scaled to integral coefficients: act=%f, rhs=%f, norm=%f, eff=%f\n",
-                           cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut));
+                           cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, NULL, cut));
                      }
 
                      /* release the row */
@@ -472,7 +473,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
 
 /** arbitrary primal solution separation method of separator */
-#define sepaExecsolGomory NULL /*????????????????*/
+#define sepaExecsolGomory NULL /* gomory cuts only make sense if an LP basis exists */
 
 
 

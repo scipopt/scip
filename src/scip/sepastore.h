@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.h,v 1.26 2005/09/22 14:43:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.h,v 1.27 2005/09/22 17:33:56 bzfpfend Exp $"
 
 /**@file   sepastore.h
  * @brief  internal methods for storing separated cuts
@@ -86,6 +86,7 @@ SCIP_RETCODE SCIPsepastoreAddCut(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_LP*              lp,                 /**< LP data */
+   SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
    SCIP_Bool             root                /**< are we at the root node? */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.21 2005/09/22 14:43:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.22 2005/09/22 17:33:55 bzfpfend Exp $"
 
 /**@file   sepa_intobj.c
  * @brief  integer objective value separator
@@ -267,7 +267,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpIntobj)
       *result = SCIP_CUTOFF;
    else if( !SCIProwIsInLP(sepadata->objrow) )
    {
-      SCIP_CALL( SCIPaddCut(scip, sepadata->objrow, FALSE) );
+      SCIP_CALL( SCIPaddCut(scip, NULL, sepadata->objrow, FALSE) );
       *result = SCIP_SEPARATED;
    }
    else if( tightened )

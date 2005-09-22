@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.40 2005/09/22 14:43:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.41 2005/09/22 17:33:53 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -257,7 +257,7 @@ SCIP_RETCODE addRelaxation(
 
    SCIPdebugMessage("adding relaxation of varbound constraint <%s>: ", SCIPconsGetName(cons));
    SCIPdebug( SCIProwPrint(consdata->row, NULL) );
-   SCIP_CALL( SCIPaddCut(scip, consdata->row, FALSE) );
+   SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -294,7 +294,7 @@ SCIP_RETCODE separateCons(
       feasibility = SCIPgetRowLPFeasibility(scip, consdata->row);
       if( SCIPisFeasNegative(scip, feasibility) )
       {
-         SCIP_CALL( SCIPaddCut(scip, consdata->row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE) );
          *separated = TRUE;
       }
    }

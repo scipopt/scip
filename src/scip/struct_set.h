@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.57 2005/08/30 13:42:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.58 2005/09/22 17:33:56 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -58,7 +58,9 @@ struct SCIP_Set
    SCIP_BUFFER*          buffer;             /**< memory buffers for short living temporary objects */
    SCIP_READER**         readers;            /**< file readers */
    SCIP_PRICER**         pricers;            /**< variable pricers */
-   SCIP_CONSHDLR**       conshdlrs;          /**< constraint handlers */
+   SCIP_CONSHDLR**       conshdlrs;          /**< constraint handlers (sorted by check priority) */
+   SCIP_CONSHDLR**       conshdlrs_sepa;     /**< constraint handlers (sorted by separation priority) */
+   SCIP_CONSHDLR**       conshdlrs_enfo;     /**< constraint handlers (sorted by enforcement priority) */
    SCIP_CONFLICTHDLR**   conflicthdlrs;      /**< conflict handlers */
    SCIP_PRESOL**         presols;            /**< presolvers */
    SCIP_RELAX**          relaxs;             /**< relaxators */

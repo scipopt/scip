@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.45 2005/09/22 14:43:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.46 2005/09/22 17:33:56 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -203,7 +203,7 @@ SCIP_Bool sepastoreIsCutRedundant(
 }
 
 /** adds cut stored as LP row to separation storage and captures it;
- *  if the cut should be forced to enter the LP, an infinite score has to be used
+ *  if the cut should be forced to be used, an infinite score has to be used
  */
 static
 SCIP_RETCODE sepastoreAddCut(
@@ -212,6 +212,7 @@ SCIP_RETCODE sepastoreAddCut(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_LP*              lp,                 /**< LP data */
+   SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
    SCIP_Bool             root                /**< are we at the root node? */
@@ -231,7 +232,7 @@ SCIP_RETCODE sepastoreAddCut(
    assert(sepastore->nforcedcuts <= sepastore->ncuts);
    assert(set != NULL);
    assert(cut != NULL);
-   assert(!SCIProwIsInLP(cut));
+   assert(sol != NULL || !SCIProwIsInLP(cut));
    assert(!SCIPsetIsInfinity(set, -SCIProwGetLhs(cut)) || !SCIPsetIsInfinity(set, SCIProwGetRhs(cut)));
 
    /* check cut for redundancy
@@ -276,7 +277,10 @@ SCIP_RETCODE sepastoreAddCut(
    }
    else
    {
-      cutefficacy = SCIProwGetEfficacy(cut, set, stat, lp);
+      if( sol == NULL )
+         cutefficacy = SCIProwGetLPEfficacy(cut, set, stat, lp);
+      else
+         cutefficacy = SCIProwGetSolEfficacy(cut, set, stat, sol);
       cutscore = cutefficacy + set->sepa_objparalfac * cutobjparallelism + set->sepa_orthofac * cutorthogonality;
       assert(!SCIPsetIsInfinity(set, cutscore));
    }
@@ -441,6 +445,7 @@ SCIP_RETCODE SCIPsepastoreAddCut(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_LP*              lp,                 /**< LP data */
+   SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
    SCIP_Bool             root                /**< are we at the root node? */
@@ -465,7 +470,7 @@ SCIP_RETCODE SCIPsepastoreAddCut(
    forcecut = forcecut || (!SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1);
 
    /* add LP row cut to separation storage */
-   SCIP_CALL( sepastoreAddCut(sepastore, blkmem, set, stat, lp, cut, forcecut, root) );
+   SCIP_CALL( sepastoreAddCut(sepastore, blkmem, set, stat, lp, sol, cut, forcecut, root) );
 
    return SCIP_OKAY;
 }
