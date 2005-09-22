@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.37 2005/08/24 17:26:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.38 2005/09/22 14:43:46 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -275,7 +275,7 @@ public:
       return SCIP_OKAY;
    }
 
-   /** separation method of constraint handler
+   /** separation method of constraint handler for LP solution
     *
     *  Separates all constraints of the constraint handler. The method is called in the LP solution loop,
     *  which means that a valid LP solution exists.
@@ -293,12 +293,46 @@ public:
     *  - SCIP_DIDNOTRUN  : the separator was skipped
     *  - SCIP_DELAYED    : the separator was skipped, but should be called again
     */
-   virtual SCIP_RETCODE scip_sepa(
+   virtual SCIP_RETCODE scip_sepalp(
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
       SCIP_CONS**        conss,              /**< array of constraints to process */
       int                nconss,             /**< number of constraints to process */
       int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+      SCIP_RESULT*       result              /**< pointer to store the result of the separation call */
+      )
+   {
+      assert(result != NULL);
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
+   /** separation method of constraint handler for arbitrary primal solution
+    *
+    *  Separates all constraints of the constraint handler. The method is called outside the LP solution loop (e.g., by
+    *  a relaxator or a primal heuristic), which means that there is no valid LP solution.
+    *  Instead, the method should produce cuts that separate the given solution.
+    *
+    *  The first nusefulconss constraints are the ones, that are identified to likely be violated. The separation
+    *  method should process only the useful constraints in most runs, and only occasionally the remaining
+    *  nconss - nusefulconss constraints.
+    *
+    *  possible return values for *result (if more than one applies, the first in the list should be used):
+    *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
+    *  - SCIP_CONSADDED  : an additional constraint was generated
+    *  - SCIP_REDUCEDDOM : a variable's domain was reduced
+    *  - SCIP_SEPARATED  : a cutting plane was generated
+    *  - SCIP_DIDNOTFIND : the separator searched, but did not find domain reductions, cutting planes, or cut constraints
+    *  - SCIP_DIDNOTRUN  : the separator was skipped
+    *  - SCIP_DELAYED    : the separator was skipped, but should be called again
+    */
+   virtual SCIP_RETCODE scip_sepasol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS**        conss,              /**< array of constraints to process */
+      int                nconss,             /**< number of constraints to process */
+      int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+      SCIP_SOL*          sol,                /**< primal solution that should be separated */
       SCIP_RESULT*       result              /**< pointer to store the result of the separation call */
       )
    {

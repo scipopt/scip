@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.26 2005/08/24 17:26:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.27 2005/09/22 14:43:46 bzfpfend Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -226,9 +226,9 @@ SCIP_DECL_CONSINITLP(consInitlpObj)
 }
 
 
-/** separation method of constraint handler */
+/** separation method of constraint handler for LP solutions */
 static
-SCIP_DECL_CONSSEPA(consSepaObj)
+SCIP_DECL_CONSSEPALP(consSepalpObj)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
@@ -237,7 +237,24 @@ SCIP_DECL_CONSSEPA(consSepaObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   SCIP_CALL( conshdlrdata->objconshdlr->scip_sepa(scip, conshdlr, conss, nconss, nusefulconss, result) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_sepalp(scip, conshdlr, conss, nconss, nusefulconss, result) );
+
+   return SCIP_OKAY;
+}
+
+
+/** separation method of constraint handler for arbitrary primal solutions */
+static
+SCIP_DECL_CONSSEPASOL(consSepasolObj)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->objconshdlr != NULL);
+
+   /* call virtual method of conshdlr object */
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_sepasol(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
 
    return SCIP_OKAY;
 }
@@ -482,7 +499,7 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
          consFreeObj, consInitObj, consExitObj, 
          consInitpreObj, consExitpreObj, consInitsolObj, consExitsolObj,
          consDeleteObj, consTransObj, consInitlpObj,
-         consSepaObj, consEnfolpObj, consEnfopsObj, consCheckObj, 
+         consSepalpObj, consSepasolObj, consEnfolpObj, consEnfopsObj, consCheckObj, 
          consPropObj, consPresolObj, consRespropObj, consLockObj,
          consActiveObj, consDeactiveObj, 
          consEnableObj, consDisableObj,

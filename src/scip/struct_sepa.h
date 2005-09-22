@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sepa.h,v 1.14 2005/08/24 17:27:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_sepa.h,v 1.15 2005/09/22 14:43:51 bzfpfend Exp $"
 
 /**@file   struct_sepa.h
  * @brief  datastructures for separators
@@ -45,7 +45,8 @@ struct SCIP_Sepa
    SCIP_DECL_SEPAEXIT    ((*sepaexit));      /**< deinitialize separator */
    SCIP_DECL_SEPAINITSOL ((*sepainitsol));   /**< solving process initialization method of separator */
    SCIP_DECL_SEPAEXITSOL ((*sepaexitsol));   /**< solving process deinitialization method of separator */
-   SCIP_DECL_SEPAEXEC    ((*sepaexec));      /**< execution method of separator */
+   SCIP_DECL_SEPAEXECLP  ((*sepaexeclp));    /**< LP solution separation method of separator */
+   SCIP_DECL_SEPAEXECSOL ((*sepaexecsol));   /**< arbitrary primal solution separation method of separator */
    SCIP_SEPADATA*        sepadata;           /**< separators local data */
    SCIP_CLOCK*           sepaclock;          /**< separation time */
    int                   priority;           /**< priority of the separator */
@@ -53,7 +54,8 @@ struct SCIP_Sepa
    int                   ncallsatnode;       /**< number of times, this separator was called at the current node */
    int                   ncutsfoundatnode;   /**< number of cutting planes found at the current node */
    SCIP_Bool             delay;              /**< should separator be delayed, if other separators found cuts? */
-   SCIP_Bool             wasdelayed;         /**< was the separator delayed at the last call? */
+   SCIP_Bool             lpwasdelayed;       /**< was the LP separation delayed at the last call? */
+   SCIP_Bool             solwasdelayed;      /**< was the solution separation delayed at the last call? */
    SCIP_Bool             initialized;        /**< is separator initialized? */
 };
 

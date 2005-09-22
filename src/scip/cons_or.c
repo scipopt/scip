@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.46 2005/09/05 15:27:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.47 2005/09/22 14:43:49 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -1249,9 +1249,9 @@ SCIP_DECL_CONSINITLP(consInitlpOr)
 }
 
 
-/** separation method of constraint handler */
+/** separation method of constraint handler for LP solutions */
 static
-SCIP_DECL_CONSSEPA(consSepaOr)
+SCIP_DECL_CONSSEPALP(consSepalpOr)
 {  /*lint --e{715}*/
    SCIP_Bool separated;
    int c;
@@ -1271,6 +1271,10 @@ SCIP_DECL_CONSSEPA(consSepaOr)
 
    return SCIP_OKAY;
 }
+
+
+/** separation method of constraint handler for arbitrary primal solutions */
+#define consSepasolOr NULL /*?????????????????*/
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -1575,7 +1579,7 @@ SCIP_RETCODE SCIPincludeConshdlrOr(
          consFreeOr, consInitOr, consExitOr, 
          consInitpreOr, consExitpreOr, consInitsolOr, consExitsolOr,
          consDeleteOr, consTransOr, consInitlpOr,
-         consSepaOr, consEnfolpOr, consEnfopsOr, consCheckOr, 
+         consSepalpOr, consSepasolOr, consEnfolpOr, consEnfopsOr, consCheckOr, 
          consPropOr, consPresolOr, consRespropOr, consLockOr,
          consActiveOr, consDeactiveOr, 
          consEnableOr, consDisableOr,

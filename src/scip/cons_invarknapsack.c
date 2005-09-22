@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_invarknapsack.c,v 1.31 2005/08/24 17:26:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_invarknapsack.c,v 1.32 2005/09/22 14:43:48 bzfpfend Exp $"
 
 /**@file   cons_invarknapsack.c
  * @brief  constraint handler for invarknapsack constraints
@@ -217,10 +217,10 @@ SCIP_DECL_CONSINITLP(consInitlpInvarknapsack)
 #endif
 
 
-/** separation method of constraint handler */
+/** separation method of constraint handler for LP solutions */
 #if 0
 static
-SCIP_DECL_CONSSEPA(consSepaInvarknapsack)
+SCIP_DECL_CONSSEPALP(consSepalpInvarknapsack)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -228,7 +228,22 @@ SCIP_DECL_CONSSEPA(consSepaInvarknapsack)
    return SCIP_OKAY;
 }
 #else
-#define consSepaInvarknapsack NULL
+#define consSepalpInvarknapsack NULL
+#endif
+
+
+/** separation method of constraint handler for arbitrary primal solutions */
+#if 0
+static
+SCIP_DECL_CONSSEPASOL(consSepasolInvarknapsack)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of invarknapsack constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consSepasolInvarknapsack NULL
 #endif
 
 
@@ -461,7 +476,8 @@ SCIP_RETCODE SCIPincludeConshdlrInvarknapsack(
          consFreeInvarknapsack, consInitInvarknapsack, consExitInvarknapsack, 
          consInitpreInvarknapsack, consExitpreInvarknapsack, consInitsolInvarknapsack, consExitsolInvarknapsack,
          consDeleteInvarknapsack, consTransInvarknapsack, consInitlpInvarknapsack,
-         consSepaInvarknapsack, consEnfolpInvarknapsack, consEnfopsInvarknapsack, consCheckInvarknapsack, 
+         consSepalpInvarknapsack, consSepasolInvarknapsack, consEnfolpInvarknapsack, consEnfopsInvarknapsack, 
+         consCheckInvarknapsack, 
          consPropInvarknapsack, consPresolInvarknapsack, consRespropInvarknapsack, consLockInvarknapsack,
          consActiveInvarknapsack, consDeactiveInvarknapsack, 
          consEnableInvarknapsack, consDisableInvarknapsack,

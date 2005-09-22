@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.114 2005/09/20 17:56:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.115 2005/09/22 14:43:48 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -3295,9 +3295,9 @@ SCIP_DECL_CONSINITLP(consInitlpKnapsack)
    return SCIP_OKAY;
 }
 
-/** separation method of constraint handler */
+/** separation method of constraint handler for LP solutions */
 static
-SCIP_DECL_CONSSEPA(consSepaKnapsack)
+SCIP_DECL_CONSSEPALP(consSepalpKnapsack)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool sepacardinality;
@@ -3349,6 +3349,11 @@ SCIP_DECL_CONSSEPA(consSepaKnapsack)
    
    return SCIP_OKAY;
 }
+
+
+/** separation method of constraint handler for arbitrary primal solutions */
+#define consSepasolKnapsack NULL /*?????????????????*/
+
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
@@ -3866,7 +3871,7 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
          consFreeKnapsack, consInitKnapsack, consExitKnapsack, 
          consInitpreKnapsack, consExitpreKnapsack, consInitsolKnapsack, consExitsolKnapsack,
          consDeleteKnapsack, consTransKnapsack, consInitlpKnapsack,
-         consSepaKnapsack, consEnfolpKnapsack, consEnfopsKnapsack, consCheckKnapsack, 
+         consSepalpKnapsack, consSepasolKnapsack, consEnfolpKnapsack, consEnfopsKnapsack, consCheckKnapsack, 
          consPropKnapsack, consPresolKnapsack, consRespropKnapsack, consLockKnapsack,
          consActiveKnapsack, consDeactiveKnapsack, 
          consEnableKnapsack, consDisableKnapsack,

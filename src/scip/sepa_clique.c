@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.19 2005/09/05 15:27:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.20 2005/09/22 14:43:50 bzfpfend Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -1021,9 +1021,10 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolClique)
    return SCIP_OKAY;
 }
 
-/** execution method of separator */
+
+/** LP solution separation method of separator */
 static
-SCIP_DECL_SEPAEXEC(sepaExecClique)
+SCIP_DECL_SEPAEXECLP(sepaExeclpClique)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
    TCLIQUE_GRAPH* tcliquegraph;
@@ -1096,6 +1097,10 @@ SCIP_DECL_SEPAEXEC(sepaExecClique)
 }
 
 
+/** arbitrary primal solution separation method of separator */
+#define sepaExecsolClique NULL /*???????????????*/
+
+
 
 
 /*
@@ -1119,7 +1124,9 @@ SCIP_RETCODE SCIPincludeSepaClique(
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
-         sepaFreeClique, sepaInitClique, sepaExitClique, sepaInitsolClique, sepaExitsolClique, sepaExecClique,
+         sepaFreeClique, sepaInitClique, sepaExitClique,
+         sepaInitsolClique, sepaExitsolClique,
+         sepaExeclpClique, sepaExecsolClique,
          sepadata) );
 
    /* add clique separator parameters */

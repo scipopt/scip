@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_xxx.c,v 1.15 2005/08/24 17:26:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_xxx.c,v 1.16 2005/09/22 14:43:51 bzfpfend Exp $"
 
 /**@file   sepa_xxx.c
  * @brief  xxx separator
@@ -141,16 +141,34 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolXxx)
 #endif
 
 
-/** execution method of separator */
+/** LP solution separation method of separator */
+#if 0
 static
-SCIP_DECL_SEPAEXEC(sepaExecXxx)
+SCIP_DECL_SEPAEXECLP(sepaExeclpXxx)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xxx separator not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
+#else
+#define sepaExeclpXxx NULL
+#endif
 
+
+/** arbitrary primal solution separation method of separator */
+#if 0
+static
+SCIP_DECL_SEPAEXECSOL(sepaExecsolXxx)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xxx separator not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define sepaExecsolXxx NULL
+#endif
 
 
 
@@ -173,7 +191,8 @@ SCIP_RETCODE SCIPincludeSepaXxx(
    /* include separator */
    SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
          sepaFreeXxx, sepaInitXxx, sepaExitXxx, 
-         sepaInitsolXxx, sepaExitsolXxx, sepaExecXxx,
+         sepaInitsolXxx, sepaExitsolXxx,
+         sepaExeclpXxx, sepaExecsolXxx,
          sepadata) );
 
    /* add xxx separator parameters */

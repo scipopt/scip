@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.96 2005/09/09 12:34:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.97 2005/09/22 14:43:49 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -1964,9 +1964,9 @@ SCIP_DECL_CONSINITLP(consInitlpSetppc)
 }
 
 
-/** separation method of constraint handler */
+/** separation method of constraint handler for LP solutions */
 static
-SCIP_DECL_CONSSEPA(consSepaSetppc)
+SCIP_DECL_CONSSEPALP(consSepalpSetppc)
 {  /*lint --e{715}*/
    SCIP_Bool cutoff;
    SCIP_Bool separated;
@@ -2005,6 +2005,11 @@ SCIP_DECL_CONSSEPA(consSepaSetppc)
 
    return SCIP_OKAY;
 }
+
+
+/** separation method of constraint handler for arbitrary primal solutions */
+#define consSepasolSetppc NULL /*??????????????????*/
+
 
 #ifdef VARUSES
 #ifdef BRANCHLP
@@ -3348,8 +3353,8 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          consFreeSetppc, consInitSetppc, consExitSetppc, 
          consInitpreSetppc, consExitpreSetppc, consInitsolSetppc, consExitsolSetppc,
-         consDeleteSetppc, consTransSetppc, 
-         consInitlpSetppc, consSepaSetppc, consEnfolpSetppc, consEnfopsSetppc, consCheckSetppc, 
+         consDeleteSetppc, consTransSetppc, consInitlpSetppc,
+         consSepalpSetppc, consSepasolSetppc, consEnfolpSetppc, consEnfopsSetppc, consCheckSetppc, 
          consPropSetppc, consPresolSetppc, consRespropSetppc, consLockSetppc,
          consActiveSetppc, consDeactiveSetppc, 
          consEnableSetppc, consDisableSetppc,

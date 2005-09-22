@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.49 2005/08/24 17:26:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.50 2005/09/22 14:43:50 bzfpfend Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -76,7 +76,8 @@ SCIP_RETCODE SCIPsepaCreate(
    SCIP_DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
    SCIP_DECL_SEPAINITSOL ((*sepainitsol)),   /**< solving process initialization method of separator */
    SCIP_DECL_SEPAEXITSOL ((*sepaexitsol)),   /**< solving process deinitialization method of separator */
-   SCIP_DECL_SEPAEXEC    ((*sepaexec)),      /**< execution method of separator */
+   SCIP_DECL_SEPAEXECLP  ((*sepaexeclp)),    /**< LP solution separation method of separator */
+   SCIP_DECL_SEPAEXECSOL ((*sepaexecsol)),   /**< arbitrary primal solution separation method of separator */
    SCIP_SEPADATA*        sepadata            /**< separator data */
    )
 {
@@ -87,7 +88,7 @@ SCIP_RETCODE SCIPsepaCreate(
    assert(name != NULL);
    assert(desc != NULL);
    assert(freq >= -1);
-   assert(sepaexec != NULL);
+   assert(sepaexeclp != NULL || sepaexecsol != NULL);
 
    SCIP_ALLOC( BMSallocMemory(sepa) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*sepa)->name, name, strlen(name)+1) );
@@ -99,7 +100,8 @@ SCIP_RETCODE SCIPsepaCreate(
    (*sepa)->sepaexit = sepaexit;
    (*sepa)->sepainitsol = sepainitsol;
    (*sepa)->sepaexitsol = sepaexitsol;
-   (*sepa)->sepaexec = sepaexec;
+   (*sepa)->sepaexeclp = sepaexeclp;
+   (*sepa)->sepaexecsol = sepaexecsol;
    (*sepa)->sepadata = sepadata;
    SCIP_CALL( SCIPclockCreate(&(*sepa)->sepaclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*sepa)->lastsepanode = -1;
@@ -107,7 +109,8 @@ SCIP_RETCODE SCIPsepaCreate(
    (*sepa)->ncutsfound = 0;
    (*sepa)->ncallsatnode = 0;
    (*sepa)->ncutsfoundatnode = 0;
-   (*sepa)->wasdelayed = FALSE;
+   (*sepa)->lpwasdelayed = FALSE;
+   (*sepa)->solwasdelayed = FALSE;
    (*sepa)->initialized = FALSE;
 
    /* add parameters */
@@ -247,8 +250,8 @@ SCIP_RETCODE SCIPsepaExitsol(
    return SCIP_OKAY;
 }
 
-/** calls execution method of separator */
-SCIP_RETCODE SCIPsepaExec(
+/** calls LP separation method of separator */
+SCIP_RETCODE SCIPsepaExecLP(
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -259,7 +262,6 @@ SCIP_RETCODE SCIPsepaExec(
    )
 {
    assert(sepa != NULL);
-   assert(sepa->sepaexec != NULL);
    assert(sepa->freq >= -1);
    assert(set != NULL);
    assert(set->scip != NULL);
@@ -267,14 +269,15 @@ SCIP_RETCODE SCIPsepaExec(
    assert(depth >= 0);
    assert(result != NULL);
 
-   if( (depth == 0 && sepa->freq == 0) || (sepa->freq > 0 && depth % sepa->freq == 0) || sepa->wasdelayed )
+   if( sepa->sepaexeclp != NULL
+      && ((depth == 0 && sepa->freq == 0) || (sepa->freq > 0 && depth % sepa->freq == 0) || sepa->lpwasdelayed) )
    {
       if( !sepa->delay || execdelayed )
       {
          int oldncutsstored;
          int ncutsfound;
 
-         SCIPdebugMessage("executing separator <%s>\n", sepa->name);
+         SCIPdebugMessage("executing separator <%s> on LP solution\n", sepa->name);
 
          oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
 
@@ -289,7 +292,7 @@ SCIP_RETCODE SCIPsepaExec(
          SCIPclockStart(sepa->sepaclock, set);
 
          /* call external separation method */
-         SCIP_CALL( sepa->sepaexec(set->scip, sepa, result) );
+         SCIP_CALL( sepa->sepaexeclp(set->scip, sepa, result) );
 
          /* stop timing */
          SCIPclockStop(sepa->sepaclock, set);
@@ -326,7 +329,95 @@ SCIP_RETCODE SCIPsepaExec(
       }
 
       /* remember whether separator was delayed */
-      sepa->wasdelayed = (*result == SCIP_DELAYED);
+      sepa->lpwasdelayed = (*result == SCIP_DELAYED);
+   }
+   else
+      *result = SCIP_DIDNOTRUN;
+   
+   return SCIP_OKAY;
+}
+
+/** calls primal solution separation method of separator */
+SCIP_RETCODE SCIPsepaExecSol(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_SOL*             sol,                /**< primal solution that should be separated */
+   int                   depth,              /**< depth of current node */
+   SCIP_Bool             execdelayed,        /**< execute separator even if it is marked to be delayed */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(sepa != NULL);
+   assert(sepa->freq >= -1);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+   assert(stat != NULL);
+   assert(depth >= 0);
+   assert(result != NULL);
+
+   if( sepa->sepaexecsol != NULL
+      && ((depth == 0 && sepa->freq == 0) || (sepa->freq > 0 && depth % sepa->freq == 0) || sepa->solwasdelayed) )
+   {
+      if( !sepa->delay || execdelayed )
+      {
+         int oldncutsstored;
+         int ncutsfound;
+
+         SCIPdebugMessage("executing separator <%s> on solution %p\n", sepa->name, sol);
+
+         oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
+
+         /* reset the statistics for current node */
+         if( sepa->lastsepanode != stat->ntotalnodes )
+         {
+            sepa->ncallsatnode = 0;
+            sepa->ncutsfoundatnode = 0;
+         }
+
+         /* start timing */
+         SCIPclockStart(sepa->sepaclock, set);
+
+         /* call external separation method */
+         SCIP_CALL( sepa->sepaexecsol(set->scip, sepa, sol, result) );
+
+         /* stop timing */
+         SCIPclockStop(sepa->sepaclock, set);
+
+         /* update statistics */
+         if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
+         {
+            sepa->ncalls++;
+            sepa->ncallsatnode++;
+            sepa->lastsepanode = stat->ntotalnodes;
+         }
+         ncutsfound = SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored;
+         sepa->ncutsfound += ncutsfound;
+         sepa->ncutsfoundatnode += ncutsfound;
+
+         /* evaluate result */
+         if( *result != SCIP_CUTOFF
+            && *result != SCIP_CONSADDED
+            && *result != SCIP_REDUCEDDOM
+            && *result != SCIP_SEPARATED
+            && *result != SCIP_DIDNOTFIND
+            && *result != SCIP_DIDNOTRUN
+            && *result != SCIP_DELAYED )
+         {
+            SCIPerrorMessage("execution method of separator <%s> returned invalid result <%d>\n", 
+               sepa->name, *result);
+            return SCIP_INVALIDRESULT;
+         }
+      }
+      else
+      {
+         SCIPdebugMessage("separator <%s> was delayed\n", sepa->name);
+         *result = SCIP_DELAYED;
+      }
+
+      /* remember whether separator was delayed */
+      sepa->solwasdelayed = (*result == SCIP_DELAYED);
    }
    else
       *result = SCIP_DIDNOTRUN;
@@ -469,14 +560,24 @@ SCIP_Bool SCIPsepaIsDelayed(
    return sepa->delay;
 }
 
-/** was separator delayed at the last call? */
-SCIP_Bool SCIPsepaWasDelayed(
+/** was separation of the LP solution delayed at the last call? */
+SCIP_Bool SCIPsepaWasLPDelayed(
    SCIP_SEPA*            sepa                /**< separator */
    )
 {
    assert(sepa != NULL);
 
-   return sepa->wasdelayed;
+   return sepa->lpwasdelayed;
+}
+
+/** was separation of the primal solution delayed at the last call? */
+SCIP_Bool SCIPsepaWasSolDelayed(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return sepa->solwasdelayed;
 }
 
 /** is separator initialized? */

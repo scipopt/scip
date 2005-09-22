@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.32 2005/08/24 17:27:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.33 2005/09/22 14:43:52 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -175,7 +175,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  */
 #define SCIP_DECL_CONSINITLP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss)
 
-/** separation method of constraint handler
+/** separation method of constraint handler for LP solution
  *
  *  Separates all constraints of the constraint handler. The method is called in the LP solution loop,
  *  which means that a valid LP solution exists.
@@ -201,8 +201,39 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - SCIP_DIDNOTRUN  : the separator was skipped
  *  - SCIP_DELAYED    : the separator was skipped, but should be called again
  */
-#define SCIP_DECL_CONSSEPA(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, \
-      SCIP_RESULT* result)
+#define SCIP_DECL_CONSSEPALP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, \
+      int nconss, int nusefulconss, SCIP_RESULT* result)
+
+/** separation method of constraint handler for arbitrary primal solution
+ *
+ *  Separates all constraints of the constraint handler. The method is called outside the LP solution loop (e.g., by
+ *  a relaxator or a primal heuristic), which means that there is no valid LP solution.
+ *  Instead, the method should produce cuts that separate the given solution.
+ *
+ *  The first nusefulconss constraints are the ones, that are identified to likely be violated. The separation
+ *  method should process only the useful constraints in most runs, and only occasionally the remaining
+ *  nconss - nusefulconss constraints.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - conss           : array of constraints to process
+ *  - nconss          : number of constraints to process
+ *  - nusefulconss    : number of useful (non-obsolete) constraints to process
+ *  - sol             : primal solution that should be separated
+ *  - result          : pointer to store the result of the separation call
+ *
+ *  possible return values for *result (if more than one applies, the first in the list should be used):
+ *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
+ *  - SCIP_CONSADDED  : an additional constraint was generated
+ *  - SCIP_REDUCEDDOM : a variable's domain was reduced
+ *  - SCIP_SEPARATED  : a cutting plane was generated
+ *  - SCIP_DIDNOTFIND : the separator searched, but did not find domain reductions, cutting planes, or cut constraints
+ *  - SCIP_DIDNOTRUN  : the separator was skipped
+ *  - SCIP_DELAYED    : the separator was skipped, but should be called again
+ */
+#define SCIP_DECL_CONSSEPASOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, \
+      int nconss, int nusefulconss, SCIP_SOL* sol, SCIP_RESULT* result)
 
 /** constraint enforcing method of constraint handler for LP solutions
  *

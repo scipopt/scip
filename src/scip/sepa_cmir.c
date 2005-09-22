@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.44 2005/09/05 15:27:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.45 2005/09/22 14:43:50 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -999,9 +999,9 @@ SCIP_DECL_SEPAFREE(sepaFreeCmir)
 #define sepaExitsolCmir NULL
 
 
-/** execution method of separator */
+/** LP solution separation method of separator */
 static
-SCIP_DECL_SEPAEXEC(sepaExecCmir)
+SCIP_DECL_SEPAEXECLP(sepaExeclpCmir)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
    SCIP_VAR** vars;
@@ -1212,6 +1212,10 @@ SCIP_DECL_SEPAEXEC(sepaExecCmir)
 }
 
 
+/** arbitrary primal solution separation method of separator */
+#define sepaExecsolCmir NULL /*?????????????????*/
+
+
 
 
 /*
@@ -1231,7 +1235,8 @@ SCIP_RETCODE SCIPincludeSepaCmir(
    /* include separator */
    SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
          sepaFreeCmir, sepaInitCmir, sepaExitCmir, 
-         sepaInitsolCmir, sepaExitsolCmir, sepaExecCmir,
+         sepaInitsolCmir, sepaExitsolCmir, 
+         sepaExeclpCmir, sepaExecsolCmir,
          sepadata) );
 
    /* add cmir separator parameters */

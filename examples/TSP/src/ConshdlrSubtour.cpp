@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.4 2005/09/07 12:02:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.5 2005/09/22 14:43:46 bzfpfend Exp $"
 
 /**@file   ConshdlrSubtour.cpp
  * @brief  C++ file reader for TSP data files
@@ -42,6 +42,7 @@ struct SCIP_ConsData
    GRAPH* graph;
 };
 
+static
 bool findSubtour( 
    SCIP*              scip,               /**< SCIP data structure */
    GRAPH*             graph,              /**< underlying graph */
@@ -127,76 +128,14 @@ bool findSubtour(
       return false; 
 }
 
-/** frees specific constraint data
- *
- *  WARNING! There may exist unprocessed events. For example, a variable's bound may have been already changed, but
- *  the corresponding bound change event was not yet processed.
- */
-SCIP_RETCODE ConshdlrSubtour::scip_delete(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-   SCIP_CONSDATA**    consdata            /**< pointer to the constraint data to free */
-   )
-{
-   assert(consdata != NULL);
-
-   release_graph(&(*consdata)->graph);
-   SCIPfreeMemory(scip, consdata);
-
-   return SCIP_OKAY;
-}
-
-
-/** transforms constraint data into data belonging to the transformed problem */
-SCIP_RETCODE ConshdlrSubtour::scip_trans(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-   SCIP_CONS*         sourcecons,         /**< source constraint to transform */
-   SCIP_CONS**        targetcons          /**< pointer to store created target constraint */
-   )
-{
-   SCIP_CONSDATA* sourcedata;
-   SCIP_CONSDATA* targetdata;
-
-   sourcedata = SCIPconsGetData(sourcecons);
-
-   SCIP_CALL( SCIPallocMemory(scip,&targetdata) );
-   targetdata->graph = sourcedata->graph;
-   capture_graph(targetdata->graph);
-
-   /* create target constraint */
-   SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
-         SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
-         SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),  SCIPconsIsLocal(sourcecons),
-         SCIPconsIsModifiable(sourcecons), SCIPconsIsDynamic(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
-
-   return SCIP_OKAY;
-}
-
-/** separation method of constraint handler
- *
- *  Separates all constraints of the constraint handler. The method is called in the LP solution loop,
- *  which means that a valid LP solution exists.
- *
- *  The first nusefulconss constraints are the ones, that are identified to likely be violated. The separation
- *  method should process only the useful constraints in most runs, and only occasionally the remaining
- *  nconss - nusefulconss constraints.
- *
- *  possible return values for *result (if more than one applies, the first in the list should be used):
- *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
- *  - SCIP_CONSADDED  : an additional constraint was generated
- *  - SCIP_REDUCEDDOM : a variable's domain was reduced
- *  - SCIP_SEPARATED  : a cutting plane was generated
- *  - SCIP_DIDNOTFIND : the separator searched, but did not find domain reductions, cutting planes, or cut constraints
- *  - SCIP_DIDNOTRUN  : the separator was skipped
- *  - SCIP_DELAYED    : the separator was skipped, but should be called again
- */
-SCIP_RETCODE ConshdlrSubtour::scip_sepa(
+static
+SCIP_RETCODE sepaSubtour(
    SCIP*              scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
    SCIP_CONS**        conss,              /**< array of constraints to process */
    int                nconss,             /**< number of constraints to process */
    int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+   SCIP_SOL*          sol,                /**< primal solution that should be separated */
    SCIP_RESULT*       result              /**< pointer to store the result of the separation call */
    )
 {
@@ -219,7 +158,7 @@ SCIP_RETCODE ConshdlrSubtour::scip_sepa(
       // store the suggested, but infeasible solution into the capacity of the edges
       for( int i = 0; i < graph->nedges; i++)
       {
-         cap = SCIPgetVarSol(scip, graph->edges[i].var);
+         cap = SCIPgetSolVal(scip, sol, graph->edges[i].var);
          graph->edges[i].rcap = cap;
          graph->edges[i].cap = cap;
          graph->edges[i].back->rcap = cap;
@@ -285,6 +224,121 @@ SCIP_RETCODE ConshdlrSubtour::scip_sepa(
       SCIPfreeBufferArray( scip, &cuts );
                 
    }
+
+   return SCIP_OKAY;
+}
+
+
+/** frees specific constraint data
+ *
+ *  WARNING! There may exist unprocessed events. For example, a variable's bound may have been already changed, but
+ *  the corresponding bound change event was not yet processed.
+ */
+SCIP_RETCODE ConshdlrSubtour::scip_delete(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+   SCIP_CONSDATA**    consdata            /**< pointer to the constraint data to free */
+   )
+{
+   assert(consdata != NULL);
+
+   release_graph(&(*consdata)->graph);
+   SCIPfreeMemory(scip, consdata);
+
+   return SCIP_OKAY;
+}
+
+
+/** transforms constraint data into data belonging to the transformed problem */
+SCIP_RETCODE ConshdlrSubtour::scip_trans(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+   SCIP_CONS*         sourcecons,         /**< source constraint to transform */
+   SCIP_CONS**        targetcons          /**< pointer to store created target constraint */
+   )
+{
+   SCIP_CONSDATA* sourcedata;
+   SCIP_CONSDATA* targetdata;
+
+   sourcedata = SCIPconsGetData(sourcecons);
+
+   SCIP_CALL( SCIPallocMemory(scip,&targetdata) );
+   targetdata->graph = sourcedata->graph;
+   capture_graph(targetdata->graph);
+
+   /* create target constraint */
+   SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
+         SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
+         SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),  SCIPconsIsLocal(sourcecons),
+         SCIPconsIsModifiable(sourcecons), SCIPconsIsDynamic(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+
+   return SCIP_OKAY;
+}
+
+
+/** separation method of constraint handler for LP solution
+ *
+ *  Separates all constraints of the constraint handler. The method is called in the LP solution loop,
+ *  which means that a valid LP solution exists.
+ *
+ *  The first nusefulconss constraints are the ones, that are identified to likely be violated. The separation
+ *  method should process only the useful constraints in most runs, and only occasionally the remaining
+ *  nconss - nusefulconss constraints.
+ *
+ *  possible return values for *result (if more than one applies, the first in the list should be used):
+ *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
+ *  - SCIP_CONSADDED  : an additional constraint was generated
+ *  - SCIP_REDUCEDDOM : a variable's domain was reduced
+ *  - SCIP_SEPARATED  : a cutting plane was generated
+ *  - SCIP_DIDNOTFIND : the separator searched, but did not find domain reductions, cutting planes, or cut constraints
+ *  - SCIP_DIDNOTRUN  : the separator was skipped
+ *  - SCIP_DELAYED    : the separator was skipped, but should be called again
+ */
+SCIP_RETCODE ConshdlrSubtour::scip_sepalp(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+   SCIP_CONS**        conss,              /**< array of constraints to process */
+   int                nconss,             /**< number of constraints to process */
+   int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+   SCIP_RESULT*       result              /**< pointer to store the result of the separation call */
+   )
+{
+   SCIP_CALL( sepaSubtour(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
+
+   return SCIP_OKAY;
+}
+
+
+/** separation method of constraint handler for arbitrary primal solution
+ *
+ *  Separates all constraints of the constraint handler. The method is called outside the LP solution loop (e.g., by
+ *  a relaxator or a primal heuristic), which means that there is no valid LP solution.
+ *  Instead, the method should produce cuts that separate the given solution.
+ *
+ *  The first nusefulconss constraints are the ones, that are identified to likely be violated. The separation
+ *  method should process only the useful constraints in most runs, and only occasionally the remaining
+ *  nconss - nusefulconss constraints.
+ *
+ *  possible return values for *result (if more than one applies, the first in the list should be used):
+ *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
+ *  - SCIP_CONSADDED  : an additional constraint was generated
+ *  - SCIP_REDUCEDDOM : a variable's domain was reduced
+ *  - SCIP_SEPARATED  : a cutting plane was generated
+ *  - SCIP_DIDNOTFIND : the separator searched, but did not find domain reductions, cutting planes, or cut constraints
+ *  - SCIP_DIDNOTRUN  : the separator was skipped
+ *  - SCIP_DELAYED    : the separator was skipped, but should be called again
+ */
+SCIP_RETCODE ConshdlrSubtour::scip_sepasol(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+   SCIP_CONS**        conss,              /**< array of constraints to process */
+   int                nconss,             /**< number of constraints to process */
+   int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+   SCIP_SOL*          sol,                /**< primal solution that should be separated */
+   SCIP_RESULT*       result              /**< pointer to store the result of the separation call */
+   )
+{
+   SCIP_CALL( sepaSubtour(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
 
    return SCIP_OKAY;
 }

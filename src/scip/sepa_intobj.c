@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.20 2005/08/24 17:26:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.21 2005/09/22 14:43:51 bzfpfend Exp $"
 
 /**@file   sepa_intobj.c
  * @brief  integer objective value separator
@@ -214,9 +214,9 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolIntobj)
 }
 
 
-/** execution method of separator */
+/** LP solution separation method of separator */
 static
-SCIP_DECL_SEPAEXEC(sepaExecIntobj)
+SCIP_DECL_SEPAEXECLP(sepaExeclpIntobj)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
    SCIP_Real objval;
@@ -275,6 +275,11 @@ SCIP_DECL_SEPAEXEC(sepaExecIntobj)
       
    return SCIP_OKAY;
 }
+
+
+/** arbitrary primal solution separation method of separator */
+#define sepaExecsolIntobj NULL /*???????????????*/
+
 
 
 
@@ -378,7 +383,8 @@ SCIP_RETCODE SCIPincludeSepaIntobj(
    /* include separator */
    SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
          sepaFreeIntobj, sepaInitIntobj, sepaExitIntobj, 
-         sepaInitsolIntobj, sepaExitsolIntobj, sepaExecIntobj,
+         sepaInitsolIntobj, sepaExitsolIntobj, 
+         sepaExeclpIntobj, sepaExecsolIntobj,
          sepadata) );
 
    /* include event handler for objective change events */

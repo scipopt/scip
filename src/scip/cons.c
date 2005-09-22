@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.132 2005/09/08 19:46:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.133 2005/09/22 14:43:47 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1611,7 +1611,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
    SCIP_DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
    SCIP_DECL_CONSINITLP  ((*consinitlp)),    /**< initialize LP with relaxations of "initial" constraints */
-   SCIP_DECL_CONSSEPA    ((*conssepa)),      /**< separate cutting planes */
+   SCIP_DECL_CONSSEPALP  ((*conssepalp)),    /**< separate cutting planes for LP solution */
+   SCIP_DECL_CONSSEPASOL ((*conssepasol)),   /**< separate cutting planes for arbitrary primal solution */
    SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
    SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
@@ -1632,8 +1633,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
    assert(conshdlr != NULL);
    assert(name != NULL);
    assert(desc != NULL);
-   assert((conssepa != NULL) || (sepafreq == -1));
-   assert((consprop != NULL) || (propfreq == -1));
+   assert(conssepalp != NULL || conssepasol != NULL || sepafreq == -1);
+   assert(consprop != NULL || propfreq == -1);
    assert(eagerfreq >= -1);
 
    SCIP_ALLOC( BMSallocMemory(conshdlr) );
@@ -1656,7 +1657,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->consdelete = consdelete;
    (*conshdlr)->constrans = constrans;
    (*conshdlr)->consinitlp = consinitlp;
-   (*conshdlr)->conssepa = conssepa;
+   (*conshdlr)->conssepalp = conssepalp;
+   (*conshdlr)->conssepasol = conssepasol;
    (*conshdlr)->consenfolp = consenfolp;
    (*conshdlr)->consenfops = consenfops;
    (*conshdlr)->conscheck = conscheck;
@@ -1740,7 +1742,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->nchgsides = 0;
    (*conshdlr)->ageresetavg = AGERESETAVG_INIT;
    (*conshdlr)->needscons = needscons;
-   (*conshdlr)->sepawasdelayed = FALSE;
+   (*conshdlr)->sepalpwasdelayed = FALSE;
+   (*conshdlr)->sepasolwasdelayed = FALSE;
    (*conshdlr)->propwasdelayed = FALSE;
    (*conshdlr)->presolwasdelayed = FALSE;
    (*conshdlr)->initialized = FALSE;
@@ -2124,8 +2127,8 @@ SCIP_RETCODE SCIPconshdlrInitLP(
    return SCIP_OKAY;
 }
 
-/** calls separator method of constraint handler to separate all constraints added after last conshdlrResetSepa() call */
-SCIP_RETCODE SCIPconshdlrSeparate(
+/** calls separator method of constraint handler to separate LP solution */
+SCIP_RETCODE SCIPconshdlrSeparateLP(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -2149,10 +2152,10 @@ SCIP_RETCODE SCIPconshdlrSeparate(
 
    *result = SCIP_DIDNOTRUN;
 
-   if( conshdlr->conssepa != NULL
+   if( conshdlr->conssepalp != NULL
       && ((depth == 0 && conshdlr->sepafreq == 0)
          || (conshdlr->sepafreq > 0 && depth % conshdlr->sepafreq == 0)
-         || conshdlr->sepawasdelayed) )
+         || conshdlr->sepalpwasdelayed) )
    {
       /* check, if separation method should be delayed */
       if( !conshdlr->delaysepa || execdelayed )
@@ -2222,8 +2225,8 @@ SCIP_RETCODE SCIPconshdlrSeparate(
             SCIPclockStart(conshdlr->sepatime, set);
 
             /* call external method */
-            SCIP_CALL( conshdlr->conssepa(set->scip, conshdlr, conss, nconss, nusefulconss, result) );
-            SCIPdebugMessage(" -> separating returned result <%d>\n", *result);
+            SCIP_CALL( conshdlr->conssepalp(set->scip, conshdlr, conss, nconss, nusefulconss, result) );
+            SCIPdebugMessage(" -> separating LP returned result <%d>\n", *result);
 
             /* stop timing */
             SCIPclockStop(conshdlr->sepatime, set);
@@ -2253,7 +2256,7 @@ SCIP_RETCODE SCIPconshdlrSeparate(
                && *result != SCIP_DIDNOTRUN
                && *result != SCIP_DELAYED )
             {
-               SCIPerrorMessage("separation method of constraint handler <%s> returned invalid result <%d>\n", 
+               SCIPerrorMessage("LP separation method of constraint handler <%s> returned invalid result <%d>\n", 
                   conshdlr->name, *result);
                return SCIP_INVALIDRESULT;
             }
@@ -2261,12 +2264,130 @@ SCIP_RETCODE SCIPconshdlrSeparate(
       }
       else
       {
-         SCIPdebugMessage("separation method of constraint handler <%s> was delayed\n", conshdlr->name);
+         SCIPdebugMessage("LP separation method of constraint handler <%s> was delayed\n", conshdlr->name);
          *result = SCIP_DELAYED;
       }
 
       /* remember whether separation method was delayed */
-      conshdlr->sepawasdelayed = (*result == SCIP_DELAYED);
+      conshdlr->sepalpwasdelayed = (*result == SCIP_DELAYED);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls separator method of constraint handler to separate given primal solution */
+SCIP_RETCODE SCIPconshdlrSeparateSol(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_SOL*             sol,                /**< primal solution that should be separated */
+   int                   depth,              /**< depth of current node */
+   SCIP_Bool             execdelayed,        /**< execute separation method even if it is marked to be delayed */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
+   assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
+   assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
+   assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   if( conshdlr->conssepasol != NULL
+      && ((depth == 0 && conshdlr->sepafreq == 0)
+         || (conshdlr->sepafreq > 0 && depth % conshdlr->sepafreq == 0)
+         || conshdlr->sepasolwasdelayed) )
+   {
+      /* check, if separation method should be delayed */
+      if( !conshdlr->delaysepa || execdelayed )
+      {
+         int nconss;
+         int nusefulconss;
+
+         /* always separate all constraints */
+         nconss = conshdlr->nsepaconss;
+         nusefulconss = conshdlr->nusefulsepaconss;
+         assert(nusefulconss <= nconss);
+
+         if( nconss > 0 || !conshdlr->needscons )
+         {
+            SCIP_CONS** conss;
+            SCIP_Longint oldndomchgs;
+            int oldncutsstored;
+            int oldnactiveconss;
+
+            SCIPdebugMessage("separating %d constraints of handler <%s> (primal solution %p)\n",
+               nconss, conshdlr->name, sol);
+
+            /* get the array of the constraints to be processed */
+            conss = conshdlr->sepaconss;
+         
+            oldndomchgs = stat->nboundchgs + stat->nholechgs;
+            oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
+            oldnactiveconss = stat->nactiveconss;
+
+            /* check, if we want to use eager evaluation */
+            if( (conshdlr->eagerfreq == 0 && conshdlr->nsepacalls == 0)
+               || (conshdlr->eagerfreq > 0 && conshdlr->nsepacalls % conshdlr->eagerfreq == 0) )
+               nusefulconss = nconss;
+
+            /* because during constraint processing, constraints of this handler may be deleted, activated, deactivated,
+             * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
+             * external method; to avoid this, these changes will be buffered and processed after the method call
+             */
+            conshdlrDelayUpdates(conshdlr);
+
+            /* start timing */
+            SCIPclockStart(conshdlr->sepatime, set);
+
+            /* call external method */
+            SCIP_CALL( conshdlr->conssepasol(set->scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
+            SCIPdebugMessage(" -> separating sol returned result <%d>\n", *result);
+
+            /* stop timing */
+            SCIPclockStop(conshdlr->sepatime, set);
+
+            /* perform the cached constraint updates */
+            SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
+
+            /* update statistics */
+            if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
+               conshdlr->nsepacalls++;
+            if( *result == SCIP_CUTOFF )
+               conshdlr->ncutoffs++;
+            conshdlr->ncutsfound += SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored; /*lint !e776*/
+            conshdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
+            conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+
+            /* evaluate result */
+            if( *result != SCIP_CUTOFF
+               && *result != SCIP_CONSADDED
+               && *result != SCIP_REDUCEDDOM
+               && *result != SCIP_SEPARATED
+               && *result != SCIP_DIDNOTFIND
+               && *result != SCIP_DIDNOTRUN
+               && *result != SCIP_DELAYED )
+            {
+               SCIPerrorMessage("SOL separation method of constraint handler <%s> returned invalid result <%d>\n", 
+                  conshdlr->name, *result);
+               return SCIP_INVALIDRESULT;
+            }
+         }
+      }
+      else
+      {
+         SCIPdebugMessage("SOL separation method of constraint handler <%s> was delayed\n", conshdlr->name);
+         *result = SCIP_DELAYED;
+      }
+
+      /* remember whether separation method was delayed */
+      conshdlr->sepasolwasdelayed = (*result == SCIP_DELAYED);
    }
 
    return SCIP_OKAY;
@@ -3359,14 +3480,24 @@ SCIP_Bool SCIPconshdlrIsPresolvingDelayed(
    return conshdlr->delaypresol;
 }
 
-/** was separation method delayed at the last call? */
-SCIP_Bool SCIPconshdlrWasSeparationDelayed(
+/** was LP separation method delayed at the last call? */
+SCIP_Bool SCIPconshdlrWasLPSeparationDelayed(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {
    assert(conshdlr != NULL);
 
-   return conshdlr->sepawasdelayed;
+   return conshdlr->sepalpwasdelayed;
+}
+
+/** was primal solution separation method delayed at the last call? */
+SCIP_Bool SCIPconshdlrWasSolSeparationDelayed(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->sepasolwasdelayed;
 }
 
 /** was propagation method delayed at the last call? */

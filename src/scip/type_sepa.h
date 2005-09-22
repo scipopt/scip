@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_sepa.h,v 1.15 2005/08/24 17:27:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_sepa.h,v 1.16 2005/09/22 14:43:52 bzfpfend Exp $"
 
 /**@file   type_sepa.h
  * @brief  type definitions for separators
@@ -78,9 +78,10 @@ typedef struct SCIP_SepaData SCIP_SEPADATA;       /**< locally defined separator
  */
 #define SCIP_DECL_SEPAEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_SEPA* sepa)
 
-/** execution method of separator
+/** LP solution separation method of separator
  *
- *  Searches for cutting planes. The method is called in the LP solving loop.
+ *  Searches for cutting planes that separate the current LP solution. The method is called in the LP solving loop,
+ *  which means that a valid LP solution exists.
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -96,12 +97,35 @@ typedef struct SCIP_SepaData SCIP_SEPADATA;       /**< locally defined separator
  *  - SCIP_DIDNOTRUN  : the separator was skipped
  *  - SCIP_DELAYED    : the separator was skipped, but should be called again
  */
-#define SCIP_DECL_SEPAEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_SEPA* sepa, SCIP_RESULT* result)
+#define SCIP_DECL_SEPAEXECLP(x) SCIP_RETCODE x (SCIP* scip, SCIP_SEPA* sepa, SCIP_RESULT* result)
+
+/** arbitrary primal solution separation method of separator
+ *
+ *  Searches for cutting planes that separate the given primal solution. The method is called outside the LP solution
+ *  loop (e.g., by a relaxator or a primal heuristic), which means that there is no valid LP solution.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - sepa            : the separator itself
+ *  - sol             : primal solution that should be separated
+ *  - result          : pointer to store the result of the separation call
+ *
+ *  possible return values for *result (if more than one applies, the first in the list should be used):
+ *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
+ *  - SCIP_CONSADDED  : an additional constraint was generated
+ *  - SCIP_REDUCEDDOM : a variable's domain was reduced
+ *  - SCIP_SEPARATED  : a cutting plane was generated
+ *  - SCIP_DIDNOTFIND : the separator searched, but did not find domain reductions, cutting planes, or cut constraints
+ *  - SCIP_DIDNOTRUN  : the separator was skipped
+ *  - SCIP_DELAYED    : the separator was skipped, but should be called again
+ */
+#define SCIP_DECL_SEPAEXECSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_SEPA* sepa, SCIP_SOL* sol, SCIP_RESULT* result)
 
 
 #include "scip/def.h"
 #include "scip/type_retcode.h"
 #include "scip/type_result.h"
+#include "scip/type_sol.h"
 #include "scip/type_scip.h"
 
 

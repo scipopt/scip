@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.192 2005/09/22 13:05:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.193 2005/09/22 14:43:48 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -5471,9 +5471,9 @@ SCIP_DECL_CONSINITLP(consInitlpLinear)
 }
 
 
-/** separation method of constraint handler */
+/** separation method of constraint handler for LP solutions */
 static
-SCIP_DECL_CONSSEPA(consSepaLinear)
+SCIP_DECL_CONSSEPALP(consSepalpLinear)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    int c;
@@ -5522,6 +5522,10 @@ SCIP_DECL_CONSSEPA(consSepaLinear)
 
    return SCIP_OKAY;
 }
+
+
+/** separation method of constraint handler for arbitrary primal solutions */
+#define consSepasolLinear NULL /*???????????????*/
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -6271,8 +6275,8 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
          consFreeLinear, consInitLinear, consExitLinear, 
          consInitpreLinear, consExitpreLinear, consInitsolLinear, consExitsolLinear,
-         consDeleteLinear, consTransLinear, 
-         consInitlpLinear, consSepaLinear, consEnfolpLinear, consEnfopsLinear, consCheckLinear, 
+         consDeleteLinear, consTransLinear, consInitlpLinear,
+         consSepalpLinear, consSepasolLinear, consEnfolpLinear, consEnfopsLinear, consCheckLinear, 
          consPropLinear, consPresolLinear, consRespropLinear, consLockLinear,
          consActiveLinear, consDeactiveLinear, 
          consEnableLinear, consDisableLinear,

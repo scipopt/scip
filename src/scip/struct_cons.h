@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.36 2005/08/24 17:26:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.37 2005/09/22 14:43:51 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -124,7 +124,8 @@ struct SCIP_Conshdlr
    SCIP_DECL_CONSDELETE  ((*consdelete));    /**< free specific constraint data */
    SCIP_DECL_CONSTRANS   ((*constrans));     /**< transform constraint data into data belonging to the transformed problem */
    SCIP_DECL_CONSINITLP  ((*consinitlp));    /**< initialize LP with relaxations of "initial" constraints */
-   SCIP_DECL_CONSSEPA    ((*conssepa));      /**< separate cutting planes */
+   SCIP_DECL_CONSSEPALP  ((*conssepalp));    /**< separate cutting planes for LP solution */
+   SCIP_DECL_CONSSEPASOL ((*conssepasol));   /**< separate cutting planes for arbitrary primal solution */
    SCIP_DECL_CONSENFOLP  ((*consenfolp));    /**< enforcing constraints for LP solutions */
    SCIP_DECL_CONSENFOPS  ((*consenfops));    /**< enforcing constraints for pseudo solutions */
    SCIP_DECL_CONSCHECK   ((*conscheck));     /**< check feasibility of primal solution */
@@ -204,7 +205,8 @@ struct SCIP_Conshdlr
    SCIP_Bool             delayprop;          /**< should propagation method be delayed, if other propagators found reductions? */
    SCIP_Bool             delaypresol;        /**< should presolving method be delayed, if other presolvers found reductions? */
    SCIP_Bool             needscons;          /**< should the constraint handler be skipped, if no constraints are available? */
-   SCIP_Bool             sepawasdelayed;     /**< was the separation method delayed at the last call? */
+   SCIP_Bool             sepalpwasdelayed;   /**< was the LP separation method delayed at the last call? */
+   SCIP_Bool             sepasolwasdelayed;  /**< was the SOL separation method delayed at the last call? */
    SCIP_Bool             propwasdelayed;     /**< was the propagation method delayed at the last call? */
    SCIP_Bool             presolwasdelayed;   /**< was the presolving method delayed at the last call? */
    SCIP_Bool             initialized;        /**< is constraint handler initialized? */

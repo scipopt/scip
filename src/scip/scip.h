@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.245 2005/09/19 11:05:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.246 2005/09/22 14:43:50 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -636,7 +636,8 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
    SCIP_DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
    SCIP_DECL_CONSINITLP  ((*consinitlp)),    /**< initialize LP with relaxations of "initial" constraints */
-   SCIP_DECL_CONSSEPA    ((*conssepa)),      /**< separate cutting planes */
+   SCIP_DECL_CONSSEPALP  ((*conssepalp)),    /**< separate cutting planes for LP solution */
+   SCIP_DECL_CONSSEPASOL ((*conssepasol)),   /**< separate cutting planes for arbitrary primal solution */
    SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
    SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
@@ -817,7 +818,8 @@ SCIP_RETCODE SCIPincludeSepa(
    SCIP_DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
    SCIP_DECL_SEPAINITSOL ((*sepainitsol)),   /**< solving process initialization method of separator */
    SCIP_DECL_SEPAEXITSOL ((*sepaexitsol)),   /**< solving process deinitialization method of separator */
-   SCIP_DECL_SEPAEXEC    ((*sepaexec)),      /**< execution method of separator */
+   SCIP_DECL_SEPAEXECLP  ((*sepaexeclp)),    /**< LP solution separation method of separator */
+   SCIP_DECL_SEPAEXECSOL ((*sepaexecsol)),   /**< arbitrary primal solution separation method of separator */
    SCIP_SEPADATA*        sepadata            /**< separator data */
    );
 
@@ -3404,14 +3406,30 @@ SCIP_Bool SCIPisEfficacious(
    SCIP_Real             efficacy            /**< efficacy of the cut */
    );
 
-/** adds cut to separation storage;
- *  if the cut should be forced to enter the LP, an infinite score has to be used
- */
+/** adds cut to separation storage */
 extern
 SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             cut,                /**< separated cut */
    SCIP_Bool             forcecut            /**< should the cut be forced to enter the LP? */
+   );
+
+/** clears the separation storage */
+extern
+SCIP_RETCODE SCIPclearCuts(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets the array of cuts currently stored in the separation storage */
+extern
+SCIP_ROW** SCIPgetCuts(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** get current number of cuts in the separation storage */
+extern
+int SCIPgetNCuts(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** if not already existing, adds row to global cut pool */
@@ -4540,12 +4558,6 @@ int SCIPgetNPricevarsApplied(
 /** gets number of separation rounds performed so far at the current node */
 extern
 int SCIPgetNSepaRounds(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** get current number of cuts in the cut store */
-extern
-int SCIPgetNCuts(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.61 2005/09/05 15:27:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.62 2005/09/22 14:43:47 bzfpfend Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -1249,9 +1249,9 @@ SCIP_DECL_CONSINITLP(consInitlpAnd)
 }
 
 
-/** separation method of constraint handler */
+/** separation method of constraint handler for LP solutions */
 static
-SCIP_DECL_CONSSEPA(consSepaAnd)
+SCIP_DECL_CONSSEPALP(consSepalpAnd)
 {  /*lint --e{715}*/
    SCIP_Bool separated;
    int c;
@@ -1271,6 +1271,10 @@ SCIP_DECL_CONSSEPA(consSepaAnd)
 
    return SCIP_OKAY;
 }
+
+
+/** separation method of constraint handler for arbitrary primal solutions */
+#define consSepasolAnd NULL   /*??????????????????*/
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -1576,7 +1580,7 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          consFreeAnd, consInitAnd, consExitAnd, 
          consInitpreAnd, consExitpreAnd, consInitsolAnd, consExitsolAnd,
          consDeleteAnd, consTransAnd, consInitlpAnd,
-         consSepaAnd, consEnfolpAnd, consEnfopsAnd, consCheckAnd, 
+         consSepalpAnd, consSepasolAnd, consEnfolpAnd, consEnfopsAnd, consCheckAnd, 
          consPropAnd, consPresolAnd, consRespropAnd, consLockAnd,
          consActiveAnd, consDeactiveAnd, 
          consEnableAnd, consDisableAnd,

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.39 2005/09/05 15:27:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.40 2005/09/22 14:43:49 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -998,9 +998,9 @@ SCIP_DECL_CONSINITLP(consInitlpVarbound)
 }
 
 
-/** separation method of constraint handler */
+/** separation method of constraint handler for LP solutions */
 static
-SCIP_DECL_CONSSEPA(consSepaVarbound)
+SCIP_DECL_CONSSEPALP(consSepalpVarbound)
 {  /*lint --e{715}*/
    SCIP_Bool separated;
    int i;
@@ -1025,6 +1025,10 @@ SCIP_DECL_CONSSEPA(consSepaVarbound)
 
    return SCIP_OKAY;
 }
+
+
+/** separation method of constraint handler for arbitrary primal solutions */
+#define consSepasolVarbound NULL /*???????????????*/
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -1386,7 +1390,7 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
          consFreeVarbound, consInitVarbound, consExitVarbound, 
          consInitpreVarbound, consExitpreVarbound, consInitsolVarbound, consExitsolVarbound,
          consDeleteVarbound, consTransVarbound, consInitlpVarbound,
-         consSepaVarbound, consEnfolpVarbound, consEnfopsVarbound, consCheckVarbound, 
+         consSepalpVarbound, consSepasolVarbound, consEnfolpVarbound, consEnfopsVarbound, consCheckVarbound, 
          consPropVarbound, consPresolVarbound, consRespropVarbound, consLockVarbound,
          consActiveVarbound, consDeactiveVarbound, 
          consEnableVarbound, consDisableVarbound,

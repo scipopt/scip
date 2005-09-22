@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.31 2005/08/24 17:26:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.32 2005/09/22 14:43:47 bzfpfend Exp $"
 
 /**@file   cons_eqknapsack.c
  * @brief  constraint handler for eqknapsack constraints
@@ -217,10 +217,10 @@ SCIP_DECL_CONSINITLP(consInitlpEqknapsack)
 #endif
 
 
-/** separation method of constraint handler */
+/** separation method of constraint handler for LP solutions */
 #if 0
 static
-SCIP_DECL_CONSSEPA(consSepaEqknapsack)
+SCIP_DECL_CONSSEPALP(consSepalpEqknapsack)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -228,7 +228,22 @@ SCIP_DECL_CONSSEPA(consSepaEqknapsack)
    return SCIP_OKAY;
 }
 #else
-#define consSepaEqknapsack NULL
+#define consSepalpEqknapsack NULL
+#endif
+
+
+/** separation method of constraint handler for arbitrary primal solutions */
+#if 0
+static
+SCIP_DECL_CONSSEPASOL(consSepasolEqknapsack)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consSepasolEqknapsack NULL
 #endif
 
 
@@ -461,7 +476,7 @@ SCIP_RETCODE SCIPincludeConshdlrEqknapsack(
          consFreeEqknapsack, consInitEqknapsack, consExitEqknapsack, 
          consInitpreEqknapsack, consExitpreEqknapsack, consInitsolEqknapsack, consExitsolEqknapsack,
          consDeleteEqknapsack, consTransEqknapsack, consInitlpEqknapsack,
-         consSepaEqknapsack, consEnfolpEqknapsack, consEnfopsEqknapsack, consCheckEqknapsack, 
+         consSepalpEqknapsack, consSepasolEqknapsack, consEnfolpEqknapsack, consEnfopsEqknapsack, consCheckEqknapsack, 
          consPropEqknapsack, consPresolEqknapsack, consRespropEqknapsack, consLockEqknapsack,
          consActiveEqknapsack, consDeactiveEqknapsack, 
          consEnableEqknapsack, consDisableEqknapsack,

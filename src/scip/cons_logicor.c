@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.88 2005/09/05 15:27:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.89 2005/09/22 14:43:48 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -1012,9 +1012,9 @@ SCIP_DECL_CONSINITLP(consInitlpLogicor)
 }
 
 
-/** separation method of constraint handler */
+/** separation method of constraint handler for LP solutions */
 static
-SCIP_DECL_CONSSEPA(consSepaLogicor)
+SCIP_DECL_CONSSEPALP(consSepalpLogicor)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool cutoff;
@@ -1057,6 +1057,11 @@ SCIP_DECL_CONSSEPA(consSepaLogicor)
 
    return SCIP_OKAY;
 }
+
+
+/** separation method of constraint handler for arbitrary primal solutions */
+#define consSepasolLogicor NULL /*?????????????????????*/
+
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
@@ -1694,7 +1699,7 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
          consFreeLogicor, consInitLogicor, consExitLogicor, 
          consInitpreLogicor, consExitpreLogicor, consInitsolLogicor, consExitsolLogicor,
          consDeleteLogicor, consTransLogicor, 
-         consInitlpLogicor, consSepaLogicor, 
+         consInitlpLogicor, consSepalpLogicor, consSepasolLogicor, 
          consEnfolpLogicor, consEnfopsLogicor, consCheckLogicor, 
          consPropLogicor, consPresolLogicor, consRespropLogicor, consLockLogicor,
          consActiveLogicor, consDeactiveLogicor,

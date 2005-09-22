@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_binpack.c,v 1.32 2005/08/24 17:26:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_binpack.c,v 1.33 2005/09/22 14:43:47 bzfpfend Exp $"
 
 /**@file   cons_binpack.c
  * @brief  constraint handler for binpack constraints
@@ -217,10 +217,10 @@ SCIP_DECL_CONSINITLP(consInitlpBinpack)
 #endif
 
 
-/** separation method of constraint handler */
+/** separation method of constraint handler for LP solutions */
 #if 0
 static
-SCIP_DECL_CONSSEPA(consSepaBinpack)
+SCIP_DECL_CONSSEPALP(consSepalpBinpack)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -228,7 +228,22 @@ SCIP_DECL_CONSSEPA(consSepaBinpack)
    return SCIP_OKAY;
 }
 #else
-#define consSepaBinpack NULL
+#define consSepalpBinpack NULL
+#endif
+
+
+/** separation method of constraint handler for arbitrary primal solutions */
+#if 0
+static
+SCIP_DECL_CONSSEPASOL(consSepasolBinpack)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of binpack constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consSepasolBinpack NULL
 #endif
 
 
@@ -487,7 +502,7 @@ SCIP_RETCODE SCIPincludeConshdlrBinpack(
          consFreeBinpack, consInitBinpack, consExitBinpack, 
          consInitpreBinpack, consExitpreBinpack, consInitsolBinpack, consExitsolBinpack,
          consDeleteBinpack, consTransBinpack, consInitlpBinpack,
-         consSepaBinpack, consEnfolpBinpack, consEnfopsBinpack, consCheckBinpack, 
+         consSepalpBinpack, consSepasolBinpack, consEnfolpBinpack, consEnfopsBinpack, consCheckBinpack, 
          consPropBinpack, consPresolBinpack, consRespropBinpack, consLockBinpack,
          consActiveBinpack, consDeactiveBinpack, 
          consEnableBinpack, consDisableBinpack,

@@ -1,3 +1,23 @@
+current version
+===============
+
+interface:
+- new method SCIPgetCuts()
+- callback method CONSSEPA of constraint handler was split into two methods CONSSEPALP and CONSSEPASOL
+- replaced method SCIPconshdlrWasSeparationDelayed() by two methods SCIPconshdlrWasLPSeparationDelayed()
+  and SCIPconshdlrWasSolSeparationDelayed()
+- callback method SEPAEXEC of separator was split into two methods SEPAEXECLP and SEPAEXECSOL
+- replaced method SCIPsepaWasDelayed() by SCIPsepaWasLPDelayed() and SCIPsepaWasSolDelayed()
+
+plugins:
+
+parameters:
+
+features:
+
+fixed bugs:
+
+
 SCIP version 0.80
 =================
 

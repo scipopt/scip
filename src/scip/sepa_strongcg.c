@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.16 2005/09/05 15:27:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.17 2005/09/22 14:43:51 bzfpfend Exp $"
 
 /**@file   sepa_strongcg.c
  * @brief  Strong CG Cuts (Letchford & Lodi)
@@ -218,9 +218,9 @@ SCIP_DECL_SEPAFREE(sepaFreeStrongcg)
 #define sepaExitsolStrongcg NULL
 
 
-/** execution method of separator */
+/** LP solution separation method of separator */
 static
-SCIP_DECL_SEPAEXEC(sepaExecStrongcg)
+SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
    SCIP_VAR** vars;
@@ -470,6 +470,10 @@ SCIP_DECL_SEPAEXEC(sepaExecStrongcg)
 }
 
 
+/** arbitrary primal solution separation method of separator */
+#define sepaExecsolStrongcg NULL /*????????????????*/
+
+
 
 
 /*
@@ -489,7 +493,8 @@ SCIP_RETCODE SCIPincludeSepaStrongcg(
    /* include separator */
    SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
          sepaFreeStrongcg, sepaInitStrongcg, sepaExitStrongcg,
-         sepaInitsolStrongcg, sepaExitsolStrongcg, sepaExecStrongcg,
+         sepaInitsolStrongcg, sepaExitsolStrongcg, 
+         sepaExeclpStrongcg, sepaExecsolStrongcg,
          sepadata) );
 
    /* add separator parameters */

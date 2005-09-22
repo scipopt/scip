@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.8 2005/09/05 15:27:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.9 2005/09/22 14:43:51 bzfpfend Exp $"
 
 /**@file   sepa_impliedbounds.c
  * @brief  implied bounds separator
@@ -122,9 +122,9 @@ SCIP_RETCODE addCut(
 #define sepaExitsolImpliedbounds NULL
 
 
-/** execution method of separator */
+/** LP solution separation method of separator */
 static
-SCIP_DECL_SEPAEXEC(sepaExecImpliedbounds)
+SCIP_DECL_SEPAEXECLP(sepaExeclpImpliedbounds)
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
    SCIP_VAR** fracvars;
@@ -273,6 +273,9 @@ SCIP_DECL_SEPAEXEC(sepaExecImpliedbounds)
 }
 
 
+/** arbitrary primal solution separation method of separator */
+#define sepaExecsolImpliedbounds NULL /*??????????????*/
+
 
 
 
@@ -293,7 +296,8 @@ SCIP_RETCODE SCIPincludeSepaImpliedbounds(
    /* include separator */
    SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
          sepaFreeImpliedbounds, sepaInitImpliedbounds, sepaExitImpliedbounds, 
-         sepaInitsolImpliedbounds, sepaExitsolImpliedbounds, sepaExecImpliedbounds,
+         sepaInitsolImpliedbounds, sepaExitsolImpliedbounds, 
+         sepaExeclpImpliedbounds, sepaExecsolImpliedbounds,
          sepadata) );
 
    return SCIP_OKAY;

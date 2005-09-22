@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.98 2005/09/08 19:46:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.99 2005/09/22 14:43:47 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -84,7 +84,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
    SCIP_DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
    SCIP_DECL_CONSINITLP  ((*consinitlp)),    /**< initialize LP with relaxations of "initial" constraints */
-   SCIP_DECL_CONSSEPA    ((*conssepa)),      /**< separate cutting planes */
+   SCIP_DECL_CONSSEPALP  ((*conssepalp)),    /**< separate cutting planes for LP solution */
+   SCIP_DECL_CONSSEPASOL ((*conssepasol)),   /**< separate cutting planes for arbitrary primal solution */
    SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
    SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
@@ -172,14 +173,28 @@ SCIP_RETCODE SCIPconshdlrInitLP(
    SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
 
-/** calls separator method of constraint handler to separate all constraints added after last conshdlrReset() call */
+/** calls separator method of constraint handler to separate LP solution */
 extern
-SCIP_RETCODE SCIPconshdlrSeparate(
+SCIP_RETCODE SCIPconshdlrSeparateLP(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   int                   depth,              /**< depth of current node */
+   SCIP_Bool             execdelayed,        /**< execute separation method even if it is marked to be delayed */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** calls separator method of constraint handler to separate given primal solution */
+extern
+SCIP_RETCODE SCIPconshdlrSeparateSol(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_SOL*             sol,                /**< primal solution that should be separated */
    int                   depth,              /**< depth of current node */
    SCIP_Bool             execdelayed,        /**< execute separation method even if it is marked to be delayed */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */

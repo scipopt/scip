@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.35 2005/09/05 15:27:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.36 2005/09/22 14:43:49 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -955,9 +955,9 @@ SCIP_DECL_CONSINITLP(consInitlpXor)
 }
 
 
-/** separation method of constraint handler */
+/** separation method of constraint handler for LP solutions */
 static
-SCIP_DECL_CONSSEPA(consSepaXor)
+SCIP_DECL_CONSSEPALP(consSepalpXor)
 {  /*lint --e{715}*/
    SCIP_Bool separated;
    int c;
@@ -977,6 +977,10 @@ SCIP_DECL_CONSSEPA(consSepaXor)
 
    return SCIP_OKAY;
 }
+
+
+/** separation method of constraint handler for arbitrary primal solutions */
+#define consSepasolXor NULL /*????????????????????*/
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -1354,7 +1358,7 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
          consFreeXor, consInitXor, consExitXor, 
          consInitpreXor, consExitpreXor, consInitsolXor, consExitsolXor,
          consDeleteXor, consTransXor, consInitlpXor,
-         consSepaXor, consEnfolpXor, consEnfopsXor, consCheckXor, 
+         consSepalpXor, consSepasolXor, consEnfolpXor, consEnfopsXor, consCheckXor, 
          consPropXor, consPresolXor, consRespropXor, consLockXor,
          consActiveXor, consDeactiveXor, 
          consEnableXor, consDisableXor,

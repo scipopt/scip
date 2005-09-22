@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.23 2005/09/08 19:46:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.24 2005/09/22 14:43:47 bzfpfend Exp $"
 
 /**@file   cons_conjunction.c
  * @brief  constraint handler for conjunction constraints
@@ -334,8 +334,12 @@ SCIP_DECL_CONSTRANS(consTransConjunction)
 #define consInitlpConjunction NULL
 
 
-/** separation method of constraint handler */
-#define consSepaConjunction NULL
+/** separation method of constraint handler for LP solutions */
+#define consSepalpConjunction NULL
+
+
+/** separation method of constraint handler for arbitrary primal solutions */
+#define consSepasolConjunction NULL
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -521,8 +525,8 @@ SCIP_RETCODE SCIPincludeConshdlrConjunction(
          consFreeConjunction, consInitConjunction, consExitConjunction, 
          consInitpreConjunction, consExitpreConjunction, consInitsolConjunction, consExitsolConjunction,
          consDeleteConjunction, consTransConjunction, consInitlpConjunction,
-         consSepaConjunction, consEnfolpConjunction, consEnfopsConjunction, consCheckConjunction, 
-         consPropConjunction, consPresolConjunction, consRespropConjunction, consLockConjunction,
+         consSepalpConjunction, consSepasolConjunction, consEnfolpConjunction, consEnfopsConjunction, 
+         consCheckConjunction, consPropConjunction, consPresolConjunction, consRespropConjunction, consLockConjunction,
          consActiveConjunction, consDeactiveConjunction, 
          consEnableConjunction, consDisableConjunction,
          consPrintConjunction,

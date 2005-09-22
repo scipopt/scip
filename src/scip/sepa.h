@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.h,v 1.42 2005/08/28 12:24:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.h,v 1.43 2005/09/22 14:43:50 bzfpfend Exp $"
 
 /**@file   sepa.h
  * @brief  internal methods for separators
@@ -55,7 +55,8 @@ SCIP_RETCODE SCIPsepaCreate(
    SCIP_DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
    SCIP_DECL_SEPAINITSOL ((*sepainitsol)),   /**< solving process initialization method of separator */
    SCIP_DECL_SEPAEXITSOL ((*sepaexitsol)),   /**< solving process deinitialization method of separator */
-   SCIP_DECL_SEPAEXEC    ((*sepaexec)),      /**< execution method of separator */
+   SCIP_DECL_SEPAEXECLP  ((*sepaexeclp)),    /**< LP solution separation method of separator */
+   SCIP_DECL_SEPAEXECSOL ((*sepaexecsol)),   /**< arbitrary primal solution separation method of separator */
    SCIP_SEPADATA*        sepadata            /**< separator data */
    );
 
@@ -94,13 +95,26 @@ SCIP_RETCODE SCIPsepaExitsol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** calls execution method of separator */
+/** calls LP separation method of separator */
 extern
-SCIP_RETCODE SCIPsepaExec(
+SCIP_RETCODE SCIPsepaExecLP(
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   int                   depth,              /**< depth of current node */
+   SCIP_Bool             execdelayed,        /**< execute separator even if it is marked to be delayed */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** calls primal solution separation method of separator */
+extern
+SCIP_RETCODE SCIPsepaExecSol(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_SOL*             sol,                /**< primal solution that should be separated */
    int                   depth,              /**< depth of current node */
    SCIP_Bool             execdelayed,        /**< execute separator even if it is marked to be delayed */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */

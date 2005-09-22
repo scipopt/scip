@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_sepa.h,v 1.11 2005/08/24 17:26:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_sepa.h,v 1.12 2005/09/22 14:43:49 bzfpfend Exp $"
 
 /**@file   pub_sepa.h
  * @brief  public methods for separators
@@ -110,9 +110,15 @@ SCIP_Bool SCIPsepaIsDelayed(
    SCIP_SEPA*            sepa                /**< separator */
    );
 
-/** was separator delayed at the last call? */
+/** was separation of the LP solution delayed at the last call? */
 extern
-SCIP_Bool SCIPsepaWasDelayed(
+SCIP_Bool SCIPsepaWasLPDelayed(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
+/** was separation of the primal solution delayed at the last call? */
+extern
+SCIP_Bool SCIPsepaWasSolDelayed(
    SCIP_SEPA*            sepa                /**< separator */
    );
 

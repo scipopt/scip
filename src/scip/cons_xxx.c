@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.35 2005/08/24 17:26:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.36 2005/09/22 14:43:49 bzfpfend Exp $"
 
 /**@file   cons_xxx.c
  * @brief  constraint handler for xxx constraints
@@ -238,10 +238,10 @@ SCIP_DECL_CONSINITLP(consInitlpXxx)
 #endif
 
 
-/** separation method of constraint handler */
+/** separation method of constraint handler for LP solutions */
 #if 0
 static
-SCIP_DECL_CONSSEPA(consSepaXxx)
+SCIP_DECL_CONSSEPALP(consSepalpXxx)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -249,7 +249,22 @@ SCIP_DECL_CONSSEPA(consSepaXxx)
    return SCIP_OKAY;
 }
 #else
-#define consSepaXxx NULL
+#define consSepalpXxx NULL
+#endif
+
+
+/** separation method of constraint handler for arbitrary primal solutions */
+#if 0
+static
+SCIP_DECL_CONSSEPASOL(consSepasolXxx)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consSepasolXxx NULL
 #endif
 
 
@@ -479,7 +494,7 @@ SCIP_RETCODE SCIPincludeConshdlrXxx(
          consFreeXxx, consInitXxx, consExitXxx, 
          consInitpreXxx, consExitpreXxx, consInitsolXxx, consExitsolXxx,
          consDeleteXxx, consTransXxx, consInitlpXxx,
-         consSepaXxx, consEnfolpXxx, consEnfopsXxx, consCheckXxx, 
+         consSepalpXxx, consSepasolXxx, consEnfolpXxx, consEnfopsXxx, consCheckXxx, 
          consPropXxx, consPresolXxx, consRespropXxx, consLockXxx,
          consActiveXxx, consDeactiveXxx, 
          consEnableXxx, consDisableXxx,

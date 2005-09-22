@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.cpp,v 1.13 2005/08/24 17:26:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objsepa.cpp,v 1.14 2005/09/22 14:43:46 bzfpfend Exp $"
 
 /**@file   objsepa.cpp
  * @brief  C++ wrapper for cut separators
@@ -141,9 +141,9 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolObj)
 }
 
 
-/** execution method of separator */
+/** LP solution separation method of separator */
 static
-SCIP_DECL_SEPAEXEC(sepaExecObj)
+SCIP_DECL_SEPAEXECLP(sepaExeclpObj)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
 
@@ -152,7 +152,24 @@ SCIP_DECL_SEPAEXEC(sepaExecObj)
    assert(sepadata->objsepa != NULL);
 
    /* call virtual method of sepa object */
-   SCIP_CALL( sepadata->objsepa->scip_exec(scip, sepa, result) );
+   SCIP_CALL( sepadata->objsepa->scip_execlp(scip, sepa, result) );
+
+   return SCIP_OKAY;
+}
+
+
+/** arbitrary primal solution separation method of separator */
+static
+SCIP_DECL_SEPAEXECSOL(sepaExecsolObj)
+{  /*lint --e{715}*/
+   SCIP_SEPADATA* sepadata;
+
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+   assert(sepadata->objsepa != NULL);
+
+   /* call virtual method of sepa object */
+   SCIP_CALL( sepadata->objsepa->scip_execsol(scip, sepa, sol, result) );
 
    return SCIP_OKAY;
 }
@@ -181,7 +198,8 @@ SCIP_RETCODE SCIPincludeObjSepa(
    /* include cut separator */
    SCIP_CALL( SCIPincludeSepa(scip, objsepa->scip_name_, objsepa->scip_desc_, 
          objsepa->scip_priority_, objsepa->scip_freq_, objsepa->scip_delay_,
-         sepaFreeObj, sepaInitObj, sepaExitObj, sepaInitsolObj, sepaExitsolObj, sepaExecObj,
+         sepaFreeObj, sepaInitObj, sepaExitObj, sepaInitsolObj, sepaExitsolObj, 
+         sepaExeclpObj, sepaExecsolObj,
          sepadata) );
 
    return SCIP_OKAY;

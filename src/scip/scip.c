@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.318 2005/09/20 17:58:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.319 2005/09/22 14:43:49 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1310,7 +1310,8 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
    SCIP_DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
    SCIP_DECL_CONSINITLP  ((*consinitlp)),    /**< initialize LP with relaxations of "initial" constraints */
-   SCIP_DECL_CONSSEPA    ((*conssepa)),      /**< separate cutting planes */
+   SCIP_DECL_CONSSEPALP  ((*conssepalp)),    /**< separate cutting planes for LP solution */
+   SCIP_DECL_CONSSEPASOL ((*conssepasol)),   /**< separate cutting planes for arbitrary primal solution */
    SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
    SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
@@ -1334,8 +1335,8 @@ SCIP_RETCODE SCIPincludeConshdlr(
          name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, eagerfreq, maxprerounds, 
          delaysepa, delayprop, delaypresol, needscons,
          consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol, 
-         consdelete, constrans, consinitlp, conssepa, consenfolp, consenfops, conscheck, consprop, conspresol,
-         consresprop, conslock, consactive, consdeactive, consenable, consdisable, consprint,
+         consdelete, constrans, consinitlp, conssepalp, conssepasol, consenfolp, consenfops, conscheck, consprop,
+         conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable, consprint,
          conshdlrdata) );
    SCIP_CALL( SCIPsetIncludeConshdlr(scip->set, conshdlr) );
    
@@ -1618,7 +1619,8 @@ SCIP_RETCODE SCIPincludeSepa(
    SCIP_DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
    SCIP_DECL_SEPAINITSOL ((*sepainitsol)),   /**< solving process initialization method of separator */
    SCIP_DECL_SEPAEXITSOL ((*sepaexitsol)),   /**< solving process deinitialization method of separator */
-   SCIP_DECL_SEPAEXEC    ((*sepaexec)),      /**< execution method of separator */
+   SCIP_DECL_SEPAEXECLP  ((*sepaexeclp)),    /**< LP solution separation method of separator */
+   SCIP_DECL_SEPAEXECSOL ((*sepaexecsol)),   /**< arbitrary primal solution separation method of separator */
    SCIP_SEPADATA*        sepadata            /**< separator data */
    )
 {
@@ -1628,7 +1630,7 @@ SCIP_RETCODE SCIPincludeSepa(
 
    SCIP_CALL( SCIPsepaCreate(&sepa, scip->set, scip->mem->setmem,
          name, desc, priority, freq, delay,
-         sepafree, sepainit, sepaexit, sepainitsol, sepaexitsol, sepaexec, sepadata) );
+         sepafree, sepainit, sepaexit, sepainitsol, sepaexitsol, sepaexeclp, sepaexecsol, sepadata) );
    SCIP_CALL( SCIPsetIncludeSepa(scip->set, sepa) );
    
    return SCIP_OKAY;
@@ -9092,9 +9094,7 @@ SCIP_Bool SCIPisEfficacious(
    return SCIPsetIsEfficacious(scip->set, (SCIPtreeGetCurrentDepth(scip->tree) == 0), efficacy);
 }
 
-/** adds cut to separation storage;
- *  if the cut should be forced to enter the LP, an infinite score has to be used
- */
+/** adds cut to separation storage */
 SCIP_RETCODE SCIPaddCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             cut,                /**< separated cut */
@@ -9105,16 +9105,42 @@ SCIP_RETCODE SCIPaddCut(
 
    assert(SCIPtreeGetCurrentNode(scip->tree) != NULL);
 
-   if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
-   {
-      SCIPerrorMessage("cannot add cuts, because node LP is not processed\n");
-      return SCIP_INVALIDCALL;
-   }
-
    SCIP_CALL( SCIPsepastoreAddCut(scip->sepastore, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
          cut, forcecut, (SCIPtreeGetCurrentDepth(scip->tree) == 0)) );
    
    return SCIP_OKAY;
+}
+
+/** clears the separation storage */
+SCIP_RETCODE SCIPclearCuts(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPclearCuts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   
+   SCIP_CALL( SCIPsepastoreClearCuts(scip->sepastore, scip->mem->solvemem, scip->set, scip->lp) );
+
+   return SCIP_OKAY;
+}
+
+/** gets the array of cuts currently stored in the separation storage */
+SCIP_ROW** SCIPgetCuts(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetCuts", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPsepastoreGetCuts(scip->sepastore);
+}
+
+/** get current number of cuts in the separation storage */
+int SCIPgetNCuts(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNCuts", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPsepastoreGetNCuts(scip->sepastore);
 }
 
 /** if not already existing, adds row to global cut pool */
@@ -11533,16 +11559,6 @@ int SCIPgetNSepaRounds(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNSepaRounds", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    return scip->stat->nseparounds;
-}
-
-/** get current number of cuts in the cut store */
-int SCIPgetNCuts(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNCuts", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
-
-   return SCIPsepastoreGetNCuts(scip->sepastore);
 }
 
 /** get total number of cuts found so far */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.192 2005/09/13 10:58:41 bzfdixan Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.193 2005/09/22 14:43:51 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -864,10 +864,10 @@ SCIP_RETCODE separationRound(
       if( SCIPsepaGetPriority(set->sepas[i]) < 0 )
          continue;
 
-      if( onlydelayed && !SCIPsepaWasDelayed(set->sepas[i]) )
+      if( onlydelayed && !SCIPsepaWasLPDelayed(set->sepas[i]) )
          continue;
 
-      SCIP_CALL( SCIPsepaExec(set->sepas[i], set, stat, sepastore, actdepth, onlydelayed, &result) );
+      SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, onlydelayed, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       *separateagain = *separateagain || (result == SCIP_CONSADDED);
       *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
@@ -884,10 +884,10 @@ SCIP_RETCODE separationRound(
    /* try separating constraints of the constraint handlers */
    for( i = 0; i < set->nconshdlrs && !(*cutoff) && !(*enoughcuts) && lp->flushed; ++i )
    {
-      if( onlydelayed && !SCIPconshdlrWasSeparationDelayed(set->conshdlrs[i]) )
+      if( onlydelayed && !SCIPconshdlrWasLPSeparationDelayed(set->conshdlrs[i]) )
          continue;
 
-      SCIP_CALL( SCIPconshdlrSeparate(conshdlrs_sepa[i], blkmem, set, stat, sepastore, actdepth, onlydelayed, &result) );
+      SCIP_CALL( SCIPconshdlrSeparateLP(conshdlrs_sepa[i], blkmem, set, stat, sepastore, actdepth, onlydelayed, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       *separateagain = *separateagain || (result == SCIP_CONSADDED);
       *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
@@ -907,10 +907,10 @@ SCIP_RETCODE separationRound(
       if( SCIPsepaGetPriority(set->sepas[i]) >= 0 )
          continue;
 
-      if( onlydelayed && !SCIPsepaWasDelayed(set->sepas[i]) )
+      if( onlydelayed && !SCIPsepaWasLPDelayed(set->sepas[i]) )
          continue;
 
-      SCIP_CALL( SCIPsepaExec(set->sepas[i], set, stat, sepastore, actdepth, onlydelayed, &result) );
+      SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, onlydelayed, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       *separateagain = *separateagain || (result == SCIP_CONSADDED);
       *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.h,v 1.17 2005/08/24 17:26:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objsepa.h,v 1.18 2005/09/22 14:43:46 bzfpfend Exp $"
 
 /**@file   objsepa.h
  * @brief  C++ wrapper for cut separators
@@ -129,9 +129,10 @@ public:
       return SCIP_OKAY;
    }
    
-   /** execution method of separator
+   /** LP solution separation method of separator
     *
-    *  Searches for cutting planes. The method is called in the LP solving loop.
+    *  Searches for cutting planes that separate the current LP solution. The method is called in the LP solving loop,
+    *  which means that a valid LP solution exists.
     *
     *  possible return values for *result:
     *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
@@ -142,11 +143,38 @@ public:
     *  - SCIP_DIDNOTRUN  : the separator was skipped
     *  - SCIP_DELAYED    : the separator was skipped, but should be called again
     */
-   virtual SCIP_RETCODE scip_exec(
+   virtual SCIP_RETCODE scip_execlp(
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_SEPA*         sepa,               /**< the cut separator itself */
       SCIP_RESULT*       result              /**< pointer to store the result of the separation call */
-      ) = 0;
+      )
+   {
+      return SCIP_OKAY;
+   }
+   
+   /** arbitrary primal solution separation method of separator
+    *
+    *  Searches for cutting planes that separate the given primal solution. The method is called outside the LP solution
+    *  loop (e.g., by a relaxator or a primal heuristic), which means that there is no valid LP solution.
+    *
+    *  possible return values for *result:
+    *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
+    *  - SCIP_SEPARATED  : a cutting plane was generated
+    *  - SCIP_REDUCEDDOM : no cutting plane was generated, but a variable's domain was reduced
+    *  - SCIP_CONSADDED  : no cutting plane or domain reduction, but an additional constraint was generated
+    *  - SCIP_DIDNOTFIND : the separator searched, but did not find domain reductions, cutting planes, or cut constraints
+    *  - SCIP_DIDNOTRUN  : the separator was skipped
+    *  - SCIP_DELAYED    : the separator was skipped, but should be called again
+    */
+   virtual SCIP_RETCODE scip_execsol(
+      SCIP*              scip,               /**< SCIP data structure */
+      SCIP_SEPA*         sepa,               /**< the cut separator itself */
+      SCIP_SOL*          sol,                /**< primal solution that should be separated */
+      SCIP_RESULT*       result              /**< pointer to store the result of the separation call */
+      )
+   {
+      return SCIP_OKAY;
+   }
 };
 
 } /* namespace scip */

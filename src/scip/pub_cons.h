@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.27 2005/08/28 12:29:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.28 2005/09/22 14:43:49 bzfpfend Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -318,9 +318,15 @@ SCIP_Bool SCIPconshdlrIsPresolvingDelayed(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** was separation method delayed at the last call? */
+/** was LP separation method delayed at the last call? */
 extern
-SCIP_Bool SCIPconshdlrWasSeparationDelayed(
+SCIP_Bool SCIPconshdlrWasLPSeparationDelayed(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** was primal solution separation method delayed at the last call? */
+extern
+SCIP_Bool SCIPconshdlrWasSolSeparationDelayed(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 

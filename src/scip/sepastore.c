@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.44 2005/09/22 13:05:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.45 2005/09/22 14:43:51 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -727,6 +727,16 @@ SCIP_RETCODE SCIPsepastoreClearCuts(
    sepastore->ncutsstored = 0;
 
    return SCIP_OKAY;
+}
+
+/** get cuts in the separation storage */
+SCIP_ROW** SCIPsepastoreGetCuts(
+   SCIP_SEPASTORE*            sepastore                /**< separation storage */
+   )
+{
+   assert(sepastore != NULL);
+
+   return sepastore->cuts;
 }
 
 /** get number of cuts in the separation storage */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.50 2005/09/05 15:27:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.51 2005/09/22 14:43:50 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -220,9 +220,9 @@ SCIP_DECL_SEPAFREE(sepaFreeGomory)
 #define sepaExitsolGomory NULL
 
 
-/** execution method of separator */
+/** LP solution separation method of separator */
 static
-SCIP_DECL_SEPAEXEC(sepaExecGomory)
+SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
    SCIP_VAR** vars;
@@ -471,6 +471,10 @@ SCIP_DECL_SEPAEXEC(sepaExecGomory)
 }
 
 
+/** arbitrary primal solution separation method of separator */
+#define sepaExecsolGomory NULL /*????????????????*/
+
+
 
 
 /*
@@ -490,7 +494,8 @@ SCIP_RETCODE SCIPincludeSepaGomory(
    /* include separator */
    SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
          sepaFreeGomory, sepaInitGomory, sepaExitGomory,
-         sepaInitsolGomory, sepaExitsolGomory, sepaExecGomory,
+         sepaInitsolGomory, sepaExitsolGomory, 
+         sepaExeclpGomory, sepaExecsolGomory,
          sepadata) );
 
    /* add separator parameters */
