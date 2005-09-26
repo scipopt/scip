@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.7 2005/09/08 20:53:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.8 2005/09/26 16:03:04 bzfpfend Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -490,10 +490,13 @@ SCIP_DECL_READERREAD(readerReadZpl)
       SCIPerrorMessage("error getting the current path\n");
       return SCIP_READERROR;
    }
-   if( chdir(path) != 0 )
+   if( path != NULL )
    {
-      SCIPerrorMessage("error changing to directory <%s>\n", path);
-      return SCIP_NOFILE;
+      if( chdir(path) != 0 )
+      {
+         SCIPerrorMessage("error changing to directory <%s>\n", path);
+         return SCIP_NOFILE;
+      }
    }
 
    /* set static variables (ZIMPL callbacks do not support user data) */
@@ -505,11 +508,14 @@ SCIP_DECL_READERREAD(readerReadZpl)
    zpl_read(namewithoutpath);
 
    /* change directory back to old path */
-   if( chdir(oldpath) != 0 )
+   if( path != NULL )
    {
-      SCIPwarningMessage("error changing back to directory <%s>\n", oldpath);
+      if( chdir(oldpath) != 0 )
+      {
+         SCIPwarningMessage("error changing back to directory <%s>\n", oldpath);
+      }
    }
-   
+
    *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.2 2005/09/20 13:29:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.3 2005/09/26 16:03:04 bzfpfend Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -299,7 +299,7 @@ SCIP_Bool getNextToken(
       /* read non-value token */
       tokenlen = 0;
       while( !isDelimChar(buf[lpinput->linepos])
-         && (tokenlen == 0 || !isTokenChar(buf[lpinput->linepos])) )
+         && (tokenlen == 0 || !isTokenChar(lpinput->token[tokenlen-1])) )
       {
          assert(tokenlen < LP_MAX_LINELEN);
          lpinput->token[tokenlen] = buf[lpinput->linepos];
@@ -479,12 +479,15 @@ SCIP_Bool isSign(
    assert(sign != NULL);
    assert(*sign == +1 || *sign == -1);
 
-   if( *lpinput->token == '+' )
-      return TRUE;
-   else if( *lpinput->token == '-' )
+   if( lpinput->token[1] == '\0' )
    {
-      *sign *= -1;
-      return TRUE;
+      if( *lpinput->token == '+' )
+         return TRUE;
+      else if( *lpinput->token == '-' )
+      {
+         *sign *= -1;
+         return TRUE;
+      }
    }
 
    return FALSE;
