@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.h,v 1.18 2005/09/22 14:43:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objsepa.h,v 1.19 2005/09/26 14:06:27 bzfpfend Exp $"
 
 /**@file   objsepa.h
  * @brief  C++ wrapper for cut separators
@@ -149,6 +149,8 @@ public:
       SCIP_RESULT*       result              /**< pointer to store the result of the separation call */
       )
    {
+      assert(result != NULL);
+      *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
    
@@ -173,6 +175,8 @@ public:
       SCIP_RESULT*       result              /**< pointer to store the result of the separation call */
       )
    {
+      assert(result != NULL);
+      *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
 };
