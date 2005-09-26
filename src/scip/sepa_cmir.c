@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.46 2005/09/22 17:33:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.47 2005/09/26 12:54:47 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -224,6 +224,7 @@ static
 SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real*            varsolvals,         /**< solution values of active variables */
    SCIP_Real*            cutcoefs,           /**< coefficients of active variables in cut */
    SCIP_Real             cutrhs,             /**< right hand side of cut */
@@ -271,17 +272,17 @@ SCIP_RETCODE addCut(
       SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
 
       SCIPdebugMessage(" -> found potential c-mir cut <%s>: activity=%f, rhs=%f, norm=%f, eff=%f\n",
-         cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, NULL, cut));
+         cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
       SCIPdebug(SCIPprintRow(scip, cut, NULL));
       
 #if 0
       /* try to scale the cut to integral values */
       SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
             10, 100.0, MAKECONTINTEGRAL, &success) );
-      if( success && !SCIPisCutEfficacious(scip, NULL, cut) )
+      if( success && !SCIPisCutEfficacious(scip, sol, cut) )
       {
          SCIPdebugMessage(" -> c-mir cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
-            cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, NULL, cut));
+            cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
          SCIPdebug(SCIPprintRow(scip, cut, NULL));
          success = FALSE;
       }
@@ -293,11 +294,11 @@ SCIP_RETCODE addCut(
       if( success ) /*lint !e774*/ /* Boolean within 'if' always evaluates to True */
       {
          SCIPdebugMessage(" -> found c-mir cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%g)\n",
-            cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, NULL, cut),
+            cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut),
             SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
             SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
          SCIPdebug(SCIPprintRow(scip, cut, NULL));
-         SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
          if( !cutislocal )
          {
             SCIP_CALL( SCIPaddPoolCut(scip, cut) );
@@ -320,7 +321,8 @@ SCIP_RETCODE addCut(
 static
 void updateNActiveConts(
    SCIP*                 scip,               /**< SCIP data structure */ 
-   SCIP_COL*             col,                /**< column of continuous variable */
+   SCIP_Real*            varsolvals,         /**< LP solution value of all variables in LP */
+   SCIP_VAR*             var,                /**< continuous variable */
    int                   delta,              /**< delta value of counters */
    int*                  nactiveconts        /**< pointer to count number of active continuous variabls */
    )
@@ -331,12 +333,9 @@ void updateNActiveConts(
 
    assert(nactiveconts != NULL);
 
-   primsol = SCIPcolGetPrimsol(col);
-   lb = SCIPcolGetLb(col);
-   ub = SCIPcolGetUb(col);
-   assert(SCIPisEQ(scip, primsol, SCIPvarGetLPSol(SCIPcolGetVar(col))));
-   assert(SCIPisEQ(scip, lb, SCIPvarGetLbLocal(SCIPcolGetVar(col))));
-   assert(SCIPisEQ(scip, ub, SCIPvarGetUbLocal(SCIPcolGetVar(col))));
+   primsol = varsolvals[SCIPvarGetProbindex(var)];
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
 
    if( SCIPisLT(scip, lb, primsol) && SCIPisLT(scip, primsol, ub) )
       (*nactiveconts) += delta;
@@ -386,6 +385,7 @@ static
 SCIP_RETCODE aggregation(
    SCIP*                 scip,               /**< SCIP data structure */ 
    SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real*            varsolvals,         /**< LP solution value of all variables in LP */
    SCIP_Real*            rowlhsscores,       /**< aggregation scores for left hand sides of row */
    SCIP_Real*            rowrhsscores,       /**< aggregation scores for right hand sides of row */
@@ -469,7 +469,7 @@ SCIP_RETCODE aggregation(
 
    /* initialize weights of rows in aggregation */
    BMSclearMemoryArray(rowweights, nrows);
-   startrowact = SCIPgetRowActivity(scip, rows[startrow]);
+   startrowact = SCIPgetRowSolActivity(scip, rows[startrow], sol);
    if( startrowact <= 0.5 * SCIProwGetLhs(rows[startrow]) + 0.5 * SCIProwGetRhs(rows[startrow]) )
       rowweights[startrow] = -1.0;
    else 
@@ -502,7 +502,7 @@ SCIP_RETCODE aggregation(
       aggrcoefs[pos] = rowweights[startrow] * startnonzcoefs[c];
       if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
       {
-         updateNActiveConts(scip, startnonzcols[c], +1, &nactiveconts);
+         updateNActiveConts(scip, varsolvals, var, +1, &nactiveconts);
          aggrnonzidxs[pos] = naggrcontnonzs;
          aggrcontnonzposs[naggrcontnonzs] = pos;
          naggrcontnonzs++;
@@ -516,7 +516,7 @@ SCIP_RETCODE aggregation(
          {
             SCIP_Real primsol;
 
-            primsol = SCIPcolGetPrimsol(startnonzcols[c]);
+            primsol = varsolvals[SCIPvarGetProbindex(var)];
             hasfractional = !SCIPisIntegral(scip, primsol);
          }
       }
@@ -557,7 +557,7 @@ SCIP_RETCODE aggregation(
       {
          if( aggrcoefs[c] != 0.0 )
             SCIPdebugPrintf(" %+g<%s>(%g)", aggrcoefs[c], SCIPvarGetName(SCIPcolGetVar(cols[c])),
-               SCIPvarGetLPSol(SCIPcolGetVar(cols[c])));
+               varsolvals[SCIPvarGetProbindex(SCIPcolGetVar(cols[c]))]);
       }
       SCIPdebugPrintf("\n");
 #endif
@@ -573,6 +573,7 @@ SCIP_RETCODE aggregation(
       maxaggrcoef = 0.0;
       for( nzi = 0; nzi < naggrintnonzs; ++nzi )
       {
+         SCIP_VAR* var;
          SCIP_Real primsol;
          SCIP_Real lb;
          SCIP_Real ub;
@@ -596,12 +597,12 @@ SCIP_RETCODE aggregation(
          if( ntesteddeltas >= maxtestdelta )
             continue; /* remaining loop is only for maxaggrcoef calculations */
 
-         primsol = SCIPcolGetPrimsol(cols[c]);
+         var = SCIPcolGetVar(cols[c]);
+         primsol = varsolvals[SCIPvarGetProbindex(var)];
          lb = SCIPcolGetLb(cols[c]);
          ub = SCIPcolGetUb(cols[c]);
-         assert(SCIPisEQ(scip, primsol, varsolvals[SCIPvarGetProbindex(SCIPcolGetVar(cols[c]))]));
-         assert(SCIPisEQ(scip, lb, SCIPvarGetLbLocal(SCIPcolGetVar(cols[c]))));
-         assert(SCIPisEQ(scip, ub, SCIPvarGetUbLocal(SCIPcolGetVar(cols[c]))));
+         assert(SCIPisEQ(scip, lb, SCIPvarGetLbLocal(var)));
+         assert(SCIPisEQ(scip, ub, SCIPvarGetUbLocal(var)));
 
          /* ignore variables with current solution value on its bounds */
          if( SCIPisEQ(scip, primsol, lb) || SCIPisEQ(scip, primsol, ub) )
@@ -727,7 +728,7 @@ SCIP_RETCODE aggregation(
          SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->maxrowfac, MINFRAC,
                rowweights, bestdelta, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
          assert(ALLOWLOCAL || !cutislocal);
-         SCIP_CALL( addCut(scip, sepadata, varsolvals, cutcoefs, cutrhs, cutislocal, normtype, ncuts) );
+         SCIP_CALL( addCut(scip, sepadata, sol, varsolvals, cutcoefs, cutrhs, cutislocal, normtype, ncuts) );
 
          /* if the cut was successfully added, abort the aggregation of further rows */
          if( *ncuts > oldncuts )
@@ -757,6 +758,7 @@ SCIP_RETCODE aggregation(
       for( nzi = 0; nzi < naggrcontnonzs; ++nzi )
       {
          SCIP_COL* col;
+         SCIP_VAR* var;
          SCIP_Real primsol;
          SCIP_Real lb;
          SCIP_Real ub;
@@ -770,12 +772,15 @@ SCIP_RETCODE aggregation(
          assert(!SCIPisZero(scip, aggrcoefs[c]));
 
          col = cols[c];
-         assert(!SCIPvarIsIntegral(SCIPcolGetVar(col)));
+         var = SCIPcolGetVar(col);
+         assert(!SCIPvarIsIntegral(var));
 
          /* get minimum distance of LP solution value of variable to its bounds */
-         primsol = SCIPcolGetPrimsol(col);
+         primsol = varsolvals[SCIPvarGetProbindex(var)];
          lb = SCIPcolGetLb(col);
          ub = SCIPcolGetUb(col);
+         assert(SCIPisEQ(scip, lb, SCIPvarGetLbLocal(var)));
+         assert(SCIPisEQ(scip, ub, SCIPvarGetUbLocal(var)));
          distlower = primsol - lb;
          distupper = ub - primsol;
          bounddist = MIN(distlower, distupper);
@@ -788,7 +793,7 @@ SCIP_RETCODE aggregation(
             int nnonzrows;
             
             SCIPdebugMessage("     -> col <%s>[%g,%g]: sol=%g, dist=%g\n", 
-               SCIPvarGetName(SCIPcolGetVar(col)), lb, ub, primsol, bounddist);
+               SCIPvarGetName(var), lb, ub, primsol, bounddist);
             
             /* look for "best" row to add (minimal slack), but don't add rows again,
              * that are already involved in aggregation
@@ -812,7 +817,7 @@ SCIP_RETCODE aggregation(
                
                SCIPdebugMessage("        -> row <%s>: weight=%g, pos=%d, factor=%g, %g <= %g <= %g\n",
                   SCIProwGetName(nonzrows[r]), rowweights[lppos], lppos, - aggrcoefs[c] / nonzcoefs[r],
-                  SCIProwGetLhs(nonzrows[r]), SCIPgetRowLPActivity(scip, nonzrows[r]), SCIProwGetRhs(nonzrows[r]));
+                  SCIProwGetLhs(nonzrows[r]), SCIPgetRowSolActivity(scip, nonzrows[r], sol), SCIProwGetRhs(nonzrows[r]));
                
                /* take only unmodifiable LP rows, that are not yet aggregated */
                if( rowweights[lppos] != 0.0 || SCIProwIsModifiable(nonzrows[r]) )
@@ -826,7 +831,7 @@ SCIP_RETCODE aggregation(
                   continue;
                
                /* check, if the row's slack multiplied with the aggregation factor is too large */
-               activity = SCIPgetRowLPActivity(scip, nonzrows[r]);
+               activity = SCIPgetRowSolActivity(scip, nonzrows[r], sol);
                lhs = SCIProwGetLhs(nonzrows[r]);
                rhs = SCIProwGetRhs(nonzrows[r]);
                if( (factor < 0.0 && SCIPisGT(scip, factor * (lhs - activity), maxslack))
@@ -907,7 +912,7 @@ SCIP_RETCODE aggregation(
                   aggrcontnonzposs[nzi] = aggrcontnonzposs[naggrcontnonzs-1];
                   aggrnonzidxs[aggrcontnonzposs[nzi]] = nzi;
                   naggrcontnonzs--;
-                  updateNActiveConts(scip, bestrownonzcols[c], -1, &nactiveconts);
+                  updateNActiveConts(scip, varsolvals, var, -1, &nactiveconts);
                }
                else
                {
@@ -929,7 +934,7 @@ SCIP_RETCODE aggregation(
                aggrnonzidxs[pos] = naggrcontnonzs;
                aggrcontnonzposs[naggrcontnonzs] = pos;
                naggrcontnonzs++;
-               updateNActiveConts(scip, bestrownonzcols[c], +1, &nactiveconts);
+               updateNActiveConts(scip, varsolvals, var, +1, &nactiveconts);
             }
             else
             {
@@ -958,51 +963,15 @@ SCIP_RETCODE aggregation(
    return SCIP_OKAY; 
 }
 
-
-
-/*
- * Callback methods of separator
- */
-
-/** destructor of separator to free user data (called when SCIP is exiting) */
+/** searches and adds c-MIR cuts that separate the given primal solution */
 static
-SCIP_DECL_SEPAFREE(sepaFreeCmir)
-{  /*lint --e{715}*/
-   SCIP_SEPADATA* sepadata;
-
-   /* free separator data */
-   sepadata = SCIPsepaGetData(sepa);
-   assert(sepadata != NULL);
-
-   SCIPfreeMemory(scip, &sepadata);
-
-   SCIPsepaSetData(sepa, NULL);
-
-   return SCIP_OKAY;
-
-}
-
-
-/** initialization method of separator (called when problem solving starts) */
-#define sepaInitCmir NULL
-
-
-/** deinitialization method of separator (called when problem solving exits) */
-#define sepaExitCmir NULL
-
-
-/** solving process initialization method of separator (called when branch and bound process is about to begin) */
-#define sepaInitsolCmir NULL
-
-
-/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
-#define sepaExitsolCmir NULL
-
-
-/** LP solution separation method of separator */
-static
-SCIP_DECL_SEPAEXECLP(sepaExeclpCmir)
-{  /*lint --e{715}*/
+SCIP_RETCODE separateCuts(
+   SCIP*                 scip,               /**< SCIP data structure */ 
+   SCIP_SEPA*            sepa,               /**< the c-MIR separator */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
+   SCIP_RESULT*          result              /**< pointer to store the result */
+   )
+{
    SCIP_SEPADATA* sepadata;
    SCIP_VAR** vars;
    SCIP_Real* varsolvals;
@@ -1029,9 +998,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCmir)
    int r;
    char normtype;
 
-   assert(sepa != NULL);
-   assert(scip != NULL);
- 
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
@@ -1072,8 +1042,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCmir)
    SCIP_CALL( SCIPallocBufferArray(scip, &roworder, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varsolvals, nvars) );
   
-   /* get the LP solution for all active variables */
-   SCIP_CALL( SCIPgetVarSols(scip, nvars, vars, varsolvals) );
+   /* get the solution values for all active variables */
+   SCIP_CALL( SCIPgetSolVals(scip, sol, nvars, vars, varsolvals) );
 
    /* get the maximal number of cuts allowed in a separation round */
    if( depth == 0 )
@@ -1125,8 +1095,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCmir)
          SCIP_Real rownorm;
          SCIP_Real slack;
 
-         dualsol = SCIProwGetDualsol(rows[r]);
-         activity = SCIPgetRowLPActivity(scip, rows[r]);
+         dualsol = (sol == NULL ? SCIProwGetDualsol(rows[r]) : 1.0);
+         activity = SCIPgetRowSolActivity(scip, rows[r], sol);
          lhs = SCIProwGetLhs(rows[r]);
          rhs = SCIProwGetRhs(rows[r]);
          rownorm = SCIProwGetNorm(rows[r]);
@@ -1183,7 +1153,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCmir)
       int oldncuts;
 
       oldncuts = ncuts;
-      SCIP_CALL( aggregation(scip, sepadata, varsolvals, rowlhsscores, rowrhsscores, roworder[r], 
+      SCIP_CALL( aggregation(scip, sepadata, sol, varsolvals, rowlhsscores, rowrhsscores, roworder[r], 
             maxaggrs, maxslack, maxtestdelta, maxconts, normtype, &wastried, &ncuts) );
       if( !wastried )
          continue;
@@ -1212,8 +1182,65 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCmir)
 }
 
 
+
+
+/*
+ * Callback methods of separator
+ */
+
+/** destructor of separator to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_SEPAFREE(sepaFreeCmir)
+{  /*lint --e{715}*/
+   SCIP_SEPADATA* sepadata;
+
+   /* free separator data */
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   SCIPfreeMemory(scip, &sepadata);
+
+   SCIPsepaSetData(sepa, NULL);
+
+   return SCIP_OKAY;
+
+}
+
+
+/** initialization method of separator (called when problem solving starts) */
+#define sepaInitCmir NULL
+
+
+/** deinitialization method of separator (called when problem solving exits) */
+#define sepaExitCmir NULL
+
+
+/** solving process initialization method of separator (called when branch and bound process is about to begin) */
+#define sepaInitsolCmir NULL
+
+
+/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
+#define sepaExitsolCmir NULL
+
+
+/** LP solution separation method of separator */
+static
+SCIP_DECL_SEPAEXECLP(sepaExeclpCmir)
+{  /*lint --e{715}*/
+   SCIP_CALL( separateCuts(scip, sepa, NULL, result) );
+
+   return SCIP_OKAY;
+}
+
+
 /** arbitrary primal solution separation method of separator */
-#define sepaExecsolCmir NULL /*?????????????????*/
+static
+SCIP_DECL_SEPAEXECSOL(sepaExecsolCmir)
+{  /*lint --e{715}*/
+   SCIP_CALL( separateCuts(scip, sepa, sol, result) );
+
+   return SCIP_OKAY;
+}
 
 
 

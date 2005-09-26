@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.194 2005/09/22 17:33:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.195 2005/09/26 12:54:46 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3307,7 +3307,8 @@ SCIP_RETCODE createRow(
 static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< linear constraint */
+   SCIP_CONS*            cons,               /**< linear constraint */
+   SCIP_SOL*             sol                 /**< primal CIP solution, NULL for current LP solution */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -3324,7 +3325,7 @@ SCIP_RETCODE addRelaxation(
    assert(!SCIProwIsInLP(consdata->row));
    
    /* insert LP row as cut */
-   SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE) );
+   SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -3339,6 +3340,7 @@ SCIP_RETCODE separateRelaxedKnapsack(
    SCIP_Real*            knapvals,           /**< coefficientce of the variables in the continuous knapsack constraint */
    SCIP_Real             valscale,           /**< -1.0 if lhs of row is used as rhs of c. k. constraint, +1.0 otherwise */
    SCIP_Real             rhs,                /**< right hand side of the continuous knapsack constraint */ 
+   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    ) 
 {
@@ -3420,7 +3422,7 @@ SCIP_RETCODE separateRelaxedKnapsack(
                SCIP_Real vlbsol;
 
                assert(0 <= SCIPvarGetProbindex(zvlb[j]) && SCIPvarGetProbindex(zvlb[j]) < nbinvars);
-               vlbsol = bvlb[j] * SCIPvarGetLPSol(zvlb[j]) + dvlb[j];
+               vlbsol = bvlb[j] * SCIPgetSolVal(scip, sol, zvlb[j]) + dvlb[j];
                if( SCIPisGE(scip, vlbsol, bestlbsol) )
                {
                   bestlbsol = vlbsol;
@@ -3446,7 +3448,7 @@ SCIP_RETCODE separateRelaxedKnapsack(
             binvals[SCIPvarGetProbindex(zvlb[bestlbtype])] += valscale * knapvals[i] * bvlb[bestlbtype];
             SCIPdebugMessage(" -> non-binary variable %+g<%s> replaced with variable lower bound %+g<%s>(%g) %+g (rhs=%g)\n",
                valscale * knapvals[i], SCIPvarGetName(var), bvlb[bestlbtype], SCIPvarGetName(zvlb[bestlbtype]), 
-               SCIPvarGetLPSol(zvlb[bestlbtype]), dvlb[bestlbtype], rhs);
+               SCIPgetSolVal(scip, sol, zvlb[bestlbtype]), dvlb[bestlbtype], rhs);
          }
       }
       else
@@ -3478,7 +3480,7 @@ SCIP_RETCODE separateRelaxedKnapsack(
                SCIP_Real vubsol;
 
                assert(0 <= SCIPvarGetProbindex(zvub[j]) && SCIPvarGetProbindex(zvub[j]) < nbinvars);
-               vubsol = bvub[j] * SCIPvarGetLPSol(zvub[j]) + dvub[j];
+               vubsol = bvub[j] * SCIPgetSolVal(scip, sol, zvub[j]) + dvub[j];
                if( SCIPisLE(scip, vubsol, bestubsol) )
                {
                   bestubsol = vubsol;
@@ -3504,7 +3506,7 @@ SCIP_RETCODE separateRelaxedKnapsack(
             binvals[SCIPvarGetProbindex(zvub[bestubtype])] += valscale * knapvals[i] * bvub[bestubtype];
             SCIPdebugMessage(" -> non-binary variable %+g<%s> replaced with variable upper bound %+g<%s>(%g) %+g (rhs=%g)\n",
                valscale * knapvals[i], SCIPvarGetName(var), bvub[bestubtype], SCIPvarGetName(zvub[bestubtype]), 
-               SCIPvarGetLPSol(zvub[bestubtype]), dvub[bestubtype], rhs);
+               SCIPgetSolVal(scip, sol, zvub[bestubtype]), dvub[bestubtype], rhs);
          }
       }
    }
@@ -3580,14 +3582,15 @@ SCIP_RETCODE separateRelaxedKnapsack(
          act = 0.0;
          for( i = 0; i < nconsvars; ++i )
          {
-            SCIPdebugPrintf(" %+lld<%s>(%g)", consvals[i], SCIPvarGetName(consvars[i]), SCIPvarGetLPSol(consvars[i]));
-            act += consvals[i] * SCIPvarGetLPSol(consvars[i]);
+            SCIPdebugPrintf(" %+lld<%s>(%g)", consvals[i], SCIPvarGetName(consvars[i]), 
+               SCIPgetSolVal(scip, sol, consvars[i]));
+            act += consvals[i] * SCIPgetSolVal(scip, sol, consvars[i]);
          }
          SCIPdebugPrintf(" <= %lld (%g) [act: %g, max: %lld]\n", capacity, rhs, act, maxact);
 #endif
          
          /* separate lifted cut from relaxed knapsack constraint */
-         SCIP_CALL( SCIPseparateKnapsackCover(scip, cons, consvars, nconsvars, consvals, capacity, -1, ncuts) );
+         SCIP_CALL( SCIPseparateKnapsackCover(scip, cons, consvars, nconsvars, consvals, capacity, sol, -1, ncuts) );
       }
    }
    
@@ -3600,11 +3603,12 @@ SCIP_RETCODE separateRelaxedKnapsack(
    return SCIP_OKAY;
 }
 
-/** separates linear constraint: adds linear constraint as cut, if violated by current LP solution */
+/** separates linear constraint: adds linear constraint as cut, if violated by given solution */
 static
 SCIP_RETCODE separateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
+   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    )
 {
@@ -3619,31 +3623,47 @@ SCIP_RETCODE separateCons(
 
    oldncuts = *ncuts;
 
-   SCIP_CALL( checkCons(scip, cons, NULL, FALSE, &violated) );
+   SCIP_CALL( checkCons(scip, cons, sol, (sol != NULL), &violated) );
 
    if( violated )
    {
       /* insert LP row as cut */
-      SCIP_CALL( addRelaxation(scip, cons) );
+      SCIP_CALL( addRelaxation(scip, cons, sol) );
       (*ncuts)++;
    }
    else if( !SCIPconsIsModifiable(cons) )
    {
       /* relax linear constraint into knapsack constraint and separate lifted cardinality cuts */
-      if( consdata->row != NULL && SCIProwIsInLP(consdata->row) )
+      if( sol == NULL )
       {
-         SCIP_Real dualsol;
+         if( consdata->row != NULL && SCIProwIsInLP(consdata->row) )
+         {
+            SCIP_Real dualsol;
 
-         dualsol = SCIProwGetDualsol(consdata->row);
-         if( !SCIPisInfinity(scip, consdata->rhs) && SCIPisFeasNegative(scip, dualsol) )
+            dualsol = SCIProwGetDualsol(consdata->row);
+            if( !SCIPisInfinity(scip, consdata->rhs) && SCIPisFeasNegative(scip, dualsol) )
+            {
+               SCIP_CALL( separateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars, 
+                     consdata->vals, +1.0, consdata->rhs, sol, ncuts) ); 
+            }
+            else if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisFeasPositive(scip, dualsol) )
+            { 
+               SCIP_CALL( separateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars, 
+                     consdata->vals, -1.0, -consdata->lhs, sol, ncuts) ); 
+            }
+         }
+      }
+      else
+      {
+         if( !SCIPisInfinity(scip, consdata->rhs) )
          {
             SCIP_CALL( separateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars, 
-                  consdata->vals, +1.0, consdata->rhs, ncuts) ); 
-         }
-         else if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisFeasPositive(scip, dualsol) )
+                  consdata->vals, +1.0, consdata->rhs, sol, ncuts) ); 
+            }
+         else if( !SCIPisInfinity(scip, -consdata->lhs) )
          { 
             SCIP_CALL( separateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars, 
-                  consdata->vals, -1.0, -consdata->lhs, ncuts) ); 
+                  consdata->vals, -1.0, -consdata->lhs, sol, ncuts) ); 
          }
       }
    }
@@ -5463,7 +5483,7 @@ SCIP_DECL_CONSINITLP(consInitlpLinear)
    {
       if( SCIPconsIsInitial(conss[c]) )
       {
-         SCIP_CALL( addRelaxation(scip, conss[c]) );
+         SCIP_CALL( addRelaxation(scip, conss[c], NULL) );
       }
    }
 
@@ -5510,7 +5530,7 @@ SCIP_DECL_CONSSEPALP(consSepalpLinear)
    for( c = 0; c < nusefulconss && ncuts < maxsepacuts; ++c )
    {
       /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
-      SCIP_CALL( separateCons(scip, conss[c], &ncuts) );
+      SCIP_CALL( separateCons(scip, conss[c], NULL, &ncuts) );
    }
 
    /* adjust return value */
@@ -5525,7 +5545,56 @@ SCIP_DECL_CONSSEPALP(consSepalpLinear)
 
 
 /** separation method of constraint handler for arbitrary primal solutions */
-#define consSepasolLinear NULL /*???????????????*/
+static
+SCIP_DECL_CONSSEPASOL(consSepasolLinear)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int c;
+   int depth;
+   int nrounds;
+   int maxsepacuts;
+   int ncuts;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   depth = SCIPgetDepth(scip);
+   nrounds = SCIPgetNSepaRounds(scip);
+
+   /*debugMessage("Sepa method of linear constraints\n");*/
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* only call the separator a given number of times at each node */
+   if( (depth == 0 && conshdlrdata->maxroundsroot >= 0 && nrounds >= conshdlrdata->maxroundsroot)
+      || (depth > 0 && conshdlrdata->maxrounds >= 0 && nrounds >= conshdlrdata->maxrounds) )
+      return SCIP_OKAY;
+
+   /* get the maximal number of cuts allowed in a separation round */
+   maxsepacuts = (depth == 0 ? conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts);
+
+   *result = SCIP_DIDNOTFIND;
+   ncuts = 0;
+
+   /* check all useful linear constraints for feasibility */
+   for( c = 0; c < nusefulconss && ncuts < maxsepacuts; ++c )
+   {
+      /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
+      SCIP_CALL( separateCons(scip, conss[c], sol, &ncuts) );
+   }
+
+   /* adjust return value */
+   if( ncuts > 0 )
+      *result = SCIP_SEPARATED;
+ 
+   /* combine linear constraints to get more cuts */
+   /**@todo further cuts of linear constraints */
+
+   return SCIP_OKAY;
+}
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -5558,7 +5627,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinear)
       if( violated )
       {
          /* insert LP row as cut */
-         SCIP_CALL( addRelaxation(scip, conss[c]) );
+         SCIP_CALL( addRelaxation(scip, conss[c], NULL) );
          *result = SCIP_SEPARATED;
       }
    }
@@ -5571,7 +5640,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinear)
       if( violated )
       {
          /* insert LP row as cut */
-         SCIP_CALL( addRelaxation(scip, conss[c]) );
+         SCIP_CALL( addRelaxation(scip, conss[c], NULL) );
          *result = SCIP_SEPARATED;
       }
    }

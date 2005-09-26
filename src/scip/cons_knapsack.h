@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.h,v 1.27 2005/08/24 17:26:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.h,v 1.28 2005/09/26 12:54:46 bzfpfend Exp $"
 
 /**@file   cons_knapsack.h
  * @brief  constraint handler for knapsack constraints
@@ -108,7 +108,7 @@ SCIP_RETCODE SCIPliftKnapsackCover(
    int                   nvars,              /**< number of variables in knapsack constraint */
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    SCIP_Longint          capacity,           /**< capacity of knapsack */
-   SCIP_Real*            solvals,            /**< LP values of all problem variables */
+   SCIP_Real*            solvals,            /**< solution values of all problem variables */
    int*                  covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr LP val then weight) */
    int*                  noncovervars,       /**< noncover variables (sorted by non-incr LP val then weight) */
    int                   ncovervars,         /**< number of cover variables */
@@ -128,6 +128,7 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
    int                   nvars,              /**< number of variables in knapsack constraint */
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    SCIP_Longint          capacity,           /**< capacity of knapsack */
+   SCIP_SOL*             sol,                /**< primal CIP solution to separate, NULL for current LP solution */
    int                   maxnumcardlift,     /**< maximal number of cardinality inequ. lifted per sepa round (-1: unlimited) */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    );

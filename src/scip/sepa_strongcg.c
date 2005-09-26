@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.18 2005/09/22 17:33:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.19 2005/09/26 12:54:48 bzfpfend Exp $"
 
 /**@file   sepa_strongcg.c
  * @brief  Strong CG Cuts (Letchford & Lodi)
@@ -472,7 +472,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
 
 
 /** arbitrary primal solution separation method of separator */
-#define sepaExecsolStrongcg NULL /*????????????????*/
+#define sepaExecsolStrongcg NULL /* strong CG cuts need a basic LP solution */
 
 
 

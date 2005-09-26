@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.10 2005/09/22 17:33:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.11 2005/09/26 12:54:48 bzfpfend Exp $"
 
 /**@file   sepa_impliedbounds.c
  * @brief  implied bounds separator
@@ -95,68 +95,25 @@ SCIP_RETCODE addCut(
    return SCIP_OKAY;
 }
 
-
-/*
- * Callback methods of separator
- */
-
-
-/** destructor of separator to free user data (called when SCIP is exiting) */
-#define sepaFreeImpliedbounds NULL
-
-
-
-/** initialization method of separator (called after problem was transformed) */
-#define sepaInitImpliedbounds NULL
-
-
-/** deinitialization method of separator (called before transformed problem is freed) */
-#define sepaExitImpliedbounds NULL
-
-
-/** solving process initialization method of separator (called when branch and bound process is about to begin) */
-#define sepaInitsolImpliedbounds NULL
-
-
-/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
-#define sepaExitsolImpliedbounds NULL
-
-
-/** LP solution separation method of separator */
+/** searches and adds implied bound cuts that are violated by the given solution value array */
 static
-SCIP_DECL_SEPAEXECLP(sepaExeclpImpliedbounds)
-{  /*lint --e{715}*/
-   SCIP_VAR** vars;
-   SCIP_VAR** fracvars;
-   SCIP_Real* solvals;
-   SCIP_Real* fracvals;
-   int nvars;
-   int nbinvars;
-   int nfracs;
-   int ncuts;
+SCIP_RETCODE separateCuts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            solvals,            /**< array with solution values of all problem variables */
+   SCIP_VAR**            fracvars,           /**< array of fractional variables */
+   SCIP_Real*            fracvals,           /**< solution values of fractional variables */
+   int                   nfracs,             /**< number of fractional variables */
+   int*                  ncuts               /**< pointer to store the number of generated cuts */
+   )
+{
    int i;
 
-   assert(sepa != NULL);
-   assert(scip != NULL);
- 
-   *result = SCIP_DIDNOTRUN;
+   assert(solvals != NULL);
+   assert(fracvars != NULL || nfracs == 0);
+   assert(fracvals != NULL || nfracs == 0);
+   assert(ncuts != NULL);
 
-   /* gets active problem variables */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, NULL, NULL, NULL) );
-   if( nbinvars == 0 )
-      return SCIP_OKAY;
-
-   /* get fractional problem variables */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &fracvars, &fracvals, NULL, &nfracs, NULL) );
-   if( nfracs == 0 )
-      return SCIP_OKAY;
-
-   /* get solution values for all variables */
-   SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nvars) );
-   SCIP_CALL( SCIPgetVarSols(scip, nvars, vars, solvals) );
-
-   *result = SCIP_DIDNOTFIND;
-   ncuts = 0;
+   *ncuts = 0;
 
    SCIPdebugMessage("searching for implied bound cuts\n");
 
@@ -201,7 +158,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpImpliedbounds)
             
             /* add cut if violated */
             SCIP_CALL( addCut(scip, 1.0, implvars[j], solval, (ub - implbounds[j]), fracvars[i], fracvals[i],
-                  ub, &ncuts) );
+                  ub, ncuts) );
          }
          else
          {
@@ -213,7 +170,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpImpliedbounds)
  
             /* add cut if violated */
             SCIP_CALL( addCut(scip, -1.0, implvars[j], solval, (implbounds[j] - lb), fracvars[i], fracvals[i],
-                  -lb, &ncuts) );
+                  -lb, ncuts) );
          }
       } 
 
@@ -245,7 +202,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpImpliedbounds)
  
             /* add cut if violated */
             SCIP_CALL( addCut(scip, 1.0, implvars[j], solval, (implbounds[j] - ub), fracvars[i], fracvals[i],
-                  implbounds[j], &ncuts) );
+                  implbounds[j], ncuts) );
          }
          else
          {
@@ -257,14 +214,83 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpImpliedbounds)
  
             /* add cut if violated */
             SCIP_CALL( addCut(scip, -1.0, implvars[j], solval, (lb - implbounds[j]), fracvars[i], fracvals[i],
-                  -implbounds[j], &ncuts) );
+                  -implbounds[j], ncuts) );
          }
       }
    }
 
+   return SCIP_OKAY;
+}
+
+
+
+
+/*
+ * Callback methods of separator
+ */
+
+
+/** destructor of separator to free user data (called when SCIP is exiting) */
+#define sepaFreeImpliedbounds NULL
+
+
+
+/** initialization method of separator (called after problem was transformed) */
+#define sepaInitImpliedbounds NULL
+
+
+/** deinitialization method of separator (called before transformed problem is freed) */
+#define sepaExitImpliedbounds NULL
+
+
+/** solving process initialization method of separator (called when branch and bound process is about to begin) */
+#define sepaInitsolImpliedbounds NULL
+
+
+/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
+#define sepaExitsolImpliedbounds NULL
+
+
+/** LP solution separation method of separator */
+static
+SCIP_DECL_SEPAEXECLP(sepaExeclpImpliedbounds)
+{  /*lint --e{715}*/
+   SCIP_VAR** vars;
+   SCIP_VAR** fracvars;
+   SCIP_Real* solvals;
+   SCIP_Real* fracvals;
+   int nvars;
+   int nbinvars;
+   int nfracs;
+   int ncuts;
+
+   assert(sepa != NULL);
+   assert(scip != NULL);
+ 
+   *result = SCIP_DIDNOTRUN;
+
+   /* gets active problem variables */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, NULL, NULL, NULL) );
+   if( nbinvars == 0 )
+      return SCIP_OKAY;
+
+   /* get fractional problem variables */
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &fracvars, &fracvals, NULL, &nfracs, NULL) );
+   if( nfracs == 0 )
+      return SCIP_OKAY;
+
+   /* get solution values for all variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nvars) );
+   SCIP_CALL( SCIPgetVarSols(scip, nvars, vars, solvals) );
+
+   /* call the cut separation */
+   SCIP_CALL( separateCuts(scip, solvals, fracvars, fracvals, nfracs, &ncuts) );
+
    /* adjust result code */
    if( ncuts > 0 )
       *result = SCIP_SEPARATED;
+   else
+      *result = SCIP_DIDNOTFIND;
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &solvals);
@@ -274,7 +300,66 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpImpliedbounds)
 
 
 /** arbitrary primal solution separation method of separator */
-#define sepaExecsolImpliedbounds NULL /*??????????????*/
+static
+SCIP_DECL_SEPAEXECSOL(sepaExecsolImpliedbounds)
+{  /*lint --e{715}*/
+   SCIP_VAR** vars;
+   SCIP_VAR** fracvars;
+   SCIP_Real* solvals;
+   SCIP_Real* fracvals;
+   int nvars;
+   int nbinvars;
+   int nfracs;
+   int ncuts;
+   int i;
+
+   assert(sepa != NULL);
+   assert(scip != NULL);
+ 
+   *result = SCIP_DIDNOTRUN;
+
+   /* gets active problem variables */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, NULL, NULL, NULL) );
+   if( nbinvars == 0 )
+      return SCIP_OKAY;
+
+   /* get solution values for all variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nvars) );
+   SCIP_CALL( SCIPgetSolVals(scip, sol, nvars, vars, solvals) );
+
+   /* get binary problem variables that are fractional in given solution */
+   SCIP_CALL( SCIPallocBufferArray(scip, &fracvars, nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &fracvals, nbinvars) );
+   nfracs = 0;
+   for( i = 0; i < nbinvars; ++i )
+   {
+      if( !SCIPisFeasIntegral(scip, solvals[i]) )
+      {
+         fracvars[nfracs] = vars[i];
+         fracvals[nfracs] = solvals[i];
+         nfracs++;
+      }
+   }
+
+   /* call the cut separation */
+   if( nfracs > 0 )
+   {
+      SCIP_CALL( separateCuts(scip, solvals, fracvars, fracvals, nfracs, &ncuts) );
+   }
+
+   /* adjust result code */
+   if( ncuts > 0 )
+      *result = SCIP_SEPARATED;
+   else
+      *result = SCIP_DIDNOTFIND;
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &fracvals);
+   SCIPfreeBufferArray(scip, &fracvars);
+   SCIPfreeBufferArray(scip, &solvals);
+
+   return SCIP_OKAY;
+}
 
 
 

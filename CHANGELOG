@@ -9,6 +9,7 @@ interface:
 - callback method SEPAEXEC of separator was split into two methods SEPAEXECLP and SEPAEXECSOL
 - replaced method SCIPsepaWasDelayed() by SCIPsepaWasLPDelayed() and SCIPsepaWasSolDelayed()
 - additional parameter "sol" for methods SCIPaddCut(), SCIPgetCutEfficacy(), and SCIPisCutEfficacious()
+- additional parameter "sol" for method SCIPseparateKnapsackCover()
 
 plugins:
 

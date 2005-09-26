@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.41 2005/09/22 17:33:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.42 2005/09/26 12:54:47 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -267,6 +267,7 @@ static
 SCIP_RETCODE separateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< varbound constraint */
+   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    SCIP_Bool*            separated           /**< pointer to store whether a cut was found */
    )
 {
@@ -289,12 +290,12 @@ SCIP_RETCODE separateCons(
    }
 
    /* check non-LP rows for feasibility and add them as cut, if violated */
-   if( !SCIProwIsInLP(consdata->row) )
+   if( sol != NULL || !SCIProwIsInLP(consdata->row) )
    {
-      feasibility = SCIPgetRowLPFeasibility(scip, consdata->row);
+      feasibility = SCIPgetRowSolFeasibility(scip, consdata->row, sol);
       if( SCIPisFeasNegative(scip, feasibility) )
       {
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
          *separated = TRUE;
       }
    }
@@ -1010,7 +1011,7 @@ SCIP_DECL_CONSSEPALP(consSepalpVarbound)
    /* separate useful constraints */
    for( i = 0; i < nusefulconss; ++i )
    {
-      SCIP_CALL( separateCons(scip, conss[i], &separated) );
+      SCIP_CALL( separateCons(scip, conss[i], NULL, &separated) );
       if( separated )
          *result = SCIP_SEPARATED;
    }
@@ -1018,7 +1019,7 @@ SCIP_DECL_CONSSEPALP(consSepalpVarbound)
    /* separate remaining constraints */
    for( i = nusefulconss; i < nconss && *result == SCIP_DIDNOTFIND; ++i )
    {
-      SCIP_CALL( separateCons(scip, conss[i], &separated) );
+      SCIP_CALL( separateCons(scip, conss[i], NULL, &separated) );
       if( separated )
          *result = SCIP_SEPARATED;
    }
@@ -1028,7 +1029,32 @@ SCIP_DECL_CONSSEPALP(consSepalpVarbound)
 
 
 /** separation method of constraint handler for arbitrary primal solutions */
-#define consSepasolVarbound NULL /*???????????????*/
+static
+SCIP_DECL_CONSSEPASOL(consSepasolVarbound)
+{  /*lint --e{715}*/
+   SCIP_Bool separated;
+   int i;
+
+   *result = SCIP_DIDNOTFIND;
+
+   /* separate useful constraints */
+   for( i = 0; i < nusefulconss; ++i )
+   {
+      SCIP_CALL( separateCons(scip, conss[i], sol, &separated) );
+      if( separated )
+         *result = SCIP_SEPARATED;
+   }
+
+   /* separate remaining constraints */
+   for( i = nusefulconss; i < nconss && *result == SCIP_DIDNOTFIND; ++i )
+   {
+      SCIP_CALL( separateCons(scip, conss[i], sol, &separated) );
+      if( separated )
+         *result = SCIP_SEPARATED;
+   }
+
+   return SCIP_OKAY;
+}
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -1044,7 +1070,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpVarbound)
    {
       if( !checkCons(scip, conss[i], NULL, FALSE) )
       {
-         SCIP_CALL( separateCons(scip, conss[i], &separated) );
+         SCIP_CALL( separateCons(scip, conss[i], NULL, &separated) );
          if( separated )
          {
             *result = SCIP_SEPARATED;

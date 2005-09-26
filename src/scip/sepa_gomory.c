@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.52 2005/09/22 17:33:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.53 2005/09/26 12:54:47 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -473,7 +473,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
 
 /** arbitrary primal solution separation method of separator */
-#define sepaExecsolGomory NULL /* gomory cuts only make sense if an LP basis exists */
+#define sepaExecsolGomory NULL /* gomory cuts need a basic LP solution */
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.116 2005/09/22 17:33:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.117 2005/09/26 12:54:46 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -503,7 +503,8 @@ SCIP_RETCODE createRelaxation(
 static 
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< knapsack constraint */
+   SCIP_CONS*            cons,               /**< knapsack constraint */
+   SCIP_SOL*             sol                 /**< primal CIP solution, NULL for current LP solution */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -521,7 +522,7 @@ SCIP_RETCODE addRelaxation(
    SCIPdebugMessage("adding relaxation of knapsack constraint <%s> (capacity %lld): ", 
       SCIPconsGetName(cons), consdata->capacity);
    SCIPdebug( SCIProwPrint(consdata->row, NULL) );
-   SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE) );
+   SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -677,7 +678,7 @@ SCIP_RETCODE getCover(
    int                   nvars,              /**< number of variables in knapsack constraint */
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    SCIP_Longint          capacity,           /**< capacity of knapsack */
-   SCIP_Real*            solvals,            /**< LP values of all problem variables */
+   SCIP_Real*            solvals,            /**< solution values of all problem variables */
    int*                  varsc2,             /**< set C2 of variables in knapsack constraint (variables for downlifting) */
    int*                  varscn2,            /**< set of variables in knapsack constraint that are not in C2 (cand. for C1) */
    int                   nvarsc2,            /**< number of variables in C2 */
@@ -754,7 +755,7 @@ SCIP_RETCODE getCover(
     * with the meaning: x_i is member of cover <==> z_i == 0
     */
    
-   /* use all variables with fractional LP value from the set of variables not in C2 */
+   /* use all variables with fractional solution value from the set of variables not in C2 */
    nitems = 0;
    nfixedzeros = 0;
    dpcapacity = varsc2weight - capacity - 1;
@@ -762,7 +763,7 @@ SCIP_RETCODE getCover(
    {
       assert(SCIPvarGetType(vars[varscn2[i]]) == SCIP_VARTYPE_BINARY);
       
-      /* variable has fractional LP value */
+      /* variable has fractional solution value */
       if( SCIPisFeasGT(scip, solvals[varscn2[i]], 0.0) )
       {
          /* sort items by non-decreasing relative slack value (1-x_i^*)/w_i */
@@ -773,7 +774,7 @@ SCIP_RETCODE getCover(
          nitems++;
          dpcapacity += weights[varscn2[i]];
       }
-      /* variable has LP value 0 */
+      /* variable has solution value 0 */
       else
       {
          fixedzeros[nfixedzeros] = varscn2[i];
@@ -937,7 +938,7 @@ SCIP_RETCODE getCover(
          (*nnoncovervars)++;
       }  
 
-      /* add all variables with LP value zero to noncovervars */
+      /* add all variables with solution value zero to noncovervars */
       for( i = 0; i < nfixedzeros; i++ )
       {
          noncovervars[*nnoncovervars] = fixedzeros[i];
@@ -987,7 +988,7 @@ void getPartition(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of variables in knapsack constraint */
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
-   SCIP_Real*            solvals,            /**< LP values of all problem variables */
+   SCIP_Real*            solvals,            /**< solution values of all problem variables */
    int*                  varsc2,             /**< pointer to store variables of knapsack constraint in C2 */
    int*                  varscn2,            /**< pointer to store variables of knapsack constraint not in C1 */
    int*                  nvarsc2,            /**< pointer to store number of variables of knapsack constraint in C2 */
@@ -1011,7 +1012,7 @@ void getPartition(
    *nvarsc2 = 0;
    *varsc2weight = 0;
 
-   /* choses all variables with LP value equal to one for the set of variables for downlifting (C2) */
+   /* choses all variables with solution value equal to one for the set of variables for downlifting (C2) */
    for( i = 0; i < nvars; i++ )
    {
       if( SCIPisFeasEQ(scip, solvals[i], 1.0) )
@@ -1029,7 +1030,7 @@ void getPartition(
    }
 }
 
-/** sorts given set of variables in knapsack constraint by non-increasing LP value (variables with equal LP value 
+/** sorts given set of variables in knapsack constraint by non-increasing solution value (variables with equal solution value 
  *  are ordered by non-increasing weight)
  */
 static
@@ -1037,7 +1038,7 @@ void sortSetvars(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  setvars,            /**< set of variables in knapsack constraint to be sorted */
    int                   nsetvars,           /**< number of variables in set of variables in knapsack cons. to be sorted */
-   SCIP_Real*            solvals             /**< LP values of all problem variables */
+   SCIP_Real*            solvals             /**< solution values of all problem variables */
    )
 {
    SCIP_Real solval;
@@ -1050,7 +1051,7 @@ void sortSetvars(
    assert(nsetvars >= 0);
    assert(solvals != NULL);
 
-   /* sorts setvars by non-increasing LP value */
+   /* sorts setvars by non-increasing solution value */
    for( i = 0; i < nsetvars; i++ ) 
    {
       idx = setvars[i];
@@ -1098,7 +1099,7 @@ SCIP_RETCODE enlargeMinweights(
 /** lifts up given inequality sum(j in C1) x_j <= liftrhs which is valid for the knapsack polytop { x binary | 
  *  x is solution of knapsack constraint, x_j = 1 for all j in C2, x_j = 0 for all j in noncovervars } to a valid 
  *  inequality for the knapsack polytop { x binary | x is solution of knapsack constraint, x_j = 1 for all j in C2,
- *  x_j = 0 for all j in noncovervars with LP value = 0 }
+ *  x_j = 0 for all j in noncovervars with solution value = 0 }
  */
 static
 SCIP_RETCODE liftupKnapsackCover(
@@ -1106,7 +1107,7 @@ SCIP_RETCODE liftupKnapsackCover(
    SCIP_VAR**            vars,               /**< variables in knapsack constraint */
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    SCIP_Longint          capacity,           /**< capacity of knapsack */
-   SCIP_Real*            solvals,            /**< LP values of all problem variables */
+   SCIP_Real*            solvals,            /**< solution values of all problem variables */
    int*                  covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr LP val then weight) */
    int*                  noncovervars,       /**< noncover variables (sorted by non-incr LP val then weight) */
    int                   ncovervars,         /**< number of cover variables */
@@ -1164,7 +1165,7 @@ SCIP_RETCODE liftupKnapsackCover(
    assert(*liftrhs < *minweightslen);
    assert(0 <= *minweightslen && *minweightslen <= *minweightssize);
 
-   /* calculate lifting coefficients for noncover variables with LP value > 0:
+   /* calculate lifting coefficients for noncover variables with solution value > 0:
     *  for each noncovervar x_i with LP-value > 0 (in non-increasing order of LP-value and weight): 
     *   1. calculates max activity z_max of current lifted inequality s.t. the knapsack is still feasible with 
     *      x_i = 1, x_j = 0 for all j in noncovervars with j > i, x_j = 1 for all j in C2
@@ -1278,10 +1279,10 @@ SCIP_RETCODE liftupKnapsackCover(
    return SCIP_OKAY;
 }
 
-/** lifts down given inequality sum(j in C1 & noncovervars with LP value > 0) beta_j * x_j <= liftrhs which is valid for 
+/** lifts down given inequality sum(j in C1 & noncovervars with solution value > 0) beta_j * x_j <= liftrhs which is valid for 
  *  the knapsack polytop { x binary | x is solution of knapsack constraint, x_j = 1 for all j in C2, x_j = 0 for all j in 
- *  noncovervars with LP value 0} to a valid inequality for the knapsack polytop { x binary | x is solution of knapsack 
- *  constraint, x_j = 0 for all j in noncovervars with LP value 0}
+ *  noncovervars with solution value 0} to a valid inequality for the knapsack polytop { x binary | x is solution of knapsack 
+ *  constraint, x_j = 0 for all j in noncovervars with solution value 0}
  */
 static
 SCIP_RETCODE liftdownKnapsackCover(
@@ -1289,7 +1290,7 @@ SCIP_RETCODE liftdownKnapsackCover(
    SCIP_VAR**            vars,               /**< variables in knapsack constraint */
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    SCIP_Longint          capacity,           /**< capacity of knapsack */
-   SCIP_Real*            solvals,            /**< LP values of all problem variables */
+   SCIP_Real*            solvals,            /**< solution values of all problem variables */
    int*                  covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr LP val then weight) */
    int*                  noncovervars,       /**< noncover variables (sorted by non-incr LP val then weight) */
    int                   ncovervars,         /**< number of cover variables */
@@ -1334,7 +1335,7 @@ SCIP_RETCODE liftdownKnapsackCover(
    /* calculate lifting coefficients for cover variables in C2:
     *  for each covervar x_i in C2 (in non-increasing order of LP-value and weight): 
     *   1. calculate max activity z_max of current lifted inequality s.t. the knapsack is still feasible with 
-    *      x_i = 0, x_j = 1 for all covervars in C2 with j > i, x_j = 0 for all j in noncovervars with LP value 0
+    *      x_i = 0, x_j = 1 for all covervars in C2 with j > i, x_j = 0 for all j in noncovervars with solution value 0
     *   2. add x_i with lifting coefficient beta_i = z_max - liftrhs to current lifted inequality
     *   3. change liftrhs: liftrhs = liftrhs + beta_i
     *   4. update minweight table: calculate minimal sum of weights s.t. activity of current lifted inequality equals z 
@@ -1433,9 +1434,9 @@ SCIP_RETCODE liftdownKnapsackCover(
    return SCIP_OKAY;
 }
 
-/** lifts up given inequality sum(j in C1 & noncovervars with LP value > 0 & C2) beta_j * x_j <= liftrhs which is valid 
+/** lifts up given inequality sum(j in C1 & noncovervars with solution value > 0 & C2) beta_j * x_j <= liftrhs which is valid 
  *  for the knapsack polytop { x binary | x is solution of knapsack constraint, x_j = 0 for all j in noncovervars with 
- *  LP value 0} to a valid inequality for the knapsack polytop { x binary | x is solution of knapsack constraint }
+ *  solution value 0} to a valid inequality for the knapsack polytop { x binary | x is solution of knapsack constraint }
  */
 static
 void liftupZerosKnapsackCover(
@@ -1443,9 +1444,9 @@ void liftupZerosKnapsackCover(
    SCIP_VAR**            vars,               /**< variables in knapsack constraint */
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    SCIP_Longint          capacity,           /**< capacity of knapsack */
-   SCIP_Real*            solvals,            /**< LP values of all problem variables */
+   SCIP_Real*            solvals,            /**< solution values of all problem variables */
    int*                  covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr LP val then weight) */
-   int*                  noncovervars,       /**< noncover variables (sorted by non-incr LP value then weight) */
+   int*                  noncovervars,       /**< noncover variables (sorted by non-incr solution value then weight) */
    int                   ncovervars,         /**< number of cover variables */
    int                   ncovervarsc1,       /**< number of cover variables in C1 (at the end of covervars) */
    int                   ncovervarsc2,       /**< number of cover variables in C2 (at the beginning of covervars) */
@@ -1453,7 +1454,7 @@ void liftupZerosKnapsackCover(
    int*                  liftcoefs,          /**< lifting coefficients of variables in knapsack cons in lifted inequality */
    int*                  liftrhs,            /**< right hand side of lifted inequality */
    SCIP_Real*            liftlpval,          /**< LP solution value of lifted variables (without C1) */  
-   int                   lastlifted,         /**< index of last noncover var with LP value > 0 lifted (-1 if no var lifted) */
+   int                   lastlifted,         /**< index of last noncover var with solution value > 0 lifted (-1 if no var lifted) */
    SCIP_Longint*         minweights          /**< minweights table */
    )
 {
@@ -1476,7 +1477,7 @@ void liftupZerosKnapsackCover(
    assert(liftlpval != NULL);
    assert(minweights != NULL);
 
-   /* calculates lifting coefficients for noncover variables with LP value = 0:
+   /* calculates lifting coefficients for noncover variables with solution value = 0:
     *  for each noncovervar x_i with LP-value = 0 (i > lastlifted) (in non-increasing order of LP-value and weight): 
     *   1. calculates max activity z_max of current lifted inequality s.t. the knapsack is still feasible with 
     *      x_i = 1, x_j = 0 for all j in noncovervars with j > i
@@ -1585,7 +1586,7 @@ SCIP_RETCODE liftKnapsackCover(
    int                   nvars,              /**< number of variables in knapsack constraint */
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    SCIP_Longint          capacity,           /**< capacity of knapsack */
-   SCIP_Real*            solvals,            /**< LP values of all problem variables */
+   SCIP_Real*            solvals,            /**< solution values of all problem variables */
    int*                  covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr LP val then weight) */
    int*                  noncovervars,       /**< noncover variables (sorted by non-incr LP val then weight) */
    int                   ncovervars,         /**< number of cover variables */
@@ -1641,7 +1642,7 @@ SCIP_RETCODE liftKnapsackCover(
       liftcoefs[covervars[i]] = 1;
    }
    
-   /* lifts up all noncover variables with LP value > 0 */
+   /* lifts up all noncover variables with solution value > 0 */
    fixedoneweight = 0;
    for( i = 0; i < ncovervarsc2; i++ )
       fixedoneweight += weights[covervars[i]];
@@ -1656,7 +1657,7 @@ SCIP_RETCODE liftKnapsackCover(
          ncovervarsc1, ncovervarsc2, nnoncovervars, fixedoneweight, liftcoefs, liftrhs, liftlpval,
          &minweights, &minweightslen, &minweightssize) );
 
-   /* lifts up all remaining noncover variables (noncover variables with LP value 0) */
+   /* lifts up all remaining noncover variables (noncover variables with solution value 0) */
    liftupZerosKnapsackCover(scip, vars, weights, capacity, solvals, covervars, noncovervars, ncovervars, ncovervarsc1, 
       ncovervarsc2, nnoncovervars, liftcoefs, liftrhs, liftlpval, lastlifted, minweights);
 
@@ -1676,7 +1677,7 @@ SCIP_RETCODE SCIPliftKnapsackCover(
    int                   nvars,              /**< number of variables in knapsack constraint */
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    SCIP_Longint          capacity,           /**< capacity of knapsack */
-   SCIP_Real*            solvals,            /**< LP values of all problem variables */
+   SCIP_Real*            solvals,            /**< solution values of all problem variables */
    int*                  covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr LP val then weight) */
    int*                  noncovervars,       /**< noncover variables (sorted by non-incr LP val then weight) */
    int                   ncovervars,         /**< number of cover variables */
@@ -1733,6 +1734,7 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
    int                   nvars,              /**< number of variables in knapsack constraint */
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    SCIP_Longint          capacity,           /**< capacity of knapsack */
+   SCIP_SOL*             sol,                /**< primal CIP solution to separate, NULL for current LP solution */
    int                   maxnumcardlift,     /**< maximal number of cardinality inequ. lifted per sepa round (-1: unlimited) */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    )
@@ -1780,8 +1782,8 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
    SCIP_CALL( SCIPallocBufferArray(scip, &noncovervars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &liftcoefs, nvars) );
 
-   /* get LP solution values of all problem variables */
-   SCIP_CALL( SCIPgetVarSols(scip, nvars, vars, solvals) );
+   /* get solution values of all problem variables */
+   SCIP_CALL( SCIPgetSolVals(scip, sol, nvars, vars, solvals) );
 
 #ifdef SEPARATEOUT
    printf("=================================== separating knapsack constraint <%s>: =================================\n", 
@@ -1837,7 +1839,7 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
       for( i = 1; i <= ncovervarsc1; ++i )
          initminweight[i] += initminweight[i-1];
 
-      /* sort covervars and noncovervars by non-increasing LP value */
+      /* sort covervars and noncovervars by non-increasing solution value */
       sortSetvars(scip, covervars, ncovervars, solvals);
       sortSetvars(scip, noncovervars, nnoncovervars, solvals);
          
@@ -1924,9 +1926,9 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
 
          /* lift cardinality inequality sum(j in C1) x_j <= |C1| to a valid inequality of the full dimensional knapsack 
           * polytop: 
-          *  1. uplifting of noncovervars with LP value > 0 
+          *  1. uplifting of noncovervars with solution value > 0 
           *  2. downlifting of covervarsc2 (C2)
-          *  3. uplifting of noncovervars with LP value = 0 
+          *  3. uplifting of noncovervars with solution value = 0 
           */
          SCIP_CALL( liftKnapsackCover(scip, vars, nvars, weights, capacity, solvals, covervars, noncovervars, 
                ncovervars, ncovervarsc1, ncovervarsc2, nnoncovervars, initminweight,
@@ -1960,7 +1962,7 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
             
             /* check, if cut is violated enough */
-            if( SCIPisCutEfficacious(scip, NULL, row) )
+            if( SCIPisCutEfficacious(scip, sol, row) )
             {         
 #ifdef CUTOUT
                printf("lifted cover cut for knapsack constraint <%s> round j=%d: ", SCIPconsGetName(cons), j);
@@ -1970,7 +1972,7 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
 
 #endif               
                SCIP_CALL( SCIPresetConsAge(scip, cons) );
-               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
+               SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
                (*ncuts)++;
             }
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -2001,6 +2003,7 @@ static
 SCIP_RETCODE separateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< knapsack constraint */
+   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    SCIP_Bool             sepacardinality,    /**< should knapsack cardinality cuts be separated? */
    int                   maxnumcardlift,     /**< maximal number of cardinality inequ. lifted per sepa round (-1: unlimited) */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
@@ -2017,18 +2020,18 @@ SCIP_RETCODE separateCons(
    SCIPdebugMessage("separating knapsack constraint <%s>\n", SCIPconsGetName(cons));
    
    /* check knapsack constraint itself for feasibility */
-   SCIP_CALL( checkCons(scip, cons, NULL, FALSE, &violated) );
+   SCIP_CALL( checkCons(scip, cons, sol, (sol != NULL), &violated) );
    
    if( violated )
    {
       /* add knapsack constraint as LP row to the LP */
-      SCIP_CALL( addRelaxation(scip, cons) );
+      SCIP_CALL( addRelaxation(scip, cons, sol) );
       (*ncuts)++;
    }
    else if( sepacardinality )
    {
       SCIP_CALL( SCIPseparateKnapsackCover(scip, cons, consdata->vars, consdata->nvars, consdata->weights, 
-            consdata->capacity, maxnumcardlift, ncuts) );
+            consdata->capacity, sol, maxnumcardlift, ncuts) );
    }
    
    return SCIP_OKAY;
@@ -3288,7 +3291,7 @@ SCIP_DECL_CONSINITLP(consInitlpKnapsack)
    {
       if( SCIPconsIsInitial(conss[i]) )
       {
-         SCIP_CALL( addRelaxation(scip, conss[i]) );
+         SCIP_CALL( addRelaxation(scip, conss[i], NULL) );
       }
    }
 
@@ -3340,7 +3343,7 @@ SCIP_DECL_CONSSEPALP(consSepalpKnapsack)
    /* separate useful constraints */
    for( i = 0; i < nusefulconss && ncuts < maxsepacuts; i++ )
    {
-      SCIP_CALL( separateCons(scip, conss[i], sepacardinality, conshdlrdata->maxnumcardlift, &ncuts) );
+      SCIP_CALL( separateCons(scip, conss[i], NULL, sepacardinality, conshdlrdata->maxnumcardlift, &ncuts) );
    }
    
    /* adjust return value */
@@ -3352,7 +3355,59 @@ SCIP_DECL_CONSSEPALP(consSepalpKnapsack)
 
 
 /** separation method of constraint handler for arbitrary primal solutions */
-#define consSepasolKnapsack NULL /*?????????????????*/
+static
+SCIP_DECL_CONSSEPASOL(consSepasolKnapsack)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool sepacardinality;
+   int depth;
+   int nrounds;
+   int sepafreq;
+   int sepacardfreq;
+   int ncuts;
+   int maxsepacuts;
+   int i;
+
+   *result = SCIP_DIDNOTRUN;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   depth = SCIPgetDepth(scip);
+   nrounds = SCIPgetNSepaRounds(scip);
+   
+   SCIPdebugMessage("knapsack separation of %d/%d constraints, round %d (max %d/%d)\n",
+      nusefulconss, nconss, nrounds, conshdlrdata->maxroundsroot, conshdlrdata->maxrounds);
+
+   /* only call the separator a given number of times at each node */
+   if( (depth == 0 && conshdlrdata->maxroundsroot >= 0 && nrounds >= conshdlrdata->maxroundsroot)
+      || (depth > 0 && conshdlrdata->maxrounds >= 0 && nrounds >= conshdlrdata->maxrounds) )
+      return SCIP_OKAY;
+
+   /* check, if we should additionally separate cardinality cuts */
+   sepafreq = SCIPconshdlrGetSepaFreq(conshdlr);
+   sepacardfreq = sepafreq * conshdlrdata->sepacardfreq;
+   sepacardinality = (conshdlrdata->sepacardfreq >= 0)
+      && ((sepacardfreq == 0 && depth == 0) || (sepacardfreq >= 1 && (depth % sepacardfreq == 0)));
+
+   /* get the maximal number of cuts allowed in a separation round */
+   maxsepacuts = (depth == 0 ? conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts);
+
+   *result = SCIP_DIDNOTFIND;
+   ncuts = 0;
+
+   /* separate useful constraints */
+   for( i = 0; i < nusefulconss && ncuts < maxsepacuts; i++ )
+   {
+      SCIP_CALL( separateCons(scip, conss[i], sol, sepacardinality, conshdlrdata->maxnumcardlift, &ncuts) );
+   }
+   
+   /* adjust return value */
+   if( ncuts > 0 )
+      *result = SCIP_SEPARATED;
+   
+   return SCIP_OKAY;
+}
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -3383,7 +3438,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpKnapsack)
       if( violated )
       {
          /* add knapsack constraint as LP row to the LP */
-         SCIP_CALL( addRelaxation(scip, conss[i]) );
+         SCIP_CALL( addRelaxation(scip, conss[i], NULL) );
          ncuts++;
       }
    } 
@@ -3395,7 +3450,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpKnapsack)
       if( violated )
       {
          /* add knapsack constraint as LP row to the LP */
-         SCIP_CALL( addRelaxation(scip, conss[i]) );
+         SCIP_CALL( addRelaxation(scip, conss[i], NULL) );
          ncuts++;
       }
    } 

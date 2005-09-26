@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.22 2005/09/22 17:33:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.23 2005/09/26 12:54:48 bzfpfend Exp $"
 
 /**@file   sepa_intobj.c
  * @brief  integer objective value separator
@@ -143,6 +143,79 @@ SCIP_RETCODE createObjRow(
    return SCIP_OKAY;
 }
 
+/** searches and adds integral objective cuts that separate the given primal solution */
+static
+SCIP_RETCODE separateCuts(
+   SCIP*                 scip,               /**< SCIP data structure */ 
+   SCIP_SEPA*            sepa,               /**< the intobj separator */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
+   SCIP_RESULT*          result              /**< pointer to store the result */
+   )
+{
+   SCIP_SEPADATA* sepadata;
+   SCIP_Real objval;
+   SCIP_Real intobjval;
+   SCIP_Bool infeasible;
+   SCIP_Bool tightened;
+
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* if the objective value may be fractional, we cannot do anything */
+   if( !SCIPisObjIntegral(scip) )
+      return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTFIND;
+
+   /* if the current objective value is integral, there is no integral objective value cut */
+   if( sol == NULL )
+      objval = SCIPretransformObj(scip, SCIPgetLPObjval(scip));
+   else
+      objval = SCIPgetSolOrigObj(scip, sol);
+   if( SCIPisFeasIntegral(scip, objval) )
+      return SCIP_OKAY;
+
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   /* the objective value is fractional: create the objective value equality, if not yet existing */
+   SCIP_CALL( createObjRow(scip, sepadata) );
+
+   /* adjust the bounds of the objective value variable */
+   if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
+   {
+      intobjval = SCIPceil(scip, objval);
+      SCIP_CALL( SCIPtightenVarLb(scip, sepadata->objvar, intobjval, &infeasible, &tightened) );
+      SCIPdebugMessage("new objective variable lower bound: <%s>[%g,%g]\n", 
+         SCIPvarGetName(sepadata->objvar), SCIPvarGetLbLocal(sepadata->objvar), SCIPvarGetUbLocal(sepadata->objvar));
+   }
+   else
+   {
+      intobjval = SCIPfloor(scip, objval);
+      SCIP_CALL( SCIPtightenVarUb(scip, sepadata->objvar, intobjval, &infeasible, &tightened) );
+      SCIPdebugMessage("new objective variable upper bound: <%s>[%g,%g]\n", 
+         SCIPvarGetName(sepadata->objvar), SCIPvarGetLbLocal(sepadata->objvar), SCIPvarGetUbLocal(sepadata->objvar));
+   }
+
+   /* add the objective value equality as a cut to the LP */
+   if( infeasible )
+      *result = SCIP_CUTOFF;
+   else
+   {
+      if( !SCIProwIsInLP(sepadata->objrow) )
+      {
+         SCIP_CALL( SCIPaddCut(scip, NULL, sepadata->objrow, FALSE) );
+      }
+      if( tightened )
+         *result = SCIP_REDUCEDDOM;
+      else
+         *result = SCIP_SEPARATED;
+   }
+
+   return SCIP_OKAY;
+}
+
 
 
 
@@ -218,67 +291,20 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolIntobj)
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpIntobj)
 {  /*lint --e{715}*/
-   SCIP_SEPADATA* sepadata;
-   SCIP_Real objval;
-   SCIP_Real intobjval;
-   SCIP_Bool infeasible;
-   SCIP_Bool tightened;
+   SCIP_CALL( separateCuts(scip, sepa, NULL, result) );
 
-   assert(result != NULL);
-
-   *result = SCIP_DIDNOTRUN;
-
-   /* if the objective value may be fractional, we cannot do anything */
-   if( !SCIPisObjIntegral(scip) )
-      return SCIP_OKAY;
-
-   *result = SCIP_DIDNOTFIND;
-
-   /* if the current objective value is integral, there is no integral objective value cut */
-   objval = SCIPgetLPObjval(scip);
-   objval = SCIPretransformObj(scip, objval);
-   if( SCIPisFeasIntegral(scip, objval) )
-      return SCIP_OKAY;
-
-   sepadata = SCIPsepaGetData(sepa);
-   assert(sepadata != NULL);
-
-   /* the objective value is fractional: create the objective value equality, if not yet existing */
-   SCIP_CALL( createObjRow(scip, sepadata) );
-
-   /* adjust the bounds of the objective value variable */
-   if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
-   {
-      intobjval = SCIPceil(scip, objval);
-      SCIP_CALL( SCIPtightenVarLb(scip, sepadata->objvar, intobjval, &infeasible, &tightened) );
-      SCIPdebugMessage("new objective variable lower bound: <%s>[%g,%g]\n", 
-         SCIPvarGetName(sepadata->objvar), SCIPvarGetLbLocal(sepadata->objvar), SCIPvarGetUbLocal(sepadata->objvar));
-   }
-   else
-   {
-      intobjval = SCIPfloor(scip, objval);
-      SCIP_CALL( SCIPtightenVarUb(scip, sepadata->objvar, intobjval, &infeasible, &tightened) );
-      SCIPdebugMessage("new objective variable upper bound: <%s>[%g,%g]\n", 
-         SCIPvarGetName(sepadata->objvar), SCIPvarGetLbLocal(sepadata->objvar), SCIPvarGetUbLocal(sepadata->objvar));
-   }
-
-   /* add the objective value equality as a cut to the LP */
-   if( infeasible )
-      *result = SCIP_CUTOFF;
-   else if( !SCIProwIsInLP(sepadata->objrow) )
-   {
-      SCIP_CALL( SCIPaddCut(scip, NULL, sepadata->objrow, FALSE) );
-      *result = SCIP_SEPARATED;
-   }
-   else if( tightened )
-      *result = SCIP_REDUCEDDOM;
-      
    return SCIP_OKAY;
 }
 
 
 /** arbitrary primal solution separation method of separator */
-#define sepaExecsolIntobj NULL /*???????????????*/
+static
+SCIP_DECL_SEPAEXECSOL(sepaExecsolIntobj)
+{  /*lint --e{715}*/
+   SCIP_CALL( separateCuts(scip, sepa, sol, result) );
+
+   return SCIP_OKAY;
+}
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.90 2005/09/22 17:33:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.91 2005/09/26 12:54:46 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -715,7 +715,8 @@ SCIP_RETCODE createRow(
 static
 SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< logic or constraint */
+   SCIP_CONS*            cons,               /**< logic or constraint */
+   SCIP_SOL*             sol                 /**< primal CIP solution, NULL for current LP solution */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -734,7 +735,7 @@ SCIP_RETCODE addCut(
    SCIPdebugMessage("adding constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
 
    /* insert LP row as cut */
-   SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE) );
+   SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -744,6 +745,7 @@ static
 SCIP_RETCODE separateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< logic or constraint to be separated */
+   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
    SCIP_Bool*            separated,          /**< pointer to store TRUE, if a cut was found */
@@ -763,7 +765,7 @@ SCIP_RETCODE separateCons(
    SCIPdebugMessage("separating constraint <%s>\n", SCIPconsGetName(cons));
 
    /* update and check the watched variables, if they were changed since last processing */
-   if( SCIPconsIsPropagationEnabled(cons) )
+   if( sol == NULL && SCIPconsIsPropagationEnabled(cons) )
    {
       SCIP_CALL( processWatchedVars(scip, cons, eventhdlr, cutoff, reduceddom, &addcut, &mustcheck) );
    }
@@ -783,7 +785,7 @@ SCIP_RETCODE separateCons(
       assert(consdata != NULL);
 
       /* variable's fixings didn't give us any information -> we have to check the constraint */
-      if( consdata->row != NULL )
+      if( sol == NULL && consdata->row != NULL )
       {
          /* skip constraints already in the LP */
          if( SCIProwIsInLP(consdata->row) )
@@ -799,14 +801,14 @@ SCIP_RETCODE separateCons(
       }
       else
       {
-         SCIP_CALL( checkCons(scip, cons, NULL, &addcut) );
+         SCIP_CALL( checkCons(scip, cons, sol, &addcut) );
       }
    }
 
    if( addcut )
    {
       /* insert LP row as cut */
-      SCIP_CALL( addCut(scip, cons) );
+      SCIP_CALL( addCut(scip, cons, sol) );
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       *separated = TRUE;
    }
@@ -1004,7 +1006,7 @@ SCIP_DECL_CONSINITLP(consInitlpLogicor)
    {
       if( SCIPconsIsInitial(conss[c]) )
       {
-         SCIP_CALL( addCut(scip, conss[c]) );
+         SCIP_CALL( addCut(scip, conss[c], NULL) );
       }
    }
 
@@ -1039,7 +1041,7 @@ SCIP_DECL_CONSSEPALP(consSepalpLogicor)
    /* check all useful logic or constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
+      SCIP_CALL( separateCons(scip, conss[c], NULL, conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
    }
 
    /* combine logic or constraints to get more cuts */
@@ -1060,7 +1062,50 @@ SCIP_DECL_CONSSEPALP(consSepalpLogicor)
 
 
 /** separation method of constraint handler for arbitrary primal solutions */
-#define consSepasolLogicor NULL /*?????????????????????*/
+static
+SCIP_DECL_CONSSEPASOL(consSepasolLogicor)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool cutoff;
+   SCIP_Bool separated;
+   SCIP_Bool reduceddom;
+   int c;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(nconss == 0 || conss != NULL);
+   assert(result != NULL);
+
+   SCIPdebugMessage("separating %d/%d logic or constraints\n", nusefulconss, nconss);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   cutoff = FALSE;
+   separated = FALSE;
+   reduceddom = FALSE;
+
+   /* check all useful logic or constraints for feasibility */
+   for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
+   {
+      SCIP_CALL( separateCons(scip, conss[c], sol, conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
+   }
+
+   /* combine logic or constraints to get more cuts */
+   /**@todo further cuts of logic or constraints */
+
+   /* return the correct result */
+   if( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( separated )
+      *result = SCIP_SEPARATED;
+   else if( reduceddom )
+      *result = SCIP_REDUCEDDOM;
+   else
+      *result = SCIP_DIDNOTFIND;
+
+   return SCIP_OKAY;
+}
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -1092,13 +1137,13 @@ SCIP_DECL_CONSENFOLP(consEnfolpLogicor)
    /* check all useful logic or constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
+      SCIP_CALL( separateCons(scip, conss[c], NULL, conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
    }
 
    /* check all obsolete logic or constraints for feasibility */
    for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
+      SCIP_CALL( separateCons(scip, conss[c], NULL, conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
    }
 
    /* return the correct result */

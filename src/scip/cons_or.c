@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.48 2005/09/22 17:33:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.49 2005/09/26 12:54:47 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -692,6 +692,7 @@ static
 SCIP_RETCODE separateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to check */
+   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    SCIP_Bool*            separated           /**< pointer to store whether a cut was found */
    )
 {
@@ -718,10 +719,10 @@ SCIP_RETCODE separateCons(
    {
       if( !SCIProwIsInLP(consdata->rows[r]) )
       {
-         feasibility = SCIPgetRowLPFeasibility(scip, consdata->rows[r]);
+         feasibility = SCIPgetRowSolFeasibility(scip, consdata->rows[r], sol);
          if( SCIPisFeasNegative(scip, feasibility) )
          {
-            SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], FALSE) );
+            SCIP_CALL( SCIPaddCut(scip, sol, consdata->rows[r], FALSE) );
             *separated = TRUE;
          }
       }            
@@ -1261,7 +1262,7 @@ SCIP_DECL_CONSSEPALP(consSepalpOr)
    /* separate all useful constraints */
    for( c = 0; c < nusefulconss; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], &separated) );
+      SCIP_CALL( separateCons(scip, conss[c], NULL, &separated) );
       if( separated )
          *result = SCIP_SEPARATED;
    } 
@@ -1274,7 +1275,27 @@ SCIP_DECL_CONSSEPALP(consSepalpOr)
 
 
 /** separation method of constraint handler for arbitrary primal solutions */
-#define consSepasolOr NULL /*?????????????????*/
+static
+SCIP_DECL_CONSSEPASOL(consSepasolOr)
+{  /*lint --e{715}*/
+   SCIP_Bool separated;
+   int c;
+
+   *result = SCIP_DIDNOTFIND;
+
+   /* separate all useful constraints */
+   for( c = 0; c < nusefulconss; ++c )
+   {
+      SCIP_CALL( separateCons(scip, conss[c], sol, &separated) );
+      if( separated )
+         *result = SCIP_SEPARATED;
+   } 
+
+   /* combine constraints to get more cuts */
+   /**@todo combine constraints to get further cuts */
+
+   return SCIP_OKAY;
+}
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -1292,7 +1313,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpOr)
       {
          SCIP_Bool separated;
 
-         SCIP_CALL( separateCons(scip, conss[i], &separated) );
+         SCIP_CALL( separateCons(scip, conss[i], NULL, &separated) );
          assert(separated); /* because the solution is integral, the separation always finds a cut */
          *result = SCIP_SEPARATED;
          return SCIP_OKAY;
