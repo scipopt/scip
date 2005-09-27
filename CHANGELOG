@@ -17,6 +17,9 @@ parameters:
 
 features:
 
+Makefile:
+- included version number in binary file name
+
 fixed bugs:
 - fixed bug in ZIMPL model reader with wrong chdir, if .zpl file is in current directory
 - fixed bug in LP file reader with signed values without space between sign and value (e.g. "+2x" instead of "+ 2x")

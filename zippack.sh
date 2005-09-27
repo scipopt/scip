@@ -14,6 +14,7 @@ $NAME/examples/TSP/lint/* $NAME/examples/TSP/lint/cpp/* $NAME/examples/TSP/lint/
 $NAME/examples/TSP/lint/posix/sys/* $NAME/examples/TSP/make/* $NAME/examples/TSP/src/* $NAME/examples/TSP/tspviewer/* \
 -x ".*" -x "*~" -x "*/CVS/*"
 rm $NAME
-echo "check version numbers in src/scip/def.h, doc/xternal.c and zippack.sh ($VERSION):"
+echo "check version numbers in src/scip/def.h, doc/xternal.c, Makefile and zippack.sh ($VERSION):"
 grep "VERSION" src/scip/def.h
 grep "@version" doc/xternal.c
+grep "VERSION" Makefile

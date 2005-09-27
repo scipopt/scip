@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.132 2005/09/26 08:55:44 bzfpfend Exp $
+# $Id: Makefile,v 1.133 2005/09/27 11:49:29 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -36,6 +36,8 @@ HOSTNAME	:=	$(shell uname -n | tr '[:upper:]' '[:lower:]')
 #-----------------------------------------------------------------------------
 # default settings
 #-----------------------------------------------------------------------------
+
+VERSION		:=	0.80a
 
 TIME     	=  	3600
 NODES           =       2100000000
@@ -351,7 +353,7 @@ OBJSCIPLIBDEP	=	$(SRCDIR)/depend.objsciplib.$(OPT)
 # Main Program
 #-----------------------------------------------------------------------------
 
-MAINNAME	=	scip
+MAINNAME	=	scip-$(VERSION)
 
 ifeq ($(LINKER),C)
 MAINOBJ		=	cmain.o
