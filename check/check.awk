@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.26 2005/08/03 15:29:59 bzfpfend Exp $
+# $Id: check.awk,v 1.27 2005/09/27 15:08:17 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -79,6 +79,8 @@ BEGIN {
     n  = split ($2, a, "/");
     split(a[n], b, ".");
     prob = b[1];
+    if( b[m] == "gz" || b[m] == "z" || b[m] == "GZ" || b[m] == "Z" )
+       m--;
     for( i = 2; i < m; ++i )
        prob = prob "." b[i];
 
