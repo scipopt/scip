@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.4 2005/09/27 09:09:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.5 2005/09/27 09:32:12 bzfpfend Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -161,6 +161,7 @@ static
 SCIP_Bool isValueChar(
    char                  c,                  /**< input character */
    char                  nextc,              /**< next input character */
+   SCIP_Bool             firstchar,          /**< is the given character the first char of the token? */
    SCIP_Bool*            hasdot,             /**< pointer to update the dot flag */
    LPEXPTYPE*            exptype             /**< pointer to update the exponent type */
    )
@@ -175,7 +176,7 @@ SCIP_Bool isValueChar(
       *hasdot = TRUE;
       return TRUE;
    }
-   else if( (*exptype == LP_EXP_NONE) && (c == 'e' || c == 'E') )
+   else if( !firstchar && (*exptype == LP_EXP_NONE) && (c == 'e' || c == 'E') )
    {
       if( nextc == '+' || nextc == '-' )
       {
@@ -282,7 +283,7 @@ SCIP_Bool getNextToken(
    /* check if the token is a value */
    hasdot = FALSE;
    exptype = LP_EXP_NONE;
-   if( isValueChar(buf[lpinput->linepos], buf[lpinput->linepos+1], &hasdot, &exptype) )
+   if( isValueChar(buf[lpinput->linepos], buf[lpinput->linepos+1], TRUE, &hasdot, &exptype) )
    {
       /* read value token */
       tokenlen = 0;
@@ -294,7 +295,7 @@ SCIP_Bool getNextToken(
          tokenlen++;
          lpinput->linepos++;
       }
-      while( isValueChar(buf[lpinput->linepos], buf[lpinput->linepos+1], &hasdot, &exptype) );
+      while( isValueChar(buf[lpinput->linepos], buf[lpinput->linepos+1], FALSE, &hasdot, &exptype) );
    }
    else
    {
