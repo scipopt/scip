@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.91 2005/09/26 12:54:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.92 2005/09/27 15:24:26 bzfdixan Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -1039,7 +1039,7 @@ SCIP_DECL_CONSSEPALP(consSepalpLogicor)
    reduceddom = FALSE;
 
    /* check all useful logic or constraints for feasibility */
-   for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
+   for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
       SCIP_CALL( separateCons(scip, conss[c], NULL, conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
    }
@@ -1050,10 +1050,10 @@ SCIP_DECL_CONSSEPALP(consSepalpLogicor)
    /* return the correct result */
    if( cutoff )
       *result = SCIP_CUTOFF;
-   else if( separated )
-      *result = SCIP_SEPARATED;
    else if( reduceddom )
       *result = SCIP_REDUCEDDOM;
+   else if( separated )
+      *result = SCIP_SEPARATED;
    else
       *result = SCIP_DIDNOTFIND;
 
@@ -1086,7 +1086,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolLogicor)
    reduceddom = FALSE;
 
    /* check all useful logic or constraints for feasibility */
-   for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
+   for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
       SCIP_CALL( separateCons(scip, conss[c], sol, conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
    }
@@ -1097,10 +1097,10 @@ SCIP_DECL_CONSSEPASOL(consSepasolLogicor)
    /* return the correct result */
    if( cutoff )
       *result = SCIP_CUTOFF;
-   else if( separated )
-      *result = SCIP_SEPARATED;
    else if( reduceddom )
       *result = SCIP_REDUCEDDOM;
+   else if( separated )
+      *result = SCIP_SEPARATED;
    else
       *result = SCIP_DIDNOTFIND;
 

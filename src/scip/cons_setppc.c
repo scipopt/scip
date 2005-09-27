@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.99 2005/09/26 12:54:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.100 2005/09/27 15:24:26 bzfdixan Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -1994,7 +1994,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSetppc)
    reduceddom = FALSE;
 
    /* check all useful set partitioning / packing / covering constraints for feasibility */
-   for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
+   for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
       SCIP_CALL( separateCons(scip, conss[c], NULL, &cutoff, &separated, &reduceddom) );
    }
@@ -2005,10 +2005,10 @@ SCIP_DECL_CONSSEPALP(consSepalpSetppc)
    /* return the correct result */
    if( cutoff )
       *result = SCIP_CUTOFF;
-   else if( separated )
-      *result = SCIP_SEPARATED;
    else if( reduceddom )
       *result = SCIP_REDUCEDDOM;
+   else if( separated )
+      *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;
 }
@@ -2037,7 +2037,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSetppc)
    reduceddom = FALSE;
 
    /* check all useful set partitioning / packing / covering constraints for feasibility */
-   for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
+   for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
       SCIP_CALL( separateCons(scip, conss[c], sol, &cutoff, &separated, &reduceddom) );
    }
@@ -2048,10 +2048,10 @@ SCIP_DECL_CONSSEPASOL(consSepasolSetppc)
    /* return the correct result */
    if( cutoff )
       *result = SCIP_CUTOFF;
-   else if( separated )
-      *result = SCIP_SEPARATED;
    else if( reduceddom )
       *result = SCIP_REDUCEDDOM;
+   else if( separated )
+      *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;
 }
