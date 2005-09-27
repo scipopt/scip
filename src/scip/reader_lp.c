@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.3 2005/09/26 16:03:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.4 2005/09/27 09:09:19 bzfpfend Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -253,7 +253,7 @@ SCIP_Bool getNextToken(
    /* check the token stack */
    if( lpinput->npushedtokens > 0 )
    {
-      strcmp(lpinput->token, lpinput->pushedtokens[lpinput->npushedtokens-1]);
+      strcpy(lpinput->token, lpinput->pushedtokens[lpinput->npushedtokens-1]);
       lpinput->npushedtokens--;
       SCIPdebugMessage("(line %d) read token again: '%s'\n", lpinput->linenumber, lpinput->token);
       return TRUE;
@@ -276,6 +276,8 @@ SCIP_Bool getNextToken(
       else
          lpinput->linepos++;
    }
+   assert(lpinput->linepos < LP_MAX_LINELEN);
+   assert(!isDelimChar(buf[lpinput->linepos]));
 
    /* check if the token is a value */
    hasdot = FALSE;
@@ -298,14 +300,16 @@ SCIP_Bool getNextToken(
    {
       /* read non-value token */
       tokenlen = 0;
-      while( !isDelimChar(buf[lpinput->linepos])
-         && (tokenlen == 0 || !isTokenChar(lpinput->token[tokenlen-1])) )
+      do
       {
          assert(tokenlen < LP_MAX_LINELEN);
          lpinput->token[tokenlen] = buf[lpinput->linepos];
          tokenlen++;
          lpinput->linepos++;
+         if( tokenlen == 1 && isTokenChar(lpinput->token[0]) )
+            break;
       }
+      while( !isDelimChar(buf[lpinput->linepos]) && !isTokenChar(buf[lpinput->linepos]) );
 
       /* if the token is an equation sense '<', '>', or '=', skip a following '=' */
       if( tokenlen >= 1
@@ -334,7 +338,7 @@ void pushToken(
    assert(lpinput->npushedtokens < LP_MAX_PUSHEDTOKENS);
    assert(token != NULL);
 
-   strncmp(lpinput->pushedtokens[lpinput->npushedtokens], token, LP_MAX_LINELEN);
+   strncpy(lpinput->pushedtokens[lpinput->npushedtokens], token, LP_MAX_LINELEN);
    lpinput->pushedtokens[lpinput->npushedtokens][LP_MAX_LINELEN-1] = '\0';
    lpinput->npushedtokens++;
 }
@@ -826,6 +830,7 @@ SCIP_RETCODE readConstraints(
    SCIP_Bool dynamic;
    SCIP_Bool removeable;
    int ncoefs;
+   int sidesign;
 
    assert(lpinput != NULL);
 
@@ -844,11 +849,26 @@ SCIP_RETCODE readConstraints(
    }
 
    /* read the right hand side */
-   if( !getNextToken(lpinput) || !isValue(scip, lpinput, &sidevalue) )
+   sidesign = +1;
+   if( !getNextToken(lpinput) )
+   {
+      syntaxError(scip, lpinput, "missing right hand side");
+      goto TERMINATE;
+   }
+   if( isSign(lpinput, &sidesign) )
+   {
+      if( !getNextToken(lpinput) )
+      {
+         syntaxError(scip, lpinput, "missing value of right hand side");
+         goto TERMINATE;
+      }
+   }
+   if( !isValue(scip, lpinput, &sidevalue) )
    {
       syntaxError(scip, lpinput, "expected value as right hand side");
       goto TERMINATE;
    }
+   sidevalue *= sidesign;
 
    /* assign the left and right hand side, depending on the constraint sense */
    switch( sense )

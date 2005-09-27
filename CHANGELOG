@@ -20,6 +20,8 @@ features:
 fixed bugs:
 - fixed bug in ZIMPL model reader with wrong chdir, if .zpl file is in current directory
 - fixed bug in LP file reader with signed values without space between sign and value (e.g. "+2x" instead of "+ 2x")
+- fixed various bugs in LP file reader
+- also removed history_length, if NO_REMOVE_HISTORY is defined to support older versions of the readline library
 
 known bugs:
 - if one uses column generation and restarts, a solution that contains variables that are only present in the transformed

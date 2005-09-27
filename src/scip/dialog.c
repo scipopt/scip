@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.27 2005/09/06 17:29:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.28 2005/09/27 09:09:19 bzfpfend Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -84,7 +84,11 @@ int getHistoryLength(
    void
    )
 {
+#ifndef NO_REMOVE_HISTORY
    return history_length;
+#else
+   return 0;
+#endif
 }
 
 /** removes a single element from the history list */
