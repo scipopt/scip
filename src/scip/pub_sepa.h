@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_sepa.h,v 1.12 2005/09/22 14:43:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_sepa.h,v 1.13 2005/09/27 13:55:33 bzfpfets Exp $"
 
 /**@file   pub_sepa.h
  * @brief  public methods for separators
@@ -101,6 +101,18 @@ SCIP_Longint SCIPsepaGetNCutsFound(
 /** gets the number of cutting planes found by this separator at the current node */
 extern
 SCIP_Longint SCIPsepaGetNCutsFoundAtNode(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
+/** gets total number of additional constraints added by this separator */
+extern
+SCIP_Longint SCIPsepaGetNConssFound(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
+/** gets total number of domain reductions found by this separator */
+extern
+SCIP_Longint SCIPsepaGetNDomredsFound(
    SCIP_SEPA*            sepa                /**< separator */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.160 2005/09/22 17:33:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.161 2005/09/27 13:55:33 bzfpfets Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -188,7 +188,7 @@
 
 /* Separation */
 
-#define SCIP_DEFAULT_SEPA_MAXBOUNDDIST      0.2 /**< maximal relative distance from current node's dual bound to primal 
+#define SCIP_DEFAULT_SEPA_MAXBOUNDDIST      0.2 /**< maximal relative distance from current node's dual bound to primal
                                                  *   bound compared to best node's dual bound for applying separation
                                                  *   (0.0: only on current best node, 1.0: on all nodes) */
 #define SCIP_DEFAULT_SEPA_MINEFFICACY      0.05 /**< minimal efficacy for a cut to enter the LP */
@@ -261,7 +261,7 @@ SCIP_DECL_PARAMCHGD(paramChgdFeastol)
    SCIP_Real newfeastol;
 
    newfeastol = SCIPparamGetReal(param);
-   
+
    /* change the feastol through the SCIP call in order to mark the LP unsolved */
    SCIP_CALL( SCIPchgFeastol(scip, newfeastol) );
 
@@ -275,7 +275,7 @@ SCIP_DECL_PARAMCHGD(paramChgdDualfeastol)
    SCIP_Real newdualfeastol;
 
    newdualfeastol = SCIPparamGetReal(param);
-   
+
    /* change the dualfeastol through the SCIP call in order to mark the LP unsolved */
    SCIP_CALL( SCIPchgDualfeastol(scip, newdualfeastol) );
 
@@ -289,7 +289,7 @@ SCIP_DECL_PARAMCHGD(paramChgdBarrierconvtol)
    SCIP_Real newbarrierconvtol;
 
    newbarrierconvtol = SCIPparamGetReal(param);
-   
+
    /* change the barrierconvtol through the SCIP call in order to mark the LP unsolved */
    SCIP_CALL( SCIPchgBarrierconvtol(scip, newbarrierconvtol) );
 
@@ -310,7 +310,7 @@ SCIP_DECL_PARAMCHGD(SCIPparamChgdDispWidth)
 SCIP_RETCODE SCIPsetCreate(
    SCIP_SET**            set,                /**< pointer to SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP*                 scip                /**< SCIP data structure */   
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(set != NULL);
@@ -383,7 +383,7 @@ SCIP_RETCODE SCIPsetCreate(
          "branching score function ('s'um, 'p'roduct)",
          &(*set)->branch_scorefunc, SCIP_DEFAULT_BRANCH_SCOREFUNC, "sp",
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "branching/scorefac",
          "branching score factor to weigh downward and upward gain prediction in sum score function",
          &(*set)->branch_scorefac, SCIP_DEFAULT_BRANCH_SCOREFAC, 0.0, 1.0,
@@ -475,7 +475,7 @@ SCIP_RETCODE SCIPsetCreate(
          "should the conflict's relaxations be subject to LP aging and cleanup?",
          &(*set)->conf_removeable, SCIP_DEFAULT_CONF_REMOVEABLE,
          NULL, NULL) );
-   
+
    /* constraint parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "constraints/agelimit",
@@ -496,17 +496,17 @@ SCIP_RETCODE SCIPsetCreate(
          (int*)&(*set)->disp_verblevel, (int)SCIP_DEFAULT_DISP_VERBLEVEL,
          (int)SCIP_VERBLEVEL_NONE, (int)SCIP_VERBLEVEL_FULL,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "display/width",
          "maximal number of characters in a node information line",
          &(*set)->disp_width, SCIP_DEFAULT_DISP_WIDTH, 0, INT_MAX,
          SCIPparamChgdDispWidth, NULL) );
-   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "display/freq",
          "frequency for displaying node information lines",
          &(*set)->disp_freq, SCIP_DEFAULT_DISP_FREQ, -1, INT_MAX,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "display/headerfreq",
          "frequency for displaying header lines (every n'th node information line)",
          &(*set)->disp_headerfreq, SCIP_DEFAULT_DISP_HEADERFREQ, -1, INT_MAX,
@@ -637,7 +637,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
 
    /* memory parameters */
-   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "memory/savefac",
          "fraction of maximal memory usage resulting in switch to memory saving mode",
          &(*set)->mem_savefac, SCIP_DEFAULT_MEM_SAVEFAC, 0.0, 1.0,
@@ -662,7 +662,7 @@ SCIP_RETCODE SCIPsetCreate(
          "initial size of tree array",
          &(*set)->mem_treegrowinit, SCIP_DEFAULT_MEM_TREEGROWINIT, 0, INT_MAX,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "memory/pathgrowfac",
          "memory growing factor for path array",
          &(*set)->mem_pathgrowfac, SCIP_DEFAULT_MEM_PATHGROWFAC, 1.0, 10.0,
@@ -738,29 +738,29 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
 
    /* presolving parameters */
-   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "presolving/maxrounds",
          "maximal number of presolving rounds (-1: unlimited)",
          &(*set)->presol_maxrounds, SCIP_DEFAULT_PRESOL_MAXROUNDS, -1, INT_MAX,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "presolving/abortfac",
          "abort presolve, if at most this fraction of the problem was changed in last presolve round",
          &(*set)->presol_abortfac, SCIP_DEFAULT_PRESOL_ABORTFAC, 0.0, 1.0,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "presolving/maxrestarts",
          "maximal number of restarts (-1: unlimited)",
          &(*set)->presol_maxrestarts, SCIP_DEFAULT_PRESOL_MAXRESTARTS, -1, INT_MAX,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "presolving/restartfac",
          "fraction of bounds that changed in the root node triggering a restart with preprocessing (0.0: restart only after complete root node evaluation)",
          &(*set)->presol_restartfac, SCIP_DEFAULT_PRESOL_RESTARTFAC, 0.0, 1.0,
          NULL, NULL) );
 
    /* pricing parameters */
-   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "pricing/maxvars",
          "maximal number of variables priced in per pricing round",
          &(*set)->price_maxvars, SCIP_DEFAULT_PRICE_MAXVARS, 1, INT_MAX,
@@ -777,12 +777,12 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
 
    /* propagation parameters */
-   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "propagating/maxrounds",
          "maximal number of propagation rounds per node (-1: unlimited)",
          &(*set)->prop_maxrounds, SCIP_DEFAULT_PROP_MAXROUNDS, -1, INT_MAX,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem, 
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "propagating/maxroundsroot",
          "maximal number of propagation rounds in the root node (-1: unlimited)",
          &(*set)->prop_maxroundsroot, SCIP_DEFAULT_PROP_MAXROUNDSROOT, -1, INT_MAX,
@@ -892,7 +892,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddStringParam(*set, blkmem,
          "vbc/filename",
          "name of the VBC Tool output file, or - if no VBC Tool output should be created",
-         &(*set)->vbc_filename, SCIP_DEFAULT_VBC_FILENAME, 
+         &(*set)->vbc_filename, SCIP_DEFAULT_VBC_FILENAME,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "vbc/realtime",
@@ -1032,7 +1032,7 @@ SCIP_RETCODE SCIPsetAddBoolParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetAddBool(set->paramset, blkmem, name, desc, valueptr, defaultvalue, paramchgd, paramdata) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1052,9 +1052,9 @@ SCIP_RETCODE SCIPsetAddIntParam(
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetAddInt(set->paramset, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
+   SCIP_CALL( SCIPparamsetAddInt(set->paramset, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue,
          paramchgd, paramdata) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1074,9 +1074,9 @@ SCIP_RETCODE SCIPsetAddLongintParam(
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetAddLongint(set->paramset, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
+   SCIP_CALL( SCIPparamsetAddLongint(set->paramset, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue,
          paramchgd, paramdata) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1096,9 +1096,9 @@ SCIP_RETCODE SCIPsetAddRealParam(
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetAddReal(set->paramset, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
+   SCIP_CALL( SCIPparamsetAddReal(set->paramset, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue,
          paramchgd, paramdata) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1117,9 +1117,9 @@ SCIP_RETCODE SCIPsetAddCharParam(
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetAddChar(set->paramset, blkmem, name, desc, valueptr, defaultvalue, allowedvalues, 
+   SCIP_CALL( SCIPparamsetAddChar(set->paramset, blkmem, name, desc, valueptr, defaultvalue, allowedvalues,
          paramchgd, paramdata) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1138,7 +1138,7 @@ SCIP_RETCODE SCIPsetAddStringParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetAddString(set->paramset, blkmem, name, desc, valueptr, defaultvalue, paramchgd, paramdata) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1152,7 +1152,7 @@ SCIP_RETCODE SCIPsetGetBoolParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetGetBool(set->paramset, name, value) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1166,7 +1166,7 @@ SCIP_RETCODE SCIPsetGetIntParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetGetInt(set->paramset, name, value) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1180,7 +1180,7 @@ SCIP_RETCODE SCIPsetGetLongintParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetGetLongint(set->paramset, name, value) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1194,7 +1194,7 @@ SCIP_RETCODE SCIPsetGetRealParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetGetReal(set->paramset, name, value) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1208,7 +1208,7 @@ SCIP_RETCODE SCIPsetGetCharParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetGetChar(set->paramset, name, value) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1222,7 +1222,7 @@ SCIP_RETCODE SCIPsetGetStringParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetGetString(set->paramset, name, value) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1236,7 +1236,7 @@ SCIP_RETCODE SCIPsetSetBoolParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetSetBool(set->paramset, set, name, value) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1250,7 +1250,7 @@ SCIP_RETCODE SCIPsetSetIntParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetSetInt(set->paramset, set, name, value) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1264,7 +1264,7 @@ SCIP_RETCODE SCIPsetSetLongintParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetSetLongint(set->paramset, set, name, value) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1278,7 +1278,7 @@ SCIP_RETCODE SCIPsetSetRealParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetSetReal(set->paramset, set, name, value) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1292,7 +1292,7 @@ SCIP_RETCODE SCIPsetSetCharParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetSetChar(set->paramset, set, name, value) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1306,7 +1306,7 @@ SCIP_RETCODE SCIPsetSetStringParam(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetSetString(set->paramset, set, name, value) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1373,12 +1373,12 @@ SCIP_RETCODE SCIPsetIncludeReader(
       SCIP_ALLOC( BMSreallocMemoryArray(&set->readers, set->readerssize) );
    }
    assert(set->nreaders < set->readerssize);
-   
+
    set->readers[set->nreaders] = reader;
    set->nreaders++;
 
    return SCIP_OKAY;
-}   
+}
 
 /** returns the file reader of the given name, or NULL if not existing */
 SCIP_READER* SCIPsetFindReader(
@@ -1415,13 +1415,13 @@ SCIP_RETCODE SCIPsetIncludePricer(
       SCIP_ALLOC( BMSreallocMemoryArray(&set->pricers, set->pricerssize) );
    }
    assert(set->npricers < set->pricerssize);
-   
+
    set->pricers[set->npricers] = pricer;
    set->npricers++;
    set->pricerssorted = FALSE;
 
    return SCIP_OKAY;
-}   
+}
 
 /** returns the variable pricer of the given name, or NULL if not existing */
 SCIP_PRICER* SCIPsetFindPricer(
@@ -1490,7 +1490,7 @@ SCIP_RETCODE SCIPsetIncludeConshdlr(
 
    /* sort constraint handler into conshdlrs_sepa array sorted by sepa priority */
    priority = SCIPconshdlrGetSepaPriority(conshdlr);
-   for( i = set->nconshdlrs; i > 0 && SCIPconshdlrGetSepaPriority(set->conshdlrs[i-1]) < priority; --i )
+   for( i = set->nconshdlrs; i > 0 && SCIPconshdlrGetSepaPriority(set->conshdlrs_sepa[i-1]) < priority; --i )
    {
       set->conshdlrs_sepa[i] = set->conshdlrs_sepa[i-1];
    }
@@ -1498,7 +1498,7 @@ SCIP_RETCODE SCIPsetIncludeConshdlr(
 
    /* sort constraint handler into conshdlrs_enfo array sorted by enfo priority */
    priority = SCIPconshdlrGetEnfoPriority(conshdlr);
-   for( i = set->nconshdlrs; i > 0 && SCIPconshdlrGetEnfoPriority(set->conshdlrs[i-1]) < priority; --i )
+   for( i = set->nconshdlrs; i > 0 && SCIPconshdlrGetEnfoPriority(set->conshdlrs_enfo[i-1]) < priority; --i )
    {
       set->conshdlrs_enfo[i] = set->conshdlrs_enfo[i-1];
    }
@@ -1507,7 +1507,7 @@ SCIP_RETCODE SCIPsetIncludeConshdlr(
    set->nconshdlrs++;
 
    return SCIP_OKAY;
-}   
+}
 
 /** returns the constraint handler of the given name, or NULL if not existing */
 SCIP_CONSHDLR* SCIPsetFindConshdlr(
@@ -1602,13 +1602,13 @@ SCIP_RETCODE SCIPsetIncludePresol(
       SCIP_ALLOC( BMSreallocMemoryArray(&set->presols, set->presolssize) );
    }
    assert(set->npresols < set->presolssize);
-   
+
    set->presols[set->npresols] = presol;
    set->npresols++;
    set->presolssorted = FALSE;
 
    return SCIP_OKAY;
-}   
+}
 
 /** returns the presolver of the given name, or NULL if not existing */
 SCIP_PRESOL* SCIPsetFindPresol(
@@ -1660,13 +1660,13 @@ SCIP_RETCODE SCIPsetIncludeRelax(
       SCIP_ALLOC( BMSreallocMemoryArray(&set->relaxs, set->relaxssize) );
    }
    assert(set->nrelaxs < set->relaxssize);
-   
+
    set->relaxs[set->nrelaxs] = relax;
    set->nrelaxs++;
    set->relaxssorted = FALSE;
 
    return SCIP_OKAY;
-}   
+}
 
 /** returns the relaxator of the given name, or NULL if not existing */
 SCIP_RELAX* SCIPsetFindRelax(
@@ -1718,13 +1718,13 @@ SCIP_RETCODE SCIPsetIncludeSepa(
       SCIP_ALLOC( BMSreallocMemoryArray(&set->sepas, set->sepassize) );
    }
    assert(set->nsepas < set->sepassize);
-   
+
    set->sepas[set->nsepas] = sepa;
    set->nsepas++;
    set->sepassorted = FALSE;
 
    return SCIP_OKAY;
-}   
+}
 
 /** returns the separator of the given name, or NULL if not existing */
 SCIP_SEPA* SCIPsetFindSepa(
@@ -1776,13 +1776,13 @@ SCIP_RETCODE SCIPsetIncludeProp(
       SCIP_ALLOC( BMSreallocMemoryArray(&set->props, set->propssize) );
    }
    assert(set->nprops < set->propssize);
-   
+
    set->props[set->nprops] = prop;
    set->nprops++;
    set->propssorted = FALSE;
 
    return SCIP_OKAY;
-}   
+}
 
 /** returns the propagator of the given name, or NULL if not existing */
 SCIP_PROP* SCIPsetFindProp(
@@ -1834,13 +1834,13 @@ SCIP_RETCODE SCIPsetIncludeHeur(
       SCIP_ALLOC( BMSreallocMemoryArray(&set->heurs, set->heurssize) );
    }
    assert(set->nheurs < set->heurssize);
-   
+
    set->heurs[set->nheurs] = heur;
    set->nheurs++;
    set->heurssorted = FALSE;
 
    return SCIP_OKAY;
-}   
+}
 
 /** returns the primal heuristic of the given name, or NULL if not existing */
 SCIP_HEUR* SCIPsetFindHeur(
@@ -1892,12 +1892,12 @@ SCIP_RETCODE SCIPsetIncludeEventhdlr(
       SCIP_ALLOC( BMSreallocMemoryArray(&set->eventhdlrs, set->eventhdlrssize) );
    }
    assert(set->neventhdlrs < set->eventhdlrssize);
-   
+
    set->eventhdlrs[set->neventhdlrs] = eventhdlr;
    set->neventhdlrs++;
 
    return SCIP_OKAY;
-}   
+}
 
 /** returns the event handler of the given name, or NULL if not existing */
 SCIP_EVENTHDLR* SCIPsetFindEventhdlr(
@@ -1937,7 +1937,7 @@ SCIP_RETCODE SCIPsetIncludeNodesel(
       SCIP_ALLOC( BMSreallocMemoryArray(&set->nodesels, set->nodeselssize) );
    }
    assert(set->nnodesels < set->nodeselssize);
-   
+
    for( i = set->nnodesels; i > 0 && SCIPnodeselGetStdPriority(nodesel) > SCIPnodeselGetStdPriority(set->nodesels[i-1]);
         --i )
    {
@@ -1947,7 +1947,7 @@ SCIP_RETCODE SCIPsetIncludeNodesel(
    set->nnodesels++;
 
    return SCIP_OKAY;
-}   
+}
 
 /** returns the node selector of the given name, or NULL if not existing */
 SCIP_NODESEL* SCIPsetFindNodesel(
@@ -2003,7 +2003,7 @@ SCIP_NODESEL* SCIPsetGetNodesel(
          }
       }
    }
-   
+
    return set->nodesel;
 }
 
@@ -2029,7 +2029,7 @@ SCIP_RETCODE SCIPsetIncludeBranchrule(
    set->branchrulessorted = FALSE;
 
    return SCIP_OKAY;
-}   
+}
 
 /** returns the branching rule of the given name, or NULL if not existing */
 SCIP_BRANCHRULE* SCIPsetFindBranchrule(
@@ -2092,7 +2092,7 @@ SCIP_RETCODE SCIPsetIncludeDisp(
    set->ndisps++;
 
    return SCIP_OKAY;
-}   
+}
 
 /** returns the display column of the given name, or NULL if not existing */
 SCIP_DISP* SCIPsetFindDisp(
@@ -2424,7 +2424,7 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
    {
       SCIP_CALL( SCIPconshdlrInitsol(set->conshdlrs[i], blkmem, set, stat) );
    }
-   
+
    /* conflict handlers */
    for( i = 0; i < set->nconflicthdlrs; ++i )
    {
@@ -2472,7 +2472,7 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
    {
       SCIP_CALL( SCIPbranchruleInitsol(set->branchrules[i], set) );
    }
-   
+
    /* display columns */
    for( i = 0; i < set->ndisps; ++i )
    {
@@ -2505,7 +2505,7 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    {
       SCIP_CALL( SCIPconshdlrExitsol(set->conshdlrs[i], blkmem, set, stat) );
    }
-   
+
    /* conflict handlers */
    for( i = 0; i < set->nconflicthdlrs; ++i )
    {
@@ -2553,7 +2553,7 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    {
       SCIP_CALL( SCIPbranchruleExitsol(set->branchrules[i], set) );
    }
-   
+
    /* display columns */
    for( i = 0; i < set->ndisps; ++i )
    {
@@ -2603,7 +2603,7 @@ SCIP_RETCODE SCIPsetSetVerbLevel(
       SCIPerrorMessage("invalid verbosity level <%d>, maximum is <%d>\n", verblevel, SCIP_VERBLEVEL_FULL);
       return SCIP_INVALIDCALL;
    }
-   
+
    set->disp_verblevel = verblevel;
 
    return SCIP_OKAY;
@@ -2676,7 +2676,7 @@ int SCIPsetGetSepaMaxcuts(
       return set->sepa_maxcuts;
 }
 
-   
+
 
 /*
  * simple functions implemented as defines
@@ -2949,9 +2949,9 @@ SCIP_Bool SCIPsetIsScalingIntegral(
    )
 {
    SCIP_Real scaledeps;
-   
+
    assert(set != NULL);
-   
+
    scaledeps = REALABS(scalar);
    scaledeps = MAX(scaledeps, 1.0);
    scaledeps *= set->num_epsilon;

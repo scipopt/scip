@@ -10,12 +10,14 @@ interface:
 - replaced method SCIPsepaWasDelayed() by SCIPsepaWasLPDelayed() and SCIPsepaWasSolDelayed()
 - additional parameter "sol" for methods SCIPaddCut(), SCIPgetCutEfficacy(), and SCIPisCutEfficacious()
 - additional parameter "sol" for method SCIPseparateKnapsackCover()
+- new methods SCIPsepaGetNConssFound() and SCIPsepaGetNDomredsFound()
 
 plugins:
 
 parameters:
 
 features:
+- changed handling of added constraints in separation calls
 
 Makefile:
 - included version number in binary file name

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.46 2005/09/22 17:33:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.47 2005/09/27 13:55:33 bzfpfets Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -79,9 +79,9 @@ SCIP_RETCODE SCIPsepastoreCreate(
    )
 {
    assert(sepastore != NULL);
-   
+
    SCIP_ALLOC( BMSallocMemory(sepastore) );
-   
+
    (*sepastore)->cuts = NULL;
    (*sepastore)->efficacies = NULL;
    (*sepastore)->objparallelisms = NULL;
@@ -297,7 +297,7 @@ SCIP_RETCODE sepastoreAddCut(
    SCIP_CALL( sepastoreEnsureCutsMem(sepastore, set, sepastore->ncuts+1) );
    assert(sepastore->ncuts < sepastore->cutssize);
 
-   SCIPdebugMessage("adding cut to separation storage of size %d/%d (forcecut=%d, efficacy=%g, objparallelism=%g, score=%g)\n", 
+   SCIPdebugMessage("adding cut to separation storage of size %d/%d (forcecut=%d, efficacy=%g, objparallelism=%g, score=%g)\n",
       sepastore->ncuts, maxsepacuts, forcecut, cutefficacy, cutobjparallelism, cutscore);
    SCIPdebug(SCIProwPrint(cut, NULL));
 
@@ -305,7 +305,7 @@ SCIP_RETCODE sepastoreAddCut(
    for( c = sepastore->nforcedcuts; c < sepastore->ncuts && cutscore <= sepastore->scores[c]; ++c )
    {
       SCIP_Real thisortho;
-         
+
       assert(!SCIPsetIsInfinity(set, sepastore->scores[c]));
       assert(!SCIPsetIsInfinity(set, cutscore));
       assert(!forcecut);
@@ -316,7 +316,7 @@ SCIP_RETCODE sepastoreAddCut(
       {
          cutorthogonality = thisortho;
          cutscore = cutefficacy + set->sepa_objparalfac * cutobjparallelism + set->sepa_orthofac * cutorthogonality;
-         
+
          /* check, if the cut (after regarding orthogonality) is still good enough */
          if( (sepastore->ncuts >= maxsepacuts && cutscore <= sepastore->scores[maxsepacuts-1])
             || cutorthogonality < mincutorthogonality )
@@ -496,7 +496,7 @@ SCIP_RETCODE sepastoreApplyLb(
 
    if( SCIPsetIsGT(set, bound, SCIPvarGetLbLocal(var)) )
    {
-      SCIPdebugMessage(" -> applying bound change: <%s>: [%g,%g] -> [%g,%g]\n", 
+      SCIPdebugMessage(" -> applying bound change: <%s>: [%g,%g] -> [%g,%g]\n",
          SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bound, SCIPvarGetUbLocal(var));
 
       if( SCIPsetIsLE(set, bound, SCIPvarGetUbLocal(var)) )
@@ -535,9 +535,9 @@ SCIP_RETCODE sepastoreApplyUb(
 
    if( SCIPsetIsLT(set, bound, SCIPvarGetUbLocal(var)) )
    {
-      SCIPdebugMessage(" -> applying bound change: <%s>: [%g,%g] -> [%g,%g]\n", 
+      SCIPdebugMessage(" -> applying bound change: <%s>: [%g,%g] -> [%g,%g]\n",
          SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var), bound);
-      
+
       if( SCIPsetIsGE(set, bound, SCIPvarGetLbLocal(var)) )
       {
          SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, tree, lp, branchcand, eventqueue,
@@ -545,7 +545,7 @@ SCIP_RETCODE sepastoreApplyUb(
       }
       else
          *cutoff = TRUE;
-      
+
       if( !sepastore->initiallp )
          sepastore->ncutsapplied++;
    }
@@ -672,7 +672,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       if( !SCIProwIsInLP(cut) )
       {
          SCIPdebugMessage(" -> applying cut %d/%d (efficacy=%g, objparallelism=%g, orthogonality=%g, score=%g)\n",
-            i, sepastore->ncuts, sepastore->efficacies[i], sepastore->objparallelisms[i], 
+            i, sepastore->ncuts, sepastore->efficacies[i], sepastore->objparallelisms[i],
             sepastore->orthogonalities[i], sepastore->scores[i]);
          SCIPdebug(SCIProwPrint(cut, NULL));
          assert(i == 0 || sepastore->scores[i] <= sepastore->scores[i-1]);
@@ -690,7 +690,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
 
          /* release the row */
          SCIP_CALL( SCIProwRelease(&sepastore->cuts[i], blkmem, set, lp) );
-         
+
          if( !sepastore->initiallp )
             sepastore->ncutsapplied++;
       }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.50 2005/09/22 14:43:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.51 2005/09/27 13:55:33 bzfpfets Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -107,6 +107,8 @@ SCIP_RETCODE SCIPsepaCreate(
    (*sepa)->lastsepanode = -1;
    (*sepa)->ncalls = 0;
    (*sepa)->ncutsfound = 0;
+   (*sepa)->nconssfound = 0;
+   (*sepa)->ndomredsfound = 0;
    (*sepa)->ncallsatnode = 0;
    (*sepa)->ncutsfoundatnode = 0;
    (*sepa)->lpwasdelayed = FALSE;
@@ -117,7 +119,7 @@ SCIP_RETCODE SCIPsepaCreate(
    sprintf(paramname, "separating/%s/priority", name);
    sprintf(paramdesc, "priority of separator <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-         &(*sepa)->priority, priority, INT_MIN, INT_MAX, 
+         &(*sepa)->priority, priority, INT_MIN, INT_MAX,
          paramChgdSepaPriority, (SCIP_PARAMDATA*)(*sepa)) ); /*lint !e740*/
 
    sprintf(paramname, "separating/%s/freq", name);
@@ -178,6 +180,8 @@ SCIP_RETCODE SCIPsepaInit(
    sepa->lastsepanode = -1;
    sepa->ncalls = 0;
    sepa->ncutsfound = 0;
+   sepa->nconssfound = 0;
+   sepa->ndomredsfound = 0;
    sepa->ncallsatnode = 0;
    sepa->ncutsfoundatnode = 0;
 
@@ -274,12 +278,16 @@ SCIP_RETCODE SCIPsepaExecLP(
    {
       if( !sepa->delay || execdelayed )
       {
-         int oldncutsstored;
+	 SCIP_Longint oldndomchgs;
+	 int oldncutsstored;
+	 int oldnactiveconss;
          int ncutsfound;
 
          SCIPdebugMessage("executing separator <%s> on LP solution\n", sepa->name);
 
-         oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
+	 oldndomchgs = stat->nboundchgs + stat->nholechgs;
+	 oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
+	 oldnactiveconss = stat->nactiveconss;
 
          /* reset the statistics for current node */
          if( sepa->lastsepanode != stat->ntotalnodes )
@@ -307,6 +315,8 @@ SCIP_RETCODE SCIPsepaExecLP(
          ncutsfound = SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored;
          sepa->ncutsfound += ncutsfound;
          sepa->ncutsfoundatnode += ncutsfound;
+	 sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
+	 sepa->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
 
          /* evaluate result */
          if( *result != SCIP_CUTOFF
@@ -317,7 +327,7 @@ SCIP_RETCODE SCIPsepaExecLP(
             && *result != SCIP_DIDNOTRUN
             && *result != SCIP_DELAYED )
          {
-            SCIPerrorMessage("execution method of separator <%s> returned invalid result <%d>\n", 
+            SCIPerrorMessage("execution method of separator <%s> returned invalid result <%d>\n",
                sepa->name, *result);
             return SCIP_INVALIDRESULT;
          }
@@ -333,7 +343,7 @@ SCIP_RETCODE SCIPsepaExecLP(
    }
    else
       *result = SCIP_DIDNOTRUN;
-   
+
    return SCIP_OKAY;
 }
 
@@ -362,12 +372,16 @@ SCIP_RETCODE SCIPsepaExecSol(
    {
       if( !sepa->delay || execdelayed )
       {
-         int oldncutsstored;
+	 SCIP_Longint oldndomchgs;
+	 int oldncutsstored;
+	 int oldnactiveconss;
          int ncutsfound;
 
          SCIPdebugMessage("executing separator <%s> on solution %p\n", sepa->name, sol);
 
-         oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
+	 oldndomchgs = stat->nboundchgs + stat->nholechgs;
+	 oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
+	 oldnactiveconss = stat->nactiveconss;
 
          /* reset the statistics for current node */
          if( sepa->lastsepanode != stat->ntotalnodes )
@@ -395,6 +409,8 @@ SCIP_RETCODE SCIPsepaExecSol(
          ncutsfound = SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored;
          sepa->ncutsfound += ncutsfound;
          sepa->ncutsfoundatnode += ncutsfound;
+	 sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
+	 sepa->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
 
          /* evaluate result */
          if( *result != SCIP_CUTOFF
@@ -405,7 +421,7 @@ SCIP_RETCODE SCIPsepaExecSol(
             && *result != SCIP_DIDNOTRUN
             && *result != SCIP_DELAYED )
          {
-            SCIPerrorMessage("execution method of separator <%s> returned invalid result <%d>\n", 
+            SCIPerrorMessage("execution method of separator <%s> returned invalid result <%d>\n",
                sepa->name, *result);
             return SCIP_INVALIDRESULT;
          }
@@ -421,7 +437,7 @@ SCIP_RETCODE SCIPsepaExecSol(
    }
    else
       *result = SCIP_DIDNOTRUN;
-   
+
    return SCIP_OKAY;
 }
 
@@ -485,7 +501,7 @@ void SCIPsepaSetPriority(
 {
    assert(sepa != NULL);
    assert(set != NULL);
-   
+
    sepa->priority = priority;
    set->sepassorted = FALSE;
 }
@@ -548,6 +564,26 @@ SCIP_Longint SCIPsepaGetNCutsFoundAtNode(
    assert(sepa != NULL);
 
    return sepa->ncutsfoundatnode;
+}
+
+/** gets total number of additional constraints added by this separator */
+SCIP_Longint SCIPsepaGetNConssFound(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return sepa->nconssfound;
+}
+
+/** gets total number of domain reductions found by this separator */
+SCIP_Longint SCIPsepaGetNDomredsFound(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return sepa->ndomredsfound;
 }
 
 /** should separator be delayed, if other separators found cuts? */
