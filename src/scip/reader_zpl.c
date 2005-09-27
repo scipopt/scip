@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.9 2005/09/27 09:32:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.10 2005/09/27 11:20:53 bzfpfend Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -41,7 +41,7 @@
 #include "zimpl/xlpglue.h"
 
 extern
-void zpl_read(const char* filename);
+Bool zpl_read(const char* filename);
 
 
 
@@ -440,9 +440,10 @@ void xlp_addtocost(Var* var, const Numb* cost)
    SCIP_CALL_ABORT( SCIPchgVarObj(scip_, scipvar, scipval) );
 }
 
-void xlp_presolve(void)
+Bool xlp_presolve(void)
 {
    /* nothing to be done */
+   return TRUE;
 }
 
 Bool xlp_hassos(void)
@@ -505,7 +506,8 @@ SCIP_DECL_READERREAD(readerReadZpl)
    readerror_ = FALSE;
 
    /* call ZIMPL parser */
-   zpl_read(namewithoutpath);
+   if( !zpl_read(namewithoutpath) )
+      readerror_ = TRUE;
 
    /* change directory back to old path */
    if( path != NULL )
