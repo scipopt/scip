@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.c,v 1.2 2005/09/01 18:19:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_branch.c,v 1.3 2005/10/08 15:11:28 bzfpfets Exp $"
 
 /**@file   tclique_branch.c
  * @brief  branch and bound part of algorithm for maximum cliques
@@ -340,7 +340,7 @@ void insertClique(
 
    /* allocate memory */
    ensureCliquehashSize(cliquehash, cliquehash->ncliques+1);
-   
+
    /* insert clique into table */
    for( i = cliquehash->ncliques; i > insertpos; --i )
       cliquehash->cliques[i] = cliquehash->cliques[i-1];
@@ -498,7 +498,7 @@ void newSolution(
                assert(cliquehash->ncliques == 0);
                createClique(&clique, curcliquenodes, ncurcliquenodes);
             }
-            
+
             /* insert clique into clique hash table */
             insertClique(cliquehash, clique, insertpos);
             clique = NULL; /* the clique now belongs to the table */
@@ -532,13 +532,13 @@ void newSolution(
 
 /** tries to find a clique, if V has only one or two nodes */
 static
-void reduced( 
+void reduced(
    TCLIQUE_GETWEIGHTS((*getweights)),   /**< user function to get the node weights */
    TCLIQUE_ISEDGE   ((*isedge)),        /**< user function to check for existence of an edge */
    TCLIQUE_GRAPH*   tcliquegraph,       /**< pointer to graph data structure */
    int*             V,                  /**< non-zero weighted nodes for branching */
    int              nV,                 /**< number of non-zero weighted nodes for branching */
-   TCLIQUE_WEIGHT*  apbound,            /**< apriori bound of nodes for branching */ 
+   TCLIQUE_WEIGHT*  apbound,            /**< apriori bound of nodes for branching */
    int*             tmpcliquenodes,     /**< buffer for storing the temporary clique */
    int*             ntmpcliquenodes,    /**< pointer to store number of nodes of the temporary clique */
    TCLIQUE_WEIGHT*  tmpcliqueweight     /**< pointer to store weight of the temporary clique */
@@ -565,7 +565,7 @@ void reduced(
    if( nV >= 2 )
       apbound[1] = weights[V[1]];
 
-   /* check if nodes are adjacent */ 
+   /* check if nodes are adjacent */
    if( nV >= 2 && isedge(tcliquegraph, V[0], V[1]) )
    {
       assert(isedge(tcliquegraph, V[1], V[0]));
@@ -612,7 +612,7 @@ TCLIQUE_WEIGHT boundSubgraph(
    int              nV,                 /**< number of non-zero weighted nodes for branching */
    NBC*             gsd,                /**< neighbour color information of all nodes */
    TCLIQUE_Bool*    iscolored,          /**< coloring status of all nodes */
-   TCLIQUE_WEIGHT*  apbound,            /**< apriori bound of nodes for branching */ 
+   TCLIQUE_WEIGHT*  apbound,            /**< apriori bound of nodes for branching */
    int*             tmpcliquenodes,     /**< buffer for storing the temporary clique */
    int*             ntmpcliquenodes,    /**< pointer to store number of nodes of the temporary clique */
    TCLIQUE_WEIGHT*  tmpcliqueweight     /**< pointer to store weight of the temporary clique */
@@ -630,17 +630,17 @@ TCLIQUE_WEIGHT boundSubgraph(
    else
    {
       /* color the graph induces by nodes of V to get an upper bound for the remaining subgraph */
-      return tcliqueColoring(getnnodes, getweights, selectadjnodes, tcliquegraph, 
-         mem, buffer, V, nV, gsd, iscolored, apbound, 
+      return tcliqueColoring(getnnodes, getweights, selectadjnodes, tcliquegraph,
+         mem, buffer, V, nV, gsd, iscolored, apbound,
          tmpcliquenodes, ntmpcliquenodes, tmpcliqueweight);
    }
 }
 
 /** gets the index of the node of V with the maximum apriori bound; returns -1, if no node exists */
 static
-int getMaxApBoundIndex( 
+int getMaxApBoundIndex(
    int              nV,  	        /**< number of nodes of V */
-   TCLIQUE_WEIGHT*  apbound             /**< apriori bound of nodes of V */ 
+   TCLIQUE_WEIGHT*  apbound             /**< apriori bound of nodes of V */
    )
 {
    TCLIQUE_WEIGHT maxapbound;
@@ -659,7 +659,7 @@ int getMaxApBoundIndex(
       {
          maxapbound = apbound[i];
          maxindex = i;
-      }      
+      }
    }
 
    return maxindex;
@@ -670,10 +670,10 @@ int getMaxApBoundIndex(
  *  returns -1 if no node with weight smaller or equal than maxweight is found
  */
 static
-int getMaxApBoundIndexNotMaxWeight( 
+int getMaxApBoundIndexNotMaxWeight(
    int*             V,                  /**< non-zero weighted nodes for branching */
    int              nV,                 /**< number of non-zero weighted nodes for branching */
-   const TCLIQUE_WEIGHT*    apbound,            /**< apriori bound of nodes of V */ 
+   const TCLIQUE_WEIGHT*    apbound,            /**< apriori bound of nodes of V */
    const TCLIQUE_WEIGHT*    weights,            /**< weights of nodes */
    TCLIQUE_WEIGHT   maxweight           /**< maximal weight of node to be candidate for selection */
    )
@@ -696,17 +696,17 @@ int getMaxApBoundIndexNotMaxWeight(
       {
          maxapbound = apbound[i];
          maxindex = i;
-      }      
+      }
    }
-   
+
    return maxindex;
 }
 
-/** branches the searching tree, branching nodes are selected in decreasing order of their apriori bound, 
+/** branches the searching tree, branching nodes are selected in decreasing order of their apriori bound,
  *  returns whether to stop branching
  */
 static
-TCLIQUE_Bool branch( 
+TCLIQUE_Bool branch(
    TCLIQUE_GETNNODES((*getnnodes)),     /**< user function to get the number of nodes */
    TCLIQUE_GETWEIGHTS((*getweights)),   /**< user function to get the node weights */
    TCLIQUE_ISEDGE   ((*isedge)),        /**< user function to check for existence of an edge */
@@ -724,7 +724,7 @@ TCLIQUE_Bool branch(
    int              nVzero,             /**< number of zero weighted nodes */
    NBC*             gsd,                /**< neighbour color information of all nodes */
    TCLIQUE_Bool*    iscolored,          /**< coloring status of all nodes */
-   int*             K,                  /**< nodes from the b&b tree */ 
+   int*             K,                  /**< nodes from the b&b tree */
    TCLIQUE_WEIGHT   weightK,            /**< weight of the nodes from b&b tree */
    int*             maxcliquenodes,     /**< pointer to store nodes of the maximum weight clique */
    int*             nmaxcliquenodes,    /**< pointer to store number of nodes in the maximum weight clique */
@@ -733,11 +733,12 @@ TCLIQUE_Bool branch(
    int*             ncurcliquenodes,    /**< pointer to store number of nodes in current clique */
    TCLIQUE_WEIGHT*  curcliqueweight,    /**< pointer to store weight of current clique */
    int*             tmpcliquenodes,     /**< buffer for storing the temporary clique */
-   TCLIQUE_WEIGHT   maxfirstnodeweight, /**< maximum weight of branching nodes in level 0; 0 if not used 
+   TCLIQUE_WEIGHT   maxfirstnodeweight, /**< maximum weight of branching nodes in level 0; 0 if not used
                                          **  (for cliques with at least one fractional node) */
    int*             ntreenodes,         /**< pointer to store number of nodes of b&b tree */
    int              maxntreenodes,	/**< maximal number of nodes of b&b tree */
-   int              maxnzeroextensions  /**< maximal number of zero-valued variables extending the clique */
+   int              maxnzeroextensions, /**< maximal number of zero-valued variables extending the clique */
+   int              fixednode           /**< node that is forced to be in the clique, or -1; must have positive weight */
    )
 {
    TCLIQUE_Bool stopsolving;
@@ -771,7 +772,7 @@ TCLIQUE_Bool branch(
    (*ntreenodes)++;
 #ifdef TCLIQUE_DEBUG
    debugMessage("(level %d, treenode %d) maxclique = %d, curclique = %d [mem=%lld (%lld), cliques=%d]\n",
-      level, *ntreenodes, *maxcliqueweight, *curcliqueweight, 
+      level, *ntreenodes, *maxcliqueweight, *curcliqueweight,
       BMSgetChunkMemoryUsed(mem), BMSgetMemoryUsed(), cliquehash->ncliques);
    debugMessage(" -> current branching (weight %d):", weightK);
    for( i = 0; i < level; ++i )
@@ -844,14 +845,14 @@ TCLIQUE_Bool branch(
 
       /* process current subtree */
       level++;
-   
+
       /* set up data structures */
       ALLOC_ABORT( BMSallocMemoryArray(&Vcurrent, nV-1) );
 
       nValive = nV;
       weightKold = weightK;
 
-      debugMessage("============================ branching level %d ===============================\n", level); 
+      debugMessage("============================ branching level %d ===============================\n", level);
 
       /* branch on the nodes of V by decreasing order of their apriori bound */
       while( !stopsolving && nValive > 0 )
@@ -859,7 +860,15 @@ TCLIQUE_Bool branch(
          int branchidx;
 
          /* get next branching node */
-         if( level == 1 && maxfirstnodeweight > 0 ) 
+	 if( level == 1 && fixednode >= 0 )
+	 {
+	    /* select the fixed node as first "branching" candidate */
+	    for( branchidx = 0; branchidx < nValive && V[branchidx] != fixednode; branchidx++ )
+	    {}
+	    assert(branchidx < nValive);
+	    assert(V[branchidx] == fixednode);
+	 }
+         if( level == 1 && maxfirstnodeweight > 0 )
             branchidx = getMaxApBoundIndexNotMaxWeight(V, nValive, apbound, weights, maxfirstnodeweight);
          else
             branchidx = getMaxApBoundIndex(nValive, apbound);
@@ -873,21 +882,21 @@ TCLIQUE_Bool branch(
          if( (weightKold + apbound[branchidx]) <= *maxcliqueweight )
             break;
 
-         debugMessage("%d. branching in level %d: bidx=%d, node %d, weight %d, upperbound: %d+%d = %d, maxclique=%d\n", 
-            nV-nValive+1, level, branchidx, V[branchidx], weights[V[branchidx]], weightKold, apbound[branchidx], 
-            weightKold + apbound[branchidx], *maxcliqueweight); 
+         debugMessage("%d. branching in level %d: bidx=%d, node %d, weight %d, upperbound: %d+%d = %d, maxclique=%d\n",
+            nV-nValive+1, level, branchidx, V[branchidx], weights[V[branchidx]], weightKold, apbound[branchidx],
+            weightKold + apbound[branchidx], *maxcliqueweight);
 
          /* because we branch on this node, the node is no leaf in the tree */
          isleaf = FALSE;
 
-         /* update the set of nodes from the b&b tree 
+         /* update the set of nodes from the b&b tree
           *   K = K & {branchingnode}
           */
          branchingnode = V[branchidx];
          K[level-1] = branchingnode;
          weightK = weightKold + weights[branchingnode];
- 
-         /* update the set of nodes for branching 
+
+         /* update the set of nodes for branching
           *   V = V \ {branchingnode}
           */
          nValive--;
@@ -897,21 +906,25 @@ TCLIQUE_Bool branch(
             apbound[i] = apbound[i+1];
          }
 
-         /* set the nodes for the next level of b&b tree 
+         /* set the nodes for the next level of b&b tree
           *   Vcurrent = nodes of V, that are adjacent to branchingnode
           */
          nVcurrent = selectadjnodes(tcliquegraph, branchingnode, V, nValive, Vcurrent);
-      
+
          /* process the selected subtree */
          stopsolving = branch(getnnodes, getweights, isedge, selectadjnodes, tcliquegraph, newsol, tcliquedata,
             mem, cliquehash, buffer,
             level, Vcurrent, nVcurrent, Vzero, nVzero, gsd, iscolored, K, weightK,
-            maxcliquenodes, nmaxcliquenodes, maxcliqueweight, 
+            maxcliquenodes, nmaxcliquenodes, maxcliqueweight,
             curcliquenodes, ncurcliquenodes, curcliqueweight, tmpcliquenodes,
-            maxfirstnodeweight, ntreenodes, maxntreenodes, maxnzeroextensions);
+			      maxfirstnodeweight, ntreenodes, maxntreenodes, maxnzeroextensions, -1);
+
+	 /* if we had a fixed node, ignore all other nodes */
+	 if( fixednode >= 0 )
+	    nValive = 0;
       }
-   
-      debugMessage("========================== branching level %d end =============================\n\n", level); 
+
+      debugMessage("========================== branching level %d end =============================\n\n", level);
 
       /* free data structures */
       BMSfreeMemoryArray(&Vcurrent);
@@ -927,7 +940,7 @@ TCLIQUE_Bool branch(
       {
          debugMessage("found clique of weight %d at node %d in level %d\n", *curcliqueweight, *ntreenodes, level);
          newSolution(selectadjnodes, tcliquegraph, newsol, tcliquedata, cliquehash, buffer, Vzero, nVzero,
-            maxnzeroextensions, curcliquenodes, *ncurcliquenodes, *curcliqueweight, 
+            maxnzeroextensions, curcliquenodes, *ncurcliquenodes, *curcliqueweight,
             maxcliquenodes, nmaxcliquenodes, maxcliqueweight, &stopsolving);
       }
 
@@ -936,7 +949,7 @@ TCLIQUE_Bool branch(
       *curcliqueweight = 0;
    }
 
-   /* free data structures */   
+   /* free data structures */
    BMSfreeMemoryArray(&apbound);
 
    return stopsolving;
@@ -954,17 +967,18 @@ void tcliqueMaxClique(
    int*             maxcliquenodes,     /**< pointer to store nodes of the maximum weight clique */
    int*             nmaxcliquenodes,    /**< pointer to store number of nodes in the maximum weight clique */
    TCLIQUE_WEIGHT*  maxcliqueweight,    /**< pointer to store weight of the maximum weight clique */
-   TCLIQUE_WEIGHT   maxfirstnodeweight, /**< maximum weight of branching nodes in level 0; 0 if not used 
+   TCLIQUE_WEIGHT   maxfirstnodeweight, /**< maximum weight of branching nodes in level 0; 0 if not used
                                          *   for cliques with at least one fractional node) */
    TCLIQUE_WEIGHT   minweight,          /**< lower bound for weight of generated cliques */
    int              maxntreenodes,	/**< maximal number of nodes of b&b tree */
-   int              maxnzeroextensions  /**< maximal number of zero-valued variables extending the clique */
+   int              maxnzeroextensions, /**< maximal number of zero-valued variables extending the clique */
+   int              fixednode           /**< node that is forced to be in the clique, or -1; must have positive weight */
    )
 {
    CLIQUEHASH* cliquehash;
    const TCLIQUE_WEIGHT* weights;
    int* buffer;
-   int* K;	
+   int* K;
    int* V;
    int* Vzero;
    int nnodes;
@@ -1016,7 +1030,7 @@ void tcliqueMaxClique(
    ALLOC_ABORT( BMSallocMemoryArray(&tmpcliquenodes, nnodes) );
 
    /* set weight and number of nodes of maximum weighted clique */
-   *nmaxcliquenodes = 0; 
+   *nmaxcliquenodes = 0;
    *maxcliqueweight = minweight-1;
    ncurcliquenodes = 0;
    curcliqueweight = 0;
@@ -1041,24 +1055,24 @@ void tcliqueMaxClique(
       }
    }
 
-   /* initialize own memory allocator for coloring */ 
-   mem = BMScreateChunkMemory(sizeof(LIST_ITV), CHUNK_SIZE, -1); 
+   /* initialize own memory allocator for coloring */
+   mem = BMScreateChunkMemory(sizeof(LIST_ITV), CHUNK_SIZE, -1);
 
    /* branch to find maximum weight clique */
    (void)branch(getnnodes, getweights, isedge, selectadjnodes, tcliquegraph, newsol, tcliquedata, mem, cliquehash, buffer,
-      0, V, nV, Vzero, nVzero, gsd, iscolored, K, 0, 
-      maxcliquenodes, nmaxcliquenodes, maxcliqueweight, 
+      0, V, nV, Vzero, nVzero, gsd, iscolored, K, 0,
+      maxcliquenodes, nmaxcliquenodes, maxcliqueweight,
       curcliquenodes, &ncurcliquenodes, &curcliqueweight, tmpcliquenodes,
-      maxfirstnodeweight, &ntreenodes, maxntreenodes, maxnzeroextensions);
+		maxfirstnodeweight, &ntreenodes, maxntreenodes, maxnzeroextensions, fixednode);
 
-   /* delete own memory allocator for coloring */ 
-   BMSdestroyChunkMemory(&mem); 
-   
+   /* delete own memory allocator for coloring */
+   BMSdestroyChunkMemory(&mem);
+
    /* free data structures */
    BMSfreeMemoryArray(&tmpcliquenodes);
    BMSfreeMemoryArray(&curcliquenodes);
-   BMSfreeMemoryArray(&iscolored); 
-   BMSfreeMemoryArray(&gsd); 
+   BMSfreeMemoryArray(&iscolored);
+   BMSfreeMemoryArray(&gsd);
    BMSfreeMemoryArray(&Vzero);
    BMSfreeMemoryArray(&V);
    BMSfreeMemoryArray(&K);

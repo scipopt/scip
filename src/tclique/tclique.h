@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique.h,v 1.2 2005/09/01 18:19:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique.h,v 1.3 2005/10/08 15:11:28 bzfpfets Exp $"
 
 /**@file   tclique.h
  * @brief  tclique user interface
@@ -165,7 +165,7 @@ void tcliqueChangeWeight(
    TCLIQUE_WEIGHT   weight              /**< new weight of node (allready scaled) */
    );
 
-/** adds edge (node1, node2) to graph data structure (node1 and node2 have to be contained in 
+/** adds edge (node1, node2) to graph data structure (node1 and node2 have to be contained in
  *  graph data structure);
  *  new edges are cached, s.t. the graph data structures are not correct until a call to tcliqueFlush();
  *  you have to make sure, that no double edges are inserted
@@ -259,11 +259,12 @@ void tcliqueMaxClique(
    int*             maxcliquenodes,     /**< pointer to store nodes of the maximum weight clique */
    int*             nmaxcliquenodes,    /**< pointer to store number of nodes in the maximum weight clique */
    TCLIQUE_WEIGHT*  maxcliqueweight,    /**< pointer to store weight of the maximum weight clique */
-   TCLIQUE_WEIGHT   maxfirstnodeweight, /**< maximum weight of branching nodes in level 0; 0 if not used 
+   TCLIQUE_WEIGHT   maxfirstnodeweight, /**< maximum weight of branching nodes in level 0; 0 if not used
                                          *   for cliques with at least one fractional node) */
    TCLIQUE_WEIGHT   minweight,          /**< lower bound for weight of generated cliques */
    int              maxntreenodes,	/**< maximal number of nodes of b&b tree */
-   int              maxnzeroextensions  /**< maximal number of zero-valued variables extending the clique */
+   int              maxnzeroextensions, /**< maximal number of zero-valued variables extending the clique */
+   int              fixednode           /**< node that is forced to be in the clique, or -1; must have positive weight */
    );
 
 #endif

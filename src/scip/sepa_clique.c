@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.22 2005/09/22 19:02:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.23 2005/10/08 15:11:28 bzfpfets Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -61,7 +61,7 @@ struct SCIP_SepaData
    int                   ncalls;             /**< number of calls to the clique separator */
    int                   ncuts;              /**< number of cuts found */
    SCIP_Bool             tcliquegraphloaded; /**< TRUE if tcliquegraph is allready loaded (tcliquegraph can be NULL),
-                                              *   FALSE otherwise */ 
+                                              *   FALSE otherwise */
 };
 
 /** tclique graph data */
@@ -97,7 +97,7 @@ SCIP_RETCODE tcliquegraphCreate(
    assert(tcliquegraph != NULL);
 
    SCIP_CALL( SCIPallocMemory(scip, tcliquegraph) );
-   
+
    /* there are at most 2*nbinvars nodes in the graph */
    maxnnodes = 2*SCIPgetNBinVars(scip);
    assert(maxnnodes > 0);
@@ -129,7 +129,7 @@ SCIP_RETCODE tcliquegraphFree(
 
    assert(tcliquegraph != NULL);
    assert(*tcliquegraph != NULL);
-   
+
    /* release variables */
    for( v = 0; v < (*tcliquegraph)->nnodes; ++v )
    {
@@ -342,7 +342,7 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
       for( xvalue = 0; xvalue < 2; xvalue++ )
       {
          SCIP_VAR** ximplvars;
-         SCIP_BOUNDTYPE* ximpltypes; 
+         SCIP_BOUNDTYPE* ximpltypes;
          int xnbinimpls;
          int i;
 
@@ -350,7 +350,7 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
          xnbinimpls = SCIPvarGetNBinImpls(x, (SCIP_Bool)xvalue);
          ximplvars = SCIPvarGetImplVars(x, (SCIP_Bool)xvalue);
          ximpltypes = SCIPvarGetImplTypes(x, (SCIP_Bool)xvalue);
-      
+
          /* ignore implicants with yindex <= xindex */
          for( i = 0; i < xnbinimpls-1 && SCIPvarGetIndex(ximplvars[i]) <= xindex; ++i )
          {}
@@ -363,7 +363,7 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
             int yvalue;
             int yi;
             SCIP_VAR** yimplvars;
-            SCIP_BOUNDTYPE* yimpltypes; 
+            SCIP_BOUNDTYPE* yimpltypes;
             int ynbinimpls;
             int xk;
             int yk;
@@ -391,7 +391,7 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
             while( xk < xnbinimpls && yk < ynbinimpls )
             {
                int zindex;
-               
+
                assert(yindex < SCIPvarGetIndex(ximplvars[xk]));
                assert(yindex < SCIPvarGetIndex(yimplvars[yk]));
 
@@ -448,7 +448,7 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
                      SCIP_CALL( tcliquegraphAddNode(scip, tcliquegraph, z, (SCIP_Bool)zvalue, &cliquegraphidx[zvalue][zi]) );
                   }
                }
-               
+
                /* proceed with the next pair of implications */
                xk++;
                yk++;
@@ -498,7 +498,7 @@ SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
       for( xvalue = 0; xvalue < 2; xvalue++ )
       {
          SCIP_VAR** ximplvars;
-         SCIP_BOUNDTYPE* ximpltypes; 
+         SCIP_BOUNDTYPE* ximpltypes;
          int xnbinimpls;
          int yk;
 
@@ -510,7 +510,7 @@ SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
          xnbinimpls = SCIPvarGetNBinImpls(x, (SCIP_Bool)xvalue);
          ximplvars = SCIPvarGetImplVars(x, (SCIP_Bool)xvalue);
          ximpltypes = SCIPvarGetImplTypes(x, (SCIP_Bool)xvalue);
-      
+
          /* loop over all y */
          for( yk = 0; yk < xnbinimpls-1; ++yk ) /* at least one variable must be left over for z */
          {
@@ -518,7 +518,7 @@ SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
             int yvalue;
             int yi;
             int zk;
-            
+
             y = ximplvars[yk];
             yi = SCIPvarGetProbindex(y);
 
@@ -533,10 +533,10 @@ SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
                SCIP_VAR* z;
                int zvalue;
                int zi;
-               
+
                z = ximplvars[zk];
                zi = SCIPvarGetProbindex(z);
-               
+
                /* check, whether the implicant is z == 0 or z == 1 (z conflicts with x == xvalue) */
                zvalue = (int)(ximpltypes[zk] == SCIP_BOUNDTYPE_UPPER);
 
@@ -581,7 +581,7 @@ SCIP_RETCODE tcliquegraphAddImplics(
    /* there is nothing to do, if the graph is empty */
    if( tcliquegraph == NULL )
       return SCIP_OKAY;
-   
+
    /* the tclique graph should currently contain no implications */
    assert(tcliquegraph->adjnodes == NULL);
    assert(tcliquegraph->adjnodessize == 0);
@@ -596,7 +596,7 @@ SCIP_RETCODE tcliquegraphAddImplics(
       int nbinimpls;
       int adjnodesidx;
       int j;
-      
+
       /* store start adjnodes index of the node */
       adjnodesidx = nadjnodes;
       tcliquegraph->adjnodesidxs[i] = adjnodesidx;
@@ -653,7 +653,7 @@ SCIP_RETCODE tcliquegraphAddImplics(
 /* creates tclique data structure using the implication graph;
  * only variables that are contained in a 3-clique are added as nodes to the clique graph
  */
-static 
+static
 SCIP_RETCODE loadTcliquegraph(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata            /**< separator data */
@@ -700,7 +700,7 @@ SCIP_RETCODE loadTcliquegraph(
 }
 
 /* updates the weights in the tclique graph data structure */
-static 
+static
 void updateTcliquegraph(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata            /**< separator data */
@@ -856,7 +856,7 @@ TCLIQUE_SELECTADJNODES(tcliqueSelectadjnodesClique)
       if( nodeadjindex < nodeadjend && graphadjnodes[nodeadjindex] == nodes[i] )
       {
          /* current node is adjacent to given node */
-         adjnodes[nadjnodes] = nodes[i]; 
+         adjnodes[nadjnodes] = nodes[i];
          nadjnodes++;
       }
       else
@@ -864,16 +864,16 @@ TCLIQUE_SELECTADJNODES(tcliqueSelectadjnodesClique)
          /* current node is not adjacent to given node: check if they share a common clique */
          if( nodesHaveCommonClique(tcliquegraph, node, nodes[i]) )
          {
-            adjnodes[nadjnodes] = nodes[i]; 
+            adjnodes[nadjnodes] = nodes[i];
             nadjnodes++;
-         }         
+         }
       }
    }
-   
+
    return nadjnodes;
 }
 
-/** generates cuts using a clique found by algorithm for maximum weight clique 
+/** generates cuts using a clique found by algorithm for maximum weight clique
  *  and decides whether to stop generating cliques with the algorithm for maximum weight clique
  */
 static
@@ -890,7 +890,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
    assert(sepadata->scip != NULL);
    assert(sepadata->tcliquegraph != NULL);
    assert(sepadata->ncuts >= 0);
-   
+
    /* we don't accept the solution as new incumbent, because we want to find many violated clique inequalities */
    *acceptsol = FALSE;
    *stopsolving = FALSE;
@@ -909,7 +909,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
       int i;
 
       scip = sepadata->scip;
-      varsolvals = sepadata->varsolvals; 
+      varsolvals = sepadata->varsolvals;
       assert(varsolvals != NULL);
 
       /* calculate the weight of the clique in unscaled fractional variable space */
@@ -924,8 +924,8 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          SCIP_ROW* cut;
          char cutname[SCIP_MAXSTRLEN];
 
-         nvars = sepadata->tcliquegraph->nnodes; 
-         vars = sepadata->tcliquegraph->vars; 
+         nvars = sepadata->tcliquegraph->nnodes;
+         vars = sepadata->tcliquegraph->vars;
          assert(nvars > 0);
          assert(vars != NULL);
 
@@ -951,7 +951,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          SCIP_CALL_ABORT( SCIPaddCut(scip, sepadata->sol, cut, FALSE) );
          SCIP_CALL_ABORT( SCIPaddPoolCut(scip, cut) );
          sepadata->ncuts++;
-         
+
          /* release the row */
          SCIP_CALL_ABORT( SCIPreleaseRow(scip, &cut) );
 
@@ -984,20 +984,20 @@ SCIP_RETCODE separateCuts(
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
    TCLIQUE_GRAPH* tcliquegraph;
-   int* cliquenodes; 	        
-   TCLIQUE_WEIGHT cliqueweight;    
-   int ncliquenodes;	        
+   int* cliquenodes;
+   TCLIQUE_WEIGHT cliqueweight;
+   int ncliquenodes;
    int maxtreenodes;
    int maxzeroextensions;
 
    assert(scip != NULL);
-   
+
    *result = SCIP_DIDNOTRUN;
 
    /* get separator data */
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
-   
+
    sepadata->sol = sol;
    sepadata->ncalls = SCIPsepaGetNCalls(sepa);
    sepadata->ncuts = 0;
@@ -1007,7 +1007,7 @@ SCIP_RETCODE separateCuts(
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
-      
+
    /* load tclique data structure */
    if( !sepadata->tcliquegraphloaded )
    {
@@ -1015,7 +1015,7 @@ SCIP_RETCODE separateCuts(
 
       SCIP_CALL( loadTcliquegraph(scip, sepadata) );
       sepadata->tcliquegraphloaded = TRUE;
-   
+
       if( sepadata->tcliquegraph == NULL )
       {
          /* we did not find any variables that are contained in a clique with at least 3 variables in the
@@ -1026,7 +1026,7 @@ SCIP_RETCODE separateCuts(
    }
    tcliquegraph = sepadata->tcliquegraph;
    assert(tcliquegraph != NULL);
-   
+
    /* store LP-solution in sepadata and update weights in tclique data structure */
    SCIP_CALL( SCIPallocBufferArray(scip, &sepadata->varsolvals, tcliquegraph->nnodes) );
    SCIP_CALL( SCIPgetSolVals(scip, sol, tcliquegraph->nnodes, tcliquegraph->vars, sepadata->varsolvals) );
@@ -1038,10 +1038,10 @@ SCIP_RETCODE separateCuts(
 
    /* finds maximum weight clique in tclique */
    SCIP_CALL( SCIPallocBufferArray(scip, &cliquenodes, tcliquegraph->nnodes) );
-   tcliqueMaxClique(tcliqueGetnnodesClique, tcliqueGetweightsClique, tcliqueIsedgeClique, tcliqueSelectadjnodesClique, 
+   tcliqueMaxClique(tcliqueGetnnodesClique, tcliqueGetweightsClique, tcliqueIsedgeClique, tcliqueSelectadjnodesClique,
       tcliquegraph, tcliqueNewsolClique, (TCLIQUE_DATA*)sepadata,
-      cliquenodes, &ncliquenodes, &cliqueweight, (int)sepadata->scaleval-1, (int)sepadata->scaleval+1, 
-      maxtreenodes, maxzeroextensions);
+      cliquenodes, &ncliquenodes, &cliqueweight, (int)sepadata->scaleval-1, (int)sepadata->scaleval+1,
+      maxtreenodes, maxzeroextensions, -1);
 
    /* frees data structures */
    SCIPfreeBufferArray(scip, &cliquenodes);
@@ -1069,7 +1069,7 @@ static
 SCIP_DECL_SEPAFREE(sepaFreeClique)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
-   
+
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
    assert(sepadata->tcliquegraph == NULL);
@@ -1098,7 +1098,7 @@ static
 SCIP_DECL_SEPAEXITSOL(sepaExitsolClique)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
-   
+
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
@@ -1154,7 +1154,7 @@ SCIP_RETCODE SCIPincludeSepaClique(
    sepadata->tcliquegraph = NULL;
    sepadata->scip = scip;
    sepadata->sol = NULL;
-   sepadata->varsolvals = NULL; 
+   sepadata->varsolvals = NULL;
    sepadata->ncalls = 0;
    sepadata->ncuts = 0;
    sepadata->tcliquegraphloaded = FALSE;
