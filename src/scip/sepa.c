@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.51 2005/09/27 13:55:33 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.52 2005/10/10 09:53:23 bzfpfend Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -106,6 +106,7 @@ SCIP_RETCODE SCIPsepaCreate(
    SCIP_CALL( SCIPclockCreate(&(*sepa)->sepaclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*sepa)->lastsepanode = -1;
    (*sepa)->ncalls = 0;
+   (*sepa)->ncutoffs = 0;
    (*sepa)->ncutsfound = 0;
    (*sepa)->nconssfound = 0;
    (*sepa)->ndomredsfound = 0;
@@ -179,6 +180,7 @@ SCIP_RETCODE SCIPsepaInit(
 
    sepa->lastsepanode = -1;
    sepa->ncalls = 0;
+   sepa->ncutoffs = 0;
    sepa->ncutsfound = 0;
    sepa->nconssfound = 0;
    sepa->ndomredsfound = 0;
@@ -312,6 +314,8 @@ SCIP_RETCODE SCIPsepaExecLP(
             sepa->ncallsatnode++;
             sepa->lastsepanode = stat->ntotalnodes;
          }
+         if( *result == SCIP_CUTOFF )
+            sepa->ncutoffs++;
          ncutsfound = SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored;
          sepa->ncutsfound += ncutsfound;
          sepa->ncutsfoundatnode += ncutsfound;
@@ -406,6 +410,8 @@ SCIP_RETCODE SCIPsepaExecSol(
             sepa->ncallsatnode++;
             sepa->lastsepanode = stat->ntotalnodes;
          }
+         if( *result == SCIP_CUTOFF )
+            sepa->ncutoffs++;
          ncutsfound = SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored;
          sepa->ncutsfound += ncutsfound;
          sepa->ncutsfoundatnode += ncutsfound;
@@ -544,6 +550,16 @@ int SCIPsepaGetNCallsAtNode(
    assert(sepa != NULL);
 
    return sepa->ncallsatnode;
+}
+
+/** gets total number of times, the separator detected a cutoff */
+SCIP_Longint SCIPsepaGetNCutoffs(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return sepa->ncutoffs;
 }
 
 /** gets the total number of cutting planes found by this separator */

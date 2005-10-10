@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.5 2005/09/27 09:32:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.6 2005/10/10 09:53:22 bzfpfend Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -934,6 +934,8 @@ SCIP_RETCODE readBounds(
       SCIP_Real value;
       SCIP_Real lb;
       SCIP_Real ub;
+      int sign;
+      SCIP_Bool hassign;
       LPSENSE leftsense;
 
       /* check if we reached a new section */
@@ -944,6 +946,15 @@ SCIP_RETCODE readBounds(
       lb = 0.0;
       ub = SCIPinfinity(scip);
       leftsense = LP_SENSE_NOTHING;
+
+      /* check if the first token is a sign */
+      sign = +1;
+      hassign = isSign(lpinput, &sign);
+      if( hassign && !getNextToken(lpinput) )
+      {
+         syntaxError(scip, lpinput, "expected value");
+         return SCIP_OKAY;
+      }
 
       /* the first token must be either a value or a variable name */
       if( isValue(scip, lpinput, &value) )
@@ -959,20 +970,25 @@ SCIP_RETCODE readBounds(
          switch( leftsense )
          {
          case LP_SENSE_GE:
-            ub = value;
+            ub = sign * value;
             break;
          case LP_SENSE_LE:
-            lb = value;
+            lb = sign * value;
             break;
          case LP_SENSE_EQ:
-            lb = value;
-            ub = value;
+            lb = sign * value;
+            ub = sign * value;
             break;
          case LP_SENSE_NOTHING:
          default:
             SCIPerrorMessage("invalid bound sense <%d>\n", leftsense);
             return SCIP_INVALIDDATA;
          }
+      }
+      else if( hassign )
+      {
+         syntaxError(scip, lpinput, "expected value");
+         return SCIP_OKAY;
       }
       else
          pushToken(lpinput, lpinput->token);
@@ -997,8 +1013,23 @@ SCIP_RETCODE readBounds(
                || (leftsense == LP_SENSE_LE && rightsense == LP_SENSE_LE)
                || (leftsense == LP_SENSE_GE && rightsense == LP_SENSE_GE) )
             {
+               if( !getNextToken(lpinput) )
+               {
+                  syntaxError(scip, lpinput, "expected value or sign");
+                  return SCIP_OKAY;
+               }
+
+               /* check if the next token is a sign */
+               sign = +1;
+               hassign = isSign(lpinput, &sign);
+               if( hassign && !getNextToken(lpinput) )
+               {
+                  syntaxError(scip, lpinput, "expected value");
+                  return SCIP_OKAY;
+               }
+
                /* the next token must be a value */
-               if( !getNextToken(lpinput) || !isValue(scip, lpinput, &value) )
+               if( !isValue(scip, lpinput, &value) )
                {
                   syntaxError(scip, lpinput, "expected value");
                   return SCIP_OKAY;
@@ -1008,14 +1039,14 @@ SCIP_RETCODE readBounds(
                switch( rightsense )
                {
                case LP_SENSE_GE:
-                  lb = value;
+                  lb = sign * value;
                   break;
                case LP_SENSE_LE:
-                  ub = value;
+                  ub = sign * value;
                   break;
                case LP_SENSE_EQ:
-                  lb = value;
-                  ub = value;
+                  lb = sign * value;
+                  ub = sign * value;
                   break;
                case LP_SENSE_NOTHING:
                default:

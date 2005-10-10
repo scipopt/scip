@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.322 2005/09/27 13:55:33 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.323 2005/10/10 09:53:22 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -12399,18 +12399,19 @@ void printSeparatorStatistics(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIPmessageFPrintInfo(file, "Separators         :       Time      Calls    DomReds       Cuts      Conss\n");
-   SCIPmessageFPrintInfo(file, "  cut pool         : %10.2f %10lld            %10lld              (maximal pool size: %d)\n",
+   SCIPmessageFPrintInfo(file, "Separators         :       Time      Calls    Cutoffs    DomReds       Cuts      Conss\n");
+   SCIPmessageFPrintInfo(file, "  cut pool         : %10.2f %10lld          -          - %10lld          -    (maximal pool size: %d)\n",
       SCIPcutpoolGetTime(scip->cutpool),
       SCIPcutpoolGetNCalls(scip->cutpool),
       SCIPcutpoolGetNCutsFound(scip->cutpool),
       SCIPcutpoolGetMaxNCuts(scip->cutpool));
 
    for( i = 0; i < scip->set->nsepas; ++i )
-      SCIPmessageFPrintInfo(file, "  %-17.17s: %10.2f %10lld %10lld %10lld %10lld\n",
+      SCIPmessageFPrintInfo(file, "  %-17.17s: %10.2f %10lld %10lld %10lld %10lld %10lld\n",
          SCIPsepaGetName(scip->set->sepas[i]),
          SCIPsepaGetTime(scip->set->sepas[i]),
          SCIPsepaGetNCalls(scip->set->sepas[i]),
+         SCIPsepaGetNCutoffs(scip->set->sepas[i]),
          SCIPsepaGetNDomredsFound(scip->set->sepas[i]),
 	 SCIPsepaGetNCutsFound(scip->set->sepas[i]),
          SCIPsepaGetNConssFound(scip->set->sepas[i]));

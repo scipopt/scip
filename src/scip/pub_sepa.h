@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_sepa.h,v 1.13 2005/09/27 13:55:33 bzfpfets Exp $"
+#pragma ident "@(#) $Id: pub_sepa.h,v 1.14 2005/10/10 09:53:22 bzfpfend Exp $"
 
 /**@file   pub_sepa.h
  * @brief  public methods for separators
@@ -89,6 +89,12 @@ SCIP_Longint SCIPsepaGetNCalls(
 /** gets the number of times, the separator was called at the current node */
 extern
 int SCIPsepaGetNCallsAtNode(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
+/** gets total number of times, the separator detected a cutoff */
+extern
+SCIP_Longint SCIPsepaGetNCutoffs(
    SCIP_SEPA*            sepa                /**< separator */
    );
 
