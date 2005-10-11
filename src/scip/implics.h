@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.h,v 1.10 2005/08/28 12:29:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.h,v 1.11 2005/10/11 14:45:39 bzfpfend Exp $"
 
 /**@file   implics.h
  * @brief  methods for implications, variable bounds, and cliques
@@ -167,6 +167,16 @@ SCIP_RETCODE SCIPimplicsDel(
    SCIP_Bool             varfixing,          /**< FALSE if y should be removed from implications for x <= 0, TRUE for x >= 1 */
    SCIP_VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
    SCIP_BOUNDTYPE        impltype            /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
+   );
+
+/** returns which implications on given variable y are contained in implications for x == 0 or x == 1 */
+extern
+void SCIPimplicsGetVarImplics(
+   SCIP_IMPLICS*         implics,            /**< implications data structure */
+   SCIP_Bool             varfixing,          /**< FALSE if y should be searched in implications for x == 0, TRUE for x == 1 */
+   SCIP_VAR*             implvar,            /**< variable y to search for */
+   SCIP_Bool*            haslowerimplic,     /**< pointer to store whether there exists an implication y >= l */
+   SCIP_Bool*            hasupperimplic      /**< pointer to store whether there exists an implication y <= u */
    );
 
 /** returns whether an implication y <= b or y >= b is contained in implications for x == 0 or x == 1 */

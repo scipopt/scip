@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.323 2005/10/10 09:53:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.324 2005/10/11 14:45:39 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6649,7 +6649,8 @@ SCIP_RETCODE SCIPchgVarType(
 
 /** in problem creation and solving stage, both bounds of the variable are set to the given value;
  *  in presolving stage, the variable is converted into a fixed variable, and bounds are changed respectively;
- *  conversion into a fixed variable changes the vars array returned from SCIPgetVars() and SCIPgetVarsData()
+ *  conversion into a fixed variable changes the vars array returned from SCIPgetVars() and SCIPgetVarsData(),
+ *  and also renders arrays returned from the SCIPvarGetImpl...() methods invalid
  */
 SCIP_RETCODE SCIPfixVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -7011,8 +7012,8 @@ SCIP_RETCODE aggregateActiveVars(
 }
 
 /** From a given equality a*x + b*y == c, aggregates one of the variables and removes it from the set of
- *  active problem variables. This changes the vars array returned from SCIPgetVars() and SCIPgetVarsData().
- *  In the first step, the equality is transformed into an equality with active problem variables
+ *  active problem variables. This changes the vars array returned from SCIPgetVars() and SCIPgetVarsData(),
+ *  and also renders the arrays returned from the SCIPvarGetImpl...() methods for the two variables invalid.
  *  a'*x' + b'*y' == c'. If x' == y', this leads to the detection of redundancy if a' == -b' and c' == 0,
  *  of infeasibility, if a' == -b' and c' != 0, or to a variable fixing x' == c'/(a'+b') (and possible
  *  infeasibility) otherwise.

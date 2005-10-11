@@ -13,11 +13,13 @@ interface:
 - new methods SCIPsepaGetNConssFound() and SCIPsepaGetNDomredsFound()
 
 plugins:
+- new presolver "implics" to find bound changes and aggregations out of the implication graph
 
 parameters:
 
 features:
 - changed handling of added constraints in separation calls
+- logic or constraint handler now produces implications on clauses with 2 literals
 
 Makefile:
 - included version number in binary file name

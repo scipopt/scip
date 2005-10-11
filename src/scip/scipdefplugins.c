@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.45 2005/09/20 12:17:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.46 2005/10/11 14:45:40 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -60,6 +60,7 @@
 #include "scip/nodesel_dfs.h"
 #include "scip/nodesel_restartdfs.h"
 #include "scip/presol_dualfix.h"
+#include "scip/presol_implics.h"
 #include "scip/presol_probing.h"
 #include "scip/presol_trivial.h"
 #include "scip/prop_pseudoobj.h"
@@ -111,6 +112,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeReaderMps(scip) );
    SCIP_CALL( SCIPincludeReaderZpl(scip) );
    SCIP_CALL( SCIPincludePresolDualfix(scip) );
+   SCIP_CALL( SCIPincludePresolImplics(scip) );
    SCIP_CALL( SCIPincludePresolProbing(scip) );
    SCIP_CALL( SCIPincludePresolTrivial(scip) );
    SCIP_CALL( SCIPincludeNodeselBfs(scip) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cnf.c,v 1.31 2005/09/20 12:17:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_cnf.c,v 1.32 2005/10/11 14:45:39 bzfpfend Exp $"
 
 /**@file   reader_cnf.c
  * @brief  CNF file reader
@@ -34,6 +34,8 @@
 #define READER_NAME             "cnfreader"
 #define READER_DESC             "file reader for SAT problems in conjunctive normal form"
 #define READER_EXTENSION        "cnf"
+
+#define MAXLINELEN       65536
 
 
 
@@ -129,7 +131,7 @@ SCIP_RETCODE readCnf(
    int* varsign;
    char* tok;
    char* nexttok;
-   char line[SCIP_MAXSTRLEN];
+   char line[MAXLINELEN];
    char format[SCIP_MAXSTRLEN];
    char varname[SCIP_MAXSTRLEN];
    char s[SCIP_MAXSTRLEN];

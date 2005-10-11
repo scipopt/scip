@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.14 2005/09/13 18:07:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.15 2005/10/11 14:45:39 bzfpfend Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -532,25 +532,24 @@ SCIP_RETCODE implicsEnsureSize(
    return SCIP_OKAY;
 }
 
-/** returns whether variable y is already contained in implications for x == 0 or x == 1 with the given impltype
- *  y can be contained in structure with y >= b (y_lower) and y <= b (y_upper) 
+/** gets the positions of the implications y >= l and y <= u in the implications data structure;
+ *  if no lower or upper bound implication for y was found, -1 is returned
  */
 static
-SCIP_Bool implicsSearchVar(
+void implicsSearchVar(
    SCIP_IMPLICS*         implics,            /**< implications data structure */
    SCIP_Bool             varfixing,          /**< FALSE if y is searched in implications for x == 0, TRUE for x == 1 */
    SCIP_VAR*             implvar,            /**< variable y to search for */
-   SCIP_BOUNDTYPE        impltype,           /**< type of implication y <=/>= b to search for */
-   int*                  poslower,           /**< pointer to store position of y_lower (inf if not found) */
-   int*                  posupper,           /**< pointer to store position of y_upper (inf if not found) */
-   int*                  posadd              /**< pointer to store correct position (with respect to impltype) to add y */
+   int*                  poslower,           /**< pointer to store position of y_lower (-1 if not found) */
+   int*                  posupper,           /**< pointer to store position of y_upper (-1 if not found) */
+   int*                  posadd              /**< pointer to store position of first y entry, or where a new y entry
+                                              *   should be placed */
    )
 {
    int implvaridx;
    int left;
    int right;
    int middle;
-   SCIP_Bool found;
 
    assert(implics != NULL);
    assert(poslower != NULL);
@@ -560,26 +559,28 @@ SCIP_Bool implicsSearchVar(
    /* set left and right pointer */
    if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
    {
+      /* check whether there are implications with binary variable y */
       if( implics->nbinimpls[varfixing] == 0 )
       {
          /* there are no implications with binary variable y */
          *posadd = 0;
-         *poslower = INT_MAX;
-         *posupper = INT_MAX;
-          return FALSE;
+         *poslower = -1;
+         *posupper = -1;
+          return;
       }      
       left = 0;
       right = implics->nbinimpls[varfixing] - 1;
    }
    else
    {
+      /* check whethere there are implications with nonbinary variable y */
       if( implics->nimpls[varfixing] == implics->nbinimpls[varfixing] )
       {
          /* there are no implications with nonbinary variable y */
          *posadd = implics->nbinimpls[varfixing];
-         *poslower = INT_MAX;
-         *posupper = INT_MAX;
-         return FALSE;
+         *poslower = -1;
+         *posupper = -1;
+         return;
       }
       left = implics->nbinimpls[varfixing];
       right = implics->nimpls[varfixing] - 1;
@@ -607,20 +608,18 @@ SCIP_Bool implicsSearchVar(
    while( left <= right );
    assert(left <= right+1);
 
-   found = FALSE;
    if( left > right )
    {
       /* y was not found */
       assert(right == -1 || compVars((void*)implics->vars[varfixing][right], (void*)implvar) < 0);
       assert(left >= implics->nimpls[varfixing] || implics->vars[varfixing][left] != implvar);
-      *poslower = INT_MAX;
-      *posupper = INT_MAX;
+      *poslower = -1;
+      *posupper = -1;
       *posadd = left;
-      found = FALSE;
    }
    else
    {
-      /* y was found, but do we have the correct impltype? */
+      /* y was found */
       assert(implvar == implics->vars[varfixing][middle]);
 
       /* set poslower and posupper */
@@ -634,7 +633,8 @@ SCIP_Bool implicsSearchVar(
             *posupper = middle + 1;
          }
          else
-            *posupper = INT_MAX;
+            *posupper = -1;
+         *posadd = middle;
       }
       else
       {
@@ -644,42 +644,53 @@ SCIP_Bool implicsSearchVar(
          {  
             assert(implics->types[varfixing][middle-1] == SCIP_BOUNDTYPE_LOWER);
             *poslower = middle - 1;
-         }
-         else
-            *poslower = INT_MAX;
-      }
-
-      /* set posadd */
-      if( impltype == SCIP_BOUNDTYPE_LOWER )
-      {
-         if( *poslower < INT_MAX )
-         {
-            *posadd = *poslower;
-            found = TRUE;
+            *posadd = middle - 1;
          }
          else
          {
-            *posadd = *posupper;
-            found = FALSE;
-         }
-      }     
-      else
-      {
-         if( *posupper < INT_MAX )
-         {
-            *posadd = *posupper;
-            found = TRUE;
-         }
-         else
-         {
-            *posadd = (*poslower)+1;
-            found = FALSE;
+            *poslower = -1;
+            *posadd = middle;
          }
       }
-      assert(*posadd < INT_MAX);
    }
+}
 
-   return found;
+/** returns whether variable y is already contained in implications for x == 0 or x == 1 with the given impltype
+ *  y can be contained in structure with y >= b (y_lower) and y <= b (y_upper) 
+ */
+static
+SCIP_Bool implicsSearchImplic(
+   SCIP_IMPLICS*         implics,            /**< implications data structure */
+   SCIP_Bool             varfixing,          /**< FALSE if y is searched in implications for x == 0, TRUE for x == 1 */
+   SCIP_VAR*             implvar,            /**< variable y to search for */
+   SCIP_BOUNDTYPE        impltype,           /**< type of implication y <=/>= b to search for */
+   int*                  poslower,           /**< pointer to store position of y_lower (inf if not found) */
+   int*                  posupper,           /**< pointer to store position of y_upper (inf if not found) */
+   int*                  posadd              /**< pointer to store correct position (with respect to impltype) to add y */
+   )
+{
+   assert(implics != NULL);
+   assert(poslower != NULL);
+   assert(posupper != NULL);
+   assert(posadd != NULL);
+
+   implicsSearchVar(implics, varfixing, implvar, poslower, posupper, posadd);
+   assert(*poslower == -1 || *posupper == -1 || *posupper == (*poslower)+1);
+   assert(*poslower == -1 || *posadd == *poslower);
+   assert(*poslower >= 0 || *posupper == -1 || *posadd == *posupper);
+   assert(0 <= *posadd && *posadd <= implics->nimpls[varfixing]);
+
+   if( impltype == SCIP_BOUNDTYPE_LOWER )
+      return (*poslower >= 0);
+   else
+   {
+      if( *poslower >= 0 )
+      {
+         assert(*posadd == *poslower);
+         (*posadd)++;
+      }
+      return (*posupper >= 0);
+   }
 }
 
 /** adds an implication x == 0/1 -> y <= b or y >= b to the implications data structure;
@@ -725,29 +736,27 @@ SCIP_RETCODE SCIPimplicsAdd(
    /* check if variable is already contained in implications data structure */
    if( *implics != NULL )
    {
-      found = implicsSearchVar(*implics, varfixing, implvar, impltype, &poslower, &posupper, &posadd);
-      assert(poslower >= 0);
-      assert(posupper >= 0);
-      assert(posadd >= 0 && posadd <= (*implics)->nimpls[varfixing]);
-      assert(poslower == INT_MAX || poslower < (*implics)->nimpls[varfixing]);
-      assert(poslower == INT_MAX || (*implics)->types[varfixing][poslower] == SCIP_BOUNDTYPE_LOWER);
-      assert(posupper == INT_MAX || posupper < (*implics)->nimpls[varfixing]);
-      assert(posupper == INT_MAX || (*implics)->types[varfixing][posupper] == SCIP_BOUNDTYPE_UPPER);
+      found = implicsSearchImplic(*implics, varfixing, implvar, impltype, &poslower, &posupper, &posadd);
+      assert(-1 <= poslower && poslower < (*implics)->nimpls[varfixing]);
+      assert(-1 <= posupper && posupper < (*implics)->nimpls[varfixing]);
+      assert(0 <= posadd && posadd <= (*implics)->nimpls[varfixing]);
+      assert(poslower == -1 || (*implics)->types[varfixing][poslower] == SCIP_BOUNDTYPE_LOWER);
+      assert(posupper == -1 || (*implics)->types[varfixing][posupper] == SCIP_BOUNDTYPE_UPPER);
    }
    else
    {
       found = FALSE;
-      poslower = INT_MAX;
-      posupper = INT_MAX;
+      poslower = -1;
+      posupper = -1;
       posadd = 0;
    }
 
    if( impltype == SCIP_BOUNDTYPE_LOWER )
    {
-      assert(found == (poslower < INT_MAX));
+      assert(found == (poslower >= 0));
 
       /* check if y >= b is redundant */
-      if( poslower < INT_MAX && SCIPsetIsFeasLE(set, implbound, (*implics)->bounds[varfixing][poslower]) )
+      if( poslower >= 0 && SCIPsetIsFeasLE(set, implbound, (*implics)->bounds[varfixing][poslower]) )
       {
          SCIPdebugMessage(" -> implication is redundant to <%s> >= %g\n", 
             SCIPvarGetName(implvar), (*implics)->bounds[varfixing][poslower]);
@@ -755,7 +764,7 @@ SCIP_RETCODE SCIPimplicsAdd(
       }
 
       /* check if y >= b causes conflict for x (i.e. y <= a (with a < b) is also valid) */
-      if( posupper < INT_MAX && SCIPsetIsFeasGT(set, implbound, (*implics)->bounds[varfixing][posupper]) )
+      if( posupper >= 0 && SCIPsetIsFeasGT(set, implbound, (*implics)->bounds[varfixing][posupper]) )
       {      
          SCIPdebugMessage(" -> implication is conflicting to <%s> <= %g\n", 
             SCIPvarGetName(implvar), (*implics)->bounds[varfixing][posupper]);
@@ -766,8 +775,11 @@ SCIP_RETCODE SCIPimplicsAdd(
       *added = TRUE;
 
       /* check if entry of the same type already exists */
-      if( posadd == poslower )
+      if( found )
       {
+         assert(poslower >= 0);
+         assert(posadd == poslower);
+
          /* add y >= b by changing old entry on poslower */
          assert((*implics)->vars[varfixing][poslower] == implvar);
          assert(SCIPsetIsFeasGT(set, implbound, (*implics)->bounds[varfixing][poslower]));
@@ -775,9 +787,9 @@ SCIP_RETCODE SCIPimplicsAdd(
       }
       else
       {
-         /* add y >= b by creating a new entry on posadd */
-         assert(poslower == INT_MAX);
+         assert(poslower == -1);
 
+         /* add y >= b by creating a new entry on posadd */
          SCIP_CALL( implicsEnsureSize(implics, blkmem, set, varfixing,
                *implics != NULL ? (*implics)->nimpls[varfixing]+1 : 1) );
          assert(*implics != NULL);
@@ -807,10 +819,10 @@ SCIP_RETCODE SCIPimplicsAdd(
    }
    else
    {
-      assert(found == (posupper < INT_MAX));
+      assert(found == (posupper >= 0));
 
       /* check if y <= b is redundant */
-      if( posupper < INT_MAX && SCIPsetIsFeasGE(set, implbound, (*implics)->bounds[varfixing][posupper]) )
+      if( posupper >= 0 && SCIPsetIsFeasGE(set, implbound, (*implics)->bounds[varfixing][posupper]) )
       {
          SCIPdebugMessage(" -> implication is redundant to <%s> <= %g\n", 
             SCIPvarGetName(implvar), (*implics)->bounds[varfixing][posupper]);
@@ -818,7 +830,7 @@ SCIP_RETCODE SCIPimplicsAdd(
       }
 
       /* check if y <= b causes conflict for x (i.e. y >= a (with a > b) is also valid) */
-      if( poslower < INT_MAX && SCIPsetIsFeasLT(set, implbound, (*implics)->bounds[varfixing][poslower]) )
+      if( poslower >= 0 && SCIPsetIsFeasLT(set, implbound, (*implics)->bounds[varfixing][poslower]) )
       {      
          SCIPdebugMessage(" -> implication is conflicting to <%s> >= %g\n", 
             SCIPvarGetName(implvar), (*implics)->bounds[varfixing][poslower]);
@@ -829,8 +841,11 @@ SCIP_RETCODE SCIPimplicsAdd(
       *added = TRUE;
 
       /* check if entry of the same type already exists */
-      if( posadd == posupper )
+      if( found )
       {
+         assert(posupper >= 0);
+         assert(posadd == posupper);
+
          /* add y <= b by changing old entry on posupper */
          assert((*implics)->vars[varfixing][posupper] == implvar);
          assert(SCIPsetIsFeasLT(set, implbound,(*implics)->bounds[varfixing][posupper]));
@@ -839,7 +854,7 @@ SCIP_RETCODE SCIPimplicsAdd(
       else
       {
          /* add y <= b by creating a new entry on posadd */
-         assert(posupper == INT_MAX);
+         assert(posupper == -1);
 
          SCIP_CALL( implicsEnsureSize(implics, blkmem, set, varfixing,
                *implics != NULL ? (*implics)->nimpls[varfixing]+1 : 1) );
@@ -900,15 +915,15 @@ SCIP_RETCODE SCIPimplicsDel(
    checkImplics(*implics, set);
 
    /* searches for y in implications of x */
-   found = implicsSearchVar(*implics, varfixing, implvar, impltype, &poslower, &posupper, &posadd);
+   found = implicsSearchImplic(*implics, varfixing, implvar, impltype, &poslower, &posupper, &posadd);
    if( !found )
    {
       SCIPdebugMessage(" -> implication was not found\n");
       return SCIP_OKAY;
    }
 
-   assert((impltype == SCIP_BOUNDTYPE_LOWER && poslower < INT_MAX && posadd == poslower) 
-      || (impltype == SCIP_BOUNDTYPE_UPPER && posupper < INT_MAX && posadd == posupper));
+   assert((impltype == SCIP_BOUNDTYPE_LOWER && poslower >= 0 && posadd == poslower) 
+      || (impltype == SCIP_BOUNDTYPE_UPPER && posupper >= 0 && posadd == posupper));
    assert(0 <= posadd && posadd < (*implics)->nimpls[varfixing]);
    assert((SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY) == (posadd < (*implics)->nbinimpls[varfixing]));
    assert((*implics)->vars[varfixing][posadd] == implvar);
@@ -937,6 +952,28 @@ SCIP_RETCODE SCIPimplicsDel(
    return SCIP_OKAY;
 }
 
+/** returns which implications on given variable y are contained in implications for x == 0 or x == 1 */
+void SCIPimplicsGetVarImplics(
+   SCIP_IMPLICS*         implics,            /**< implications data structure */
+   SCIP_Bool             varfixing,          /**< FALSE if y should be searched in implications for x == 0, TRUE for x == 1 */
+   SCIP_VAR*             implvar,            /**< variable y to search for */
+   SCIP_Bool*            haslowerimplic,     /**< pointer to store whether there exists an implication y >= l */
+   SCIP_Bool*            hasupperimplic      /**< pointer to store whether there exists an implication y <= u */
+   )
+{
+   int poslower;
+   int posupper;
+   int posadd;
+
+   assert(haslowerimplic != NULL);
+   assert(hasupperimplic != NULL);
+
+   implicsSearchVar(implics, varfixing, implvar, &poslower, &posupper, &posadd);
+
+   *haslowerimplic = (poslower >= 0);
+   *hasupperimplic = (posupper >= 0);
+}
+
 /** returns whether an implication y <= b or y >= b is contained in implications for x == 0 or x == 1 */
 SCIP_Bool SCIPimplicsContainsImpl(
    SCIP_IMPLICS*         implics,            /**< implications data structure */
@@ -949,7 +986,7 @@ SCIP_Bool SCIPimplicsContainsImpl(
    int posupper;
    int posadd;
 
-   return implicsSearchVar(implics, varfixing, implvar, impltype, &poslower, &posupper, &posadd);
+   return implicsSearchImplic(implics, varfixing, implvar, impltype, &poslower, &posupper, &posadd);
 }
 
 

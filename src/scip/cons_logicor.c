@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.92 2005/09/27 15:24:26 bzfdixan Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.93 2005/10/11 14:45:39 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -78,6 +78,7 @@ struct SCIP_ConsData
    int                   watchedvar2;        /**< position of the second watched variable */
    int                   filterpos1;         /**< event filter position of first watched variable */
    int                   filterpos2;         /**< event filter position of second watched variable */
+   unsigned int          impladded:1;        /**< was the 2-variable logic or constraint already added as implication? */
 };
 
 
@@ -185,6 +186,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->watchedvar2 = -1;
    (*consdata)->filterpos1 = -1;
    (*consdata)->filterpos2 = -1;
+   (*consdata)->impladded = FALSE;
 
    /* get transformed variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
@@ -1370,6 +1372,22 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
             (*ndelconss)++;
             *result = SCIP_SUCCESS;
             continue;
+         }
+         else if( consdata->nvars == 2 && !consdata->impladded )
+         {
+            SCIP_Bool implinfeasible;
+            int nimplbdchgs;
+
+            /* a two-variable logicor constraint x + y >= 1 yields the implication x == 0 -> y == 1 */
+            SCIP_CALL( SCIPaddVarImplication(scip, consdata->vars[0], FALSE, consdata->vars[1],
+                  SCIP_BOUNDTYPE_LOWER, 1.0, &implinfeasible, &nimplbdchgs) );
+            *nchgbds += nimplbdchgs;
+            if( implinfeasible )
+            {
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
+            consdata->impladded = TRUE;
          }
       }
    }

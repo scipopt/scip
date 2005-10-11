@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.100 2005/09/27 15:24:26 bzfdixan Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.101 2005/10/11 14:45:39 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -2891,10 +2891,12 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
          else if( consdata->nvars == 2 && !SCIPconsIsModifiable(cons) )
          {
             SCIP_Bool infeasible;
+            int nimplbdchgs;
 
             /* a two-variable set covering constraint x + y >= 1 yields the implication x == 0 -> y == 1 */
             SCIP_CALL( SCIPaddVarImplication(scip, consdata->vars[0], FALSE, consdata->vars[1],
-                  SCIP_BOUNDTYPE_LOWER, 1.0, &infeasible, nchgbds) );
+                  SCIP_BOUNDTYPE_LOWER, 1.0, &infeasible, &nimplbdchgs) );
+            *nchgbds += nimplbdchgs;
             if( infeasible )
             {
                *result = SCIP_CUTOFF;
