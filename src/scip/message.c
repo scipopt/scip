@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.c,v 1.20 2005/08/28 12:24:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: message.c,v 1.21 2005/10/11 12:02:33 bzfpfets Exp $"
 
 /**@file   message.c
  * @brief  message output methods
@@ -61,6 +61,7 @@ static
 SCIP_DECL_MESSAGEINFO(messageInfoDefault)
 {
    fputs(msg, file);
+   fflush(file);
 }
 
 /** default message handler that prints messages to stdout or stderr */
@@ -178,7 +179,7 @@ void messagePrintDialog(
       if( file == NULL || file == stdout )
       {
          char outmsg[SCIP_MAXSTRLEN];
-         
+
          bufferMessage(curmessagehdlr->dialogbuffer, &curmessagehdlr->dialogbufferlen, msg, outmsg);
          if( *outmsg != '\0' )
             curmessagehdlr->messagedialog(curmessagehdlr, stdout, outmsg);
@@ -204,7 +205,7 @@ void messagePrintInfo(
       if( file == NULL || file == stdout )
       {
          char outmsg[SCIP_MAXSTRLEN];
-         
+
          bufferMessage(curmessagehdlr->infobuffer, &curmessagehdlr->infobufferlen, msg, outmsg);
          if( *outmsg != '\0' )
             curmessagehdlr->messageinfo(curmessagehdlr, stdout, outmsg);
@@ -479,7 +480,7 @@ void SCIPmessageVFPrintInfo(
    )
 {
    char msg[SCIP_MAXSTRLEN];
-   
+
    vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
    messagePrintInfo(file, msg);
 }
@@ -547,4 +548,3 @@ void SCIPmessageVFPrintVerbInfo(
       messagePrintInfo(file, msg);
    }
 }
-
