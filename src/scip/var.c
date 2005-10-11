@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.187 2005/10/11 14:45:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.188 2005/10/11 15:38:01 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -5316,7 +5316,7 @@ SCIP_RETCODE applyImplic(
 
    implub = SCIPvarGetUbGlobal(implvar);
    impllb = SCIPvarGetLbGlobal(implvar);
-   if( implbound == SCIP_BOUNDTYPE_LOWER )
+   if( impltype == SCIP_BOUNDTYPE_LOWER )
    {
       if( SCIPsetIsFeasGT(set, implbound, implub) )
       {
@@ -5420,51 +5420,6 @@ SCIP_RETCODE varAddImplic(
 
    assert((impltype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, implbound, SCIPvarGetLbGlobal(implvar)))
       || (impltype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, implbound, SCIPvarGetUbGlobal(implvar))));
-
-#if 0 /*??????????????????????*/
-   /* in case of implications x = a -> y = b on binary variables, check whether an implication x = !a -> y = c exists:
-    *  x = 0 -> y = 0, and x = 1 -> y = 0: fix y to 0
-    *  x = 0 -> y = 0, and x = 1 -> y = 1: aggregate x == y
-    *  x = 0 -> y = 1, and x = 1 -> y = 0: aggregate x == 1-y
-    *  x = 0 -> y = 1, and x = 1 -> y = 1: fix y to 1
-    */
-   if( var->implics != NULL && SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
-   { /*???????????????????*/
-      SCIP_Bool haslowerimplic;
-      SCIP_Bool hasupperimplic;
-
-      SCIPimplicsGetVarImplics(var->implics, !varfixing, implvar, &haslowerimplic, &hasupperimplic);
-      if( (impltype == SCIP_BOUNDTYPE_UPPER && hasupperimplic)       /* x = f -> y = 0, and x = !f -> y = 0 */
-         || (impltype == SCIP_BOUNDTYPE_LOWER && haslowerimplic) )   /* x = f -> y = 1, and x = !f -> y = 1 */
-      {
-         printf(" -> <%s> = %d -> <%s> = %d, and <%s> = %d -> <%s> = %d:  fix <%s> = %d\n",
-            SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER,
-            SCIPvarGetName(var), !varfixing, SCIPvarGetName(implvar), haslowerimplic,
-            SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER);
-         if( hasupperimplic )
-         {
-            SCIP_CALL( SCIPvarChgUbGlobal(implvar, blkmem, set, stat, lp, branchcand, eventqueue, 0.0) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPvarChgLbGlobal(implvar, blkmem, set, stat, lp, branchcand, eventqueue, 1.0) );
-         }
-         if( nbdchgs != NULL )
-            (*nbdchgs)++;
-
-         return SCIP_OKAY;
-      }
-      if( (impltype == SCIP_BOUNDTYPE_UPPER && haslowerimplic)       /* x = f -> y = 0, and x = !f -> y = 1 */
-         || (impltype == SCIP_BOUNDTYPE_LOWER && hasupperimplic) )   /* x = f -> y = 1, and x = !f -> y = 0 */
-      {
-         printf(" -> <%s> = %d -> <%s> = %d, and <%s> = %d -> <%s> = %d:  aggregate <%s> = %s<%s>\n",
-            SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER,
-            SCIPvarGetName(var), !varfixing, SCIPvarGetName(implvar), haslowerimplic,
-            SCIPvarGetName(var), varfixing == haslowerimplic ? "1 - " : "", SCIPvarGetName(implvar));
-      }
-   }
-#endif
-
 
    if( !conflict )
    {
