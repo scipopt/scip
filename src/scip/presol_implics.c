@@ -1,0 +1,361 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                           */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2005 Tobias Achterberg                              */
+/*                                                                           */
+/*                  2002-2005 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*                                                                           */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma ident "@(#) $Id: presol_implics.c,v 1.1 2005/10/12 12:07:19 bzfpfend Exp $"
+
+/**@file   presol_implics.c
+ * @brief  implics presolver
+ * @author Tobias Achterberg
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#include <assert.h>
+
+#include "scip/presol_implics.h"
+
+
+#define PRESOL_NAME            "implics"
+#define PRESOL_DESC            "implication graph aggregator"
+#define PRESOL_PRIORITY         -100000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+#define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
+
+
+
+
+/*
+ * Callback methods of presolver
+ */
+
+/** destructor of presolver to free user data (called when SCIP is exiting) */
+#define presolFreeImplics NULL
+
+
+/** initialization method of presolver (called after problem was transformed) */
+#define presolInitImplics NULL
+
+
+/** deinitialization method of presolver (called before transformed problem is freed) */
+#define presolExitImplics NULL
+
+
+/** presolving initialization method of presolver (called when presolving is about to begin) */
+#define presolInitpreImplics NULL
+
+
+/** presolving deinitialization method of presolver (called after presolving has been finished) */
+#define presolExitpreImplics NULL
+
+
+/** execution method of presolver */
+static
+SCIP_DECL_PRESOLEXEC(presolExecImplics)
+{  /*lint --e{715}*/
+   SCIP_VAR** vars;
+   SCIP_VAR** bdchgvars;
+   SCIP_BOUNDTYPE* bdchgtypes;
+   SCIP_Real* bdchgvals;
+   SCIP_VAR** aggrvars;
+   SCIP_VAR** aggraggvars;
+   SCIP_Real* aggrcoefs;
+   SCIP_Real* aggrconsts;
+   int nbdchgs;
+   int naggregations;
+   int nvars;
+   int v;
+
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTFIND;
+
+   /* initialize fixing and aggregation storages */
+   bdchgvars = NULL;
+   bdchgtypes = NULL;
+   bdchgvals = NULL;
+   nbdchgs = 0;
+   aggrvars = NULL;
+   aggraggvars = NULL;
+   aggrcoefs = NULL;
+   aggrconsts = NULL;
+   naggregations = 0;
+
+   /* get active problem variables */
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+
+   /* look for variable implications in x == 0 and x == 1 with the same implied variable:
+    *  x = 0 -> y = 0, and x = 1 -> y = 0: fix y to 0
+    *  x = 0 -> y = 0, and x = 1 -> y = 1: aggregate x == y
+    *  x = 0 -> y = 1, and x = 1 -> y = 0: aggregate x == 1-y
+    *  x = 0 -> y = 1, and x = 1 -> y = 1: fix y to 1
+    * the fixings and aggregations are stored in a buffer and applied afterwards, because fixing and aggregation
+    * would modify the vars array and the implication arrays
+    */
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIP_VAR** implvars[2];
+      SCIP_BOUNDTYPE* impltypes[2];
+      SCIP_Real* implbounds[2];
+      int nimpls[2];
+      int nbinimpls[2];
+      int varfixing;
+      int i0;
+      int i1;
+
+      /* don't perform presolving operations on deleted variables */
+      if( SCIPvarIsDeleted(vars[v]) )
+         continue;
+
+      /* get implications for given variable */
+      for( varfixing = 0; varfixing < 2; ++varfixing )
+      {
+         implvars[varfixing] = SCIPvarGetImplVars(vars[v], (SCIP_Bool)varfixing);
+         impltypes[varfixing] = SCIPvarGetImplTypes(vars[v], (SCIP_Bool)varfixing);
+         implbounds[varfixing] = SCIPvarGetImplBounds(vars[v], (SCIP_Bool)varfixing);
+         nimpls[varfixing] = SCIPvarGetNImpls(vars[v], (SCIP_Bool)varfixing);
+         nbinimpls[varfixing] = SCIPvarGetNBinImpls(vars[v], (SCIP_Bool)varfixing);
+      }
+
+      /* scan implication arrays for equal variables */
+      i0 = 0;
+      i1 = 0;
+      while( i0 < nimpls[0] && i1 < nimpls[1] )
+      {
+         int index0;
+         int index1;
+
+         /* check if we are done with the binaries in one of the implication arrays -> switch to non-binaries */
+         if( (i0 < nbinimpls[0]) != (i1 < nbinimpls[1]) )
+         {
+            assert(i0 == nbinimpls[0] || i1 == nbinimpls[1]);
+            i0 = nbinimpls[0];
+            i1 = nbinimpls[1];
+            if( i0 == nimpls[0] || i1 == nimpls[1] )
+               break;
+         }
+
+         /* scan the binary or non-binary part of the implication arrays */
+         index0 = SCIPvarGetIndex(implvars[0][i0]);
+         index1 = SCIPvarGetIndex(implvars[1][i1]);
+         while( index0 < index1 )
+         {
+            i0++;
+            if( i0 == nbinimpls[0] || i0 == nimpls[0] )
+            {
+               index0 = -1;
+               break;
+            }
+            index0 = SCIPvarGetIndex(implvars[0][i0]);
+         }
+         while( index1 < index0 )
+         {
+            i1++;
+            if( i1 == nbinimpls[1] || i1 == nimpls[1] )
+            {
+               index1 = -1;
+               break;
+            }
+            index1 = SCIPvarGetIndex(implvars[1][i1]);
+         }
+         /**@todo for all implied binary variables y, check the cliques of x == !varfixing if y is contained */
+
+         if( index0 == index1 )
+         {
+            assert(index0 >= 0);
+            assert(i0 < nimpls[0]);
+            assert(i1 < nimpls[1]);
+            assert((i0 < nbinimpls[0]) == (i1 < nbinimpls[1]));
+            assert(implvars[0][i0] == implvars[1][i1]);
+
+            if( impltypes[0][i0] == impltypes[1][i1] )
+            {
+               /* found implication x = 0 -> y >= b / y <= b  and  x = 1 -> y >= c / y <= c
+                *   =>  change bound y >= min(b,c) / y <= max(b,c)
+                */
+               SCIP_CALL( SCIPreallocBufferArray(scip, &bdchgvars, nbdchgs+1) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, &bdchgtypes, nbdchgs+1) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, &bdchgvals, nbdchgs+1) );
+               bdchgvars[nbdchgs] = implvars[0][i0];
+               bdchgtypes[nbdchgs] = impltypes[0][i0];
+               if( impltypes[0][i0] == SCIP_BOUNDTYPE_LOWER )
+                  bdchgvals[nbdchgs] = MIN(implbounds[0][i0], implbounds[1][i1]);
+               else
+                  bdchgvals[nbdchgs] = MAX(implbounds[0][i0], implbounds[1][i1]);
+
+               SCIPdebugMessage(" -> <%s> = 0 -> <%s> %s %g, and <%s> = 1 -> <%s> %s %g:  tighten <%s> %s %g\n",
+                  SCIPvarGetName(vars[v]), SCIPvarGetName(implvars[0][i0]),
+                  impltypes[0][i0] == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", implbounds[0][i0],
+                  SCIPvarGetName(vars[v]), SCIPvarGetName(implvars[1][i1]),
+                  impltypes[1][i1] == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", implbounds[1][i1],
+                  SCIPvarGetName(bdchgvars[nbdchgs]), bdchgtypes[nbdchgs] == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+                  bdchgvals[nbdchgs]);
+
+               nbdchgs++;
+            }
+            else
+            {
+               SCIP_Real implvarlb;
+               SCIP_Real implvarub;
+               
+               implvarlb = SCIPvarGetLbGlobal(implvars[0][i0]);
+               implvarub = SCIPvarGetUbGlobal(implvars[0][i0]);
+
+               if( impltypes[0][i0] == SCIP_BOUNDTYPE_UPPER
+                  && SCIPisEQ(scip, implbounds[0][i0], implvarlb)
+                  && SCIPisEQ(scip, implbounds[1][i1], implvarub) )
+               {
+                  /* found implication x = 0 -> y = lb and x = 1 -> y = ub  =>  aggregate y = lb + (ub-lb) * x */
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &aggrvars, naggregations+1) );
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &aggraggvars, naggregations+1) );
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &aggrcoefs, naggregations+1) );
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &aggrconsts, naggregations+1) );
+                  aggrvars[naggregations] = implvars[0][i0];
+                  aggraggvars[naggregations] = vars[v];
+                  aggrcoefs[naggregations] = implvarub - implvarlb;
+                  aggrconsts[naggregations] = implvarlb;
+
+                  SCIPdebugMessage(" -> <%s> = 0 -> <%s> = %g, and <%s> = 1 -> <%s> = %g:  aggregate <%s> = %g %+g<%s>\n",
+                     SCIPvarGetName(vars[v]), SCIPvarGetName(implvars[0][i0]), implbounds[0][i0],
+                     SCIPvarGetName(vars[v]), SCIPvarGetName(implvars[1][i1]), implbounds[1][i1],
+                     SCIPvarGetName(aggrvars[naggregations]), aggrconsts[naggregations], aggrcoefs[naggregations],
+                     SCIPvarGetName(aggraggvars[naggregations]));
+
+                  naggregations++;
+               }
+               else if( impltypes[0][i0] == SCIP_BOUNDTYPE_LOWER
+                  && SCIPisEQ(scip, implbounds[0][i0], implvarub)
+                  && SCIPisEQ(scip, implbounds[1][i1], implvarlb) )
+               {
+                  /* found implication x = 0 -> y = ub and x = 1 -> y = lb  =>  aggregate y = ub - (ub-lb) * x */
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &aggrvars, naggregations+1) );
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &aggraggvars, naggregations+1) );
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &aggrcoefs, naggregations+1) );
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &aggrconsts, naggregations+1) );
+                  aggrvars[naggregations] = implvars[0][i0];
+                  aggraggvars[naggregations] = vars[v];
+                  aggrcoefs[naggregations] = implvarlb - implvarub;
+                  aggrconsts[naggregations] = implvarub;
+
+                  SCIPdebugMessage(" -> <%s> = 0 -> <%s> = %g, and <%s> = 1 -> <%s> = %g:  aggregate <%s> = %g %+g<%s>\n",
+                     SCIPvarGetName(vars[v]), SCIPvarGetName(implvars[0][i0]), implbounds[0][i0],
+                     SCIPvarGetName(vars[v]), SCIPvarGetName(implvars[1][i1]), implbounds[1][i1],
+                     SCIPvarGetName(aggrvars[naggregations]), aggrconsts[naggregations], aggrcoefs[naggregations],
+                     SCIPvarGetName(aggraggvars[naggregations]));
+
+                  naggregations++;
+               }
+            }
+
+            /* process the next implications */
+            i0++;
+            i1++;
+         }
+      }
+   }
+
+   /**@todo check cliques of x == 0 and x == 1 for equal entries y == b -> fix y == !b */
+
+   /* perform the bound changes */
+   for( v = 0; v < nbdchgs; ++v )
+   {
+      SCIP_Bool infeasible;
+      SCIP_Bool tightened;
+
+      if( bdchgtypes[v] == SCIP_BOUNDTYPE_LOWER )
+      {
+         SCIP_CALL( SCIPtightenVarLb(scip, bdchgvars[v], bdchgvals[v], &infeasible, &tightened) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPtightenVarUb(scip, bdchgvars[v], bdchgvals[v], &infeasible, &tightened) );
+      }
+
+      if( infeasible )
+      {
+         SCIPdebugMessage(" -> infeasible bound change <%s> %s %g\n", SCIPvarGetName(bdchgvars[v]),
+            bdchgtypes[v] == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", bdchgvals[v]);
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+      if( tightened )
+      {
+         (*nchgbds)++;
+         *result = SCIP_SUCCESS;
+      }
+   }
+
+   /* perform the aggregations */
+   for( v = 0; v < naggregations; ++v )
+   {
+      SCIP_Bool infeasible;
+      SCIP_Bool redundant;
+      SCIP_Bool aggregated;
+
+      /* aggregation y = const + coef * x  =>  y - coef * x = const */
+      SCIP_CALL( SCIPaggregateVars(scip, aggrvars[v], aggraggvars[v], 1.0, -aggrcoefs[v], aggrconsts[v],
+            &infeasible, &redundant, &aggregated) );
+      if( infeasible )
+      {
+         SCIPdebugMessage(" -> infeasible aggregation <%s> = %g %+g<%s>\n",
+            SCIPvarGetName(aggrvars[v]), aggrconsts[v], aggrcoefs[v], SCIPvarGetName(aggraggvars[v]));
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+      if( aggregated )
+      {
+         (*naggrvars)++;
+         *result = SCIP_SUCCESS;
+      }
+   }
+
+   /* free the storage buffers */
+   SCIPfreeBufferArrayNull(scip, &aggrconsts);
+   SCIPfreeBufferArrayNull(scip, &aggrcoefs);
+   SCIPfreeBufferArrayNull(scip, &aggraggvars);
+   SCIPfreeBufferArrayNull(scip, &aggrvars);
+   SCIPfreeBufferArrayNull(scip, &bdchgvals);
+   SCIPfreeBufferArrayNull(scip, &bdchgvars);
+
+   return SCIP_OKAY;
+}
+
+
+
+
+
+/*
+ * presolver specific interface methods
+ */
+
+/** creates the implics presolver and includes it in SCIP */
+SCIP_RETCODE SCIPincludePresolImplics(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_PRESOLDATA* presoldata;
+
+   /* create implics presolver data */
+   presoldata = NULL;
+
+   /* include presolver */
+   SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+         presolFreeImplics, presolInitImplics, presolExitImplics, 
+         presolInitpreImplics, presolExitpreImplics, presolExecImplics,
+         presoldata) );
+
+   return SCIP_OKAY;
+}
