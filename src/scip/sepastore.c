@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.47 2005/09/27 13:55:33 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.48 2005/10/12 16:55:04 bzfpfets Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -261,7 +261,7 @@ SCIP_RETCODE sepastoreAddCut(
       maxsepacuts = INT_MAX;
    else
       maxsepacuts = SCIPsetGetSepaMaxcuts(set, root);
-   assert(sepastore->ncuts <= maxsepacuts);
+   assert(sepastore->ncuts <= maxsepacuts + sepastore->nforcedcuts);
    if( maxsepacuts == 0 )
       return SCIP_OKAY;
 
