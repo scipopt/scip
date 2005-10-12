@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.188 2005/10/11 15:38:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.189 2005/10/12 14:10:33 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -5380,7 +5380,7 @@ SCIP_RETCODE varAddImplic(
    assert(SCIPvarIsActive(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-   assert(SCIPvarIsActive(implvar));
+   assert(SCIPvarIsActive(implvar) || SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_FIXED);
    assert(infeasible != NULL);
    assert(added != NULL);
 
@@ -5423,6 +5423,8 @@ SCIP_RETCODE varAddImplic(
 
    if( !conflict )
    {
+      assert(SCIPvarIsActive(implvar)); /* a fixed implvar would either cause a redundancy or infeasibility */
+
       /* add implication x == 0/1 -> y <= b / y >= b to the implications list of x */
       SCIPdebugMessage("adding implication: <%s> == %d  ==>  <%s> %s %g\n", 
          SCIPvarGetName(var), varfixing,
@@ -5460,6 +5462,8 @@ SCIP_RETCODE varAddImplic(
       /* the implication was redundant: the inverse is also redundant */
       return SCIP_OKAY;
    }
+
+   assert(SCIPvarIsActive(implvar)); /* a fixed implvar would either cause a redundancy or infeasibility */
 
    /* check, whether implied variable is binary */
    if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
@@ -5571,7 +5575,7 @@ SCIP_RETCODE varAddTransitiveImplic(
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
    assert(SCIPvarIsActive(var));
    assert(implvar != NULL);
-   assert(SCIPvarIsActive(implvar));
+   assert(SCIPvarIsActive(implvar) || SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_FIXED);
    assert(infeasible != NULL);
 
    /* add implication x == varfixing -> y <= b / y >= b to the implications list of x */
@@ -5579,6 +5583,8 @@ SCIP_RETCODE varAddTransitiveImplic(
          varfixing, implvar, impltype, implbound, infeasible, nbdchgs, &added) );
    if( *infeasible || var == implvar || !transitive || !added )
       return SCIP_OKAY;
+
+   assert(SCIPvarIsActive(implvar)); /* a fixed implvar would either cause a redundancy or infeasibility */
 
    /* add transitive closure */
    if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
@@ -6276,9 +6282,11 @@ SCIP_RETCODE SCIPvarAddImplic(
       {
          SCIP_CALL( SCIPvarGetProbvarBound(&implvar, &implbound, &impltype) );
          SCIPvarAdjustBd(implvar, set, impltype, &implbound);
-         
-         SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
-               varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
+         if( SCIPvarIsActive(implvar) || SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_FIXED )
+         {
+            SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+                  varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
+         }
       }
       break;
       

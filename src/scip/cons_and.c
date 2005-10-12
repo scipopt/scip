@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.64 2005/09/26 12:54:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.65 2005/10/12 14:10:33 bzfpfend Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -69,6 +69,7 @@ struct SCIP_ConsData
    int                   filterpos2;         /**< event filter position of second watched operator variable */
    unsigned int          propagated:1;       /**< is constraint already preprocessed/propagated? */
    unsigned int          nofixedzero:1;      /**< is none of the opereator variables fixed to FALSE? */
+   unsigned int          impladded:1;        /**< were the implications of the constraint already added? */
 };
 
 /** constraint handler data */
@@ -366,6 +367,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->filterpos2 = -1;
    (*consdata)->propagated = FALSE;
    (*consdata)->nofixedzero = FALSE;
+   (*consdata)->impladded = FALSE;
 
    /* get transformed variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
@@ -1044,7 +1046,7 @@ SCIP_RETCODE resolvePropagation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
    SCIP_VAR*             infervar,           /**< variable that was deduced */
-   PROPRULE         proprule,           /**< propagation rule that deduced the value */
+   PROPRULE              proprule,           /**< propagation rule that deduced the value */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
@@ -1412,8 +1414,6 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    SCIP_CONS* cons;
    SCIP_CONSDATA* consdata;
    SCIP_Bool cutoff;
-   SCIP_Bool redundant;
-   SCIP_Bool aggregated;
    int oldnfixedvars;
    int oldnaggrvars;
    int c;
@@ -1453,6 +1453,9 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
          /* if only one variable is left, the resultant has to be equal to this single variable */
          if( consdata->nvars == 1 )
          {
+            SCIP_Bool redundant;
+            SCIP_Bool aggregated;
+
             SCIPdebugMessage("and constraint <%s> has only one variable not fixed to 1.0\n", SCIPconsGetName(cons));
             
             assert(consdata->vars != NULL);
@@ -1469,6 +1472,21 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
             /* delete constraint */
             SCIP_CALL( SCIPdelCons(scip, cons) );
             (*ndelconss)++;
+         }
+         else if( !consdata->impladded )
+         {
+            int i;
+
+            /* add implications: resultant == 1 -> all operands == 1 */
+            for( i = 0; i < consdata->nvars && !cutoff; ++i )
+            {
+               int nimplbdchgs;
+
+               SCIP_CALL( SCIPaddVarImplication(scip, consdata->resvar, TRUE, consdata->vars[i],
+                     SCIP_BOUNDTYPE_LOWER, 1.0, &cutoff, &nimplbdchgs) );
+               *nchgbds += nimplbdchgs;
+            }
+            consdata->impladded = TRUE;
          }
       }
    }

@@ -14,12 +14,14 @@ interface:
 
 plugins:
 - new presolver "implics" to find bound changes and aggregations out of the implication graph
+- logic or constraint handler now adds implications on clauses with 2 literals to the implication graph
+- and/or constraint handlers now add implications to the implication graph
+- xor constraint handler now uses stronger LP relaxation without auxiliary variable for xor constraint with 2 operands
 
 parameters:
 
 features:
 - changed handling of added constraints in separation calls
-- logic or constraint handler now produces implications on clauses with 2 literals
 
 Makefile:
 - included version number in binary file name
@@ -30,6 +32,7 @@ fixed bugs:
 - fixed various bugs in LP file reader
 - also removed history_length, if NO_REMOVE_HISTORY is defined to support older versions of the readline library
 - removed bug in implication addition
+- fixed wrong assert with implications that imply a fixed variable
 
 known bugs:
 - if one uses column generation and restarts, a solution that contains variables that are only present in the transformed

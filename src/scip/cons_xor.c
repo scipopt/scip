@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.38 2005/09/26 12:54:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.39 2005/10/12 14:10:33 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -47,6 +47,7 @@
 #define EVENTHDLR_NAME         "xor"
 #define EVENTHDLR_DESC         "event handler for xor constraints"
 
+#define NROWS 4
 
 
 
@@ -59,7 +60,7 @@ struct SCIP_ConsData
 {
    SCIP_VAR**            vars;               /**< variables (including resultant) in the xor operation */
    SCIP_VAR*             intvar;             /**< internal variable for LP relaxation */
-   SCIP_ROW*             row;                /**< row for linear relaxation of xor constraint */
+   SCIP_ROW*             rows[NROWS];        /**< rows for linear relaxation of xor constraint */
    int                   nvars;              /**< number of variables (including resultant) in xor operation */
    int                   varssize;           /**< size of vars array */
    int                   watchedvar1;        /**< position of first watched operator variable */
@@ -235,6 +236,8 @@ SCIP_RETCODE consdataCreate(
    SCIP_VAR*             resvar              /**< resultant variable */
    )
 {
+   int r;
+
    assert(consdata != NULL);
    assert(nvars == 0 || vars != NULL);
    assert(resvar != NULL);
@@ -247,7 +250,8 @@ SCIP_RETCODE consdataCreate(
    BMScopyMemoryArray(&(*consdata)->vars[1], vars, nvars);
 
    (*consdata)->intvar = NULL;
-   (*consdata)->row = NULL;
+   for( r = 0; r < NROWS; ++r )
+      (*consdata)->rows[r] = NULL;
    (*consdata)->nvars = nvars+1;
    (*consdata)->varssize = nvars+1;
    (*consdata)->watchedvar1 = -1;
@@ -272,11 +276,16 @@ SCIP_RETCODE consdataFreeRows(
    SCIP_CONSDATA*        consdata            /**< constraint data */
    )
 {
+   int r;
+
    assert(consdata != NULL);
 
-   if( consdata->row != NULL )
+   for( r = 0; r < NROWS; ++r )
    {
-      SCIP_CALL( SCIPreleaseRow(scip, &consdata->row) );
+      if( consdata->rows[r] != NULL )
+      {
+         SCIP_CALL( SCIPreleaseRow(scip, &consdata->rows[r]) );
+      }
    }
 
    return SCIP_OKAY;
@@ -459,7 +468,12 @@ SCIP_RETCODE applyFixings(
 
 /** creates LP row corresponding to xor constraint: 
  *    resvar + v1 + ... + vn - 2q == 0
- *  with internal integer variable q
+ *  with internal integer variable q;
+ *  in the special case of 2 operand variables r == x xor y, the following linear system is created:
+ *    + x - y - r <= 0
+ *    - x + y - r <= 0
+ *    - x - y + r <= 0
+ *    + x + y + r <= 2
  */
 static 
 SCIP_RETCODE createRelaxation(
@@ -472,27 +486,54 @@ SCIP_RETCODE createRelaxation(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->row == NULL);
+   assert(consdata->rows[0] == NULL);
 
-   /* create internal variable, if not yet existing */
-   if( consdata->intvar == NULL )
+   if( SCIPconsIsModifiable(cons) || consdata->nvars != 3 )  /* resultant is member of vars array */
    {
-      sprintf(varname, "%s_int", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPcreateVar(scip, &consdata->intvar, varname, 0.0, (SCIP_Real)(consdata->nvars/2), 0.0,
-            consdata->nvars >= 4 ? SCIP_VARTYPE_INTEGER : SCIP_VARTYPE_BINARY,
-            SCIPconsIsInitial(cons), SCIPconsIsRemoveable(cons), NULL, NULL, NULL, NULL) );
-      SCIP_CALL( SCIPaddVar(scip, consdata->intvar) );
+      /* create internal variable, if not yet existing */
+      if( consdata->intvar == NULL )
+      {
+         sprintf(varname, "%s_int", SCIPconsGetName(cons));
+         SCIP_CALL( SCIPcreateVar(scip, &consdata->intvar, varname, 0.0, (SCIP_Real)(consdata->nvars/2), 0.0,
+               consdata->nvars >= 4 ? SCIP_VARTYPE_INTEGER : SCIP_VARTYPE_BINARY,
+               SCIPconsIsInitial(cons), SCIPconsIsRemoveable(cons), NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPaddVar(scip, consdata->intvar) );
 
-      /* install the rounding locks for the internal variable */
-      SCIP_CALL( lockRounding(scip, cons, consdata->intvar) );
+         /* install the rounding locks for the internal variable */
+         SCIP_CALL( lockRounding(scip, cons, consdata->intvar) );
+      }
+
+      /* create LP row (resultant variable is also stored in vars array) */
+      SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[0], SCIPconsGetName(cons), 0.0, 0.0,
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+      SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[0], consdata->intvar, -2.0) );
+      SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[0], consdata->nvars, consdata->vars, 1.0) );
    }
+   else
+   {
+      char rowname[SCIP_MAXSTRLEN];
+      int r;
 
-   /* create LP row (resultant variable is also stored in vars array) */
-   /**@todo change LP relaxation! */
-   SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons), 0.0, 0.0,
-         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
-   SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, consdata->intvar, -2.0) );
-   SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->row, consdata->nvars, consdata->vars, 1.0) );
+      /* create the <= 0 rows with one positive sign */
+      for( r = 0; r < 3; ++r )
+      {
+         int v;
+
+         sprintf(rowname, "%s_%d", SCIPconsGetName(cons), r);
+         SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[r], rowname, -SCIPinfinity(scip), 0.0,
+               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+         for( v = 0; v < 3; ++v )
+         {
+            SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[r], consdata->vars[v], v == r ? +1.0 : -1.0) );
+         }
+      }
+
+      /* create the <= 2 row with all positive signs */
+      sprintf(rowname, "%s_3", SCIPconsGetName(cons));
+      SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[3], rowname, -SCIPinfinity(scip), 2.0,
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+      SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[3], consdata->nvars, consdata->vars, 1.0) );
+   }
 
    return SCIP_OKAY;
 }  
@@ -505,17 +546,47 @@ SCIP_RETCODE addRelaxation(
    )
 {
    SCIP_CONSDATA* consdata;
+   int r;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->row == NULL )
+   if( consdata->rows[0] == NULL )
    {
       SCIP_CALL( createRelaxation(scip, cons) );
    }
-   SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE) );
+   assert(consdata->rows[0] != NULL);
+   for( r = 0; r < NROWS; ++r )
+   {
+      if( consdata->rows[r] != NULL )
+      {
+         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], FALSE) );
+      }
+   }
 
    return SCIP_OKAY;
+}
+
+/** returns whether all rows of the LP relaxation are in the current LP */
+static
+SCIP_Bool allRowsInLP(
+   SCIP_CONSDATA*        consdata            /**< constraint data */
+   )
+{
+   assert(consdata != NULL);
+
+   if( consdata->rows[0] == NULL )      /* LP relaxation does not exist */
+      return FALSE;
+   else
+   {
+      int r;
+      for( r = 0; r < NROWS; ++r )
+      {
+         if( consdata->rows[r] != NULL && !SCIProwIsInLP(consdata->rows[r]) )
+            return FALSE;
+      }
+      return TRUE;
+   }
 }
 
 /** checks xor constraint for feasibility of given solution: returns TRUE iff constraint is feasible */
@@ -538,7 +609,7 @@ SCIP_RETCODE checkCons(
    *violated = FALSE;
 
    /* check feasibility of constraint if necessary */
-   if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
+   if( checklprows || !allRowsInLP(consdata) )
    {
       SCIP_Real solval;
       int i;
@@ -576,6 +647,7 @@ SCIP_RETCODE separateCons(
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real feasibility;
+   int r;
 
    assert(separated != NULL);
 
@@ -585,22 +657,25 @@ SCIP_RETCODE separateCons(
    *separated = FALSE;
 
    /* create row for the linear relaxation */
-   if( consdata->row == NULL )
+   if( consdata->rows[0] == NULL )
    {
       SCIP_CALL( createRelaxation(scip, cons) );
    }
-   assert(consdata->row != NULL);
+   assert(consdata->rows[0] != NULL);
 
-   /* test row for feasibility and add it, if it is infeasible */
-   if( sol != NULL || !SCIProwIsInLP(consdata->row) )
+   /* test rows for feasibility and add it, if it is infeasible */
+   for( r = 0; r < NROWS; ++r )
    {
-      feasibility = SCIPgetRowSolFeasibility(scip, consdata->row, sol);
-      if( SCIPisFeasNegative(scip, feasibility) )
+      if( sol != NULL || (consdata->rows[r] != NULL && !SCIProwIsInLP(consdata->rows[r])) )
       {
-         SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
-         *separated = TRUE;
+         feasibility = SCIPgetRowSolFeasibility(scip, consdata->rows[r], sol);
+         if( SCIPisFeasNegative(scip, feasibility) )
+         {
+            SCIP_CALL( SCIPaddCut(scip, sol, consdata->rows[r], FALSE) );
+            *separated = TRUE;
+         }
       }
-   }            
+   }
 
    return SCIP_OKAY;
 }

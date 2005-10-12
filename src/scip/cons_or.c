@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.49 2005/09/26 12:54:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.50 2005/10/12 14:10:33 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -69,6 +69,7 @@ struct SCIP_ConsData
    int                   filterpos2;         /**< event filter position of second watched operator variable */
    unsigned int          propagated:1;       /**< is constraint already preprocessed/propagated? */
    unsigned int          nofixedone:1;       /**< is none of the opereator variables fixed to TRUE? */
+   unsigned int          impladded:1;        /**< were the implications of the constraint already added? */
 };
 
 /** constraint handler data */
@@ -366,6 +367,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->filterpos2 = -1;
    (*consdata)->propagated = FALSE;
    (*consdata)->nofixedone = FALSE;
+   (*consdata)->impladded = FALSE;
 
    /* get transformed variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
@@ -1469,6 +1471,21 @@ SCIP_DECL_CONSPRESOL(consPresolOr)
             /* delete constraint */
             SCIP_CALL( SCIPdelCons(scip, cons) );
             (*ndelconss)++;
+         }
+         else if( !consdata->impladded )
+         {
+            int i;
+
+            /* add implications: resultant == 0 -> all operands == 0 */
+            for( i = 0; i < consdata->nvars && !cutoff; ++i )
+            {
+               int nimplbdchgs;
+
+               SCIP_CALL( SCIPaddVarImplication(scip, consdata->resvar, FALSE, consdata->vars[i],
+                     SCIP_BOUNDTYPE_UPPER, 0.0, &cutoff, &nimplbdchgs) );
+               *nchgbds += nimplbdchgs;
+            }
+            consdata->impladded = TRUE;
          }
       }
    }
