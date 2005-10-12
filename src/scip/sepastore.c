@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.49 2005/10/12 17:05:46 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.50 2005/10/12 18:22:28 bzfpfets Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -257,12 +257,9 @@ SCIP_RETCODE sepastoreAddCut(
     *  - the remaining cuts are only forwarded to the LP, if they fit into the maximal separation size
     */
    forcecut = forcecut || sepastore->initiallp || sepastore->forcecuts;
-   if( forcecut )
-      maxsepacuts = INT_MAX;
-   else
-      maxsepacuts = SCIPsetGetSepaMaxcuts(set, root);
-   assert(sepastore->ncuts - sepastore->nforcedcuts <= maxsepacuts);
-   if( maxsepacuts == 0 )
+   maxsepacuts = SCIPsetGetSepaMaxcuts(set, root);
+   assert(sepastore->ncuts <= maxsepacuts || sepastore->ncuts == sepastore->nforcedcuts);
+   if( !forcecut && maxsepacuts == 0 )
       return SCIP_OKAY;
 
    /* calculate cut's efficacy and objective hyperplane parallelism;
@@ -270,7 +267,7 @@ SCIP_RETCODE sepastoreAddCut(
     */
    cutobjparallelism = SCIProwGetObjParallelism(cut, set, lp);
    cutorthogonality = 1.0;
-   if( maxsepacuts == INT_MAX )
+   if( forcecut )
    {
       cutefficacy = SCIPsetInfinity(set);
       cutscore = SCIPsetInfinity(set);
@@ -286,8 +283,9 @@ SCIP_RETCODE sepastoreAddCut(
    }
 
    /* check, if cut has potential to belong to the best "maxsepacuts" separation cuts */
-   if( sepastore->ncuts >= maxsepacuts && cutscore <= sepastore->scores[maxsepacuts-1] )
+   if( !forcecut && sepastore->ncuts >= maxsepacuts && cutscore <= sepastore->scores[maxsepacuts-1] )
       return SCIP_OKAY;
+   assert(forcecut || sepastore->nforcedcuts < maxsepacuts);
 
    /* calculate minimal cut orthogonality */
    mincutorthogonality = (root ? set->sepa_minorthoroot : set->sepa_minortho);
@@ -324,7 +322,7 @@ SCIP_RETCODE sepastoreAddCut(
       }
    }
    assert(c <= sepastore->ncuts);
-   assert(c < maxsepacuts);
+   assert(forcecut || c < maxsepacuts);
 
    /* the cut is good enough to keep at this point: increase stored counter */
    sepastore->ncutsstored++;
@@ -412,15 +410,15 @@ SCIP_RETCODE sepastoreAddCut(
    /* capture the cut */
    SCIProwCapture(cut);
 
-   /* if the array consists of more than "maxsepacuts" cuts, release the worst cut */
-   if( sepastore->ncuts > maxsepacuts )
+   /* if the array consists of more than "maxsepacuts" cuts, release the worst unforced cuts */
+   if( sepastore->ncuts > maxsepacuts && sepastore->ncuts > sepastore->nforcedcuts )
    {
       assert(sepastore->ncuts == maxsepacuts+1);
       assert(!SCIPsetIsInfinity(set, sepastore->scores[sepastore->ncuts-1]));
       SCIP_CALL( SCIProwRelease(&sepastore->cuts[sepastore->ncuts-1], blkmem, set, lp) );
       sepastore->ncuts--;
    }
-   assert(sepastore->ncuts <= maxsepacuts);
+   assert(sepastore->ncuts <= maxsepacuts || sepastore->ncuts == sepastore->nforcedcuts);
 
    /* remove cuts that are no longer orthogonal enough */
    while( sepastore->ncuts > 0 && sepastore->orthogonalities[sepastore->ncuts-1] < mincutorthogonality )
