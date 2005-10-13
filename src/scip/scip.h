@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.249 2005/10/11 14:45:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.250 2005/10/13 21:10:06 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2404,6 +2404,20 @@ SCIP_Real SCIPgetVarPseudocostScoreCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             solval              /**< variable's LP solution value */
+   );
+
+/** returns the variable's average inference score value */
+extern
+SCIP_Real SCIPgetVarConflictScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns the variable's average inference score value only using inferences of the current run */
+extern
+SCIP_Real SCIPgetVarConflictScoreCurrentRun(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** returns the average number of inferences found after branching on the variable in given direction;

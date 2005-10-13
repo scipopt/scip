@@ -11,14 +11,20 @@ interface:
 - additional parameter "sol" for methods SCIPaddCut(), SCIPgetCutEfficacy(), and SCIPisCutEfficacious()
 - additional parameter "sol" for method SCIPseparateKnapsackCover()
 - new methods SCIPsepaGetNConssFound() and SCIPsepaGetNDomredsFound()
+- new methods SCIPvarGetConflictScore(), SCIPvarGetConflictScoreCurrentRun(), SCIPgetVarConflictScore(), and
+  SCIPgetVarConflictScoreCurrentRun()
 
 plugins:
 - new presolver "implics" to find bound changes and aggregations out of the implication graph
 - logic or constraint handler now adds implications on clauses with 2 literals to the implication graph
 - and/or constraint handlers now add implications to the implication graph
 - xor constraint handler now uses stronger LP relaxation without auxiliary variable for xor constraint with 2 operands
+- modified probing order in probing presolver
+- LP file reader now accepts the keyword "Integer" for defining the start of the integer variables section
 
 parameters:
+- modified meaning of parameter presolving/probing/maxtotaluseless
+- new parameter branching/inference/conflictweight
 
 features:
 - changed handling of added constraints in separation calls
@@ -34,6 +40,7 @@ fixed bugs:
 - removed bug in implication addition
 - fixed wrong assert with implications that imply a fixed variable
 - fixed numerics in check method of linear constraint handler
+- hopefully fixed bug with wrong path slash '/' under Windows
 
 known bugs:
 - if one uses column generation and restarts, a solution that contains variables that are only present in the transformed

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_inference.c,v 1.14 2005/08/24 17:26:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_inference.c,v 1.15 2005/10/13 21:10:04 bzfpfend Exp $"
 
 /**@file   branch_inference.c
  * @brief  inference history branching rule
@@ -35,13 +35,15 @@
 #define BRANCHRULE_MAXDEPTH      -1
 #define BRANCHRULE_MAXBOUNDDIST  1.0
 
-#define DEFAULT_CUTOFFWEIGHT     1.0    /**< factor to weigh average number of cutoffs in branching score */
-#define DEFAULT_FRACTIONALS      TRUE   /**< should branching on LP solution be restricted to the fractional variables? */
+#define DEFAULT_CONFLICTWEIGHT  1000.0  /**< factor to weigh conflict score against inference score */
+#define DEFAULT_CUTOFFWEIGHT       1.0  /**< factor to weigh average number of cutoffs in branching score */
+#define DEFAULT_FRACTIONALS        TRUE /**< should branching on LP solution be restricted to the fractional variables? */
 
 
 /** branching rule data */
 struct SCIP_BranchruleData
 {
+   SCIP_Real             conflictweight;     /**< factor to weigh conflict score against inference score */
    SCIP_Real             cutoffweight;       /**< factor to weigh average number of cutoffs in branching score */
    SCIP_Bool             fractionals;        /**< should branching on LP solution be restricted to the fractional variables? */
 };
@@ -54,6 +56,7 @@ SCIP_RETCODE performBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            cands,              /**< candidate array */
    int                   ncands,             /**< number of candidates */
+   SCIP_Real             conflictweight,     /**< factor to weigh conflict score against inference score */
    SCIP_Real             cutoffweight        /**< factor to weigh average number of cutoffs in branching score */
    )
 {
@@ -71,7 +74,8 @@ SCIP_RETCODE performBranching(
    bestcand = -1;
    for( c = 0; c < ncands; ++c )
    {
-      score = SCIPgetVarAvgInferenceCutoffScore(scip, cands[c], cutoffweight);
+      score = conflictweight * SCIPgetVarConflictScore(scip, cands[c])
+         + SCIPgetVarAvgInferenceCutoffScore(scip, cands[c], cutoffweight);
       if( score > bestscore )
       {
          bestscore = score;
@@ -163,7 +167,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpInference)
    }
 
    /* perform the branching */
-   SCIP_CALL( performBranching(scip, cands, ncands, branchruledata->cutoffweight) );
+   SCIP_CALL( performBranching(scip, cands, ncands, branchruledata->conflictweight, branchruledata->cutoffweight) );
 
    *result = SCIP_BRANCHED;
    
@@ -189,7 +193,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsInference)
    SCIP_CALL( SCIPgetPseudoBranchCands(scip, &cands, NULL, &ncands) );
 
    /* perform the branching */
-   SCIP_CALL( performBranching(scip, cands, ncands, branchruledata->cutoffweight) );
+   SCIP_CALL( performBranching(scip, cands, ncands, branchruledata->conflictweight, branchruledata->cutoffweight) );
 
    *result = SCIP_BRANCHED;
    
@@ -221,6 +225,10 @@ SCIP_RETCODE SCIPincludeBranchruleInference(
          branchruledata) );
 
    /* inference branching rule parameters */
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "branching/inference/conflictweight", 
+         "factor to weigh conflict score against inference score",
+         &branchruledata->conflictweight, DEFAULT_CONFLICTWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "branching/inference/cutoffweight", 
          "factor to weigh average number of cutoffs in branching score",

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.c,v 1.24 2005/08/28 12:29:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.c,v 1.25 2005/10/13 21:10:05 bzfpfend Exp $"
 
 /**@file   history.c
  * @brief  methods for branching and inference history
@@ -78,6 +78,8 @@ void SCIPhistoryReset(
    history->pscostcount[1] = 0.0;
    history->pscostsum[0] = 0.0;
    history->pscostsum[1] = 0.0;
+   history->conflictscore[0] = 0.0;
+   history->conflictscore[1] = 0.0;
    history->nbranchings[0] = 0;
    history->nbranchings[1] = 0;
    history->ninferences[0] = 0;
@@ -106,6 +108,8 @@ void SCIPhistoryUnite(
    history->pscostcount[1] += addhistory->pscostcount[1-d];
    history->pscostsum[0] += addhistory->pscostsum[d];
    history->pscostsum[1] += addhistory->pscostsum[1-d];
+   history->conflictscore[0] += addhistory->conflictscore[d];
+   history->conflictscore[1] += addhistory->conflictscore[1-d];
    history->nbranchings[0] += addhistory->nbranchings[d];
    history->nbranchings[1] += addhistory->nbranchings[1-d];
    history->ninferences[0] += addhistory->ninferences[d];
@@ -192,6 +196,9 @@ void SCIPhistoryUpdatePseudocost(
 #undef SCIPhistoryGetPseudocost
 #undef SCIPhistoryGetPseudocostCount
 #undef SCIPhistoryIsPseudocostEmpty
+#undef SCIPhistoryIncConflictScore
+#undef SCIPhistoryScaleConflictScores
+#undef SCIPhistoryGetConflictScore
 #undef SCIPhistoryIncNBranchings
 #undef SCIPhistoryIncNInferences
 #undef SCIPhistoryIncNCutoffs
@@ -251,6 +258,45 @@ SCIP_Bool SCIPhistoryIsPseudocostEmpty(
    assert((int)dir == 0 || (int)dir == 1);
    
    return (history->pscostcount[dir] == 0.0);
+}
+
+/** increases the conflict score of the history entry by the given weight */
+void SCIPhistoryIncConflictScore(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_BRANCHDIR        dir,                /**< branching direction */
+   SCIP_Real             weight              /**< weight of this update in conflict score */
+   )
+{
+   assert(history != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+   assert((int)dir == 0 || (int)dir == 1);
+
+   history->conflictscore[dir] += weight;
+}
+
+/** scales the conflict score values with the given scalar */
+void SCIPhistoryScaleConflictScores(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_Real             scalar              /**< scalar to multiply the conflict scores with */
+   )
+{
+   assert(history != NULL);
+
+   history->conflictscore[0] *= scalar;
+   history->conflictscore[1] *= scalar;
+}
+
+/** gets the conflict score of the history entry */
+SCIP_Real SCIPhistoryGetConflictScore(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_BRANCHDIR        dir                 /**< branching direction */
+   )
+{
+   assert(history != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+   assert((int)dir == 0 || (int)dir == 1);
+
+   return history->conflictscore[dir];
 }
 
 /** increases the number of branchings counter */

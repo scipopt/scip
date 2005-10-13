@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.h,v 1.22 2005/08/28 12:29:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.h,v 1.23 2005/10/13 21:10:05 bzfpfend Exp $"
 
 /**@file   history.h
  * @brief  internal methods for branching and inference history
@@ -115,6 +115,28 @@ SCIP_Bool SCIPhistoryIsPseudocostEmpty(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
+/** increases the conflict score of the history entry by the given weight */
+extern
+void SCIPhistoryIncConflictScore(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_BRANCHDIR        dir,                /**< branching direction */
+   SCIP_Real             weight              /**< weight of this update in conflict score */
+   );
+
+/** scales the conflict score values with the given scalar */
+extern
+void SCIPhistoryScaleConflictScores(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_Real             scalar              /**< scalar to multiply the conflict scores with */
+   );
+
+/** gets the conflict score of the history entry */
+extern
+SCIP_Real SCIPhistoryGetConflictScore(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_BRANCHDIR        dir                 /**< branching direction */
+   );
+
 /** increases the number of branchings counter */
 extern
 void SCIPhistoryIncNBranchings(
@@ -195,10 +217,14 @@ SCIP_Real SCIPhistoryGetAvgBranchdepth(
          ? (history)->pscostsum[0] / (history)->pscostcount[0] : 1.0) )
 #define SCIPhistoryGetPseudocostCount(history,dir) ((history)->pscostcount[dir])
 #define SCIPhistoryIsPseudocostEmpty(history,dir)  ((history)->pscostcount[dir] == 0.0)
+#define SCIPhistoryIncConflictScore(history,dir,weight) (history)->conflictscore[dir] += (weight)
+#define SCIPhistoryScaleConflictScores(history,scalar) { (history)->conflictscore[0] *= (scalar); \
+      (history)->conflictscore[1] *= (scalar); }
+#define SCIPhistoryGetConflictScore(history,dir)   ((history)->conflictscore[dir])
 #define SCIPhistoryIncNBranchings(history,depth,dir) { (history)->nbranchings[dir]++; \
       (history)->branchdepthsum[dir] += depth; }
-#define SCIPhistoryIncNInferences(history,dir)     (history)->ninferences[dir]++;
-#define SCIPhistoryIncNCutoffs(history,dir)        (history)->ncutoffs[dir]++;
+#define SCIPhistoryIncNInferences(history,dir)     (history)->ninferences[dir]++
+#define SCIPhistoryIncNCutoffs(history,dir)        (history)->ncutoffs[dir]++
 #define SCIPhistoryGetNBranchings(history,dir)     ((history)->nbranchings[dir])
 #define SCIPhistoryGetNInferences(history,dir)     ((history)->ninferences[dir])
 #define SCIPhistoryGetAvgInferences(history,dir)   ((history)->nbranchings[dir] > 0 \

@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.135 2005/10/12 12:09:14 bzfpfend Exp $
+# $Id: Makefile,v 1.136 2005/10/13 21:10:04 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -596,3 +596,4 @@ endif
 
 
 # --- EOF ---------------------------------------------------------------------
+# DO NOT DELETE

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.158 2005/09/08 19:46:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.159 2005/10/13 21:10:07 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -3445,8 +3445,8 @@ SCIP_RETCODE SCIPtreeBranchVar(
          if( SCIPtreeHasFocusNodeLP(tree) )
             downprio = SCIPvarGetRootSol(var) - solval;
          else
-            downprio = (SCIP_Real)SCIPvarGetNInferences(var, SCIP_BRANCHDIR_UPWARDS)
-            - (SCIP_Real)SCIPvarGetNInferences(var, SCIP_BRANCHDIR_DOWNWARDS);
+            downprio = (SCIP_Real)SCIPvarGetAvgInferences(var, stat, SCIP_BRANCHDIR_DOWNWARDS)
+               - (SCIP_Real)SCIPvarGetAvgInferences(var, stat, SCIP_BRANCHDIR_UPWARDS);
          break;
       default:
          SCIPerrorMessage("invalid preferred automatic branching direction <%d> specified\n", SCIPvarGetBranchDirection(var));

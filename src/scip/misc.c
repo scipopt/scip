@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.50 2005/09/08 20:53:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.51 2005/10/13 21:10:05 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -3656,7 +3656,7 @@ void SCIPsplitFilename(
    if( compression != NULL )
       *compression = NULL;
 
-   lastslash = strrchr(filename, '/');
+   lastslash = strrchr(filename, SCIP_FILESLASH);
    lastdot = strrchr(filename, '.');
    if( lastslash != NULL && lastdot != NULL && lastdot < lastslash ) /* is the last dot belonging to the path? */
       lastdot = NULL;

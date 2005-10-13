@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_history.h,v 1.13 2005/08/24 17:27:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_history.h,v 1.14 2005/10/13 21:10:07 bzfpfend Exp $"
 
 /**@file   struct_history.h
  * @brief  datastructures for branching and inference history
@@ -36,6 +36,7 @@ struct SCIP_History
 {
    SCIP_Real             pscostcount[2];     /**< nr of (partial) summands in down/upwards pseudo costs (may be fractional) */
    SCIP_Real             pscostsum[2];       /**< sum of (partial) pseudo cost values for down/upwards branching */
+   SCIP_Real             conflictscore[2];   /**< degree of how often the variable was reason for a conflict */
    SCIP_Longint          nbranchings[2];     /**< nr of times, the variable changed its bounds due to branching */
    SCIP_Longint          ninferences[2];     /**< nr of times, branching on the variable lead to inference of another bound */
    SCIP_Longint          ncutoffs[2];        /**< nr of times, branching on the variable lead to an infeasible sub problem */

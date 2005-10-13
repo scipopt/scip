@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.6 2005/10/10 09:53:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.7 2005/10/13 21:10:06 bzfpfend Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -431,7 +431,10 @@ SCIP_Bool isNewSection(
 
    if( strcasecmp(lpinput->token, "GENERAL") == 0
       || strcasecmp(lpinput->token, "GENERALS") == 0
-      || strcasecmp(lpinput->token, "GEN") == 0 )
+      || strcasecmp(lpinput->token, "GEN") == 0
+      || strcasecmp(lpinput->token, "INTEGER") == 0
+      || strcasecmp(lpinput->token, "INTEGERS") == 0
+      || strcasecmp(lpinput->token, "INT") == 0 )
    {
       SCIPdebugMessage("(line %d) new section: GENERALS\n", lpinput->linenumber);
       lpinput->section = LP_GENERALS;

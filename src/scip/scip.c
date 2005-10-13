@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.324 2005/10/11 14:45:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.325 2005/10/13 21:10:06 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3839,8 +3839,8 @@ SCIP_Bool isPresolveFinished(
          || (scip->stat->npresolfixedvars - lastnfixedvars
             + scip->stat->npresolaggrvars - lastnaggrvars
             + scip->stat->npresolchgvartypes - lastnchgvartypes
-            + scip->stat->npresolchgbds - lastnchgbds
-            + scip->stat->npresoladdholes - lastnaddholes <= abortfac * scip->transprob->nvars));
+            + (scip->stat->npresolchgbds - lastnchgbds)/10
+            + (scip->stat->npresoladdholes - lastnaddholes)/10 <= abortfac * scip->transprob->nvars));
 
    /* don't abort, if enough changes were applied to the constraints */
    finished = finished
@@ -3856,10 +3856,12 @@ SCIP_Bool isPresolveFinished(
          || (scip->stat->npresolchgcoefs - lastnchgcoefs
             <= abortfac * 0.2 * scip->transprob->nvars * scip->transprob->nconss));
 
+#if 0
    /* don't abort, if enough new implications or cliques were found (assume 100 implications per variable) */
    finished = finished
       && (scip->stat->nimplications - lastnimplications <= abortfac * 100 * scip->transprob->nbinvars)
       && (SCIPcliquetableGetNCliques(scip->cliquetable) - lastncliques <= abortfac * scip->transprob->nbinvars);
+#endif
 
    /* abort if problem is infeasible or unbounded */
    finished = finished || unbounded || infeasible;
@@ -7294,6 +7296,40 @@ SCIP_Real SCIPgetVarPseudocostScoreCurrentRun(
    return SCIPbranchGetScore(scip->set, var, pscostdown, pscostup);
 }
 
+/** returns the variable's average inference score value */
+SCIP_Real SCIPgetVarConflictScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_Real downscore;
+   SCIP_Real upscore;
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarConflictScore", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   downscore = SCIPvarGetConflictScore(var, SCIP_BRANCHDIR_DOWNWARDS);
+   upscore = SCIPvarGetConflictScore(var, SCIP_BRANCHDIR_UPWARDS);
+
+   return SCIPbranchGetScore(scip->set, var, downscore, upscore);
+}
+
+/** returns the variable's average inference score value only using inferences of the current run */
+SCIP_Real SCIPgetVarConflictScoreCurrentRun(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_Real downscore;
+   SCIP_Real upscore;
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarConflictScoreCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   downscore = SCIPvarGetConflictScoreCurrentRun(var, SCIP_BRANCHDIR_DOWNWARDS);
+   upscore = SCIPvarGetConflictScoreCurrentRun(var, SCIP_BRANCHDIR_UPWARDS);
+
+   return SCIPbranchGetScore(scip->set, var, downscore, upscore);
+}
+
 /** returns the average number of inferences found after branching on the variable in given direction;
  *  if branching on the variable in the given direction was yet evaluated, the average number of inferences
  *  over all variables for branching in the given direction is returned
@@ -7547,7 +7583,7 @@ SCIP_RETCODE SCIPaddConflictLb(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddConflictLb", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->set, var, SCIP_BOUNDTYPE_LOWER, bdchgidx) );
+   SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->set, scip->stat, var, SCIP_BOUNDTYPE_LOWER, bdchgidx) );
 
    return SCIP_OKAY;
 }
@@ -7568,7 +7604,7 @@ SCIP_RETCODE SCIPaddConflictUb(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddConflictUb", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->set, var, SCIP_BOUNDTYPE_UPPER, bdchgidx) );
+   SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->set, scip->stat, var, SCIP_BOUNDTYPE_UPPER, bdchgidx) );
 
    return SCIP_OKAY;
 }
@@ -7590,7 +7626,7 @@ SCIP_RETCODE SCIPaddConflictBd(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddConflictBd", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->set, var, boundtype, bdchgidx) );
+   SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->set, scip->stat, var, boundtype, bdchgidx) );
 
    return SCIP_OKAY;
 }
@@ -7612,11 +7648,11 @@ SCIP_RETCODE SCIPaddConflictBinvar(
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
    if( SCIPvarGetLbLocal(var) > 0.5 )
    {
-      SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->set, var, SCIP_BOUNDTYPE_LOWER, NULL) );
+      SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->set, scip->stat, var, SCIP_BOUNDTYPE_LOWER, NULL) );
    }
    else if( SCIPvarGetUbLocal(var) < 0.5 )
    {
-      SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->set, var, SCIP_BOUNDTYPE_UPPER, NULL) );
+      SCIP_CALL( SCIPconflictAddBound(scip->conflict, scip->set, scip->stat, var, SCIP_BOUNDTYPE_UPPER, NULL) );
    }
 
    return SCIP_OKAY;
@@ -12330,10 +12366,11 @@ void printConflictStatistics(
    FILE*                 file                /**< output file */
    )
 {
-   SCIPmessageFPrintInfo(file, "Conflict Analysis  :       Time      Calls  Conflicts   Literals    Reconvs ReconvLits   LP Iters\n");
-   SCIPmessageFPrintInfo(file, "  propagation      : %10.2f %10lld %10lld %10.1f %10lld %10.1f          -\n",
+   SCIPmessageFPrintInfo(file, "Conflict Analysis  :       Time      Calls    Success  Conflicts   Literals    Reconvs ReconvLits   LP Iters\n");
+   SCIPmessageFPrintInfo(file, "  propagation      : %10.2f %10lld %10lld %10lld %10.1f %10lld %10.1f          -\n",
       SCIPconflictGetPropTime(scip->conflict),
       SCIPconflictGetNPropCalls(scip->conflict),
+      SCIPconflictGetNPropSuccess(scip->conflict),
       SCIPconflictGetNPropConflictClauses(scip->conflict),
       SCIPconflictGetNPropConflictClauses(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNPropConflictLiterals(scip->conflict)
@@ -12342,9 +12379,10 @@ void printConflictStatistics(
       SCIPconflictGetNPropReconvergenceClauses(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNPropReconvergenceLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNPropReconvergenceClauses(scip->conflict) : 0);
-   SCIPmessageFPrintInfo(file, "  infeasible LP    : %10.2f %10lld %10lld %10.1f %10lld %10.1f %10lld\n",
+   SCIPmessageFPrintInfo(file, "  infeasible LP    : %10.2f %10lld %10lld %10lld %10.1f %10lld %10.1f %10lld\n",
       SCIPconflictGetLPTime(scip->conflict),
       SCIPconflictGetNLPCalls(scip->conflict),
+      SCIPconflictGetNLPSuccess(scip->conflict),
       SCIPconflictGetNLPConflictClauses(scip->conflict),
       SCIPconflictGetNLPConflictClauses(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNLPConflictLiterals(scip->conflict)
@@ -12354,9 +12392,10 @@ void printConflictStatistics(
       ? (SCIP_Real)SCIPconflictGetNLPReconvergenceLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNLPReconvergenceClauses(scip->conflict) : 0,
       SCIPconflictGetNLPIterations(scip->conflict));
-   SCIPmessageFPrintInfo(file, "  strong branching : %10.2f %10lld %10lld %10.1f %10lld %10.1f %10lld\n",
+   SCIPmessageFPrintInfo(file, "  strong branching : %10.2f %10lld %10lld %10lld %10.1f %10lld %10.1f %10lld\n",
       SCIPconflictGetStrongbranchTime(scip->conflict),
       SCIPconflictGetNStrongbranchCalls(scip->conflict),
+      SCIPconflictGetNStrongbranchSuccess(scip->conflict),
       SCIPconflictGetNStrongbranchConflictClauses(scip->conflict),
       SCIPconflictGetNStrongbranchConflictClauses(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNStrongbranchConflictLiterals(scip->conflict)
@@ -12366,9 +12405,10 @@ void printConflictStatistics(
       ? (SCIP_Real)SCIPconflictGetNStrongbranchReconvergenceLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNStrongbranchReconvergenceClauses(scip->conflict) : 0,
       SCIPconflictGetNStrongbranchIterations(scip->conflict));
-   SCIPmessageFPrintInfo(file, "  pseudo solution  : %10.2f %10lld %10lld %10.1f %10lld %10.1f          -\n",
+   SCIPmessageFPrintInfo(file, "  pseudo solution  : %10.2f %10lld %10lld %10lld %10.1f %10lld %10.1f          -\n",
       SCIPconflictGetPseudoTime(scip->conflict),
       SCIPconflictGetNPseudoCalls(scip->conflict),
+      SCIPconflictGetNPseudoSuccess(scip->conflict),
       SCIPconflictGetNPseudoConflictClauses(scip->conflict),
       SCIPconflictGetNPseudoConflictClauses(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNPseudoConflictLiterals(scip->conflict)
@@ -12377,12 +12417,12 @@ void printConflictStatistics(
       SCIPconflictGetNPseudoReconvergenceClauses(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNPseudoReconvergenceLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNPseudoReconvergenceClauses(scip->conflict) : 0);
-   SCIPmessageFPrintInfo(file, "  applied globally :          -          - %10lld %10.1f          -          -          -\n",
+   SCIPmessageFPrintInfo(file, "  applied globally :          -          -          - %10lld %10.1f          -          -          -\n",
       SCIPconflictGetNAppliedGlobalClauses(scip->conflict),
       SCIPconflictGetNAppliedGlobalClauses(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNAppliedGlobalLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNAppliedGlobalClauses(scip->conflict) : 0);
-   SCIPmessageFPrintInfo(file, "  applied locally  :          -          - %10lld %10.1f          -          -          -\n",
+   SCIPmessageFPrintInfo(file, "  applied locally  :          -          -          - %10lld %10.1f          -          -          -\n",
       SCIPconflictGetNAppliedLocalClauses(scip->conflict),
       SCIPconflictGetNAppliedLocalClauses(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNAppliedLocalLiterals(scip->conflict)

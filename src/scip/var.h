@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.103 2005/08/28 12:29:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.104 2005/10/13 21:10:08 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -885,6 +885,21 @@ extern
 SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/** increases the conflict score of the variable by the given weight */
+extern
+SCIP_RETCODE SCIPvarIncConflictScore(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir,                /**< branching direction */
+   SCIP_Real             weight              /**< weight of this update in conflict score */
+   );
+
+/** increases the conflict score of the variable by the given weight */
+extern
+SCIP_RETCODE SCIPvarScaleConflictScores(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             scalar              /**< scalar to multiply the conflict scores with */
    );
 
 /** increases the number of branchings counter of the variable */

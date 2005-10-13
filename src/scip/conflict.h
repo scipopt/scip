@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.34 2005/08/28 12:23:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.35 2005/10/13 21:10:05 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -150,6 +150,7 @@ extern
 SCIP_RETCODE SCIPconflictAddBound(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound that was changed: lower or upper bound */
    SCIP_BDCHGIDX*        bdchgidx            /**< bound change index (time stamp of bound change), or NULL for current time */
@@ -239,6 +240,12 @@ SCIP_Longint SCIPconflictGetNPropCalls(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+/** gets number of calls to propagation conflict analysis that yield at least one conflict clause */
+extern
+SCIP_Longint SCIPconflictGetNPropSuccess(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
 /** gets number of conflict clauses detected in propagation conflict analysis */
 extern
 SCIP_Longint SCIPconflictGetNPropConflictClauses(
@@ -297,6 +304,12 @@ SCIP_Real SCIPconflictGetLPTime(
 /** gets number of calls to infeasible LP conflict analysis */
 extern
 SCIP_Longint SCIPconflictGetNLPCalls(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of calls to infeasible LP conflict analysis that yield at least one conflict clause */
+extern
+SCIP_Longint SCIPconflictGetNLPSuccess(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
@@ -366,6 +379,12 @@ SCIP_Longint SCIPconflictGetNStrongbranchCalls(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+/** gets number of calls to infeasible strong branching conflict analysis that yield at least one conflict clause */
+extern
+SCIP_Longint SCIPconflictGetNStrongbranchSuccess(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
 /** gets number of conflict clauses detected in infeasible strong branching conflict analysis */
 extern
 SCIP_Longint SCIPconflictGetNStrongbranchConflictClauses(
@@ -430,6 +449,12 @@ SCIP_Real SCIPconflictGetPseudoTime(
 /** gets number of calls to pseudo solution conflict analysis */
 extern
 SCIP_Longint SCIPconflictGetNPseudoCalls(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of calls to pseudo solution conflict analysis that yield at least one conflict clause */
+extern
+SCIP_Longint SCIPconflictGetNPseudoSuccess(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.161 2005/09/27 13:55:33 bzfpfets Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.162 2005/10/13 21:10:06 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -87,6 +87,7 @@
                                                  *   decisions by deductions */
 #define SCIP_DEFAULT_CONF_DYNAMIC          TRUE /**< should the conflict constraints be subject to aging? */
 #define SCIP_DEFAULT_CONF_REMOVEABLE       TRUE /**< should the conflict's relaxations be subject to LP aging and cleanup? */
+#define SCIP_DEFAULT_CONF_SCOREFAC         0.98 /**< factor to decrease importance of variables' earlier conflict scores */
 
 
 /* Constraints */
@@ -474,6 +475,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/removeable",
          "should the conflict's relaxations be subject to LP aging and cleanup?",
          &(*set)->conf_removeable, SCIP_DEFAULT_CONF_REMOVEABLE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
+         "conflict/scorefac",
+         "factor to decrease importance of variables' earlier conflict scores",
+         &(*set)->conf_scorefac, SCIP_DEFAULT_CONF_SCOREFAC, 1e-6, 1.0,
          NULL, NULL) );
 
    /* constraint parameters */

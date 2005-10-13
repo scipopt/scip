@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_implics.c,v 1.1 2005/10/12 12:07:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_implics.c,v 1.2 2005/10/13 21:10:05 bzfpfend Exp $"
 
 /**@file   presol_implics.c
  * @brief  implics presolver
@@ -30,7 +30,7 @@
 
 #define PRESOL_NAME            "implics"
 #define PRESOL_DESC            "implication graph aggregator"
-#define PRESOL_PRIORITY         -100000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+#define PRESOL_PRIORITY          -10000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
 

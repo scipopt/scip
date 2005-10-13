@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.25 2005/09/01 18:19:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.26 2005/10/13 21:10:05 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -49,8 +49,8 @@
                                          *   (0: don't interrupt) */
 #define DEFAULT_MAXUSELESS        2000  /**< maximal number of successive probings without fixings,
                                          *   until probing is aborted (0: don't abort) */
-#define DEFAULT_MAXTOTALUSELESS    100  /**< maximal number of successive probings without fixings and implications,
-                                         *   until probing is aborted (0: don't abort) */
+#define DEFAULT_MAXTOTALUSELESS    100  /**< maximal number of successive probings without fixings, bound changes,
+                                         *   and implications, until probing is aborted (0: don't abort) */
 
 
 
@@ -71,9 +71,10 @@ struct SCIP_PresolData
                                               *   (0: don't interrupt) */
    int                   maxuseless;         /**< maximal number of successive probings without fixings,
                                               *   until probing is aborted (0: don't abort) */
-   int                   maxtotaluseless;    /**< maximal number of successive probings without fixings and implications,
-                                              *   until probing is aborted (0: don't abort) */
+   int                   maxtotaluseless;    /**< maximal number of successive probings without fixings, bound changes,
+                                              *   and implications, until probing is aborted (0: don't abort) */
    int                   startidx;           /**< starting variable index of next call */
+   int                   lastsortstartidx;   /**< last starting variable index where the variables have been sorted */
    int                   nfixings;           /**< total number of fixings found in probing */
    int                   naggregations;      /**< total number of aggregations found in probing */
    int                   nimplications;      /**< total number of implications found in probing */
@@ -116,6 +117,58 @@ SCIP_RETCODE freeSortedvars(
    return SCIP_OKAY;
 }
 
+/** sorts the binary variables starting with the given index by rounding locks and implications */
+static
+SCIP_RETCODE sortVariables(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
+   int                   firstidx            /**< first index that should be subject to sorting */
+   )
+{
+   SCIP_VAR** vars;
+   int* varsscores;
+   int nvars;
+   int i;
+
+   assert(presoldata != NULL);
+   assert(presoldata->sortedvars != NULL);
+
+   vars = &presoldata->sortedvars[firstidx];
+   nvars = presoldata->nsortedbinvars - firstidx;
+   if( nvars <= 0 )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("resorting probing variables %d to %d\n", firstidx, presoldata->nsortedbinvars-1);
+
+   /* sort the variables by number of rounding locks and implications */
+   SCIP_CALL( SCIPallocBufferArray(scip, &varsscores, nvars) );
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIP_VAR* var;
+      int j;
+      int scores;
+
+      var = vars[i];
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+      if( SCIPvarIsActive(var) )
+         scores = SCIPvarGetNLocksDown(var) + SCIPvarGetNLocksUp(var)
+            + SCIPvarGetNImpls(var, FALSE) + SCIPvarGetNImpls(var, TRUE)
+            + 5*(SCIPvarGetNCliques(var, FALSE) + SCIPvarGetNCliques(var, TRUE));
+      else
+         scores = -1;
+      for( j = i; j > 0 && scores > varsscores[j-1]; --j )
+      {
+         vars[j] = vars[j-1];
+         varsscores[j] = varsscores[j-1];
+      }
+      vars[j] = var;
+      varsscores[j] = scores;
+   }
+   SCIPfreeBufferArray(scip, &varsscores);
+
+   return SCIP_OKAY;
+}
+
 /** applies and evaluates probing of a single variable in the given direction */
 static
 SCIP_RETCODE applyProbing(
@@ -143,7 +196,11 @@ SCIP_RETCODE applyProbing(
    assert(SCIPvarGetLbLocal(vars[probingpos]) < 0.5);
    assert(SCIPvarGetUbLocal(vars[probingpos]) > 0.5);
 
-   SCIPdebugMessage("applying probing on variable <%s> == %d\n", SCIPvarGetName(vars[probingpos]), probingdir);
+   SCIPdebugMessage("applying probing on variable <%s> == %d (nlocks=%d/%d, impls=%d/%d, clqs=%d/%d)\n",
+      SCIPvarGetName(vars[probingpos]), probingdir,
+      SCIPvarGetNLocksDown(vars[probingpos]), SCIPvarGetNLocksUp(vars[probingpos]),
+      SCIPvarGetNImpls(vars[probingpos], FALSE), SCIPvarGetNImpls(vars[probingpos], TRUE),
+      SCIPvarGetNCliques(vars[probingpos], FALSE), SCIPvarGetNCliques(vars[probingpos], TRUE));
 
    /* start probing mode */
    SCIP_CALL( SCIPstartProbing(scip) );
@@ -249,6 +306,7 @@ SCIP_DECL_PRESOLINIT(presolInitProbing)
    presoldata->nsortedvars = 0;
    presoldata->nsortedbinvars = 0;
    presoldata->startidx = 0;
+   presoldata->lastsortstartidx = -1;
    presoldata->nfixings = 0;
    presoldata->naggregations = 0;
    presoldata->nimplications = 0;
@@ -339,6 +397,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
    int oldnchgbds;
    int oldnimplications;
    int i;
+   SCIP_Bool delay;
    SCIP_Bool cutoff;
 
    assert(result != NULL);
@@ -357,6 +416,11 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
    if( presoldata->called && nnewfixedvars == 0 && nnewaggrvars == 0 && nnewchgbds == 0 && nnewholes == 0 )
       return SCIP_OKAY;
 
+   SCIPdebugMessage("executing probing (used %.1f sec)\n", SCIPpresolGetTime(presol));
+
+   *result = SCIP_DIDNOTFIND;
+   presoldata->called = TRUE;
+
    /* allow some additional probings */
    presoldata->nuseless /= 2;
    presoldata->ntotaluseless /= 2;
@@ -365,54 +429,36 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
    if( presoldata->sortedvars == NULL )
    {
       SCIP_VAR** probvars;
-      int* varsnlocks;
+
+      assert(presoldata->startidx == 0);
 
       SCIP_CALL( SCIPgetVarsData(scip, &probvars, &nvars, &nbinvars, NULL, NULL, NULL) );
       if( nbinvars == 0 )
          return SCIP_OKAY;
 
-      SCIP_CALL( SCIPallocMemoryArray(scip, &presoldata->sortedvars, nvars) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &presoldata->sortedvars, probvars, nvars) );
       presoldata->nsortedvars = nvars;
       presoldata->nsortedbinvars = nbinvars;
-      vars = presoldata->sortedvars;
-
-      /* sort the variables by number of rounding locks */
-      SCIP_CALL( SCIPallocBufferArray(scip, &varsnlocks, nbinvars) );
-      for( i = 0; i < nbinvars; ++i )
-      {
-         int j;
-         int nlocks;
-         
-         nlocks = SCIPvarGetNLocksDown(probvars[i]) + SCIPvarGetNLocksUp(probvars[i]);
-         for( j = i; j > 0 && nlocks > varsnlocks[j-1]; --j )
-         {
-            vars[j] = vars[j-1];
-            varsnlocks[j] = varsnlocks[j-1];
-         }
-         vars[j] = probvars[i];
-         varsnlocks[j] = nlocks;
-      }
-      for( i = nbinvars; i < nvars; ++i )
-         vars[i] = probvars[i];
-      SCIPfreeBufferArray(scip, &varsnlocks);
 
       /* capture variables to make sure, the variables are not deleted */
-      for( i = 0; i < nvars; ++i )
+      for( i = 0; i < presoldata->nsortedvars; ++i )
       {
-         SCIP_CALL( SCIPcaptureVar(scip, vars[i]) );
+         SCIP_CALL( SCIPcaptureVar(scip, presoldata->sortedvars[i]) );
       }
    }
-   else
+
+   /* sort the binary variables by number of rounding locks, if the at least 100 variables were probed since last sort */
+   if( presoldata->lastsortstartidx < 0 || presoldata->startidx - presoldata->lastsortstartidx >= 100 )
    {
-      vars = presoldata->sortedvars;
-      nvars = presoldata->nsortedvars;
-      nbinvars = presoldata->nsortedbinvars;
+      SCIP_CALL( sortVariables(scip, presoldata, presoldata->startidx) );
+      presoldata->lastsortstartidx = presoldata->startidx;
    }
+
+   vars = presoldata->sortedvars;
+   nvars = presoldata->nsortedvars;
+   nbinvars = presoldata->nsortedbinvars;
    assert(vars != NULL);
    assert(nbinvars > 0);
-
-   *result = SCIP_DIDNOTFIND;
-   presoldata->called = TRUE;
 
    maxfixings = (presoldata->maxfixings > 0 ? presoldata->maxfixings : INT_MAX);
    maxuseless = (presoldata->maxuseless > 0 ? presoldata->maxuseless : INT_MAX);
@@ -433,13 +479,20 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
    SCIP_CALL( SCIPallocBufferArray(scip, &onepropubs, nvars) );
 
    /* for each binary variable, probe fixing the variable to zero and one */
+   delay = FALSE;
    cutoff = FALSE;
    for( i = presoldata->startidx; i < nbinvars && !cutoff && !SCIPpressedCtrlC(scip)
-           && *nfixedvars - oldnfixedvars + *naggrvars - oldnaggrvars < maxfixings
            && presoldata->nuseless < maxuseless && presoldata->ntotaluseless < maxtotaluseless; ++i )
    {
       SCIP_Bool localcutoff;
       int j;
+
+      /* check if we already fixed enough variables for this round */
+      if( *nfixedvars - oldnfixedvars + *naggrvars - oldnaggrvars >= maxfixings )
+      {
+         delay = TRUE;
+         break;
+      }
 
       /* display probing status */
       if( (i+1) % 100 == 0 )
@@ -580,8 +633,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
             else if( zeropropubs[j] < 0.5 && zeroimplubs[j] > 0.5 ) /* ignore already existing implications */
             {
                /* insert implication: x_i == 0  =>  x_j == 0 */
-               SCIPdebugMessage("found implication <%s> == 0  =>  <%s> == 0\n", 
-                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));
+               /*SCIPdebugMessage("found implication <%s> == 0  =>  <%s> == 0\n", 
+                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));*/
                SCIP_CALL( SCIPaddVarImplication(scip, vars[i], FALSE, vars[j], SCIP_BOUNDTYPE_UPPER, 0.0,
                      &cutoff, &nboundchanges) );
                presoldata->nimplications++;
@@ -592,8 +645,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
             else if( zeroproplbs[j] > 0.5 && zeroimpllbs[j] < 0.5 ) /* ignore already existing implications */
             {
                /* insert implication: x_i == 0  =>  x_j == 1 */
-               SCIPdebugMessage("found implication <%s> == 0  =>  <%s> == 1\n", 
-                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));
+               /*SCIPdebugMessage("found implication <%s> == 0  =>  <%s> == 1\n", 
+                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));*/
                SCIP_CALL( SCIPaddVarImplication(scip, vars[i], FALSE, vars[j], SCIP_BOUNDTYPE_LOWER, 1.0,
                      &cutoff, &nboundchanges) );
                presoldata->nimplications++;
@@ -604,8 +657,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
             else if( onepropubs[j] < 0.5 && oneimplubs[j] > 0.5 ) /* ignore already existing implications */
             {
                /* insert implication: x_i == 1  =>  x_j == 0 */
-               SCIPdebugMessage("found implication <%s> == 1  =>  <%s> == 0\n", 
-                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));
+               /*SCIPdebugMessage("found implication <%s> == 1  =>  <%s> == 0\n", 
+                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));*/
                SCIP_CALL( SCIPaddVarImplication(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_UPPER, 0.0,
                      &cutoff, &nboundchanges) );
                presoldata->nimplications++;
@@ -616,8 +669,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
             else if( oneproplbs[j] > 0.5 && oneimpllbs[j] < 0.5 ) /* ignore already existing implications */
             {
                /* insert implication: x_i == 1  =>  x_j == 1 */
-               SCIPdebugMessage("found implication <%s> == 1  =>  <%s> == 1\n", 
-                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));
+               /*SCIPdebugMessage("found implication <%s> == 1  =>  <%s> == 1\n", 
+                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]));*/
                SCIP_CALL( SCIPaddVarImplication(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_LOWER, 1.0, 
                      &cutoff, &nboundchanges) );
                presoldata->nimplications++;
@@ -649,7 +702,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
                      SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
                   (*nchgbds)++;
                   presoldata->nbdchgs++;
-                  presoldata->nuseless = 0;
+                  /*presoldata->nuseless = 0;*/
                   presoldata->ntotaluseless = 0;
                }
             }
@@ -664,7 +717,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
                      SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
                   (*nchgbds)++;
                   presoldata->nbdchgs++;
-                  presoldata->nuseless = 0;
+                  /*presoldata->nuseless = 0;*/
                   presoldata->ntotaluseless = 0;
                }
             }
@@ -673,8 +726,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
             if( zeropropubs[j] < newub - 0.5 && zeropropubs[j] < zeroimplubs[j] && !cutoff )
             {
                /* insert implication: x_i == 0  =>  x_j <= zeropropubs[j] */
-               SCIPdebugMessage("found implication <%s> == 0  =>  <%s>[%g,%g] <= %g\n", 
-                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, zeropropubs[j]);
+               /*SCIPdebugMessage("found implication <%s> == 0  =>  <%s>[%g,%g] <= %g\n", 
+                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, zeropropubs[j]);*/
                SCIP_CALL( SCIPaddVarImplication(scip, vars[i], FALSE, vars[j], SCIP_BOUNDTYPE_UPPER, zeropropubs[j],
                      &cutoff, &nboundchanges) );
                presoldata->nimplications++;
@@ -685,8 +738,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
             if( zeroproplbs[j] > newlb + 0.5 && zeroproplbs[j] > zeroimpllbs[j] && !cutoff )
             {
                /* insert implication: x_i == 0  =>  x_j >= zeroproplbs[j] */
-               SCIPdebugMessage("found implication <%s> == 0  =>  <%s>[%g,%g] >= %g\n", 
-                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, zeroproplbs[j]);
+               /*SCIPdebugMessage("found implication <%s> == 0  =>  <%s>[%g,%g] >= %g\n", 
+                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, zeroproplbs[j]);*/
                SCIP_CALL( SCIPaddVarImplication(scip, vars[i], FALSE, vars[j], SCIP_BOUNDTYPE_LOWER, zeroproplbs[j],
                      &cutoff, &nboundchanges) );
                presoldata->nimplications++;
@@ -697,8 +750,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
             if( onepropubs[j] < newub - 0.5 && onepropubs[j] < oneimplubs[j] && !cutoff )
             {
                /* insert implication: x_i == 1  =>  x_j <= onepropubs[j] */
-               SCIPdebugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] <= %g\n", 
-                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, onepropubs[j]);
+               /*SCIPdebugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] <= %g\n", 
+                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, onepropubs[j]);*/
                SCIP_CALL( SCIPaddVarImplication(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_UPPER, onepropubs[j],
                      &cutoff, &nboundchanges) );
                presoldata->nimplications++;
@@ -709,8 +762,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
             if( oneproplbs[j] > newlb + 0.5 && oneproplbs[j] > oneimpllbs[j] && !cutoff )
             {
                /* insert implication: x_i == 1  =>  x_j >= oneproplbs[j] */
-               SCIPdebugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] >= %g\n", 
-                  SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, oneproplbs[j]);
+               /*SCIPdebugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] >= %g\n", 
+                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, oneproplbs[j]);*/
                SCIP_CALL( SCIPaddVarImplication(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_LOWER, oneproplbs[j],
                      &cutoff, &nboundchanges) );
                presoldata->nimplications++;
@@ -736,6 +789,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
    /* adjust result code */
    if( cutoff )
       *result = SCIP_CUTOFF;
+   else if( delay )
+      *result = SCIP_DELAYED;
    else if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars || *nchgbds > oldnchgbds
       || presoldata->nimplications > oldnimplications )
       *result = SCIP_SUCCESS;
@@ -786,7 +841,7 @@ SCIP_RETCODE SCIPincludePresolProbing(
          &presoldata->maxuseless, DEFAULT_MAXUSELESS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/probing/maxtotaluseless",
-         "maximal number of successive probings without fixings and implications, until probing is aborted (0: don't abort)",
+         "maximal number of successive probings without fixings, bound changes, and implications, until probing is aborted (0: don't abort)",
          &presoldata->maxtotaluseless, DEFAULT_MAXTOTALUSELESS, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
