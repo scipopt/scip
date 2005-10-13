@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.196 2005/09/27 13:55:33 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.197 2005/10/13 14:59:29 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -749,11 +749,17 @@ void consdataPrint(
    /* print coefficients */
    if( consdata->nvars == 0 )
       SCIPinfoMessage(scip, file, "0 ");
+   SCIP_Real act = 0.0; /*????????????????*/
    for( v = 0; v < consdata->nvars; ++v )
    {
+      SCIP_Real solval = SCIPgetSolVal(scip, SCIPgetBestSol(scip), consdata->vars[v]); /*???????????????*/
       assert(consdata->vars[v] != NULL);
-      SCIPinfoMessage(scip, file, "%+g<%s> ", consdata->vals[v], SCIPvarGetName(consdata->vars[v]));
+      /*?????????????SCIPinfoMessage(scip, file, "%+g<%s> ", consdata->vals[v], SCIPvarGetName(consdata->vars[v]));*/
+      SCIPinfoMessage(scip, file, "%+g<%s>[%.9f] ", consdata->vals[v], SCIPvarGetName(consdata->vars[v]), solval); /*??????????*/
+      act += consdata->vals[v] * solval;
    }
+   SCIPinfoMessage(scip, file, "[act=%.9f] ", act); /*??????????????????????*/
+   SCIPinfoMessage(scip, file, "[slack=%.9f] ", consdata->lhs - act); /*??????????????????????*/
 
    /* print right hand side */
    if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
@@ -761,7 +767,7 @@ void consdataPrint(
    else if( !SCIPisInfinity(scip, consdata->rhs) )
       SCIPinfoMessage(scip, file, "<= %g\n", consdata->rhs);
    else if( !SCIPisInfinity(scip, -consdata->lhs) )
-      SCIPinfoMessage(scip, file, ">= %g\n", consdata->lhs);
+      SCIPinfoMessage(scip, file, ">= %.9f\n", consdata->lhs); /*?????????????????*/
    else
       SCIPinfoMessage(scip, file, " [free]\n");
 }
@@ -3239,7 +3245,7 @@ SCIP_RETCODE checkCons(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Real feasibility;
+   SCIP_Real activity;
 
    assert(violated != NULL);
 
@@ -3256,19 +3262,19 @@ SCIP_RETCODE checkCons(
       if( !checklprows && SCIProwIsInLP(consdata->row) )
          return SCIP_OKAY;
       else if( sol == NULL && !SCIPhasCurrentNodeLP(scip) )
-         feasibility = consdataGetPseudoFeasibility(scip, consdata);
+         activity = consdataGetPseudoActivity(scip, consdata);
       else
-         feasibility = SCIPgetRowSolFeasibility(scip, consdata->row, sol);
+         activity = SCIPgetRowSolActivity(scip, consdata->row, sol);
    }
    else
-      feasibility = consdataGetFeasibility(scip, consdata, sol);
+      activity = consdataGetActivity(scip, consdata, sol);
 
-   SCIPdebugMessage("  consdata feasibility=%g (lhs=%g, rhs=%g, row=%p, checklprows=%d, rowinlp=%d, sol=%p, hascurrentnodelp=%d)\n",
-      feasibility, consdata->lhs, consdata->rhs, consdata->row, checklprows,
+   SCIPdebugMessage("  consdata activity=%g (lhs=%g, rhs=%g, row=%p, checklprows=%d, rowinlp=%d, sol=%p, hascurrentnodelp=%d)\n",
+      activity, consdata->lhs, consdata->rhs, consdata->row, checklprows,
       consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), sol,
       consdata->row == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
 
-   if( SCIPisFeasNegative(scip, feasibility) )
+   if( SCIPisFeasLT(scip, activity, consdata->lhs) || SCIPisFeasGT(scip, activity, consdata->rhs) )
    {
       *violated = TRUE;
       SCIP_CALL( SCIPresetConsAge(scip, cons) );

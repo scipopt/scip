@@ -33,6 +33,7 @@ fixed bugs:
 - also removed history_length, if NO_REMOVE_HISTORY is defined to support older versions of the readline library
 - removed bug in implication addition
 - fixed wrong assert with implications that imply a fixed variable
+- fixed numerics in check method of linear constraint handler
 
 known bugs:
 - if one uses column generation and restarts, a solution that contains variables that are only present in the transformed
