@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.197 2005/10/13 14:59:29 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.198 2005/10/13 15:01:17 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -1246,6 +1246,7 @@ SCIP_Real consdataGetPseudoActivity(
    return consdata->pseudoactivity;
 }
 
+#if 0
 /** calculates the feasibility of the linear constraint for given solution */
 static
 SCIP_Real consdataGetPseudoFeasibility(
@@ -1261,6 +1262,7 @@ SCIP_Real consdataGetPseudoFeasibility(
 
    return MIN(consdata->rhs - activity, activity - consdata->lhs);
 }
+#endif
 
 /** gets activity bounds for constraint */
 static
