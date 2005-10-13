@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.70 2005/08/24 17:26:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.71 2005/10/13 15:51:06 bzfberth Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -90,9 +90,6 @@ SCIP_RETCODE ensureExistingsolsSize(
 
    return SCIP_OKAY;
 }
-
-
-
 
 /** creates primal data */
 SCIP_RETCODE SCIPprimalCreate(
@@ -542,6 +539,54 @@ int primalSearchSolPos(
    return right;
 }
 
+/** returns whether the given primal solution is already existant in the solution storage */
+static
+SCIP_Bool primalExistsSol(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_SOL*             sol,                /**< primal solution to search position for */
+   int                   insertpos           /**< insertion position returned by primalSearchSolPos() */
+   )
+{
+   SCIP_Real obj;
+   int i;
+
+   assert(primal != NULL);
+   assert(0 <= insertpos && insertpos <= primal->nsols);
+
+   obj = SCIPsolGetObj(sol, set, prob);
+
+   /* search in the better solutions */
+   for( i = insertpos-1; i >= 0; --i )
+   {
+      SCIP_Real solobj;
+
+      solobj = SCIPsolGetObj(primal->sols[i], set, prob);
+      assert(solobj <= obj);
+      if( SCIPsetIsLT(set, solobj, obj) )
+         break;
+      if( SCIPsolsAreEqual(sol, primal->sols[i], set, stat, prob) )
+         return TRUE;
+   }
+
+   /* search in the worse solutions */
+   for( i = insertpos; i < primal->nsols; ++i )
+   {
+      SCIP_Real solobj;
+
+      solobj = SCIPsolGetObj(primal->sols[i], set, prob);
+      assert(solobj > obj);
+      if( SCIPsetIsGT(set, solobj, obj) )
+         break;
+      if( SCIPsolsAreEqual(sol, primal->sols[i], set, stat, prob) )
+         return TRUE;
+   }
+
+   return FALSE;
+}
+
 /** adds primal solution to solution storage by copying it */
 SCIP_RETCODE SCIPprimalAddSol(
    SCIP_PRIMAL*          primal,             /**< primal data */
@@ -565,7 +610,7 @@ SCIP_RETCODE SCIPprimalAddSol(
    /* search the position to insert solution in storage */
    insertpos = primalSearchSolPos(primal, set, prob, sol);
 
-   if( insertpos < set->limit_maxsol )
+   if( insertpos < set->limit_maxsol && !primalExistsSol(primal, set, stat, prob, sol, insertpos) )
    {
       SCIP_SOL* solcopy;
 
@@ -607,7 +652,7 @@ SCIP_RETCODE SCIPprimalAddSolFree(
    /* search the position to insert solution in storage */
    insertpos = primalSearchSolPos(primal, set, prob, *sol);
 
-   if( insertpos < set->limit_maxsol )
+   if( insertpos < set->limit_maxsol && !primalExistsSol(primal, set, stat, prob, *sol, insertpos) )
    {
       /* insert solution into solution storage */
       SCIP_CALL( primalAddSol(primal, blkmem, set, stat, prob, tree, lp, eventfilter, *sol, insertpos) );
@@ -713,7 +758,7 @@ SCIP_RETCODE SCIPprimalTrySol(
    /* search the position to insert solution in storage */
    insertpos = primalSearchSolPos(primal, set, prob, sol);
 
-   if( insertpos < set->limit_maxsol )
+   if( insertpos < set->limit_maxsol && !primalExistsSol(primal, set, stat, prob, sol, insertpos) )
    {
       /* check solution for feasibility */
       SCIP_CALL( SCIPsolCheck(sol, blkmem, set, stat, prob, checkbounds, checkintegrality, checklprows, &feasible) );
@@ -773,7 +818,7 @@ SCIP_RETCODE SCIPprimalTrySolFree(
    /* search the position to insert solution in storage */
    insertpos = primalSearchSolPos(primal, set, prob, *sol);
 
-   if( insertpos < set->limit_maxsol )
+   if( insertpos < set->limit_maxsol && !primalExistsSol(primal, set, stat, prob, *sol, insertpos) )
    {
       /* check solution for feasibility */
       SCIP_CALL( SCIPsolCheck(*sol, blkmem, set, stat, prob, checkbounds, checkintegrality, checklprows, &feasible) );

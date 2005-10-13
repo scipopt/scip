@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.67 2005/09/26 14:06:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.68 2005/10/13 15:51:06 bzfberth Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -1039,6 +1039,36 @@ SCIP_RETCODE SCIPsolRetransform(
    SCIPsetFreeBufferArray(set, &solvals);
 
    return SCIP_OKAY;
+}
+
+/** returns whether the given solutions are equal */
+SCIP_Bool SCIPsolsAreEqual(
+   SCIP_SOL*             sol1,               /**< first primal CIP solution */
+   SCIP_SOL*             sol2,               /**< second primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob                /**< transformed problem data */
+   )
+{
+   int v;
+
+   assert(prob != NULL);
+
+   if( !SCIPsetIsEQ(set, sol1->obj, sol2->obj) )
+      return FALSE;
+
+   for( v = 0; v < prob->nvars; ++v )
+   {
+      SCIP_Real val1;
+      SCIP_Real val2;
+
+      val1 = SCIPsolGetVal(sol1, set, stat, prob->vars[v]);
+      val2 = SCIPsolGetVal(sol2, set, stat, prob->vars[v]);
+      if( !SCIPsetIsEQ(set, val1, val2) )
+         return FALSE;
+   }
+
+   return TRUE;
 }
 
 /** outputs non-zero elements of solution to file stream */
