@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.46 2005/10/11 14:45:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.47 2005/10/14 14:40:40 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -47,6 +47,7 @@
 #include "scip/heur_fixandinfer.h"
 #include "scip/heur_fracdiving.h"
 #include "scip/heur_guideddiving.h"
+#include "scip/heur_intdiving.h"
 #include "scip/heur_linesearchdiving.h"
 #include "scip/heur_localbranching.h"
 #include "scip/heur_objpscostdiving.h"
@@ -130,6 +131,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurFixandinfer(scip) );
    SCIP_CALL( SCIPincludeHeurFracdiving(scip) );
    SCIP_CALL( SCIPincludeHeurGuideddiving(scip) );
+   SCIP_CALL( SCIPincludeHeurIntdiving(scip) );
    SCIP_CALL( SCIPincludeHeurLinesearchdiving(scip) );
    SCIP_CALL( SCIPincludeHeurLocalbranching(scip) );
    SCIP_CALL( SCIPincludeHeurObjpscostdiving(scip) );
