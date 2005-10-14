@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.117 2005/09/26 12:54:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.118 2005/10/14 12:57:28 bzfwolte Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -668,7 +668,7 @@ SCIP_RETCODE SCIPsolveKnapsack(
    return SCIP_OKAY;
 }
 
-/** gets a most violated minimal cover C = C2 & C1 for a given knapsack constraint, considering that a all variables 
+/** gets a most violated minimal cover C = C2 & C1 for a given knapsack constraint, considering that all variables 
  *  in a given set C2 of variables in knapsack constraint are fixed to one (variables for downlifting)
  */
 static
@@ -768,7 +768,7 @@ SCIP_RETCODE getCover(
       {
          /* sort items by non-decreasing relative slack value (1-x_i^*)/w_i */
          relslack = (1.0 - solvals[varscn2[i]])/weights[varscn2[i]];
-         for( j = nitems; j > 0 && relslack < (1.0 - solvals[varscn2[j-1]])/weights[varscn2[j-1]]; --j )
+         for( j = nitems; j > 0 && relslack < (1.0 - solvals[items[j-1]])/weights[items[j-1]]; --j )
             items[j] = items[j-1];
          items[j] = varscn2[i];
          nitems++;
@@ -990,7 +990,7 @@ void getPartition(
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    SCIP_Real*            solvals,            /**< solution values of all problem variables */
    int*                  varsc2,             /**< pointer to store variables of knapsack constraint in C2 */
-   int*                  varscn2,            /**< pointer to store variables of knapsack constraint not in C1 */
+   int*                  varscn2,            /**< pointer to store variables of knapsack constraint not in C2 */
    int*                  nvarsc2,            /**< pointer to store number of variables of knapsack constraint in C2 */
    int*                  nvarscn2,           /**< pointer to store number of variables of knapsack constraint not in C2 */
    SCIP_Longint*         varsc2weight        /**< pointer to store sum of weights of variables of knapsack constraint in C2 */
