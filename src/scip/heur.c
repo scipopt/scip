@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.51 2005/09/16 14:07:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.52 2005/10/17 18:00:54 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -344,7 +344,7 @@ SCIP_RETCODE SCIPheurExec(
    execute = execute && (heur->pseudonodes || currentnodehaslp);
 
    /* execute heuristic, depending on its "afternode" and "duringlploop" flags */
-   execute = execute && ((heur->afternode == nodesolved) || (heur->duringlploop && inlploop));
+   execute = execute && ((heur->afternode == nodesolved && !inlploop) || (heur->duringlploop && inlploop));
 
    if( execute )
    {
@@ -570,4 +570,3 @@ SCIP_Real SCIPheurGetTime(
 
    return SCIPclockGetTime(heur->heurclock);
 }
-
