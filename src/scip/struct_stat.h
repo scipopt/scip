@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.40 2005/10/13 21:10:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.41 2005/10/18 16:48:19 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -64,6 +64,7 @@ struct SCIP_Stat
    SCIP_Longint          npssolsfound;       /**< number of CIP-feasible pseudo solutions found so far */
    SCIP_Longint          lastdispnode;       /**< last node for which an information line was displayed */
    SCIP_Longint          lastdivenode;       /**< last node where LP diving was applied */
+   SCIP_Longint          lastconflictnode;   /**< last node where conflict analysis was applied */
    SCIP_Longint          domchgcount;        /**< internal counter, where all domain changes are counted */
    SCIP_Longint          nrootboundchgs;     /**< total number of bound changes generated in the root node */
    SCIP_Longint          nrepropboundchgs;   /**< total number of bound changes generated in repropagating nodes */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.104 2005/10/13 21:10:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.105 2005/10/18 16:48:20 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -922,6 +922,24 @@ SCIP_RETCODE SCIPvarIncNInferences(
 /** increases the number of cutoffs counter of the variable */
 extern
 SCIP_RETCODE SCIPvarIncNCutoffs(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/** returns the average number of inferences found after branching on the variable in given direction */
+extern
+SCIP_Real SCIPvarGetConflictScore(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/** returns the average number of inferences found after branching on the variable in given direction
+ *  in the current run
+ */
+extern
+SCIP_Real SCIPvarGetConflictScoreCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */

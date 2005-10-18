@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.104 2005/10/13 21:10:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.105 2005/10/18 16:48:18 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -2354,18 +2354,22 @@ SCIP_RETCODE conflictAnalyze(
    }
 
    /* increase the conflict score weight for history updates of future conflict reasons */
-   assert(0.0 < set->conf_scorefac && set->conf_scorefac <= 1.0);
-   stat->conflictscoreweight /= set->conf_scorefac;
-   assert(stat->conflictscoreweight > 0.0);
-
-   /* if the conflict score for the next conflict exceeds 1000.0, rescale all history conflict scores */
-   if( stat->conflictscoreweight >= 1000.0 )
+   if( stat->nnodes > stat->lastconflictnode )
    {
-      int v;
+      assert(0.0 < set->conf_scorefac && set->conf_scorefac <= 1.0);
+      stat->conflictscoreweight /= set->conf_scorefac;
+      assert(stat->conflictscoreweight > 0.0);
 
-      for( v = 0; v < prob->nvars; ++v )
-         SCIPvarScaleConflictScores(prob->vars[v], 1.0/stat->conflictscoreweight);
-      stat->conflictscoreweight = 1.0;
+      /* if the conflict score for the next conflict exceeds 1000.0, rescale all history conflict scores */
+      if( stat->conflictscoreweight >= 1000.0 )
+      {
+         int v;
+
+         for( v = 0; v < prob->nvars; ++v )
+            SCIPvarScaleConflictScores(prob->vars[v], 1.0/stat->conflictscoreweight);
+         stat->conflictscoreweight = 1.0;
+      }
+      stat->lastconflictnode = stat->nnodes;
    }
 
    return SCIP_OKAY;

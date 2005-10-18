@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.191 2005/10/18 14:06:31 bzfberth Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.192 2005/10/18 16:48:19 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -8529,10 +8529,12 @@ SCIP_Real SCIPvarGetAvgBranchdepthCurrentRun(
 /** returns the average number of inferences found after branching on the variable in given direction */
 SCIP_Real SCIPvarGetConflictScore(
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(var != NULL);
+   assert(stat != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
    switch( SCIPvarGetStatus(var) )
@@ -8541,26 +8543,26 @@ SCIP_Real SCIPvarGetConflictScore(
       if( var->data.original.transvar == NULL )
          return 0.0;
       else
-         return SCIPvarGetConflictScore(var->data.original.transvar, dir);
+         return SCIPvarGetConflictScore(var->data.original.transvar, stat, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      return SCIPhistoryGetConflictScore(var->history, dir);
+      return SCIPhistoryGetConflictScore(var->history, dir)/stat->conflictscoreweight;
 
    case SCIP_VARSTATUS_FIXED:
       return 0.0;
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
-         return SCIPvarGetConflictScore(var->data.aggregate.var, dir);
+         return SCIPvarGetConflictScore(var->data.aggregate.var, stat, dir);
       else
-         return SCIPvarGetConflictScore(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
+         return SCIPvarGetConflictScore(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir));
       
    case SCIP_VARSTATUS_MULTAGGR:
       return 0.0;
 
    case SCIP_VARSTATUS_NEGATED:
-      return SCIPvarGetConflictScore(var->negatedvar, SCIPbranchdirOpposite(dir));
+      return SCIPvarGetConflictScore(var->negatedvar, stat, SCIPbranchdirOpposite(dir));
       
    default:
       SCIPerrorMessage("unknown variable status\n");
@@ -8574,10 +8576,12 @@ SCIP_Real SCIPvarGetConflictScore(
  */
 SCIP_Real SCIPvarGetConflictScoreCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    )
 {
    assert(var != NULL);
+   assert(stat != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
    switch( SCIPvarGetStatus(var) )
@@ -8586,26 +8590,26 @@ SCIP_Real SCIPvarGetConflictScoreCurrentRun(
       if( var->data.original.transvar == NULL )
          return 0.0;
       else
-         return SCIPvarGetConflictScoreCurrentRun(var->data.original.transvar, dir);
+         return SCIPvarGetConflictScoreCurrentRun(var->data.original.transvar, stat, dir);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      return SCIPhistoryGetConflictScore(var->historycrun, dir);
+      return SCIPhistoryGetConflictScore(var->historycrun, dir)/stat->conflictscoreweight;
 
    case SCIP_VARSTATUS_FIXED:
       return 0.0;
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
-         return SCIPvarGetConflictScoreCurrentRun(var->data.aggregate.var, dir);
+         return SCIPvarGetConflictScoreCurrentRun(var->data.aggregate.var, stat, dir);
       else
-         return SCIPvarGetConflictScoreCurrentRun(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
+         return SCIPvarGetConflictScoreCurrentRun(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir));
       
    case SCIP_VARSTATUS_MULTAGGR:
       return 0.0;
 
    case SCIP_VARSTATUS_NEGATED:
-      return SCIPvarGetConflictScoreCurrentRun(var->negatedvar, SCIPbranchdirOpposite(dir));
+      return SCIPvarGetConflictScoreCurrentRun(var->negatedvar, stat, SCIPbranchdirOpposite(dir));
       
    default:
       SCIPerrorMessage("unknown variable status\n");

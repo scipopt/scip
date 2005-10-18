@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.326 2005/10/18 09:09:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.327 2005/10/18 16:48:19 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7311,8 +7311,8 @@ SCIP_Real SCIPgetVarConflictScore(
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarConflictScore", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   downscore = SCIPvarGetConflictScore(var, SCIP_BRANCHDIR_DOWNWARDS);
-   upscore = SCIPvarGetConflictScore(var, SCIP_BRANCHDIR_UPWARDS);
+   downscore = SCIPvarGetConflictScore(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS);
+   upscore = SCIPvarGetConflictScore(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
 
    return SCIPbranchGetScore(scip->set, var, downscore, upscore);
 }
@@ -7328,8 +7328,8 @@ SCIP_Real SCIPgetVarConflictScoreCurrentRun(
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarConflictScoreCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   downscore = SCIPvarGetConflictScoreCurrentRun(var, SCIP_BRANCHDIR_DOWNWARDS);
-   upscore = SCIPvarGetConflictScoreCurrentRun(var, SCIP_BRANCHDIR_UPWARDS);
+   downscore = SCIPvarGetConflictScoreCurrentRun(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS);
+   upscore = SCIPvarGetConflictScoreCurrentRun(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
 
    return SCIPbranchGetScore(scip->set, var, downscore, upscore);
 }

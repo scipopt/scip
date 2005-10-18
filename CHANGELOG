@@ -11,8 +11,7 @@ interface:
 - additional parameter "sol" for methods SCIPaddCut(), SCIPgetCutEfficacy(), and SCIPisCutEfficacious()
 - additional parameter "sol" for method SCIPseparateKnapsackCover()
 - new methods SCIPsepaGetNConssFound() and SCIPsepaGetNDomredsFound()
-- new methods SCIPvarGetConflictScore(), SCIPvarGetConflictScoreCurrentRun(), SCIPgetVarConflictScore(), and
-  SCIPgetVarConflictScoreCurrentRun()
+- new methods SCIPgetVarConflictScore(), and SCIPgetVarConflictScoreCurrentRun()
 
 plugins:
 - new presolver "implics" to find bound changes and aggregations out of the implication graph

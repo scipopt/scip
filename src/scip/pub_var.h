@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.55 2005/10/13 21:10:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.56 2005/10/18 16:48:19 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -196,22 +196,6 @@ SCIP_Real SCIPvarGetAvgBranchdepth(
  */
 extern
 SCIP_Real SCIPvarGetAvgBranchdepthCurrentRun(
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
-   );
-
-/** returns the average number of inferences found after branching on the variable in given direction */
-extern
-SCIP_Real SCIPvarGetConflictScore(
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
-   );
-
-/** returns the average number of inferences found after branching on the variable in given direction
- *  in the current run
- */
-extern
-SCIP_Real SCIPvarGetConflictScoreCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
