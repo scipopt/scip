@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.c,v 1.3 2005/10/08 15:11:28 bzfpfets Exp $"
+#pragma ident "@(#) $Id: tclique_branch.c,v 1.4 2005/10/18 14:20:14 bzfpfend Exp $"
 
 /**@file   tclique_branch.c
  * @brief  branch and bound part of algorithm for maximum cliques
@@ -868,7 +868,7 @@ TCLIQUE_Bool branch(
 	    assert(branchidx < nValive);
 	    assert(V[branchidx] == fixednode);
 	 }
-         if( level == 1 && maxfirstnodeweight > 0 )
+         else if( level == 1 && maxfirstnodeweight > 0 )
             branchidx = getMaxApBoundIndexNotMaxWeight(V, nValive, apbound, weights, maxfirstnodeweight);
          else
             branchidx = getMaxApBoundIndex(nValive, apbound);
@@ -1063,7 +1063,7 @@ void tcliqueMaxClique(
       0, V, nV, Vzero, nVzero, gsd, iscolored, K, 0,
       maxcliquenodes, nmaxcliquenodes, maxcliqueweight,
       curcliquenodes, &ncurcliquenodes, &curcliqueweight, tmpcliquenodes,
-		maxfirstnodeweight, &ntreenodes, maxntreenodes, maxnzeroextensions, fixednode);
+      maxfirstnodeweight, &ntreenodes, maxntreenodes, maxnzeroextensions, fixednode);
 
    /* delete own memory allocator for coloring */
    BMSdestroyChunkMemory(&mem);
