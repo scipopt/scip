@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.26 2005/10/13 21:10:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.27 2005/10/18 14:07:48 bzfberth Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -90,6 +90,27 @@ struct SCIP_PresolData
 /*
  * Local methods
  */
+
+/** initializes the presolver data */
+static
+void initPresoldata(
+   SCIP_PRESOLDATA*      presoldata          /**< presolver data */
+   )
+{
+   assert(presoldata != NULL);
+
+   presoldata->sortedvars = NULL;
+   presoldata->nsortedvars = 0;
+   presoldata->nsortedbinvars = 0;
+   presoldata->startidx = 0;
+   presoldata->lastsortstartidx = -1;
+   presoldata->nfixings = 0;
+   presoldata->naggregations = 0;
+   presoldata->nimplications = 0;
+   presoldata->nbdchgs = 0;
+   presoldata->nuseless = 0;
+   presoldata->ntotaluseless = 0;
+}
 
 /** frees the sorted vars array */
 static
@@ -302,17 +323,7 @@ SCIP_DECL_PRESOLINIT(presolInitProbing)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
-   presoldata->sortedvars = NULL;
-   presoldata->nsortedvars = 0;
-   presoldata->nsortedbinvars = 0;
-   presoldata->startidx = 0;
-   presoldata->lastsortstartidx = -1;
-   presoldata->nfixings = 0;
-   presoldata->naggregations = 0;
-   presoldata->nimplications = 0;
-   presoldata->nbdchgs = 0;
-   presoldata->nuseless = 0;
-   presoldata->ntotaluseless = 0;
+   initPresoldata(presoldata);
 
    return SCIP_OKAY;
 }
@@ -815,6 +826,7 @@ SCIP_RETCODE SCIPincludePresolProbing(
 
    /* create probing presolver data */
    SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
+   initPresoldata(presoldata);
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
