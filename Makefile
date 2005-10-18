@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.136 2005/10/13 21:10:04 bzfpfend Exp $
+# $Id: Makefile,v 1.137 2005/10/18 09:09:59 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -285,6 +285,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/heur_fixandinfer.o \
 			scip/heur_fracdiving.o \
 			scip/heur_guideddiving.o \
+			scip/heur_intdiving.o \
 			scip/heur_linesearchdiving.o \
 			scip/heur_localbranching.o \
 			scip/heur_objpscostdiving.o \

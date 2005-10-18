@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.325 2005/10/13 21:10:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.326 2005/10/18 09:09:59 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3907,6 +3907,7 @@ SCIP_RETCODE presolveRound(
       if( onlydelayed && !SCIPpresolWasDelayed(scip->set->presols[i]) )
          continue;
 
+      SCIPdebugMessage("executing presolver <%s>\n", SCIPpresolGetName(scip->set->presols[i]));
       SCIP_CALL( SCIPpresolExec(scip->set->presols[i], scip->set, onlydelayed, scip->stat->npresolrounds,
             &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
             &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
@@ -3931,7 +3932,7 @@ SCIP_RETCODE presolveRound(
             scip->branchcand) );
 
       /* if we work off the delayed presolvers, we stop immediately if a reduction was found */
-      if( onlydelayed && (result == SCIP_SUCCESS || result == SCIP_DELAYED) )
+      if( onlydelayed && (result == SCIP_SUCCESS /*???????????????? || result == SCIP_DELAYED*/) )
       {
          *delayed = TRUE;
          aborted = TRUE;
@@ -3944,6 +3945,8 @@ SCIP_RETCODE presolveRound(
       if( onlydelayed && !SCIPconshdlrWasPresolvingDelayed(scip->set->conshdlrs[i]) )
          continue;
 
+      SCIPdebugMessage("executing presolve method of constraint handler <%s>\n", 
+         SCIPconshdlrGetName(scip->set->conshdlrs[i]));
       SCIP_CALL( SCIPconshdlrPresolve(scip->set->conshdlrs[i], scip->mem->solvemem, scip->set, scip->stat,
             onlydelayed, scip->stat->npresolrounds,
             &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
@@ -3970,7 +3973,7 @@ SCIP_RETCODE presolveRound(
             scip->branchcand) );
 
       /* if we work off the delayed presolvers, we stop immediately if a reduction was found */
-      if( onlydelayed && (result == SCIP_SUCCESS || result == SCIP_DELAYED) )
+      if( onlydelayed && (result == SCIP_SUCCESS /*???????????????? || result == SCIP_DELAYED*/) )
       {
          *delayed = TRUE;
          aborted = TRUE;
@@ -3986,6 +3989,7 @@ SCIP_RETCODE presolveRound(
       if( onlydelayed && !SCIPpresolWasDelayed(scip->set->presols[i]) )
          continue;
 
+      SCIPdebugMessage("executing presolver <%s>\n", SCIPpresolGetName(scip->set->presols[i]));
       SCIP_CALL( SCIPpresolExec(scip->set->presols[i], scip->set, onlydelayed, scip->stat->npresolrounds,
             &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
             &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
@@ -4010,7 +4014,7 @@ SCIP_RETCODE presolveRound(
             scip->branchcand) );
 
       /* if we work off the delayed presolvers, we stop immediately if a reduction was found */
-      if( onlydelayed && (result == SCIP_SUCCESS || result == SCIP_DELAYED) )
+      if( onlydelayed && (result == SCIP_SUCCESS /*???????????????? || result == SCIP_DELAYED*/) )
       {
          *delayed = TRUE;
          aborted = TRUE;

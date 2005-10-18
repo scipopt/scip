@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_inference.c,v 1.15 2005/10/13 21:10:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_inference.c,v 1.16 2005/10/18 09:09:59 bzfpfend Exp $"
 
 /**@file   branch_inference.c
  * @brief  inference history branching rule
@@ -66,8 +66,8 @@ SCIP_RETCODE performBranching(
    SCIP_Real score;
    int bestcand;
    int c;
-   SCIP_Real downinfs;
-   SCIP_Real upinfs;
+   SCIP_Real downscore;
+   SCIP_Real upscore;
 
    /* search for variable with best score w.r.t. average inferences per branching */
    bestscore = 0.0;
@@ -86,11 +86,11 @@ SCIP_RETCODE performBranching(
    var = cands[bestcand];
 
    /* select the preferred branching direction: try to find a conflict as fast as possible */
-   downinfs = SCIPgetVarAvgInferences(scip, var, SCIP_BRANCHDIR_DOWNWARDS);
-   upinfs = SCIPgetVarAvgInferences(scip, var, SCIP_BRANCHDIR_UPWARDS);
-   if( downinfs > upinfs + 1.0 )
+   downscore = SCIPgetVarAvgInferences(scip, var, SCIP_BRANCHDIR_DOWNWARDS);
+   upscore = SCIPgetVarAvgInferences(scip, var, SCIP_BRANCHDIR_UPWARDS);
+   if( downscore > upscore + 1.0 )
       branchdir = SCIP_BRANCHDIR_DOWNWARDS;
-   else if( downinfs < upinfs - 1.0 )
+   else if( downscore < upscore - 1.0 )
       branchdir = SCIP_BRANCHDIR_UPWARDS;
    else
       branchdir = SCIP_BRANCHDIR_AUTO;

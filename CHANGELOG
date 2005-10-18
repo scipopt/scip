@@ -21,6 +21,7 @@ plugins:
 - xor constraint handler now uses stronger LP relaxation without auxiliary variable for xor constraint with 2 operands
 - modified probing order in probing presolver
 - LP file reader now accepts the keyword "Integer" for defining the start of the integer variables section
+- added preliminary version of "intdiving" heuristic (disabled in default settings)
 
 parameters:
 - modified meaning of parameter presolving/probing/maxtotaluseless

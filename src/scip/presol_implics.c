@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_implics.c,v 1.2 2005/10/13 21:10:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_implics.c,v 1.3 2005/10/18 09:09:59 bzfpfend Exp $"
 
 /**@file   presol_implics.c
  * @brief  implics presolver
@@ -270,7 +270,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
    /**@todo check cliques of x == 0 and x == 1 for equal entries y == b -> fix y == !b */
 
    /* perform the bound changes */
-   for( v = 0; v < nbdchgs; ++v )
+   for( v = 0; v < nbdchgs && *result != SCIP_CUTOFF; ++v )
    {
       SCIP_Bool infeasible;
       SCIP_Bool tightened;
@@ -289,9 +289,8 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
          SCIPdebugMessage(" -> infeasible bound change <%s> %s %g\n", SCIPvarGetName(bdchgvars[v]),
             bdchgtypes[v] == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", bdchgvals[v]);
          *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
       }
-      if( tightened )
+      else if( tightened )
       {
          (*nchgbds)++;
          *result = SCIP_SUCCESS;
@@ -299,7 +298,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
    }
 
    /* perform the aggregations */
-   for( v = 0; v < naggregations; ++v )
+   for( v = 0; v < naggregations && *result != SCIP_CUTOFF; ++v )
    {
       SCIP_Bool infeasible;
       SCIP_Bool redundant;
@@ -313,9 +312,8 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
          SCIPdebugMessage(" -> infeasible aggregation <%s> = %g %+g<%s>\n",
             SCIPvarGetName(aggrvars[v]), aggrconsts[v], aggrcoefs[v], SCIPvarGetName(aggraggvars[v]));
          *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
       }
-      if( aggregated )
+      else if( aggregated )
       {
          (*naggrvars)++;
          *result = SCIP_SUCCESS;
@@ -328,6 +326,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
    SCIPfreeBufferArrayNull(scip, &aggraggvars);
    SCIPfreeBufferArrayNull(scip, &aggrvars);
    SCIPfreeBufferArrayNull(scip, &bdchgvals);
+   SCIPfreeBufferArrayNull(scip, &bdchgtypes);
    SCIPfreeBufferArrayNull(scip, &bdchgvars);
 
    return SCIP_OKAY;

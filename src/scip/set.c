@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.162 2005/10/13 21:10:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.163 2005/10/18 09:10:00 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -246,9 +246,10 @@ int calcGrowSize(
    else
    {
       /* calculate the size with this loop, such that the resulting numbers are always the same (-> block memory) */
+      initsize = MAX(initsize, 4);
       size = initsize;
       while( size < num )
-         size = (int)(growfac * size + 1);
+         size = (int)(growfac * size + initsize);
    }
 
    return size;
