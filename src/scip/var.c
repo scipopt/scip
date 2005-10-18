@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.190 2005/10/13 21:10:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.191 2005/10/18 14:06:31 bzfberth Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -4540,6 +4540,8 @@ SCIP_RETCODE varProcessChgLbLocal(
 
    if( SCIPsetIsEQ(set, newbound, var->locdom.lb) )
       return SCIP_OKAY;
+   if( SCIPsetIsEQ(set, newbound, var->glbdom.lb) )
+      newbound = var->glbdom.lb;
 
    /* change the bound */
    oldbound = var->locdom.lb;
@@ -4635,6 +4637,8 @@ SCIP_RETCODE varProcessChgUbLocal(
 
    if( SCIPsetIsEQ(set, newbound, var->locdom.ub) )
       return SCIP_OKAY;
+   if( SCIPsetIsEQ(set, newbound, var->glbdom.ub) )
+      newbound = var->glbdom.ub;
 
    /* change the bound */
    oldbound = var->locdom.ub;
