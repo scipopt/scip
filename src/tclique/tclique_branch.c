@@ -12,8 +12,8 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.c,v 1.4 2005/10/18 14:20:14 bzfpfend Exp $"
-
+#pragma ident "@(#) $Id: tclique_branch.c,v 1.5 2005/10/18 16:16:59 bzfpfets Exp $"
+#define TCLIQUE_DEBUG
 /**@file   tclique_branch.c
  * @brief  branch and bound part of algorithm for maximum cliques
  * @author Tobias Achterberg
@@ -773,7 +773,8 @@ TCLIQUE_Bool branch(
 #ifdef TCLIQUE_DEBUG
    debugMessage("(level %d, treenode %d) maxclique = %d, curclique = %d [mem=%lld (%lld), cliques=%d]\n",
       level, *ntreenodes, *maxcliqueweight, *curcliqueweight,
-      BMSgetChunkMemoryUsed(mem), BMSgetMemoryUsed(), cliquehash->ncliques);
+      BMSgetChunkMemoryUsed(mem), BMSgetMemoryUsed(), cliquehash == NULL ? 0 : cliquehash->ncliques);
+
    debugMessage(" -> current branching (weight %d):", weightK);
    for( i = 0; i < level; ++i )
       debugPrintf(" %d", K[i]);
@@ -810,8 +811,11 @@ TCLIQUE_Bool branch(
    }
 #endif
 
-   /* check, whether the heuristic solution is better than the current subtree's solution */
-   if( weightK + tmpcliqueweight > *curcliqueweight )
+   /* check, whether the heuristic solution is better than the current subtree's solution;
+    * if the user wanted to have a fixed variable inside the clique and we are in level 0, we first have to
+    * fix this variable in this level (the current clique might not contain the fixed node)
+    */
+   if( weightK + tmpcliqueweight > *curcliqueweight && (level > 0 || fixednode == -1) )
    {
       /* install the newly generated clique as current clique */
       for( i = 0; i < level; ++i )
@@ -832,9 +836,10 @@ TCLIQUE_Bool branch(
 
    /* discard subtree, if the upper bound is not better than the weight of the currently best clique;
     * if only 2 nodes are left, the maximal weighted clique was already calculated in boundSubgraph() and nothing
-    * more has to be done
+    * more has to be done;
+    * however, if the user wanted to have a fixed node and we are in the first decision level, we have to continue
     */
-   if( weightK + subgraphweight > *maxcliqueweight && nV > 2 )
+   if( weightK + subgraphweight > *maxcliqueweight && (nV > 2 || (fixednode >= 0 && level == 0)) )
    {
       int* Vcurrent;
       int nVcurrent;
