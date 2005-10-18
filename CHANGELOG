@@ -42,6 +42,7 @@ fixed bugs:
 - fixed wrong assert with implications that imply a fixed variable
 - fixed numerics in check method of linear constraint handler
 - hopefully fixed bug with wrong path slash '/' under Windows
+- fixed numerics in probing and linear constraint handler (rentacar was detected to be infeasible in presolving)
 
 known bugs:
 - if one uses column generation and restarts, a solution that contains variables that are only present in the transformed

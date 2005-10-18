@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.27 2005/10/18 14:07:48 bzfberth Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.28 2005/10/18 15:21:27 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -51,6 +51,8 @@
                                          *   until probing is aborted (0: don't abort) */
 #define DEFAULT_MAXTOTALUSELESS    100  /**< maximal number of successive probings without fixings, bound changes,
                                          *   and implications, until probing is aborted (0: don't abort) */
+#define DEFAULT_MAXSUMUSELESS        0  /**< maximal number of probings without fixings, until probing is aborted
+                                         *   (0: don't abort) */
 
 
 
@@ -73,14 +75,17 @@ struct SCIP_PresolData
                                               *   until probing is aborted (0: don't abort) */
    int                   maxtotaluseless;    /**< maximal number of successive probings without fixings, bound changes,
                                               *   and implications, until probing is aborted (0: don't abort) */
+   int                   maxsumuseless;      /**< maximal number of probings without fixings, until probing is aborted
+                                              *   (0: don't abort) */
    int                   startidx;           /**< starting variable index of next call */
    int                   lastsortstartidx;   /**< last starting variable index where the variables have been sorted */
    int                   nfixings;           /**< total number of fixings found in probing */
    int                   naggregations;      /**< total number of aggregations found in probing */
    int                   nimplications;      /**< total number of implications found in probing */
    int                   nbdchgs;            /**< total number of bound changes found in probing */
-   int                   nuseless;           /**< current number of useless probings */
-   int                   ntotaluseless;      /**< current number of totally useless probings */
+   int                   nuseless;           /**< current number of successive useless probings */
+   int                   ntotaluseless;      /**< current number of successive totally useless probings */
+   int                   nsumuseless;        /**< current number of useless probings */
    SCIP_Bool             called;             /**< was probing applied at least once? */
 };
 
@@ -110,6 +115,7 @@ void initPresoldata(
    presoldata->nbdchgs = 0;
    presoldata->nuseless = 0;
    presoldata->ntotaluseless = 0;
+   presoldata->nsumuseless = 0;
 }
 
 /** frees the sorted vars array */
@@ -403,6 +409,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
    int maxfixings;
    int maxuseless;
    int maxtotaluseless;
+   int maxsumuseless;
    int oldnfixedvars;
    int oldnaggrvars;
    int oldnchgbds;
@@ -474,6 +481,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
    maxfixings = (presoldata->maxfixings > 0 ? presoldata->maxfixings : INT_MAX);
    maxuseless = (presoldata->maxuseless > 0 ? presoldata->maxuseless : INT_MAX);
    maxtotaluseless = (presoldata->maxtotaluseless > 0 ? presoldata->maxtotaluseless : INT_MAX);
+   maxsumuseless = (presoldata->maxsumuseless > 0 ? presoldata->maxsumuseless : INT_MAX);
    oldnfixedvars = *nfixedvars;
    oldnaggrvars = *naggrvars;
    oldnchgbds = *nchgbds;
@@ -493,7 +501,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
    delay = FALSE;
    cutoff = FALSE;
    for( i = presoldata->startidx; i < nbinvars && !cutoff && !SCIPpressedCtrlC(scip)
-           && presoldata->nuseless < maxuseless && presoldata->ntotaluseless < maxtotaluseless; ++i )
+           && presoldata->nuseless < maxuseless && presoldata->ntotaluseless < maxtotaluseless
+           && presoldata->nsumuseless < maxsumuseless; ++i )
    {
       SCIP_Bool localcutoff;
       int j;
@@ -522,6 +531,10 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
          || SCIPvarGetLbGlobal(vars[i]) > 0.5 || SCIPvarGetUbGlobal(vars[i]) < 0.5 )
          continue;
 
+      if( presoldata->nuseless > 0 )
+         presoldata->nsumuseless++;
+      else
+         presoldata->nsumuseless = MAX(presoldata->nsumuseless-1, 0);
       presoldata->nuseless++;
       presoldata->ntotaluseless++;
 
@@ -583,7 +596,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
             SCIP_Real fixval;
 
             /* in both probings, variable j is deduced to 0: fix variable to 0 */
-            fixval = SCIPselectSimpleValue(newlb, newub, MAXDNOM);
+            fixval = SCIPselectSimpleValue(newlb - SCIPepsilon(scip), newub + SCIPepsilon(scip), MAXDNOM);
             SCIP_CALL( SCIPfixVar(scip, vars[j], fixval, &cutoff, &fixed) );
             if( fixed )
             {
@@ -855,6 +868,10 @@ SCIP_RETCODE SCIPincludePresolProbing(
          "presolving/probing/maxtotaluseless",
          "maximal number of successive probings without fixings, bound changes, and implications, until probing is aborted (0: don't abort)",
          &presoldata->maxtotaluseless, DEFAULT_MAXTOTALUSELESS, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "presolving/probing/maxsumuseless",
+         "maximal number of probings without fixings, until probing is aborted (0: don't abort)",
+         &presoldata->maxsumuseless, DEFAULT_MAXSUMUSELESS, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.199 2005/10/13 21:10:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.200 2005/10/18 15:21:27 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4101,7 +4101,7 @@ SCIP_RETCODE convertUnaryEquality(
    var = consdata->vars[0];
    val = consdata->vals[0];
    assert(!SCIPisZero(scip, val));
-   fixval = SCIPselectSimpleValue(consdata->lhs/val, consdata->rhs/val, MAXDNOM);
+   fixval = SCIPselectSimpleValue(consdata->lhs/val - SCIPepsilon(scip), consdata->rhs/val + SCIPepsilon(scip), MAXDNOM);
    SCIPdebugMessage("linear equality <%s>: fix <%s> == %g\n",
       SCIPconsGetName(cons), SCIPvarGetName(var), fixval);
 
@@ -4438,7 +4438,7 @@ SCIP_RETCODE fixVariables(
          {
             SCIP_Real fixval;
 
-            fixval = SCIPselectSimpleValue(lb, ub, MAXDNOM);
+            fixval = SCIPselectSimpleValue(lb - SCIPepsilon(scip), ub + SCIPepsilon(scip), MAXDNOM);
             SCIPdebugMessage("converting variable <%s> with fixed bounds [%g,%g] into fixed variable fixed at %g\n",
                SCIPvarGetName(var), lb, ub, fixval);
             SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeasible, &fixed) );

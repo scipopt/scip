@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.50 2005/10/12 18:22:28 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.51 2005/10/18 15:21:28 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -572,6 +572,7 @@ SCIP_RETCODE sepastoreApplyBdchg(
    SCIP_Real lhs;
    SCIP_Real rhs;
 
+   assert(sepastore != NULL);
    assert(!SCIProwIsModifiable(cut));
    assert(SCIProwGetNNonz(cut) == 1);
    assert(cutoff != NULL);
@@ -585,6 +586,10 @@ SCIP_RETCODE sepastoreApplyBdchg(
    vals = SCIProwGetVals(cut);
    assert(vals != NULL);
    assert(!SCIPsetIsZero(set, vals[0]));
+
+   /* if the coefficient is nearly zero, we better igore this cut for numerical reasons */
+   if( SCIPsetIsFeasZero(set, vals[0]) )
+      return SCIP_OKAY;
 
    /* get the left hand side of the cut and convert it to a bound */
    lhs = SCIProwGetLhs(cut);
@@ -623,6 +628,10 @@ SCIP_RETCODE sepastoreApplyBdchg(
                var, rhs/vals[0], cutoff) );
       }
    }
+
+   /* count the bound change as applied cut */
+   if( !sepastore->initiallp )
+      sepastore->ncutsapplied++;
 
    return SCIP_OKAY;
 }
@@ -684,13 +693,12 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
          {
             /* add cut to the LP and capture it */
             SCIP_CALL( SCIPlpAddRow(lp, set, cut, nodedepth) );
+            if( !sepastore->initiallp )
+               sepastore->ncutsapplied++;
          }
 
          /* release the row */
          SCIP_CALL( SCIProwRelease(&sepastore->cuts[i], blkmem, set, lp) );
-
-         if( !sepastore->initiallp )
-            sepastore->ncutsapplied++;
       }
    }
 

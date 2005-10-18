@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.196 2005/10/13 21:10:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.197 2005/10/18 15:21:28 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1449,13 +1449,14 @@ SCIP_RETCODE priceAndCutLoop(
          SCIPdebugMessage("constraint separation\n");
 
          /* separate constraints and LP */
-         while( !(*cutoff) && !(*lperror) && !enoughcuts && lp->solved
+         if( !(*cutoff) && !(*lperror) && !enoughcuts && lp->solved
             && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) )
          {
             /* apply a separation round */
             SCIP_CALL( separationRoundLP(blkmem, set, stat, lp, sepastore, actdepth, delayedsepa,
                   &delayedsepa, &enoughcuts, cutoff) );
 
+            /* if bound changes were applied in the separation round, we have to resolve the LP */
             if( !(*cutoff) && !lp->flushed )
             {
                /* solve LP (with dual simplex) */
@@ -1465,8 +1466,6 @@ SCIP_RETCODE priceAndCutLoop(
                assert(lp->solved || *lperror);
                delayedsepa = FALSE;
             }
-	    else
-	       break;
          }
          assert(*cutoff || *lperror || (lp->flushed && lp->solved));
          assert(!lp->solved

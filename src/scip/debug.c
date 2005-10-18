@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.12 2005/09/09 12:34:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.13 2005/10/18 15:21:27 bzfpfend Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -536,7 +536,7 @@ SCIP_RETCODE SCIPdebugCheckImplic(
    SCIP_CALL( getSolutionValue(var, &solval) );
    if( solval == SCIP_INVALID )
       return SCIP_OKAY;
-   assert(SCIPsetIsEQ(set, solval, 0.0) || SCIPsetIsEQ(set, solval, 1.0));
+   assert(SCIPsetIsFeasEQ(set, solval, 0.0) || SCIPsetIsFeasEQ(set, solval, 1.0));
 
    /* check, whether the implication applies for the debugging solution */
    if( (solval > 0.5) != varfixing )
