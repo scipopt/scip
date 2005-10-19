@@ -12,8 +12,8 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.c,v 1.5 2005/10/18 16:16:59 bzfpfets Exp $"
-#define TCLIQUE_DEBUG
+#pragma ident "@(#) $Id: tclique_branch.c,v 1.6 2005/10/19 08:35:46 bzfpfend Exp $"
+
 /**@file   tclique_branch.c
  * @brief  branch and bound part of algorithm for maximum cliques
  * @author Tobias Achterberg
