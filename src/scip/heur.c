@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.52 2005/10/17 18:00:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.53 2005/10/20 09:33:50 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -319,20 +319,20 @@ SCIP_RETCODE SCIPheurExec(
    if( heur->pseudonodes )
    {
       /* heuristic may be executed on every node: check, if the current depth matches the execution frequency and offset */
-      execute = (heur->freq > 0 && (depth - heur->freqofs) % heur->freq == 0);
+      execute = (heur->freq > 0 && depth >= heur->freqofs && (depth - heur->freqofs) % heur->freq == 0);
    }
    else
    {
       /* heuristic may only be executed on LP nodes: check, if a node matching the execution frequency lies between the
        * current node and the last LP node of the path
        */
-      execute = (heur->freq > 0
+      execute = (heur->freq > 0 && depth >= heur->freqofs
          && ((depth + heur->freq - heur->freqofs) / heur->freq
             != (lpforkdepth + heur->freq - heur->freqofs) / heur->freq));
    }
 
-   /* if frequency is zero, execute heuristic at root node */
-   execute = execute || (depth == 0 && heur->freq == 0);
+   /* if frequency is zero, execute heuristic only at the depth level of the frequency offset */
+   execute = execute || (depth == heur->freqofs && heur->freq == 0);
 
    /* compare current depth against heuristic's maximal depth level */
    execute = execute && (heur->maxdepth == -1 || depth <= heur->maxdepth);
