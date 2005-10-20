@@ -25,6 +25,7 @@ plugins:
 parameters:
 - modified meaning of parameter presolving/probing/maxtotaluseless
 - new parameter branching/inference/conflictweight
+- heuristics with freq = 0 and freqofs > 0 are now called in depth level freqofs instead of being called in the root node
 
 features:
 - changed handling of added constraints in separation calls
@@ -42,6 +43,7 @@ fixed bugs:
 - fixed numerics in check method of linear constraint handler
 - hopefully fixed bug with wrong path slash '/' under Windows
 - fixed numerics in probing and linear constraint handler (rentacar was detected to be infeasible in presolving)
+- fixed bug with calling heuristics in depths smaller than their frequency offset
 
 known bugs:
 - if one uses column generation and restarts, a solution that contains variables that are only present in the transformed
