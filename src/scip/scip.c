@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.327 2005/10/18 16:48:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.328 2005/10/24 13:48:40 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -12694,7 +12694,8 @@ void printSolutionStatistics(
    gap = SCIPgetGap(scip);
 
    SCIPmessageFPrintInfo(file, "Solution           :\n");
-   SCIPmessageFPrintInfo(file, "  Solutions found  : %10lld\n", scip->primal->nsolsfound);
+   SCIPmessageFPrintInfo(file, "  Solutions found  : %10lld (%d improvements)\n",
+      scip->primal->nsolsfound, scip->primal->nbestsolsfound);
    if( SCIPsetIsInfinity(scip->set, REALABS(primalbound)) )
    {
       if( scip->set->stage == SCIP_STAGE_SOLVED )

@@ -29,6 +29,8 @@ parameters:
 
 features:
 - changed handling of added constraints in separation calls
+- modified bookkeeping of locally added and disabled and constraints such that the order of enabling and disabling
+  constraints stays the same
 
 Makefile:
 - included version number in binary file name
