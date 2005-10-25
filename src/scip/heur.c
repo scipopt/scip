@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.54 2005/10/20 11:07:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.55 2005/10/25 09:25:38 bzfberth Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -326,7 +326,7 @@ SCIP_RETCODE SCIPheurExec(
       /* heuristic may only be executed on LP nodes: check, if a node matching the execution frequency lies between the
        * current node and the last LP node of the path
        */
-      execute = (heur->freq > 0 && depth >= heur->freqofs
+      execute = (heur->freq > 0 && depth >= heur->freqofs 
          && ((depth + heur->freq - heur->freqofs) / heur->freq
             != (lpforkdepth + heur->freq - heur->freqofs) / heur->freq));
    }
