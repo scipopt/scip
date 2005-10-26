@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.250 2005/10/13 21:10:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.251 2005/10/26 17:08:17 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3920,6 +3920,14 @@ SCIP_RETCODE SCIPcreatePseudoSol(
 /** creates a primal solution, initialized to the current solution */
 extern
 SCIP_RETCODE SCIPcreateCurrentSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
+/** creates a primal solution, initialized to invalid values */
+extern
+SCIP_RETCODE SCIPcreateInvalidSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */

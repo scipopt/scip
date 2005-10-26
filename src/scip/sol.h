@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.46 2005/10/13 15:51:06 bzfberth Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.47 2005/10/26 17:08:18 bzfpfend Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -119,6 +119,18 @@ SCIP_RETCODE SCIPsolCreateCurrentSol(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
+/** creates primal CIP solution, initialized to invalid values */
+extern
+SCIP_RETCODE SCIPsolCreateInvalid(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
 /** frees primal CIP solution */
 extern
 SCIP_RETCODE SCIPsolFree(
@@ -167,6 +179,14 @@ SCIP_RETCODE SCIPsolLinkCurrentSol(
 /** clears primal CIP solution */
 extern
 SCIP_RETCODE SCIPsolClear(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   );
+
+/** declares all entries in the primal CIP solution to be invalid */
+extern
+SCIP_RETCODE SCIPsolInvalidate(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_TREE*            tree                /**< branch and bound tree */

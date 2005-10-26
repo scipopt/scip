@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.328 2005/10/24 13:48:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.329 2005/10/26 17:08:17 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -10238,6 +10238,20 @@ SCIP_RETCODE SCIPcreateCurrentSol(
    return SCIP_OKAY;
 }
 
+/** creates a primal solution, initialized to invalid values */
+SCIP_RETCODE SCIPcreateInvalidSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPcreateInvalidSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPsolCreateInvalid(sol, scip->mem->solvemem, scip->set, scip->stat, scip->primal, scip->tree, heur) );
+
+   return SCIP_OKAY;
+}
+
 /** creates a primal solution living in the original problem space, initialized to zero;
  *  a solution in original space allows to set original variables to values, that would be invalid in the
  *  transformed problem due to preprocessing fixings or aggregations
@@ -10668,7 +10682,7 @@ SCIP_RETCODE SCIPprintTransSol(
 
    if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
    {
-      SCIPerrorMessage("cannot print in original space solution as transformed solution\n");
+      SCIPerrorMessage("cannot print original space solution as transformed solution\n");
       return SCIP_INVALIDCALL;
    }
 

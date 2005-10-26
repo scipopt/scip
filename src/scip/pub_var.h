@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.56 2005/10/18 16:48:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.57 2005/10/26 17:08:17 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -243,6 +243,13 @@ const char* SCIPvarGetName(
 extern
 SCIP_VARDATA* SCIPvarGetData(
    SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** sets the user data for the variable */
+extern
+void SCIPvarSetData(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_VARDATA*         vardata             /**< user variable data */
    );
 
 /** gets status of variable */
@@ -591,6 +598,7 @@ SCIP_CLIQUE** SCIPvarGetCliques(
 
 #define SCIPvarGetName(var)             (var)->name
 #define SCIPvarGetData(var)             (var)->vardata
+#define SCIPvarSetData(var,vdata)       (var)->vardata = (vdata)
 #define SCIPvarGetStatus(var)           (SCIP_VARSTATUS)((var)->varstatus)
 #define SCIPvarIsOriginal(var)          ((var)->varstatus == SCIP_VARSTATUS_ORIGINAL \
       || ((var)->varstatus == SCIP_VARSTATUS_NEGATED && (var)->negatedvar->varstatus == SCIP_VARSTATUS_ORIGINAL))

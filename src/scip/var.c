@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.192 2005/10/18 16:48:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.193 2005/10/26 17:08:18 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -9427,6 +9427,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPdomchgGetBoundchg
 #undef SCIPvarGetName
 #undef SCIPvarGetData
+#undef SCIPvarSetData
 #undef SCIPvarGetStatus
 #undef SCIPvarIsOriginal
 #undef SCIPvarIsTransformed
@@ -9575,6 +9576,17 @@ SCIP_VARDATA* SCIPvarGetData(
    assert(var != NULL);
 
    return var->vardata;
+}
+
+/** sets the user data for the variable */
+void SCIPvarSetData(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_VARDATA*         vardata             /**< user variable data */
+   )
+{
+   assert(var != NULL);
+
+   var->vardata = vardata;
 }
 
 /** gets status of variable */

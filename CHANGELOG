@@ -12,6 +12,11 @@ interface:
 - additional parameter "sol" for method SCIPseparateKnapsackCover()
 - new methods SCIPsepaGetNConssFound() and SCIPsepaGetNDomredsFound()
 - new methods SCIPgetVarConflictScore(), and SCIPgetVarConflictScoreCurrentRun()
+- new method SCIPvarSetData()
+- new method SCIPcreateInvalidSol()
+- primal solutions may now contain values marked to be invalid (value is SCIP_INVALID), which means that the value
+  is unknown; invalid values don't contribute to the objective value of the solution; a solution with invalid values
+  can not be feasible
 
 plugins:
 - new presolver "implics" to find bound changes and aggregations out of the implication graph

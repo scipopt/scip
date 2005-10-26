@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.51 2005/10/13 21:10:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.52 2005/10/26 17:08:17 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -1286,7 +1286,13 @@ SCIP_RETCODE SCIPrealarrayIncVal(
    SCIP_Real             incval              /**< value to increase array index */
    )
 {
-   return SCIPrealarraySetVal(realarray, set, idx, SCIPrealarrayGetVal(realarray, idx) + incval);
+   SCIP_Real oldval;
+
+   oldval = SCIPrealarrayGetVal(realarray, idx);
+   if( oldval != SCIP_INVALID )
+      return SCIPrealarraySetVal(realarray, set, idx, oldval + incval);
+   else
+      return SCIP_OKAY;
 }
 
 /** returns the minimal index of all stored non-zero elements */

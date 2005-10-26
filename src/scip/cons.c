@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.134 2005/10/24 13:48:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.135 2005/10/26 17:08:16 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1314,6 +1314,15 @@ SCIP_RETCODE conshdlrDeactivateCons(
    return SCIP_OKAY;
 }
 
+/** returns whether the constraint updates of the constraint handler are currently delayed */
+static
+SCIP_Bool conshdlrAreUpdatesDelayed(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   return (conshdlr->delayupdatecount > 0);
+}
+
 /** processes all delayed updates of constraints:
  *  recently (de)activated constraints will be (de)activated;
  *  recently en/disabled constraints will be en/disabled;
@@ -1334,7 +1343,7 @@ SCIP_RETCODE conshdlrProcessUpdates(
    int i;
 
    assert(conshdlr != NULL);
-   assert(!conshdlr->delayupdates);
+   assert(!conshdlrAreUpdatesDelayed(conshdlr));
    assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
@@ -1502,11 +1511,10 @@ void conshdlrDelayUpdates(
    )
 {
    assert(conshdlr != NULL);
-   assert(!conshdlr->delayupdates);
    
    SCIPdebugMessage("constraint updates of constraint handler <%s> will be delayed\n", conshdlr->name);
 
-   conshdlr->delayupdates = TRUE;
+   conshdlr->delayupdatecount++;
 }
 
 /** marks constraint handler to perform all constraint updates immediately;
@@ -1521,13 +1529,16 @@ SCIP_RETCODE conshdlrForceUpdates(
    )
 {
    assert(conshdlr != NULL);
-   assert(conshdlr->delayupdates);
+   assert(conshdlrAreUpdatesDelayed(conshdlr));
    
    SCIPdebugMessage("constraint updates of constraint handler <%s> will be processed immediately\n", conshdlr->name);
-   conshdlr->delayupdates = FALSE;
+   conshdlr->delayupdatecount--;
 
-   SCIP_CALL( conshdlrProcessUpdates(conshdlr, blkmem, set, stat) );
-   assert(conshdlr->nupdateconss == 0);
+   if( !conshdlrAreUpdatesDelayed(conshdlr) )
+   {
+      SCIP_CALL( conshdlrProcessUpdates(conshdlr, blkmem, set, stat) );
+      assert(conshdlr->nupdateconss == 0);
+   }
 
    return SCIP_OKAY;
 }
@@ -1740,6 +1751,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->nupgdconss = 0;
    (*conshdlr)->nchgcoefs = 0;
    (*conshdlr)->nchgsides = 0;
+   (*conshdlr)->delayupdatecount = 0;
    (*conshdlr)->ageresetavg = AGERESETAVG_INIT;
    (*conshdlr)->needscons = needscons;
    (*conshdlr)->sepalpwasdelayed = FALSE;
@@ -1747,7 +1759,6 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->propwasdelayed = FALSE;
    (*conshdlr)->presolwasdelayed = FALSE;
    (*conshdlr)->initialized = FALSE;
-   (*conshdlr)->delayupdates = FALSE;
 
    /* add parameters */
    sprintf(paramname, "constraints/%s/sepafreq", name);
@@ -1903,7 +1914,7 @@ SCIP_RETCODE SCIPconshdlrInit(
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
    }
    conshdlr->initialized = TRUE;
-   assert(!conshdlr->delayupdates);
+   assert(!conshdlrAreUpdatesDelayed(conshdlr));
 
    return SCIP_OKAY;
 }
@@ -4074,7 +4085,7 @@ SCIP_RETCODE SCIPconsCreate(
    if( !original )
    {
       /* check, if inserting constraint should be delayed */
-      if( conshdlr->delayupdates )
+      if( conshdlrAreUpdatesDelayed(conshdlr) )
       {
          SCIPdebugMessage(" -> delaying insertion of constraint <%s>\n", (*cons)->name);
          (*cons)->updateinsert = TRUE;
@@ -4177,7 +4188,7 @@ SCIP_RETCODE SCIPconsRelease(
       assert(!(*cons)->active || (*cons)->updatedeactivate);
 
       /* check, if freeing constraint should be delayed */
-      if( (*cons)->conshdlr->delayupdates )
+      if( conshdlrAreUpdatesDelayed((*cons)->conshdlr) )
       {
          SCIPdebugMessage(" -> delaying freeing constraint <%s>\n", (*cons)->name);
          (*cons)->updatefree = TRUE;
@@ -4236,7 +4247,8 @@ SCIP_RETCODE SCIPconsDelete(
    assert(cons->conshdlr != NULL);
    assert(!cons->active || cons->updatedeactivate || cons->addarraypos >= 0);
 
-   SCIPdebugMessage("globally deleting constraint <%s> (delay updates: %d)\n", cons->name, cons->conshdlr->delayupdates);
+   SCIPdebugMessage("globally deleting constraint <%s> (delay updates: %d)\n", 
+      cons->name, cons->conshdlr->delayupdatecount);
 
    /* deactivate constraint, if it is currently active */
    if( cons->active && !cons->updatedeactivate )
@@ -4522,7 +4534,7 @@ SCIP_RETCODE SCIPconsActivate(
    assert(cons->activedepth == -2);
    assert(cons->conshdlr != NULL);
 
-   if( cons->conshdlr->delayupdates )
+   if( conshdlrAreUpdatesDelayed(cons->conshdlr) )
    {
       SCIPdebugMessage("delayed activation of constraint <%s> in constraint handler <%s> (depth %d)\n", 
          cons->name, cons->conshdlr->name, depth);
@@ -4555,7 +4567,7 @@ SCIP_RETCODE SCIPconsDeactivate(
    assert(cons->activedepth >= -1);
    assert(cons->conshdlr != NULL);
 
-   if( cons->conshdlr->delayupdates )
+   if( conshdlrAreUpdatesDelayed(cons->conshdlr) )
    {
       SCIPdebugMessage("delayed deactivation of constraint <%s> in constraint handler <%s>\n", 
          cons->name, cons->conshdlr->name);
@@ -4589,7 +4601,7 @@ SCIP_RETCODE SCIPconsEnable(
 
    assert(!cons->updateactivate);
 
-   if( cons->conshdlr->delayupdates )
+   if( conshdlrAreUpdatesDelayed(cons->conshdlr) )
    {
       cons->updateenable = TRUE;
       SCIP_CALL( conshdlrAddUpdateCons(cons->conshdlr, set, cons) );
@@ -4621,7 +4633,7 @@ SCIP_RETCODE SCIPconsDisable(
    assert(cons->active);
    assert(!cons->updateactivate);
 
-   if( cons->conshdlr->delayupdates )
+   if( conshdlrAreUpdatesDelayed(cons->conshdlr) )
    {
       cons->updatedisable = TRUE;
       SCIP_CALL( conshdlrAddUpdateCons(cons->conshdlr, set, cons) );
@@ -4648,7 +4660,7 @@ SCIP_RETCODE SCIPconsEnableSeparation(
    if( cons->updatesepaenable || (cons->sepaenabled && !cons->updatesepadisable) )
       return SCIP_OKAY;
 
-   if( cons->conshdlr->delayupdates )
+   if( conshdlrAreUpdatesDelayed(cons->conshdlr) )
    {
       cons->updatesepadisable = FALSE;
       cons->updatesepaenable = TRUE;
@@ -4676,7 +4688,7 @@ SCIP_RETCODE SCIPconsDisableSeparation(
    if( cons->updatesepadisable || (!cons->sepaenabled && !cons->updatesepaenable) )
       return SCIP_OKAY;
 
-   if( cons->conshdlr->delayupdates )
+   if( conshdlrAreUpdatesDelayed(cons->conshdlr) )
    {
       cons->updatesepaenable = FALSE;
       cons->updatesepadisable = TRUE;
@@ -4704,7 +4716,7 @@ SCIP_RETCODE SCIPconsEnablePropagation(
    if( cons->updatepropenable || (cons->propenabled && !cons->updatepropdisable) )
       return SCIP_OKAY;
 
-   if( cons->conshdlr->delayupdates )
+   if( conshdlrAreUpdatesDelayed(cons->conshdlr) )
    {
       cons->updatepropdisable = FALSE;
       cons->updatepropenable = TRUE;
@@ -4732,7 +4744,7 @@ SCIP_RETCODE SCIPconsDisablePropagation(
    if( cons->updatepropdisable || (!cons->propenabled && !cons->updatepropenable) )
       return SCIP_OKAY;
 
-   if( cons->conshdlr->delayupdates )
+   if( conshdlrAreUpdatesDelayed(cons->conshdlr) )
    {
       cons->updatepropenable = FALSE;
       cons->updatepropdisable = TRUE;
@@ -4788,7 +4800,7 @@ SCIP_RETCODE SCIPconsAddAge(
       }
       else if( !cons->obsolete && consExceedsObsoleteage(cons, set) )
       {
-         if( cons->conshdlr->delayupdates )
+         if( conshdlrAreUpdatesDelayed(cons->conshdlr) )
          {
             cons->updateobsolete = TRUE;
             SCIP_CALL( conshdlrAddUpdateCons(cons->conshdlr, set, cons) );
@@ -4850,7 +4862,7 @@ SCIP_RETCODE SCIPconsResetAge(
    if( cons->obsolete )
    {
       assert(!cons->original);
-      if( cons->conshdlr->delayupdates )
+      if( conshdlrAreUpdatesDelayed(cons->conshdlr) )
       {
          cons->updateobsolete = TRUE;
          SCIP_CALL( conshdlrAddUpdateCons(cons->conshdlr, set, cons) );
