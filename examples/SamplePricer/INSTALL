@@ -43,7 +43,7 @@ compilation settings:
 - $(LPS):    the LP solver to use
              "spx", "spx121", "clp", "cpx"
 
-For example, if you want to compile the TSP example on a Linux system with a x86 processor
+For example, if you want to compile the example on a Linux system with a x86 processor
 using the gnu compiler in debug mode with static linking, and using Soplex version >= 1.2.2
 as LP solver, you would have the following names:
 - $(OSTYPE) = linux
@@ -55,7 +55,7 @@ as LP solver, you would have the following names:
 
 -----------------------------------------------------------------------------
 
-Here is what you have to do to get the C++ TSP example using SCIP as a library
+Here is what you have to do to get the C++ example project using SCIP as a library
 running:
 
 1. Install and compile SCIP as described in the INSTALL file of SCIP's main 
@@ -67,9 +67,9 @@ running:
    - ln -s <path to SCIP> lib/scip
      (e.g. "ln -s /scip lib/scip")
 
-3. Compile the TSP example:
-   In the example's main directory, enter "make OPT=<...> LPS=<...> COMP=<...> LINK=<...>"
-   with the following options:
+3. Compile the example project:
+   In the example's main directory, enter "make OPT=<...> LPS=<...> COMP=<...> LINK=<...>" with
+   the following options:
    - "OPT=opt"       to use optimized compilation mode (default)
    - "OPT=dbg"       to use debug compilation mode
    - "OPT=prf"       to use performance analysis compilation mode
@@ -82,14 +82,8 @@ running:
    - "LINK=static"   to use static libraries (default)
    - "LINK=dynamic"  to use dynamic libraries
 
-3. If you want to watch the generated solutions by using the Java Tour Viewer included in the
-   tspviewer subdirectory, compile and run the Java Tour Viewer before running sciptsp:
-   - enter "cd tspviewer"
-   - enter "javac TSPViewer.java"
-   - enter "java TSPViewer &"
-   To run the program enter "bin/sciptsp.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LINK).$(LPS)"
-   (e.g. "bin/sciptsp.linux.x86.gnu.dbg.static.cpx")
-   - enter "bin/sciptsp.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LINK).$(LPS)"
+3. To run the program enter "bin/pmedian.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LINK).$(LPS)"
+   (e.g. "bin/pmedian.linux.x86.gnu.dbg.static.cpx")
 
 4. To generate the documentation, you need to have doxygen installed, and
    enter "make doc"

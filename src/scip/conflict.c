@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.106 2005/10/26 09:54:11 bzfpfets Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.107 2005/10/27 16:36:47 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -645,6 +645,8 @@ SCIP_RETCODE conflictInsertClause(
          SCIP_CALL( clauseFree(&clause, blkmem) );
          return SCIP_OKAY;
       }
+      /**@todo like in sepastore.c: calculate overlap between clauses -> large overlap reduces score */
+      /*????????????????????????*/
    }
 
    /* insert clause into the sorted clauses array*/

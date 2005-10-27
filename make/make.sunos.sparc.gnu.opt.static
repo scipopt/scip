@@ -1,0 +1,23 @@
+#--- $Id: make.sunos.sparc.gnu.opt.static,v 1.1 2005/10/27 16:36:47 bzfpfend Exp $
+CXX		=	g++
+FLAGS           +=      -DNDEBUG 
+OFLAGS          +=      -O3 -fomit-frame-pointer 
+CFLAGS          +=      $(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
+CXXFLAGS        +=      $(GXXWARN) -Wno-strict-aliasing
+LDFLAGS		=	-lm #-static 
+ARFLAGS		=	crs
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline
+
+
+
+
+
+
+
+
+
+
+

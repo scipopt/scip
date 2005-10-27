@@ -1,6 +1,10 @@
 current version
 ===============
 
+examples:
+- added small pricer example
+- updated example code (s.t. it compiles again)
+
 interface:
 - new method SCIPgetCuts()
 - callback method CONSSEPA of constraint handler was split into two methods CONSSEPALP and CONSSEPASOL

@@ -1,0 +1,14 @@
+#--- $Id: make.sunos.sparc.gnu.dbg.static,v 1.1 2005/10/27 16:36:47 bzfpfend Exp $
+CXX             =       g++
+FLAGS           +=      -DNDEBUG
+OFLAGS          +=      -Isrc -O0 -g
+CFLAGS          +=      $(GCCWARN)
+CXXFLAGS        +=      $(GXXWARN)
+LDFLAGS         =       -lm #-static
+ARFLAGS         =       crs
+ZLIB_FLAGS      =
+ZLIB_LDFLAGS    =       -lz
+READLINE_FLAGS  =
+READLINE_LDFLAGS=       -lreadline
+
+

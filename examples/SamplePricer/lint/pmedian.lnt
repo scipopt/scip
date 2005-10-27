@@ -14,7 +14,7 @@
 //*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 //*                                                                           */
 //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-// $Id: example.lnt,v 1.4 2005/05/31 17:20:06 bzfpfend Exp $
+// $Id: pmedian.lnt,v 1.1 2005/10/27 16:36:40 bzfpfend Exp $
 
 -passes(1)
 // esoteric size settings to find erros.

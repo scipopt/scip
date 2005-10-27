@@ -63,6 +63,7 @@ running:
    directory
 
 2. Create necessary softlink to SCIP's main directory in lib/ directory:
+   - mkdir lib
    - ln -s <path to SCIP> lib/scip
      (e.g. "ln -s /scip lib/scip")
 
@@ -81,8 +82,8 @@ running:
    - "LINK=static"   to use static libraries (default)
    - "LINK=dynamic"  to use dynamic libraries
 
-3. To run the program enter "bin/example.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LINK).$(LPS)"
-   (e.g. "bin/example.linux.x86.gnu.dbg.static.cpx")
+3. To run the program enter "bin/scipmip.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LINK).$(LPS)"
+   (e.g. "bin/scipmip.linux.x86.gnu.dbg.static.cpx")
 
 4. To generate the documentation, you need to have doxygen installed, and
    enter "make doc"

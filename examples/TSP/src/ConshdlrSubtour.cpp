@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.5 2005/09/22 14:43:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.6 2005/10/27 16:36:47 bzfpfend Exp $"
 
 /**@file   ConshdlrSubtour.cpp
  * @brief  C++ file reader for TSP data files
@@ -209,9 +209,9 @@ SCIP_RETCODE sepaSubtour(
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
             // add cut
-            if( SCIPisCutEfficacious(scip, row) )
+            if( SCIPisCutEfficacious(scip, sol, row) )
             {
-               SCIP_CALL( SCIPaddCut(scip, row, FALSE) );
+               SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
                *result = SCIP_SEPARATED;    
             }
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -432,7 +432,7 @@ SCIP_RETCODE ConshdlrSubtour::scip_enfolp(
          SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
          // add the constraint to SCIP 
-         SCIP_CALL( SCIPaddCut(scip, row, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE) );
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
          
          *result = SCIP_SEPARATED;
