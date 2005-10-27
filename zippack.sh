@@ -12,6 +12,9 @@ $NAME/examples/MIPSolver/lint/posix/sys/* $NAME/examples/MIPSolver/make/* $NAME/
 $NAME/examples/TSP/* $NAME/examples/TSP/doc/* $NAME/examples/TSP/lib \
 $NAME/examples/TSP/lint/* $NAME/examples/TSP/lint/cpp/* $NAME/examples/TSP/lint/posix/* \
 $NAME/examples/TSP/lint/posix/sys/* $NAME/examples/TSP/make/* $NAME/examples/TSP/src/* $NAME/examples/TSP/tspviewer/* \
+$NAME/examples/SamplePricer/* $NAME/examples/SamplePricer/doc/* $NAME/examples/SamplePricer/lib \
+$NAME/examples/SamplePricer/lint/* $NAME/examples/SamplePricer/lint/cpp/* $NAME/examples/SamplePricer/lint/posix/* \
+$NAME/examples/SamplePricer/lint/posix/sys/* $NAME/examples/SamplePricer/make/* $NAME/examples/SamplePricer/src/* \
 -x ".*" -x "*~" -x "*/CVS/*"
 rm $NAME
 echo "check version numbers in src/scip/def.h, doc/xternal.c, Makefile and zippack.sh ($VERSION):"
