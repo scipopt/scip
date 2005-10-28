@@ -21,6 +21,7 @@ interface:
 - primal solutions may now contain values marked to be invalid (value is SCIP_INVALID), which means that the value
   is unknown; invalid values don't contribute to the objective value of the solution; a solution with invalid values
   can not be feasible
+- new method SCIPgetNConflictClausesFoundNode()
 
 plugins:
 - new presolver "implics" to find bound changes and aggregations out of the implication graph

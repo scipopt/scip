@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.329 2005/10/26 17:08:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.330 2005/10/28 12:03:06 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2741,7 +2741,7 @@ SCIP_RETCODE SCIPdelVar(
    SCIP_VAR*             var                 /**< variable to delete */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPdelVar", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPdelVar", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE) );
 
    /* don't remove variables that are not in the problem */
    /**@todo what about negated variables? should the negation variable be removed instead? */
@@ -2767,6 +2767,7 @@ SCIP_RETCODE SCIPdelVar(
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
@@ -11727,6 +11728,16 @@ SCIP_Longint SCIPgetNConflictClausesFound(
       + SCIPconflictGetNStrongbranchReconvergenceClauses(scip->conflict)
       + SCIPconflictGetNPseudoConflictClauses(scip->conflict)
       + SCIPconflictGetNPseudoReconvergenceClauses(scip->conflict);
+}
+
+/** get number of conflict clauses found so far at the current node */
+int SCIPgetNConflictClausesFoundNode(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNConflictClausesFoundNode", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIPconflictGetNClauses(scip->conflict);
 }
 
 /** get total number of conflict clauses added to the problem */

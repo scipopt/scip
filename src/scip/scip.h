@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.251 2005/10/26 17:08:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.252 2005/10/28 12:03:06 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -4632,6 +4632,12 @@ int SCIPgetNCutsApplied(
 /** get total number of clauses found in conflict analysis (conflict and reconvergence clauses) */
 extern
 SCIP_Longint SCIPgetNConflictClausesFound(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** get number of conflict clauses found so far at the current node */
+extern
+int SCIPgetNConflictClausesFoundNode(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
