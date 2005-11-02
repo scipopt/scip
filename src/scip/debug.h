@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.h,v 1.14 2005/10/18 15:21:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.h,v 1.15 2005/11/02 11:14:44 bzfpfend Exp $"
 
 /**@file   debug.h
  * @brief  methods for debugging
@@ -27,7 +27,7 @@
 #define __SCIP_DEBUG_H__
 
 /** uncomment this define to activate debugging on given solution */
-/*#define SCIP_DEBUG_SOLUTION "rentacar.sol"*/
+/*#define SCIP_DEBUG_SOLUTION "biquad.sol"*/
 
 
 #include "scip/def.h"

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.193 2005/10/26 17:08:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.194 2005/11/02 11:14:44 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1680,6 +1680,7 @@ SCIP_RETCODE varCreate(
    (*var)->ubchginfossize = 0;
    (*var)->nubchginfos = 0;
    (*var)->conflictsetcount = 0;
+   (*var)->conflictqueuecount = 0;
    (*var)->initial = initial;
    (*var)->removeable = removeable;
    (*var)->deleted = FALSE;
@@ -1721,7 +1722,7 @@ SCIP_RETCODE SCIPvarCreateOriginal(
 
    /* create variable */
    SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removeable,
-                  vardelorig, vartrans, vardeltrans, vardata) );
+         vardelorig, vartrans, vardeltrans, vardata) );
 
    /* set variable status and data */
    (*var)->varstatus = SCIP_VARSTATUS_ORIGINAL; /*lint !e641*/
@@ -1762,7 +1763,7 @@ SCIP_RETCODE SCIPvarCreateTransformed(
 
    /* create variable */
    SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removeable,
-                  vardelorig, vartrans, vardeltrans, vardata) );
+         vardelorig, vartrans, vardeltrans, vardata) );
 
    /* create event filter for transformed variable */
    SCIP_CALL( SCIPeventfilterCreate(&(*var)->eventfilter, blkmem) );
@@ -2041,10 +2042,14 @@ void SCIPvarInitSolve(
 
    SCIPhistoryReset(var->historycrun);
    var->conflictsetcount = 0;
+   var->conflictqueuecount = 0;
 
    /* the negations of active problem variables can also be member of a conflict set */
    if( var->negatedvar != NULL )
+   {
       var->negatedvar->conflictsetcount = 0;
+      var->negatedvar->conflictqueuecount = 0;
+   }
 }
 
 /** outputs variable information into file stream */
@@ -2767,7 +2772,8 @@ SCIP_RETCODE varUpdateAggregationBounds(
    SCIP_VAR*             aggvar,             /**< variable y in aggregation x = a*y + c */
    SCIP_Real             scalar,             /**< multiplier a in aggregation x = a*y + c */
    SCIP_Real             constant,           /**< constant shift c in aggregation x = a*y + c */
-   SCIP_Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
+   SCIP_Bool*            fixed               /**< pointer to store whether the variables were fixed */
    )
 {
    SCIP_Real varlb;
@@ -2780,6 +2786,10 @@ SCIP_RETCODE varUpdateAggregationBounds(
    assert(aggvar != NULL);
    assert(!SCIPsetIsZero(set, scalar));
    assert(infeasible != NULL);
+   assert(fixed != NULL);
+
+   *infeasible = FALSE;
+   *fixed = FALSE;
 
    SCIPdebugMessage("updating bounds of variables in aggregation <%s> == %g*<%s> %+g\n",
       var->name, scalar, aggvar->name, constant);
@@ -2828,15 +2838,16 @@ SCIP_RETCODE varUpdateAggregationBounds(
       }
       else if( SCIPsetIsEQ(set, varlb, varub) )
       {
-         SCIP_Bool fixed;
-
          /* the aggregated variable is fixed -> fix both variables */
          SCIP_CALL( SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 
-               varlb, infeasible, &fixed) );
+               varlb, infeasible, fixed) );
          if( !(*infeasible) )
          {
+            SCIP_Bool aggfixed;
+
             SCIP_CALL( SCIPvarFix(aggvar, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 
-                  (varlb-constant)/scalar, infeasible, &fixed) );
+                  (varlb-constant)/scalar, infeasible, &aggfixed) );
+            assert(*fixed == aggfixed);
          }
          return SCIP_OKAY;
       }
@@ -2892,15 +2903,16 @@ SCIP_RETCODE varUpdateAggregationBounds(
       }
       else if( SCIPsetIsEQ(set, aggvarlb, aggvarub) )
       {
-         SCIP_Bool fixed;
-
          /* the aggregation variable is fixed -> fix both variables */
          SCIP_CALL( SCIPvarFix(aggvar, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, aggvarlb, 
-               infeasible, &fixed) );
+               infeasible, fixed) );
          if( !(*infeasible) )
          {
+            SCIP_Bool varfixed;
+
             SCIP_CALL( SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 
-                  aggvarlb * scalar + constant, infeasible, &fixed) );
+                  aggvarlb * scalar + constant, infeasible, &varfixed) );
+            assert(*fixed == varfixed);
          }
          return SCIP_OKAY;
       }
@@ -2954,6 +2966,7 @@ SCIP_RETCODE SCIPvarAggregate(
    SCIP_Real* constants;
    SCIP_Real obj;
    SCIP_Real branchfactor;
+   SCIP_Bool fixed;
    int branchpriority;
    int nlocksdown;
    int nlocksup;
@@ -3007,9 +3020,12 @@ SCIP_RETCODE SCIPvarAggregate(
 
    /* tighten the bounds of aggregated and aggregation variable */
    SCIP_CALL( varUpdateAggregationBounds(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue,
-         aggvar, scalar, constant, infeasible) );
-   if( *infeasible )
+         aggvar, scalar, constant, infeasible, &fixed) );
+   if( *infeasible || fixed )
+   {
+      *aggregated = fixed;
       return SCIP_OKAY;
+   }
 
    /* delete implications and variable bounds of the aggregated variable from other variables, but keep them in the
     * aggregated variable
@@ -6379,6 +6395,22 @@ SCIP_Bool SCIPvarHasImplic(
    return var->implics != NULL && SCIPimplicsContainsImpl(var->implics, varfixing, implvar, impltype);
 }
 
+/** returns whether there is an implication x == varfixing -> y == implvarfixing in the implication graph;
+ *  implications that are represented as cliques in the clique table are not regarded (use SCIPvarsHaveCommonClique());
+ *  both variables must be active binary variables
+ */
+SCIP_Bool SCIPvarHasBinaryImplic(
+   SCIP_VAR*             var,                /**< problem variable x */
+   SCIP_Bool             varfixing,          /**< FALSE if y should be searched in implications for x == 0, TRUE for x == 1 */
+   SCIP_VAR*             implvar,            /**< variable y to search for */
+   SCIP_Bool             implvarfixing       /**< value of the implied variable to search for */
+   )
+{
+   assert(SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY);
+
+   return SCIPvarHasImplic(var, varfixing, implvar, implvarfixing ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER);
+}
+
 /** fixes the bounds of a binary variable to the given value, counting bound changes and detecting infeasibility */
 static
 SCIP_RETCODE varFixBinary(
@@ -9428,6 +9460,9 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetName
 #undef SCIPvarGetData
 #undef SCIPvarSetData
+#undef SCIPvarSetDelorigData
+#undef SCIPvarSetTransData
+#undef SCIPvarSetDeltransData
 #undef SCIPvarGetStatus
 #undef SCIPvarIsOriginal
 #undef SCIPvarIsTransformed
@@ -9587,6 +9622,40 @@ void SCIPvarSetData(
    assert(var != NULL);
 
    var->vardata = vardata;
+}
+
+/** sets method to free user data for the original variable */
+void SCIPvarSetDelorigData(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_DECL_VARDELORIG  ((*vardelorig))     /**< frees user data of original variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->varstatus == SCIP_VARSTATUS_ORIGINAL);
+
+   var->vardelorig = vardelorig;
+}
+
+/** sets method to transform user data of the variable */
+void SCIPvarSetTransData(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_DECL_VARTRANS    ((*vartrans))       /**< creates transformed user data by transforming original user data */
+   )
+{
+   assert(var != NULL);
+
+   var->vartrans = vartrans;
+}
+
+/** sets method to free transformed user data for the variable */
+void SCIPvarSetDeltransData(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_DECL_VARDELTRANS ((*vardeltrans))    /**< frees user data of transformed variable */
+   )
+{
+   assert(var != NULL);
+
+   var->vardeltrans = vardeltrans;
 }
 
 /** gets status of variable */

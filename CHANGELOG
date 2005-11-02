@@ -22,6 +22,8 @@ interface:
   is unknown; invalid values don't contribute to the objective value of the solution; a solution with invalid values
   can not be feasible
 - new method SCIPgetNConflictClausesFoundNode()
+- new methods SCIPvarSetDelorigData(), SCIPvarSetTransData(), and SCIPvarSetDeltransData()
+- new method SCIPvarHasBinaryImplic()
 
 plugins:
 - new presolver "implics" to find bound changes and aggregations out of the implication graph
@@ -31,6 +33,7 @@ plugins:
 - modified probing order in probing presolver
 - LP file reader now accepts the keyword "Integer" for defining the start of the integer variables section
 - added preliminary version of "intdiving" heuristic (disabled in default settings)
+- slightly modified restartdfs node selector
 
 parameters:
 - modified meaning of parameter presolving/probing/maxtotaluseless
@@ -41,6 +44,7 @@ features:
 - changed handling of added constraints in separation calls
 - modified bookkeeping of locally added and disabled and constraints such that the order of enabling and disabling
   constraints stays the same
+- improved performance of the priority queue in conflict analysis
 
 Makefile:
 - included version number in binary file name
@@ -56,6 +60,7 @@ fixed bugs:
 - hopefully fixed bug with wrong path slash '/' under Windows
 - fixed numerics in probing and linear constraint handler (rentacar was detected to be infeasible in presolving)
 - fixed bug with calling heuristics in depths smaller than their frequency offset
+- fixed bug with aggregating fixed variables
 
 known bugs:
 - if one uses column generation and restarts, a solution that contains variables that are only present in the transformed

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.107 2005/10/27 16:36:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.108 2005/11/02 11:14:43 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1384,7 +1384,9 @@ SCIP_RETCODE SCIPconflictInit(
    conflict->nconflictvars = 0;
    conflict->ntmpconflictvars = 0;
 
-   /* increase the conflict set counter, such that variables of new conflict set are labeled with this new counter */
+   /* increase the conflict counter, such that variables of new conflict set and new conflict queues are labeled with
+    * this new counter
+    */
    conflict->count++;
    if( conflict->count == 0 ) /* make sure, 0 is not a valid conflict counter (may happen due to integer overflow) */
       conflict->count = 1;
@@ -1399,16 +1401,28 @@ SCIP_RETCODE conflictAddBdchginfo(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    )
 {
+   SCIP_VAR* var;
+
    assert(conflict != NULL);
    assert(bdchginfo != NULL);
 
+   var = SCIPbdchginfoGetVar(bdchginfo);
+
    /* put candidate in the appropriate priority queue */
-   if( SCIPvarGetType(SCIPbdchginfoGetVar(bdchginfo)) == SCIP_VARTYPE_BINARY )
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
    {
-      SCIP_CALL( SCIPpqueueInsert(conflict->binbdchgqueue, (void*)bdchginfo) );
+      /* check if the binary variable is/was already member of the queue */
+      if( var->conflictqueuecount != conflict->count )
+      {
+         SCIP_CALL( SCIPpqueueInsert(conflict->binbdchgqueue, (void*)bdchginfo) );
+         var->conflictqueuecount = conflict->count;
+      }
    }
    else
    {
+      /* bounds of non-binary variables must be put into the queue because we don't have a flag to mark the bound
+       * changes (would consume too much memory)
+       */
       SCIP_CALL( SCIPpqueueInsert(conflict->nonbinbdchgqueue, (void*)bdchginfo) );
    }
 

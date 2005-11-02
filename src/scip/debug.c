@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.13 2005/10/18 15:21:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.14 2005/11/02 11:14:44 bzfpfend Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -276,17 +276,25 @@ SCIP_RETCODE isSolutionInNode(
             /* get solution value of variable */
             SCIP_CALL( getSolutionValue(boundchgs[i].var, &varsol) );
 
-            /* compare the bound change with the solution value */
-            if( boundchgs[i].boundtype == SCIP_BOUNDTYPE_LOWER )
-               *solcontained = SCIPsetIsFeasGE(set, varsol, boundchgs[i].newbound);
-            else
-               *solcontained = SCIPsetIsFeasLE(set, varsol, boundchgs[i].newbound);
-            if( !(*solcontained) && boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING )
+            if( varsol != SCIP_INVALID )
             {
-               SCIPerrorMessage("debugging solution was cut off in local node %p at depth %d by inference <%s>[%.8g] %s %.8g\n",
-                  node, SCIPnodeGetDepth(node), SCIPvarGetName(boundchgs[i].var), varsol,
-                  boundchgs[i].boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", boundchgs[i].newbound);
-               SCIPABORT();
+               /* compare the bound change with the solution value */
+               if( boundchgs[i].boundtype == SCIP_BOUNDTYPE_LOWER )
+                  *solcontained = SCIPsetIsFeasGE(set, varsol, boundchgs[i].newbound);
+               else
+                  *solcontained = SCIPsetIsFeasLE(set, varsol, boundchgs[i].newbound);
+               if( !(*solcontained) && boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING )
+               {
+                  SCIPerrorMessage("debugging solution was cut off in local node %p at depth %d by inference <%s>[%.8g] %s %.8g\n",
+                     node, SCIPnodeGetDepth(node), SCIPvarGetName(boundchgs[i].var), varsol,
+                     boundchgs[i].boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", boundchgs[i].newbound);
+                  SCIPABORT();
+               }
+            }
+            else if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+            {
+               /* we branched on a variable were we don't know the solution: no debugging can be applied in this subtree */
+               *solcontained = FALSE;
             }
          }
       }

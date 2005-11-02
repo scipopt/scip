@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.57 2005/10/26 17:08:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.58 2005/11/02 11:14:44 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -212,6 +212,18 @@ SCIP_Bool SCIPvarHasImplic(
    SCIP_BOUNDTYPE        impltype            /**< type of implication y <=/>= b to search for */
    );
 
+/** returns whether there is an implication x == varfixing -> y == implvarfixing in the implication graph;
+ *  implications that are represented as cliques in the clique table are not regarded (use SCIPvarsHaveCommonClique());
+ *  both variables must be active binary variables
+ */
+extern
+SCIP_Bool SCIPvarHasBinaryImplic(
+   SCIP_VAR*             var,                /**< problem variable x */
+   SCIP_Bool             varfixing,          /**< FALSE if y should be searched in implications for x == 0, TRUE for x == 1 */
+   SCIP_VAR*             implvar,            /**< variable y to search for */
+   SCIP_Bool             implvarfixing       /**< value of the implied variable to search for */
+   );
+
 /** returns whether there is a clique that contains both given variable/value pairs;
  *  the variables must be active binary variables;
  *  if regardimplics is FALSE, only the cliques in the clique table are looked at;
@@ -250,6 +262,27 @@ extern
 void SCIPvarSetData(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_VARDATA*         vardata             /**< user variable data */
+   );
+
+/** sets method to free user data for the original variable */
+extern
+void SCIPvarSetDelorigData(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_DECL_VARDELORIG  ((*vardelorig))     /**< frees user data of original variable */
+   );
+
+/** sets method to transform user data of the variable */
+extern
+void SCIPvarSetTransData(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_DECL_VARTRANS    ((*vartrans))       /**< creates transformed user data by transforming original user data */
+   );
+
+/** sets method to free transformed user data for the variable */
+extern
+void SCIPvarSetDeltransData(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_DECL_VARDELTRANS ((*vardeltrans))    /**< frees user data of transformed variable */
    );
 
 /** gets status of variable */
@@ -599,6 +632,9 @@ SCIP_CLIQUE** SCIPvarGetCliques(
 #define SCIPvarGetName(var)             (var)->name
 #define SCIPvarGetData(var)             (var)->vardata
 #define SCIPvarSetData(var,vdata)       (var)->vardata = (vdata)
+#define SCIPvarSetDelorigData(var,func) (var)->vardelorig = (func)
+#define SCIPvarSetTransData(var,func)   (var)->vartrans = (func)
+#define SCIPvarSetDeltransData(var,func) (var)->vardeltrans = (func)
 #define SCIPvarGetStatus(var)           (SCIP_VARSTATUS)((var)->varstatus)
 #define SCIPvarIsOriginal(var)          ((var)->varstatus == SCIP_VARSTATUS_ORIGINAL \
       || ((var)->varstatus == SCIP_VARSTATUS_NEGATED && (var)->negatedvar->varstatus == SCIP_VARSTATUS_ORIGINAL))

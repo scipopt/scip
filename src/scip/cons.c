@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.135 2005/10/26 17:08:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.136 2005/11/02 11:14:43 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -2742,6 +2742,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    int                   depth,              /**< depth of current node */
+   SCIP_Bool             fullpropagation,    /**< should all constraints be propagated (or only new ones)? */
    SCIP_Bool             execdelayed,        /**< execute propagation method even if it is marked to be delayed */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -2774,7 +2775,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
          int firstcons;
 
          /* check, if the current domains were already propagated */
-         if( conshdlr->lastpropdomchgcount == stat->domchgcount )
+         if( !fullpropagation && conshdlr->lastpropdomchgcount == stat->domchgcount )
          {
             /* all constraints that were not yet propagated on the new domains must be useful constraints, which means,
              * that the new constraints are the last constraints of the useful ones
@@ -2795,7 +2796,8 @@ SCIP_RETCODE SCIPconshdlrPropagate(
          assert(nusefulconss <= nconss);
 
          /* constraint handlers without constraints should only be called once */
-         if( nconss > 0 || (!conshdlr->needscons && conshdlr->lastpropdomchgcount != stat->domchgcount) )
+         if( nconss > 0 || fullpropagation
+            || (!conshdlr->needscons && conshdlr->lastpropdomchgcount != stat->domchgcount) )
          {
             SCIP_CONS** conss;
             SCIP_Longint oldndomchgs;
@@ -2804,7 +2806,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
          
             SCIPdebugMessage("propagating constraints %d to %d of %d constraints of handler <%s> (%s pseudo solution, %d useful)\n",
                firstcons, firstcons + nconss - 1, conshdlr->npropconss, conshdlr->name,
-               conshdlr->lastpropdomchgcount == stat->domchgcount ? "old" : "new", nusefulconss);
+               !fullpropagation && conshdlr->lastpropdomchgcount == stat->domchgcount ? "old" : "new", nusefulconss);
 
             /* remember the number of processed constraints on the current domains */
             lastpropdomchgcount = stat->domchgcount;

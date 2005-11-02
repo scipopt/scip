@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.22 2005/08/24 17:26:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.23 2005/11/02 11:14:44 bzfpfend Exp $"
 
 /**@file   nodesel_restartdfs.c
  * @brief  node selector for depth first search with periodical selection of the best node
@@ -49,6 +49,7 @@
 /** node selector data for best first search node selection */
 struct SCIP_NodeselData
 {
+   SCIP_Longint          lastrestart;        /**< node number where the last best node was selected */
    int                   selectbestfreq;     /**< frequency for selecting the best node instead of the deepest one */
 };
 
@@ -65,9 +66,7 @@ SCIP_DECL_NODESELFREE(nodeselFreeRestartdfs)
 {  /*lint --e{715}*/
    SCIP_NODESELDATA* nodeseldata;
 
-   assert(nodesel != NULL);
    assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
-   assert(scip != NULL);
 
    /* free user data of node selector */
    nodeseldata = SCIPnodeselGetData(nodesel);
@@ -87,7 +86,20 @@ SCIP_DECL_NODESELFREE(nodeselFreeRestartdfs)
 
 
 /** solving process initialization method of node selector (called when branch and bound process is about to begin) */
-#define nodeselInitsolRestartdfs NULL
+static
+SCIP_DECL_NODESELINITSOL(nodeselInitsolRestartdfs)
+{
+   SCIP_NODESELDATA* nodeseldata;
+
+   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
+
+   nodeseldata = SCIPnodeselGetData(nodesel);
+   assert(nodeseldata != NULL);
+
+   nodeseldata->lastrestart = 0;
+
+   return SCIP_OKAY;
+}
 
 
 /** solving process deinitialization method of node selector (called before branch and bound process data is freed) */
@@ -98,24 +110,27 @@ SCIP_DECL_NODESELFREE(nodeselFreeRestartdfs)
 static
 SCIP_DECL_NODESELSELECT(nodeselSelectRestartdfs)
 {  /*lint --e{715}*/
-   SCIP_NODESELDATA* nodeseldata;
-
-   assert(nodesel != NULL);
    assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
-   assert(scip != NULL);
    assert(selnode != NULL);
 
-   /* get node selector user data */
-   nodeseldata = SCIPnodeselGetData(nodesel);
-   assert(nodeseldata != NULL);
-
-   /* decide if we want to select the node with lowest bound or the deepest node */
-   if( nodeseldata->selectbestfreq >= 1 && SCIPgetNNodes(scip) % nodeseldata->selectbestfreq == 0 )
-      *selnode = SCIPgetBestboundNode(scip);
-   else
+   /* decide if we want to select the node with lowest bound or the deepest node; finish the current dive in any case */
+   *selnode = SCIPgetPrioChild(scip);
+   if( *selnode == NULL )
    {
-      *selnode = SCIPgetPrioChild(scip);
-      if( *selnode == NULL )
+      SCIP_NODESELDATA* nodeseldata;
+      SCIP_Longint nnodes;
+
+      /* get node selector user data */
+      nodeseldata = SCIPnodeselGetData(nodesel);
+      assert(nodeseldata != NULL);
+
+      nnodes = SCIPgetNNodes(scip);
+      if( nodeseldata->selectbestfreq >= 1 && nnodes - nodeseldata->lastrestart >= nodeseldata->selectbestfreq )
+      {
+         nodeseldata->lastrestart = nnodes;
+         *selnode = SCIPgetBestboundNode(scip);
+      }
+      else
       {
          *selnode = SCIPgetPrioSibling(scip);
          if( *selnode == NULL )

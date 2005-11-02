@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.197 2005/10/18 15:21:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.198 2005/11/02 11:14:44 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -101,6 +101,7 @@ SCIP_RETCODE propagationRound(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    int                   depth,              /**< depth level to use for propagator frequency checks */
+   SCIP_Bool             fullpropagation,    /**< should all constraints be propagated (or only new ones)? */
    SCIP_Bool             onlydelayed,        /**< should only delayed propagators be called? */
    SCIP_Bool*            delayed,            /**< pointer to store whether a propagator was delayed */
    SCIP_Bool*            propagain,          /**< pointer to store whether propagation should be applied again */
@@ -153,7 +154,8 @@ SCIP_RETCODE propagationRound(
       if( onlydelayed && !SCIPconshdlrWasPropagationDelayed(set->conshdlrs[i]) )
          continue;
 
-      SCIP_CALL( SCIPconshdlrPropagate(set->conshdlrs[i], blkmem, set, stat, depth, onlydelayed, &result) );
+      SCIP_CALL( SCIPconshdlrPropagate(set->conshdlrs[i], blkmem, set, stat, depth, fullpropagation, onlydelayed,
+            &result) );
       *delayed = *delayed || (result == SCIP_DELAYED);
       *propagain = *propagain || (result == SCIP_REDUCEDDOM);
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
@@ -209,6 +211,7 @@ SCIP_RETCODE propagateDomains(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    int                   depth,              /**< depth level to use for propagator frequency checks */
    int                   maxproprounds,      /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
+   SCIP_Bool             fullpropagation,    /**< should all constraints be propagated (or only new ones)? */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
@@ -247,14 +250,19 @@ SCIP_RETCODE propagateDomains(
       propround++;
 
       /* perform the propagation round by calling the propagators and constraint handlers */
-      SCIP_CALL( propagationRound(blkmem, set, stat, depth, FALSE, &delayed, &propagain, cutoff) );
+      SCIP_CALL( propagationRound(blkmem, set, stat, depth, fullpropagation, FALSE, &delayed, &propagain, cutoff) );
 
       /* if the propagation will be terminated, call the delayed propagators */
       while( delayed && (!propagain || propround >= maxproprounds) && !(*cutoff) )
       {
          /* call the delayed propagators and constraint handlers */
-         SCIP_CALL( propagationRound(blkmem, set, stat, depth, TRUE, &delayed, &propagain, cutoff) );
+         SCIP_CALL( propagationRound(blkmem, set, stat, depth, fullpropagation, TRUE, &delayed, &propagain, cutoff) );
       }
+
+      /* if a reduction was found, we want to do another full propagation round (even if the propagator only claimed
+       * to have done a domain reduction without applying a domain change)
+       */
+      fullpropagation = TRUE;
    }
 
    /* mark the node to be completely propagated in the current repropagation subtree level */
@@ -277,7 +285,7 @@ SCIP_RETCODE SCIPpropagateDomains(
    )
 {
    /* apply domain propagation */
-   SCIP_CALL( propagateDomains(blkmem, set, stat, tree, depth, maxproprounds, cutoff) );
+   SCIP_CALL( propagateDomains(blkmem, set, stat, tree, depth, maxproprounds, TRUE, cutoff) );
 
    /* flush the conflict clause storage */
    SCIP_CALL( SCIPconflictFlushClauses(conflict, blkmem, set, stat, prob, tree) );
@@ -1500,7 +1508,7 @@ SCIP_RETCODE priceAndCutLoop(
                /* if a new bound change (e.g. a cut with only one column) was found, propagate domains again */
                if( stat->domchgcount != olddomchgcount )
                {
-                  SCIP_CALL( propagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, cutoff) );
+                  SCIP_CALL( propagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, cutoff) );
                }
 
                mustprice = mustprice || !lp->flushed || (prob->ncolvars != npricedcolvars);
@@ -2022,6 +2030,7 @@ SCIP_RETCODE solveNode(
    SCIP_Bool solverelaxagain;
    SCIP_Bool solvelpagain;
    SCIP_Bool propagateagain;
+   SCIP_Bool fullpropagation;
    SCIP_Bool branched;
    SCIP_Bool forcedlpsolve;
 
@@ -2082,6 +2091,7 @@ SCIP_RETCODE solveNode(
    solverelaxagain = TRUE;
    solvelpagain = TRUE;
    propagateagain = TRUE;
+   fullpropagation = TRUE;
    forcedlpsolve = FALSE;
    while( !(*cutoff) && (solverelaxagain || solvelpagain || propagateagain) && nlperrors < MAXNLPERRORS && !(*restart) )
    {
@@ -2097,7 +2107,8 @@ SCIP_RETCODE solveNode(
       if( propagateagain && !(*cutoff) )
       {
          propagateagain = FALSE;
-         SCIP_CALL( propagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, cutoff) );
+         SCIP_CALL( propagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, fullpropagation, cutoff) );
+         fullpropagation = FALSE;
 
          /* check, if the path was cutoff */
          *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);

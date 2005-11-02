@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.99 2005/09/22 14:43:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.100 2005/11/02 11:14:43 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -249,6 +249,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    int                   depth,              /**< depth of current node; -1 if preprocessing domain propagation */
+   SCIP_Bool             fullpropagation,    /**< should all constraints be propagated (or only new ones)? */
    SCIP_Bool             execdelayed,        /**< execute propagation method even if it is marked to be delayed */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );

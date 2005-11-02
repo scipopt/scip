@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.38 2005/09/08 19:46:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.39 2005/11/02 11:14:44 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -239,6 +239,7 @@ struct SCIP_Var
    int                   ubchginfossize;     /**< available slots in ubchginfos array */
    int                   nubchginfos;        /**< number of upper bound changes from root node to current node */
    int                   conflictsetcount;   /**< number of last conflict set, this variable was member of */
+   int                   conflictqueuecount; /**< number of last conflict analysis call, the variable was in the queue */
    unsigned int          initial:1;          /**< TRUE iff var's column should be present in the initial root LP */
    unsigned int          removeable:1;       /**< TRUE iff var's column is removeable from the LP (due to aging or cleanup) */
    unsigned int          deleted:1;          /**< TRUE iff variable was deleted from the problem */

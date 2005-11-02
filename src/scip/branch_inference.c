@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_inference.c,v 1.16 2005/10/18 09:09:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_inference.c,v 1.17 2005/11/02 11:14:43 bzfpfend Exp $"
 
 /**@file   branch_inference.c
  * @brief  inference history branching rule
@@ -81,6 +81,8 @@ SCIP_RETCODE performBranching(
          bestscore = score;
          bestcand = c;
       }
+      SCIPdebugMessage(" -> cand <%s>: prio=%d, score=%g\n", SCIPvarGetName(cands[c]), SCIPvarGetBranchPriority(cands[c]),
+         score);
    }
    assert(0 <= bestcand && bestcand < ncands);
    var = cands[bestcand];
@@ -96,8 +98,8 @@ SCIP_RETCODE performBranching(
       branchdir = SCIP_BRANCHDIR_AUTO;
 
    /* perform the branching */
-   SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%.12f, score=%g)\n",
-      ncands, bestcand, SCIPvarGetName(var), SCIPgetVarSol(scip, var), bestscore);
+   SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s> (prio=%d, solval=%.12f, score=%g)\n",
+      ncands, bestcand, SCIPvarGetName(var), SCIPvarGetBranchPriority(var), SCIPgetVarSol(scip, var), bestscore);
    SCIP_CALL( SCIPbranchVar(scip, var, branchdir) );
 
    return SCIP_OKAY;
