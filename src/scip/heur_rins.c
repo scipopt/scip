@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rins.c,v 1.5 2005/10/25 09:25:38 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_rins.c,v 1.6 2005/11/02 14:12:30 bzfberth Exp $"
 
 /**@file   heur_rins.c
  * @brief  RINS primal heuristic
@@ -387,7 +387,8 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit - SCIPgetTotalTime(scip) + 10.0) );
 
-   /* forbid recursive call of rins as well as usage of local branching */
+   /* forbid recursive call of heuristics solving subMIPs */
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) ); 
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
 

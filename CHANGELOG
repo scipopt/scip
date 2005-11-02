@@ -34,11 +34,13 @@ plugins:
 - LP file reader now accepts the keyword "Integer" for defining the start of the integer variables section
 - added preliminary version of "intdiving" heuristic (disabled in default settings)
 - slightly modified restartdfs node selector
+- added crossover heuristic
 
 parameters:
 - modified meaning of parameter presolving/probing/maxtotaluseless
 - new parameter branching/inference/conflictweight
 - heuristics with freq = 0 and freqofs > 0 are now called in depth level freqofs instead of being called in the root node
+- added some parameters in local branching and RINS heuristic
 
 features:
 - changed handling of added constraints in separation calls
@@ -61,6 +63,7 @@ fixed bugs:
 - fixed numerics in probing and linear constraint handler (rentacar was detected to be infeasible in presolving)
 - fixed bug with calling heuristics in depths smaller than their frequency offset
 - fixed bug with aggregating fixed variables
+- fixed bugs in local branching and RINS heuristic
 
 known bugs:
 - if one uses column generation and restarts, a solution that contains variables that are only present in the transformed

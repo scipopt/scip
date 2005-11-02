@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.4 2005/09/19 11:05:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.5 2005/11/02 14:12:30 bzfberth Exp $"
 
 /**@file   heur_localbranching.c
  * @brief  localbranching primal heuristic
@@ -38,14 +38,16 @@
 #define HEUR_MAXDEPTH         -1
 #define HEUR_PSEUDONODES      TRUE      /* call heuristic at nodes where only a pseudo solution exist?              */
 #define HEUR_DURINGPLUNGING   TRUE      /* call heuristic during plunging?                                          */
-#define HEUR_DURINGLPLOOP     FALSE     /* call heuristic during the LP price-and-cut loop? */
+#define HEUR_DURINGLPLOOP     FALSE     /* call heuristic during the LP price-and-cut loop?                         */
 #define HEUR_AFTERNODE        TRUE      /* call heuristic after or before the current node was solved?              */
 
-#define DEFAULT_NEIGHBORHOODSIZE  18    /* radius of the incumbents neighborhood to be searched                    */
+#define DEFAULT_NEIGHBORHOODSIZE  18    /* radius of the incumbents neighborhood to be searched                     */
 #define DEFAULT_NODESOFS      1000      /* number of nodes added to the contingent of the total nodes               */
 #define DEFAULT_MAXNODES      10000     /* maximum number of nodes to regard in the subproblem                      */
+#define DEFAULT_MINIMPROVE    0.01      /* factor by which localbranching should at least improve the incumbent     */
 #define DEFAULT_MINNODES      1000      /* minimum number of nodes required to start the subproblem                 */
 #define DEFAULT_NODESQUOT     0.05      /* contingent of sub problem nodes in relation to original nodes            */
+#define DEFAULT_NWAITINGNODES 200       /* number of nodes without incumbent change that heuristic should wait      */
 
 #define EXECUTE               0
 #define WAITFORNEWSOL         1
@@ -60,17 +62,19 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   int                    nodesofs;           /**< number of nodes added to the contingent of the total nodes       */
-   int                    minnodes;           /**< minimum number of nodes required to start the subproblem         */
-   int                    maxnodes;           /**< maximum number of nodes to regard in the subproblem              */
-   SCIP_Longint           usednodes;          /**< amount of nodes local branching used during all calls            */
-   SCIP_Real              nodesquot;          /**< contingent of sub problem nodes in relation to original nodes    */
-   int                    neighborhoodsize;   /**< radius of the incumbent's neighborhood to be searched            */
-   int                    callstatus;         /**< current status of localbranching heuristic                       */
-   SCIP_SOL*              lastsol;            /**< the last incumbent localbranching used as reference point        */
-   int                    curneighborhoodsize;/**< current neighborhoodsize                                         */
-   int                    curminnodes;        /**< current minimal number of nodes required to start the subproblem */
-   int                    emptyneighborhoodsize;/**< size of neighborhood that was proven to be empty               */
+   int                    nwaitingnodes;      /**< number of nodes without incumbent change that heuristic should wait  */
+   int                    nodesofs;           /**< number of nodes added to the contingent of the total nodes           */
+   int                    minnodes;           /**< minimum number of nodes required to start the subproblem             */
+   int                    maxnodes;           /**< maximum number of nodes to regard in the subproblem                  */
+   SCIP_Longint           usednodes;          /**< amount of nodes local branching used during all calls                */
+   SCIP_Real              nodesquot;          /**< contingent of sub problem nodes in relation to original nodes        */
+   SCIP_Real              minimprove;         /**< factor by which localbranching should at least improve the incumbent */
+   int                    neighborhoodsize;   /**< radius of the incumbent's neighborhood to be searched                */
+   int                    callstatus;         /**< current status of localbranching heuristic                           */
+   SCIP_SOL*              lastsol;            /**< the last incumbent localbranching used as reference point            */
+   int                    curneighborhoodsize;/**< current neighborhoodsize                                             */
+   int                    curminnodes;        /**< current minimal number of nodes required to start the subproblem     */
+   int                    emptyneighborhoodsize;/**< size of neighborhood that was proven to be empty                   */
 };
 
 
@@ -339,12 +343,13 @@ static
 SCIP_DECL_HEUREXEC(heurExecLocalbranching)
 { 
    SCIP_HEURDATA* heurdata;
-   SCIP* subscip;
-   SCIP_VAR** subvars;
-   SCIP_SOL* bestsol;                        /* best solution so far */
+   SCIP* subscip;                            /* the subproblem created by localbranching              */
+   SCIP_VAR** subvars;                       /* subproblem's variables                                */
+   SCIP_SOL* bestsol;                        /* best solution so far                                  */
    SCIP_Real timelimit;                      /* timelimit for subscip (equals remaining time of scip) */
-   SCIP_Longint maxnnodes;                   /* maximum number of subnodes */
-   SCIP_Longint nsubnodes;                   /* nodelimit for subscip */
+   SCIP_Longint maxnnodes;                   /* maximum number of subnodes                            */
+   SCIP_Longint nsubnodes;                   /* nodelimit for subscip                                 */
+   SCIP_Real cutoff;                         /* objective cutoff for the subproblem                   */
    int nvars;
    int i;
    
@@ -362,12 +367,20 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    if( SCIPgetNBinVars(scip) < 2*heurdata->neighborhoodsize )
       return SCIP_OKAY;
 
-   /* only call heuristic, if an optimal LP solution is at hand */
-   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL || SCIPgetNSols(scip) <= 0  )
-   {
-      *result = SCIP_DELAYED;
+   *result = SCIP_DELAYED;
+
+   /* only call heuristic, if an IP solution is at hand */
+   if( SCIPgetNSols(scip) <= 0  )
+         return SCIP_OKAY;
+      
+   /* only call heuristic, if the best solution comes from transformed problem */
+   assert( SCIPgetBestSol(scip) != NULL );
+   if( SCIPsolGetOrigin(SCIPgetBestSol(scip)) == SCIP_SOLORIGIN_ORIGINAL )
       return SCIP_OKAY;
-   }
+   
+   /* only call heuristic, if enough nodes were processed since last incumbent */
+   if( SCIPgetNNodes(scip) - SCIPgetSolNodenum(scip,SCIPgetBestSol(scip))  < heurdata->nwaitingnodes)
+      return SCIP_OKAY;
 
    /* reset neighborhood and minnodes, if new solution was found */
    bestsol = SCIPgetBestSol(scip);
@@ -383,6 +396,8 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    /* if no new solution was found and local branching also seems to fail, just keep on waiting */
    if( heurdata->callstatus == WAITFORNEWSOL )
       return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTRUN;
 
    /* calculate the maximal number of branching nodes until heuristic is aborted */
    maxnnodes = heurdata->nodesquot * SCIPgetNNodes(scip);
@@ -417,7 +432,8 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit - SCIPgetTotalTime(scip) + 10 ) );
 
-   /* forbid recursive call of local branching as well as usage of rins */
+   /* forbid recursive call of heuristics solving subMIPs */
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) );
 
@@ -452,7 +468,9 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    addLocalBranchingConstraint(scip, subscip, subvars, heurdata);
 
    /* add an objective cutoff */
-   SCIP_CALL( SCIPsetObjlimit(subscip, SCIPgetSolTransObj(scip, bestsol) - SCIPepsilon(scip)) );
+   cutoff = (1-heurdata->minimprove)*SCIPgetUpperbound(scip) - heurdata->minimprove*SCIPgetLowerbound(scip);
+   cutoff = MIN( SCIPgetUpperbound(scip) - SCIPsumepsilon(scip), cutoff );
+   SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
 
    /* solve the subproblem */  
    SCIPdebugMessage("solving local branching sub-MIP with neighborhoodsize %d and maxnodes %lld\n",
@@ -565,6 +583,14 @@ SCIP_RETCODE SCIPincludeHeurLocalbranching(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/localbranching/maxnodes",
          "maximum number of nodes to regard in the subproblem",
          &heurdata->maxnodes, DEFAULT_MAXNODES, 0, INT_MAX, NULL, NULL) );
+   
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/localbranching/nwaitingnodes",
+         "number of nodes without incumbent change that heuristic should wait",
+         &heurdata->nwaitingnodes, DEFAULT_NWAITINGNODES, 0, INT_MAX, NULL, NULL) );
+   
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/localbranching/minimprove",
+         "factor by which localbranching should at least improve the incumbent  ",
+         &heurdata->minimprove, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }
