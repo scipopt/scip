@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.h,v 1.41 2005/08/24 17:26:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.h,v 1.42 2005/11/07 11:42:35 bzfpfend Exp $"
 
 /**@file   cons_linear.h
  * @brief  constraint handler for linear constraints
@@ -101,7 +101,7 @@ SCIP_RETCODE SCIPcreateConsLinear(
    const char*           name,               /**< name of constraint */
    int                   nvars,              /**< number of nonzeros in the constraint */
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Real*            vals,               /**< array with coefficients of constraint entries */
+   SCIP_Real*            vals,               /**< array with coefficients of constraint entries; coefs must not be zero! */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs,                /**< right hand side of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
@@ -115,7 +115,7 @@ SCIP_RETCODE SCIPcreateConsLinear(
    SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    );
 
-/** adds coefficient to linear constraint */
+/** adds coefficient to linear constraint (if it is not zero) */
 extern
 SCIP_RETCODE SCIPaddCoefLinear(
    SCIP*                 scip,               /**< SCIP data structure */

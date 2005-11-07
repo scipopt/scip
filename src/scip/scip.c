@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.330 2005/10/28 12:03:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.331 2005/11/07 11:42:35 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4903,9 +4903,9 @@ SCIP_RETCODE SCIPreleaseVar(
    case SCIP_STAGE_SOLVED:
    case SCIP_STAGE_FREESOLVE:
    case SCIP_STAGE_FREETRANS:
-      if( !SCIPvarIsTransformed(*var) )
+      if( !SCIPvarIsTransformed(*var) && (*var)->nuses == 1 )
       {
-         SCIPerrorMessage("cannot release original variables while the transformed problem exists\n");
+         SCIPerrorMessage("cannot release last use of original variable while the transformed problem exists\n");
          return SCIP_INVALIDCALL;
       }
       SCIP_CALL( SCIPvarRelease(var, scip->mem->solvemem, scip->set, scip->lp) );

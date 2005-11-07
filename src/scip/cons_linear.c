@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.200 2005/10/18 15:21:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.201 2005/11/07 11:42:35 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -6427,7 +6427,7 @@ SCIP_RETCODE SCIPcreateConsLinear(
    const char*           name,               /**< name of constraint */
    int                   nvars,              /**< number of nonzeros in the constraint */
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Real*            vals,               /**< array with coefficients of constraint entries */
+   SCIP_Real*            vals,               /**< array with coefficients of constraint entries; coefs must not be zero! */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs,                /**< right hand side of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
@@ -6469,7 +6469,7 @@ SCIP_RETCODE SCIPcreateConsLinear(
    return SCIP_OKAY;
 }
 
-/** adds coefficient to linear constraint */
+/** adds coefficient to linear constraint (if it is not zero) */
 SCIP_RETCODE SCIPaddCoefLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -6485,7 +6485,10 @@ SCIP_RETCODE SCIPaddCoefLinear(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( addCoef(scip, cons, var, val) );
+   if( !SCIPisZero(scip, val) )
+   {
+      SCIP_CALL( addCoef(scip, cons, var, val) );
+   }
 
    return SCIP_OKAY;
 }

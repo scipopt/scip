@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.7 2005/10/13 21:10:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.8 2005/11/07 11:42:35 bzfpfend Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -759,9 +759,12 @@ SCIP_RETCODE readCoefficients(
 
       /* insert the coefficient */
       SCIPdebugMessage("(line %d) read coefficient: %+g<%s>\n", lpinput->linenumber, coefsign * coef, SCIPvarGetName(var));
-      (*vars)[*ncoefs] = var;
-      (*coefs)[*ncoefs] = coefsign * coef;
-      (*ncoefs)++;
+      if( !SCIPisZero(scip, coef) )
+      {
+         (*vars)[*ncoefs] = var;
+         (*coefs)[*ncoefs] = coefsign * coef;
+         (*ncoefs)++;
+      }
 
       /* reset the flags and coefficient value for the next coefficient */
       coefsign = +1;
