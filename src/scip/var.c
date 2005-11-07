@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.194 2005/11/02 11:14:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.195 2005/11/07 14:46:54 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -5707,7 +5707,13 @@ SCIP_RETCODE varAddTransitiveImplic(
          vlbvars = SCIPvboundsGetVars(implvar->vlbs);
          vlbcoefs = SCIPvboundsGetCoefs(implvar->vlbs);
          vlbconstants = SCIPvboundsGetConstants(implvar->vlbs);
-         for( i = 0; i < nvlbvars && !(*infeasible); ++i )
+         /* we have to iterate from back to front, because in varAddImplic() it may happen that a conflict is detected and
+          * vlbvars[i] is fixed, s.t. the variable bound is deleted; this affects the array over which we currently
+          * iterate; the only thing that can happen, is that elements of the array are deleted; in this case, the
+          * subsequent elements are moved to the front; if we iterate from back to front, the only thing that can happen
+          * is that we add the same implication twice - this does no harm
+          */
+         for( i = nvlbvars-1; i >= 0 && !(*infeasible); --i )
          {
             assert(vlbvars[i] != implvar);
             assert(!SCIPsetIsZero(set, vlbcoefs[i]));
@@ -5733,7 +5739,8 @@ SCIP_RETCODE varAddTransitiveImplic(
                   SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
                         varfixing, vlbvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, infeasible, nbdchgs, &added) );
                }
-               assert(SCIPvboundsGetNVbds(implvar->vlbs) == nvlbvars);
+               nvlbvars = SCIPvboundsGetNVbds(implvar->vlbs);
+               i = MIN(i, nvlbvars); /* some elements from the array could have been removed */
             }
          }
       }
@@ -5751,7 +5758,13 @@ SCIP_RETCODE varAddTransitiveImplic(
          vubvars = SCIPvboundsGetVars(implvar->vubs);
          vubcoefs = SCIPvboundsGetCoefs(implvar->vubs);
          vubconstants = SCIPvboundsGetConstants(implvar->vubs);
-         for( i = 0; i < nvubvars && !(*infeasible); ++i )
+         /* we have to iterate from back to front, because in varAddImplic() it may happen that a conflict is detected and
+          * vubvars[i] is fixed, s.t. the variable bound is deleted; this affects the array over which we currently
+          * iterate; the only thing that can happen, is that elements of the array are deleted; in this case, the
+          * subsequent elements are moved to the front; if we iterate from back to front, the only thing that can happen
+          * is that we add the same implication twice - this does no harm
+          */
+         for( i = nvubvars-1; i >= 0 && !(*infeasible); --i )
          {
             assert(vubvars[i] != implvar);
             assert(!SCIPsetIsZero(set, vubcoefs[i]));
@@ -5777,7 +5790,8 @@ SCIP_RETCODE varAddTransitiveImplic(
                   SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
                         varfixing, vubvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, infeasible, nbdchgs, &added) );
                }
-               assert(SCIPvboundsGetNVbds(implvar->vubs) == nvubvars);
+               nvubvars = SCIPvboundsGetNVbds(implvar->vubs);
+               i = MIN(i, nvubvars); /* some elements from the array could have been removed */
             }
          }
       }

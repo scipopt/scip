@@ -64,6 +64,8 @@ fixed bugs:
 - fixed bug with calling heuristics in depths smaller than their frequency offset
 - fixed bug with aggregating fixed variables
 - fixed bugs in local branching and RINS heuristic
+- fixed bug in LP file reader with explicit zero coefficients
+- fixed bug in transitive implication addition
 
 known bugs:
 - if one uses column generation and restarts, a solution that contains variables that are only present in the transformed
