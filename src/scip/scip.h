@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.252 2005/10/28 12:03:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.253 2005/11/08 17:07:52 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1504,6 +1504,30 @@ extern
 SCIP_CONS* SCIPfindCons(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of constraint to find */
+   );
+
+/** gets total number of globally valid constraints currently in the problem */
+extern
+int SCIPgetNConss(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets array of globally valid constraints currently in the problem */
+extern
+SCIP_CONS** SCIPgetConss(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets total number of constraints in the original problem */
+extern
+int SCIPgetNOrigConss(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets array of constraints in the original problem */
+extern
+SCIP_CONS** SCIPgetOrigConss(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /**@} */
@@ -4686,12 +4710,6 @@ int SCIPgetNActiveConss(
 /** gets total number of enabled constraints at the current node */
 extern
 int SCIPgetNEnabledConss(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** gets total number of globally valid constraints currently in the problem */
-extern
-int SCIPgetNGlobalConss(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

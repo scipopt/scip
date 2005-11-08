@@ -24,6 +24,8 @@ interface:
 - new method SCIPgetNConflictClausesFoundNode()
 - new methods SCIPvarSetDelorigData(), SCIPvarSetTransData(), and SCIPvarSetDeltransData()
 - new method SCIPvarHasBinaryImplic()
+- renamed method SCIPgetNGlobalConss() to SCIPgetNConss()
+- added methods SCIPgetConss(), SCIPgetNOrigConss(), and SCIPgetOrigConss()
 
 plugins:
 - new presolver "implics" to find bound changes and aggregations out of the implication graph

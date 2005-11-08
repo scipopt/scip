@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.331 2005/11/07 11:42:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.332 2005/11/08 17:07:51 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3315,6 +3315,76 @@ SCIP_CONS* SCIPfindCons(
       SCIPABORT();
       return NULL;
    }  /*lint !e788*/
+}
+
+/** gets total number of globally valid constraints currently in the problem */
+int SCIPgetNConss(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNConss", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      return scip->origprob->nconss;
+
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+      return scip->transprob->nconss;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      SCIPABORT();
+      return 0;
+   }  /*lint !e788*/
+}
+
+/** gets array of globally valid constraints currently in the problem */
+SCIP_CONS** SCIPgetConss(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetConss", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      return scip->origprob->conss;
+
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+      return scip->transprob->conss;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      SCIPABORT();
+      return NULL;
+   }  /*lint !e788*/
+}
+
+/** gets total number of constraints in the original problem */
+int SCIPgetNOrigConss(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNOrigConss", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->origprob->nconss;
+}
+
+/** gets array of constraints in the original problem */
+SCIP_CONS** SCIPgetOrigConss(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetOrigConss", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->origprob->conss;
 }
 
 
@@ -11818,31 +11888,6 @@ int SCIPgetNEnabledConss(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNEnabledConss", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    return scip->stat->nenabledconss;
-}
-
-/** gets total number of globally valid constraints currently in the problem */
-int SCIPgetNGlobalConss(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNGlobalConss", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
-
-   switch( scip->set->stage )
-   {
-   case SCIP_STAGE_PROBLEM:
-      return scip->origprob->nconss;
-
-   case SCIP_STAGE_PRESOLVING:
-   case SCIP_STAGE_PRESOLVED:
-   case SCIP_STAGE_SOLVING:
-   case SCIP_STAGE_SOLVED:
-      return scip->transprob->nconss;
-
-   default:
-      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      SCIPABORT();
-      return 0;
-   }  /*lint !e788*/
 }
 
 /** gets average dual bound of all unprocessed nodes */
