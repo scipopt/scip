@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.28 2005/10/18 15:21:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.29 2005/11/10 18:39:53 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -440,8 +440,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
    presoldata->called = TRUE;
 
    /* allow some additional probings */
-   presoldata->nuseless /= 2;
-   presoldata->ntotaluseless /= 2;
+   presoldata->nuseless -= presoldata->nuseless/10;
+   presoldata->ntotaluseless -= presoldata->ntotaluseless/10;
 
    /* get variable data */
    if( presoldata->sortedvars == NULL )
