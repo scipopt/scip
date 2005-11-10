@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: retcode.c,v 1.21 2005/08/24 17:26:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: retcode.c,v 1.22 2005/11/10 18:10:02 bzfpfend Exp $"
 
 /**@file   retcode.c
  * @brief  methods for return codes for SCIP methods
@@ -36,8 +36,6 @@ void SCIPretcodePrint(
    SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
    )
 {
-   assert(file != NULL);
-
    switch( retcode )
    {
    case SCIP_OKAY:

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.253 2005/11/08 17:07:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.254 2005/11/10 18:10:02 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -4117,7 +4117,8 @@ extern
 SCIP_RETCODE SCIPprintSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
 
 /** outputs non-zero variables of solution in transformed problem space to file stream */
@@ -4125,7 +4126,8 @@ extern
 SCIP_RETCODE SCIPprintTransSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
 
 /** gets number of primal solutions stored in the solution storage */
@@ -4150,14 +4152,16 @@ SCIP_SOL* SCIPgetBestSol(
 extern
 SCIP_RETCODE SCIPprintBestSol(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
 
 /** outputs best feasible primal solution found so far in transformed variables to file stream */
 extern
 SCIP_RETCODE SCIPprintBestTransSol(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
 
 /** try to round given solution */

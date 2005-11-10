@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.47 2005/10/26 17:08:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.48 2005/11/10 18:10:03 bzfpfend Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -310,7 +310,8 @@ SCIP_RETCODE SCIPsolPrint(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< problem data (original or transformed) */
    SCIP_PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
 
 

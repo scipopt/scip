@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.69 2005/10/26 17:08:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.70 2005/11/10 18:10:03 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -961,7 +961,8 @@ SCIP_RETCODE SCIPsolCheck(
 
 #ifdef SCIP_DEBUG
          if( !(*feasible) )
-            SCIPdebugPrintf("  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var), lb, ub);
+            SCIPdebugPrintf("  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
+               SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
 #endif
       }
    }
@@ -1124,7 +1125,7 @@ SCIP_RETCODE SCIPsolRetransform(
    }
 
    /**@todo remember the variables without original counterpart (priced variables) in the solution */
-   /*????????????????????????*/
+   /*???????????????????????? remember the variables without original counterpart (priced variables) in the solution */
 
    /* free temporary memory */
    SCIPsetFreeBufferArray(set, &solvals);
@@ -1169,7 +1170,8 @@ SCIP_RETCODE SCIPsolPrint(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< problem data (original or transformed) */
    SCIP_PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    )
 {
    SCIP_Real solval;
@@ -1184,15 +1186,15 @@ SCIP_RETCODE SCIPsolPrint(
    {
       assert(prob->fixedvars[v] != NULL);
       solval = SCIPsolGetVal(sol, set, stat, prob->fixedvars[v]);
-      if( !SCIPsetIsZero(set, solval) )
+      if( printzeros || !SCIPsetIsZero(set, solval) )
       {
          SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
          if( solval == SCIP_INVALID )
-            SCIPmessageFPrintInfo(file, " invalid");
+            SCIPmessageFPrintInfo(file, "              invalid");
          else if( SCIPsetIsInfinity(set, solval) )
-            SCIPmessageFPrintInfo(file, " +infinity");
+            SCIPmessageFPrintInfo(file, "            +infinity");
          else if( SCIPsetIsInfinity(set, -solval) )
-            SCIPmessageFPrintInfo(file, " -infinity");
+            SCIPmessageFPrintInfo(file, "            -infinity");
          else
             SCIPmessageFPrintInfo(file, " % 20.9g", solval);
          SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(prob->fixedvars[v]));
@@ -1202,15 +1204,15 @@ SCIP_RETCODE SCIPsolPrint(
    {
       assert(prob->vars[v] != NULL);
       solval = SCIPsolGetVal(sol, set, stat, prob->vars[v]);
-      if( !SCIPsetIsZero(set, solval) )
+      if( printzeros || !SCIPsetIsZero(set, solval) )
       {
          SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(prob->vars[v]));
          if( solval == SCIP_INVALID )
-            SCIPmessageFPrintInfo(file, " invalid");
+            SCIPmessageFPrintInfo(file, "              invalid");
          else if( SCIPsetIsInfinity(set, solval) )
-            SCIPmessageFPrintInfo(file, " +infinity");
+            SCIPmessageFPrintInfo(file, "            +infinity");
          else if( SCIPsetIsInfinity(set, -solval) )
-            SCIPmessageFPrintInfo(file, " -infinity");
+            SCIPmessageFPrintInfo(file, "            -infinity");
          else
             SCIPmessageFPrintInfo(file, " % 20.9g", solval);
          SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(prob->vars[v]));
@@ -1228,15 +1230,15 @@ SCIP_RETCODE SCIPsolPrint(
             continue;
 
          solval = SCIPsolGetVal(sol, set, stat, transprob->fixedvars[v]);
-         if( !SCIPsetIsZero(set, solval) )
+         if( printzeros || !SCIPsetIsZero(set, solval) )
          {
             SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(transprob->fixedvars[v]));
             if( solval == SCIP_INVALID )
-               SCIPmessageFPrintInfo(file, " invalid");
+               SCIPmessageFPrintInfo(file, "              invalid");
             else if( SCIPsetIsInfinity(set, solval) )
-               SCIPmessageFPrintInfo(file, " +infinity");
+               SCIPmessageFPrintInfo(file, "            +infinity");
             else if( SCIPsetIsInfinity(set, -solval) )
-               SCIPmessageFPrintInfo(file, " -infinity");
+               SCIPmessageFPrintInfo(file, "            -infinity");
             else
                SCIPmessageFPrintInfo(file, " % 20.9g", solval);
             SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(transprob->fixedvars[v]));
@@ -1249,15 +1251,15 @@ SCIP_RETCODE SCIPsolPrint(
             continue;
 
          solval = SCIPsolGetVal(sol, set, stat, transprob->vars[v]);
-         if( !SCIPsetIsZero(set, solval) )
+         if( printzeros || !SCIPsetIsZero(set, solval) )
          {
             SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(transprob->vars[v]));
             if( solval == SCIP_INVALID )
-               SCIPmessageFPrintInfo(file, " invalid");
+               SCIPmessageFPrintInfo(file, "              invalid");
             else if( SCIPsetIsInfinity(set, solval) )
-               SCIPmessageFPrintInfo(file, " +infinity");
+               SCIPmessageFPrintInfo(file, "            +infinity");
             else if( SCIPsetIsInfinity(set, -solval) )
-               SCIPmessageFPrintInfo(file, " -infinity");
+               SCIPmessageFPrintInfo(file, "            -infinity");
             else
                SCIPmessageFPrintInfo(file, " % 20.9g", solval);
             SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(transprob->vars[v]));

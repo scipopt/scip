@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.48 2005/11/02 14:12:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.49 2005/11/10 18:10:02 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -69,6 +69,7 @@
 #include "scip/reader_cnf.h"
 #include "scip/reader_lp.h"
 #include "scip/reader_mps.h"
+#include "scip/reader_sol.h"
 #include "scip/reader_zpl.h"
 #include "scip/sepa_clique.h"
 #include "scip/sepa_cmir.h"
@@ -112,6 +113,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeReaderCnf(scip) );
    SCIP_CALL( SCIPincludeReaderLp(scip) );
    SCIP_CALL( SCIPincludeReaderMps(scip) );
+   SCIP_CALL( SCIPincludeReaderSol(scip) );
    SCIP_CALL( SCIPincludeReaderZpl(scip) );
    SCIP_CALL( SCIPincludePresolDualfix(scip) );
    SCIP_CALL( SCIPincludePresolImplics(scip) );

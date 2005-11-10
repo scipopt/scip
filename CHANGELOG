@@ -26,6 +26,8 @@ interface:
 - new method SCIPvarHasBinaryImplic()
 - renamed method SCIPgetNGlobalConss() to SCIPgetNConss()
 - added methods SCIPgetConss(), SCIPgetNOrigConss(), and SCIPgetOrigConss()
+- new parameter "printzeros" for methods SCIPprintSol(), SCIPprintTransSol(), SCIPprintBestSol(), and
+  SCIPprintBestTransSol()
 
 plugins:
 - new presolver "implics" to find bound changes and aggregations out of the implication graph
@@ -37,6 +39,7 @@ plugins:
 - added preliminary version of "intdiving" heuristic (disabled in default settings)
 - slightly modified restartdfs node selector
 - added crossover heuristic
+- new file reader for (partial) solutions
 
 parameters:
 - modified meaning of parameter presolving/probing/maxtotaluseless

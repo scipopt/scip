@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.332 2005/11/08 17:07:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.333 2005/11/10 18:10:02 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -10701,7 +10701,8 @@ SCIP_HEUR* SCIPgetSolHeur(
 SCIP_RETCODE SCIPprintSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    )
 {
    SCIP_Bool currentsol;
@@ -10721,7 +10722,7 @@ SCIP_RETCODE SCIPprintSol(
       SCIPprobExternObjval(scip->transprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob)), 20, 9);
    SCIPmessageFPrintInfo(file, "\n");
 
-   SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->stat, scip->origprob, scip->transprob, file) );
+   SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->stat, scip->origprob, scip->transprob, file, printzeros) );
 
    if( currentsol )
    {
@@ -10736,7 +10737,8 @@ SCIP_RETCODE SCIPprintSol(
 SCIP_RETCODE SCIPprintTransSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    )
 {
    SCIP_Bool currentsol;
@@ -10761,7 +10763,7 @@ SCIP_RETCODE SCIPprintTransSol(
    SCIPprintReal(scip, file, SCIPsolGetObj(sol, scip->set, scip->transprob), 20, 9);
    SCIPmessageFPrintInfo(file, "\n");
 
-   SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->stat, scip->transprob, NULL, file) );
+   SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->stat, scip->transprob, NULL, file, printzeros) );
 
    if( currentsol )
    {
@@ -10811,7 +10813,8 @@ SCIP_SOL* SCIPgetBestSol(
 /** outputs best feasible primal solution found so far to file stream */
 SCIP_RETCODE SCIPprintBestSol(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    )
 {
    SCIP_SOL* sol;
@@ -10824,7 +10827,7 @@ SCIP_RETCODE SCIPprintBestSol(
       SCIPmessageFPrintInfo(file, "no solution available\n");
    else
    {
-      SCIP_CALL( SCIPprintSol(scip, sol, file) );
+      SCIP_CALL( SCIPprintSol(scip, sol, file, printzeros) );
    }
 
    return SCIP_OKAY;
@@ -10833,7 +10836,8 @@ SCIP_RETCODE SCIPprintBestSol(
 /** outputs best feasible primal solution found so far in transformed variables to file stream */
 SCIP_RETCODE SCIPprintBestTransSol(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    )
 {
    SCIP_SOL* sol;
@@ -10852,7 +10856,7 @@ SCIP_RETCODE SCIPprintBestTransSol(
       SCIPmessageFPrintInfo(file, "no solution available\n");
    else
    {
-      SCIP_CALL( SCIPprintTransSol(scip, sol, file) );
+      SCIP_CALL( SCIPprintTransSol(scip, sol, file, printzeros) );
    }
 
    return SCIP_OKAY;

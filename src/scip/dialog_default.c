@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.53 2005/08/24 17:26:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.54 2005/11/10 18:10:01 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -597,7 +597,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution)
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
    SCIPdialogMessage(scip, NULL, "\n");
-   SCIP_CALL( SCIPprintBestSol(scip, NULL) );
+   SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
    SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -727,7 +727,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayTranssolution)
       }
       else
       {
-         SCIP_CALL( SCIPprintBestTransSol(scip, NULL) );
+         SCIP_CALL( SCIPprintBestTransSol(scip, NULL, FALSE) );
       }
    }
    else
@@ -1418,7 +1418,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
          SCIPinfoMessage(scip, file, "solution status: ");
          SCIP_CALL( SCIPprintStatus(scip, file) );
          SCIPinfoMessage(scip, file, "\n");
-         SCIP_CALL( SCIPprintBestSol(scip, file) );
+         SCIP_CALL( SCIPprintBestSol(scip, file, FALSE) );
          SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
          fclose(file);
       }

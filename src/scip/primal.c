@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.72 2005/10/26 17:08:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.73 2005/11/10 18:10:01 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -419,7 +419,7 @@ SCIP_RETCODE primalAddSol(
    assert(0 <= insertpos && insertpos < set->limit_maxsol);
 
    SCIPdebugMessage("insert primal solution %p with obj %g at position %d:\n", sol, SCIPsolGetObj(sol, set, prob), insertpos);
-   SCIPdebug( SCIPsolPrint(sol, set, stat, prob, NULL, NULL) );
+   SCIPdebug( SCIPsolPrint(sol, set, stat, prob, NULL, NULL, FALSE) );
 
 #if 0
 #ifndef NDEBUG
@@ -433,7 +433,7 @@ SCIP_RETCODE primalAddSol(
       if( !feasible )
       {
          SCIPerrorMessage("infeasible solution accepted:\n");
-         SCIP_CALL( SCIPsolPrint(sol, set, stat, prob, NULL, NULL) );
+         SCIP_CALL( SCIPsolPrint(sol, set, stat, prob, NULL, NULL, FALSE) );
       }
       assert(feasible);
    }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.23 2005/08/30 20:35:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.24 2005/11/10 18:10:01 bzfpfend Exp $"
 
 /**@file   heur_simplerounding.c
  * @brief  simple and fast LP rounding heuristic
@@ -221,7 +221,7 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
       {
 #ifdef SCIP_DEBUG
          SCIPdebugMessage("found feasible rounded solution:\n");
-         SCIPprintSol(scip, sol, NULL);
+         SCIPprintSol(scip, sol, NULL, FALSE);
 #endif
          *result = SCIP_FOUNDSOL;
       }
