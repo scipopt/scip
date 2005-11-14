@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.54 2005/11/10 18:10:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.55 2005/11/14 09:59:43 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -1431,6 +1431,42 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the write statistics command */
+static
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteStatistics)
+{  /*lint --e{715}*/
+   const char* filename;
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
+   if( filename[0] != '\0' )
+   {
+      FILE* file;
+
+      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename) );
+
+      file = fopen(filename, "w");
+      if( file == NULL )
+      {
+         SCIPdialogMessage(scip, NULL, "error creating file <%s>\n", filename);
+         SCIPdialoghdlrClearBuffer(dialoghdlr);
+      }
+      else
+      {
+         SCIP_CALL( SCIPprintStatistics(scip, file) );
+         SCIPdialogMessage(scip, NULL, "written statistics to file <%s>\n", filename);
+         fclose(file);
+      }
+   }
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the write transproblem command */
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteTransproblem)
@@ -1774,6 +1810,15 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
    
+   /* write statistics */
+   if( !SCIPdialogHasEntry(submenu, "statistics") )
+   {
+      SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecWriteStatistics, NULL,
+            "statistics", "write statistics to file", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
    /* write transproblem */
    if( !SCIPdialogHasEntry(submenu, "transproblem") )
    {

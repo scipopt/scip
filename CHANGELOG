@@ -40,6 +40,7 @@ plugins:
 - slightly modified restartdfs node selector
 - added crossover heuristic
 - new file reader for (partial) solutions
+- added "write statistics" command to default user dialogs
 
 parameters:
 - modified meaning of parameter presolving/probing/maxtotaluseless
