@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.1 2005/11/02 14:28:06 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.2 2005/11/15 12:24:04 bzfpfend Exp $"
 
 /**@file   heur_crossover.c
  * @brief  crossover primal heuristic
@@ -33,7 +33,7 @@
 #define HEUR_NAME             "crossover"
 #define HEUR_DESC             "LNS heuristic that fixes all variables that are identic in a couple of solutions"
 #define HEUR_DISPCHAR         'C'
-#define HEUR_PRIORITY         -1000000
+#define HEUR_PRIORITY         -1011000
 #define HEUR_FREQ             30
 #define HEUR_FREQOFS          10
 #define HEUR_MAXDEPTH         -1
