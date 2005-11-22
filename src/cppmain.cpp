@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.9 2005/08/24 17:26:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.10 2005/11/22 13:11:24 bzfpfend Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for C++ compilation
@@ -83,7 +83,7 @@ SCIP_RETCODE fromCommandLine(
 
    SCIPinfoMessage(scip, NULL, "\nprimal solution:\n");
    SCIPinfoMessage(scip, NULL, "================\n\n");
-   SCIP_CALL( SCIPprintBestSol(scip, NULL) );
+   SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
 
 
    /**************

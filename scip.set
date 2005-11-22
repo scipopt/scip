@@ -74,6 +74,10 @@ conflict/dynamic = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 conflict/removeable = TRUE
 
+# factor to decrease importance of variables' earlier conflict scores
+# [type: real, range: [1e-06,1], default: 0.98]
+conflict/scorefac = 0.98
+
 # maximum age an unnecessary constraint can reach before it is deleted (0: dynamic, -1: keep all constraints)
 # [type: int, range: [-1,2147483647], default: 0]
 constraints/agelimit = 0
@@ -782,6 +786,18 @@ presolving/dualfix/maxrounds = -1
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 presolving/dualfix/delay = FALSE
 
+# priority of presolver <implics>
+# [type: int, range: [-2147483648,2147483647], default: -10000]
+presolving/implics/priority = -10000
+
+# maximal number of presolving rounds the presolver participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/implics/maxrounds = -1
+
+# should presolver be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+presolving/implics/delay = FALSE
+
 # priority of presolver <probing>
 # [type: int, range: [-2147483648,2147483647], default: -100000]
 presolving/probing/priority = -100000
@@ -810,9 +826,13 @@ presolving/probing/maxfixings = 50
 # [type: int, range: [0,2147483647], default: 2000]
 presolving/probing/maxuseless = 2000
 
-# maximal number of successive probings without fixings and implications, until probing is aborted (0: don't abort)
+# maximal number of successive probings without fixings, bound changes, and implications, until probing is aborted (0: don't abort)
 # [type: int, range: [0,2147483647], default: 100]
 presolving/probing/maxtotaluseless = 100
+
+# maximal number of probings without fixings, until probing is aborted (0: don't abort)
+# [type: int, range: [0,2147483647], default: 0]
+presolving/probing/maxsumuseless = 0
 
 # priority of presolver <trivial>
 # [type: int, range: [-2147483648,2147483647], default: 9000000]
@@ -906,6 +926,10 @@ branching/inference/maxdepth = -1
 # [type: real, range: [0,1], default: 1]
 branching/inference/maxbounddist = 1
 
+# factor to weigh conflict score against inference score
+# [type: real, range: [0,1.79769313486232e+308], default: 1000]
+branching/inference/conflictweight = 1000
+
 # factor to weigh average number of cutoffs in branching score
 # [type: real, range: [0,1.79769313486232e+308], default: 1]
 branching/inference/cutoffweight = 1
@@ -998,7 +1022,7 @@ branching/relpscost/maxbdchgs = 5
 # [type: int, range: [-2147483648,2147483647], default: -1001000]
 heuristics/coefdiving/priority = -1001000
 
-# frequency for calling primal heuristic <coefdiving> (-1: never, 0: only in root node)
+# frequency for calling primal heuristic <coefdiving> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: 10]
 heuristics/coefdiving/freq = 10
 
@@ -1042,11 +1066,55 @@ heuristics/coefdiving/maxdiveubquotnosol = 0.1
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/coefdiving/maxdiveavgquotnosol = 0
 
+# priority of heuristic <crossover>
+# [type: int, range: [-2147483648,2147483647], default: -1011000]
+heuristics/crossover/priority = -1011000
+
+# frequency for calling primal heuristic <crossover> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 30]
+heuristics/crossover/freq = 30
+
+# frequency offset for calling primal heuristic <crossover>
+# [type: int, range: [0,2147483647], default: 10]
+heuristics/crossover/freqofs = 10
+
+# maximal depth level to call primal heuristic <crossover> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/crossover/maxdepth = -1
+
+# number of nodes added to the contingent of the total nodes
+# [type: int, range: [0,2147483647], default: 500]
+heuristics/crossover/nodesofs = 500
+
+# maximum number of nodes to regard in the subproblem
+# [type: int, range: [0,2147483647], default: 5000]
+heuristics/crossover/maxnodes = 5000
+
+# minimum number of nodes required to start the subproblem
+# [type: int, range: [0,2147483647], default: 500]
+heuristics/crossover/minnodes = 500
+
+# number of solutions to be takten into account
+# [type: int, range: [2,2147483647], default: 3]
+heuristics/crossover/nusedsols = 3
+
+# number of nodes without incumbent change that heuristic should wait
+# [type: int, range: [0,2147483647], default: 200]
+heuristics/crossover/nwaitingnodes = 200
+
+# contingent of sub problem nodes in relation to the number of nodes of the original problem
+# [type: real, range: [0,1], default: 0.1]
+heuristics/crossover/nodesquot = 0.1
+
+# minimum percentage of integer variables that have to be fixed 
+# [type: real, range: [0,1], default: 0.666]
+heuristics/crossover/minfixingrate = 0.666
+
 # priority of heuristic <feaspump>
 # [type: int, range: [-2147483648,2147483647], default: -1000000]
 heuristics/feaspump/priority = -1000000
 
-# frequency for calling primal heuristic <feaspump> (-1: never, 0: only in root node)
+# frequency for calling primal heuristic <feaspump> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: 20]
 heuristics/feaspump/freq = 20
 
@@ -1094,7 +1162,7 @@ heuristics/feaspump/perturbfreq = 100
 # [type: int, range: [-2147483648,2147483647], default: -500000]
 heuristics/fixandinfer/priority = -500000
 
-# frequency for calling primal heuristic <fixandinfer> (-1: never, 0: only in root node)
+# frequency for calling primal heuristic <fixandinfer> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: -1]
 heuristics/fixandinfer/freq = -1
 
@@ -1118,7 +1186,7 @@ heuristics/fixandinfer/minfixings = 100
 # [type: int, range: [-2147483648,2147483647], default: -1003000]
 heuristics/fracdiving/priority = -1003000
 
-# frequency for calling primal heuristic <fracdiving> (-1: never, 0: only in root node)
+# frequency for calling primal heuristic <fracdiving> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: 10]
 heuristics/fracdiving/freq = 10
 
@@ -1166,7 +1234,7 @@ heuristics/fracdiving/maxdiveavgquotnosol = 0
 # [type: int, range: [-2147483648,2147483647], default: -1007000]
 heuristics/guideddiving/priority = -1007000
 
-# frequency for calling primal heuristic <guideddiving> (-1: never, 0: only in root node)
+# frequency for calling primal heuristic <guideddiving> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: 10]
 heuristics/guideddiving/freq = 10
 
@@ -1202,11 +1270,59 @@ heuristics/guideddiving/maxdiveubquot = 0.8
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/guideddiving/maxdiveavgquot = 0
 
+# priority of heuristic <intdiving>
+# [type: int, range: [-2147483648,2147483647], default: -1003500]
+heuristics/intdiving/priority = -1003500
+
+# frequency for calling primal heuristic <intdiving> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/intdiving/freq = -1
+
+# frequency offset for calling primal heuristic <intdiving>
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/intdiving/freqofs = 0
+
+# maximal depth level to call primal heuristic <intdiving> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/intdiving/maxdepth = -1
+
+# minimal relative depth to start diving
+# [type: real, range: [0,1], default: 0]
+heuristics/intdiving/minreldepth = 0
+
+# maximal relative depth to start diving
+# [type: real, range: [0,1], default: 1]
+heuristics/intdiving/maxreldepth = 1
+
+# maximal fraction of diving LP iterations compared to node LP iterations
+# [type: real, range: [0,1.79769313486232e+308], default: 0.05]
+heuristics/intdiving/maxlpiterquot = 0.05
+
+# additional number of allowed LP iterations
+# [type: int, range: [0,2147483647], default: 1000]
+heuristics/intdiving/maxlpiterofs = 1000
+
+# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed (0.0: no limit)
+# [type: real, range: [0,1], default: 0.8]
+heuristics/intdiving/maxdiveubquot = 0.8
+
+# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+heuristics/intdiving/maxdiveavgquot = 0
+
+# maximal UBQUOT when no solution was found yet (0.0: no limit)
+# [type: real, range: [0,1], default: 0.1]
+heuristics/intdiving/maxdiveubquotnosol = 0.1
+
+# maximal AVGQUOT when no solution was found yet (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+heuristics/intdiving/maxdiveavgquotnosol = 0
+
 # priority of heuristic <linesearchdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1006000]
 heuristics/linesearchdiving/priority = -1006000
 
-# frequency for calling primal heuristic <linesearchdiving> (-1: never, 0: only in root node)
+# frequency for calling primal heuristic <linesearchdiving> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: 10]
 heuristics/linesearchdiving/freq = 10
 
@@ -1254,13 +1370,13 @@ heuristics/linesearchdiving/maxdiveavgquotnosol = 0
 # [type: int, range: [-2147483648,2147483647], default: -1010000]
 heuristics/localbranching/priority = -1010000
 
-# frequency for calling primal heuristic <localbranching> (-1: never, 0: only in root node)
+# frequency for calling primal heuristic <localbranching> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: -1]
 heuristics/localbranching/freq = -1
 
 # frequency offset for calling primal heuristic <localbranching>
 # [type: int, range: [0,2147483647], default: 0]
-heuristics/localbranching/freqofs = 9
+heuristics/localbranching/freqofs = 0
 
 # maximal depth level to call primal heuristic <localbranching> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -1286,11 +1402,19 @@ heuristics/localbranching/minnodes = 1000
 # [type: int, range: [0,2147483647], default: 10000]
 heuristics/localbranching/maxnodes = 10000
 
+# number of nodes without incumbent change that heuristic should wait
+# [type: int, range: [0,2147483647], default: 200]
+heuristics/localbranching/nwaitingnodes = 200
+
+# factor by which localbranching should at least improve the incumbent  
+# [type: real, range: [0,1], default: 0.01]
+heuristics/localbranching/minimprove = 0.01
+
 # priority of heuristic <objpscostdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1004000]
 heuristics/objpscostdiving/priority = -1004000
 
-# frequency for calling primal heuristic <objpscostdiving> (-1: never, 0: only in root node)
+# frequency for calling primal heuristic <objpscostdiving> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: 20]
 heuristics/objpscostdiving/freq = 20
 
@@ -1334,7 +1458,7 @@ heuristics/objpscostdiving/depthfacnosol = 2
 # [type: int, range: [-2147483648,2147483647], default: -1008000]
 heuristics/octane/priority = -1008000
 
-# frequency for calling primal heuristic <octane> (-1: never, 0: only in root node)
+# frequency for calling primal heuristic <octane> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: 10]
 heuristics/octane/freq = 10
 
@@ -1378,7 +1502,7 @@ heuristics/octane/usediffbwray = TRUE
 # [type: int, range: [-2147483648,2147483647], default: -1002000]
 heuristics/pscostdiving/priority = -1002000
 
-# frequency for calling primal heuristic <pscostdiving> (-1: never, 0: only in root node)
+# frequency for calling primal heuristic <pscostdiving> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: 10]
 heuristics/pscostdiving/freq = 10
 
@@ -1426,13 +1550,13 @@ heuristics/pscostdiving/maxdiveavgquotnosol = 0
 # [type: int, range: [-2147483648,2147483647], default: -1009000]
 heuristics/rins/priority = -1009000
 
-# frequency for calling primal heuristic <rins> (-1: never, 0: only in root node)
+# frequency for calling primal heuristic <rins> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: -1]
 heuristics/rins/freq = -1
 
 # frequency offset for calling primal heuristic <rins>
 # [type: int, range: [0,2147483647], default: 5]
-heuristics/rins/freqofs = 8
+heuristics/rins/freqofs = 5
 
 # maximal depth level to call primal heuristic <rins> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -1454,11 +1578,23 @@ heuristics/rins/minnodes = 500
 # [type: real, range: [0,1], default: 0.1]
 heuristics/rins/nodesquot = 0.1
 
+# number of nodes without incumbent change that heuristic should wait
+# [type: int, range: [0,2147483647], default: 200]
+heuristics/rins/nwaitingnodes = 200
+
+# factor by which RINS should at least improve the incumbent  
+# [type: real, range: [0,1], default: 0.01]
+heuristics/rins/minimprove = 0.01
+
+# minimum percentage of integer variables that have to be fixed 
+# [type: real, range: [0,1], default: 0.666]
+heuristics/rins/minfixingrate = 0.666
+
 # priority of heuristic <rootsoldiving>
 # [type: int, range: [-2147483648,2147483647], default: -1005000]
 heuristics/rootsoldiving/priority = -1005000
 
-# frequency for calling primal heuristic <rootsoldiving> (-1: never, 0: only in root node)
+# frequency for calling primal heuristic <rootsoldiving> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: 20]
 heuristics/rootsoldiving/freq = 20
 
@@ -1502,7 +1638,7 @@ heuristics/rootsoldiving/depthfacnosol = 2
 # [type: int, range: [-2147483648,2147483647], default: -1000]
 heuristics/rounding/priority = -1000
 
-# frequency for calling primal heuristic <rounding> (-1: never, 0: only in root node)
+# frequency for calling primal heuristic <rounding> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: 1]
 heuristics/rounding/freq = 1
 
@@ -1518,7 +1654,7 @@ heuristics/rounding/maxdepth = -1
 # [type: int, range: [-2147483648,2147483647], default: 0]
 heuristics/simplerounding/priority = 0
 
-# frequency for calling primal heuristic <simplerounding> (-1: never, 0: only in root node)
+# frequency for calling primal heuristic <simplerounding> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: 1]
 heuristics/simplerounding/freq = 1
 

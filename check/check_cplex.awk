@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.13 2005/05/31 17:20:06 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.14 2005/11/22 13:11:24 bzfpfend Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -44,9 +44,9 @@ BEGIN {
     printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &     Nodes &     Time \\\\\n") > TEXFILE;
     printf("\\midrule\n")                                            >TEXFILE;
 
-    printf("------------------+-------+------+--------------+--------------+------+-------+------+-------\n");
-    printf("Name              | Conss | Vars |   Dual Bound | Primal Bound | Gap% | Nodes | Time |       \n");
-    printf("------------------+-------+------+--------------+--------------+------+-------+------+-------\n");
+    printf("------------------+-------+------+--------------+--------------+------+---------------+-------+------+-------\n");
+    printf("Name              | Conss | Vars |   Dual Bound | Primal Bound | Gap% |               | Nodes | Time |       \n");
+    printf("------------------+-------+------+--------------+--------------+------+---------------+-------+------+-------\n");
 
     nprobs   = 0;
     sbab     = 0;
@@ -177,7 +177,7 @@ BEGIN {
    printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
       pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
    
-   printf("%-19s %6d %6d %14.9g %14.9g %6s %7d %6.1f ",
+   printf("%-19s %6d %6d %14.9g %14.9g %6s                 %7d %6.1f ",
       prob, cons, vars, db, pb, gapstr, bbnodes, tottime);
    
    if (sol[prob] == "")
@@ -241,7 +241,7 @@ END {
     printf("\\end{table}\n")                                              >TEXFILE;
     printf("\\end{document}\n")                                           >TEXFILE;
     
-    printf("------------------+-------+------+--------------+--------------+------+-------+------+-------\n");
+    printf("------------------+-------+------+--------------+--------------+------+---------------+-------+------+-------\n");
     
     printf("\n");
     printf("------------------------[Nodes]---------------[Time]------\n");

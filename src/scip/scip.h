@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.254 2005/11/10 18:10:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.255 2005/11/22 13:11:24 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1393,6 +1393,20 @@ int SCIPgetNImplVars(
 /** gets number of continuous active problem variables */
 extern
 int SCIPgetNContVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets array with fixed and aggregated problem variables; data may become invalid after
+ *  calls to SCIPfixVar(), SCIPaggregateVars(), and SCIPmultiaggregateVar()
+ */
+extern
+SCIP_VAR** SCIPgetFixedVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of fixed or aggregated problem variables */
+extern
+int SCIPgetNFixedVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

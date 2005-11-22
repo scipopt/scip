@@ -28,6 +28,7 @@ interface:
 - added methods SCIPgetConss(), SCIPgetNOrigConss(), and SCIPgetOrigConss()
 - new parameter "printzeros" for methods SCIPprintSol(), SCIPprintTransSol(), SCIPprintBestSol(), and
   SCIPprintBestTransSol()
+- new methods SCIPgetFixedVars() and SCIPgetNFixedVars()
 
 plugins:
 - new presolver "implics" to find bound changes and aggregations out of the implication graph

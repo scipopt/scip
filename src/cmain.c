@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cmain.c,v 1.82 2005/08/24 17:26:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cmain.c,v 1.83 2005/11/22 13:11:24 bzfpfend Exp $"
 
 /**@file   cmain.c
  * @brief  main file for C compilation
@@ -80,7 +80,7 @@ SCIP_RETCODE fromCommandLine(
 
    SCIPinfoMessage(scip, NULL, "\nprimal solution:\n");
    SCIPinfoMessage(scip, NULL, "================\n\n");
-   SCIP_CALL( SCIPprintBestSol(scip, NULL) );
+   SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
 
 
    /**************
