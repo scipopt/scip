@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.142 2005/12/07 19:56:33 bzfpfend Exp $
+# $Id: Makefile,v 1.143 2005/12/07 20:47:40 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -25,11 +25,12 @@ ARCH            :=      $(shell uname -m | \
                         sed \
 			-e s/sun../sparc/ \
 			-e s/i.86/x86/ \
+                        -e s/^[0-9]86/x86/ \
 			-e s/IP../mips/ \
 			-e s/9000..../hppa/ \
 			-e s/Power\ Macintosh/ppc/ \
 			-e s/00........../pwr4/)
-OSTYPE		:=	$(shell uname -s | tr '[:upper:]' '[:lower:]' | sed -e s/cygwin.*/cygwin/ -e s/irix../irix/ )
+OSTYPE		:=	$(shell uname -s | tr '[:upper:]' '[:lower:]' | sed -e s/cygwin.*/cygwin/ -e s/irix../irix/ -e s/windows.*/windows/)
 HOSTNAME	:=	$(shell uname -n | tr '[:upper:]' '[:lower:]')
 
 
@@ -59,10 +60,23 @@ ZLIB		=	true
 ZIMPL		=	false
 
 CC		=	gcc
+CC_c		=	-c # the trailing space is important
+CC_o		=	-o # the trailing space is important
 CXX		=	g++
+CXX_c		=	-c # the trailing space is important
+CXX_o		=	-o # the trailing space is important
+LINKCC		=	gcc
+LINKCC_L	=	-L
+LINKCC_l	=	-l
+LINKCC_o	=	-o # the trailing space is important
+LINKCXX		=	g++
+LINKCXX_L	=	-L
+LINKCXX_l	=	-l
+LINKCXX_o	=	-o # the trailing space is important
 DCC		=	gcc
 DCXX		=	g++
 AR		=	ar
+AR_o		=
 RANLIB		=	ranlib
 LINT		=	flexelint
 DOXY		=	doxygen
@@ -72,7 +86,7 @@ FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF
 OFLAGS		=
 CFLAGS		=	
 CXXFLAGS	=	
-LDFLAGS		=	-lpthread -lm
+LDFLAGS		=	$(LINKCC_l)pthread $(LINKCC_l)m
 ARFLAGS		=	cr
 DFLAGS		=	-MM
 
@@ -130,7 +144,8 @@ LPILIBNAME	=	lpi$(LPS)
 
 ifeq ($(LPS),cpx)
 FLAGS		+=	-I$(LIBDIR)/cpxinc
-LPSLDFLAGS	=	-lcplex.$(OSTYPE).$(ARCH).$(COMP)
+#LPSLDFLAGS	=	$(LIBDIR)/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXT)
+LPSLDFLAGS	=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)
 LPILIBOBJ	=	scip/lpi_cpx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 endif
@@ -138,7 +153,8 @@ endif
 ifeq ($(LPS),spx)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc 
-LPSLDFLAGS	=	-lsoplex.$(OSTYPE).$(ARCH).$(COMP)
+#LPSLDFLAGS	=	$(LIBDIR)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXT)
+LPSLDFLAGS	=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP)
 LPILIBOBJ	=	scip/lpi_spx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_spx.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 endif
@@ -146,7 +162,8 @@ endif
 ifeq ($(LPS),spxdbg)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc 
-LPSLDFLAGS	=	-lsoplexdbg.$(OSTYPE).$(ARCH).$(COMP)
+#LPSLDFLAGS	=	$(LIBDIR)/libsoplexdbg.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXT)
+LPSLDFLAGS	=	$(LINKCXX_l)soplexdbg.$(OSTYPE).$(ARCH).$(COMP)
 LPILIBOBJ	=	scip/lpi_spx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_spx.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 endif
@@ -154,7 +171,8 @@ endif
 ifeq ($(LPS),spx121)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spx121inc 
-LPSLDFLAGS	=	-lsoplex121.$(OSTYPE).$(ARCH).$(COMP)
+#LPSLDFLAGS	=	$(LIBDIR)/libsoplex121.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXT)
+LPSLDFLAGS	=	$(LINKCXX_l)soplex121.$(OSTYPE).$(ARCH).$(COMP)
 LPILIBOBJ	=	scip/lpi_spx121.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_spx121.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 endif
@@ -163,7 +181,7 @@ ifeq ($(LPS),clp)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/clpinc
 #LPSLDFLAGS	=	-lclp.$(OSTYPE).$(ARCH).$(COMP) -lcoin.$(OSTYPE).$(ARCH).$(COMP)
-LPSLDFLAGS	=	-L$(LIBDIR)/clpinc/../lib -Wl,-rpath,$(LIBDIR)/clpinc/../lib -lClp -lCoin
+LPSLDFLAGS	=	$(LINKCXX_L)$(LIBDIR)/clpinc/../lib -Wl,-rpath,$(LIBDIR)/clpinc/../lib $(LINKCXX_l)Clp $(LINKCXX_l)Coin
 LPILIBOBJ	=	scip/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_clp.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 endif
@@ -171,7 +189,7 @@ endif
 ifeq ($(LPS),clpdbg)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/clpinc
-LPSLDFLAGS	=	-lclpdbg.$(OSTYPE).$(ARCH).$(COMP) -lcoindbg.$(OSTYPE).$(ARCH).$(COMP)
+LPSLDFLAGS	=	$(LINKCXX_L)$(LIBDIR)/clpinc/../lib -Wl,-rpath,$(LIBDIR)/clpinc/../lib $(LINKCXX_l)Clpdbg $(LINKCXX_l)Coindbg
 LPILIBOBJ	=	scip/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_clp.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 endif
@@ -216,7 +234,7 @@ ZIMPL		=	false
 endif
 ifeq ($(ZIMPL),true)
 FLAGS		+=	-DWITH_ZIMPL -Ilib/zimplinc
-LDFLAGS		+=	-lzimpl.$(OSTYPE).$(ARCH).$(COMP) -lgmp -lz
+LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP) $(LINKCC_l)gmp $(LINKCC_l)z
 endif
 
 
@@ -243,7 +261,6 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/intervalarith.o \
 			scip/lp.o \
 			scip/mem.o \
-			scip/message.o \
 			scip/misc.o \
 			scip/nodesel.o \
 			scip/paramset.o \
@@ -324,7 +341,6 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/sepa_impliedbounds.o \
 			scip/sepa_intobj.o \
 			scip/sepa_strongcg.o \
-			blockmemshell/memory.o \
 			tclique/tclique_branch.o \
 			tclique/tclique_coloring.o \
 			tclique/tclique_graph.o
@@ -484,24 +500,24 @@ $(MAINFILE):	$(BINDIR) $(BINOBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
 ifeq ($(VERBOSE), true)
-		$(CC) $(MAINOBJFILES) \
-		-L$(LIBDIR) -l$(SCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) -o $@
+		$(LINKCC) $(MAINOBJFILES) \
+		$(LINKCC_L)$(LIBDIR) $(LINKCC_l)$(SCIPLIB) $(LINKCC_l)$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
+		$(LDFLAGS) $(LINKCC_o)$@
 else
-		@$(CC) $(MAINOBJFILES) \
-		-L$(LIBDIR) -l$(SCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) -o $@
+		@$(LINKCC) $(MAINOBJFILES) \
+		$(LINKCC_L)$(LIBDIR) $(LINKCC_l)$(SCIPLIB) $(LINKCC_l)$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
+		$(LDFLAGS) $(LINKCC_o)$@
 endif
 endif
 ifeq ($(LINKER),CPP)
 ifeq ($(VERBOSE), true)
-		$(CXX) $(MAINOBJFILES) \
-		-L$(LIBDIR) -l$(SCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) -o $@
+		$(LINKCXX) $(MAINOBJFILES) \
+		$(LINKCXX_L)$(LIBDIR) $(LINKCXX_l)$(SCIPLIB) $(LINKCXX_l)$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
+		$(LDFLAGS) $(LINKCXX_o)$@
 else
-		@$(CXX) $(MAINOBJFILES) \
-		-L$(LIBDIR) -l$(SCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) -o $@
+		@$(LINKCXX) $(MAINOBJFILES) \
+		$(LINKCXX_L)$(LIBDIR) $(LINKCXX_l)$(SCIPLIB) $(LINKCXX_l)$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
+		$(LDFLAGS) $(LINKCXX_o)$@
 endif
 endif
 
@@ -509,13 +525,13 @@ $(SCIPLIBFILE):	$(LIBOBJSUBDIRS) $(LIBDIR) touchexternal $(SCIPLIBOBJFILES)
 		@echo "-> generating library $@"
 ifeq ($(VERBOSE), true)
 		-rm -f $@
-		$(AR) $(ARFLAGS) $@ $(SCIPLIBOBJFILES) 
+		$(AR) $(ARFLAGS) $(AR_o)$@ $(SCIPLIBOBJFILES) 
 ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 else
 		@-rm -f $@
-		@$(AR) $(ARFLAGS) $@ $(SCIPLIBOBJFILES) 
+		@$(AR) $(ARFLAGS) $(AR_o)$@ $(SCIPLIBOBJFILES) 
 ifneq ($(RANLIB),)
 		@$(RANLIB) $@
 endif
@@ -525,13 +541,13 @@ $(OBJSCIPLIBFILE):	$(LIBOBJSUBDIRS) $(LIBDIR) $(OBJSCIPLIBOBJFILES)
 		@echo "-> generating library $@"
 ifeq ($(VERBOSE), true)
 		-rm -f $@
-		$(AR) $(ARFLAGS) $@ $(OBJSCIPLIBOBJFILES) 
+		$(AR) $(ARFLAGS) $(AR_o)$@ $(OBJSCIPLIBOBJFILES) 
 ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 else
 		@-rm -f $@
-		@$(AR) $(ARFLAGS) $@ $(OBJSCIPLIBOBJFILES) 
+		@$(AR) $(ARFLAGS) $(AR_o)$@ $(OBJSCIPLIBOBJFILES) 
 ifneq ($(RANLIB),)
 		@$(RANLIB) $@
 endif
@@ -541,13 +557,13 @@ $(LPILIBFILE):	$(LIBOBJSUBDIRS) $(LIBDIR) $(LPILIBOBJFILES)
 		@echo "-> generating library $@"
 ifeq ($(VERBOSE), true)
 		-rm -f $@
-		$(AR) $(ARFLAGS) $@ $(LPILIBOBJFILES)
+		$(AR) $(ARFLAGS) $(AR_o)$@ $(LPILIBOBJFILES)
 ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 else
 		@-rm -f $@
-		@$(AR) $(ARFLAGS) $@ $(LPILIBOBJFILES)
+		@$(AR) $(ARFLAGS) $(AR_o)$@ $(LPILIBOBJFILES)
 ifneq ($(RANLIB),)
 		@$(RANLIB) $@
 endif
@@ -556,33 +572,33 @@ endif
 $(BINOBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
 ifeq ($(VERBOSE), true)
-		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< -o $@
+		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) $(CC_c)$< $(CC_o)$@
 else
-		@$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< -o $@
+		@$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) $(CC_c)$< $(CC_o)$@
 endif
 
 $(BINOBJDIR)/%.o:	$(SRCDIR)/%.cpp
 		@echo "-> compiling $@"
 ifeq ($(VERBOSE), true)
-		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< -o $@
+		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(CXX_c)$< $(CXX_o)$@
 else
-		@$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< -o $@
+		@$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(CXX_c)$< $(CXX_o)$@
 endif
 
 $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
 ifeq ($(VERBOSE), true)
-		$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) -c $< -o $@
+		$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) $(CC_c)$< $(CC_o)$@
 else
-		@$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) -c $< -o $@
+		@$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) $(CC_c)$< $(CC_o)$@
 endif
 
 $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp
 		@echo "-> compiling $@"
 ifeq ($(VERBOSE), true)
-		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) -c $< -o $@
+		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(CXX_c)$< $(CXX_o)$@
 else
-		@$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) -c $< -o $@
+		@$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(CXX_c)$< $(CXX_o)$@
 endif
 
 
