@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.198 2005/11/02 11:14:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.199 2005/12/07 19:56:46 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -2056,7 +2056,7 @@ SCIP_RETCODE solveNode(
    assert(SCIPnodeGetType(focusnode) == SCIP_NODETYPE_FOCUSNODE);
    actdepth = SCIPnodeGetDepth(focusnode);
 
-   SCIPdebugMessage("Processing node %lld in depth %d, %d siblings\n", stat->nnodes, actdepth, tree->nsiblings);
+   SCIPdebugMessage("Processing node %"SCIP_LONGINT_FORMAT" in depth %d, %d siblings\n", stat->nnodes, actdepth, tree->nsiblings);
    SCIPdebugMessage("current pseudosolution: obj=%g\n", SCIPlpGetPseudoObjval(lp, set));
    /*debug(SCIPprobPrintPseudoSol(prob, set));*/
 
@@ -2150,7 +2150,7 @@ SCIP_RETCODE solveNode(
             SCIP_CALL( solveNodeLP(blkmem, set, stat, prob, primal, tree, lp, pricestore, sepastore,
                   cutpool, branchcand, conflict, eventfilter, eventqueue, initiallpsolved, cutoff, unbounded, &lperror) );
             initiallpsolved = TRUE;
-            SCIPdebugMessage(" -> LP status: %d, LP obj: %g, iter: %lld, count: %d\n",
+            SCIPdebugMessage(" -> LP status: %d, LP obj: %g, iter: %"SCIP_LONGINT_FORMAT", count: %d\n",
                SCIPlpGetSolstat(lp),
                *cutoff ? SCIPsetInfinity(set) : lperror ? -SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set),
                stat->nlpiterations, stat->lpcount);
@@ -2163,14 +2163,14 @@ SCIP_RETCODE solveNode(
             {
                if( forcedlpsolve )
                {
-                  SCIPerrorMessage("(node %lld) unresolved numerical troubles in LP %d cannot be dealt with\n",
+                  SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %d cannot be dealt with\n",
                      stat->nnodes, stat->nlps);
                   return SCIP_LPERROR;
                }
                SCIPtreeSetFocusNodeLP(tree, FALSE);
                nlperrors++;
                SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %lld) unresolved numerical troubles in LP %d -- using pseudo solution instead (loop %d)\n",
+                  "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %d -- using pseudo solution instead (loop %d)\n",
                   stat->nnodes, stat->nlps, nlperrors);
             }
 
@@ -2182,9 +2182,9 @@ SCIP_RETCODE solveNode(
             {
                if( SCIPbranchcandGetNPseudoCands(branchcand) == 0 && prob->ncontvars > 0 )
                {
-                  SCIPerrorMessage("(node %lld) could not prove infeasibility of LP %d, all variables are fixed, %d continuous vars\n",
+                  SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT") could not prove infeasibility of LP %d, all variables are fixed, %d continuous vars\n",
                      stat->nnodes, stat->nlps, prob->ncontvars);
-                  SCIPerrorMessage("(node %lld)  -> have to call PerPlex() (feature not yet implemented)\n", stat->nnodes);
+                  SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT")  -> have to call PerPlex() (feature not yet implemented)\n", stat->nnodes);
                   /**@todo call PerPlex */
                   return SCIP_LPERROR;
                }
@@ -2192,7 +2192,7 @@ SCIP_RETCODE solveNode(
                {
                   SCIPtreeSetFocusNodeLP(tree, FALSE);
                   SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                     "(node %lld) could not prove infeasibility of LP %d -- using pseudo solution (%d unfixed vars) instead\n",
+                     "(node %"SCIP_LONGINT_FORMAT") could not prove infeasibility of LP %d -- using pseudo solution (%d unfixed vars) instead\n",
                      stat->nnodes, stat->nlps, SCIPbranchcandGetNPseudoCands(branchcand));
                }
             }
@@ -2414,7 +2414,7 @@ SCIP_RETCODE solveNode(
    /* check for too many LP errors */
    if( nlperrors >= MAXNLPERRORS )
    {
-      SCIPerrorMessage("(node %lld) unresolved numerical troubles in LP %d -- aborting\n", stat->nnodes, stat->nlps);
+      SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %d -- aborting\n", stat->nnodes, stat->nlps);
       return SCIP_LPERROR;
    }
 

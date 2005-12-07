@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.17 2005/08/28 12:24:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.18 2005/12/07 19:56:47 bzfpfend Exp $"
 
 /**@file   vbc.c
  * @brief  methods for VBC Tool output
@@ -312,7 +312,7 @@ void SCIPvbcSolvedNode(
    branchvar = getBranchVar(node);
 
    printTime(vbc, stat);
-   SCIPmessageFPrintInfo(vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s\\nbound:\\t%f\\nnr:\\t%lld\n", 
+   SCIPmessageFPrintInfo(vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n", 
       nodenum, nodenum, node, SCIPnodeGetDepth(node),
       branchvar == NULL ? "-" : SCIPvarGetName(branchvar), SCIPnodeGetLowerbound(node), stat->nnodes);
 

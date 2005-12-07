@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.334 2005/11/22 13:11:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.335 2005/12/07 19:56:45 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4777,12 +4777,12 @@ SCIP_RETCODE SCIPsolve(
       SCIPmessagePrintInfo("\n");
       SCIPmessagePrintInfo("Solving Time (sec) : %.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
       if( scip->stat->nruns > 1 )
-         SCIPmessagePrintInfo("Solving Nodes      : %lld (total of %lld nodes in %d runs)\n",
+         SCIPmessagePrintInfo("Solving Nodes      : %"SCIP_LONGINT_FORMAT" (total of %"SCIP_LONGINT_FORMAT" nodes in %d runs)\n",
             scip->stat->nnodes, scip->stat->ntotalnodes, scip->stat->nruns);
       else
-         SCIPmessagePrintInfo("Solving Nodes      : %lld\n", scip->stat->nnodes);
+         SCIPmessagePrintInfo("Solving Nodes      : %"SCIP_LONGINT_FORMAT"\n", scip->stat->nnodes);
       if( scip->set->stage >= SCIP_STAGE_TRANSFORMED && scip->set->stage <= SCIP_STAGE_FREESOLVE )
-         SCIPmessagePrintInfo("Primal Bound       : %+.14e (%lld solutions)\n",
+         SCIPmessagePrintInfo("Primal Bound       : %+.14e (%"SCIP_LONGINT_FORMAT" solutions)\n",
             SCIPgetPrimalbound(scip), scip->primal->nsolsfound);
       if( scip->set->stage >= SCIP_STAGE_SOLVING && scip->set->stage <= SCIP_STAGE_SOLVED )
       {
@@ -10363,16 +10363,16 @@ SCIP_RETCODE SCIPcreateCurrentSol(
    return SCIP_OKAY;
 }
 
-/** creates a primal solution, initialized to invalid values */
-SCIP_RETCODE SCIPcreateInvalidSol(
+/** creates a primal solution, initialized to unknown values */
+SCIP_RETCODE SCIPcreateUnknownSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPcreateInvalidSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPcreateUnknownSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPsolCreateInvalid(sol, scip->mem->solvemem, scip->set, scip->stat, scip->primal, scip->tree, heur) );
+   SCIP_CALL( SCIPsolCreateUnknown(sol, scip->mem->solvemem, scip->set, scip->stat, scip->primal, scip->tree, heur) );
 
    return SCIP_OKAY;
 }
@@ -12371,7 +12371,7 @@ void printPresolverStatistics(
    }
 
    /* root node bound changes */
-   SCIPmessageFPrintInfo(file, "  root node        :          -          -          - %10lld          -          -          -          -\n",
+   SCIPmessageFPrintInfo(file, "  root node        :          -          -          - %10"SCIP_LONGINT_FORMAT"          -          -          -          -\n",
       scip->stat->nrootboundchgs);
 
 #if 0
@@ -12415,7 +12415,7 @@ void printConstraintStatistics(
       if( maxnactiveconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
       {
          SCIPmessageFPrintInfo(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         SCIPmessageFPrintInfo(file, " %10d%c%10lld %10lld %10lld %10lld %10lld %10lld %10lld %10lld %10lld\n",
+         SCIPmessageFPrintInfo(file, " %10d%c%10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
             startnactiveconss,
             maxnactiveconss > startnactiveconss ? '+' : ' ',
             SCIPconshdlrGetNSepaCalls(conshdlr),
@@ -12478,13 +12478,13 @@ void printPropagatorStatistics(
 
    SCIPmessageFPrintInfo(file, "Propagators        :       Time      Calls    Cutoffs    DomReds\n");
 
-   SCIPmessageFPrintInfo(file, "  reduced cost str.: %10.2f %10lld          - %10lld\n",
+   SCIPmessageFPrintInfo(file, "  reduced cost str.: %10.2f %10"SCIP_LONGINT_FORMAT"          - %10"SCIP_LONGINT_FORMAT"\n",
       SCIPclockGetTime(scip->stat->redcoststrtime),
       scip->stat->nredcoststrcalls,
       scip->stat->nredcoststrfound);
 
    for( i = 0; i < scip->set->nprops; ++i )
-      SCIPmessageFPrintInfo(file, "  %-17.17s: %10.2f %10lld %10lld %10lld\n",
+      SCIPmessageFPrintInfo(file, "  %-17.17s: %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
          SCIPpropGetName(scip->set->props[i]),
          SCIPpropGetTime(scip->set->props[i]),
          SCIPpropGetNCalls(scip->set->props[i]),
@@ -12499,7 +12499,7 @@ void printConflictStatistics(
    )
 {
    SCIPmessageFPrintInfo(file, "Conflict Analysis  :       Time      Calls    Success  Conflicts   Literals    Reconvs ReconvLits   LP Iters\n");
-   SCIPmessageFPrintInfo(file, "  propagation      : %10.2f %10lld %10lld %10lld %10.1f %10lld %10.1f          -\n",
+   SCIPmessageFPrintInfo(file, "  propagation      : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT" %10.1f          -\n",
       SCIPconflictGetPropTime(scip->conflict),
       SCIPconflictGetNPropCalls(scip->conflict),
       SCIPconflictGetNPropSuccess(scip->conflict),
@@ -12511,7 +12511,7 @@ void printConflictStatistics(
       SCIPconflictGetNPropReconvergenceClauses(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNPropReconvergenceLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNPropReconvergenceClauses(scip->conflict) : 0);
-   SCIPmessageFPrintInfo(file, "  infeasible LP    : %10.2f %10lld %10lld %10lld %10.1f %10lld %10.1f %10lld\n",
+   SCIPmessageFPrintInfo(file, "  infeasible LP    : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT"\n",
       SCIPconflictGetLPTime(scip->conflict),
       SCIPconflictGetNLPCalls(scip->conflict),
       SCIPconflictGetNLPSuccess(scip->conflict),
@@ -12524,7 +12524,7 @@ void printConflictStatistics(
       ? (SCIP_Real)SCIPconflictGetNLPReconvergenceLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNLPReconvergenceClauses(scip->conflict) : 0,
       SCIPconflictGetNLPIterations(scip->conflict));
-   SCIPmessageFPrintInfo(file, "  strong branching : %10.2f %10lld %10lld %10lld %10.1f %10lld %10.1f %10lld\n",
+   SCIPmessageFPrintInfo(file, "  strong branching : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT"\n",
       SCIPconflictGetStrongbranchTime(scip->conflict),
       SCIPconflictGetNStrongbranchCalls(scip->conflict),
       SCIPconflictGetNStrongbranchSuccess(scip->conflict),
@@ -12537,7 +12537,7 @@ void printConflictStatistics(
       ? (SCIP_Real)SCIPconflictGetNStrongbranchReconvergenceLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNStrongbranchReconvergenceClauses(scip->conflict) : 0,
       SCIPconflictGetNStrongbranchIterations(scip->conflict));
-   SCIPmessageFPrintInfo(file, "  pseudo solution  : %10.2f %10lld %10lld %10lld %10.1f %10lld %10.1f          -\n",
+   SCIPmessageFPrintInfo(file, "  pseudo solution  : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT" %10.1f          -\n",
       SCIPconflictGetPseudoTime(scip->conflict),
       SCIPconflictGetNPseudoCalls(scip->conflict),
       SCIPconflictGetNPseudoSuccess(scip->conflict),
@@ -12549,12 +12549,12 @@ void printConflictStatistics(
       SCIPconflictGetNPseudoReconvergenceClauses(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNPseudoReconvergenceLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNPseudoReconvergenceClauses(scip->conflict) : 0);
-   SCIPmessageFPrintInfo(file, "  applied globally :          -          -          - %10lld %10.1f          -          -          -\n",
+   SCIPmessageFPrintInfo(file, "  applied globally :          -          -          - %10"SCIP_LONGINT_FORMAT" %10.1f          -          -          -\n",
       SCIPconflictGetNAppliedGlobalClauses(scip->conflict),
       SCIPconflictGetNAppliedGlobalClauses(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNAppliedGlobalLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNAppliedGlobalClauses(scip->conflict) : 0);
-   SCIPmessageFPrintInfo(file, "  applied locally  :          -          -          - %10lld %10.1f          -          -          -\n",
+   SCIPmessageFPrintInfo(file, "  applied locally  :          -          -          - %10"SCIP_LONGINT_FORMAT" %10.1f          -          -          -\n",
       SCIPconflictGetNAppliedLocalClauses(scip->conflict),
       SCIPconflictGetNAppliedLocalClauses(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNAppliedLocalLiterals(scip->conflict)
@@ -12573,14 +12573,14 @@ void printSeparatorStatistics(
    assert(scip->set != NULL);
 
    SCIPmessageFPrintInfo(file, "Separators         :       Time      Calls    Cutoffs    DomReds       Cuts      Conss\n");
-   SCIPmessageFPrintInfo(file, "  cut pool         : %10.2f %10lld          -          - %10lld          -    (maximal pool size: %d)\n",
+   SCIPmessageFPrintInfo(file, "  cut pool         : %10.2f %10"SCIP_LONGINT_FORMAT"          -          - %10"SCIP_LONGINT_FORMAT"          -    (maximal pool size: %d)\n",
       SCIPcutpoolGetTime(scip->cutpool),
       SCIPcutpoolGetNCalls(scip->cutpool),
       SCIPcutpoolGetNCutsFound(scip->cutpool),
       SCIPcutpoolGetMaxNCuts(scip->cutpool));
 
    for( i = 0; i < scip->set->nsepas; ++i )
-      SCIPmessageFPrintInfo(file, "  %-17.17s: %10.2f %10lld %10lld %10lld %10lld %10lld\n",
+      SCIPmessageFPrintInfo(file, "  %-17.17s: %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
          SCIPsepaGetName(scip->set->sepas[i]),
          SCIPsepaGetTime(scip->set->sepas[i]),
          SCIPsepaGetNCalls(scip->set->sepas[i]),
@@ -12629,7 +12629,7 @@ void printBranchruleStatistics(
    SCIPmessageFPrintInfo(file, "Branching Rules    :       Time      Calls    Cutoffs    DomReds       Cuts      Conss   Children\n");
 
    for( i = 0; i < scip->set->nbranchrules; ++i )
-      SCIPmessageFPrintInfo(file, "  %-17.17s: %10.2f %10lld %10lld %10lld %10lld %10lld %10lld\n",
+      SCIPmessageFPrintInfo(file, "  %-17.17s: %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
          SCIPbranchruleGetName(scip->set->branchrules[i]),
          SCIPbranchruleGetTime(scip->set->branchrules[i]),
          SCIPbranchruleGetNLPCalls(scip->set->branchrules[i]) + SCIPbranchruleGetNPseudoCalls(scip->set->branchrules[i]),
@@ -12653,17 +12653,17 @@ void printHeuristicStatistics(
    assert(scip->tree != NULL);
 
    SCIPmessageFPrintInfo(file, "Primal Heuristics  :       Time      Calls      Found\n");
-   SCIPmessageFPrintInfo(file, "  LP solutions     : %10.2f          - %10lld\n",
+   SCIPmessageFPrintInfo(file, "  LP solutions     : %10.2f          - %10"SCIP_LONGINT_FORMAT"\n",
       SCIPclockGetTime(scip->stat->lpsoltime),
       scip->stat->nlpsolsfound);
-   SCIPmessageFPrintInfo(file, "  pseudo solutions : %10.2f          - %10lld\n",
+   SCIPmessageFPrintInfo(file, "  pseudo solutions : %10.2f          - %10"SCIP_LONGINT_FORMAT"\n",
       SCIPclockGetTime(scip->stat->pseudosoltime),
       scip->stat->npssolsfound);
 
    SCIPsetSortHeurs(scip->set);
 
    for( i = 0; i < scip->set->nheurs; ++i )
-      SCIPmessageFPrintInfo(file, "  %-17.17s: %10.2f %10lld %10lld\n",
+      SCIPmessageFPrintInfo(file, "  %-17.17s: %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
          SCIPheurGetName(scip->set->heurs[i]),
          SCIPheurGetTime(scip->set->heurs[i]),
          SCIPheurGetNCalls(scip->set->heurs[i]),
@@ -12682,7 +12682,7 @@ void printLPStatistics(
 
    SCIPmessageFPrintInfo(file, "LP                 :       Time      Calls Iterations  Iter/call   Iter/sec\n");
 
-   SCIPmessageFPrintInfo(file, "  primal LP        : %10.2f %10d %10lld %10.2f",
+   SCIPmessageFPrintInfo(file, "  primal LP        : %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10.2f",
       SCIPclockGetTime(scip->stat->primallptime),
       scip->stat->nprimallps,
       scip->stat->nprimallpiterations,
@@ -12692,7 +12692,7 @@ void printLPStatistics(
    else
       SCIPmessageFPrintInfo(file, "          -\n");
 
-   SCIPmessageFPrintInfo(file, "  dual LP          : %10.2f %10d %10lld %10.2f",
+   SCIPmessageFPrintInfo(file, "  dual LP          : %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10.2f",
       SCIPclockGetTime(scip->stat->duallptime),
       scip->stat->nduallps,
       scip->stat->nduallpiterations,
@@ -12702,7 +12702,7 @@ void printLPStatistics(
    else
       SCIPmessageFPrintInfo(file, "          -\n");
 
-   SCIPmessageFPrintInfo(file, "  barrier LP       : %10.2f %10d %10lld %10.2f",
+   SCIPmessageFPrintInfo(file, "  barrier LP       : %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10.2f",
       SCIPclockGetTime(scip->stat->barrierlptime),
       scip->stat->nbarrierlps,
       scip->stat->nbarrierlpiterations,
@@ -12712,7 +12712,7 @@ void printLPStatistics(
    else
       SCIPmessageFPrintInfo(file, "          -\n");
 
-   SCIPmessageFPrintInfo(file, "  diving/probing LP: %10.2f %10d %10lld %10.2f",
+   SCIPmessageFPrintInfo(file, "  diving/probing LP: %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10.2f",
       SCIPclockGetTime(scip->stat->divinglptime),
       scip->stat->ndivinglps,
       scip->stat->ndivinglpiterations,
@@ -12722,7 +12722,7 @@ void printLPStatistics(
    else
       SCIPmessageFPrintInfo(file, "          -\n");
 
-   SCIPmessageFPrintInfo(file, "  strong branching : %10.2f %10d %10lld %10.2f",
+   SCIPmessageFPrintInfo(file, "  strong branching : %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10.2f",
       SCIPclockGetTime(scip->stat->strongbranchtime),
       scip->stat->nstrongbranchs,
       scip->stat->nsblpiterations,
@@ -12732,13 +12732,13 @@ void printLPStatistics(
    else
       SCIPmessageFPrintInfo(file, "          -\n");
 
-   SCIPmessageFPrintInfo(file, "    (at root node) :          - %10d %10lld %10.2f          -\n",
+   SCIPmessageFPrintInfo(file, "    (at root node) :          - %10d %10"SCIP_LONGINT_FORMAT" %10.2f          -\n",
       scip->stat->nrootstrongbranchs,
       scip->stat->nrootsblpiterations,
       scip->stat->nrootstrongbranchs > 0
       ? (SCIP_Real)scip->stat->nrootsblpiterations/(SCIP_Real)scip->stat->nrootstrongbranchs : 0.0);
 
-   SCIPmessageFPrintInfo(file, "  conflict analysis: %10.2f %10d %10lld %10.2f",
+   SCIPmessageFPrintInfo(file, "  conflict analysis: %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10.2f",
       SCIPclockGetTime(scip->stat->conflictlptime),
       scip->stat->nconflictlps,
       scip->stat->nconflictlpiterations,
@@ -12767,7 +12767,7 @@ void printRelaxatorStatistics(
    SCIPmessageFPrintInfo(file, "Relaxators         :       Time      Calls\n");
 
    for( i = 0; i < scip->set->nrelaxs; ++i )
-      SCIPmessageFPrintInfo(file, "  %-17.17s: %10.2f %10lld\n",
+      SCIPmessageFPrintInfo(file, "  %-17.17s: %10.2f %10"SCIP_LONGINT_FORMAT"\n",
          SCIPrelaxGetName(scip->set->relaxs[i]),
          SCIPrelaxGetTime(scip->set->relaxs[i]),
          SCIPrelaxGetNCalls(scip->set->relaxs[i]));
@@ -12785,14 +12785,14 @@ void printTreeStatistics(
 
    SCIPmessageFPrintInfo(file, "B&B Tree           :\n");
    SCIPmessageFPrintInfo(file, "  number of runs   : %10d\n", scip->stat->nruns);
-   SCIPmessageFPrintInfo(file, "  nodes            : %10lld\n", scip->stat->nnodes);
-   SCIPmessageFPrintInfo(file, "  nodes (total)    : %10lld\n", scip->stat->ntotalnodes);
+   SCIPmessageFPrintInfo(file, "  nodes            : %10"SCIP_LONGINT_FORMAT"\n", scip->stat->nnodes);
+   SCIPmessageFPrintInfo(file, "  nodes (total)    : %10"SCIP_LONGINT_FORMAT"\n", scip->stat->ntotalnodes);
    SCIPmessageFPrintInfo(file, "  max depth        : %10d\n", scip->stat->maxdepth);
    SCIPmessageFPrintInfo(file, "  max depth (total): %10d\n", scip->stat->maxtotaldepth);
-   SCIPmessageFPrintInfo(file, "  backtracks       : %10lld (%.1f%%)\n", scip->stat->nbacktracks,
+   SCIPmessageFPrintInfo(file, "  backtracks       : %10"SCIP_LONGINT_FORMAT" (%.1f%%)\n", scip->stat->nbacktracks,
       scip->stat->nnodes > 0 ? 100.0 * (SCIP_Real)scip->stat->nbacktracks / (SCIP_Real)scip->stat->nnodes : 0.0);
-   SCIPmessageFPrintInfo(file, "  delayed cutoffs  : %10lld\n", scip->stat->ndelayedcutoffs);
-   SCIPmessageFPrintInfo(file, "  repropagations   : %10lld (%lld domain reductions)\n",
+   SCIPmessageFPrintInfo(file, "  delayed cutoffs  : %10"SCIP_LONGINT_FORMAT"\n", scip->stat->ndelayedcutoffs);
+   SCIPmessageFPrintInfo(file, "  repropagations   : %10"SCIP_LONGINT_FORMAT" (%"SCIP_LONGINT_FORMAT" domain reductions)\n",
       scip->stat->nreprops, scip->stat->nrepropboundchgs);
    SCIPmessageFPrintInfo(file, "  avg switch length: %10.2f\n",
       scip->stat->nnodes > 0
@@ -12822,7 +12822,7 @@ void printSolutionStatistics(
    gap = SCIPgetGap(scip);
 
    SCIPmessageFPrintInfo(file, "Solution           :\n");
-   SCIPmessageFPrintInfo(file, "  Solutions found  : %10lld (%d improvements)\n",
+   SCIPmessageFPrintInfo(file, "  Solutions found  : %10"SCIP_LONGINT_FORMAT" (%d improvements)\n",
       scip->primal->nsolsfound, scip->primal->nbestsolsfound);
    if( SCIPsetIsInfinity(scip->set, REALABS(primalbound)) )
    {
@@ -12850,7 +12850,7 @@ void printSolutionStatistics(
             SCIPmessageFPrintInfo(file, "   (user objective limit)\n");
             SCIPmessageFPrintInfo(file, "  Best Solution    : %+21.14e", bestsol);
          }
-         SCIPmessageFPrintInfo(file, "   (after %lld nodes, %.2f seconds, depth %d, found by <%s>)\n",
+         SCIPmessageFPrintInfo(file, "   (after %"SCIP_LONGINT_FORMAT" nodes, %.2f seconds, depth %d, found by <%s>)\n",
             SCIPsolGetNodenum(scip->primal->sols[0]),
             SCIPsolGetTime(scip->primal->sols[0]),
             SCIPsolGetDepth(scip->primal->sols[0]),
@@ -12988,7 +12988,7 @@ SCIP_RETCODE SCIPprintBranchingStatistics(
          if( SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_DOWNWARDS) > 0
             || SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_UPWARDS) > 0 )
          {
-            SCIPmessageFPrintInfo(file, "%-16s %5d %8.1f %6d %6d %6.1f %7lld %7lld %5d %8.1f %8.1f %5.1f%% %5.1f%% %9.1f %9.1f\n",
+            SCIPmessageFPrintInfo(file, "%-16s %5d %8.1f %6d %6d %6.1f %7"SCIP_LONGINT_FORMAT" %7"SCIP_LONGINT_FORMAT" %5d %8.1f %8.1f %5.1f%% %5.1f%% %9.1f %9.1f\n",
                SCIPvarGetName(vars[v]),
                SCIPvarGetBranchPriority(vars[v]),
                SCIPvarGetBranchFactor(vars[v]),

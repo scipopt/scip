@@ -2,7 +2,7 @@ current version
 ===============
 
 examples:
-- added small pricer example
+- added two small pricer examples (for C and C++)
 - updated example code (s.t. it compiles again)
 
 interface:
@@ -17,10 +17,11 @@ interface:
 - new methods SCIPsepaGetNConssFound() and SCIPsepaGetNDomredsFound()
 - new methods SCIPgetVarConflictScore(), and SCIPgetVarConflictScoreCurrentRun()
 - new method SCIPvarSetData()
-- new method SCIPcreateInvalidSol()
-- primal solutions may now contain values marked to be invalid (value is SCIP_INVALID), which means that the value
-  is unknown; invalid values don't contribute to the objective value of the solution; a solution with invalid values
-  can not be feasible
+- new method SCIPcreateUnknownSol()
+- primal solutions may now contain values marked to be unknown (value is SCIP_UNKNOWN); unknown values don't contribute
+  to the objective value of the solution; an unknown solution value should be treated as an arbitrary value in the
+  variable's bounds, e.g., in the calculation of the feasibility of a constraint, a value inside the variable's bounds
+  should be selected that makes the constraint as feasible as possible
 - new method SCIPgetNConflictClausesFoundNode()
 - new methods SCIPvarSetDelorigData(), SCIPvarSetTransData(), and SCIPvarSetDeltransData()
 - new method SCIPvarHasBinaryImplic()
@@ -55,8 +56,9 @@ features:
   constraints stays the same
 - improved performance of the priority queue in conflict analysis
 
-Makefile:
+Makefile and Compilation:
 - included version number in binary file name
+- tried to make the code Windows compatible
 
 fixed bugs:
 - fixed bug in ZIMPL model reader with wrong chdir, if .zpl file is in current directory

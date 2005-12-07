@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.48 2005/11/10 18:10:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.49 2005/12/07 19:56:46 bzfpfend Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -119,9 +119,9 @@ SCIP_RETCODE SCIPsolCreateCurrentSol(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
-/** creates primal CIP solution, initialized to invalid values */
+/** creates primal CIP solution, initialized to unknown values */
 extern
-SCIP_RETCODE SCIPsolCreateInvalid(
+SCIP_RETCODE SCIPsolCreateUnknown(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -184,9 +184,9 @@ SCIP_RETCODE SCIPsolClear(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
-/** declares all entries in the primal CIP solution to be invalid */
+/** declares all entries in the primal CIP solution to be unknown */
 extern
-SCIP_RETCODE SCIPsolInvalidate(
+SCIP_RETCODE SCIPsolSetUnknown(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_TREE*            tree                /**< branch and bound tree */

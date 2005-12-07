@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_clock.h,v 1.10 2005/08/24 17:26:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_clock.h,v 1.11 2005/12/07 19:56:46 bzfpfend Exp $"
 
 /**@file   struct_clock.h
  * @brief  datastructures for clocks and timing issues
@@ -27,7 +27,11 @@
 #define __SCIP_STRUCT_CLOCK_H__
 
 
+#if defined(_WIN32) || defined(_WIN64)
+#include <time.h>
+#else
 #include <sys/times.h>
+#endif
 
 #include "scip/def.h"
 #include "scip/type_clock.h"

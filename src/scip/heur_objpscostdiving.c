@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.28 2005/08/30 14:13:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.29 2005/12/07 19:56:44 bzfpfend Exp $"
 
 /**@file   heur_objpscostdiving.c
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
@@ -327,7 +327,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
 
-   SCIPdebugMessage("(node %lld) executing objpscostdiving heuristic: depth=%d, %d fractionals, dualbound=%g, maxnlpiterations=%lld, maxdivedepth=%d\n", 
+   SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing objpscostdiving heuristic: depth=%d, %d fractionals, dualbound=%g, maxnlpiterations=%"SCIP_LONGINT_FORMAT", maxdivedepth=%d\n", 
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), maxnlpiterations, maxdivedepth);
 
    /* dive as long we are in the given diving depth and iteration limits and fractional variables exist, but
@@ -504,7 +504,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
             roundings[varidx] = -1;
          }
          SCIP_CALL( SCIPchgVarObjDive(scip, var, newobj) );
-         SCIPdebugMessage("  dive %d/%d, LP iter %lld/%lld: var <%s>, round=%d/%d, sol=%g, bounds=[%g,%g], obj=%g, newobj=%g\n",
+         SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%d/%d, sol=%g, bounds=[%g,%g], obj=%g, newobj=%g\n",
             divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
             SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
             lpcandssol[bestcand], SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var), oldobj, newobj);

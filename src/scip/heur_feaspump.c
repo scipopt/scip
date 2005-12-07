@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.37 2005/09/07 12:43:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.38 2005/12/07 19:56:43 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -388,7 +388,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    if( maxloops == -1 )
       maxloops = INT_MAX;
 
-   SCIPdebugMessage("executing feasibility pump heuristic, maxnlpit:%lld, maxflips:%d \n", maxnlpiterations, maxflips);
+   SCIPdebugMessage("executing feasibility pump heuristic, maxnlpit:%"SCIP_LONGINT_FORMAT", maxflips:%d \n", maxnlpiterations, maxflips);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -563,7 +563,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       /* update iteration count */
       heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
       nfracs = SCIPgetNLPBranchCands(scip);
-      SCIPdebugMessage(" -> number of iterations: %lld/%lld\n", heurdata->nlpiterations, maxnlpiterations);
+      SCIPdebugMessage(" -> number of iterations: %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT"\n", heurdata->nlpiterations, maxnlpiterations);
 
       /* swap the last solutions */
       tmpsol = lastroundedsols[heurdata->cyclelength-1];

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.14 2005/11/02 11:14:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.15 2005/12/07 19:56:43 bzfpfend Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -162,8 +162,8 @@ SCIP_RETCODE getSolutionValue(
    /* ignore deleted variables */
    if( SCIPvarIsDeleted(var) )
    {
-      SCIPdebugMessage("**** invalid solution value for deleted variable <%s>\n", SCIPvarGetName(var));
-      *val = SCIP_INVALID;
+      SCIPdebugMessage("**** unknown solution value for deleted variable <%s>\n", SCIPvarGetName(var));
+      *val = SCIP_UNKNOWN;
       return SCIP_OKAY;
    }
 
@@ -183,7 +183,7 @@ SCIP_RETCODE getSolutionValue(
       if( solvar == NULL )
       {
          SCIPwarningMessage("variable <%s> has no original counterpart\n", SCIPvarGetName(var));
-         *val = SCIP_INVALID;
+         *val = SCIP_UNKNOWN;
          return SCIP_OKAY;
       }
    }
@@ -276,7 +276,7 @@ SCIP_RETCODE isSolutionInNode(
             /* get solution value of variable */
             SCIP_CALL( getSolutionValue(boundchgs[i].var, &varsol) );
 
-            if( varsol != SCIP_INVALID )
+            if( varsol != SCIP_UNKNOWN )
             {
                /* compare the bound change with the solution value */
                if( boundchgs[i].boundtype == SCIP_BOUNDTYPE_LOWER )
@@ -348,7 +348,7 @@ SCIP_RETCODE SCIPdebugCheckRow(
       /* get solution value of variable in debugging solution */
       var = SCIPcolGetVar(cols[i]);
       SCIP_CALL( getSolutionValue(var, &solval) );
-      if( solval != SCIP_INVALID )
+      if( solval != SCIP_UNKNOWN )
       {
          minactivity += vals[i] * solval;
          maxactivity += vals[i] * solval;
@@ -406,7 +406,7 @@ SCIP_RETCODE SCIPdebugCheckLbGlobal(
    SCIPdebugMessage("debugging solution on lower bound of <%s>[%g] >= %g\n", SCIPvarGetName(var), varsol, lb);
 
    /* check validity of debugging solution */
-   if( varsol != SCIP_INVALID && SCIPsetIsLT(set, varsol, lb) )
+   if( varsol != SCIP_UNKNOWN && SCIPsetIsLT(set, varsol, lb) )
    {
       SCIPerrorMessage("invalid global lower bound: <%s>[%.8g] >= %.8g\n", SCIPvarGetName(var), varsol, lb);
       SCIPABORT();
@@ -429,7 +429,7 @@ SCIP_RETCODE SCIPdebugCheckUbGlobal(
    SCIPdebugMessage("debugging solution on upper bound of <%s>[%g] <= %g\n", SCIPvarGetName(var), varsol, ub);
 
    /* check validity of debugging solution */
-   if( varsol != SCIP_INVALID && SCIPsetIsGT(set, varsol, ub) )
+   if( varsol != SCIP_UNKNOWN && SCIPsetIsGT(set, varsol, ub) )
    {
       SCIPerrorMessage("invalid global upper bound: <%s>[%.8g] <= %.8g\n", SCIPvarGetName(var), varsol, ub);
       SCIPABORT();
@@ -460,7 +460,7 @@ SCIP_RETCODE SCIPdebugCheckInference(
    SCIP_CALL( getSolutionValue(var, &varsol) );
 
    /* check validity of debugging solution */
-   if( varsol != SCIP_INVALID )
+   if( varsol != SCIP_UNKNOWN )
    {
       if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsLT(set, varsol, newbound) )
       {
@@ -510,7 +510,7 @@ SCIP_RETCODE SCIPdebugCheckVbound(
    SCIP_CALL( getSolutionValue(vbvar, &vbvarsol) );
 
    /* check validity of debugging solution */
-   if( varsol != SCIP_INVALID && vbvarsol != SCIP_INVALID )
+   if( varsol != SCIP_UNKNOWN && vbvarsol != SCIP_UNKNOWN )
    {
       vb = vbcoef * vbvarsol + vbconstant;
       if( (vbtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsLT(set, varsol, vb))
@@ -542,7 +542,7 @@ SCIP_RETCODE SCIPdebugCheckImplic(
 
    /* get solution value of variable */
    SCIP_CALL( getSolutionValue(var, &solval) );
-   if( solval == SCIP_INVALID )
+   if( solval == SCIP_UNKNOWN )
       return SCIP_OKAY;
    assert(SCIPsetIsFeasEQ(set, solval, 0.0) || SCIPsetIsFeasEQ(set, solval, 1.0));
 
@@ -552,7 +552,7 @@ SCIP_RETCODE SCIPdebugCheckImplic(
 
    /* get solution value of implied variable */
    SCIP_CALL( getSolutionValue(implvar, &solval) );
-   if( solval == SCIP_INVALID )
+   if( solval == SCIP_UNKNOWN )
       return SCIP_OKAY;
 
    if( impltype == SCIP_BOUNDTYPE_LOWER )
@@ -607,7 +607,7 @@ SCIP_RETCODE SCIPdebugCheckConflict(
       }
 
       SCIP_CALL( getSolutionValue(conflictset[i], &solval) );
-      if( solval == SCIP_INVALID )
+      if( solval == SCIP_UNKNOWN )
          return SCIP_OKAY;
       if( solval > 0.5 )
          return SCIP_OKAY;
@@ -653,7 +653,7 @@ SCIP_DECL_PROPEXEC(propExecDebug)
       SCIP_Bool fixed;
 
       SCIP_CALL( getSolutionValue(vars[i], &solval) );
-      if( solval == SCIP_INVALID )
+      if( solval == SCIP_UNKNOWN )
       {
          SCIPerrorMessage("original variable without debugging solution value\n");
          SCIPABORT();

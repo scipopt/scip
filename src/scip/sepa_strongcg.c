@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.19 2005/09/26 12:54:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.20 2005/12/07 19:56:46 bzfpfend Exp $"
 
 /**@file   sepa_strongcg.c
  * @brief  Strong CG Cuts (Letchford & Lodi)
@@ -329,7 +329,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    else
       maxsepacuts = sepadata->maxsepacuts;
 
-   SCIPdebugMessage("searching strong CG cuts: %d cols, %d rows, maxdnom=%lld, maxscale=%g, maxcuts=%d\n",
+   SCIPdebugMessage("searching strong CG cuts: %d cols, %d rows, maxdnom=%"SCIP_LONGINT_FORMAT", maxscale=%g, maxcuts=%d\n",
       ncols, nrows, maxdnom, maxscale, maxsepacuts);
 
    /* for all basic columns belonging to integer variables, try to generate a strong CG cut */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_xxx.c,v 1.12 2005/08/24 17:26:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer_xxx.c,v 1.13 2005/12/07 19:56:45 bzfpfend Exp $"
 
 /**@file   pricer_xxx.c
  * @brief  xxx variable pricer
@@ -153,7 +153,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostXxx)
 #if 0
 /** farkas pricing method of variable pricer for infeasible LPs */
 static
-SCIP_DECL_PRICERREDCOST(pricerFarkasXxx)
+SCIP_DECL_PRICERFARKAS(pricerFarkasXxx)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xxx variable pricer not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/

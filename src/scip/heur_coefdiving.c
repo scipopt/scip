@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.39 2005/08/30 14:13:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.40 2005/12/07 19:56:43 bzfpfend Exp $"
 
 /**@file   heur_coefdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the matrix coefficients
@@ -299,7 +299,7 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
    objval = SCIPgetLPObjval(scip);
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
 
-   SCIPdebugMessage("(node %lld) executing coefdiving heuristic: depth=%d, %d fractionals, dualbound=%g, avgbound=%g, cutoffbound=%g, searchbound=%g\n", 
+   SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing coefdiving heuristic: depth=%d, %d fractionals, dualbound=%g, avgbound=%g, cutoffbound=%g, searchbound=%g\n", 
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), SCIPgetAvgDualbound(scip),
       SCIPretransformObj(scip, SCIPgetCutoffbound(scip)), SCIPretransformObj(scip, searchbound));
 
@@ -462,7 +462,7 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
       if( bestcandroundup )
       {
          /* round variable up */
-         SCIPdebugMessage("  dive %d/%d, LP iter %lld/%lld: var <%s>, round=%d/%d, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+         SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%d/%d, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
             divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
             SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
             lpcandssol[bestcand], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
@@ -472,7 +472,7 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
       else
       {
          /* round variable down */
-         SCIPdebugMessage("  dive %d/%d, LP iter %lld/%lld: var <%s>, round=%d/%d, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+         SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%d/%d, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
             divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
             SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
             lpcandssol[bestcand], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
@@ -546,7 +546,7 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
    /* end diving */
    SCIP_CALL( SCIPendProbing(scip) );
 
-   SCIPdebugMessage("(node %lld) finished coefdiving heuristic: %d fractionals, dive %d/%d, LP iter %lld/%lld, objval=%g/%g, lpsolstat=%d, cutoff=%d\n", 
+   SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") finished coefdiving heuristic: %d fractionals, dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", objval=%g/%g, lpsolstat=%d, cutoff=%d\n", 
       SCIPgetNNodes(scip), nlpcands, divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
       SCIPretransformObj(scip, objval), SCIPretransformObj(scip, searchbound), lpsolstat, cutoff);
 

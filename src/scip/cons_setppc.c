@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.101 2005/10/11 14:45:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.102 2005/12/07 19:56:42 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -2191,7 +2191,7 @@ SCIP_RETCODE branchLP(
             char name[SCIP_MAXSTRLEN];
          
             /* add set covering constraint x(S) >= 1 */
-            sprintf(name, "BSB%lld", SCIPgetNTotalNodes(scip));
+            sprintf(name, "BSB%"SCIP_LONGINT_FORMAT, SCIPgetNTotalNodes(scip));
 
             SCIP_CALL( SCIPcreateConsSetcover(scip, &newcons, name, nselcands, sortcands,
                   FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
@@ -3356,7 +3356,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
    }
 
    /* create a constraint out of the conflict set */
-   sprintf(consname, "cf%lld", SCIPgetNConflictClausesApplied(scip));
+   sprintf(consname, "cf%"SCIP_LONGINT_FORMAT, SCIPgetNConflictClausesApplied(scip));
    SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, consname, nconflictvars, conflictvars, 
          FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removeable) );
    SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );

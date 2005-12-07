@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.93 2005/11/14 17:35:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.94 2005/12/07 19:56:43 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -37,6 +37,7 @@
 #define SCIP_VERSION                 80 /**< SCIP version number (multiplied by 100 to get integer number) */
 #define SCIP_SUBVERSION             "b" /**< SCIP sub version string */
 #define SCIP_COPYRIGHT   "Copyright (c) 2002-2005 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+
 
 
 /*
@@ -63,7 +64,11 @@
 #define SCIP_Longint long long                         /**< type used for long integer values */
 #define SCIP_LONGINT_MAX          LLONG_MAX
 #define SCIP_LONGINT_MIN          LLONG_MIN
-#define SCIP_LONGINT_FORMAT          "%lld"
+#if defined(_WIN32) || defined(_WIN64)
+#define SCIP_LONGINT_FORMAT           "I64d"
+#else
+#define SCIP_LONGINT_FORMAT           "lld"
+#endif
 
 
 /*
@@ -73,7 +78,7 @@
 #define SCIP_Real double                               /**< type used for floating point values */
 #define SCIP_REAL_MAX         (SCIP_Real)DBL_MAX
 #define SCIP_REAL_MIN        -(SCIP_Real)DBL_MAX
-#define SCIP_REAL_FORMAT              "%lf"
+#define SCIP_REAL_FORMAT               "lf"
 
 #define SCIP_DEFAULT_INFINITY         1e+20  /**< default value considered to be infinity */
 #define SCIP_DEFAULT_EPSILON          1e-09  /**< default upper bound for floating points to be considered zero */
@@ -87,6 +92,7 @@
 #define SCIP_MAXEPSILON               1e-03  /**< maximum value for any numerical epsilon */
 #define SCIP_MINEPSILON               1e-20  /**< minimum value for any numerical epsilon */
 #define SCIP_INVALID                  1e+99  /**< floating point value is not valid */
+#define SCIP_UNKNOWN                  1e+98  /**< floating point value is not known (in primal solution) */
 
 
 #define REALABS(x)        (fabs(x))
@@ -140,6 +146,10 @@
 #define SCIP_MAXSTRLEN             1024 /**< maximum string length in SCIP */
 #if defined(_WIN32) || defined(_WIN64)
 #define SCIP_FILESLASH             '\\' /**< character to separate directories in path name */
+#define snprintf _snprintf
+#define vsnprintf _vsnprintf
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
 #else
 #define SCIP_FILESLASH              '/' /**< character to separate directories in path name */
 #endif

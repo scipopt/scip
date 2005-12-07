@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.55 2005/11/14 09:59:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.56 2005/12/07 19:56:43 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -1035,7 +1035,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       break;
 
    case SCIP_PARAMTYPE_LONGINT:
-      snprintf(prompt, SCIP_MAXSTRLEN, "current value: %lld, new value [%lld,%lld]: ",
+      snprintf(prompt, SCIP_MAXSTRLEN, "current value: %"SCIP_LONGINT_FORMAT", new value [%"SCIP_LONGINT_FORMAT",%"SCIP_LONGINT_FORMAT"]: ",
          SCIPparamGetLongint(param), SCIPparamGetLongintMin(param), SCIPparamGetLongintMax(param));
       valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
       if( valuestr[0] == '\0' )
@@ -1043,7 +1043,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
 
-      if( sscanf(valuestr, SCIP_LONGINT_FORMAT, &longintval) != 1 )
+      if( sscanf(valuestr, "%"SCIP_LONGINT_FORMAT, &longintval) != 1 )
       {
          SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
          return SCIP_OKAY;
@@ -1053,7 +1053,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       {
          SCIP_CALL( retcode );
       }
-      SCIPdialogMessage(scip, NULL, "parameter <%s> set to %lld\n", SCIPparamGetName(param), SCIPparamGetLongint(param));
+      SCIPdialogMessage(scip, NULL, "parameter <%s> set to %"SCIP_LONGINT_FORMAT"\n", SCIPparamGetName(param), SCIPparamGetLongint(param));
       break;
 
    case SCIP_PARAMTYPE_REAL:
@@ -1065,7 +1065,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
 
-      if( sscanf(valuestr, SCIP_REAL_FORMAT, &realval) != 1 )
+      if( sscanf(valuestr, "%"SCIP_REAL_FORMAT, &realval) != 1 )
       {
          SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
          return SCIP_OKAY;
@@ -1147,7 +1147,7 @@ SCIP_DECL_DIALOGDESC(SCIPdialogDescSetParam)
       break;
 
    case SCIP_PARAMTYPE_LONGINT:
-      sprintf(valuestr, SCIP_LONGINT_FORMAT, SCIPparamGetLongint(param));
+      sprintf(valuestr, "%"SCIP_LONGINT_FORMAT, SCIPparamGetLongint(param));
       break;
 
    case SCIP_PARAMTYPE_REAL:
@@ -1334,7 +1334,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
 
-   if( sscanf(valuestr, SCIP_REAL_FORMAT, &objlim) != 1 )
+   if( sscanf(valuestr, "%"SCIP_REAL_FORMAT, &objlim) != 1 )
    {
       SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
       return SCIP_OKAY;

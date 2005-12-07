@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.159 2005/10/13 21:10:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.160 2005/12/07 19:56:47 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1022,7 +1022,7 @@ SCIP_RETCODE nodeRepropagate(
    stat->nreprops++;
    stat->nrepropboundchgs += stat->nboundchgs - oldnboundchgs;
 
-   SCIPdebugMessage("repropagation %lld at depth %d changed %lld bounds (total reprop bound changes: %lld), cutoff: %d\n",
+   SCIPdebugMessage("repropagation %"SCIP_LONGINT_FORMAT" at depth %d changed %"SCIP_LONGINT_FORMAT" bounds (total reprop bound changes: %"SCIP_LONGINT_FORMAT"), cutoff: %d\n",
       stat->nreprops, node->depth, stat->nboundchgs - oldnboundchgs, stat->nrepropboundchgs, *cutoff);
 
    /* if a propagation marked with the reprop flag was successful, we want to repropagate the whole subtree */
@@ -1034,7 +1034,7 @@ SCIP_RETCODE nodeRepropagate(
    {
       treeNextRepropsubtreecount(tree);
       node->repropsubtreemark = tree->repropsubtreecount; /*lint !e732*/
-      SCIPdebugMessage("initial repropagation at depth %d changed %lld bounds -> repropagating subtree (new mark: %d)\n",
+      SCIPdebugMessage("initial repropagation at depth %d changed %"SCIP_LONGINT_FORMAT" bounds -> repropagating subtree (new mark: %d)\n",
          node->depth, stat->nboundchgs - oldnboundchgs, tree->repropsubtreecount);
       assert((int)(node->repropsubtreemark) == tree->repropsubtreecount); /* bitfield must be large enough */
    }
@@ -2528,7 +2528,7 @@ SCIP_RETCODE focusnodeToFork(
    if( lperror || SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
    {
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %lld) numerical troubles: LP %d not optimal -- convert node into junction instead of fork\n", 
+         "(node %"SCIP_LONGINT_FORMAT") numerical troubles: LP %d not optimal -- convert node into junction instead of fork\n", 
          stat->nnodes, stat->nlps);
 
       /* remove all additions to the LP at this node */
@@ -2632,7 +2632,7 @@ SCIP_RETCODE focusnodeToSubroot(
    if( lperror || SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
    {
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %lld) numerical troubles: LP %d not optimal -- convert node into junction instead of subroot\n", 
+         "(node %"SCIP_LONGINT_FORMAT") numerical troubles: LP %d not optimal -- convert node into junction instead of subroot\n", 
          stat->nnodes, stat->nlps);
 
       /* remove all additions to the LP at this node */
@@ -3308,7 +3308,7 @@ SCIP_RETCODE SCIPtreeSetNodesel(
       if( stat->nnodes > 0 )
       {
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %lld) switching to node selector <%s>\n", stat->nnodes, SCIPnodeselGetName(nodesel));
+            "(node %"SCIP_LONGINT_FORMAT") switching to node selector <%s>\n", stat->nnodes, SCIPnodeselGetName(nodesel));
       }
    }
 
@@ -3798,7 +3798,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
          if( lperror )
          {
             SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "(node %lld) unresolved numerical troubles while resolving LP %d after probing\n",
+               "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles while resolving LP %d after probing\n",
                stat->nnodes, stat->nlps);
          }
       }

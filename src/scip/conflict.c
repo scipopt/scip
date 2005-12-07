@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.108 2005/11/02 11:14:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.109 2005/12/07 19:56:42 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -3789,7 +3789,7 @@ SCIP_RETCODE conflictAnalyzeLP(
             (*iterations) += iter;
             stat->nconflictlps++;
             stat->nconflictlpiterations += iter;
-            SCIPdebugMessage(" -> resolved objlim exceeding LP in %d iterations (total: %lld) (infeasible:%d, objlim: %d, optimal:%d)\n",
+            SCIPdebugMessage(" -> resolved objlim exceeding LP in %d iterations (total: %"SCIP_LONGINT_FORMAT") (infeasible:%d, objlim: %d, optimal:%d)\n",
                iter, stat->nconflictlpiterations, SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsObjlimExc(lpi),
                SCIPlpiIsOptimal(lpi));
             valid = (SCIPlpiIsObjlimExc(lpi) || SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsOptimal(lpi));
@@ -4111,7 +4111,7 @@ SCIP_RETCODE conflictAnalyzeLP(
             (*iterations) += iter;
             stat->nconflictlps++;
             stat->nconflictlpiterations += iter;
-            SCIPdebugMessage(" -> resolved LP in %d iterations (total: %lld) (infeasible:%d)\n",
+            SCIPdebugMessage(" -> resolved LP in %d iterations (total: %"SCIP_LONGINT_FORMAT") (infeasible:%d)\n",
                iter, stat->nconflictlpiterations, SCIPlpiIsPrimalInfeasible(lpi));
 
             /* evaluate result */

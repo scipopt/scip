@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.27 2005/08/30 14:13:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.28 2005/12/07 19:56:44 bzfpfend Exp $"
 
 /**@file   heur_rootsoldiving.c
  * @brief  LP diving heuristic that changes variable's objective values using root LP solution as guide
@@ -267,7 +267,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    /* get number of fractional variables, that should be integral */
    nlpcands = SCIPgetNLPBranchCands(scip);
 
-   SCIPdebugMessage("(node %lld) executing rootsoldiving heuristic: depth=%d, %d fractionals, dualbound=%g, maxnlpiterations=%lld, maxdivedepth=%d, LPobj=%g, objstep=%g\n",
+   SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing rootsoldiving heuristic: depth=%d, %d fractionals, dualbound=%g, maxnlpiterations=%"SCIP_LONGINT_FORMAT", maxdivedepth=%d, LPobj=%g, objstep=%g\n",
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), maxnlpiterations, maxdivedepth,
       SCIPgetLPObjval(scip), objstep);
 
@@ -313,7 +313,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       hardroundingoldbd = 0.0;
       hardroundingnewbd = 0.0;
 
-      SCIPdebugMessage("dive %d/%d, LP iter %lld/%lld:\n", divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations);
+      SCIPdebugMessage("dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT":\n", divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations);
          
       /* round solution x* from diving LP: 
        *   - x~_j = down(x*_j)    if x*_j is integer or binary variable and x*_j <= root solution_j
@@ -452,7 +452,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       SCIPdebugMessage("   -> lpsolstat=%d, nfrac=%d\n", lpsolstat, nlpcands);
    }
 
-   SCIPdebugMessage("---> diving finished: lpsolstat = %d, depth %d/%d, LP iter %lld/%lld\n", 
+   SCIPdebugMessage("---> diving finished: lpsolstat = %d, depth %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT"\n", 
       lpsolstat, divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations);
 
    /* check if a solution has been found */

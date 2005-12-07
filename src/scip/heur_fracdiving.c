@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.41 2005/10/14 14:40:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.42 2005/12/07 19:56:43 bzfpfend Exp $"
 
 /**@file   heur_fracdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
@@ -298,7 +298,7 @@ SCIP_DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
    objval = SCIPgetLPObjval(scip);
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
 
-   SCIPdebugMessage("(node %lld) executing fracdiving heuristic: depth=%d, %d fractionals, dualbound=%g, searchbound=%g\n", 
+   SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing fracdiving heuristic: depth=%d, %d fractionals, dualbound=%g, searchbound=%g\n", 
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), SCIPretransformObj(scip, searchbound));
 
    /* dive as long we are in the given objective, depth and iteration limits and fractional variables exist, but
@@ -455,7 +455,7 @@ SCIP_DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
       if( bestcandroundup )
       {
          /* round variable up */
-         SCIPdebugMessage("  dive %d/%d, LP iter %lld/%lld: var <%s>, round=%d/%d, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+         SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%d/%d, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
             divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
             SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
             lpcandssol[bestcand], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
@@ -465,7 +465,7 @@ SCIP_DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
       else
       {
          /* round variable down */
-         SCIPdebugMessage("  dive %d/%d, LP iter %lld/%lld: var <%s>, round=%d/%d, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+         SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%d/%d, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
             divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
             SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
             lpcandssol[bestcand], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),

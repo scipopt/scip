@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.c,v 1.22 2005/08/28 12:23:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: clock.c,v 1.23 2005/12/07 19:56:42 bzfpfend Exp $"
 
 /**@file   clock.c
  * @brief  methods for clocks and timing issues
@@ -24,8 +24,12 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#if defined(_WIN32) || defined(_WIN64)
+#include <windows.h>
+#else
 #include <sys/times.h>
 #include <sys/time.h>
+#endif
 #include <time.h>
 
 #include "scip/def.h"
@@ -207,19 +211,34 @@ void SCIPclockStart(
 
       if( clck->nruns == 0 )
       {
+#if defined(_WIN32) || defined(_WIN64)
+         FILETIME creationtime;
+         FILETIME exittime;
+         FILETIME kerneltime;
+         FILETIME usertime;
+#else
          struct timeval tp; /*lint !e86*/
          struct tms now;
+#endif
          
          SCIPdebugMessage("starting clock %p (type %d, usedefault=%d)\n", clck, clck->clocktype, clck->usedefault);
 
          switch( clck->clocktype )
          {
          case SCIP_CLOCKTYPE_CPU:
+#if defined(_WIN32) || defined(_WIN64)
+            GetProcessTimes(GetCurrentProcess(), &creationtime, &exittime, &kerneltime, &usertime);
+            clck->data.cpuclock.user -= usertime.dwHighDateTime * 42950 + usertime.dwLowDateTime / 100000L;
+#else
             (void)times(&now);
             clck->data.cpuclock.user -= now.tms_utime;
+#endif
             break;
 
          case SCIP_CLOCKTYPE_WALL:            
+#if defined(_WIN32) || defined(_WIN64)
+            clck->data.wallclock.sec -= time(NULL);
+#else
             gettimeofday(&tp, NULL);
             if( tp.tv_usec > clck->data.wallclock.usec ) /*lint !e115 !e40*/
             {
@@ -231,6 +250,7 @@ void SCIPclockStart(
                clck->data.wallclock.sec -= tp.tv_sec; /*lint !e115 !e40*/
                clck->data.wallclock.usec -= tp.tv_usec; /*lint !e115 !e40*/
             }
+#endif
             break;
 
          case SCIP_CLOCKTYPE_DEFAULT:            
@@ -259,19 +279,34 @@ void SCIPclockStop(
       clck->nruns--;
       if( clck->nruns == 0 )
       {
+#if defined(_WIN32) || defined(_WIN64)
+         FILETIME creationtime;
+         FILETIME exittime;
+         FILETIME kerneltime;
+         FILETIME usertime;
+#else
          struct timeval tp; /*lint !e86*/
          struct tms now;
+#endif
          
          SCIPdebugMessage("stopping clock %p (type %d, usedefault=%d)\n", clck, clck->clocktype, clck->usedefault);
 
          switch( clck->clocktype )
          {
          case SCIP_CLOCKTYPE_CPU:
+#if defined(_WIN32) || defined(_WIN64)
+            GetProcessTimes(GetCurrentProcess(), &creationtime, &exittime, &kerneltime, &usertime);
+            clck->data.cpuclock.user += usertime.dwHighDateTime * 42950 + usertime.dwLowDateTime / 100000L;
+#else
             (void)times(&now);
             clck->data.cpuclock.user += now.tms_utime;
+#endif
             break;
 
          case SCIP_CLOCKTYPE_WALL:            
+#if defined(_WIN32) || defined(_WIN64)
+            clck->data.wallclock.sec += time(NULL);
+#else
             gettimeofday(&tp, NULL);
             if( tp.tv_usec + clck->data.wallclock.usec > 1000000 ) /*lint !e115 !e40*/
             {
@@ -283,6 +318,7 @@ void SCIPclockStop(
                clck->data.wallclock.sec += tp.tv_sec; /*lint !e115 !e40*/
                clck->data.wallclock.usec += tp.tv_usec; /*lint !e115 !e40*/
             }
+#endif
             break;
 
          case SCIP_CLOCKTYPE_DEFAULT:
@@ -312,10 +348,14 @@ SCIP_Real cputime2sec(
 {
    clock_t clocks_per_second;
 
+#if defined(_WIN32) || defined(_WIN64)
+   clocks_per_second = 100;
+#else
 #ifndef CLK_TCK
    clocks_per_second = sysconf(_SC_CLK_TCK);
 #else
    clocks_per_second = CLK_TCK;
+#endif
 #endif
 
    return (SCIP_Real)cputime / (SCIP_Real)clocks_per_second;
@@ -342,10 +382,14 @@ void sec2cputime(
 
    assert(cputime != NULL);
 
+#ifdef _WIN32
+   clocks_per_second = 100;
+#else
 #ifndef CLK_TCK
    clocks_per_second = sysconf(_SC_CLK_TCK);
 #else
    clocks_per_second = CLK_TCK;
+#endif
 #endif
    *cputime = (clock_t)(sec * clocks_per_second);
 }
@@ -397,17 +441,32 @@ SCIP_Real SCIPclockGetTime(
    }
    else
    {
+#if defined(_WIN32) || defined(_WIN64)
+      FILETIME creationtime;
+      FILETIME exittime;
+      FILETIME kerneltime;
+      FILETIME usertime;
+#else
       struct timeval tp; /*lint !e86*/
       struct tms now;
+#endif
          
       /* the clock is currently running: we have to add the current time to the clocks timer */
       switch( clck->clocktype )
       {
       case SCIP_CLOCKTYPE_CPU:
+#if defined(_WIN32) || defined(_WIN64)
+          GetProcessTimes(GetCurrentProcess(), &creationtime, &exittime, &kerneltime, &usertime);
+          return cputime2sec(clck->data.cpuclock.user + usertime.dwHighDateTime * 42950 + usertime.dwLowDateTime / 100000L);
+#else
          (void)times(&now);
          return cputime2sec(clck->data.cpuclock.user + now.tms_utime);
+#endif
 
       case SCIP_CLOCKTYPE_WALL:            
+#if defined(_WIN32) || defined(_WIN64)
+         return walltime2sec(clck->data.wallclock.sec + time(NULL), 0);
+#else
          gettimeofday(&tp, NULL);
          if( tp.tv_usec + clck->data.wallclock.usec > 1000000 ) /*lint !e115 !e40*/
             return walltime2sec(clck->data.wallclock.sec + tp.tv_sec + 1, /*lint !e115 !e40*/
@@ -415,6 +474,7 @@ SCIP_Real SCIPclockGetTime(
          else
             return walltime2sec(clck->data.wallclock.sec + tp.tv_sec, /*lint !e115 !e40*/
                clck->data.wallclock.usec + tp.tv_usec); /*lint !e115 !e40*/
+#endif
 
       case SCIP_CLOCKTYPE_DEFAULT:
       default:
@@ -458,18 +518,33 @@ void SCIPclockSetTime(
    
    if( clck->nruns >= 1 )
    {
+#if defined(_WIN32) || defined(_WIN64)
+      FILETIME creationtime;
+      FILETIME exittime;
+      FILETIME kerneltime;
+      FILETIME usertime;
+#else
       struct timeval tp; /*lint !e86*/
       struct tms now;
+#endif
          
       /* the clock is currently running: we have to subtract the current time from the new timer value */
       switch( clck->clocktype )
       {
       case SCIP_CLOCKTYPE_CPU:
+#if defined(_WIN32) || defined(_WIN64)
+         GetProcessTimes(GetCurrentProcess(), &creationtime, &exittime, &kerneltime, &usertime);
+         clck->data.cpuclock.user -= usertime.dwHighDateTime * 42950 + usertime.dwLowDateTime / 100000L;
+#else
          (void)times(&now);
          clck->data.cpuclock.user -= now.tms_utime;
+#endif
          break;
 
       case SCIP_CLOCKTYPE_WALL:            
+#if defined(_WIN32) || defined(_WIN64)
+         clck->data.wallclock.sec -= time(NULL);
+#else
          gettimeofday(&tp, NULL);
          if( tp.tv_usec > clck->data.wallclock.usec ) /*lint !e115 !e40*/
          {
@@ -481,6 +556,7 @@ void SCIPclockSetTime(
             clck->data.wallclock.sec -= tp.tv_sec; /*lint !e115 !e40*/
             clck->data.wallclock.usec -= tp.tv_usec; /*lint !e115 !e40*/
          }
+#endif
          break;
 
       case SCIP_CLOCKTYPE_DEFAULT:
@@ -496,9 +572,15 @@ SCIP_Real SCIPclockGetTimeOfDay(
    void
    )
 {
+#if defined(_WIN32) || defined(_WIN64)
+   time_t now;
+   now = time(NULL);
+   return (SCIP_Real)(now % (24*3600));
+#else
    struct timeval tp; /*lint !e86*/
    
    gettimeofday(&tp, NULL);
 
    return (SCIP_Real)(tp.tv_sec % (24*3600)) + (SCIP_Real)tp.tv_usec / 1e+6;
+#endif
 }

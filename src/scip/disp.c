@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.47 2005/08/28 12:23:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.48 2005/12/07 19:56:43 bzfpfend Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -495,7 +495,7 @@ void SCIPdispLongint(
       if( val < 0 )
          SCIPmessageFPrintInfo(file, "-");
       else if( val < 10 )
-         SCIPmessageFPrintInfo(file, "%lld", val);
+         SCIPmessageFPrintInfo(file, "%"SCIP_LONGINT_FORMAT, val);
       else
          SCIPmessageFPrintInfo(file, "+");
    }
@@ -517,7 +517,7 @@ void SCIPdispLongint(
          decpower++;
          val /= 1000;
       }
-      sprintf(format, "%%%dlld%c", width-1, decpowerchar[decpower]);
+      sprintf(format, "%%%d"SCIP_LONGINT_FORMAT"%c", width-1, decpowerchar[decpower]);
 
       if( width == 2 && val < 0 )
          SCIPmessageFPrintInfo(file, "-%c", decpowerchar[decpower]);

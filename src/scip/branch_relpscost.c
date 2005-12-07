@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.39 2005/09/01 18:19:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.40 2005/12/07 19:56:41 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -441,7 +441,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
          inititer = MIN(inititer, 500 /*??????????????10000*/);
       }
       
-      SCIPdebugMessage("strong branching (reliable=%g, %d/%d cands, %d uninit, maxcands=%d, maxlookahead=%g, inititer=%d, iters:%lld/%lld, basic:%d)\n",
+      SCIPdebugMessage("strong branching (reliable=%g, %d/%d cands, %d uninit, maxcands=%d, maxlookahead=%g, inititer=%d, iters:%"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", basic:%d)\n",
          reliable, ninitcands, nlpcands, nuninitcands, maxninitcands, maxlookahead, inititer, 
          SCIPgetNStrongbranchLPIterations(scip), maxnsblpiterations, SCIPisLPSolBasic(scip));
 
@@ -470,7 +470,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
          c = initcands[i];
          assert(!SCIPisFeasIntegral(scip, lpcandssol[c]));
 
-         SCIPdebugMessage("init pseudo cost (%g/%g) of <%s> at %g (score:%g) with strong branching (%d iters) -- %lld/%lld iterations\n",
+         SCIPdebugMessage("init pseudo cost (%g/%g) of <%s> at %g (score:%g) with strong branching (%d iters) -- %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" iterations\n",
             SCIPgetVarPseudocostCountCurrentRun(scip, lpcands[c], SCIP_BRANCHDIR_DOWNWARDS), 
             SCIPgetVarPseudocostCountCurrentRun(scip, lpcands[c], SCIP_BRANCHDIR_UPWARDS), 
             SCIPvarGetName(lpcands[c]), lpcandssol[c], initcandscores[i],
@@ -484,7 +484,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
          if( lperror )
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-               "(node %lld) error in strong branching call for variable <%s> with solution %g\n", 
+               "(node %"SCIP_LONGINT_FORMAT") error in strong branching call for variable <%s> with solution %g\n", 
                SCIPgetNNodes(scip), SCIPvarGetName(lpcands[c]), lpcandssol[c]);
             break;
          }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.10 2005/09/27 11:20:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.11 2005/12/07 19:56:45 bzfpfend Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -23,16 +23,17 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "scip/reader_zpl.h"
+
+#ifdef WITH_ZIMPL
+
 #include <unistd.h>
 #include <string.h>
 #include <assert.h>
 
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
-#include "scip/reader_zpl.h"
 
-
-#ifdef WITH_ZIMPL
 
 /* include the ZIMPL headers necessary to define the LP construction interface */
 #include "zimpl/bool.h"

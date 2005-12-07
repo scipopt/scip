@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.70 2005/11/10 18:10:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.71 2005/12/07 19:56:46 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -142,8 +142,8 @@ SCIP_Real solGetArrayVal(
       case SCIP_SOLORIGIN_PSEUDOSOL:
          return SCIPvarGetPseudoSol(var);
 
-      case SCIP_SOLORIGIN_INVALID:
-         return SCIP_INVALID;
+      case SCIP_SOLORIGIN_UNKNOWN:
+         return SCIP_UNKNOWN;
 
       default:
          SCIPerrorMessage("unknown solution origin <%d>\n", sol->solorigin);
@@ -202,8 +202,8 @@ SCIP_RETCODE solUnlinkVar(
       }
       return SCIP_OKAY;
 
-   case SCIP_SOLORIGIN_INVALID:
-      SCIP_CALL( solSetArrayVal(sol, set, var, SCIP_INVALID) );
+   case SCIP_SOLORIGIN_UNKNOWN:
+      SCIP_CALL( solSetArrayVal(sol, set, var, SCIP_UNKNOWN) );
       return SCIP_OKAY;
 
    default:
@@ -384,8 +384,8 @@ SCIP_RETCODE SCIPsolCreateCurrentSol(
    return SCIP_OKAY;
 }
 
-/** creates primal CIP solution, initialized to invalid values */
-SCIP_RETCODE SCIPsolCreateInvalid(
+/** creates primal CIP solution, initialized to unknown values */
+SCIP_RETCODE SCIPsolCreateUnknown(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -403,7 +403,7 @@ SCIP_RETCODE SCIPsolCreateInvalid(
    SCIP_CALL( SCIPrealarrayCreate(&(*sol)->vals, blkmem) );
    SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valid, blkmem) );
    (*sol)->heur = heur;
-   (*sol)->solorigin = SCIP_SOLORIGIN_INVALID;
+   (*sol)->solorigin = SCIP_SOLORIGIN_UNKNOWN;
    (*sol)->obj = 0.0;
    (*sol)->primalindex = -1;
    solStamp(*sol, stat, tree);
@@ -571,8 +571,8 @@ SCIP_RETCODE SCIPsolClear(
    return SCIP_OKAY;
 }
 
-/** declares all entries in the primal CIP solution to be invalid */
-SCIP_RETCODE SCIPsolInvalidate(
+/** declares all entries in the primal CIP solution to be unknown */
+SCIP_RETCODE SCIPsolSetUnknown(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_TREE*            tree                /**< branch and bound tree */
@@ -581,7 +581,7 @@ SCIP_RETCODE SCIPsolInvalidate(
    assert(sol != NULL);
 
    SCIP_CALL( solClearArrays(sol) );
-   sol->solorigin = SCIP_SOLORIGIN_INVALID;
+   sol->solorigin = SCIP_SOLORIGIN_UNKNOWN;
    sol->obj = 0.0;
    solStamp(sol, stat, tree);
 
@@ -601,7 +601,8 @@ SCIP_RETCODE SCIPsolUnlink(
    assert(prob != NULL);
    assert(prob->nvars == 0 || prob->vars != NULL);
 
-   if( sol->solorigin != SCIP_SOLORIGIN_ORIGINAL && sol->solorigin != SCIP_SOLORIGIN_ZERO )
+   if( sol->solorigin != SCIP_SOLORIGIN_ORIGINAL && sol->solorigin != SCIP_SOLORIGIN_ZERO
+      && sol->solorigin != SCIP_SOLORIGIN_UNKNOWN )
    {
       SCIPdebugMessage("completing solution %p\n", sol);
 
@@ -631,7 +632,7 @@ SCIP_RETCODE SCIPsolSetVal(
    assert(sol != NULL);
    assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL
       || sol->solorigin == SCIP_SOLORIGIN_ZERO
-      || sol->solorigin == SCIP_SOLORIGIN_INVALID
+      || sol->solorigin == SCIP_SOLORIGIN_UNKNOWN
       || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
    assert(stat != NULL);
    assert(var != NULL);
@@ -651,11 +652,11 @@ SCIP_RETCODE SCIPsolSetVal(
 
             SCIP_CALL( solSetArrayVal(sol, set, var, val) );
 
-            /* update objective: an invalid solution value does not count towards the objective */
+            /* update objective: an unknown solution value does not count towards the objective */
             obj = SCIPvarGetObj(var);
-            if( oldval != SCIP_INVALID )
+            if( oldval != SCIP_UNKNOWN )
                sol->obj -= obj * oldval;
-            if( val != SCIP_INVALID )
+            if( val != SCIP_UNKNOWN )
                sol->obj += obj * val;
 
             solStamp(sol, stat, tree);
@@ -675,11 +676,11 @@ SCIP_RETCODE SCIPsolSetVal(
 
          SCIP_CALL( solSetArrayVal(sol, set, var, val) );
 
-         /* update objective: an invalid solution value does not count towards the objective */
+         /* update objective: an unknown solution value does not count towards the objective */
          obj = SCIPvarGetObj(var);
-         if( oldval != SCIP_INVALID )
+         if( oldval != SCIP_UNKNOWN )
             sol->obj -= obj * oldval;
-         if( val != SCIP_INVALID )
+         if( val != SCIP_UNKNOWN )
             sol->obj += obj * val;
 
          solStamp(sol, stat, tree);
@@ -700,7 +701,7 @@ SCIP_RETCODE SCIPsolSetVal(
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
       assert(!SCIPsetIsZero(set, SCIPvarGetAggrScalar(var)));
       return SCIPsolSetVal(sol, set, stat, tree, SCIPvarGetAggrVar(var),
-         val == SCIP_INVALID ? val : (val - SCIPvarGetAggrConstant(var))/SCIPvarGetAggrScalar(var));
+         val == SCIP_UNKNOWN ? val : (val - SCIPvarGetAggrConstant(var))/SCIPvarGetAggrScalar(var));
 
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot set solution value for multiple aggregated variable\n");
@@ -708,7 +709,7 @@ SCIP_RETCODE SCIPsolSetVal(
 
    case SCIP_VARSTATUS_NEGATED:
       return SCIPsolSetVal(sol, set, stat, tree, SCIPvarGetNegationVar(var), 
-         val == SCIP_INVALID ? val : SCIPvarGetNegationConstant(var) - val);
+         val == SCIP_UNKNOWN ? val : SCIPvarGetNegationConstant(var) - val);
       
    default:
       SCIPerrorMessage("unknown variable status\n");
@@ -798,7 +799,7 @@ SCIP_Real SCIPsolGetVal(
    assert(sol != NULL);
    assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL
       || sol->solorigin == SCIP_SOLORIGIN_ZERO
-      || sol->solorigin == SCIP_SOLORIGIN_INVALID
+      || sol->solorigin == SCIP_SOLORIGIN_UNKNOWN
       || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
    assert(var != NULL);
 
@@ -825,8 +826,8 @@ SCIP_Real SCIPsolGetVal(
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
       solval = SCIPsolGetVal(sol, set, stat, SCIPvarGetAggrVar(var));
-      if( solval == SCIP_INVALID )
-         return SCIP_INVALID;
+      if( solval == SCIP_UNKNOWN )
+         return SCIP_UNKNOWN;
       if( SCIPsetIsInfinity(set, solval) || SCIPsetIsInfinity(set, -solval) )
       {
          if( SCIPvarGetAggrScalar(var) * solval > 0.0 )
@@ -844,8 +845,8 @@ SCIP_Real SCIPsolGetVal(
       for( i = 0; i < nvars; ++i )
       {
          solval = SCIPsolGetVal(sol, set, stat, vars[i]);
-         if( solval == SCIP_INVALID )
-            return SCIP_INVALID;
+         if( solval == SCIP_UNKNOWN )
+            return SCIP_UNKNOWN;
          if( SCIPsetIsInfinity(set, solval) || SCIPsetIsInfinity(set, -solval) )
          {
             if( scalars[i] * solval > 0.0 )
@@ -859,8 +860,8 @@ SCIP_Real SCIPsolGetVal(
 
    case SCIP_VARSTATUS_NEGATED:
       solval = SCIPsolGetVal(sol, set, stat, SCIPvarGetNegationVar(var));
-      if( solval == SCIP_INVALID )
-         return SCIP_INVALID;
+      if( solval == SCIP_UNKNOWN )
+         return SCIP_UNKNOWN;
       if( SCIPsetIsInfinity(set, solval) )
          return -SCIPsetInfinity(set);
       if( SCIPsetIsInfinity(set, -solval) )
@@ -905,7 +906,7 @@ void SCIPsolUpdateVarObj(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
    solval = solGetArrayVal(sol, var);
-   if( solval != SCIP_INVALID )
+   if( solval != SCIP_UNKNOWN )
       sol->obj += (newobj - oldobj) * solval;
 }
 
@@ -931,7 +932,7 @@ SCIP_RETCODE SCIPsolCheck(
    assert(prob != NULL);
    assert(feasible != NULL);
 
-   SCIPdebugMessage("checking solution with objective value %g (nodenum=%lld, origin=%d)\n", 
+   SCIPdebugMessage("checking solution with objective value %g (nodenum=%"SCIP_LONGINT_FORMAT", origin=%d)\n", 
       sol->obj, sol->nodenum, sol->solorigin);
 
    *feasible = TRUE;
@@ -947,9 +948,7 @@ SCIP_RETCODE SCIPsolCheck(
 
          var = prob->vars[v];
          solval = SCIPsolGetVal(sol, set, stat, var);
-         if( solval == SCIP_INVALID )
-            *feasible = FALSE;
-         else
+         if( solval != SCIP_UNKNOWN )
          {
             SCIP_Real lb;
             SCIP_Real ub;
@@ -1014,8 +1013,8 @@ SCIP_RETCODE SCIPsolRound(
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
       solval = solGetArrayVal(sol, var);
       
-      /* invalid solutions cannot be rounded */
-      if( solval == SCIP_INVALID )
+      /* solutions with unknown entries cannot be rounded */
+      if( solval == SCIP_UNKNOWN )
          break;
 
       /* if solution value is already integral, there is nothing to do */
@@ -1072,7 +1071,7 @@ void SCIPsolUpdateVarsum(
    {
       assert(prob->vars[v] != NULL);
       solval = SCIPsolGetVal(sol, set, stat, prob->vars[v]);
-      if( solval != SCIP_INVALID )
+      if( solval != SCIP_UNKNOWN )
       {
          prob->vars[v]->primsolavg *= (1.0-weight);
          prob->vars[v]->primsolavg += weight*solval;
@@ -1119,7 +1118,7 @@ SCIP_RETCODE SCIPsolRetransform(
       if( !SCIPsetIsZero(set, solvals[v]) )
       {
          SCIP_CALL( solSetArrayVal(sol, set, vars[v], solvals[v]) );
-         if( solvals[v] != SCIP_INVALID )
+         if( solvals[v] != SCIP_UNKNOWN )
             sol->obj += SCIPvarGetObj(vars[v]) * solvals[v];
       }
    }
@@ -1189,8 +1188,8 @@ SCIP_RETCODE SCIPsolPrint(
       if( printzeros || !SCIPsetIsZero(set, solval) )
       {
          SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
-         if( solval == SCIP_INVALID )
-            SCIPmessageFPrintInfo(file, "              invalid");
+         if( solval == SCIP_UNKNOWN )
+            SCIPmessageFPrintInfo(file, "              unknown");
          else if( SCIPsetIsInfinity(set, solval) )
             SCIPmessageFPrintInfo(file, "            +infinity");
          else if( SCIPsetIsInfinity(set, -solval) )
@@ -1207,8 +1206,8 @@ SCIP_RETCODE SCIPsolPrint(
       if( printzeros || !SCIPsetIsZero(set, solval) )
       {
          SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(prob->vars[v]));
-         if( solval == SCIP_INVALID )
-            SCIPmessageFPrintInfo(file, "              invalid");
+         if( solval == SCIP_UNKNOWN )
+            SCIPmessageFPrintInfo(file, "              unknown");
          else if( SCIPsetIsInfinity(set, solval) )
             SCIPmessageFPrintInfo(file, "            +infinity");
          else if( SCIPsetIsInfinity(set, -solval) )
@@ -1233,8 +1232,8 @@ SCIP_RETCODE SCIPsolPrint(
          if( printzeros || !SCIPsetIsZero(set, solval) )
          {
             SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(transprob->fixedvars[v]));
-            if( solval == SCIP_INVALID )
-               SCIPmessageFPrintInfo(file, "              invalid");
+            if( solval == SCIP_UNKNOWN )
+               SCIPmessageFPrintInfo(file, "              unknown");
             else if( SCIPsetIsInfinity(set, solval) )
                SCIPmessageFPrintInfo(file, "            +infinity");
             else if( SCIPsetIsInfinity(set, -solval) )
@@ -1254,8 +1253,8 @@ SCIP_RETCODE SCIPsolPrint(
          if( printzeros || !SCIPsetIsZero(set, solval) )
          {
             SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(transprob->vars[v]));
-            if( solval == SCIP_INVALID )
-               SCIPmessageFPrintInfo(file, "              invalid");
+            if( solval == SCIP_UNKNOWN )
+               SCIPmessageFPrintInfo(file, "              unknown");
             else if( SCIPsetIsInfinity(set, solval) )
                SCIPmessageFPrintInfo(file, "            +infinity");
             else if( SCIPsetIsInfinity(set, -solval) )

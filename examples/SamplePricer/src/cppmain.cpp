@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.1 2005/10/27 16:36:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.2 2005/12/07 19:56:33 bzfpfend Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for p-median pricer example
@@ -97,7 +97,7 @@ SCIP_RETCODE fromCommandLine(
 
    printf("\nprimal solution:\n");
    printf("================\n\n");
-   SCIP_CALL( SCIPprintBestSol(scip, NULL) );
+   SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
 
 
    /**************
@@ -254,8 +254,6 @@ SCIP_RETCODE runSCIP(
 
    SCIP_CALL(SCIPprintOrigProblem(scip, 0));
    
-   cout << "Transformed Problem" << endl;
-   SCIP_CALL(SCIPprintTransProblem(scip, 0));
 
    /***
        Solve:
@@ -269,7 +267,7 @@ SCIP_RETCODE runSCIP(
 
    SCIP_CALL(SCIPprintTransProblem(scip, 0));
 
-   SCIP_CALL(SCIPprintBestSol(scip, NULL));
+   SCIP_CALL(SCIPprintBestSol(scip, NULL, FALSE));
 
    
    /********************

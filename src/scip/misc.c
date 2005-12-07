@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.52 2005/10/26 17:08:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.53 2005/12/07 19:56:44 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -3432,7 +3432,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
          gcd = ABS(nominator);
          scm = denominator;
          rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
-         SCIPdebugMessage(" -> c=%d first rational: val: %g == %lld/%lld, gcd=%lld, scm=%lld, rational=%d\n",
+         SCIPdebugMessage(" -> c=%d first rational: val: %g == %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", gcd=%"SCIP_LONGINT_FORMAT", scm=%"SCIP_LONGINT_FORMAT", rational=%d\n",
             c, val, nominator, denominator, gcd, scm, rational);
          break;
       }
@@ -3452,7 +3452,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
          gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
          scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
          rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
-         SCIPdebugMessage(" -> c=%d next rational : val: %g == %lld/%lld, gcd=%lld, scm=%lld, rational=%d\n",
+         SCIPdebugMessage(" -> c=%d next rational : val: %g == %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", gcd=%"SCIP_LONGINT_FORMAT", scm=%"SCIP_LONGINT_FORMAT", rational=%d\n",
             c, val, nominator, denominator, gcd, scm, rational);
       }
       else
@@ -3468,7 +3468,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
       if( intscalar != NULL )
          *intscalar = (SCIP_Real)scm/(SCIP_Real)gcd;
       *success = TRUE;
-      SCIPdebugMessage(" -> integrality can be achieved by scaling with %g (rational:%lld/%lld)\n", 
+      SCIPdebugMessage(" -> integrality can be achieved by scaling with %g (rational:%"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT")\n", 
          (SCIP_Real)scm/(SCIP_Real)gcd, scm, gcd);
    }
 
@@ -3523,7 +3523,7 @@ SCIP_Real SCIPselectSimpleValue(
       if( success )
       {
          val = (SCIP_Real)nominator/(SCIP_Real)denominator;
-         SCIPdebugPrintf(" %lld/%lld == %.9f\n", nominator, denominator, val);
+         SCIPdebugPrintf(" %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" == %.9f\n", nominator, denominator, val);
       }
       else
       {

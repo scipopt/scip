@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.73 2005/11/10 18:10:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.74 2005/12/07 19:56:45 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -462,7 +462,7 @@ SCIP_RETCODE primalAddSol(
    assert(0 <= insertpos && insertpos < primal->nsols);
    primal->sols[insertpos] = sol;
    primal->nsolsfound++;
-   SCIPdebugMessage(" -> stored at position %d of %d solutions, found %lld solutions\n", 
+   SCIPdebugMessage(" -> stored at position %d of %d solutions, found %"SCIP_LONGINT_FORMAT" solutions\n", 
       insertpos, primal->nsols, primal->nsolsfound);
 
    /* update the solution value sums in variables */

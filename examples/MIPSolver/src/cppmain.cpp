@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.7 2005/09/07 12:02:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.8 2005/12/07 19:56:33 bzfpfend Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for C++ example project using SCIP as a callable library
@@ -84,7 +84,7 @@ SCIP_RETCODE fromCommandLine(
 
    std::cout << std::endl << "primal solution:" << std::endl;
    std::cout << "================" << std::endl << std::endl;
-   SCIP_CALL( SCIPprintBestSol(scip, NULL) );
+   SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
 
 
    /**************

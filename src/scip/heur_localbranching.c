@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.5 2005/11/02 14:12:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.6 2005/12/07 19:56:43 bzfpfend Exp $"
 
 /**@file   heur_localbranching.c
  * @brief  localbranching primal heuristic
@@ -473,11 +473,11 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
 
    /* solve the subproblem */  
-   SCIPdebugMessage("solving local branching sub-MIP with neighborhoodsize %d and maxnodes %lld\n",
+   SCIPdebugMessage("solving local branching sub-MIP with neighborhoodsize %d and maxnodes %"SCIP_LONGINT_FORMAT"\n",
       heurdata->curneighborhoodsize, nsubnodes);
    SCIP_CALL( SCIPsolve(subscip) ); 
    heurdata->usednodes += SCIPgetNNodes(subscip);
-   SCIPdebugMessage("local branching used %lld/%lld nodes\n", SCIPgetNNodes(subscip), nsubnodes);
+   SCIPdebugMessage("local branching used %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" nodes\n", SCIPgetNNodes(subscip), nsubnodes);
 
    /* check, whether a solution was found */
    if( SCIPgetNSols(subscip) > 0 )

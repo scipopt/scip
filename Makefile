@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.141 2005/11/22 13:11:23 bzfpfend Exp $
+# $Id: Makefile,v 1.142 2005/12/07 19:56:33 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -186,7 +186,9 @@ LPILIBDEP	=	$(SRCDIR)/depend.lpilib.$(LPS).$(OPT)
 # External Libraries
 #-----------------------------------------------------------------------------
 
-ZLIBDEP		=	$(SRCDIR)/depend.zlib
+ZLIBDEP		:=	$(SRCDIR)/depend.zlib
+ZLIBSRC		:=	$(shell cat $(ZLIBDEP))
+ZLIBOBJ		:=	$(addprefix $(LIBOBJDIR)/,$(ZLIBSRC:.c=.o))
 ifeq ($(ZLIB_LDFLAGS),)
 ZLIB		=	false
 endif
@@ -195,7 +197,9 @@ FLAGS		+=	-DWITH_ZLIB $(ZLIB_FLAGS)
 LDFLAGS		+=	$(ZLIB_LDFLAGS)
 endif
 
-READLINEDEP	=	$(SRCDIR)/depend.readline
+READLINEDEP	:=	$(SRCDIR)/depend.readline
+READLINESRC	:=	$(shell cat $(READLINEDEP))
+READLINEOBJ	:=	$(addprefix $(LIBOBJDIR)/,$(READLINESRC:.c=.o))
 ifeq ($(READLINE_LDFLAGS),)
 READLINE	=	false
 endif
@@ -204,7 +208,12 @@ FLAGS		+=	-DWITH_READLINE $(READLINE_FLAGS)
 LDFLAGS		+=	$(READLINE_LDFLAGS)
 endif
 
-ZIMPLDEP	=	$(SRCDIR)/depend.zimpl
+ZIMPLDEP	:=	$(SRCDIR)/depend.zimpl
+ZIMPLSRC	:=	$(shell cat $(ZIMPLDEP))
+ZIMPLOBJ	:=	$(addprefix $(LIBOBJDIR)/,$(ZIMPLSRC:.c=.o))
+ifeq ($(ZIMPL),)
+ZIMPL		=	false
+endif
 ifeq ($(ZIMPL),true)
 FLAGS		+=	-DWITH_ZIMPL -Ilib/zimplinc
 LDFLAGS		+=	-lzimpl.$(OSTYPE).$(ARCH).$(COMP) -lgmp -lz
@@ -462,9 +471,9 @@ depend:		lpidepend maindepend
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(OBJSCIPLIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(OBJSCIPLIBDEP)'
-		@grep -rl "WITH_ZLIB" $(SRCDIR)/* > $(ZLIBDEP)
-		@grep -rl "WITH_READLINE" $(SRCDIR)/* > $(READLINEDEP)
-		@grep -rl "WITH_ZIMPL" $(SRCDIR)/* > $(ZIMPLDEP)
+		@echo `cd $(SRCDIR); find . -name "*.c" -exec grep -l "WITH_ZLIB" '{}' ';'` >! $(ZLIBDEP)
+		@echo `cd $(SRCDIR); find . -name "*.c" -exec grep -l "WITH_READLINE" '{}' ';'` >! $(READLINEDEP)
+		@echo `cd $(SRCDIR); find . -name "*.c" -exec grep -l "WITH_ZIMPL" '{}' ';'` >! $(ZIMPLDEP)
 
 -include	$(MAINDEP)
 -include	$(SCIPLIBDEP)
@@ -528,7 +537,7 @@ ifneq ($(RANLIB),)
 endif
 endif
 
-$(LPILIBFILE):	$(OBJSUBDIRS) $(LIBDIR) $(LPILIBOBJFILES)
+$(LPILIBFILE):	$(LIBOBJSUBDIRS) $(LIBDIR) $(LPILIBOBJFILES)
 		@echo "-> generating library $@"
 ifeq ($(VERBOSE), true)
 		-rm -f $@
@@ -582,13 +591,13 @@ endif
 .PHONY: touchexternal
 touchexternal:	$(ZLIBDEP) $(READLINEDEP) $(ZIMPLDEP)
 ifneq ($(ZLIB),$(LAST_ZLIB))
-		@-touch `cat $(ZLIBDEP)`
+		@-rm -f $(ZLIBOBJ)
 endif
 ifneq ($(READLINE),$(LAST_READLINE))
-		@-touch `cat $(READLINEDEP)`
+		@-rm -f $(READLINEOBJ)
 endif
 ifneq ($(ZIMPL),$(LAST_ZIMPL))
-		@-touch `cat $(ZIMPLDEP)`
+		@-rm -f $(ZIMPLOBJ)
 endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_ZLIB=$(ZLIB)" >> $(LASTSETTINGS)

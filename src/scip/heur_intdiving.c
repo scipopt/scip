@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intdiving.c,v 1.1 2005/10/14 14:40:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_intdiving.c,v 1.2 2005/12/07 19:56:43 bzfpfend Exp $"
 
 /**@file   heur_intdiving.c
  * @brief  LP diving heuristic that fixes variables with integral LP value
@@ -341,7 +341,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
    SCIP_CALL( SCIPallocBufferArray(scip, &fixcandsolvals, nfixcands) );
    SCIP_CALL( SCIPgetVarSols(scip, nfixcands, fixcands, fixcandsolvals) );
 
-   SCIPdebugMessage("(node %lld) executing intdiving heuristic: depth=%d, %d non-fixed, dualbound=%g, searchbound=%g\n", 
+   SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing intdiving heuristic: depth=%d, %d non-fixed, dualbound=%g, searchbound=%g\n", 
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nfixcands, SCIPgetDualbound(scip), SCIPretransformObj(scip, searchbound));
 
    /* dive as long we are in the given objective, depth and iteration limits, but if possible, we dive at least with
@@ -473,7 +473,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
       assert(SCIPisLE(scip, bestfixval, SCIPvarGetUbLocal(var)));
 
       /* apply fixing of best candidate */
-      SCIPdebugMessage("  dive %d/%d, LP iter %lld/%lld, %d unfixed: var <%s>, sol=%g, oldbounds=[%g,%g], fixed to %g\n",
+      SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", %d unfixed: var <%s>, sol=%g, oldbounds=[%g,%g], fixed to %g\n",
          divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations, SCIPgetNPseudoBranchCands(scip),
          SCIPvarGetName(var), bestsolval, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bestfixval);
       SCIP_CALL( SCIPfixVarProbing(scip, var, bestfixval) );

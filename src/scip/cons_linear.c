@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.201 2005/11/07 11:42:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.202 2005/12/07 19:56:42 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2549,7 +2549,7 @@ SCIP_RETCODE normalizeCons(
    if( success && scm != 1 )
    {
       /* scale the constraint with the smallest common multiple of all denominators */
-      SCIPdebugMessage("scale linear constraint with %lld to make coefficients integral\n", scm);
+      SCIPdebugMessage("scale linear constraint with %"SCIP_LONGINT_FORMAT" to make coefficients integral\n", scm);
       SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
       SCIP_CALL( scaleCons(scip, cons, (SCIP_Real)scm) );
    }
@@ -2572,7 +2572,7 @@ SCIP_RETCODE normalizeCons(
       if( gcd > 1 )
       {
          /* divide the constaint by the greatest common divisor of the coefficients */
-         SCIPdebugMessage("divide linear constraint by greatest common divisor %lld\n", gcd);
+         SCIPdebugMessage("divide linear constraint by greatest common divisor %"SCIP_LONGINT_FORMAT"\n", gcd);
          SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
          SCIP_CALL( scaleCons(scip, cons, 1.0/(SCIP_Real)gcd) );
       }
@@ -3548,7 +3548,7 @@ SCIP_RETCODE separateRelaxedKnapsack(
       if( val > 0 )
       {
          var = binvars[i];
-         SCIPdebugMessage(" -> positive scaled binary variable %+lld<%s> (unscaled %g): not changed (rhs=%g)\n",
+         SCIPdebugMessage(" -> positive scaled binary variable %+"SCIP_LONGINT_FORMAT"<%s> (unscaled %g): not changed (rhs=%g)\n",
             val, SCIPvarGetName(var), binvals[i], rhs);
       }
       else
@@ -3558,7 +3558,7 @@ SCIP_RETCODE separateRelaxedKnapsack(
          SCIP_CALL( SCIPgetNegatedVar(scip, binvars[i], &var) );
          val = -val;
          rhs += val;
-         SCIPdebugMessage(" -> negative scaled binary variable %+lld<%s> (unscaled %g): substituted by (1 - <%s>) (rhs=%g)\n",
+         SCIPdebugMessage(" -> negative scaled binary variable %+"SCIP_LONGINT_FORMAT"<%s> (unscaled %g): substituted by (1 - <%s>) (rhs=%g)\n",
             -val, SCIPvarGetName(binvars[i]), binvals[i], SCIPvarGetName(var), rhs);
       }
 
@@ -3584,11 +3584,11 @@ SCIP_RETCODE separateRelaxedKnapsack(
          act = 0.0;
          for( i = 0; i < nconsvars; ++i )
          {
-            SCIPdebugPrintf(" %+lld<%s>(%g)", consvals[i], SCIPvarGetName(consvars[i]),
+            SCIPdebugPrintf(" %+"SCIP_LONGINT_FORMAT"<%s>(%g)", consvals[i], SCIPvarGetName(consvars[i]),
                SCIPgetSolVal(scip, sol, consvars[i]));
             act += consvals[i] * SCIPgetSolVal(scip, sol, consvars[i]);
          }
-         SCIPdebugPrintf(" <= %lld (%g) [act: %g, max: %lld]\n", capacity, rhs, act, maxact);
+         SCIPdebugPrintf(" <= %"SCIP_LONGINT_FORMAT" (%g) [act: %g, max: %"SCIP_LONGINT_FORMAT"]\n", capacity, rhs, act, maxact);
 #endif
 
          /* separate lifted cut from relaxed knapsack constraint */
@@ -6288,7 +6288,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
       vals[v] = 1.0;
 
    /* create a constraint out of the conflict set */
-   sprintf(consname, "cf%lld", SCIPgetNConflictClausesApplied(scip));
+   sprintf(consname, "cf%"SCIP_LONGINT_FORMAT, SCIPgetNConflictClausesApplied(scip));
    SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname, nconflictvars, conflictvars, vals, 1.0, SCIPinfinity(scip),
          FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removeable) );
 

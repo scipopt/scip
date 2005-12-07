@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.119 2005/11/02 11:14:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.120 2005/12/07 19:56:42 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -519,7 +519,7 @@ SCIP_RETCODE addRelaxation(
    assert(consdata->row != NULL);
    assert(!SCIProwIsInLP(consdata->row));
 
-   SCIPdebugMessage("adding relaxation of knapsack constraint <%s> (capacity %lld): ", 
+   SCIPdebugMessage("adding relaxation of knapsack constraint <%s> (capacity %"SCIP_LONGINT_FORMAT"): ", 
       SCIPconsGetName(cons), consdata->capacity);
    SCIPdebug( SCIProwPrint(consdata->row, NULL) );
    SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
@@ -1183,20 +1183,20 @@ SCIP_RETCODE liftupKnapsackCover(
       printf("----------------------------------- up lifting --------------------------------------------------\n");
       printf("ncovervars=%d (nc2=%d, nc1=%d) && covervars=\n", ncovervars, ncovervarsc2, ncovervarsc1);
       for( z = 0; z < ncovervars; z++ )
-         printf("%d: x_%d [w=%lld, lp=%g, lb_global=%g, lb_local=%g, %s]\n", z, covervars[z], weights[covervars[z]], 
+         printf("%d: x_%d [w=%"SCIP_LONGINT_FORMAT", lp=%g, lb_global=%g, lb_local=%g, %s]\n", z, covervars[z], weights[covervars[z]], 
             solvals[covervars[z]], SCIPvarGetLbGlobal(vars[covervars[z]]), SCIPvarGetLbLocal(vars[covervars[z]]),
             SCIPvarGetName(vars[covervars[z]]));
-      printf("capacity=%lld\n\n", capacity);
+      printf("capacity=%"SCIP_LONGINT_FORMAT"\n\n", capacity);
       printf("nnoncovervars=%d && noncovervars=\n", nnoncovervars);
       for( z = 0; z < nnoncovervars; z++ )
-         printf("%d: x_%d [w=%lld, lp=%g, lb_global=%g, lb_local=%g, %s]\n", z, noncovervars[z], weights[noncovervars[z]], 
+         printf("%d: x_%d [w=%"SCIP_LONGINT_FORMAT", lp=%g, lb_global=%g, lb_local=%g, %s]\n", z, noncovervars[z], weights[noncovervars[z]], 
             solvals[noncovervars[z]], SCIPvarGetLbGlobal(vars[noncovervars[z]]), SCIPvarGetLbLocal(vars[noncovervars[z]]),
             SCIPvarGetName(vars[noncovervars[z]]));
       printf("\n\n");
       printf("i=%d: noncovervar x_%d:\n\n", i, noncovervars[i]);
       printf("minweightstable(liftrhs=%d, minweightslen=%d)=[ ", *liftrhs, *minweightslen);
       for( z = 0; z < *minweightslen; z++ )
-         printf("%lld ", minweights[z]);
+         printf("%"SCIP_LONGINT_FORMAT" ", minweights[z]);
       printf("]\n");
 #endif
 
@@ -1354,21 +1354,21 @@ SCIP_RETCODE liftdownKnapsackCover(
       printf("------------------------------ down lifting -------------------------------------------------------\n");
       printf("ncovervars=%d (nc2=%d, nc1=%d) && covervars=\n", ncovervars, ncovervarsc2, ncovervarsc1);
       for( z = 0; z < ncovervars; z++ )
-         printf("%d: x_%d [w=%lld, lp=%g, lb_global=%g, lb_local=%g, %s]\n", z, covervars[z], weights[covervars[z]], 
+         printf("%d: x_%d [w=%"SCIP_LONGINT_FORMAT", lp=%g, lb_global=%g, lb_local=%g, %s]\n", z, covervars[z], weights[covervars[z]], 
             solvals[covervars[z]], SCIPvarGetLbGlobal(vars[covervars[z]]), SCIPvarGetLbLocal(vars[covervars[z]]),
             SCIPvarGetName(vars[covervars[z]]));
-      printf("capacity=%lld\n\n", capacity);
+      printf("capacity=%"SCIP_LONGINT_FORMAT"\n\n", capacity);
       printf("nnonsetvars=%d && nonsetvars=\n", nnoncovervars);
       for( z = 0; z < nnoncovervars; z++ )
-         printf("%d: x_%d [w=%lld, lp=%g, lb_global=%g, lb_local=%g, %s]\n", z, noncovervars[z], weights[noncovervars[z]], 
+         printf("%d: x_%d [w=%"SCIP_LONGINT_FORMAT", lp=%g, lb_global=%g, lb_local=%g, %s]\n", z, noncovervars[z], weights[noncovervars[z]], 
             solvals[noncovervars[z]], SCIPvarGetLbGlobal(vars[noncovervars[z]]), SCIPvarGetLbLocal(vars[noncovervars[z]]),
             SCIPvarGetName(vars[noncovervars[z]]));
       printf("\n\n");
-      printf("i=%d: covervar x_%d, weight_%d=%lld:\n같같같같같같같같같같같같같같같같같같같같�\n", i, covervars[i], 
+      printf("i=%d: covervar x_%d, weight_%d=%"SCIP_LONGINT_FORMAT":\n같같같같같같같같같같같같같같같같같같같같�\n", i, covervars[i], 
          covervars[i], weights[covervars[i]]);
       printf("minweightstable (minweightslen=%d)=[ ", *minweightslen);
       for( z = 0; z < *minweightslen; z++ )
-         printf("%lld ", minweights[z]);
+         printf("%"SCIP_LONGINT_FORMAT" ", minweights[z]);
       printf("]\n\n");
 #endif
 
@@ -1411,7 +1411,7 @@ SCIP_RETCODE liftdownKnapsackCover(
       *liftlpval += liftcoef * solvals[liftvar];
       
 #ifdef LIFTDOWNOUT
-      printf("fixedoneweight=%lld, rescapacity=%lld, liftrhs=%d  ", fixedoneweight, rescapacity, *liftrhs);
+      printf("fixedoneweight=%"SCIP_LONGINT_FORMAT", rescapacity=%"SCIP_LONGINT_FORMAT", liftrhs=%d  ", fixedoneweight, rescapacity, *liftrhs);
       printf("==> zmax=%d, lifting coefficient=%d, liftlpval=%g\n------------------------------------------------------------------------------------------------------------------------------\n\n", 
          left, liftcoef, *liftlpval);
 #endif
@@ -1496,20 +1496,20 @@ void liftupZerosKnapsackCover(
       printf("----------------------------------- up lifting zeros --------------------------------------------------\n");
       printf("ncovervars=%d (nc2=%d, nc1=%d) && covervars=\n", ncovervars, ncovervarsc2, ncovervarsc1);
       for( z = 0; z < ncovervars; z++ )
-         printf("%d: x_%d [w=%lld, lp=%g, lb_global=%g, lb_local=%g, %s]\n", z, covervars[z], weights[covervars[z]], 
+         printf("%d: x_%d [w=%"SCIP_LONGINT_FORMAT", lp=%g, lb_global=%g, lb_local=%g, %s]\n", z, covervars[z], weights[covervars[z]], 
             solvals[covervars[z]], SCIPvarGetLbGlobal(vars[covervars[z]]), SCIPvarGetLbLocal(vars[covervars[z]]),
             SCIPvarGetName(vars[covervars[z]]));
-      printf("capacity=%lld\n\n", capacity);
+      printf("capacity=%"SCIP_LONGINT_FORMAT"\n\n", capacity);
       printf("nnonsetvars=%d && nonsetvars=\n", nnoncovervars);
       for( z = 0; z < nnoncovervars; z++ )
-         printf("%d: x_%d [w=%lld, lp=%g, lb_global=%g, lb_local=%g, %s]\n", z, noncovervars[z], weights[noncovervars[z]], 
+         printf("%d: x_%d [w=%"SCIP_LONGINT_FORMAT", lp=%g, lb_global=%g, lb_local=%g, %s]\n", z, noncovervars[z], weights[noncovervars[z]], 
             solvals[noncovervars[z]], SCIPvarGetLbGlobal(vars[noncovervars[z]]), SCIPvarGetLbLocal(vars[noncovervars[z]]),
             SCIPvarGetName(vars[noncovervars[z]]));
       printf("\n\n");
       printf("i=%d: noncovervar x_%d:\n\n", i, noncovervars[i]);
       printf("minweightstable(liftrhs=%d)=[ ", *liftrhs);
       for( z = 0; z < *liftrhs; z++ )
-         printf("%lld ", minweights[z]);
+         printf("%"SCIP_LONGINT_FORMAT" ", minweights[z]);
       printf("]\n");
 #endif
 
@@ -1790,8 +1790,8 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
       SCIPconsGetName(cons));
    printf("vars (variables in knapsack constraint)(nvars=%d):\n", nvars);
    for( i = 0; i < nvars; i++ )
-      printf("%d: x_%d [w=%lld, lp=%g] <%s>\n", i, i, weights[i], solvals[i], SCIPvarGetName(vars[i]));
-   printf("capacity of knapsack = %lld\n", capacity);
+      printf("%d: x_%d [w=%"SCIP_LONGINT_FORMAT", lp=%g] <%s>\n", i, i, weights[i], solvals[i], SCIPvarGetName(vars[i]));
+   printf("capacity of knapsack = %"SCIP_LONGINT_FORMAT"\n", capacity);
 #endif   
 
    /* get a partition of the set of variables in knapsack constraint in a set of variables for downlifting (varsc2) and 
@@ -1862,12 +1862,12 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
          printf("\nbefor card-remove:\n");
          printf("covervars (ncovervars=%d, nc2=%d, nc1=%d):\n", ncovervars, ncovervarsc2, ncovervarsc1);
          for( i = 0; i < ncovervars; i++ )
-            printf("%d: x_%d [w=%lld, lp=%g]\n", i, covervars[i], weights[covervars[i]], 
+            printf("%d: x_%d [w=%"SCIP_LONGINT_FORMAT", lp=%g]\n", i, covervars[i], weights[covervars[i]], 
                solvals[covervars[i]]);
-         printf("coverweight=%lld, covervarsc1activity=%g\n", coverweight, covervarsc1activity);
+         printf("coverweight=%"SCIP_LONGINT_FORMAT", covervarsc1activity=%g\n", coverweight, covervarsc1activity);
          printf("noncovervars (nnoncovervars=%d):\n", nnoncovervars);
          for( i = 0; i < nnoncovervars; i++ )
-            printf("%d: x_%d [w=%lld, lp=%g]\n", i, noncovervars[i], weights[noncovervars[i]], 
+            printf("%d: x_%d [w=%"SCIP_LONGINT_FORMAT", lp=%g]\n", i, noncovervars[i], weights[noncovervars[i]], 
                solvals[noncovervars[i]]);
 #endif
          /* delete current variable from C1 */
@@ -1915,12 +1915,12 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
          printf("\nafter card-remove:\n");
          printf("covervars (ncovervars=%d, nc2=%d, nc1=%d):\n", ncovervars, ncovervarsc2, ncovervarsc1);
          for( i = 0; i < ncovervars; i++ )
-            printf("%d: x_%d [w=%lld, lp=%g, beta=%d]\n", i, covervars[i], weights[covervars[i]], 
+            printf("%d: x_%d [w=%"SCIP_LONGINT_FORMAT", lp=%g, beta=%d]\n", i, covervars[i], weights[covervars[i]], 
                solvals[covervars[i]], liftcoefs[covervars[i]]);
-         printf("coverweight=%lld, covervarsc1activity=%g\n", coverweight, covervarsc1activity);
+         printf("coverweight=%"SCIP_LONGINT_FORMAT", covervarsc1activity=%g\n", coverweight, covervarsc1activity);
          printf("noncovervars (nnoncovervars=%d):\n", nnoncovervars);
          for( i = 0; i < nnoncovervars; i++ )
-            printf("%d: x_%d [w=%lld, lp=%g, beta=%d]\n", i, noncovervars[i], weights[noncovervars[i]], 
+            printf("%d: x_%d [w=%"SCIP_LONGINT_FORMAT", lp=%g, beta=%d]\n", i, noncovervars[i], weights[noncovervars[i]], 
                solvals[noncovervars[i]], liftcoefs[noncovervars[i]]);
 #endif
 
@@ -1935,14 +1935,14 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
                liftcoefs, &liftrhs, &liftlpval) );
          
          /* check, if lifting yielded a violated cut */
-         if( SCIPisEfficacious(scip, (covervarsc1activity + liftlpval - liftrhs)/sqrt((SCIP_Real)liftrhs)) )
+         if( SCIPisEfficacious(scip, (covervarsc1activity + liftlpval - liftrhs)/sqrt((SCIP_Real)MAX(liftrhs, 1))) )
          {
             SCIP_ROW* row;
             char name[SCIP_MAXSTRLEN];
             int v;
             
             /* create LP row */
-            sprintf(name, "%s_card%lld_%d", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)), j);
+            sprintf(name, "%s_card%"SCIP_LONGINT_FORMAT"_%d", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)), j);
             SCIP_CALL( SCIPcreateEmptyRow (scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, 
                   SCIPconsIsLocal(cons), FALSE, SCIPconsIsRemoveable(cons)) );
             
@@ -2083,7 +2083,7 @@ SCIP_RETCODE propagateCons(
       /* check, if weights of fixed variables already exceeds knapsack capacity */
       if( consdata->capacity < onesweightsum )
       {
-         SCIPdebugMessage(" -> cutoff - fixed weight: %lld, capacity: %lld\n", onesweightsum, consdata->capacity);
+         SCIPdebugMessage(" -> cutoff - fixed weight: %"SCIP_LONGINT_FORMAT", capacity: %"SCIP_LONGINT_FORMAT"\n", onesweightsum, consdata->capacity);
             
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
          *cutoff = TRUE;
@@ -2139,7 +2139,7 @@ SCIP_RETCODE propagateCons(
    /* if the remaining (potentially unfixed) variables would fit all into the knapsack, the knapsack is now redundant */
    if( consdata->weightsum - zerosweightsum <= consdata->capacity )
    {
-      SCIPdebugMessage(" -> knapsack constraint <%s> is redundant: weightsum=%lld, zerosweightsum=%lld, capacity=%lld\n",
+      SCIPdebugMessage(" -> knapsack constraint <%s> is redundant: weightsum=%"SCIP_LONGINT_FORMAT", zerosweightsum=%"SCIP_LONGINT_FORMAT", capacity=%"SCIP_LONGINT_FORMAT"\n",
          SCIPconsGetName(cons), consdata->weightsum, zerosweightsum, consdata->capacity);
       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
       *redundant = TRUE;
@@ -2497,7 +2497,7 @@ void normalizeWeights(
 
    if( gcd >= 2 )
    {
-      SCIPdebugMessage("knapsack constraint <%s>: dividing weights by %lld\n", SCIPconsGetName(cons), gcd);
+      SCIPdebugMessage("knapsack constraint <%s>: dividing weights by %"SCIP_LONGINT_FORMAT"\n", SCIPconsGetName(cons), gcd);
 
       for( i = 0; i < consdata->nvars; ++i )
          consdataChgWeight(consdata, i, consdata->weights[i]/gcd);
@@ -2839,7 +2839,7 @@ SCIP_RETCODE tightenWeightsLift(
             addweights[naddvars] = weight;
             addweightsum += weight;
             naddvars++;
-            SCIPdebugMessage("knapsack constraint <%s>: adding lifted item %lld<%s>\n",
+            SCIPdebugMessage("knapsack constraint <%s>: adding lifted item %"SCIP_LONGINT_FORMAT"<%s>\n",
                SCIPconsGetName(cons), weight, SCIPvarGetName(var));
          }
       }
@@ -2959,7 +2959,7 @@ SCIP_RETCODE tightenWeights(
             (*nchgcoefs)++;
             (*nchgsides)++;
             assert(!consdata->sorted);
-            SCIPdebugMessage("knapsack constraint <%s>: changed weight of <%s> from %lld to %lld, capacity from %lld to %lld\n",
+            SCIPdebugMessage("knapsack constraint <%s>: changed weight of <%s> from %"SCIP_LONGINT_FORMAT" to %"SCIP_LONGINT_FORMAT", capacity from %"SCIP_LONGINT_FORMAT" to %"SCIP_LONGINT_FORMAT"\n",
                SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[i]), weight, newweight,
                consdata->capacity + (weight-newweight), consdata->capacity);
          }
@@ -3025,7 +3025,7 @@ SCIP_RETCODE tightenWeights(
                int j;
                SCIP_Bool cliquezeroweights;
 
-               SCIPdebugMessage("knapsack constraint <%s>: weights of clique %d (maxweight: %lld) can be tightened: cliqueweightsum=%lld, capacity=%lld -> delta: %lld\n",
+               SCIPdebugMessage("knapsack constraint <%s>: weights of clique %d (maxweight: %"SCIP_LONGINT_FORMAT") can be tightened: cliqueweightsum=%"SCIP_LONGINT_FORMAT", capacity=%"SCIP_LONGINT_FORMAT" -> delta: %"SCIP_LONGINT_FORMAT"\n",
                   SCIPconsGetName(cons), i, maxcliqueweights[i], cliqueweightsum, consdata->capacity, delta);
                cliquezeroweights = FALSE;
 #ifndef NDEBUG
@@ -3041,7 +3041,7 @@ SCIP_RETCODE tightenWeights(
                      newweight = consdata->weights[j] - delta;
                      newweight = MAX(newweight, 0);
                      cliquezeroweights = cliquezeroweights || (newweight == 0);
-                     SCIPdebugMessage(" -> changed weight of <%s> from %lld to %lld\n",
+                     SCIPdebugMessage(" -> changed weight of <%s> from %"SCIP_LONGINT_FORMAT" to %"SCIP_LONGINT_FORMAT"\n",
                         SCIPvarGetName(consdata->vars[j]), consdata->weights[j], newweight);
                      consdataChgWeight(consdata, j, newweight);
                      (*nchgcoefs)++;
@@ -3050,7 +3050,7 @@ SCIP_RETCODE tightenWeights(
                }
                consdata->capacity -= delta;
                (*nchgsides)++;
-               SCIPdebugMessage(" -> changed capacity from %lld to %lld\n", consdata->capacity + delta, consdata->capacity);
+               SCIPdebugMessage(" -> changed capacity from %"SCIP_LONGINT_FORMAT" to %"SCIP_LONGINT_FORMAT"\n", consdata->capacity + delta, consdata->capacity);
 
                /* if at least one of the weights in the clique was reduced to zero, we have to make sure, the clique is
                 * enforced - the clique might have been constructed partially from this constraint, and by setting the
@@ -3074,7 +3074,7 @@ SCIP_RETCODE tightenWeights(
                         ncliquevars++;
                      }
                   }
-                  sprintf(name, "%s_clq_%lld_%d", SCIPconsGetName(cons), consdata->capacity, i);
+                  sprintf(name, "%s_clq_%"SCIP_LONGINT_FORMAT"_%d", SCIPconsGetName(cons), consdata->capacity, i);
                   SCIP_CALL( SCIPcreateConsSetpack(scip, &cliquecons, name, ncliquevars, cliquevars,
                         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
                         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
@@ -3121,7 +3121,7 @@ SCIP_RETCODE tightenWeights(
       {
          if( weight < consdata->capacity )
          {
-            SCIPdebugMessage("knapsack constraint <%s>: changed weight of <%s> from %lld to %lld\n",
+            SCIPdebugMessage("knapsack constraint <%s>: changed weight of <%s> from %"SCIP_LONGINT_FORMAT" to %"SCIP_LONGINT_FORMAT"\n",
                SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[i]), weight, consdata->capacity);
             assert(consdata->sorted);
             consdataChgWeight(consdata, i, consdata->capacity); /* this does not destroy the weight order! */
@@ -3144,7 +3144,7 @@ SCIP_RETCODE tightenWeights(
       assert(minweight >= weight);
       if( minweight + weight > consdata->capacity && weight < consdata->capacity )
       {
-         SCIPdebugMessage("knapsack constraint <%s>: changed weight of <%s> from %lld to %lld\n",
+         SCIPdebugMessage("knapsack constraint <%s>: changed weight of <%s> from %"SCIP_LONGINT_FORMAT" to %"SCIP_LONGINT_FORMAT"\n",
             SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[consdata->nvars-1]), weight, consdata->capacity);
          assert(consdata->sorted);
          consdataChgWeight(consdata, consdata->nvars-1, consdata->capacity); /* this does not destroy the weight order! */
@@ -3718,9 +3718,9 @@ SCIP_DECL_CONSPRINT(consPrintKnapsack)
    {
       if( i > 0 )
          SCIPinfoMessage(scip, file, " ");
-      SCIPinfoMessage(scip, file, "%+lld<%s>", consdata->weights[i], SCIPvarGetName(consdata->vars[i]));
+      SCIPinfoMessage(scip, file, "%+"SCIP_LONGINT_FORMAT"<%s>", consdata->weights[i], SCIPvarGetName(consdata->vars[i]));
    }
-   SCIPinfoMessage(scip, file, " <= %lld\n", consdata->capacity);
+   SCIPinfoMessage(scip, file, " <= %"SCIP_LONGINT_FORMAT"\n", consdata->capacity);
 
    return SCIP_OKAY;
 }

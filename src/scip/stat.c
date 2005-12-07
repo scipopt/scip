@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.68 2005/10/18 16:48:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.69 2005/12/07 19:56:46 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -298,7 +298,7 @@ void SCIPstatUpdateMemsaveMode(
       {
          /* switch to memory saving mode */
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-            "(node %lld) switching to memory saving mode (mem: %.1fM/%.1fM)\n", 
+            "(node %"SCIP_LONGINT_FORMAT") switching to memory saving mode (mem: %.1fM/%.1fM)\n", 
             stat->nnodes, (SCIP_Real)memused/(1024.0*1024.0), set->limit_memory);
          stat->memsavemode = TRUE;
          set->nodesel = NULL;
@@ -307,7 +307,7 @@ void SCIPstatUpdateMemsaveMode(
       {
          /* switch to standard mode */
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-            "(node %lld) switching to standard mode (mem: %.1fM/%.1fM)\n", 
+            "(node %"SCIP_LONGINT_FORMAT") switching to standard mode (mem: %.1fM/%.1fM)\n", 
             stat->nnodes, (SCIP_Real)memused/(1024.0*1024.0), set->limit_memory);
          stat->memsavemode = FALSE;
          set->nodesel = NULL;
