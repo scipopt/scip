@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.71 2005/12/07 19:56:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.72 2005/12/08 10:11:17 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -1132,7 +1132,7 @@ SCIP_RETCODE SCIPsolRetransform(
    return SCIP_OKAY;
 }
 
-/** returns whether the given solutions are equal */
+/** returns whether the given solutions in transformed space are equal */
 SCIP_Bool SCIPsolsAreEqual(
    SCIP_SOL*             sol1,               /**< first primal CIP solution */
    SCIP_SOL*             sol2,               /**< second primal CIP solution */
@@ -1143,6 +1143,10 @@ SCIP_Bool SCIPsolsAreEqual(
 {
    int v;
 
+   assert(sol1 != NULL);
+   assert(sol2 != NULL);
+   assert(sol1->solorigin != SCIP_SOLORIGIN_ORIGINAL);
+   assert(sol2->solorigin != SCIP_SOLORIGIN_ORIGINAL);
    assert(prob != NULL);
 
    if( !SCIPsetIsEQ(set, sol1->obj, sol2->obj) )

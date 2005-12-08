@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.74 2005/12/07 19:56:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.75 2005/12/08 10:11:17 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -556,6 +556,7 @@ SCIP_Bool primalExistsSol(
 
    assert(primal != NULL);
    assert(0 <= insertpos && insertpos <= primal->nsols);
+   assert(SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL);
 
    obj = SCIPsolGetObj(sol, set, prob);
 
@@ -568,7 +569,8 @@ SCIP_Bool primalExistsSol(
       assert(solobj <= obj);
       if( SCIPsetIsLT(set, solobj, obj) )
          break;
-      if( SCIPsolsAreEqual(sol, primal->sols[i], set, stat, prob) )
+      if( SCIPsolGetOrigin(primal->sols[i]) != SCIP_SOLORIGIN_ORIGINAL
+         && SCIPsolsAreEqual(sol, primal->sols[i], set, stat, prob) )
          return TRUE;
    }
 
@@ -581,7 +583,8 @@ SCIP_Bool primalExistsSol(
       assert(solobj > obj);
       if( SCIPsetIsGT(set, solobj, obj) )
          break;
-      if( SCIPsolsAreEqual(sol, primal->sols[i], set, stat, prob) )
+      if( SCIPsolGetOrigin(primal->sols[i]) != SCIP_SOLORIGIN_ORIGINAL
+         && SCIPsolsAreEqual(sol, primal->sols[i], set, stat, prob) )
          return TRUE;
    }
 
