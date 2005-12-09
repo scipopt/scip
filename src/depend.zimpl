@@ -1,1 +1,1 @@
-src/scip/reader_zpl.c
+./scip/reader_zpl.c

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.195 2005/11/07 14:46:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.196 2005/12/09 13:28:48 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -288,8 +288,11 @@ SCIP_RETCODE varAddLbchginfo(
    assert((boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER) == (infercons != NULL));
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER || inferprop == NULL);
 
-   SCIPdebugMessage("adding lower bound change info to var <%s>[%g,%g]: depth=%d, pos=%d, %g -> %g\n",
-      SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, depth, pos, oldbound, newbound);
+   SCIPdebugMessage("adding lower bound change info to var <%s>[%g,%g]: depth=%d, pos=%d, infer%s=<%s>, inferinfo=%d, %g -> %g\n",
+      SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, depth, pos,
+      infercons != NULL ? "cons" : "prop", 
+      infercons != NULL ? SCIPconsGetName(infercons) : (inferprop != NULL ? SCIPpropGetName(inferprop) : "-"), inferinfo,
+      oldbound, newbound);
 
    SCIP_CALL( varEnsureLbchginfosSize(var, blkmem, set, var->nlbchginfos+1) );
    var->lbchginfos[var->nlbchginfos].oldbound = oldbound;
@@ -356,8 +359,11 @@ SCIP_RETCODE varAddUbchginfo(
    assert((boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER) == (infercons != NULL));
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER || inferprop == NULL);
 
-   SCIPdebugMessage("adding upper bound change info to var <%s>[%g,%g]: depth=%d, pos=%d, %g -> %g\n",
-      SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, depth, pos, oldbound, newbound);
+   SCIPdebugMessage("adding upper bound change info to var <%s>[%g,%g]: depth=%d, pos=%d, infer%s=<%s>, inferinfo=%d, %g -> %g\n",
+      SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, depth, pos,
+      infercons != NULL ? "cons" : "prop", 
+      infercons != NULL ? SCIPconsGetName(infercons) : (inferprop != NULL ? SCIPpropGetName(inferprop) : "-"), inferinfo,
+      oldbound, newbound);
 
    SCIP_CALL( varEnsureUbchginfosSize(var, blkmem, set, var->nubchginfos+1) );
    var->ubchginfos[var->nubchginfos].oldbound = oldbound;

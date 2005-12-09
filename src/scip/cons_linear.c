@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.202 2005/12/07 19:56:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.203 2005/12/09 13:28:47 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -178,11 +178,11 @@ struct SCIP_LinConsUpgrade
 
 enum Proprule
 {
-   PROPRULE_1_RHS,                      /**< activity residuals of all other variables tighten bounds of single variable
-                                              *   due to the right hand side of the inequality */
-   PROPRULE_1_LHS,                      /**< activity residuals of all other variables tighten bounds of single variable
-                                              *   due to the left hand side of the inequality */
-   PROPRULE_INVALID                     /**< propagation was applied without a specific propagation rule */
+   PROPRULE_1_RHS        = 1,                /**< activity residuals of all other variables tighten bounds of single
+                                              *   variable due to the right hand side of the inequality */
+   PROPRULE_1_LHS        = 2,                /**< activity residuals of all other variables tighten bounds of single
+                                              *   variable due to the left hand side of the inequality */
+   PROPRULE_INVALID      = 0                 /**< propagation was applied without a specific propagation rule */
 };
 typedef enum Proprule PROPRULE;
 
@@ -209,7 +209,7 @@ INFERINFO intToInferInfo(
 /** converts an inference information into an int */
 static
 int inferInfoToInt(
-   INFERINFO        inferinfo           /**< inference information to convert */
+   INFERINFO             inferinfo           /**< inference information to convert */
    )
 {
    /* this dirty trick is necessary, because a direct cast (int)inferinfo is not possible */
@@ -221,7 +221,7 @@ int inferInfoToInt(
 /** constructs an inference information out of a propagation rule and a position number */
 static
 INFERINFO getInferInfo(
-   PROPRULE         proprule,           /**< propagation rule that deduced the value */
+   PROPRULE              proprule,           /**< propagation rule that deduced the value */
    int                   pos                 /**< variable position, the propagation rule was applied at */
    )
 {
@@ -236,7 +236,7 @@ INFERINFO getInferInfo(
 /** constructs an inference information out of a propagation rule and a position number, returns info as int */
 static
 int getInferInt(
-   PROPRULE         proprule,           /**< propagation rule that deduced the value */
+   PROPRULE              proprule,           /**< propagation rule that deduced the value */
    int                   pos                 /**< variable position, the propagation rule was applied at */
    )
 {
@@ -2886,7 +2886,7 @@ SCIP_RETCODE resolvePropagation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
    SCIP_VAR*             infervar,           /**< variable that was deduced */
-   INFERINFO        inferinfo,          /**< inference information */
+   INFERINFO             inferinfo,          /**< inference information */
    SCIP_BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
@@ -2945,8 +2945,10 @@ SCIP_RETCODE resolvePropagation(
 
    case PROPRULE_INVALID:
    default:
-      SCIPerrorMessage("invalid inference information %d in linear constraint <%s>\n",
-         inferinfo.proprule, SCIPconsGetName(cons));
+      SCIPerrorMessage("invalid inference information %d in linear constraint <%s> at position %d for %s bound of variable <%s>\n",
+         inferinfo.proprule, SCIPconsGetName(cons), inferinfo.pos, boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper",
+         SCIPvarGetName(infervar));
+      SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
       return SCIP_INVALIDDATA;
    }
 
@@ -3695,7 +3697,7 @@ SCIP_RETCODE propagateCons(
    assert(cutoff != NULL);
    assert(nchgbds != NULL);
 
-   SCIPdebugMessage("propagating linear constraint <%s>\n", SCIPconsGetName(cons));
+   /*SCIPdebugMessage("propagating linear constraint <%s>\n", SCIPconsGetName(cons));*/
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

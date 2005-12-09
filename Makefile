@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.143 2005/12/07 20:47:40 bzfpfend Exp $
+# $Id: Makefile,v 1.144 2005/12/09 13:28:47 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -229,9 +229,6 @@ endif
 ZIMPLDEP	:=	$(SRCDIR)/depend.zimpl
 ZIMPLSRC	:=	$(shell cat $(ZIMPLDEP))
 ZIMPLOBJ	:=	$(addprefix $(LIBOBJDIR)/,$(ZIMPLSRC:.c=.o))
-ifeq ($(ZIMPL),)
-ZIMPL		=	false
-endif
 ifeq ($(ZIMPL),true)
 FLAGS		+=	-DWITH_ZIMPL -Ilib/zimplinc
 LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP) $(LINKCC_l)gmp $(LINKCC_l)z
@@ -487,9 +484,9 @@ depend:		lpidepend maindepend
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(OBJSCIPLIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(OBJSCIPLIBDEP)'
-		@echo `cd $(SRCDIR); find . -name "*.c" -exec grep -l "WITH_ZLIB" '{}' ';'` >! $(ZLIBDEP)
-		@echo `cd $(SRCDIR); find . -name "*.c" -exec grep -l "WITH_READLINE" '{}' ';'` >! $(READLINEDEP)
-		@echo `cd $(SRCDIR); find . -name "*.c" -exec grep -l "WITH_ZIMPL" '{}' ';'` >! $(ZIMPLDEP)
+		@echo `cd $(SRCDIR); find . -name "*.c" -exec grep -l "WITH_ZLIB" '{}' ';'` >$(ZLIBDEP)
+		@echo `cd $(SRCDIR); find . -name "*.c" -exec grep -l "WITH_READLINE" '{}' ';'` >$(READLINEDEP)
+		@echo `cd $(SRCDIR); find . -name "*.c" -exec grep -l "WITH_ZIMPL" '{}' ';'` >$(ZIMPLDEP)
 
 -include	$(MAINDEP)
 -include	$(SCIPLIBDEP)
