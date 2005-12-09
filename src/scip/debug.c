@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.15 2005/12/07 19:56:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.16 2005/12/09 13:34:13 bzfwolte Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -322,6 +322,7 @@ SCIP_RETCODE SCIPdebugCheckRow(
    SCIP_Real maxactivity;
    SCIP_Real solval;
 
+   if( row->name[0] != '*' ) return SCIP_OKAY; /*??????????????????????????????*/
    /* if the row is only locally valid, check whether the debugging solution is contained in the local subproblem */
    if( SCIProwIsLocal(row) )
    {
@@ -406,7 +407,7 @@ SCIP_RETCODE SCIPdebugCheckLbGlobal(
    SCIPdebugMessage("debugging solution on lower bound of <%s>[%g] >= %g\n", SCIPvarGetName(var), varsol, lb);
 
    /* check validity of debugging solution */
-   if( varsol != SCIP_UNKNOWN && SCIPsetIsLT(set, varsol, lb) )
+   if( varsol != SCIP_UNKNOWN && SCIPsetIsFeasLT(set, varsol, lb) )
    {
       SCIPerrorMessage("invalid global lower bound: <%s>[%.8g] >= %.8g\n", SCIPvarGetName(var), varsol, lb);
       SCIPABORT();
@@ -429,9 +430,9 @@ SCIP_RETCODE SCIPdebugCheckUbGlobal(
    SCIPdebugMessage("debugging solution on upper bound of <%s>[%g] <= %g\n", SCIPvarGetName(var), varsol, ub);
 
    /* check validity of debugging solution */
-   if( varsol != SCIP_UNKNOWN && SCIPsetIsGT(set, varsol, ub) )
+   if( varsol != SCIP_UNKNOWN && SCIPsetIsFeasGT(set, varsol, ub) )
    {
-      SCIPerrorMessage("invalid global upper bound: <%s>[%.8g] <= %.8g\n", SCIPvarGetName(var), varsol, ub);
+      SCIPerrorMessage("invalid global upper bound: <%s>[%.20g] <= %.20g\n", SCIPvarGetName(var), varsol, ub);
       SCIPABORT();
    }
 
@@ -462,12 +463,12 @@ SCIP_RETCODE SCIPdebugCheckInference(
    /* check validity of debugging solution */
    if( varsol != SCIP_UNKNOWN )
    {
-      if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsLT(set, varsol, newbound) )
+      if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasLT(set, varsol, newbound) )
       {
          SCIPerrorMessage("invalid local lower bound implication: <%s>[%.8g] >= %.8g\n", SCIPvarGetName(var), varsol, newbound);
          SCIPABORT();
       }
-      if( boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsGT(set, varsol, newbound) )
+      if( boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasGT(set, varsol, newbound) )
       {
          SCIPerrorMessage("invalid local upper bound implication: <%s>[%.8g] <= %.8g\n", SCIPvarGetName(var), varsol, newbound);
          SCIPABORT();
@@ -513,8 +514,8 @@ SCIP_RETCODE SCIPdebugCheckVbound(
    if( varsol != SCIP_UNKNOWN && vbvarsol != SCIP_UNKNOWN )
    {
       vb = vbcoef * vbvarsol + vbconstant;
-      if( (vbtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsLT(set, varsol, vb))
-         || (vbtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsGT(set, varsol, vb)) )
+      if( (vbtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasLT(set, varsol, vb))
+         || (vbtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasGT(set, varsol, vb)) )
       {
          SCIPerrorMessage("invalid variable bound: <%s>[%.8g] %s %.8g<%s>[%g] %+.8g\n", 
             SCIPvarGetName(var), varsol, vbtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", vbcoef,
@@ -557,7 +558,7 @@ SCIP_RETCODE SCIPdebugCheckImplic(
 
    if( impltype == SCIP_BOUNDTYPE_LOWER )
    {
-      if( SCIPsetIsLT(set, solval, implbound) )
+      if( SCIPsetIsFeasLT(set, solval, implbound) )
       {
          SCIPerrorMessage("invalid implication <%s> == %d -> <%s> >= %.8g (variable has value %g in solution)\n",
             SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), implbound, solval);
@@ -566,7 +567,7 @@ SCIP_RETCODE SCIPdebugCheckImplic(
    }
    else
    {
-      if( SCIPsetIsGT(set, solval, implbound) )
+      if( SCIPsetIsFeasGT(set, solval, implbound) )
       {
          SCIPerrorMessage("invalid implication <%s> == %d -> <%s> <= %.8g (variable has value %g in solution)\n",
             SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), implbound, solval);
