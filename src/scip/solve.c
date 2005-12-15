@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.199 2005/12/07 19:56:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.200 2005/12/15 09:26:36 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -2097,16 +2097,24 @@ SCIP_RETCODE solveNode(
    {
       SCIP_Real pseudoobjval;
       SCIP_Bool lperror;
+      SCIP_Bool solverelax;
+      SCIP_Bool solvelp;
+      SCIP_Bool propagate;
       int r;
 
       assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
       lperror = FALSE;
+      solverelax = solverelaxagain;
+      solverelaxagain = FALSE;
+      solvelp = solvelpagain;
+      solvelpagain = FALSE;
+      propagate = propagateagain;
+      propagateagain = FALSE;
 
       /* domain propagation */
-      if( propagateagain && !(*cutoff) )
+      if( propagate && !(*cutoff) )
       {
-         propagateagain = FALSE;
          SCIP_CALL( propagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, fullpropagation, cutoff) );
          fullpropagation = FALSE;
 
@@ -2119,15 +2127,15 @@ SCIP_RETCODE solveNode(
       /**@todo if the LP modification methods of the relax interface is implemented, we can remove this and give
        *       total control to the relaxators
        */
-      if( solvelpagain )
+      if( solvelp )
       {
-         solverelaxagain = TRUE;
+         solverelax = TRUE;
          for( r = 0; r < set->nrelaxs; ++r )
             SCIPrelaxMarkUnsolved(set->relaxs[r]);
       }
 
       /* solve external relaxations with non-negative priority */
-      if( solverelaxagain && !(*cutoff) )
+      if( solverelax && !(*cutoff) )
       {
          SCIP_CALL( solveNodeRelax(set, stat, actdepth, TRUE, cutoff, &propagateagain, &solvelpagain) );
 
@@ -2141,9 +2149,8 @@ SCIP_RETCODE solveNode(
       assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
       /* check, if we want to solve the LP at this node */
-      if( solvelpagain && !(*cutoff) )
+      if( solvelp && !(*cutoff) )
       {
-         solvelpagain = FALSE;
          if( SCIPtreeHasFocusNodeLP(tree) )
          {
             /* solve the node's LP */
@@ -2202,9 +2209,8 @@ SCIP_RETCODE solveNode(
       assert(*cutoff || !SCIPtreeHasFocusNodeLP(tree) || (lp->flushed && lp->solved));
 
       /* solve external relaxations with negative priority */
-      if( solverelaxagain && !(*cutoff) )
+      if( solverelax && !(*cutoff) )
       {
-         solverelaxagain = FALSE;
          SCIP_CALL( solveNodeRelax(set, stat, actdepth, FALSE, cutoff, &propagateagain, &solvelpagain) );
 
          /* check, if the path was cutoff */
@@ -2333,11 +2339,13 @@ SCIP_RETCODE solveNode(
                SCIPerrorMessage("LP branching rule added constraint, which was not allowed this time\n");
                return SCIP_INVALIDRESULT;
             }
+            solverelaxagain = TRUE;
             solvelpagain = TRUE;
             propagateagain = TRUE;
             break;
          case SCIP_REDUCEDDOM:
             assert(tree->nchildren == 0);
+            solverelaxagain = TRUE;
             solvelpagain = TRUE;
             propagateagain = TRUE;
             break;
