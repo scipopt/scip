@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.16 2005/12/09 13:34:13 bzfwolte Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.17 2005/12/16 12:05:28 bzfpfend Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -322,7 +322,6 @@ SCIP_RETCODE SCIPdebugCheckRow(
    SCIP_Real maxactivity;
    SCIP_Real solval;
 
-   if( row->name[0] != '*' ) return SCIP_OKAY; /*??????????????????????????????*/
    /* if the row is only locally valid, check whether the debugging solution is contained in the local subproblem */
    if( SCIProwIsLocal(row) )
    {

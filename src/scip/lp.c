@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.211 2005/12/07 19:56:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.212 2005/12/16 12:05:28 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -5762,32 +5762,42 @@ SCIP_RETCODE SCIPlpFlush(
       lp->nlpicols, lp->nlpirows, lp->nchgcols, lp->nchgrows, lp->lpifirstchgcol, lp->lpifirstchgrow, 
       lp->ncols, lp->nrows, lp->flushed);
 
-   if( lp->flushed )
+   if( !lp->flushed )
    {
-      assert(lp->nlpicols == lp->ncols);
-      assert(lp->lpifirstchgcol == lp->nlpicols);
-      assert(lp->nlpirows == lp->nrows);
-      assert(lp->lpifirstchgrow == lp->nlpirows);
-      assert(lp->nchgcols == 0);
+      lp->flushdeletedcols = FALSE;
+      lp->flushaddedcols = FALSE;
+      lp->flushdeletedrows = FALSE;
+      lp->flushaddedrows = FALSE;
 
-      return SCIP_OKAY;
+      SCIP_CALL( lpFlushDelCols(lp) );
+      SCIP_CALL( lpFlushDelRows(lp, blkmem, set) );
+      SCIP_CALL( lpFlushChgCols(lp, set) );
+      SCIP_CALL( lpFlushChgRows(lp, set) );
+      SCIP_CALL( lpFlushAddCols(lp, blkmem, set) );
+      SCIP_CALL( lpFlushAddRows(lp, blkmem, set) );
+
+      lp->flushed = TRUE;
+
+      checkLinks(lp);
    }
 
-   lp->flushdeletedcols = FALSE;
-   lp->flushaddedcols = FALSE;
-   lp->flushdeletedrows = FALSE;
-   lp->flushaddedrows = FALSE;
+   assert(lp->nlpicols == lp->ncols);
+   assert(lp->lpifirstchgcol == lp->nlpicols);
+   assert(lp->nlpirows == lp->nrows);
+   assert(lp->lpifirstchgrow == lp->nlpirows);
+   assert(lp->nchgcols == 0);
+   assert(lp->nchgrows == 0);
+#ifndef NDEBUG
+   {
+      int ncols;
+      int nrows;
 
-   SCIP_CALL( lpFlushDelCols(lp) );
-   SCIP_CALL( lpFlushDelRows(lp, blkmem, set) );
-   SCIP_CALL( lpFlushChgCols(lp, set) );
-   SCIP_CALL( lpFlushChgRows(lp, set) );
-   SCIP_CALL( lpFlushAddCols(lp, blkmem, set) );
-   SCIP_CALL( lpFlushAddRows(lp, blkmem, set) );
-
-   lp->flushed = TRUE;
-
-   checkLinks(lp);
+      SCIP_CALL( SCIPlpiGetNCols(lp->lpi, &ncols) );
+      SCIP_CALL( SCIPlpiGetNRows(lp->lpi, &nrows) );
+      assert(ncols == lp->ncols);
+      assert(nrows == lp->nrows);
+   }
+#endif
 
    return SCIP_OKAY;
 }
@@ -9473,6 +9483,18 @@ SCIP_RETCODE lpFlushAndSolve(
          SCIP_CALL( lpSolve(lp, set, stat, SCIP_LPALGO_PRIMALSIMPLEX, needprimalray, needdualray, resolve, fastmip,
                tightfeastol, fromscratch, keepsol, lperror) );
       }
+      break;
+
+   case 'p':
+      SCIPdebugMessage("solving primal LP\n");
+      SCIP_CALL( lpSolve(lp, set, stat, SCIP_LPALGO_PRIMALSIMPLEX, needprimalray, needdualray, resolve, fastmip,
+            tightfeastol, fromscratch, keepsol, lperror) );
+      break;
+
+   case 'd':
+      SCIPdebugMessage("solving dual LP\n");
+      SCIP_CALL( lpSolve(lp, set, stat, SCIP_LPALGO_DUALSIMPLEX, needprimalray, needdualray, resolve, fastmip,
+            tightfeastol, fromscratch, keepsol, lperror) );
       break;
 
    case 'b':

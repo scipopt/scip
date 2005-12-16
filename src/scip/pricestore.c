@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.c,v 1.29 2005/08/24 17:26:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.c,v 1.30 2005/12/16 12:05:28 bzfpfend Exp $"
 
 /**@file   pricestore.c
  * @brief  methods for storing priced variables
@@ -187,8 +187,8 @@ SCIP_RETCODE SCIPpricestoreAddVar(
    assert(set != NULL);
    assert(var != NULL);
 
-   SCIPdebugMessage("adding variable <%s> (lb=%g, ub=%g) to pricing storage\n", 
-      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+   SCIPdebugMessage("adding variable <%s> (lb=%g, ub=%g) to pricing storage (initiallp=%d)\n", 
+      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), pricestore->initiallp);
 
    if( pricestore->initiallp )
       maxpricevars = INT_MAX;

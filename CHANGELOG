@@ -49,6 +49,7 @@ parameters:
 - new parameter branching/inference/conflictweight
 - heuristics with freq = 0 and freqofs > 0 are now called in depth level freqofs instead of being called in the root node
 - added some parameters in local branching and RINS heuristic
+- new parameter values 'p'rimal simplex and 'd'ual simplex in lp/initalgorithm and lp/resolvealgorithm
 
 features:
 - changed handling of added constraints in separation calls

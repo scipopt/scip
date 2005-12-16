@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.163 2005/10/18 09:10:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.164 2005/12/16 12:05:28 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -574,13 +574,13 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "lp/initalgorithm",
-         "LP algorithm for solving initial LP relaxations ('s'implex, 'b'arrier, barrier with 'c'rossover)",
-         &(*set)->lp_initalgorithm, SCIP_DEFAULT_LP_INITALGORITHM, "sbc",
+         "LP algorithm for solving initial LP relaxations (automatic 's'implex, 'p'rimal simplex, 'd'ual simplex, 'b'arrier, barrier with 'c'rossover)",
+         &(*set)->lp_initalgorithm, SCIP_DEFAULT_LP_INITALGORITHM, "spdbc",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "lp/resolvealgorithm",
-         "LP algorithm for resolving LP relaxations if a starting basis exists ('s'implex, 'b'arrier, barrier with 'c'rossover)",
-         &(*set)->lp_resolvealgorithm, SCIP_DEFAULT_LP_RESOLVEALGORITHM, "sbc",
+         "LP algorithm for resolving LP relaxations if a starting basis exists (automatic 's'implex, 'p'rimal simplex, 'd'ual simplex, 'b'arrier, barrier with 'c'rossover)",
+         &(*set)->lp_resolvealgorithm, SCIP_DEFAULT_LP_RESOLVEALGORITHM, "spdbc",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "lp/pricing",

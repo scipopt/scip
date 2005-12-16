@@ -142,12 +142,12 @@ lp/solvefreq = 1
 # [type: int, range: [-1,2147483647], default: -1]
 lp/solvedepth = -1
 
-# LP algorithm for solving initial LP relaxations ('s'implex, 'b'arrier, barrier with 'c'rossover)
-# [type: char, range: {sbc}, default: s]
+# LP algorithm for solving initial LP relaxations (automatic 's'implex, 'p'rimal simplex, 'd'ual simplex, 'b'arrier, barrier with 'c'rossover)
+# [type: char, range: {spdbc}, default: s]
 lp/initalgorithm = s
 
-# LP algorithm for resolving LP relaxations if a starting basis exists ('s'implex, 'b'arrier, barrier with 'c'rossover)
-# [type: char, range: {sbc}, default: s]
+# LP algorithm for resolving LP relaxations if a starting basis exists (automatic 's'implex, 'p'rimal simplex, 'd'ual simplex, 'b'arrier, barrier with 'c'rossover)
+# [type: char, range: {spdbc}, default: s]
 lp/resolvealgorithm = s
 
 # LP pricing strategy ('a'uto, 'f'ull pricing, 'p'artial, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)
