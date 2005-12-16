@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.161 2005/12/09 13:28:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.162 2005/12/16 12:47:21 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -2200,6 +2200,7 @@ SCIP_RETCODE SCIPtreeLoadLP(
    int d;
 
    assert(tree != NULL);
+   assert(!tree->focuslpconstructed);
    assert(tree->path != NULL);
    assert(tree->pathlen > 0);
    assert(tree->focusnode != NULL);
@@ -2327,6 +2328,9 @@ SCIP_RETCODE SCIPtreeLoadLP(
 
    /* if the correct LP depth is still -1, the root LP relaxation has to be initialized */
    *initroot = (tree->correctlpdepth == -1);
+
+   /* mark the LP of the focus node constructed */
+   tree->focuslpconstructed = TRUE;
 
    return SCIP_OKAY;
 }
@@ -3017,6 +3021,7 @@ SCIP_RETCODE SCIPnodeFocus(
    tree->focusnode = *node;
    tree->focuslpfork = lpfork;
    tree->focussubroot = subroot;
+   tree->focuslpconstructed = FALSE;
 
    /* track the path from the old focus node to the new node, and perform domain and constraint set changes */
    SCIP_CALL( treeSwitchPath(tree, blkmem, set, stat, prob, primal, lp, branchcand, conflict, eventfilter, eventqueue, 
@@ -3082,6 +3087,7 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->repropsubtreecount = 0;
    (*tree)->focusnodehaslp = FALSE;
    (*tree)->probingnodehaslp = FALSE;
+   (*tree)->focuslpconstructed = FALSE;
    (*tree)->cutoffdelayed = FALSE;
    (*tree)->probinglpwasflushed = FALSE;
    (*tree)->probinglpwassolved = FALSE;

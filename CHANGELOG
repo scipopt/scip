@@ -30,6 +30,7 @@ interface:
 - new parameter "printzeros" for methods SCIPprintSol(), SCIPprintTransSol(), SCIPprintBestSol(), and
   SCIPprintBestTransSol()
 - new methods SCIPgetFixedVars() and SCIPgetNFixedVars()
+- new method SCIPconstructLP() to force constructing the LP of the current node
 
 plugins:
 - new presolver "implics" to find bound changes and aggregations out of the implication graph

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.335 2005/12/07 19:56:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.336 2005/12/16 12:47:20 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8382,6 +8382,20 @@ SCIP_Bool SCIPhasCurrentNodeLP(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPhasCurrentNodeLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    return SCIPtreeHasCurrentNodeLP(scip->tree);
+}
+
+/** makes sure that the LP of the current node is loaded and may be accessed through the LP information methods */
+SCIP_RETCODE SCIPconstructLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPconstructLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconstructCurrentLP(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
+         scip->pricestore, scip->sepastore, scip->branchcand, scip->eventqueue, cutoff) );
+
+   return SCIP_OKAY;
 }
 
 /** gets solution status of current LP */

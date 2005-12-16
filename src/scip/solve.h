@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.40 2005/09/22 17:33:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.41 2005/12/16 12:47:21 bzfpfend Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -66,6 +66,22 @@ SCIP_RETCODE SCIPpropagateDomains(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    int                   depth,              /**< depth level to use for propagator frequency checks */
    int                   maxrounds,          /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+   );
+
+/** constructs the LP of the current node and loads the LP state and warmstart information  */
+extern
+SCIP_RETCODE SCIPconstructCurrentLP(
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    );
 

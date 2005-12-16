@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.200 2005/12/15 09:26:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.201 2005/12/16 12:47:20 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -714,6 +714,46 @@ SCIP_RETCODE initRootLP(
    return SCIP_OKAY;
 }
 
+/** constructs the LP of the current node and loads the LP state and warmstart information  */
+SCIP_RETCODE SCIPconstructCurrentLP(
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+   )
+{
+   SCIP_Bool initroot;
+
+   assert(tree != NULL);
+   assert(cutoff != NULL);
+
+   *cutoff = FALSE;
+
+   if( !tree->focuslpconstructed )
+   {
+      /* load the LP into the solver and load the LP state */
+      SCIPdebugMessage("loading LP\n");
+      SCIP_CALL( SCIPtreeLoadLP(tree, blkmem, set, stat, lp, &initroot) );
+      assert(initroot || SCIPnodeGetDepth(SCIPtreeGetFocusNode(tree)) > 0);
+      assert(tree->focuslpconstructed);
+      
+      /* init root node LP */
+      if( initroot )
+      {
+         SCIP_CALL( initRootLP(blkmem, set, stat, prob, tree, lp, pricestore, sepastore, branchcand, eventqueue, cutoff) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** load and solve the initial LP of a node */
 static
 SCIP_RETCODE solveNodeInitialLP(
@@ -732,37 +772,22 @@ SCIP_RETCODE solveNodeInitialLP(
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved error in LP solving occured */
    )
 {
-   SCIP_NODE* focusnode;
-   SCIP_EVENT event;
-   SCIP_Bool initroot;
-
    assert(stat != NULL);
    assert(tree != NULL);
    assert(lp != NULL);
    assert(cutoff != NULL);
    assert(lperror != NULL);
+   assert(SCIPtreeGetFocusNode(tree) != NULL);
+   assert(SCIPnodeGetType(SCIPtreeGetFocusNode(tree)) == SCIP_NODETYPE_FOCUSNODE);
 
    *cutoff = FALSE;
    *lperror = FALSE;
 
-   focusnode = SCIPtreeGetFocusNode(tree);
-   assert(focusnode != NULL);
-   assert(SCIPnodeGetType(focusnode) == SCIP_NODETYPE_FOCUSNODE);
-
    /* load the LP into the solver and load the LP state */
-   SCIPdebugMessage("loading LP\n");
-   SCIP_CALL( SCIPtreeLoadLP(tree, blkmem, set, stat, lp, &initroot) );
-   assert(initroot || SCIPnodeGetDepth(focusnode) > 0);
+   SCIP_CALL( SCIPconstructCurrentLP(blkmem, set, stat, prob, tree, lp, pricestore, sepastore, branchcand, eventqueue,
+         cutoff) );
 
-   /* init root node LP */
-   if( initroot )
-   {
-      SCIP_CALL( initRootLP(blkmem, set, stat, prob, tree, lp, pricestore, sepastore, branchcand, eventqueue, cutoff) );
-   }
-
-   /* only the bounds and the constraint list may have been changed since the LP state node
-    * -> dual simplex is applicable as first solver
-    */
+   /* solve initial LP */
    SCIPdebugMessage("node: solve initial LP\n");
    SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, TRUE, FALSE, lperror) );
    assert(lp->flushed);
@@ -770,9 +795,11 @@ SCIP_RETCODE solveNodeInitialLP(
 
    if( !(*lperror) )
    {
+      SCIP_EVENT event;
+
       /* issue FIRSTLPSOLVED event */
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_FIRSTLPSOLVED) );
-      SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
+      SCIP_CALL( SCIPeventChgNode(&event, SCIPtreeGetFocusNode(tree)) );
       SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
       /* update pseudo cost values */
