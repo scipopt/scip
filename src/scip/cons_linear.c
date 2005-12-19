@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.205 2005/12/19 18:16:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.206 2005/12/19 18:19:16 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -197,7 +197,7 @@ struct InferInfo
          unsigned int    pos:24;             /**< variable position, the propagation rule was applied at */
       } asbits;
       int                asint;              /**< inference information as a single int value */
-   };
+   } val;
 };
 typedef struct InferInfo INFERINFO;
 
@@ -209,7 +209,7 @@ INFERINFO intToInferInfo(
 {
    INFERINFO inferinfo;
 
-   inferinfo.asint = i;
+   inferinfo.val.asint = i;
 
    return inferinfo;
 }
@@ -220,7 +220,7 @@ int inferInfoToInt(
    INFERINFO             inferinfo           /**< inference information to convert */
    )
 {
-   return inferinfo.asint;
+   return inferinfo.val.asint;
 }
 
 /** returns the propagation rule stored in the inference information */
@@ -229,7 +229,7 @@ int inferInfoGetProprule(
    INFERINFO             inferinfo           /**< inference information to convert */
    )
 {
-   return inferinfo.asbits.proprule;
+   return inferinfo.val.asbits.proprule;
 }
 
 /** returns the position stored in the inference information */
@@ -238,7 +238,7 @@ int inferInfoGetPos(
    INFERINFO             inferinfo           /**< inference information to convert */
    )
 {
-   return inferinfo.asbits.pos;
+   return inferinfo.val.asbits.pos;
 }
 
 /** constructs an inference information out of a propagation rule and a position number */
@@ -250,8 +250,8 @@ INFERINFO getInferInfo(
 {
    INFERINFO inferinfo;
 
-   inferinfo.asbits.proprule = proprule;
-   inferinfo.asbits.pos = pos;
+   inferinfo.val.asbits.proprule = proprule;
+   inferinfo.val.asbits.pos = pos;
 
    return inferinfo;
 }
