@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.204 2005/12/19 18:15:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.205 2005/12/19 18:16:53 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -191,12 +191,12 @@ struct InferInfo
 {
    union
    {
-      int                asint;              /**< inference information as a single int value */
       struct
       {
          unsigned int    proprule:8;         /**< propagation rule that was applied */
          unsigned int    pos:24;             /**< variable position, the propagation rule was applied at */
       } asbits;
+      int                asint;              /**< inference information as a single int value */
    };
 };
 typedef struct InferInfo INFERINFO;
