@@ -31,6 +31,7 @@ interface:
   SCIPprintBestTransSol()
 - new methods SCIPgetFixedVars() and SCIPgetNFixedVars()
 - new method SCIPconstructLP() to force constructing the LP of the current node
+- new method SCIPisLPConstructed()
 
 plugins:
 - new presolver "implics" to find bound changes and aggregations out of the implication graph

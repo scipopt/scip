@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.162 2005/12/16 12:47:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.163 2005/12/19 10:09:37 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4357,6 +4357,16 @@ void SCIPtreeMarkProbingNodeHasLP(
    assert(tree != NULL);
 
    tree->probingnodehaslp = TRUE;
+}
+
+/** returns whether the LP of the focus node is already constructed */
+SCIP_Bool SCIPtreeIsFocusNodeLPConstructed(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->focuslpconstructed;
 }
 
 /** gets current node of the tree, i.e. the last node in the active path, or NULL if no current node exists */

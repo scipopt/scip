@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.336 2005/12/16 12:47:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.337 2005/12/19 10:09:37 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8384,6 +8384,16 @@ SCIP_Bool SCIPhasCurrentNodeLP(
    return SCIPtreeHasCurrentNodeLP(scip->tree);
 }
 
+/** returns, whether the LP of the current node is already constructed */
+SCIP_Bool SCIPisLPConstructed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisLPConstructed", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPtreeIsFocusNodeLPConstructed(scip);
+}
+
 /** makes sure that the LP of the current node is loaded and may be accessed through the LP information methods */
 SCIP_RETCODE SCIPconstructLP(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8457,7 +8467,7 @@ SCIP_RETCODE SCIPgetLPColsData(
 {
    SCIP_CALL( checkStage(scip, "SCIPgetLPColsData", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( SCIPtreeHasCurrentNodeLP(scip->tree) )
+   if( SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
    {
       if( cols != NULL )
          *cols = SCIPlpGetCols(scip->lp);
@@ -8469,7 +8479,7 @@ SCIP_RETCODE SCIPgetLPColsData(
       if( cols != NULL )
          *cols = NULL;
       if( ncols != NULL )
-         *ncols = scip->tree->pathnlpcols[scip->tree->pathlen-1];
+         *ncols = 0; /*???????????????scip->tree->pathnlpcols[scip->tree->pathlen-1];*/
    }
 
    return SCIP_OKAY;
@@ -8482,7 +8492,7 @@ SCIP_COL** SCIPgetLPCols(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetLPCols", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( SCIPtreeHasCurrentNodeLP(scip->tree) )
+   if( SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
       return SCIPlpGetCols(scip->lp);
    else
       return NULL;
@@ -8495,10 +8505,10 @@ int SCIPgetNLPCols(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLPCols", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( SCIPtreeHasCurrentNodeLP(scip->tree) )
+   if( SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
       return SCIPlpGetNCols(scip->lp);
    else
-      return scip->tree->pathnlpcols[scip->tree->pathlen-1];
+      return 0; /*???????????????scip->tree->pathnlpcols[scip->tree->pathlen-1];*/
 }
 
 /** gets current LP rows along with the current number of LP rows */
@@ -8510,7 +8520,7 @@ SCIP_RETCODE SCIPgetLPRowsData(
 {
    SCIP_CALL( checkStage(scip, "SCIPgetLPRowsData", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( SCIPtreeHasCurrentNodeLP(scip->tree) )
+   if( SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
    {
       if( rows != NULL )
          *rows = SCIPlpGetRows(scip->lp);
@@ -8522,7 +8532,7 @@ SCIP_RETCODE SCIPgetLPRowsData(
       if( rows != NULL )
          *rows = NULL;
       if( nrows != NULL )
-         *nrows = scip->tree->pathnlprows[scip->tree->pathlen-1];
+         *nrows = 0; /*??????????????scip->tree->pathnlprows[scip->tree->pathlen-1];*/
    }
 
    return SCIP_OKAY;
@@ -8535,7 +8545,7 @@ SCIP_ROW** SCIPgetLPRows(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetLPRows", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( SCIPtreeHasCurrentNodeLP(scip->tree) )
+   if( SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
       return SCIPlpGetRows(scip->lp);
    else
       return NULL;
@@ -8548,10 +8558,10 @@ int SCIPgetNLPRows(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLPRows", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( SCIPtreeHasCurrentNodeLP(scip->tree) )
+   if( SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
       return SCIPlpGetNRows(scip->lp);
    else
-      return scip->tree->pathnlprows[scip->tree->pathlen-1];
+      return 0; /*???????????????scip->tree->pathnlprows[scip->tree->pathlen-1];*/
 }
 
 /** returns TRUE iff all columns, i.e. every variable with non-empty column w.r.t. all ever created rows, are present

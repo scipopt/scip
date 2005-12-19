@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.257 2005/12/16 12:47:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.258 2005/12/19 10:09:37 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2972,6 +2972,12 @@ SCIP_RETCODE SCIPprintCons(
 /** returns, whether the LP was or is to be solved in the current node */
 extern
 SCIP_Bool SCIPhasCurrentNodeLP(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns, whether the LP of the current node is already constructed */
+extern
+SCIP_Bool SCIPisLPConstructed(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

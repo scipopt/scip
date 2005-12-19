@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.84 2005/08/28 12:29:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.85 2005/12/19 10:09:38 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -497,6 +497,12 @@ void SCIPtreeMarkProbingNodeHasLP(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
+/** returns whether the LP of the focus node is already constructed */
+extern
+SCIP_Bool SCIPtreeIsFocusNodeLPConstructed(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   );
+
 /** gets current node of the tree, i.e. the last node in the active path, or NULL if no current node exists */
 extern
 SCIP_NODE* SCIPtreeGetCurrentNode(
@@ -535,6 +541,7 @@ SCIP_Bool SCIPtreeHasCurrentNodeLP(
 #define SCIPtreeHasFocusNodeLP(tree)    (tree)->focusnodehaslp
 #define SCIPtreeSetFocusNodeLP(tree,solvelp)  ((tree)->focusnodehaslp = solvelp)
 #define SCIPtreeMarkProbingNodeHasLP(tree) ((tree)->probingnodehaslp = TRUE)
+#define SCIPtreeIsFocusNodeLPConstructed(tree) (tree)->focuslpconstructed
 #define SCIPtreeGetCurrentNode(tree)    ((tree)->pathlen > 0 ? (tree)->path[(tree)->pathlen-1] : NULL)
 #define SCIPtreeGetCurrentDepth(tree)   ((tree)->pathlen-1)
 #define SCIPtreeHasCurrentNodeLP(tree)  (SCIPtreeProbing(tree) ? (tree)->probingnodehaslp : SCIPtreeHasFocusNodeLP(tree))
