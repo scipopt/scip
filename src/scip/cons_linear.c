@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.203 2005/12/09 13:28:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.204 2005/12/19 18:15:15 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -189,8 +189,15 @@ typedef enum Proprule PROPRULE;
 /** inference information */
 struct InferInfo
 {
-   unsigned int          proprule:8;         /**< propagation rule that was applied */
-   unsigned int          pos:24;             /**< variable position, the propagation rule was applied at */
+   union
+   {
+      int                asint;              /**< inference information as a single int value */
+      struct
+      {
+         unsigned int    proprule:8;         /**< propagation rule that was applied */
+         unsigned int    pos:24;             /**< variable position, the propagation rule was applied at */
+      } asbits;
+   };
 };
 typedef struct InferInfo INFERINFO;
 
@@ -200,10 +207,11 @@ INFERINFO intToInferInfo(
    int                   i                   /**< integer to convert */
    )
 {
-   /* this dirty trick is necessary, because a direct cast (INFERINFO)i is not possible */
-   assert(sizeof(INFERINFO) == sizeof(int));
+   INFERINFO inferinfo;
 
-   return *(INFERINFO*)(&i);
+   inferinfo.asint = i;
+
+   return inferinfo;
 }
 
 /** converts an inference information into an int */
@@ -212,10 +220,25 @@ int inferInfoToInt(
    INFERINFO             inferinfo           /**< inference information to convert */
    )
 {
-   /* this dirty trick is necessary, because a direct cast (int)inferinfo is not possible */
-   assert(sizeof(INFERINFO) == sizeof(int));
+   return inferinfo.asint;
+}
 
-   return *(int*)(&inferinfo);
+/** returns the propagation rule stored in the inference information */
+static
+int inferInfoGetProprule(
+   INFERINFO             inferinfo           /**< inference information to convert */
+   )
+{
+   return inferinfo.asbits.proprule;
+}
+
+/** returns the position stored in the inference information */
+static
+int inferInfoGetPos(
+   INFERINFO             inferinfo           /**< inference information to convert */
+   )
+{
+   return inferinfo.asbits.pos;
 }
 
 /** constructs an inference information out of a propagation rule and a position number */
@@ -227,8 +250,8 @@ INFERINFO getInferInfo(
 {
    INFERINFO inferinfo;
 
-   inferinfo.proprule = proprule;
-   inferinfo.pos = pos;
+   inferinfo.asbits.proprule = proprule;
+   inferinfo.asbits.pos = pos;
 
    return inferinfo;
 }
@@ -2909,7 +2932,7 @@ SCIP_RETCODE resolvePropagation(
    assert(vals != NULL);
 
    /* get the position of the inferred variable in the vars array */
-   inferpos = inferinfo.pos;
+   inferpos = inferInfoGetPos(inferinfo);
    if( inferpos >= nvars || vars[inferpos] != infervar )
    {
       /* find inference variable in constraint */
@@ -2921,7 +2944,7 @@ SCIP_RETCODE resolvePropagation(
    assert(vars[inferpos] == infervar);
    assert(!SCIPisZero(scip, vals[inferpos]));
 
-   switch( inferinfo.proprule )
+   switch( inferInfoGetProprule(inferinfo) )
    {
    case PROPRULE_1_RHS:
       /* the bound of the variable was tightened, because the minimal or maximal residual activity of the linear
@@ -2946,8 +2969,8 @@ SCIP_RETCODE resolvePropagation(
    case PROPRULE_INVALID:
    default:
       SCIPerrorMessage("invalid inference information %d in linear constraint <%s> at position %d for %s bound of variable <%s>\n",
-         inferinfo.proprule, SCIPconsGetName(cons), inferinfo.pos, boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper",
-         SCIPvarGetName(infervar));
+         inferInfoGetProprule(inferinfo), SCIPconsGetName(cons), inferInfoGetPos(inferinfo),
+         boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", SCIPvarGetName(infervar));
       SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
       return SCIP_INVALIDDATA;
    }
