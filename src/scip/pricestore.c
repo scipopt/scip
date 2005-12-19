@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.c,v 1.30 2005/12/16 12:05:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.c,v 1.31 2005/12/19 09:41:25 bzfpfend Exp $"
 
 /**@file   pricestore.c
  * @brief  methods for storing priced variables
@@ -485,7 +485,7 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
    assert(lp != NULL);
    assert(lp->solved || pricestore->initiallp);
    assert(tree != NULL);
-   assert(SCIPtreeHasCurrentNodeLP(tree));
+   assert(SCIPtreeHasCurrentNodeLP(tree) || pricestore->initiallp);
 
    SCIPdebugMessage("adding %d variables (%d bound violated and %d priced vars) to %d LP columns\n",
       SCIPpricestoreGetNVars(pricestore), pricestore->nbdviolvars - pricestore->naddedbdviolvars,
