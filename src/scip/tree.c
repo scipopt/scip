@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.163 2005/12/19 10:09:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.164 2005/12/19 10:20:14 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4137,6 +4137,7 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
 #undef SCIPtreeHasFocusNodeLP
 #undef SCIPtreeSetFocusNodeLP
 #undef SCIPtreeMarkProbingNodeHasLP
+#undef SCIPtreeIsFocusNodeLPConstructed
 #undef SCIPtreeGetCurrentNode
 #undef SCIPtreeGetCurrentDepth
 #undef SCIPtreeHasCurrentNodeLP

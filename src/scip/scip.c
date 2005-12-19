@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.337 2005/12/19 10:09:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.338 2005/12/19 10:20:14 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8386,12 +8386,12 @@ SCIP_Bool SCIPhasCurrentNodeLP(
 
 /** returns, whether the LP of the current node is already constructed */
 SCIP_Bool SCIPisLPConstructed(
-   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPisLPConstructed", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPtreeIsFocusNodeLPConstructed(scip);
+   return SCIPtreeIsFocusNodeLPConstructed(scip->tree);
 }
 
 /** makes sure that the LP of the current node is loaded and may be accessed through the LP information methods */
