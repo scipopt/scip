@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.75 2005/12/08 10:11:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.76 2005/12/20 12:29:56 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -235,6 +235,8 @@ SCIP_RETCODE primalSetUpperbound(
       delta = 100.0*SCIPsetFeastol(set);
       delta = MIN(delta, 0.1);
       cutoffbound = SCIPsetFeasCeil(set, upperbound) - (1.0 - delta);
+      cutoffbound = MIN(cutoffbound, upperbound); /* SCIPsetFeasCeil() can increase bound by almost 1.0 due to numerics
+                                                   * and very large upperbound value */
    }
    else
       cutoffbound = upperbound;
