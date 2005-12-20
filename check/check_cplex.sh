@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.sh,v 1.14 2005/09/12 07:43:57 bzfpfend Exp $
+# $Id: check_cplex.sh,v 1.15 2005/12/20 12:04:59 bzfpfend Exp $
 TSTNAME=$1
 CPLEXBIN=$2
 SETTINGS=$3
@@ -83,4 +83,9 @@ rm $TMPFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-gawk -f check_cplex.awk -vTEXFILE=$TEXFILE $TSTNAME.solu $OUTFILE | tee $RESFILE
+if [ -f $TSTNAME.solu ]
+then
+    gawk -f check_cplex.awk -vTEXFILE=$TEXFILE $TSTNAME.solu $OUTFILE | tee $RESFILE
+else
+    gawk -f check_cplex.awk -vTEXFILE=$TEXFILE $OUTFILE | tee $RESFILE
+fi

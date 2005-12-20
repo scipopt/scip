@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.20 2005/07/20 16:35:12 bzfpfend Exp $
+# $Id: check.sh,v 1.21 2005/12/20 12:04:59 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -84,4 +84,9 @@ rm $TMPFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-gawk -f check.awk -vTEXFILE=$TEXFILE $TSTNAME.solu $OUTFILE | tee $RESFILE
+if [ -f $TSTNAME.solu ]
+then
+    gawk -f check.awk -vTEXFILE=$TEXFILE $TSTNAME.solu $OUTFILE | tee $RESFILE
+else
+    gawk -f check.awk -vTEXFILE=$TEXFILE $OUTFILE | tee $RESFILE
+fi
