@@ -3,9 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2005 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2006 Tobias Achterberg                              */
 /*                                                                           */
-/*                  2002-2005 Konrad-Zuse-Zentrum                            */
+/*                  2002-2006 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.94 2005/12/07 19:56:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.95 2006/01/03 12:22:45 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -34,9 +34,9 @@
 #include <assert.h>
 
 
-#define SCIP_VERSION                 80 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION             "b" /**< SCIP sub version string */
-#define SCIP_COPYRIGHT   "Copyright (c) 2002-2005 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_VERSION                 81 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION              "" /**< SCIP sub version string */
+#define SCIP_COPYRIGHT   "Copyright (c) 2002-2006 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 

@@ -3,7 +3,7 @@
 /*                        This file is part of the program                   */
 /*                    TCLIQUE --- Algorithm for Maximum Cliques              */
 /*                                                                           */
-/*    Copyright (C) 1996-2005 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 1996-2006 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  TCLIQUE is distributed under the terms of the ZIB Academic License.      */
@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_coloring.c,v 1.2 2005/09/01 18:19:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_coloring.c,v 1.3 2006/01/03 12:23:01 bzfpfend Exp $"
 
 /**@file   tclique_coloring.c
  * @brief  coloring part of algorithm for maximum cliques

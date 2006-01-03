@@ -4,9 +4,9 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2005 Tobias Achterberg                              *
+#*    Copyright (C) 2002-2006 Tobias Achterberg                              *
 #*                                                                           *
-#*                  2002-2005 Konrad-Zuse-Zentrum                            *
+#*                  2002-2006 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.21 2005/12/20 12:04:59 bzfpfend Exp $
+# $Id: check.sh,v 1.22 2006/01/03 12:22:37 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3

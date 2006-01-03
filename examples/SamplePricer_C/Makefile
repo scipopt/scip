@@ -3,9 +3,9 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2005 Tobias Achterberg                              *
+#*    Copyright (C) 2002-2006 Tobias Achterberg                              *
 #*                                                                           *
-#*                  2002-2005 Konrad-Zuse-Zentrum                            *
+#*                  2002-2006 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.1 2005/12/07 19:56:34 bzfpfend Exp $
+# $Id: Makefile,v 1.2 2006/01/03 12:22:38 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ example project featuring a very simple pricer
@@ -45,7 +45,7 @@ TEST		=	miplib
 SETTINGS        =       default
 
 VERBOSE		=	false
-OPT		=	dbg
+OPT		=	opt
 LPS		=	cpx
 COMP		=	gnu
 LINK		=	static
