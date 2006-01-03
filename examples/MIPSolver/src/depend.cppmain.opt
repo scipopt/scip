@@ -47,4 +47,5 @@ $(LIBOBJDIR)/cppmain.o: src/cppmain.cpp lib/scip/src/objscip/objscip.h \
   lib/scip/src/objscip/objpricer.h lib/scip/src/objscip/objprobdata.h \
   lib/scip/src/objscip/objprop.h lib/scip/src/objscip/objreader.h \
   lib/scip/src/objscip/objrelax.h lib/scip/src/objscip/objsepa.h \
-  lib/scip/src/objscip/objvardata.h lib/scip/src/scip/scipdefplugins.h
+  lib/scip/src/objscip/objvardata.h lib/scip/src/scip/scipdefplugins.h \
+  lib/scip/src/scip/scip.h

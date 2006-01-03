@@ -19,4 +19,4 @@ $(BINOBJDIR)/cmain.o: src/cmain.c src/scip/scip.h src/scip/def.h \
   src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
   src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
   src/scip/pub_tree.h src/scip/pub_var.h src/scip/type_history.h \
-  src/scip/lpi.h src/scip/scipdefplugins.h
+  src/scip/lpi.h src/scip/scipdefplugins.h src/scip/scip.h

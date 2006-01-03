@@ -11,7 +11,7 @@ $(LIBOBJDIR)/scip/lpi_spx.o: src/scip/lpi_spx.cpp lib/spxinc/spxsolver.h \
   lib/spxinc/slinsolver.h lib/spxinc/array.h lib/spxinc/random.h \
   lib/spxinc/unitvector.h lib/spxinc/updatevector.h \
   lib/spxinc/slufactor.h lib/spxinc/clufactor.h lib/spxinc/spxsteeppr.h \
-  lib/spxinc/spxpricer.h lib/spxinc/spxparmultpr.h \
+  lib/spxinc/spxpricer.h lib/spxinc/spxsolver.h lib/spxinc/spxparmultpr.h \
   lib/spxinc/spxdevexpr.h lib/spxinc/spxfastrt.h \
   lib/spxinc/spxratiotester.h src/scip/lpi.h src/scip/def.h \
   src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
@@ -21,9 +21,9 @@ $(LIBOBJDIR)/scip/bitencode.o: src/scip/bitencode.c src/scip/def.h src/scip/type
   src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
   src/scip/pub_message.h src/scip/bitencode.h
 $(LIBOBJDIR)/blockmemshell/memory.o: src/blockmemshell/memory.c src/scip/def.h \
-  src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
-  src/scip/struct_message.h src/scip/pub_message.h \
-  src/blockmemshell/memory.h
+  src/scip/type_retcode.h src/scip/message.h src/scip/def.h \
+  src/scip/type_message.h src/scip/struct_message.h \
+  src/scip/pub_message.h src/blockmemshell/memory.h
 $(LIBOBJDIR)/scip/message.o: src/scip/message.c src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
   src/scip/pub_message.h src/blockmemshell/memory.h

@@ -12,18 +12,19 @@ $(LIBOBJDIR)/scip/lpi_spx121.o: src/scip/lpi_spx121.cpp lib/spx121inc/soplex.h \
   lib/spx121inc/array.h lib/spx121inc/random.h lib/spx121inc/unitvector.h \
   lib/spx121inc/updatevector.h lib/spx121inc/slufactor.h \
   lib/spx121inc/clufactor.h lib/spx121inc/spxsteeppr.h \
-  lib/spx121inc/spxpricer.h lib/spx121inc/spxfastrt.h \
-  lib/spx121inc/spxratiotester.h src/scip/lpi.h src/scip/def.h \
-  src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
-  src/scip/struct_message.h src/scip/pub_message.h \
-  src/blockmemshell/memory.h src/scip/type_lpi.h src/scip/bitencode.h
+  lib/spx121inc/spxpricer.h lib/spx121inc/soplex.h \
+  lib/spx121inc/spxfastrt.h lib/spx121inc/spxratiotester.h src/scip/lpi.h \
+  src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
+  src/scip/type_message.h src/scip/struct_message.h \
+  src/scip/pub_message.h src/blockmemshell/memory.h src/scip/type_lpi.h \
+  src/scip/bitencode.h
 $(LIBOBJDIR)/scip/bitencode.o: src/scip/bitencode.c src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
   src/scip/pub_message.h src/scip/bitencode.h
 $(LIBOBJDIR)/blockmemshell/memory.o: src/blockmemshell/memory.c src/scip/def.h \
-  src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
-  src/scip/struct_message.h src/scip/pub_message.h \
-  src/blockmemshell/memory.h
+  src/scip/type_retcode.h src/scip/message.h src/scip/def.h \
+  src/scip/type_message.h src/scip/struct_message.h \
+  src/scip/pub_message.h src/blockmemshell/memory.h
 $(LIBOBJDIR)/scip/message.o: src/scip/message.c src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
   src/scip/pub_message.h src/blockmemshell/memory.h

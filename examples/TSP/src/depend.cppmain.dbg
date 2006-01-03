@@ -37,9 +37,10 @@ $(LIBOBJDIR)/cppmain.o: src/cppmain.cpp lib/scip/src/objscip/objscip.h \
   lib/scip/src/objscip/objprobdata.h lib/scip/src/objscip/objprop.h \
   lib/scip/src/objscip/objreader.h lib/scip/src/objscip/objrelax.h \
   lib/scip/src/objscip/objsepa.h lib/scip/src/objscip/objvardata.h \
-  lib/scip/src/scip/scipdefplugins.h src/ReaderTSP.h src/GomoryHuTree.h \
-  src/ConshdlrSubtour.h src/ProbDataTSP.h src/HeurFarthestInsert.h \
-  src/Heur2opt.h src/EventhdlrNewSol.h
+  lib/scip/src/scip/scipdefplugins.h lib/scip/src/scip/scip.h \
+  src/ReaderTSP.h src/GomoryHuTree.h src/ConshdlrSubtour.h \
+  src/ProbDataTSP.h src/HeurFarthestInsert.h src/Heur2opt.h \
+  src/EventhdlrNewSol.h
 $(LIBOBJDIR)/ConshdlrSubtour.o: src/ConshdlrSubtour.cpp src/ConshdlrSubtour.h \
   lib/scip/src/objscip/objscip.h lib/scip/src/objscip/objbranchrule.h \
   lib/scip/src/scip/scip.h lib/scip/src/scip/def.h \
@@ -80,7 +81,7 @@ $(LIBOBJDIR)/ConshdlrSubtour.o: src/ConshdlrSubtour.cpp src/ConshdlrSubtour.h \
   lib/scip/src/objscip/objprop.h lib/scip/src/objscip/objreader.h \
   lib/scip/src/objscip/objrelax.h lib/scip/src/objscip/objsepa.h \
   lib/scip/src/objscip/objvardata.h src/GomoryHuTree.h src/ProbDataTSP.h \
-  lib/scip/src/scip/cons_linear.h
+  lib/scip/src/scip/cons_linear.h lib/scip/src/scip/scip.h
 $(LIBOBJDIR)/ProbDataTSP.o: src/ProbDataTSP.cpp src/ProbDataTSP.h \
   lib/scip/src/objscip/objscip.h lib/scip/src/objscip/objbranchrule.h \
   lib/scip/src/scip/scip.h lib/scip/src/scip/def.h \
@@ -154,14 +155,15 @@ $(LIBOBJDIR)/ReaderTSP.o: src/ReaderTSP.cpp lib/scip/src/scip/cons_linear.h \
   lib/scip/src/scip/pub_tree.h lib/scip/src/scip/pub_var.h \
   lib/scip/src/scip/type_history.h lib/scip/src/scip/lpi.h \
   src/ReaderTSP.h src/GomoryHuTree.h lib/scip/src/objscip/objscip.h \
-  lib/scip/src/objscip/objbranchrule.h lib/scip/src/objscip/objconshdlr.h \
-  lib/scip/src/objscip/objeventhdlr.h lib/scip/src/objscip/objheur.h \
-  lib/scip/src/objscip/objmessagehdlr.h lib/scip/src/objscip/objnodesel.h \
-  lib/scip/src/objscip/objpresol.h lib/scip/src/objscip/objpricer.h \
-  lib/scip/src/objscip/objprobdata.h lib/scip/src/objscip/objprop.h \
-  lib/scip/src/objscip/objreader.h lib/scip/src/objscip/objrelax.h \
-  lib/scip/src/objscip/objsepa.h lib/scip/src/objscip/objvardata.h \
-  src/ProbDataTSP.h src/ConshdlrSubtour.h
+  lib/scip/src/objscip/objbranchrule.h lib/scip/src/scip/scip.h \
+  lib/scip/src/objscip/objconshdlr.h lib/scip/src/objscip/objeventhdlr.h \
+  lib/scip/src/objscip/objheur.h lib/scip/src/objscip/objmessagehdlr.h \
+  lib/scip/src/objscip/objnodesel.h lib/scip/src/objscip/objpresol.h \
+  lib/scip/src/objscip/objpricer.h lib/scip/src/objscip/objprobdata.h \
+  lib/scip/src/objscip/objprop.h lib/scip/src/objscip/objreader.h \
+  lib/scip/src/objscip/objrelax.h lib/scip/src/objscip/objsepa.h \
+  lib/scip/src/objscip/objvardata.h src/ProbDataTSP.h \
+  src/ConshdlrSubtour.h
 $(LIBOBJDIR)/GomoryHuTree.o: src/GomoryHuTree.cpp src/GomoryHuTree.h \
   lib/scip/src/objscip/objscip.h lib/scip/src/objscip/objbranchrule.h \
   lib/scip/src/scip/scip.h lib/scip/src/scip/def.h \
