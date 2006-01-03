@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.41 2005/08/24 17:27:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.42 2006/01/03 11:36:48 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -244,6 +244,7 @@ struct SCIP_Lp
    SCIP_Bool             probing;            /**< are we currently in probing mode? */
    SCIP_Bool             diving;             /**< LP is used for diving: col bounds and obj don't corresond to variables */
    SCIP_Bool             divingobjchg;       /**< objective values were changed in diving: LP objective is invalid */
+   SCIP_Bool             resolvelperror;     /**< an error occured during resolving the LP after diving or probing */
    SCIP_Bool             lpifromscratch;     /**< current FROMSCRATCH setting in LPI */
    SCIP_Bool             lpifastmip;         /**< current FASTMIP setting in LPI */
    SCIP_Bool             lpiscaling;         /**< current SCALING setting in LPI */

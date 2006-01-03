@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.212 2005/12/16 12:05:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.213 2006/01/03 11:36:48 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6112,6 +6112,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->diving = FALSE;
    (*lp)->divingobjchg = FALSE;
    (*lp)->divelpistate = NULL;
+   (*lp)->resolvelperror = FALSE;
    (*lp)->lpiuobjlim = SCIPsetInfinity(set);
    (*lp)->lpifeastol = SCIPsetFeastol(set);
    (*lp)->lpidualfeastol = SCIPsetDualfeastol(set);
@@ -11481,6 +11482,7 @@ SCIP_RETCODE SCIPlpEndDive(
    {
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles while resolving LP %d after diving\n", stat->nnodes, stat->nlps);
+      lp->resolvelperror = TRUE;
    }
 
    /* switch to standard (non-diving) mode */

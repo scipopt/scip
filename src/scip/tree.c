@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.164 2005/12/19 10:20:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.165 2006/01/03 11:36:49 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -2494,7 +2494,7 @@ SCIP_RETCODE focusnodeToFork(
    assert(tree->nchildren > 0);
    assert(lp != NULL);
    assert(lp->flushed);
-   assert(lp->solved);
+   assert(lp->solved || lp->resolvelperror);
 
    SCIPdebugMessage("focusnode %p to fork at depth %d\n", tree->focusnode, tree->focusnode->depth);
 
@@ -2502,7 +2502,7 @@ SCIP_RETCODE focusnodeToFork(
     * and we have to forget about the LP and transform the node into a junction (see below)
     */
    lperror = FALSE;
-   if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+   if( !lp->resolvelperror && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
    {
       /* clean up newly created part of LP to keep only necessary columns and rows */
       SCIP_CALL( SCIPlpCleanupNew(lp, blkmem, set, stat, (tree->focusnode->depth == 0)) );
@@ -2515,21 +2515,21 @@ SCIP_RETCODE focusnodeToFork(
       }
    }
    assert(lp->flushed);
-   assert(lp->solved || lperror);
+   assert(lp->solved || lperror || lp->resolvelperror);
 
    /* There are two reasons, that the (reduced) SCIP_LP is not solved to optimality:
     *  - The primal heuristics (called after the current node's LP was solved) found a new 
     *    solution, that is better than the current node's lower bound.
     *    (But in this case, all children should be cut off and the node should be converted
     *    into a deadend instead of a fork.)
-    *  - Something numerically weird happened after cleaning up.
+    *  - Something numerically weird happened after cleaning up or after resolving a diving or probing LP.
     * The only thing we can do, is to completely forget about the LP and treat the node as
     * if it was only a pseudo-solution node. Therefore we have to remove all additional
     * columns and rows from the LP and convert the node into a junction.
     * However, the node's lower bound is kept, thus automatically throwing away nodes that
     * were cut off due to a primal solution.
     */
-   if( lperror || SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
+   if( lperror || lp->resolvelperror || SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
    {
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %"SCIP_LONGINT_FORMAT") numerical troubles: LP %d not optimal -- convert node into junction instead of fork\n", 
@@ -2777,6 +2777,7 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(stat != NULL);
    assert(tree != NULL);
    assert(!SCIPtreeProbing(tree));
+   assert(lp != NULL);
    assert(cutoff != NULL);
 
    SCIPdebugMessage("focussing node %p of type %d in depth %d\n",
@@ -3022,6 +3023,7 @@ SCIP_RETCODE SCIPnodeFocus(
    tree->focuslpfork = lpfork;
    tree->focussubroot = subroot;
    tree->focuslpconstructed = FALSE;
+   lp->resolvelperror = FALSE;
 
    /* track the path from the old focus node to the new node, and perform domain and constraint set changes */
    SCIP_CALL( treeSwitchPath(tree, blkmem, set, stat, prob, primal, lp, branchcand, conflict, eventfilter, eventqueue, 
@@ -3806,6 +3808,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
             SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles while resolving LP %d after probing\n",
                stat->nnodes, stat->nlps);
+            lp->resolvelperror = TRUE;
          }
       }
    }

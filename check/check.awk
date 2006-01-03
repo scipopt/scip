@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.27 2005/09/27 15:08:17 bzfpfend Exp $
+# $Id: check.awk,v 1.28 2006/01/03 11:36:48 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -63,6 +63,8 @@ BEGIN {
     nodegeom = 1.0;
     timegeom = 1.0;
     sblpgeom = 1.0;
+    timeouttime = 0.0;
+    timeouts = 0;
     failtime = 0.0;
     fail = 0;
     pass = 0;
@@ -114,6 +116,7 @@ BEGIN {
     confliterals = 0.0;
     conftime = 0.0;
     overheadtime = 0.0;
+    aborted = 1;
 }
 /^SCIP> loaded parameter file/ { settings = $5; sub(/<settings\//, "", settings); sub(/.set>/, "", settings); }
 #
@@ -169,6 +172,7 @@ BEGIN {
 #
 # solution
 #
+/^SCIP Status        :/ { aborted = 0; }
 /solving was interrupted/  { timeout = 1; }
 /problem is solved/    { timeout = 0; }
 /^  Primal Bound     :/ {
@@ -241,8 +245,23 @@ BEGIN {
 #   printf("%-19s %6d %6d %14.9g %14.9g %6s %7d %6.1f ",
 #      shortprob, cons, vars, db, pb, gapstr, bbnodes, tottime);
    
-   if (sol[prob] == "")
-      printf("unknown\n");
+   if( aborted )
+   {
+      printf("abort\n");
+      failtime += tottime;
+      fail++;
+   }
+   else if (sol[prob] == "")
+   {
+      if (timeout)
+      {
+         printf("timeout\n");
+         timeouttime += tottime;
+         timeouts++;
+      }
+      else
+         printf("unknown\n");
+   }
    else
    {
       if( solfeasible[prob] )
@@ -250,11 +269,17 @@ BEGIN {
          if ((abs(pb - db) > 1e-4) || (abs(pb - sol[prob]) > 1e-6*max(abs(pb),1.0)))
          {
             if (timeout)
+            {
                printf("timeout\n");
+               timeouttime += tottime;
+               timeouts++;
+            }
             else
+            {
                printf("fail\n");
-            failtime += tottime;
-            fail++;
+               failtime += tottime;
+               fail++;
+            }
          }
          else
          {
@@ -267,11 +292,17 @@ BEGIN {
          if (feasible)
          {
             if (timeout)
+            {
                printf("timeout\n");
+               timeouttime += tottime;
+               timeouts++;
+            }
             else
+            {
                printf("fail\n");
-            failtime += tottime;
-            fail++;
+               failtime += tottime;
+               fail++;
+            }
          }
          else
          {
@@ -323,12 +354,12 @@ END {
 #    printf("------------------+-------+------+--------------+--------------+------+-------+------+-------\n");
     
     printf("\n");
-    printf("------------------------[Nodes]---------------[Time]-----------[Basic Time]-------[Overhead Time]-----[Conflict Time]-\n");
-    printf("  Cnt  Pass  Fail  total(k)     geom.     total     geom.     total     geom.     total     geom.     total     geom. \n");
-    printf("----------------------------------------------------------------------------------------------------------------------\n");
-    printf("%5d %5d %5d %9d %9.1f %9.1f %9.1f %9.1f %9.1f %9.1f %9.1f %9.1f %9.1f\n",
-       nprobs, pass, fail, sbab / 1000, nodegeom, stottime, timegeom, 
+    printf("------------------------------[Nodes]---------------[Time]-----------[Basic Time]-------[Overhead Time]-----[Conflict Time]-\n");
+    printf("  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom.     total     geom.     total     geom.     total     geom. \n");
+    printf("----------------------------------------------------------------------------------------------------------------------------\n");
+    printf("%5d %5d %5d %5d %9d %9.1f %9.1f %9.1f %9.1f %9.1f %9.1f %9.1f %9.1f %9.1f\n",
+       nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom, 
        stottime - conftottime - overheadtottime, basictimegeom,
        overheadtottime, overheadtimegeom, conftottime, conftimegeom);
-    printf("----------------------------------------------------------------------------------------------------------------------\n");
+    printf("----------------------------------------------------------------------------------------------------------------------------\n");
 }
