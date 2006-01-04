@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.203 2006/01/03 12:22:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.204 2006/01/04 16:26:47 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -530,7 +530,7 @@ SCIP_RETCODE updatePseudocost(
    actdepth = SCIPnodeGetDepth(focusnode);
    assert(tree->path[actdepth] == focusnode);
 
-   if( lp->solved && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && tree->focuslpfork != NULL )
+   if( lp->solved && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && tree->focuslpstatefork != NULL )
    {
       SCIP_BOUNDCHG** updates;
       SCIP_NODE* node;
@@ -542,13 +542,13 @@ SCIP_RETCODE updatePseudocost(
       int d;
       int i;
 
-      assert(SCIPnodeIsActive(tree->focuslpfork));
-      assert(tree->path[tree->focuslpfork->depth] == tree->focuslpfork);
+      assert(SCIPnodeIsActive(tree->focuslpstatefork));
+      assert(tree->path[tree->focuslpstatefork->depth] == tree->focuslpstatefork);
 
       /* get a buffer for the collected bound changes; start with a size twice as large as the number of nodes between
        * current node and LP fork
        */
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &updates, 2*(actdepth - tree->focuslpfork->depth)) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &updates, 2*(actdepth - tree->focuslpstatefork->depth)) );
       nupdates = 0;
       nvalidupdates = 0;
 
@@ -557,7 +557,7 @@ SCIP_RETCODE updatePseudocost(
        * attached; collect the bound changes for pseudo cost value updates and mark the corresponding variables such
        * that they are not updated twice in case of more than one bound change on the same variable
        */
-      for( d = tree->focuslpfork->depth+1; d <= actdepth; ++d )
+      for( d = tree->focuslpstatefork->depth+1; d <= actdepth; ++d )
       {
          node = tree->path[d];
 
@@ -599,7 +599,7 @@ SCIP_RETCODE updatePseudocost(
        * is equally spread on all bound changes that lead to valid pseudo cost updates
        */
       weight = nvalidupdates > 0 ? 1.0 / (SCIP_Real)nvalidupdates : 1.0;
-      lpgain = SCIPlpGetObjval(lp, set) - tree->focuslpfork->lowerbound;
+      lpgain = SCIPlpGetObjval(lp, set) - tree->focuslpstatefork->lowerbound;
       lpgain = MAX(lpgain, 0.0);
       for( i = 0; i < nupdates; ++i )
       {
@@ -611,7 +611,7 @@ SCIP_RETCODE updatePseudocost(
          {
             SCIPdebugMessage("updating pseudocosts of <%s>: sol: %g -> %g, LP: %e -> %e => gain=%g, weight: %g\n",
                SCIPvarGetName(var), updates[i]->data.branchingdata.lpsolval, SCIPvarGetLPSol(var),
-               tree->focuslpfork->lowerbound, SCIPlpGetObjval(lp, set), lpgain, weight);
+               tree->focuslpstatefork->lowerbound, SCIPlpGetObjval(lp, set), lpgain, weight);
             SCIP_CALL( SCIPvarUpdatePseudocost(var, set, stat,
                   SCIPvarGetLPSol(var) - updates[i]->data.branchingdata.lpsolval, lpgain, weight) );
          }
@@ -714,7 +714,7 @@ SCIP_RETCODE initRootLP(
    return SCIP_OKAY;
 }
 
-/** constructs the LP of the current node and loads the LP state and warmstart information  */
+/** constructs the LP of the current node, but does not load the LP state and warmstart information  */
 SCIP_RETCODE SCIPconstructCurrentLP(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -783,9 +783,14 @@ SCIP_RETCODE solveNodeInitialLP(
    *cutoff = FALSE;
    *lperror = FALSE;
 
-   /* load the LP into the solver and load the LP state */
+   /* load the LP into the solver */
    SCIP_CALL( SCIPconstructCurrentLP(blkmem, set, stat, prob, tree, lp, pricestore, sepastore, branchcand, eventqueue,
          cutoff) );
+   if( *cutoff )
+      return SCIP_OKAY;
+
+   /* load the LP state */
+   SCIP_CALL( SCIPtreeLoadLPState(tree, blkmem, set, stat, lp) );
 
    /* solve initial LP */
    SCIPdebugMessage("node: solve initial LP\n");
@@ -826,7 +831,7 @@ SCIP_RETCODE primalHeuristics(
    SCIP_Longint oldnbestsolsfound;
    int ndelayedheurs;
    int depth;
-   int lpforkdepth;
+   int lpstateforkdepth;
    int h;
 
    assert(set != NULL);
@@ -852,14 +857,14 @@ SCIP_RETCODE primalHeuristics(
       || SCIPnodeGetType(nextnode) == SCIP_NODETYPE_LEAF);
    plunging = (!nodesolved || SCIPnodeGetType(nextnode) != SCIP_NODETYPE_LEAF);
    depth = SCIPtreeGetFocusDepth(tree);
-   lpforkdepth = tree->focuslpfork != NULL ? SCIPnodeGetDepth(tree->focuslpfork) : -1;
+   lpstateforkdepth = tree->focuslpstatefork != NULL ? SCIPnodeGetDepth(tree->focuslpstatefork) : -1;
 
    /* call heuristics */
    ndelayedheurs = 0;
    oldnbestsolsfound = primal->nbestsolsfound;
    for( h = 0; h < set->nheurs; ++h )
    {
-      SCIP_CALL( SCIPheurExec(set->heurs[h], set, primal, depth, lpforkdepth, SCIPtreeHasFocusNodeLP(tree),
+      SCIP_CALL( SCIPheurExec(set->heurs[h], set, primal, depth, lpstateforkdepth, SCIPtreeHasFocusNodeLP(tree),
             plunging, nodesolved, inlploop, &ndelayedheurs, &result) );
    }
    assert(0 <= ndelayedheurs && ndelayedheurs <= set->nheurs);

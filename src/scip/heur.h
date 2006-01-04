@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.h,v 1.45 2006/01/03 12:22:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.h,v 1.46 2006/01/04 16:26:46 bzfpfend Exp $"
 
 /**@file   heur.h
  * @brief  internal methods for primal heuristics
@@ -106,7 +106,7 @@ SCIP_RETCODE SCIPheurExec(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PRIMAL*          primal,             /**< primal data */
    int                   depth,              /**< depth of current node */
-   int                   lpforkdepth,        /**< depth of the last node with solved LP */
+   int                   lpstateforkdepth,   /**< depth of the last node with solved LP */
    SCIP_Bool             currentnodehaslp,   /**< is LP being processed in the current node? */
    SCIP_Bool             plunging,           /**< is the next node to be processed a child or sibling? */
    SCIP_Bool             nodesolved,         /**< is the current node already solved? */

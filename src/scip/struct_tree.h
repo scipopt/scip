@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.29 2006/01/03 12:22:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.30 2006/01/04 16:26:47 bzfpfend Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -52,12 +52,22 @@ struct SCIP_Sibling
 /** leaf information (should not exceed the size of a pointer) */
 struct SCIP_Leaf
 {
-   SCIP_NODE*            lpfork;             /**< fork/subroot node defining the LP state of the leaf */
+   SCIP_NODE*            lpstatefork;        /**< fork/subroot node defining the LP state of the leaf */
 };
 
 /** fork without LP solution, where only bounds and constraints have been changed */
 struct SCIP_Junction
 {
+   int                   nchildren;          /**< number of children of this parent node */
+};
+
+/** fork without LP solution, where bounds and constraints have been changed, and rows and columns were added */
+struct SCIP_Pseudofork
+{
+   SCIP_COL**            addedcols;          /**< array with pointers to new columns added at this node into the LP */
+   SCIP_ROW**            addedrows;          /**< array with pointers to new rows added at this node into the LP */
+   int                   naddedcols;         /**< number of columns added at this node */
+   int                   naddedrows;         /**< number of rows added at this node */
    int                   nchildren;          /**< number of children of this parent node */
 };
 
@@ -97,6 +107,7 @@ struct SCIP_Node
       SCIP_CHILD         child;              /**< data for child nodes */
       SCIP_LEAF          leaf;               /**< data for leaf nodes */
       SCIP_JUNCTION      junction;           /**< data for junction nodes */
+      SCIP_PSEUDOFORK*   pseudofork;         /**< data for pseudo fork nodes */
       SCIP_FORK*         fork;               /**< data for fork nodes */
       SCIP_SUBROOT*      subroot;            /**< data for subroot nodes */
    } data;
@@ -123,7 +134,8 @@ struct SCIP_Tree
                                               *   siblings in the tree data structure; the focus node is the currently
                                               *   processed node; it doesn't need to be active all the time, because it
                                               *   may be cut off and the active path stops at the cut off node */
-   SCIP_NODE*            focuslpfork;        /**< LP defining fork/subroot of the focus node */
+   SCIP_NODE*            focuslpfork;        /**< LP defining pseudofork/fork/subroot of the focus node */
+   SCIP_NODE*            focuslpstatefork;   /**< LP state defining fork/subroot of the focus node */
    SCIP_NODE*            focussubroot;       /**< subroot of the focus node's sub tree */
    SCIP_NODE*            probingroot;        /**< root node of the current probing path, or NULL */
    SCIP_NODE**           children;           /**< array with children of the focus node */
@@ -135,7 +147,7 @@ struct SCIP_Tree
    int*                  pathnlprows;        /**< array with number of LP rows for each problem in active path (except
                                               *   newly added rows of the focus node) */
    SCIP_LPISTATE*        probinglpistate;    /**< LP state information before probing started */
-   int                   focuslpforklpcount; /**< LP number of last solved LP in current LP fork, or -1 if unknown */
+   int                   focuslpstateforklpcount; /**< LP number of last solved LP in current LP state fork, or -1 if unknown */
    int                   childrensize;       /**< available slots in children vector */
    int                   nchildren;          /**< number of children of focus node (number of used slots in children vector) */
    int                   siblingssize;       /**< available slots in siblings vector */
@@ -147,6 +159,7 @@ struct SCIP_Tree
    int                   repropdepth;        /**< depth of first node in active path that has to be propagated again */
    int                   repropsubtreecount; /**< cyclicly increased counter to create markers for subtree repropagation */
    SCIP_Bool             focusnodehaslp;     /**< is LP being processed in the focus node? */
+   SCIP_Bool             focusnodekeepslp;   /**< should the LP extensions being kept, even if the LP was not solved? */
    SCIP_Bool             probingnodehaslp;   /**< was the LP solved (at least once) in the current probing node? */
    SCIP_Bool             focuslpconstructed; /**< was the LP of the focus node already constructed? */
    SCIP_Bool             cutoffdelayed;      /**< the treeCutoff() call was delayed because of diving and has to be executed */

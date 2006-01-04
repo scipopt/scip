@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.86 2006/01/03 12:22:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.87 2006/01/04 16:26:47 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -335,7 +335,7 @@ SCIP_RETCODE SCIPtreeCutoff(
    SCIP_Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    );
 
-/** constructs the LP and loads LP state for fork/subroot of the focus node */
+/** constructs the LP relaxation of the focus node */
 extern
 SCIP_RETCODE SCIPtreeLoadLP(
    SCIP_TREE*            tree,               /**< branch and bound tree */
@@ -344,6 +344,16 @@ SCIP_RETCODE SCIPtreeLoadLP(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool*            initroot            /**< pointer to store whether the root LP relaxation has to be initialized */
+   );
+
+/** loads LP state for fork/subroot of the focus node */
+extern
+SCIP_RETCODE SCIPtreeLoadLPState(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_LP*              lp                  /**< current LP data */
    );
 
 /** branches on a variable; if solution value x' is fractional, two child nodes are created
@@ -491,6 +501,12 @@ void SCIPtreeSetFocusNodeLP(
    SCIP_Bool             solvelp             /**< should the LP be solved in focus node? */
    );
 
+/** marks the focus node to keep the LP extensions, even if the LP was not solved */
+extern
+void SCIPtreeKeepFocusNodeLP(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   );
+
 /** marks the probing node to have a solved LP relaxation */
 extern
 void SCIPtreeMarkProbingNodeHasLP(
@@ -540,6 +556,7 @@ SCIP_Bool SCIPtreeHasCurrentNodeLP(
 #define SCIPtreeGetFocusDepth(tree)     ((tree)->focusnode != NULL ? (tree)->focusnode->depth : -1)
 #define SCIPtreeHasFocusNodeLP(tree)    (tree)->focusnodehaslp
 #define SCIPtreeSetFocusNodeLP(tree,solvelp)  ((tree)->focusnodehaslp = solvelp)
+#define SCIPtreeKeepFocusNodeLP(tree)   ((tree)->focusnodekeepslp = TRUE)
 #define SCIPtreeMarkProbingNodeHasLP(tree) ((tree)->probingnodehaslp = TRUE)
 #define SCIPtreeIsFocusNodeLPConstructed(tree) (tree)->focuslpconstructed
 #define SCIPtreeGetCurrentNode(tree)    ((tree)->pathlen > 0 ? (tree)->path[(tree)->pathlen-1] : NULL)

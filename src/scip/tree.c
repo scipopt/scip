@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.166 2006/01/03 12:22:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.167 2006/01/04 16:26:47 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -267,8 +267,91 @@ SCIP_RETCODE junctionInit(
    junction->nchildren = tree->nchildren;
 
    /* increase the LPI state usage counter of the current LP fork */
-   if( tree->focuslpfork != NULL )
-      SCIPnodeCaptureLPIState(tree->focuslpfork, tree->nchildren);
+   if( tree->focuslpstatefork != NULL )
+      SCIPnodeCaptureLPIState(tree->focuslpstatefork, tree->nchildren);
+
+   return SCIP_OKAY;
+}
+
+/** creates pseudofork data */
+static
+SCIP_RETCODE pseudoforkCreate(
+   SCIP_PSEUDOFORK**     pseudofork,         /**< pointer to pseudofork data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   assert(pseudofork != NULL);
+   assert(blkmem != NULL);
+   assert(tree != NULL);
+   assert(tree->nchildren > 0);
+   assert(SCIPtreeIsPathComplete(tree));
+   assert(tree->focusnode != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, pseudofork) );
+
+   (*pseudofork)->addedcols = NULL;
+   (*pseudofork)->addedrows = NULL;
+   (*pseudofork)->naddedcols = SCIPlpGetNNewcols(lp);
+   (*pseudofork)->naddedrows = SCIPlpGetNNewrows(lp);
+   (*pseudofork)->nchildren = tree->nchildren;
+
+   SCIPdebugMessage("creating pseudofork information with %d children (%d new cols, %d new rows)\n",
+      (*pseudofork)->nchildren, (*pseudofork)->naddedcols, (*pseudofork)->naddedrows);
+
+   if( (*pseudofork)->naddedcols > 0 )
+   {
+      /* copy the newly created columns to the pseudofork's col array */
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*pseudofork)->addedcols, SCIPlpGetNewcols(lp),
+            (*pseudofork)->naddedcols) );
+   }
+   if( (*pseudofork)->naddedrows > 0 )
+   {
+      int i;
+      
+      /* copy the newly created rows to the pseudofork's row array */
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*pseudofork)->addedrows, SCIPlpGetNewrows(lp),
+            (*pseudofork)->naddedrows) );
+
+      /* capture the added rows */
+      for( i = 0; i < (*pseudofork)->naddedrows; ++i )
+         SCIProwCapture((*pseudofork)->addedrows[i]);
+   }
+
+   /* increase the LPI state usage counter of the current LP fork */
+   if( tree->focuslpstatefork != NULL )
+      SCIPnodeCaptureLPIState(tree->focuslpstatefork, tree->nchildren);
+
+   return SCIP_OKAY;
+}
+
+/** frees pseudofork data */
+static
+SCIP_RETCODE pseudoforkFree(
+   SCIP_PSEUDOFORK**     pseudofork,         /**< pseudofork data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   int i;
+
+   assert(pseudofork != NULL);
+   assert(*pseudofork != NULL);
+   assert((*pseudofork)->nchildren == 0);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+
+   /* release the added rows */
+   for( i = 0; i < (*pseudofork)->naddedrows; ++i )
+   {
+      SCIP_CALL( SCIProwRelease(&(*pseudofork)->addedrows[i], blkmem, set, lp) );
+   }
+
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*pseudofork)->addedcols, (*pseudofork)->naddedcols);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*pseudofork)->addedrows, (*pseudofork)->naddedrows);
+   BMSfreeBlockMemory(blkmem, pseudofork);
 
    return SCIP_OKAY;
 }
@@ -634,6 +717,12 @@ SCIP_RETCODE nodeReleaseParent(
          parent->data.junction.nchildren--;
          freeParent = (parent->data.junction.nchildren == 0); /* free parent if it has no more children */
          break;
+      case SCIP_NODETYPE_PSEUDOFORK:
+         assert(parent->data.pseudofork != NULL);
+         assert(parent->data.pseudofork->nchildren > 0);
+         parent->data.pseudofork->nchildren--;
+         freeParent = (parent->data.pseudofork->nchildren == 0); /* free parent if it has no more children */
+         break;
       case SCIP_NODETYPE_FORK:
          assert(parent->data.fork != NULL);
          assert(parent->data.fork->nchildren > 0);
@@ -778,11 +867,11 @@ SCIP_RETCODE SCIPnodeFree(
       assert((*node)->data.sibling.arraypos >= 0);
       assert((*node)->data.sibling.arraypos < tree->nsiblings);
       assert(tree->siblings[(*node)->data.sibling.arraypos] == *node);
-      if( tree->focuslpfork != NULL )
+      if( tree->focuslpstatefork != NULL )
       {
-         assert(SCIPnodeGetType(tree->focuslpfork) == SCIP_NODETYPE_FORK
-            || SCIPnodeGetType(tree->focuslpfork) == SCIP_NODETYPE_SUBROOT);
-         SCIP_CALL( SCIPnodeReleaseLPIState(tree->focuslpfork, blkmem, lp) );
+         assert(SCIPnodeGetType(tree->focuslpstatefork) == SCIP_NODETYPE_FORK
+            || SCIPnodeGetType(tree->focuslpstatefork) == SCIP_NODETYPE_SUBROOT);
+         SCIP_CALL( SCIPnodeReleaseLPIState(tree->focuslpstatefork, blkmem, lp) );
       }
       treeRemoveSibling(tree, *node);
       break;
@@ -791,20 +880,23 @@ SCIP_RETCODE SCIPnodeFree(
       assert((*node)->data.child.arraypos < tree->nchildren);
       assert(tree->children[(*node)->data.child.arraypos] == *node);
       /* The children capture the LPI state at the moment, where the focus node is
-       * converted into a junction, fork, or subroot, and a new node is focused.
+       * converted into a junction, pseudofork, fork, or subroot, and a new node is focused.
        * At the same time, they become siblings or leaves, such that freeing a child
        * of the focus node doesn't require to release the LPI state;
        * we don't need to call treeRemoveChild(), because this is done in nodeReleaseParent()
        */
       break;
    case SCIP_NODETYPE_LEAF:
-      if( (*node)->data.leaf.lpfork != NULL )
+      if( (*node)->data.leaf.lpstatefork != NULL )
       {
-         SCIP_CALL( SCIPnodeReleaseLPIState((*node)->data.leaf.lpfork, blkmem, lp) );
+         SCIP_CALL( SCIPnodeReleaseLPIState((*node)->data.leaf.lpstatefork, blkmem, lp) );
       }
       break;
    case SCIP_NODETYPE_DEADEND:
    case SCIP_NODETYPE_JUNCTION:
+      break;
+   case SCIP_NODETYPE_PSEUDOFORK:
+      SCIP_CALL( pseudoforkFree(&((*node)->data.pseudofork), blkmem, set, lp) );
       break;
    case SCIP_NODETYPE_FORK:
       SCIP_CALL( forkFree(&((*node)->data.fork), blkmem, set, lp) );
@@ -953,8 +1045,9 @@ SCIP_RETCODE nodeRepropagate(
    SCIP_NODETYPE oldtype;
    SCIP_NODE* oldfocusnode;
    SCIP_NODE* oldfocuslpfork;
+   SCIP_NODE* oldfocuslpstatefork;
    SCIP_NODE* oldfocussubroot;
-   int oldfocuslpforklpcount;
+   int oldfocuslpstateforklpcount;
    int oldnchildren;
    int oldnsiblings;
    SCIP_Bool oldfocusnodehaslp;
@@ -965,6 +1058,7 @@ SCIP_RETCODE nodeRepropagate(
    assert(node != NULL);
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_FOCUSNODE
       || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_JUNCTION
+      || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_PSEUDOFORK
       || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_FORK
       || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_SUBROOT);
    assert(node->active);
@@ -991,16 +1085,18 @@ SCIP_RETCODE nodeRepropagate(
    oldtype = (SCIP_NODETYPE)node->nodetype;
    oldfocusnode = tree->focusnode;
    oldfocuslpfork = tree->focuslpfork;
+   oldfocuslpstatefork = tree->focuslpstatefork;
    oldfocussubroot = tree->focussubroot;
-   oldfocuslpforklpcount = tree->focuslpforklpcount;
+   oldfocuslpstateforklpcount = tree->focuslpstateforklpcount;
    oldnchildren = tree->nchildren;
    oldnsiblings = tree->nsiblings;
    oldfocusnodehaslp = tree->focusnodehaslp;
    node->nodetype = SCIP_NODETYPE_REFOCUSNODE; /*lint !e641*/
    tree->focusnode = node;
    tree->focuslpfork = NULL;
+   tree->focuslpstatefork = NULL;
    tree->focussubroot = NULL;
-   tree->focuslpforklpcount = -1;
+   tree->focuslpstateforklpcount = -1;
    tree->nchildren = 0;
    tree->nsiblings = 0;
    tree->focusnodehaslp = FALSE;
@@ -1013,8 +1109,9 @@ SCIP_RETCODE nodeRepropagate(
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_REFOCUSNODE);
    assert(tree->focusnode == node);
    assert(tree->focuslpfork == NULL);
+   assert(tree->focuslpstatefork == NULL);
    assert(tree->focussubroot == NULL);
-   assert(tree->focuslpforklpcount == -1);
+   assert(tree->focuslpstateforklpcount == -1);
    assert(tree->nchildren == 0);
    assert(tree->nsiblings == 0);
    assert(tree->focusnodehaslp == FALSE);
@@ -1043,8 +1140,9 @@ SCIP_RETCODE nodeRepropagate(
    node->nodetype = oldtype; /*lint !e641*/
    tree->focusnode = oldfocusnode;
    tree->focuslpfork = oldfocuslpfork;
+   tree->focuslpstatefork = oldfocuslpstatefork;
    tree->focussubroot = oldfocussubroot;
-   tree->focuslpforklpcount = oldfocuslpforklpcount;
+   tree->focuslpstateforklpcount = oldfocuslpstateforklpcount;
    tree->nchildren = oldnchildren;
    tree->nsiblings = oldnsiblings;
    tree->focusnodehaslp = oldfocusnodehaslp;
@@ -1354,11 +1452,11 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
 
       /* get the solution value of variable in last solved LP on the active path:
        *  - if the LP was solved at the current node, the LP values of the columns are valid
-       *  - if the last solved LP was the one in the current lpfork, the LP value in the columns are still valid
+       *  - if the last solved LP was the one in the current lpstatefork, the LP value in the columns are still valid
        *  - otherwise, the LP values are invalid
        */
       if( SCIPtreeHasCurrentNodeLP(tree)
-         || (tree->focuslpforklpcount == stat->lpcount && SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN) )
+         || (tree->focuslpstateforklpcount == stat->lpcount && SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN) )
       {
          lpsolval = SCIPvarGetLPSol(var);
       }
@@ -1688,6 +1786,11 @@ void treeUpdatePathLPSize(
          SCIPABORT();
       case SCIP_NODETYPE_JUNCTION:
          break;
+      case SCIP_NODETYPE_PSEUDOFORK:
+         assert(node->data.pseudofork != NULL);
+         ncols += node->data.pseudofork->naddedcols;
+         nrows += node->data.pseudofork->naddedrows;
+         break;
       case SCIP_NODETYPE_FORK:
          assert(node->data.fork != NULL);
          ncols += node->data.fork->naddedcols;
@@ -1710,7 +1813,7 @@ void treeUpdatePathLPSize(
    }
 }
 
-/** finds the common fork node, the new LP defining fork, and the new focus subroot, if the path is switched to
+/** finds the common fork node, the new LP state defining fork, and the new focus subroot, if the path is switched to
  *  the given node
  */
 static
@@ -1719,6 +1822,7 @@ void treeFindSwitchForks(
    SCIP_NODE*            node,               /**< new focus node, or NULL */
    SCIP_NODE**           commonfork,         /**< pointer to store common fork node of old and new focus node */
    SCIP_NODE**           newlpfork,          /**< pointer to store the new LP defining fork node */
+   SCIP_NODE**           newlpstatefork,     /**< pointer to store the new LP state defining fork node */
    SCIP_NODE**           newsubroot,         /**< pointer to store the new subroot node */
    SCIP_Bool*            cutoff              /**< pointer to store whether the given node can be cut off and no path switching
                                               *   should be performed */
@@ -1726,6 +1830,7 @@ void treeFindSwitchForks(
 {
    SCIP_NODE* fork;
    SCIP_NODE* lpfork;
+   SCIP_NODE* lpstatefork;
    SCIP_NODE* subroot;
 
    assert(tree != NULL);
@@ -1733,8 +1838,10 @@ void treeFindSwitchForks(
    assert((tree->focusnode == NULL) == !tree->root->active);
    assert(tree->focuslpfork == NULL || tree->focusnode != NULL);
    assert(tree->focuslpfork == NULL || tree->focuslpfork->depth < tree->focusnode->depth);
-   assert(tree->focussubroot == NULL || tree->focuslpfork != NULL);
-   assert(tree->focussubroot == NULL || tree->focussubroot->depth <= tree->focuslpfork->depth);
+   assert(tree->focuslpstatefork == NULL || tree->focuslpfork != NULL);
+   assert(tree->focuslpstatefork == NULL || tree->focuslpstatefork->depth <= tree->focuslpfork->depth);
+   assert(tree->focussubroot == NULL || tree->focuslpstatefork != NULL);
+   assert(tree->focussubroot == NULL || tree->focussubroot->depth <= tree->focuslpstatefork->depth);
    assert(tree->cutoffdepth >= 0);
    assert(tree->cutoffdepth == INT_MAX || tree->cutoffdepth < tree->pathlen);
    assert(tree->cutoffdepth == INT_MAX || tree->path[tree->cutoffdepth]->cutoff);
@@ -1743,15 +1850,19 @@ void treeFindSwitchForks(
    assert(tree->repropdepth == INT_MAX || tree->path[tree->repropdepth]->reprop);
    assert(commonfork != NULL);
    assert(newlpfork != NULL);
+   assert(newlpstatefork != NULL);
    assert(newsubroot != NULL);
    assert(cutoff != NULL);
 
    *commonfork = NULL;
    *newlpfork = NULL;
+   *newlpstatefork = NULL;
    *newsubroot = NULL;
    *cutoff = FALSE;
 
-   /* if the new focus node is NULL, there is no common fork node, and the new LP fork and subroot are NULL */
+   /* if the new focus node is NULL, there is no common fork node, and the new LP fork, LP state fork, and subroot
+    * are NULL
+    */
    if( node == NULL )
    {
       tree->cutoffdepth = INT_MAX;
@@ -1766,7 +1877,9 @@ void treeFindSwitchForks(
       return;
    }
 
-   /* if the old focus node is NULL, there is no common fork node, and we have to search the new LP fork and subroot */
+   /* if the old focus node is NULL, there is no common fork node, and we have to search the new LP fork, LP state fork
+    * and subroot
+    */
    if( tree->focusnode == NULL )
    {
       assert(!tree->root->active);
@@ -1775,7 +1888,8 @@ void treeFindSwitchForks(
       assert(tree->repropdepth == INT_MAX);
 
       lpfork = node;
-      while( SCIPnodeGetType(lpfork) != SCIP_NODETYPE_FORK && SCIPnodeGetType(lpfork) != SCIP_NODETYPE_SUBROOT )
+      while( SCIPnodeGetType(lpfork) != SCIP_NODETYPE_PSEUDOFORK
+         && SCIPnodeGetType(lpfork) != SCIP_NODETYPE_FORK && SCIPnodeGetType(lpfork) != SCIP_NODETYPE_SUBROOT )
       {
          lpfork = lpfork->parent;
          if( lpfork == NULL )
@@ -1788,7 +1902,21 @@ void treeFindSwitchForks(
       }
       *newlpfork = lpfork;
 
-      subroot = lpfork;
+      lpstatefork = lpfork;
+      while( SCIPnodeGetType(lpstatefork) != SCIP_NODETYPE_FORK && SCIPnodeGetType(lpstatefork) != SCIP_NODETYPE_SUBROOT )
+      {
+         lpstatefork = lpstatefork->parent;
+         if( lpstatefork == NULL )
+            return;
+         if( lpstatefork->cutoff )
+         {
+            *cutoff = TRUE;
+            return;
+         }
+      }
+      *newlpstatefork = lpstatefork;
+
+      subroot = lpstatefork;
       while( SCIPnodeGetType(subroot) != SCIP_NODETYPE_SUBROOT )
       {
          subroot = subroot->parent;
@@ -1815,9 +1943,10 @@ void treeFindSwitchForks(
       return;
    }
 
-   /* find the common fork node, the new LP defining fork, and the new focus subroot */
+   /* find the common fork node, the new LP defining fork, the new LP state defining fork, and the new focus subroot */
    fork = node;
    lpfork = NULL;
+   lpstatefork = NULL;
    subroot = NULL;
    while( !fork->active )
    {
@@ -1830,13 +1959,18 @@ void treeFindSwitchForks(
          return;
       }
       if( lpfork == NULL
-         && (SCIPnodeGetType(fork) == SCIP_NODETYPE_FORK || SCIPnodeGetType(fork) == SCIP_NODETYPE_SUBROOT) )
+         && (SCIPnodeGetType(fork) == SCIP_NODETYPE_PSEUDOFORK
+            || SCIPnodeGetType(fork) == SCIP_NODETYPE_FORK || SCIPnodeGetType(fork) == SCIP_NODETYPE_SUBROOT) )
          lpfork = fork;
+      if( lpstatefork == NULL
+         && (SCIPnodeGetType(fork) == SCIP_NODETYPE_FORK || SCIPnodeGetType(fork) == SCIP_NODETYPE_SUBROOT) )
+         lpstatefork = fork;
       if( subroot == NULL && SCIPnodeGetType(fork) == SCIP_NODETYPE_SUBROOT )
          subroot = fork;
    }
    assert(fork != NULL);
    assert(lpfork == NULL || !lpfork->active || lpfork == fork);
+   assert(lpstatefork == NULL || !lpstatefork->active || lpstatefork == fork);
    assert(subroot == NULL || !subroot->active || subroot == fork);
    SCIPdebugMessage("find switch forks: forkdepth=%d\n", fork->depth);
 
@@ -1865,6 +1999,7 @@ void treeFindSwitchForks(
          /* focuslpfork is not on the same active path as the new node: we have to continue searching */
          lpfork = fork;
          while( lpfork != NULL
+            && SCIPnodeGetType(lpfork) != SCIP_NODETYPE_PSEUDOFORK
             && SCIPnodeGetType(lpfork) != SCIP_NODETYPE_FORK
             && SCIPnodeGetType(lpfork) != SCIP_NODETYPE_SUBROOT )
          {
@@ -1881,17 +2016,56 @@ void treeFindSwitchForks(
       assert(lpfork == NULL || lpfork->active);
    }
    assert(lpfork == NULL
+      || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_PSEUDOFORK
       || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_FORK
       || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_SUBROOT);
    SCIPdebugMessage("find switch forks: lpforkdepth=%d\n", lpfork == NULL ? -1 : (int)(lpfork->depth));
 
-   /* if not already found, continue searching the subroot; it cannot be deeper than the LP fork and common fork */
+   /* if not already found, continue searching the LP state defining fork; it can not be deeper than the
+    * LP defining fork and the common fork
+    */
+   if( lpstatefork == NULL )
+   {
+      if( tree->focuslpstatefork != NULL && (int)(tree->focuslpstatefork->depth) > fork->depth )
+      {
+         /* focuslpstatefork is not on the same active path as the new node: we have to continue searching */
+         if( lpfork != NULL && lpfork->depth < fork->depth )
+            lpstatefork = lpfork;
+         else
+            lpstatefork = fork;
+         while( lpstatefork != NULL
+            && SCIPnodeGetType(lpstatefork) != SCIP_NODETYPE_FORK
+            && SCIPnodeGetType(lpstatefork) != SCIP_NODETYPE_SUBROOT )
+         {
+            assert(lpstatefork->active);
+            lpstatefork = lpstatefork->parent;
+         }
+      }
+      else
+      {
+         /* focuslpstatefork is on the same active path as the new node: old and new node have the same lpstatefork */
+         lpstatefork = tree->focuslpstatefork;
+      }
+      assert(lpstatefork == NULL || (int)(lpstatefork->depth) <= fork->depth);
+      assert(lpstatefork == NULL || lpstatefork->active);
+   }
+   assert(lpstatefork == NULL
+      || SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_FORK
+      || SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_SUBROOT);
+   assert(lpstatefork == NULL || (lpfork != NULL && lpstatefork->depth <= lpfork->depth));
+   SCIPdebugMessage("find switch forks: lpstateforkdepth=%d\n", lpstatefork == NULL ? -1 : (int)(lpstatefork->depth));
+
+   /* if not already found, continue searching the subroot; it cannot be deeper than the LP defining fork, the
+    * LP state fork and the common fork
+    */
    if( subroot == NULL )
    {
       if( tree->focussubroot != NULL && (int)(tree->focussubroot->depth) > fork->depth )
       {
          /* focussubroot is not on the same active path as the new node: we have to continue searching */
-         if( lpfork != NULL && lpfork->depth < fork->depth )
+         if( lpstatefork != NULL && lpstatefork->depth < fork->depth )
+            subroot = lpstatefork;
+         else if( lpfork != NULL && lpfork->depth < fork->depth )
             subroot = lpfork;
          else
             subroot = fork;
@@ -1907,7 +2081,7 @@ void treeFindSwitchForks(
       assert(subroot == NULL || subroot->active);
    }
    assert(subroot == NULL || SCIPnodeGetType(subroot) == SCIP_NODETYPE_SUBROOT);
-   assert(subroot == NULL || (lpfork != NULL && subroot->depth <= lpfork->depth));
+   assert(subroot == NULL || (lpstatefork != NULL && subroot->depth <= lpstatefork->depth));
    SCIPdebugMessage("find switch forks: subrootdepth=%d\n", subroot == NULL ? -1 : (int)(subroot->depth));
 
    /* if a node prior to the common fork should be repropagated, we select the node to be repropagated as common
@@ -1923,6 +2097,7 @@ void treeFindSwitchForks(
 
    *commonfork = fork;
    *newlpfork = lpfork;
+   *newlpstatefork = lpstatefork;
    *newsubroot = subroot;
 
 #ifndef NDEBUG
@@ -1957,7 +2132,7 @@ SCIP_RETCODE treeSwitchPath(
    )
 {
    int focusnodedepth;  /* depth of the new focus node, or -1 if focusnode == NULL */
-   int forkdepth;       /* depth of the common subroot/fork/junction node, or -1 if no common fork exists */
+   int forkdepth;       /* depth of the common subroot/fork/pseudofork/junction node, or -1 if no common fork exists */
    int i;
 
    assert(tree != NULL);
@@ -1971,7 +2146,7 @@ SCIP_RETCODE treeSwitchPath(
    
    SCIPdebugMessage("switch path: old pathlen=%d\n", tree->pathlen);   
 
-   /* get the nodes' depth's */
+   /* get the nodes' depths */
    focusnodedepth = (focusnode != NULL ? (int)focusnode->depth : -1);
    forkdepth = (fork != NULL ? (int)fork->depth : -1);
    assert(forkdepth <= focusnodedepth);
@@ -2130,6 +2305,49 @@ SCIP_RETCODE forkAddLP(
    return SCIP_OKAY;
 }
 
+/** loads the pseudofork's additional LP data */
+static
+SCIP_RETCODE pseudoforkAddLP(
+   SCIP_NODE*            pseudofork,         /**< pseudofork node to construct additional LP for */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   SCIP_COL** cols;
+   SCIP_ROW** rows;
+   int ncols;
+   int nrows;
+   int c;
+   int r;
+
+   assert(pseudofork != NULL);
+   assert(SCIPnodeGetType(pseudofork) == SCIP_NODETYPE_PSEUDOFORK);
+   assert(pseudofork->data.pseudofork != NULL);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(lp != NULL);
+
+   cols = pseudofork->data.pseudofork->addedcols;
+   rows = pseudofork->data.pseudofork->addedrows;
+   ncols = pseudofork->data.pseudofork->naddedcols;
+   nrows = pseudofork->data.pseudofork->naddedrows;
+
+   assert(ncols == 0 || cols != NULL);
+   assert(nrows == 0 || rows != NULL);
+   
+   for( c = 0; c < ncols; ++c )
+   {
+      SCIP_CALL( SCIPlpAddCol(lp, set, cols[c], pseudofork->depth) );
+   }
+   for( r = 0; r < nrows; ++r )
+   {
+      SCIP_CALL( SCIPlpAddRow(lp, set, rows[r], pseudofork->depth) );
+   }
+
+   return SCIP_OKAY;
+}
+
 #ifndef NDEBUG
 /** checks validity of active path */
 static
@@ -2156,6 +2374,10 @@ void treeCheckPath(
       {  
       case SCIP_NODETYPE_JUNCTION:
          break;
+      case SCIP_NODETYPE_PSEUDOFORK:
+         ncols += node->data.pseudofork->naddedcols;
+         nrows += node->data.pseudofork->naddedrows;
+         break;
       case SCIP_NODETYPE_FORK:
          ncols += node->data.fork->naddedcols;
          nrows += node->data.fork->naddedrows;
@@ -2172,7 +2394,7 @@ void treeCheckPath(
          assert(SCIPtreeProbing(tree));
          break;
       default:
-         SCIPerrorMessage("node at depth %d on active path has to be of type FORK, SUBROOT, FOCUSNODE, REFOCUSNODE, or PROBINGNODE, but is %d\n",
+         SCIPerrorMessage("node at depth %d on active path has to be of type JUNCTION, PSEUDOFORK, FORK, SUBROOT, FOCUSNODE, REFOCUSNODE, or PROBINGNODE, but is %d\n",
             d, SCIPnodeGetType(node));
          SCIPABORT();
       }  /*lint !e788*/
@@ -2184,7 +2406,7 @@ void treeCheckPath(
 #define treeCheckPath(tree) /**/
 #endif
 
-/** constructs the LP and loads LP state for fork/subroot of the focus node */
+/** constructs the LP relaxation of the focus node */
 SCIP_RETCODE SCIPtreeLoadLP(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
@@ -2195,7 +2417,6 @@ SCIP_RETCODE SCIPtreeLoadLP(
    )
 {
    SCIP_NODE* lpfork;
-   SCIP_NODE* pathnode;
    int lpforkdepth;
    int d;
 
@@ -2229,12 +2450,14 @@ SCIP_RETCODE SCIPtreeLoadLP(
    {
       assert(tree->correctlpdepth == -1 || tree->pathnlpcols[tree->correctlpdepth] == 0);
       assert(tree->correctlpdepth == -1 || tree->pathnlprows[tree->correctlpdepth] == 0);
+      assert(tree->focuslpstatefork == NULL);
       assert(tree->focussubroot == NULL);
       lpforkdepth = -1;
    }
    else
    {
-      assert(SCIPnodeGetType(lpfork) == SCIP_NODETYPE_FORK || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_SUBROOT);
+      assert(SCIPnodeGetType(lpfork) == SCIP_NODETYPE_PSEUDOFORK
+         || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_FORK || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_SUBROOT);
       assert(lpfork->active);
       assert(tree->path[lpfork->depth] == lpfork);
       lpforkdepth = lpfork->depth;
@@ -2268,13 +2491,21 @@ SCIP_RETCODE SCIPtreeLoadLP(
    /* add the missing columns and rows */
    for( d = tree->correctlpdepth+1; d <= lpforkdepth; ++d )
    {
+      SCIP_NODE* pathnode;
+
       pathnode = tree->path[d];
       assert(pathnode != NULL);
       assert((int)(pathnode->depth) == d);
-      assert(SCIPnodeGetType(pathnode) == SCIP_NODETYPE_JUNCTION || SCIPnodeGetType(pathnode) == SCIP_NODETYPE_FORK);
+      assert(SCIPnodeGetType(pathnode) == SCIP_NODETYPE_JUNCTION
+         || SCIPnodeGetType(pathnode) == SCIP_NODETYPE_PSEUDOFORK
+         || SCIPnodeGetType(pathnode) == SCIP_NODETYPE_FORK);
       if( SCIPnodeGetType(pathnode) == SCIP_NODETYPE_FORK )
       {
          SCIP_CALL( forkAddLP(pathnode, blkmem, set, lp) );
+      }
+      else if( SCIPnodeGetType(pathnode) == SCIP_NODETYPE_PSEUDOFORK )
+      {
+         SCIP_CALL( pseudoforkAddLP(pathnode, blkmem, set, lp) );
       }
    }
    tree->correctlpdepth = MAX(tree->correctlpdepth, lpforkdepth);
@@ -2285,52 +2516,104 @@ SCIP_RETCODE SCIPtreeLoadLP(
    assert(lpforkdepth >= 0 || SCIPlpGetNCols(lp) == 0);
    assert(lpforkdepth >= 0 || SCIPlpGetNRows(lp) == 0);
 
-   /* load LP state, if existing */
-   if( lpfork != NULL )
-   {
-      if( tree->focuslpforklpcount != stat->lpcount )
-      {
-         if( SCIPnodeGetType(lpfork) == SCIP_NODETYPE_FORK )
-         {
-            assert(lpfork->data.fork != NULL);
-            SCIP_CALL( SCIPlpSetState(lp, blkmem, set, lpfork->data.fork->lpistate) );
-         }
-         else
-         {
-            assert(SCIPnodeGetType(lpfork) == SCIP_NODETYPE_SUBROOT);
-            assert(lpfork->data.subroot != NULL);
-            SCIP_CALL( SCIPlpSetState(lp, blkmem, set, lpfork->data.subroot->lpistate) );
-         }
-         assert(lp->primalfeasible);
-         assert(lp->dualfeasible);
-      }
-      else
-      {
-         lp->primalfeasible = TRUE;
-         lp->dualfeasible = TRUE;
-      }
-
-      /* check the path from LP fork to focus node for domain changes (destroying primal feasibility of LP basis) */
-      for( d = lpforkdepth; d < (int)(tree->focusnode->depth) && lp->primalfeasible; ++d )
-      {
-         assert(d < tree->pathlen);
-         lp->primalfeasible = lp->primalfeasible
-            && (tree->path[d]->domchg == NULL || tree->path[d]->domchg->domchgbound.nboundchgs == 0);
-      }
-   }
-
    /* mark the LP's size, such that we know which rows and columns were added in the new node */
    SCIPlpMarkSize(lp);
 
    SCIPdebugMessage("-> new correctlpdepth: %d\n", tree->correctlpdepth);
-   SCIPdebugMessage("-> new LP has %d cols and %d rows, primalfeasible=%d, dualfeasible=%d\n", 
-      SCIPlpGetNCols(lp), SCIPlpGetNRows(lp), lp->primalfeasible, lp->dualfeasible);
+   SCIPdebugMessage("-> new LP has %d cols and %d rows\n", SCIPlpGetNCols(lp), SCIPlpGetNRows(lp));
 
    /* if the correct LP depth is still -1, the root LP relaxation has to be initialized */
    *initroot = (tree->correctlpdepth == -1);
 
    /* mark the LP of the focus node constructed */
    tree->focuslpconstructed = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** loads LP state for fork/subroot of the focus node */
+SCIP_RETCODE SCIPtreeLoadLPState(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   SCIP_NODE* lpstatefork;
+   int lpstateforkdepth;
+   int d;
+
+   assert(tree != NULL);
+   assert(tree->focuslpconstructed);
+   assert(tree->path != NULL);
+   assert(tree->pathlen > 0);
+   assert(tree->focusnode != NULL);
+   assert(tree->correctlpdepth < tree->pathlen);
+   assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
+   assert(SCIPnodeGetDepth(tree->focusnode) == tree->pathlen-1);
+   assert(tree->focusnode == tree->path[tree->pathlen-1]);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(lp != NULL);
+
+   SCIPdebugMessage("load LP state for current fork node %p at depth %d\n", 
+      tree->focuslpstatefork, tree->focuslpstatefork == NULL ? -1 : (int)(tree->focuslpstatefork->depth));
+
+   lpstatefork = tree->focuslpstatefork;
+
+   /* if there is no LP state defining fork, nothing can be done */
+   if( lpstatefork == NULL )
+      return SCIP_OKAY;
+
+   /* get the lpstatefork's depth */
+   assert(SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_FORK || SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_SUBROOT);
+   assert(lpstatefork->active);
+   assert(tree->path[lpstatefork->depth] == lpstatefork);
+   lpstateforkdepth = lpstatefork->depth;
+   assert(lpstateforkdepth < tree->pathlen-1); /* lpstatefork must not be the last (the focus) node of the active path */
+   assert(lpstateforkdepth <= tree->correctlpdepth); /* LP must have been constructed at least up to the fork depth */
+   assert(tree->pathnlpcols[tree->correctlpdepth] >= tree->pathnlpcols[lpstateforkdepth]); /* LP can only grow */
+   assert(tree->pathnlprows[tree->correctlpdepth] >= tree->pathnlprows[lpstateforkdepth]); /* LP can only grow */
+
+   /* load LP state */
+   if( tree->focuslpstateforklpcount != stat->lpcount )
+   {
+      if( SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_FORK )
+      {
+         assert(lpstatefork->data.fork != NULL);
+         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, lpstatefork->data.fork->lpistate) );
+      }
+      else
+      {
+         assert(SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_SUBROOT);
+         assert(lpstatefork->data.subroot != NULL);
+         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, lpstatefork->data.subroot->lpistate) );
+      }
+      assert(lp->primalfeasible);
+      assert(lp->dualfeasible);
+   }
+   else
+   {
+      lp->primalfeasible = TRUE;
+      lp->dualfeasible = TRUE;
+   }
+
+   /* check whether the size of the LP increased (destroying primal/dual feasibility) */
+   lp->primalfeasible = lp->primalfeasible
+      && (tree->pathnlprows[tree->correctlpdepth] == tree->pathnlprows[lpstateforkdepth]);
+   lp->dualfeasible = lp->dualfeasible
+      && (tree->pathnlpcols[tree->correctlpdepth] == tree->pathnlpcols[lpstateforkdepth]);
+
+   /* check the path from LP fork to focus node for domain changes (destroying primal feasibility of LP basis) */
+   for( d = lpstateforkdepth; d < (int)(tree->focusnode->depth) && lp->primalfeasible; ++d )
+   {
+      assert(d < tree->pathlen);
+      lp->primalfeasible = lp->primalfeasible
+         && (tree->path[d]->domchg == NULL || tree->path[d]->domchg->domchgbound.nboundchgs == 0);
+   }
+
+   SCIPdebugMessage("-> primalfeasible=%d, dualfeasible=%d\n", lp->primalfeasible, lp->dualfeasible);
 
    return SCIP_OKAY;
 }
@@ -2354,36 +2637,36 @@ SCIP_RETCODE nodeToLeaf(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_NODE*            lpfork,             /**< LP fork of the node */
+   SCIP_NODE*            lpstatefork,        /**< LP state defining fork of the node */
    SCIP_Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    )
 {
    assert(SCIPnodeGetType(*node) == SCIP_NODETYPE_SIBLING || SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD);
    assert(stat != NULL);
-   assert(lpfork == NULL || lpfork->depth < (*node)->depth);
-   assert(lpfork == NULL || lpfork->active || SCIPsetIsGE(set, (*node)->lowerbound, cutoffbound));
-   assert(lpfork == NULL
-      || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_FORK
-      || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_SUBROOT);
+   assert(lpstatefork == NULL || lpstatefork->depth < (*node)->depth);
+   assert(lpstatefork == NULL || lpstatefork->active || SCIPsetIsGE(set, (*node)->lowerbound, cutoffbound));
+   assert(lpstatefork == NULL
+      || SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_FORK
+      || SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_SUBROOT);
 
    /* convert node into leaf */
-   SCIPdebugMessage("convert node %p at depth %d to leaf with lpfork %p at depth %d\n",
-      *node, (*node)->depth, lpfork, lpfork == NULL ? -1 : (int)(lpfork->depth));
+   SCIPdebugMessage("convert node %p at depth %d to leaf with lpstatefork %p at depth %d\n",
+      *node, (*node)->depth, lpstatefork, lpstatefork == NULL ? -1 : (int)(lpstatefork->depth));
    (*node)->nodetype = SCIP_NODETYPE_LEAF; /*lint !e641*/
-   (*node)->data.leaf.lpfork = lpfork;
+   (*node)->data.leaf.lpstatefork = lpstatefork;
 
 #ifndef NDEBUG
    /* check, if the LP fork is the first node with LP information on the path back to the root */
-   if( cutoffbound != SCIP_REAL_MIN ) /* if the node was cut off in SCIPnodeFocus(), the lpfork is invalid */
+   if( cutoffbound != SCIP_REAL_MIN ) /* if the node was cut off in SCIPnodeFocus(), the lpstatefork is invalid */
    {
       SCIP_NODE* pathnode;
       pathnode = (*node)->parent;
-      while( pathnode != NULL && pathnode != lpfork )
+      while( pathnode != NULL && pathnode != lpstatefork )
       {
          assert(SCIPnodeGetType(pathnode) == SCIP_NODETYPE_JUNCTION);
          pathnode = pathnode->parent;
       }
-      assert(pathnode == lpfork);
+      assert(pathnode == lpstatefork);
    }
 #endif
 
@@ -2430,9 +2713,9 @@ SCIP_RETCODE focusnodeToDeadend(
    tree->focusnode->nodetype = SCIP_NODETYPE_DEADEND; /*lint !e641*/
 
    /* release LPI state */
-   if( tree->focuslpfork != NULL )
+   if( tree->focuslpstatefork != NULL )
    {
-      SCIP_CALL( SCIPnodeReleaseLPIState(tree->focuslpfork, blkmem, lp) );
+      SCIP_CALL( SCIPnodeReleaseLPIState(tree->focuslpstatefork, blkmem, lp) );
    }
 
    return SCIP_OKAY;
@@ -2460,9 +2743,50 @@ SCIP_RETCODE focusnodeToJunction(
    SCIP_CALL( junctionInit(&tree->focusnode->data.junction, tree) );
 
    /* release LPI state */
-   if( tree->focuslpfork != NULL )
+   if( tree->focuslpstatefork != NULL )
    {
-      SCIP_CALL( SCIPnodeReleaseLPIState(tree->focuslpfork, blkmem, lp) );
+      SCIP_CALL( SCIPnodeReleaseLPIState(tree->focuslpstatefork, blkmem, lp) );
+   }
+
+   /* make the domain change data static to save memory */
+   SCIP_CALL( SCIPdomchgMakeStatic(&tree->focusnode->domchg, blkmem, set) );
+
+   return SCIP_OKAY;
+}
+
+/** converts the focus node into a pseudofork node */
+static
+SCIP_RETCODE focusnodeToPseudofork(
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   SCIP_PSEUDOFORK* pseudofork;
+
+   assert(blkmem != NULL);
+   assert(tree != NULL);
+   assert(!SCIPtreeProbing(tree));
+   assert(tree->focusnode != NULL);
+   assert(tree->focusnode->active); /* otherwise, no children could be created at the focus node */
+   assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
+   assert(tree->nchildren > 0);
+   assert(lp != NULL);
+   assert(lp->flushed);
+
+   SCIPdebugMessage("focusnode %p to pseudofork at depth %d\n", tree->focusnode, tree->focusnode->depth);
+
+   /* create pseudofork data */
+   SCIP_CALL( pseudoforkCreate(&pseudofork, blkmem, tree, lp) );
+   
+   tree->focusnode->nodetype = SCIP_NODETYPE_PSEUDOFORK; /*lint !e641*/
+   tree->focusnode->data.pseudofork = pseudofork;
+
+   /* release LPI state */
+   if( tree->focuslpstatefork != NULL )
+   {
+      SCIP_CALL( SCIPnodeReleaseLPIState(tree->focuslpstatefork, blkmem, lp) );
    }
 
    /* make the domain change data static to save memory */
@@ -2517,7 +2841,7 @@ SCIP_RETCODE focusnodeToFork(
    assert(lp->flushed);
    assert(lp->solved || lperror || lp->resolvelperror);
 
-   /* There are two reasons, that the (reduced) SCIP_LP is not solved to optimality:
+   /* There are two reasons, that the (reduced) LP is not solved to optimality:
     *  - The primal heuristics (called after the current node's LP was solved) found a new 
     *    solution, that is better than the current node's lower bound.
     *    (But in this case, all children should be cut off and the node should be converted
@@ -2555,9 +2879,9 @@ SCIP_RETCODE focusnodeToFork(
    tree->focusnode->data.fork = fork;
 
    /* release LPI state */
-   if( tree->focuslpfork != NULL )
+   if( tree->focuslpstatefork != NULL )
    {
-      SCIP_CALL( SCIPnodeReleaseLPIState(tree->focuslpfork, blkmem, lp) );
+      SCIP_CALL( SCIPnodeReleaseLPIState(tree->focuslpstatefork, blkmem, lp) );
    }
 
    /* make the domain change data static to save memory */
@@ -2621,7 +2945,7 @@ SCIP_RETCODE focusnodeToSubroot(
    assert(lp->flushed);
    assert(lp->solved || lperror);
 
-   /* There are two reasons, that the (reduced) SCIP_LP is not solved to optimality:
+   /* There are two reasons, that the (reduced) LP is not solved to optimality:
     *  - The primal heuristics (called after the current node's LP was solved) found a new 
     *    solution, that is better than the current node's lower bound.
     *    (But in this case, all children should be cut off and the node should be converted
@@ -2662,9 +2986,9 @@ SCIP_RETCODE focusnodeToSubroot(
    treeUpdatePathLPSize(tree, tree->focusnode->depth);
 
    /* release LPI state */
-   if( tree->focuslpfork != NULL )
+   if( tree->focuslpstatefork != NULL )
    {
-      SCIP_CALL( SCIPnodeReleaseLPIState(tree->focuslpfork, blkmem, lp) );
+      SCIP_CALL( SCIPnodeReleaseLPIState(tree->focuslpstatefork, blkmem, lp) );
    }
 
    /* make the domain change data static to save memory */
@@ -2683,7 +3007,7 @@ SCIP_RETCODE treeNodesToQueue(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_NODE**           nodes,              /**< array of nodes to put on the queue */
    int*                  nnodes,             /**< pointer to number of nodes in the array */
-   SCIP_NODE*            lpfork,             /**< LP fork of the nodes */
+   SCIP_NODE*            lpstatefork,        /**< LP state defining fork of the nodes */
    SCIP_Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    )
 {
@@ -2697,7 +3021,7 @@ SCIP_RETCODE treeNodesToQueue(
    for( i = 0; i < *nnodes; ++i )
    {
       /* convert node to LEAF and put it into leaves queue, or delete it if it's lower bound exceeds the cutoff bound */
-      SCIP_CALL( nodeToLeaf(&nodes[i], blkmem, set, stat, tree, lp, lpfork, cutoffbound) );
+      SCIP_CALL( nodeToLeaf(&nodes[i], blkmem, set, stat, tree, lp, lpstatefork, cutoffbound) );
       assert(nodes[i] == NULL);
    }
    *nnodes = 0;
@@ -2764,8 +3088,9 @@ SCIP_RETCODE SCIPnodeFocus(
    SCIP_NODE* oldfocusnode;
    SCIP_NODE* fork;
    SCIP_NODE* lpfork;
+   SCIP_NODE* lpstatefork;
    SCIP_NODE* subroot;
-   SCIP_NODE* childrenlpfork;
+   SCIP_NODE* childrenlpstatefork;
    int oldcutoffdepth;
 
    assert(node != NULL);
@@ -2789,9 +3114,10 @@ SCIP_RETCODE SCIPnodeFocus(
    /* find the common fork node, the new LP defining fork, and the new focus subroot,
     * thereby checking, if the new node can be cut off
     */
-   treeFindSwitchForks(tree, *node, &fork, &lpfork, &subroot, cutoff);
-   SCIPdebugMessage("focus node: focusnodedepth=%d, forkdepth=%d, lpforkdepth=%d, subrootdepth=%d, cutoff=%d\n",
-      *node != NULL ? (*node)->depth : -1, fork != NULL ? fork->depth : -1, lpfork != NULL ? lpfork->depth : -1,
+   treeFindSwitchForks(tree, *node, &fork, &lpfork, &lpstatefork, &subroot, cutoff);
+   SCIPdebugMessage("focus node: focusnodedepth=%d, forkdepth=%d, lpforkdepth=%d, lpstateforkdepth=%d, subrootdepth=%d, cutoff=%d\n",
+      *node != NULL ? (*node)->depth : -1, fork != NULL ? fork->depth : -1,
+      lpfork != NULL ? lpfork->depth : -1, lpstatefork != NULL ? lpstatefork->depth : -1,
       subroot != NULL ? subroot->depth : -1, *cutoff);
 
    /* free the new node, if it is located in a cut off subtree */
@@ -2811,7 +3137,8 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(tree->cutoffdepth == INT_MAX);
    assert(fork == NULL || fork->active);
    assert(lpfork == NULL || fork != NULL);
-   assert(subroot == NULL || lpfork != NULL);
+   assert(lpstatefork == NULL || lpfork != NULL);
+   assert(subroot == NULL || lpstatefork != NULL);
 
    /* remember the depth of the common fork node for LP updates */
    SCIPdebugMessage("focus node: old correctlpdepth=%d\n", tree->correctlpdepth);
@@ -2829,9 +3156,9 @@ SCIP_RETCODE SCIPnodeFocus(
       tree->correctlpdepth = -1;
    }
 
-   /* if the LP fork changed, the lpcount information for the new LP fork is unknown */
-   if( lpfork != tree->focuslpfork )
-      tree->focuslpforklpcount = -1;
+   /* if the LP state fork changed, the lpcount information for the new LP state fork is unknown */
+   if( lpstatefork != tree->focuslpstatefork )
+      tree->focuslpstateforklpcount = -1;
 
    /* if the old focus node was cut off, we can delete its children;
     * if the old focus node's parent was cut off, we can also delete the focus node's siblings
@@ -2855,10 +3182,10 @@ SCIP_RETCODE SCIPnodeFocus(
          /* delete the focus node's siblings by converting them to leaves with a cutoffbound of SCIP_REAL_MIN;
           * we cannot delete them directly, because in SCIPnodeFree(), the siblings array is changed, which is the
           * same array we would have to iterate over here;
-          * the siblings have the same LP fork as the old focus node
+          * the siblings have the same LP state fork as the old focus node
           */
          SCIPdebugMessage(" -> deleting the %d siblings of the old focus node\n", tree->nsiblings);
-         SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, lp, tree->siblings, &tree->nsiblings, tree->focuslpfork,
+         SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, lp, tree->siblings, &tree->nsiblings, tree->focuslpstatefork,
                SCIP_REAL_MIN) );
          assert(tree->nsiblings == 0);
       }
@@ -2867,12 +3194,17 @@ SCIP_RETCODE SCIPnodeFocus(
    /* convert the old focus node into a fork or subroot node, if it has children;
     * otherwise, convert it into a deadend, which will be freed later in treeSwitchPath()
     */
-   childrenlpfork = tree->focuslpfork;
+   childrenlpstatefork = tree->focuslpstatefork;
    if( tree->nchildren > 0 )
    {
+      SCIP_Bool selectedchild;
+
       assert(tree->focusnode != NULL);
       assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
       assert(oldcutoffdepth == INT_MAX);
+
+      /* check whether the next focus node is a child of the old focus node */
+      selectedchild = (*node != NULL && SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD);
 
       if( tree->focusnodehaslp )
       {
@@ -2891,32 +3223,47 @@ SCIP_RETCODE SCIPnodeFocus(
             SCIP_CALL( focusnodeToFork(blkmem, set, stat, prob, tree, lp) );
          }
 
-         /* update the path's LP size */
-         tree->pathnlpcols[tree->focusnode->depth] = lp->ncols;
-         tree->pathnlprows[tree->focusnode->depth] = lp->nrows;
-
          /* check, if the conversion into a subroot or fork was successful */
-         if( SCIPnodeGetType(tree->focusnode) != SCIP_NODETYPE_JUNCTION )
+         if( SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FORK
+            || SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_SUBROOT )
          {
-            assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_SUBROOT
-               || SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FORK);
-            childrenlpfork = tree->focusnode;
+            childrenlpstatefork = tree->focusnode;
 
             /* if a child of the old focus node was selected as new focus node, the old node becomes the new focus
-             * LP fork
+             * LP state fork
              */
-            if( *node != NULL && SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD )
+            if( selectedchild )
             {
-               lpfork = tree->focusnode;
-               tree->correctlpdepth = tree->focusnode->depth;
-               tree->focuslpforklpcount = stat->lpcount;
+               lpstatefork = tree->focusnode;
+               tree->focuslpstateforklpcount = stat->lpcount;
             }
          }
+      }
+      else if( tree->focusnodekeepslp && (SCIPlpGetNNewcols(lp) > 0 || SCIPlpGetNNewrows(lp) > 0) )
+      {
+         /* convert old focus node into pseudofork */
+         SCIP_CALL( focusnodeToPseudofork(blkmem, set, tree, lp) );
       }
       else
       {
          /* convert old focus node into junction */
          SCIP_CALL( focusnodeToJunction(blkmem, set, tree, lp) );
+      }
+
+      /* update the path's LP size */
+      tree->pathnlpcols[tree->focusnode->depth] = SCIPlpGetNCols(lp);
+      tree->pathnlprows[tree->focusnode->depth] = SCIPlpGetNRows(lp);
+
+      /* if a child of the old focus node was selected as new focus node, and if the old focus node was converted to
+       * an LP fork, the old node becomes the new focus LP fork
+       */
+      if( selectedchild
+         && (SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_PSEUDOFORK
+            || SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_SUBROOT
+            || SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FORK) )
+      {
+         lpfork = tree->focusnode;
+         tree->correctlpdepth = tree->focusnode->depth;
       }
    }
    else if( tree->focusnode != NULL )
@@ -2925,12 +3272,16 @@ SCIP_RETCODE SCIPnodeFocus(
       SCIP_CALL( focusnodeToDeadend(blkmem, tree, lp) );
    }
    assert(subroot == NULL || SCIPnodeGetType(subroot) == SCIP_NODETYPE_SUBROOT);
+   assert(lpstatefork == NULL
+      || SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_SUBROOT
+      || SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_FORK);
+   assert(childrenlpstatefork == NULL
+      || SCIPnodeGetType(childrenlpstatefork) == SCIP_NODETYPE_SUBROOT
+      || SCIPnodeGetType(childrenlpstatefork) == SCIP_NODETYPE_FORK);
    assert(lpfork == NULL
       || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_SUBROOT
-      || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_FORK);
-   assert(childrenlpfork == NULL
-      || SCIPnodeGetType(childrenlpfork) == SCIP_NODETYPE_SUBROOT
-      || SCIPnodeGetType(childrenlpfork) == SCIP_NODETYPE_FORK);
+      || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_FORK
+      || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_PSEUDOFORK);
    SCIPdebugMessage("focus node: new correctlpdepth=%d\n", tree->correctlpdepth);
    
    /* set up the new lists of siblings and children */
@@ -2938,11 +3289,11 @@ SCIP_RETCODE SCIPnodeFocus(
    if( *node == NULL )
    {
       /* move siblings to the queue, make them LEAFs */
-      SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, lp, tree->siblings, &tree->nsiblings, tree->focuslpfork,
+      SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, lp, tree->siblings, &tree->nsiblings, tree->focuslpstatefork,
             primal->cutoffbound) );
 
       /* move children to the queue, make them LEAFs */
-      SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, lp, tree->children, &tree->nchildren, childrenlpfork, 
+      SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, lp, tree->children, &tree->nchildren, childrenlpstatefork, 
             primal->cutoffbound) );
    }
    else
@@ -2958,7 +3309,7 @@ SCIP_RETCODE SCIPnodeFocus(
             stat->plungedepth = 0;
 
          /* move children to the queue, make them LEAFs */
-         SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, lp, tree->children, &tree->nchildren, childrenlpfork,
+         SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, lp, tree->children, &tree->nchildren, childrenlpstatefork,
                primal->cutoffbound) );
 
          /* remove selected sibling from the siblings array */
@@ -2976,7 +3327,7 @@ SCIP_RETCODE SCIPnodeFocus(
             stat->plungedepth++;
 
          /* move siblings to the queue, make them LEAFs */
-         SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, lp, tree->siblings, &tree->nsiblings, tree->focuslpfork,
+         SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, lp, tree->siblings, &tree->nsiblings, tree->focuslpstatefork,
                primal->cutoffbound) );
 
          /* remove selected child from the children array */      
@@ -2990,11 +3341,11 @@ SCIP_RETCODE SCIPnodeFocus(
          
       case SCIP_NODETYPE_LEAF:
          /* move siblings to the queue, make them LEAFs */
-         SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, lp, tree->siblings, &tree->nsiblings, tree->focuslpfork,
+         SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, lp, tree->siblings, &tree->nsiblings, tree->focuslpstatefork,
                primal->cutoffbound) );
          
          /* move children to the queue, make them LEAFs */
-         SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, lp, tree->children, &tree->nchildren, childrenlpfork,
+         SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, lp, tree->children, &tree->nchildren, childrenlpstatefork,
                primal->cutoffbound) );
 
          /* remove node from the queue */
@@ -3016,13 +3367,16 @@ SCIP_RETCODE SCIPnodeFocus(
    }
    assert(tree->nchildren == 0);
    
-   /* set new focus node, LP fork, and subroot */
-   assert(subroot == NULL || (lpfork != NULL && subroot->depth <= lpfork->depth));
+   /* set new focus node, LP fork, LP state fork, and subroot */
+   assert(subroot == NULL || (lpstatefork != NULL && subroot->depth <= lpstatefork->depth));
+   assert(lpstatefork == NULL || (lpfork != NULL && lpstatefork->depth <= lpfork->depth));
    assert(lpfork == NULL || (*node != NULL && lpfork->depth < (*node)->depth));
    tree->focusnode = *node;
    tree->focuslpfork = lpfork;
+   tree->focuslpstatefork = lpstatefork;
    tree->focussubroot = subroot;
    tree->focuslpconstructed = FALSE;
+   tree->focusnodekeepslp = FALSE;
    lp->resolvelperror = FALSE;
 
    /* track the path from the old focus node to the new node, and perform domain and constraint set changes */
@@ -3067,6 +3421,7 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->path = NULL;
    (*tree)->focusnode = NULL;
    (*tree)->focuslpfork = NULL;
+   (*tree)->focuslpstatefork = NULL;
    (*tree)->focussubroot = NULL;
    (*tree)->children = NULL;
    (*tree)->siblings = NULL;
@@ -3076,7 +3431,7 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->pathnlpcols = NULL;
    (*tree)->pathnlprows = NULL;
    (*tree)->probinglpistate = NULL;
-   (*tree)->focuslpforklpcount = -1;
+   (*tree)->focuslpstateforklpcount = -1;
    (*tree)->childrensize = 0;
    (*tree)->nchildren = 0;
    (*tree)->siblingssize = 0;
@@ -3088,6 +3443,7 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->repropdepth = INT_MAX;
    (*tree)->repropsubtreecount = 0;
    (*tree)->focusnodehaslp = FALSE;
+   (*tree)->focusnodekeepslp = FALSE;
    (*tree)->probingnodehaslp = FALSE;
    (*tree)->focuslpconstructed = FALSE;
    (*tree)->cutoffdelayed = FALSE;
@@ -3152,7 +3508,7 @@ SCIP_RETCODE SCIPtreeClear(
    assert(tree->root == NULL);
    
    /* mark working arrays to be empty and reset data */
-   tree->focuslpforklpcount = -1;
+   tree->focuslpstateforklpcount = -1;
    tree->nchildren = 0;
    tree->nsiblings = 0;
    tree->pathlen = 0;
@@ -3161,6 +3517,7 @@ SCIP_RETCODE SCIPtreeClear(
    tree->repropdepth = INT_MAX;
    tree->repropsubtreecount = 0;
    tree->focusnodehaslp = FALSE;
+   tree->focusnodekeepslp = FALSE;
    tree->probingnodehaslp = FALSE;
    tree->cutoffdelayed = FALSE;
    tree->probinglpwasflushed = FALSE;
@@ -4139,6 +4496,7 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
 #undef SCIPtreeGetFocusDepth
 #undef SCIPtreeHasFocusNodeLP
 #undef SCIPtreeSetFocusNodeLP
+#undef SCIPtreeKeepFocusNodeLP
 #undef SCIPtreeMarkProbingNodeHasLP
 #undef SCIPtreeIsFocusNodeLPConstructed
 #undef SCIPtreeGetCurrentNode
@@ -4351,6 +4709,16 @@ void SCIPtreeSetFocusNodeLP(
    assert(tree != NULL);
 
    tree->focusnodehaslp = solvelp;
+}
+
+/** marks the focus node to keep the LP extensions, even if the LP was not solved */
+void SCIPtreeKeepFocusNodeLP(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   tree->focusnodekeepslp = TRUE;
 }
 
 /** marks the probing node to have a solved LP relaxation */

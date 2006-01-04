@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.42 2006/01/03 12:22:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.43 2006/01/04 16:26:47 bzfpfend Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -69,7 +69,7 @@ SCIP_RETCODE SCIPpropagateDomains(
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    );
 
-/** constructs the LP of the current node and loads the LP state and warmstart information  */
+/** constructs the LP of the current node, but does not load the LP state and warmstart information  */
 extern
 SCIP_RETCODE SCIPconstructCurrentLP(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */

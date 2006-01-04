@@ -1,3 +1,10 @@
+current version
+===============
+
+interface:
+- new method SCIPkeepLPExtensions()
+
+
 SCIP version 0.81
 =================
 
@@ -55,7 +62,7 @@ parameters:
 
 features:
 - changed handling of added constraints in separation calls
-- modified bookkeeping of locally added and disabled and constraints such that the order of enabling and disabling
+- modified bookkeeping of locally added and disabled constraints such that the order of enabling and disabling
   constraints stays the same
 - improved performance of the priority queue in conflict analysis
 
