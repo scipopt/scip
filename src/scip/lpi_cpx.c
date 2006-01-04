@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.103 2006/01/03 12:22:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.104 2006/01/04 17:09:11 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -2866,35 +2866,51 @@ SCIP_RETCODE SCIPlpiGetState(
    return SCIP_OKAY;
 }
 
-/** loads LPi state (like basis information) into solver */
+/** loads LPi state (like basis information) into solver; note that the LP might have been extended with additional
+ *  columns and rows since the state was stored with SCIPlpiGetState()
+ */
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
    )
 {
+   int lpncols;
+   int lpnrows;
+   int i;
+
    assert(blkmem != NULL);
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
-   assert(lpistate == NULL || lpistate->ncols == CPXgetnumcols(cpxenv, lpi->cpxlp));
-   assert(lpistate == NULL || lpistate->nrows == CPXgetnumrows(cpxenv, lpi->cpxlp));
 
    /* if there was no basis information available, the LPI state was not stored */
    if( lpistate == NULL )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("loading LPI state %p (%d cols, %d rows) into CPLEX\n", lpistate, lpistate->ncols, lpistate->nrows);
+   lpncols = CPXgetnumcols(cpxenv, lpi->cpxlp);
+   lpnrows = CPXgetnumrows(cpxenv, lpi->cpxlp);
+   assert(lpistate->ncols <= lpncols);
+   assert(lpistate->nrows <= lpnrows);
+
+   SCIPdebugMessage("loading LPI state %p (%d cols, %d rows) into CPLEX LP with %d cols and %d rows\n",
+      lpistate, lpistate->ncols, lpistate->nrows, lpncols, lpnrows);
 
    if( lpistate->ncols == 0 || lpistate->nrows == 0 )
       return SCIP_OKAY;   
 
    /* allocate enough memory for storing uncompressed basis information */
-   SCIP_CALL( ensureCstatMem(lpi, lpistate->ncols) );
-   SCIP_CALL( ensureRstatMem(lpi, lpistate->nrows) );
+   SCIP_CALL( ensureCstatMem(lpi, lpncols) );
+   SCIP_CALL( ensureRstatMem(lpi, lpnrows) );
 
    /* unpack LPi state data */
    lpistateUnpack(lpistate, lpi->cstat, lpi->rstat);
+
+   /* extend the basis to the current LP */
+   for( i = lpistate->ncols; i < lpncols; ++i )
+      lpi->cstat[i] = CPX_AT_LOWER; /**@todo this has to be corrected for lb = -infinity */
+   for( i = lpistate->nrows; i < lpnrows; ++i )
+      lpi->rstat[i] = CPX_BASIC;
 
    /* load basis information into CPLEX */
    SCIP_CALL( setBase(lpi) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.59 2006/01/03 12:22:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.60 2006/01/04 17:09:11 bzfpfend Exp $"
 
 /**@file   lpi.h
  * @brief  interface methods for specific LP solvers
@@ -623,51 +623,53 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 
 
 /*
- * LP State Methods
+ * LPi State Methods
  */
 
-/**@name LP State Methods */
+/**@name LPi State Methods */
 /**@{ */
 
-/** stores LP state (like basis information) into lpistate object */
+/** stores LPi state (like basis information) into lpistate object */
 extern
 SCIP_RETCODE SCIPlpiGetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
+   SCIP_LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    );
 
-/** loads LP state (like basis information) into solver */
+/** loads LPi state (like basis information) into solver; note that the LP might have been extended with additional
+ *  columns and rows since the state was stored with SCIPlpiGetState()
+ */
 extern
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
    );
 
-/** frees LP state information */
+/** frees LPi state information */
 extern
 SCIP_RETCODE SCIPlpiFreeState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
+   SCIP_LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    );
 
-/** checks, whether the given LP state contains simplex basis information */
+/** checks, whether the given LPi state contains simplex basis information */
 extern
 SCIP_Bool SCIPlpiHasStateBasis(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
    );
 
-/** reads LP state (like basis information from a file */
+/** reads LPi state (like basis information from a file */
 extern 
 SCIP_RETCODE SCIPlpiReadState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    const char*           fname               /**< file name */
    );
 
-/** writes LP state (like basis information) to a file */
+/** writes LPi state (like basis information) to a file */
 extern 
 SCIP_RETCODE SCIPlpiWriteState(
    SCIP_LPI*             lpi,                /**< LP interface structure */

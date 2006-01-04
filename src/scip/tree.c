@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.167 2006/01/04 16:26:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.168 2006/01/04 17:09:12 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -2738,6 +2738,7 @@ SCIP_RETCODE focusnodeToJunction(
 
    SCIPdebugMessage("focusnode %p to junction at depth %d\n", tree->focusnode, tree->focusnode->depth);
 
+   /* convert node into junction */
    tree->focusnode->nodetype = SCIP_NODETYPE_JUNCTION; /*lint !e641*/
 
    SCIP_CALL( junctionInit(&tree->focusnode->data.junction, tree) );
@@ -2862,7 +2863,7 @@ SCIP_RETCODE focusnodeToFork(
       /* remove all additions to the LP at this node */
       SCIP_CALL( SCIPlpShrinkCols(lp, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
       SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
-      
+   
       /* convert node into a junction */
       SCIP_CALL( focusnodeToJunction(blkmem, set, tree, lp) );
       
@@ -2966,7 +2967,7 @@ SCIP_RETCODE focusnodeToSubroot(
       /* remove all additions to the LP at this node */
       SCIP_CALL( SCIPlpShrinkCols(lp, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
       SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
-      
+   
       /* convert node into a junction */
       SCIP_CALL( focusnodeToJunction(blkmem, set, tree, lp) );
       
@@ -3238,21 +3239,25 @@ SCIP_RETCODE SCIPnodeFocus(
                tree->focuslpstateforklpcount = stat->lpcount;
             }
          }
+
+         /* update the path's LP size */
+         tree->pathnlpcols[tree->focusnode->depth] = SCIPlpGetNCols(lp);
+         tree->pathnlprows[tree->focusnode->depth] = SCIPlpGetNRows(lp);
       }
       else if( tree->focusnodekeepslp && (SCIPlpGetNNewcols(lp) > 0 || SCIPlpGetNNewrows(lp) > 0) )
       {
          /* convert old focus node into pseudofork */
          SCIP_CALL( focusnodeToPseudofork(blkmem, set, tree, lp) );
+
+         /* update the path's LP size */
+         tree->pathnlpcols[tree->focusnode->depth] = SCIPlpGetNCols(lp);
+         tree->pathnlprows[tree->focusnode->depth] = SCIPlpGetNRows(lp);
       }
       else
       {
          /* convert old focus node into junction */
          SCIP_CALL( focusnodeToJunction(blkmem, set, tree, lp) );
       }
-
-      /* update the path's LP size */
-      tree->pathnlpcols[tree->focusnode->depth] = SCIPlpGetNCols(lp);
-      tree->pathnlprows[tree->focusnode->depth] = SCIPlpGetNRows(lp);
 
       /* if a child of the old focus node was selected as new focus node, and if the old focus node was converted to
        * an LP fork, the old node becomes the new focus LP fork

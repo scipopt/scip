@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.121 2006/01/03 12:22:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.122 2006/01/04 17:09:10 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -1179,27 +1179,6 @@ SCIP_RETCODE liftupKnapsackCover(
       int liftcoef;
       int z;
 
-#ifdef LIFTUPOUT
-      printf("----------------------------------- up lifting --------------------------------------------------\n");
-      printf("ncovervars=%d (nc2=%d, nc1=%d) && covervars=\n", ncovervars, ncovervarsc2, ncovervarsc1);
-      for( z = 0; z < ncovervars; z++ )
-         printf("%d: x_%d [w=%"SCIP_LONGINT_FORMAT", lp=%g, lb_global=%g, lb_local=%g, %s]\n", z, covervars[z], weights[covervars[z]], 
-            solvals[covervars[z]], SCIPvarGetLbGlobal(vars[covervars[z]]), SCIPvarGetLbLocal(vars[covervars[z]]),
-            SCIPvarGetName(vars[covervars[z]]));
-      printf("capacity=%"SCIP_LONGINT_FORMAT"\n\n", capacity);
-      printf("nnoncovervars=%d && noncovervars=\n", nnoncovervars);
-      for( z = 0; z < nnoncovervars; z++ )
-         printf("%d: x_%d [w=%"SCIP_LONGINT_FORMAT", lp=%g, lb_global=%g, lb_local=%g, %s]\n", z, noncovervars[z], weights[noncovervars[z]], 
-            solvals[noncovervars[z]], SCIPvarGetLbGlobal(vars[noncovervars[z]]), SCIPvarGetLbLocal(vars[noncovervars[z]]),
-            SCIPvarGetName(vars[noncovervars[z]]));
-      printf("\n\n");
-      printf("i=%d: noncovervar x_%d:\n\n", i, noncovervars[i]);
-      printf("minweightstable(liftrhs=%d, minweightslen=%d)=[ ", *liftrhs, *minweightslen);
-      for( z = 0; z < *minweightslen; z++ )
-         printf("%"SCIP_LONGINT_FORMAT" ", minweights[z]);
-      printf("]\n");
-#endif
-
       liftvar = noncovervars[i];
       assert(liftvar >= 0);
       weight = weights[liftvar];
@@ -1250,10 +1229,6 @@ SCIP_RETCODE liftupKnapsackCover(
       /* update LP solution value of lifted variables (without C1) */
       *liftlpval += liftcoef * solvals[liftvar];
          
-#ifdef LIFTUPOUT
-      printf("liftvar=xn%d: lifting coefficient=%d, liftlpval=%g\n", liftvar, liftcoefs[liftvar], *liftlpval);
-#endif
-
       /* if we have downlifting candidates, we have to increase the size of the minweight table;
        * otherwise, we only have to keep track of the elements up to z = liftrhs
        */
@@ -1350,28 +1325,6 @@ SCIP_RETCODE liftdownKnapsackCover(
       int middle;
       int z;
 
-#ifdef LIFTDOWNOUT
-      printf("------------------------------ down lifting -------------------------------------------------------\n");
-      printf("ncovervars=%d (nc2=%d, nc1=%d) && covervars=\n", ncovervars, ncovervarsc2, ncovervarsc1);
-      for( z = 0; z < ncovervars; z++ )
-         printf("%d: x_%d [w=%"SCIP_LONGINT_FORMAT", lp=%g, lb_global=%g, lb_local=%g, %s]\n", z, covervars[z], weights[covervars[z]], 
-            solvals[covervars[z]], SCIPvarGetLbGlobal(vars[covervars[z]]), SCIPvarGetLbLocal(vars[covervars[z]]),
-            SCIPvarGetName(vars[covervars[z]]));
-      printf("capacity=%"SCIP_LONGINT_FORMAT"\n\n", capacity);
-      printf("nnonsetvars=%d && nonsetvars=\n", nnoncovervars);
-      for( z = 0; z < nnoncovervars; z++ )
-         printf("%d: x_%d [w=%"SCIP_LONGINT_FORMAT", lp=%g, lb_global=%g, lb_local=%g, %s]\n", z, noncovervars[z], weights[noncovervars[z]], 
-            solvals[noncovervars[z]], SCIPvarGetLbGlobal(vars[noncovervars[z]]), SCIPvarGetLbLocal(vars[noncovervars[z]]),
-            SCIPvarGetName(vars[noncovervars[z]]));
-      printf("\n\n");
-      printf("i=%d: covervar x_%d, weight_%d=%"SCIP_LONGINT_FORMAT":\n같같같같같같같같같같같같같같같같같같같같�\n", i, covervars[i], 
-         covervars[i], weights[covervars[i]]);
-      printf("minweightstable (minweightslen=%d)=[ ", *minweightslen);
-      for( z = 0; z < *minweightslen; z++ )
-         printf("%"SCIP_LONGINT_FORMAT" ", minweights[z]);
-      printf("]\n\n");
-#endif
-
       assert(SCIPisFeasEQ(scip, solvals[covervars[i]], 1.0)); 
       liftvar = covervars[i];
       assert(liftvar >= 0);
@@ -1410,12 +1363,6 @@ SCIP_RETCODE liftdownKnapsackCover(
       /* update LP solution value of lifted variables (without C1) */
       *liftlpval += liftcoef * solvals[liftvar];
       
-#ifdef LIFTDOWNOUT
-      printf("fixedoneweight=%"SCIP_LONGINT_FORMAT", rescapacity=%"SCIP_LONGINT_FORMAT", liftrhs=%d  ", fixedoneweight, rescapacity, *liftrhs);
-      printf("==> zmax=%d, lifting coefficient=%d, liftlpval=%g\n------------------------------------------------------------------------------------------------------------------------------\n\n", 
-         left, liftcoef, *liftlpval);
-#endif
-
       /* change liftrhs */
       (*liftrhs) += liftcoef;
       
@@ -1492,27 +1439,6 @@ void liftupZerosKnapsackCover(
       int liftcoef;
       int z;
 
-#ifdef LIFTUPOUT
-      printf("----------------------------------- up lifting zeros --------------------------------------------------\n");
-      printf("ncovervars=%d (nc2=%d, nc1=%d) && covervars=\n", ncovervars, ncovervarsc2, ncovervarsc1);
-      for( z = 0; z < ncovervars; z++ )
-         printf("%d: x_%d [w=%"SCIP_LONGINT_FORMAT", lp=%g, lb_global=%g, lb_local=%g, %s]\n", z, covervars[z], weights[covervars[z]], 
-            solvals[covervars[z]], SCIPvarGetLbGlobal(vars[covervars[z]]), SCIPvarGetLbLocal(vars[covervars[z]]),
-            SCIPvarGetName(vars[covervars[z]]));
-      printf("capacity=%"SCIP_LONGINT_FORMAT"\n\n", capacity);
-      printf("nnonsetvars=%d && nonsetvars=\n", nnoncovervars);
-      for( z = 0; z < nnoncovervars; z++ )
-         printf("%d: x_%d [w=%"SCIP_LONGINT_FORMAT", lp=%g, lb_global=%g, lb_local=%g, %s]\n", z, noncovervars[z], weights[noncovervars[z]], 
-            solvals[noncovervars[z]], SCIPvarGetLbGlobal(vars[noncovervars[z]]), SCIPvarGetLbLocal(vars[noncovervars[z]]),
-            SCIPvarGetName(vars[noncovervars[z]]));
-      printf("\n\n");
-      printf("i=%d: noncovervar x_%d:\n\n", i, noncovervars[i]);
-      printf("minweightstable(liftrhs=%d)=[ ", *liftrhs);
-      for( z = 0; z < *liftrhs; z++ )
-         printf("%"SCIP_LONGINT_FORMAT" ", minweights[z]);
-      printf("]\n");
-#endif
-
       assert(SCIPisFeasLE(scip, solvals[noncovervars[i]], 0.0));  
 
       liftvar = noncovervars[i];
@@ -1560,10 +1486,6 @@ void liftupZerosKnapsackCover(
       /* updates LP solution value of lifted variables (without C1) */
       *liftlpval += liftcoef * solvals[liftvar];
          
-#ifdef LIFTUPOUT
-      printf("liftvar=xn%d: lifting coefficient=%d, liftlpval=%g\n", liftvar, liftcoefs[liftvar], *liftlpval);
-#endif
-
       /* update minweights table: calculates minimal sum of weights s.t. activity of curr lifted inequality equals z */
       for( z = *liftrhs; z >= liftcoef; z-- )
       {
@@ -1785,15 +1707,6 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
    /* get solution values of all problem variables */
    SCIP_CALL( SCIPgetSolVals(scip, sol, nvars, vars, solvals) );
 
-#ifdef SEPARATEOUT
-   printf("=================================== separating knapsack constraint <%s>: =================================\n", 
-      SCIPconsGetName(cons));
-   printf("vars (variables in knapsack constraint)(nvars=%d):\n", nvars);
-   for( i = 0; i < nvars; i++ )
-      printf("%d: x_%d [w=%"SCIP_LONGINT_FORMAT", lp=%g] <%s>\n", i, i, weights[i], solvals[i], SCIPvarGetName(vars[i]));
-   printf("capacity of knapsack = %"SCIP_LONGINT_FORMAT"\n", capacity);
-#endif   
-
    /* get a partition of the set of variables in knapsack constraint in a set of variables for downlifting (varsc2) and 
     * a set of the remaining variables (varscn2) 
     */
@@ -1857,19 +1770,6 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
          SCIP_Longint newweight;
          int n;
 
-#ifdef SEPARATEOUT
-         printf(".................................. cardinality round j=%d .......................................\n", j);
-         printf("\nbefor card-remove:\n");
-         printf("covervars (ncovervars=%d, nc2=%d, nc1=%d):\n", ncovervars, ncovervarsc2, ncovervarsc1);
-         for( i = 0; i < ncovervars; i++ )
-            printf("%d: x_%d [w=%"SCIP_LONGINT_FORMAT", lp=%g]\n", i, covervars[i], weights[covervars[i]], 
-               solvals[covervars[i]]);
-         printf("coverweight=%"SCIP_LONGINT_FORMAT", covervarsc1activity=%g\n", coverweight, covervarsc1activity);
-         printf("noncovervars (nnoncovervars=%d):\n", nnoncovervars);
-         for( i = 0; i < nnoncovervars; i++ )
-            printf("%d: x_%d [w=%"SCIP_LONGINT_FORMAT", lp=%g]\n", i, noncovervars[i], weights[noncovervars[i]], 
-               solvals[noncovervars[i]]);
-#endif
          /* delete current variable from C1 */
          weight = weights[covervars[j]];
          solval = solvals[covervars[j]];
@@ -1911,19 +1811,6 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
          }
          nnoncovervars = n;
             
-#ifdef SEPARATEOUT
-         printf("\nafter card-remove:\n");
-         printf("covervars (ncovervars=%d, nc2=%d, nc1=%d):\n", ncovervars, ncovervarsc2, ncovervarsc1);
-         for( i = 0; i < ncovervars; i++ )
-            printf("%d: x_%d [w=%"SCIP_LONGINT_FORMAT", lp=%g, beta=%d]\n", i, covervars[i], weights[covervars[i]], 
-               solvals[covervars[i]], liftcoefs[covervars[i]]);
-         printf("coverweight=%"SCIP_LONGINT_FORMAT", covervarsc1activity=%g\n", coverweight, covervarsc1activity);
-         printf("noncovervars (nnoncovervars=%d):\n", nnoncovervars);
-         for( i = 0; i < nnoncovervars; i++ )
-            printf("%d: x_%d [w=%"SCIP_LONGINT_FORMAT", lp=%g, beta=%d]\n", i, noncovervars[i], weights[noncovervars[i]], 
-               solvals[noncovervars[i]], liftcoefs[noncovervars[i]]);
-#endif
-
          /* lift cardinality inequality sum(j in C1) x_j <= |C1| to a valid inequality of the full dimensional knapsack 
           * polytop: 
           *  1. uplifting of noncovervars with solution value > 0 
@@ -1964,13 +1851,6 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
             /* check, if cut is violated enough */
             if( SCIPisCutEfficacious(scip, sol, row) )
             {         
-#ifdef CUTOUT
-               printf("lifted cover cut for knapsack constraint <%s> round j=%d: ", SCIPconsGetName(cons), j);
-               SCIProwPrint(row, NULL);
-               printf("violation = %g", covervarsc1activity + liftlpval - liftrhs);
-               printf("\n");
-
-#endif               
                SCIP_CALL( SCIPresetConsAge(scip, cons) );
                SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
                (*ncuts)++;

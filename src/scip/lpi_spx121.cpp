@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.35 2006/01/03 12:22:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.36 2006/01/04 17:09:12 bzfpfend Exp $"
 
 /**@file   lpi_spx121.cpp
  * @brief  LP interface for SOPLEX 1.2.1
@@ -2246,27 +2246,42 @@ SCIP_RETCODE SCIPlpiGetState(
    return SCIP_OKAY;
 }
 
-/** loads LPi state (like basis information) into solver */
+/** loads LPi state (like basis information) into solver; note that the LP might have been extended with additional
+ *  columns and rows since the state was stored with SCIPlpiGetState()
+ */
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           /*blkmem*/,         /**< block memory */
    SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
    )
 {
+   int lpncols;
+   int lpnrows;
+   int i;
+
    SCIPdebugMessage("calling SCIPlpiSetState()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
    assert(lpistate != NULL);
-   assert(lpistate->ncols == lpi->spx->nCols());
-   assert(lpistate->nrows == lpi->spx->nRows());
+
+   lpncols = lpi->spx->nCols();
+   lpnrows = lpi->spx->nRows();
+   assert(lpistate->ncols <= lpncols);
+   assert(lpistate->nrows <= lpnrows);
 
    /* allocate enough memory for storing uncompressed basis information */
-   SCIP_CALL( ensureCstatMem(lpi, lpistate->ncols) );
-   SCIP_CALL( ensureRstatMem(lpi, lpistate->nrows) );
+   SCIP_CALL( ensureCstatMem(lpi, lpncols) );
+   SCIP_CALL( ensureRstatMem(lpi, lpnrows) );
 
    /* unpack LPi state data */
    lpistateUnpack(lpistate, lpi->cstat, lpi->rstat);
+
+   /* extend the basis to the current LP */
+   for( i = lpistate->ncols; i < lpncols; ++i )
+      lpi->cstat[i] = SCIP_BASESTAT_LOWER; /**@todo this has to be corrected for lb = -infinity */
+   for( i = lpistate->nrows; i < lpnrows; ++i )
+      lpi->rstat[i] = SCIP_BASESTAT_BASIC;
 
    /* load basis information */
    SCIP_CALL( SCIPlpiSetBase(lpi, lpi->cstat, lpi->rstat) );
