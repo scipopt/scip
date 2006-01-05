@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.87 2006/01/04 16:26:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.88 2006/01/05 12:18:54 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -501,12 +501,6 @@ void SCIPtreeSetFocusNodeLP(
    SCIP_Bool             solvelp             /**< should the LP be solved in focus node? */
    );
 
-/** marks the focus node to keep the LP extensions, even if the LP was not solved */
-extern
-void SCIPtreeKeepFocusNodeLP(
-   SCIP_TREE*            tree                /**< branch and bound tree */
-   );
-
 /** marks the probing node to have a solved LP relaxation */
 extern
 void SCIPtreeMarkProbingNodeHasLP(
@@ -556,7 +550,6 @@ SCIP_Bool SCIPtreeHasCurrentNodeLP(
 #define SCIPtreeGetFocusDepth(tree)     ((tree)->focusnode != NULL ? (tree)->focusnode->depth : -1)
 #define SCIPtreeHasFocusNodeLP(tree)    (tree)->focusnodehaslp
 #define SCIPtreeSetFocusNodeLP(tree,solvelp)  ((tree)->focusnodehaslp = solvelp)
-#define SCIPtreeKeepFocusNodeLP(tree)   ((tree)->focusnodekeepslp = TRUE)
 #define SCIPtreeMarkProbingNodeHasLP(tree) ((tree)->probingnodehaslp = TRUE)
 #define SCIPtreeIsFocusNodeLPConstructed(tree) (tree)->focuslpconstructed
 #define SCIPtreeGetCurrentNode(tree)    ((tree)->pathlen > 0 ? (tree)->path[(tree)->pathlen-1] : NULL)

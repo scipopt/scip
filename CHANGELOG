@@ -1,8 +1,9 @@
 current version
 ===============
 
-interface:
-- new method SCIPkeepLPExtensions()
+features
+- extensions to the LP are kept even if the LP is not solved at the current node; however, if the LP turned out to
+  be numerically instable, the extensions of the current node are still discarded
 
 
 SCIP version 0.81

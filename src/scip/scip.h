@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.260 2006/01/04 16:26:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.261 2006/01/05 12:18:54 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2986,12 +2986,6 @@ extern
 SCIP_RETCODE SCIPconstructLP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
-   );
-
-/** marks the current node to keep the LP extensions, even if the LP is not solved or the LP solution was discarded */
-extern
-SCIP_RETCODE SCIPkeepLPExtensions(
-   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** gets solution status of current LP */

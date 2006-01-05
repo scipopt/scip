@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.168 2006/01/04 17:09:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.169 2006/01/05 12:18:54 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -3231,10 +3231,12 @@ SCIP_RETCODE SCIPnodeFocus(
             childrenlpstatefork = tree->focusnode;
 
             /* if a child of the old focus node was selected as new focus node, the old node becomes the new focus
-             * LP state fork
+             * LP fork and LP state fork
              */
             if( selectedchild )
             {
+               lpfork = tree->focusnode;
+               tree->correctlpdepth = tree->focusnode->depth;
                lpstatefork = tree->focusnode;
                tree->focuslpstateforklpcount = stat->lpcount;
             }
@@ -3244,31 +3246,27 @@ SCIP_RETCODE SCIPnodeFocus(
          tree->pathnlpcols[tree->focusnode->depth] = SCIPlpGetNCols(lp);
          tree->pathnlprows[tree->focusnode->depth] = SCIPlpGetNRows(lp);
       }
-      else if( tree->focusnodekeepslp && (SCIPlpGetNNewcols(lp) > 0 || SCIPlpGetNNewrows(lp) > 0) )
+      else if( SCIPlpGetNNewcols(lp) > 0 || SCIPlpGetNNewrows(lp) > 0 )
       {
          /* convert old focus node into pseudofork */
          SCIP_CALL( focusnodeToPseudofork(blkmem, set, tree, lp) );
+         assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_PSEUDOFORK);
 
          /* update the path's LP size */
          tree->pathnlpcols[tree->focusnode->depth] = SCIPlpGetNCols(lp);
          tree->pathnlprows[tree->focusnode->depth] = SCIPlpGetNRows(lp);
+
+         /* if a child of the old focus node was selected as new focus node, the old node becomes the new focus LP fork */
+         if( selectedchild )
+         {
+            lpfork = tree->focusnode;
+            tree->correctlpdepth = tree->focusnode->depth;
+         }
       }
       else
       {
          /* convert old focus node into junction */
          SCIP_CALL( focusnodeToJunction(blkmem, set, tree, lp) );
-      }
-
-      /* if a child of the old focus node was selected as new focus node, and if the old focus node was converted to
-       * an LP fork, the old node becomes the new focus LP fork
-       */
-      if( selectedchild
-         && (SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_PSEUDOFORK
-            || SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_SUBROOT
-            || SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FORK) )
-      {
-         lpfork = tree->focusnode;
-         tree->correctlpdepth = tree->focusnode->depth;
       }
    }
    else if( tree->focusnode != NULL )
@@ -3381,7 +3379,6 @@ SCIP_RETCODE SCIPnodeFocus(
    tree->focuslpstatefork = lpstatefork;
    tree->focussubroot = subroot;
    tree->focuslpconstructed = FALSE;
-   tree->focusnodekeepslp = FALSE;
    lp->resolvelperror = FALSE;
 
    /* track the path from the old focus node to the new node, and perform domain and constraint set changes */
@@ -3448,7 +3445,6 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->repropdepth = INT_MAX;
    (*tree)->repropsubtreecount = 0;
    (*tree)->focusnodehaslp = FALSE;
-   (*tree)->focusnodekeepslp = FALSE;
    (*tree)->probingnodehaslp = FALSE;
    (*tree)->focuslpconstructed = FALSE;
    (*tree)->cutoffdelayed = FALSE;
@@ -3522,7 +3518,6 @@ SCIP_RETCODE SCIPtreeClear(
    tree->repropdepth = INT_MAX;
    tree->repropsubtreecount = 0;
    tree->focusnodehaslp = FALSE;
-   tree->focusnodekeepslp = FALSE;
    tree->probingnodehaslp = FALSE;
    tree->cutoffdelayed = FALSE;
    tree->probinglpwasflushed = FALSE;
@@ -4501,7 +4496,6 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
 #undef SCIPtreeGetFocusDepth
 #undef SCIPtreeHasFocusNodeLP
 #undef SCIPtreeSetFocusNodeLP
-#undef SCIPtreeKeepFocusNodeLP
 #undef SCIPtreeMarkProbingNodeHasLP
 #undef SCIPtreeIsFocusNodeLPConstructed
 #undef SCIPtreeGetCurrentNode
@@ -4714,16 +4708,6 @@ void SCIPtreeSetFocusNodeLP(
    assert(tree != NULL);
 
    tree->focusnodehaslp = solvelp;
-}
-
-/** marks the focus node to keep the LP extensions, even if the LP was not solved */
-void SCIPtreeKeepFocusNodeLP(
-   SCIP_TREE*            tree                /**< branch and bound tree */
-   )
-{
-   assert(tree != NULL);
-
-   tree->focusnodekeepslp = TRUE;
 }
 
 /** marks the probing node to have a solved LP relaxation */

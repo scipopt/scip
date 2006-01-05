@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.340 2006/01/04 16:26:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.341 2006/01/05 12:18:53 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8404,18 +8404,6 @@ SCIP_RETCODE SCIPconstructLP(
 
    SCIP_CALL( SCIPconstructCurrentLP(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
          scip->pricestore, scip->sepastore, scip->branchcand, scip->eventqueue, cutoff) );
-
-   return SCIP_OKAY;
-}
-
-/** marks the current node to keep the LP extensions, even if the LP is not solved or the LP solution was discarded */
-SCIP_RETCODE SCIPkeepLPExtensions(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPkeepLPExtensions", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-
-   SCIPtreeKeepFocusNodeLP(scip->tree);
 
    return SCIP_OKAY;
 }
