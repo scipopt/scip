@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.169 2006/01/05 12:18:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.170 2006/01/05 13:00:04 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -2656,14 +2656,15 @@ SCIP_RETCODE nodeToLeaf(
    (*node)->data.leaf.lpstatefork = lpstatefork;
 
 #ifndef NDEBUG
-   /* check, if the LP fork is the first node with LP information on the path back to the root */
+   /* check, if the LP state fork is the first node with LP state information on the path back to the root */
    if( cutoffbound != SCIP_REAL_MIN ) /* if the node was cut off in SCIPnodeFocus(), the lpstatefork is invalid */
    {
       SCIP_NODE* pathnode;
       pathnode = (*node)->parent;
       while( pathnode != NULL && pathnode != lpstatefork )
       {
-         assert(SCIPnodeGetType(pathnode) == SCIP_NODETYPE_JUNCTION);
+         assert(SCIPnodeGetType(pathnode) == SCIP_NODETYPE_JUNCTION
+            || SCIPnodeGetType(pathnode) == SCIP_NODETYPE_PSEUDOFORK);
          pathnode = pathnode->parent;
       }
       assert(pathnode == lpstatefork);
@@ -2774,7 +2775,6 @@ SCIP_RETCODE focusnodeToPseudofork(
    assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
    assert(tree->nchildren > 0);
    assert(lp != NULL);
-   assert(lp->flushed);
 
    SCIPdebugMessage("focusnode %p to pseudofork at depth %d\n", tree->focusnode, tree->focusnode->depth);
 
@@ -3209,6 +3209,8 @@ SCIP_RETCODE SCIPnodeFocus(
 
       if( tree->focusnodehaslp )
       {
+         assert(tree->focuslpconstructed);
+
          /**@todo decide: old focus node becomes fork or subroot */
          if( FALSE && tree->focusnode->depth > 0 && tree->focusnode->depth % 25 == 0 ) /* ????????????? */
          {
@@ -3246,7 +3248,7 @@ SCIP_RETCODE SCIPnodeFocus(
          tree->pathnlpcols[tree->focusnode->depth] = SCIPlpGetNCols(lp);
          tree->pathnlprows[tree->focusnode->depth] = SCIPlpGetNRows(lp);
       }
-      else if( SCIPlpGetNNewcols(lp) > 0 || SCIPlpGetNNewrows(lp) > 0 )
+      else if( tree->focuslpconstructed && (SCIPlpGetNNewcols(lp) > 0 || SCIPlpGetNNewrows(lp) > 0) )
       {
          /* convert old focus node into pseudofork */
          SCIP_CALL( focusnodeToPseudofork(blkmem, set, tree, lp) );
