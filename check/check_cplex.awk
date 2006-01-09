@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.15 2006/01/03 12:22:38 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.16 2006/01/09 13:40:58 bzfpfend Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -113,6 +113,10 @@ BEGIN {
         feasible = 1;
     }
     opti = ($2 == "optimal") ? 1 : 0;
+}
+/^Solution limit exceeded, integer feasible:/ {
+   pb = $8;
+   timeout = 1;
 }
 /^Time/  {
     pb = ($4 == "no") ? 1e+75 : $8;

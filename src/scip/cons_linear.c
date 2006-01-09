@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.207 2006/01/03 12:22:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.208 2006/01/09 13:40:58 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -81,6 +81,8 @@
                                          *   (-1: no limit) */
 #define DEFAULT_MAXAGGRNORMSCALE    0.0 /**< maximal allowed relative gain in maximum norm for constraint aggregation
                                          *   (0.0: disable constraint aggregation) */
+#define DEFAULT_SEPARATEALL       FALSE /**< should all constraints be subject to cover cut generation instead of only
+                                         *   the ones with non-zero dual value? */
 
 #define KNAPSACKRELAX_MAXDELTA      0.1 /**< maximal allowed rounding distance for scaling in knapsack relaxation */
 #define KNAPSACKRELAX_MAXDNOM    1000LL /**< maximal allowed denominator in knapsack rational relaxation */
@@ -160,6 +162,8 @@ struct SCIP_ConshdlrData
    int                   maxsepacutsroot;    /**< maximal number of cuts separated per separation round in root node */
    int                   maxpresolpairrounds;/**< maximal number of presolving rounds with pairwise constraint comparison
                                               *   (-1: no limit) */
+   SCIP_Bool             separateall;        /**< should all constraints be subject to cover cut generation instead of only
+                                              *   the ones with non-zero dual value? */
 };
 
 /** linear constraint update method */
@@ -3636,6 +3640,8 @@ SCIP_RETCODE separateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
+   SCIP_Bool             separateall,        /**< should all constraints be subject to cover cut generation instead of only
+                                              *   the ones with non-zero dual value? */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    )
 {
@@ -3661,22 +3667,29 @@ SCIP_RETCODE separateCons(
    else if( !SCIPconsIsModifiable(cons) )
    {
       /* relax linear constraint into knapsack constraint and separate lifted cardinality cuts */
-      if( sol == NULL )
+      if( !separateall && sol == NULL )
       {
+         /* we only want to call the knapsack cover separator for rows that have a non-zero dual solution */
          if( consdata->row != NULL && SCIProwIsInLP(consdata->row) )
          {
             SCIP_Real dualsol;
 
             dualsol = SCIProwGetDualsol(consdata->row);
-            if( !SCIPisInfinity(scip, consdata->rhs) && SCIPisFeasNegative(scip, dualsol) )
+            if( SCIPisFeasNegative(scip, dualsol) )
             {
-               SCIP_CALL( separateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars,
-                     consdata->vals, +1.0, consdata->rhs, sol, ncuts) );
+               if( !SCIPisInfinity(scip, consdata->rhs) )
+               {
+                  SCIP_CALL( separateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars,
+                        consdata->vals, +1.0, consdata->rhs, sol, ncuts) );
+               }
             }
-            else if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisFeasPositive(scip, dualsol) )
+            else if( SCIPisFeasPositive(scip, dualsol) )
             {
-               SCIP_CALL( separateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars,
-                     consdata->vals, -1.0, -consdata->lhs, sol, ncuts) );
+               if( !SCIPisInfinity(scip, -consdata->lhs) )
+               {
+                  SCIP_CALL( separateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars,
+                        consdata->vals, -1.0, -consdata->lhs, sol, ncuts) );
+               }
             }
          }
       }
@@ -3686,8 +3699,8 @@ SCIP_RETCODE separateCons(
          {
             SCIP_CALL( separateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars,
                   consdata->vals, +1.0, consdata->rhs, sol, ncuts) );
-            }
-         else if( !SCIPisInfinity(scip, -consdata->lhs) )
+         }
+         if( !SCIPisInfinity(scip, -consdata->lhs) )
          {
             SCIP_CALL( separateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars,
                   consdata->vals, -1.0, -consdata->lhs, sol, ncuts) );
@@ -5557,7 +5570,7 @@ SCIP_DECL_CONSSEPALP(consSepalpLinear)
    for( c = 0; c < nusefulconss && ncuts < maxsepacuts; ++c )
    {
       /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
-      SCIP_CALL( separateCons(scip, conss[c], NULL, &ncuts) );
+      SCIP_CALL( separateCons(scip, conss[c], NULL, conshdlrdata->separateall, &ncuts) );
    }
 
    /* adjust return value */
@@ -5610,7 +5623,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinear)
    for( c = 0; c < nusefulconss && ncuts < maxsepacuts; ++c )
    {
       /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
-      SCIP_CALL( separateCons(scip, conss[c], sol, &ncuts) );
+      SCIP_CALL( separateCons(scip, conss[c], sol, conshdlrdata->separateall, &ncuts) );
    }
 
    /* adjust return value */
@@ -6408,6 +6421,10 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          "constraints/linear/maxaggrnormscale",
          "maximal allowed relative gain in maximum norm for constraint aggregation (0.0: disable constraint aggregation)",
          &conshdlrdata->maxaggrnormscale, DEFAULT_MAXAGGRNORMSCALE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/linear/separateall",
+         "should all constraints be subject to cover cut generation instead of only the ones with non-zero dual value?",
+         &conshdlrdata->separateall, DEFAULT_SEPARATEALL, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.70 2006/01/03 12:22:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.71 2006/01/09 13:40:59 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -277,6 +277,16 @@ void SCIPstatResetDisplay(
 
    stat->lastdispnode = 0;
    stat->ndisplines = 0;
+}
+
+/** increases LP count, such that all lazy updates depending on the LP are enforced again */
+void SCIPstatEnforceLPUpdates(
+   SCIP_STAT*            stat                /**< problem statistics data */
+   )
+{
+   assert(stat != NULL);
+
+   stat->lpcount++;
 }
 
 /** depending on the current memory usage, switches mode flag to standard or memory saving mode */

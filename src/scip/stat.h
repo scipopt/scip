@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.h,v 1.42 2006/01/03 12:22:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.h,v 1.43 2006/01/09 13:40:59 bzfpfend Exp $"
 
 /**@file   stat.h
  * @brief  internal methods for problem statistics
@@ -86,6 +86,12 @@ void SCIPstatResetCurrentRun(
 /** resets display statistics, such that a new header line is displayed before the next display line */
 extern
 void SCIPstatResetDisplay(
+   SCIP_STAT*            stat                /**< problem statistics data */
+   );
+
+/** increases LP count, such that all lazy updates depending on the LP are enforced again */
+extern
+void SCIPstatEnforceLPUpdates(
    SCIP_STAT*            stat                /**< problem statistics data */
    );
 

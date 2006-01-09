@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.63 2006/01/03 12:22:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.64 2006/01/09 13:40:58 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  MPS file reader
@@ -71,6 +71,7 @@ struct MpsInput
    char                 objname [MPS_MAX_LINELEN];
    SCIP_Bool            isinteger;
    SCIP_Bool            isnewformat;
+   SCIP_Bool            semicontwarning;
 };
 typedef struct MpsInput MPSINPUT;
 
@@ -95,6 +96,7 @@ SCIP_RETCODE mpsinputCreate(
    (*mpsi)->haserror    = FALSE;
    (*mpsi)->isinteger   = FALSE;
    (*mpsi)->isnewformat = FALSE;
+   (*mpsi)->semicontwarning = FALSE;
    (*mpsi)->buf     [0] = '\0';
    (*mpsi)->probname[0] = '\0';
    (*mpsi)->objname [0] = '\0';
@@ -597,11 +599,11 @@ SCIP_RETCODE readName(
       return SCIP_OKAY;
    }
 
-   if (!strcmp(mpsinputField0(mpsi), "ROWS"))
+   if (!strncmp(mpsinputField0(mpsi), "ROWS", 4))
       mpsinputSetSection(mpsi, MPS_ROWS);
-   else if (!strcmp(mpsinputField0(mpsi), "OBJSEN"))
+   else if (!strncmp(mpsinputField0(mpsi), "OBJSEN", 6))
       mpsinputSetSection(mpsi, MPS_OBJSEN);
-   else if (!strcmp(mpsinputField0(mpsi), "OBJNAME"))
+   else if (!strncmp(mpsinputField0(mpsi), "OBJNAME", 7))
       mpsinputSetSection(mpsi, MPS_OBJNAME);
    else
    {
@@ -628,9 +630,9 @@ SCIP_RETCODE readObjsen(
       return SCIP_OKAY;
    }
 
-   if (strcmp(mpsinputField1(mpsi), "MIN"))
+   if (!strncmp(mpsinputField1(mpsi), "MIN", 3))
       mpsinputSetObjsense(mpsi, SCIP_OBJSENSE_MINIMIZE);
-   else if (strcmp(mpsinputField1(mpsi), "MAX"))
+   else if (!strncmp(mpsinputField1(mpsi), "MAX", 3))
       mpsinputSetObjsense(mpsi, SCIP_OBJSENSE_MAXIMIZE);
    else
    {
@@ -1135,19 +1137,34 @@ SCIP_RETCODE readBounds(
          return SCIP_OKAY;
       }
       /* Is the value field used ? */
-      if (  (!strcmp(mpsinputField1(mpsi), "LO"))
-         || (!strcmp(mpsinputField1(mpsi), "UP"))
-         || (!strcmp(mpsinputField1(mpsi), "FX"))
-         || (!strcmp(mpsinputField1(mpsi), "LI"))
-         || (!strcmp(mpsinputField1(mpsi), "UI")))
+      if (  !strcmp(mpsinputField1(mpsi), "LO")  /* lower bound given in field 4 */
+         || !strcmp(mpsinputField1(mpsi), "UP")  /* upper bound given in field 4 */
+         || !strcmp(mpsinputField1(mpsi), "FX")  /* fixed value given in field 4 */
+         || !strcmp(mpsinputField1(mpsi), "LI")  /* CPLEX extension: lower bound of integer variable given in field 4 */
+         || !strcmp(mpsinputField1(mpsi), "UI")  /* CPLEX extension: upper bound of integer variable given in field 4 */
+         || !strcmp(mpsinputField1(mpsi), "SC")) /* CPLEX extension: semi continuous variable */
       {
          if (mpsinputField3(mpsi) != NULL && mpsinputField4(mpsi) == NULL)
+            mpsinputInsertName(mpsi, "_BND_", TRUE);
+         if( !mpsi->semicontwarning && !strcmp(mpsinputField1(mpsi), "SC") )
+         {
+            mpsinputEntryIgnored(scip, mpsi, "not supported semi continuous declaration", mpsinputField1(mpsi),
+               "variable", mpsinputField3(mpsi));
+            mpsi->semicontwarning = TRUE;
+         }
+      }
+      else if( !strcmp(mpsinputField1(mpsi), "FR") /* free variable */
+         || !strcmp(mpsinputField1(mpsi), "MI")    /* lower bound is minus infinity */
+         || !strcmp(mpsinputField1(mpsi), "PL")    /* upper bound is plus infinity */
+         || !strcmp(mpsinputField1(mpsi), "BV"))   /* CPLEX extension: binary variable */
+      {
+         if (mpsinputField2(mpsi) != NULL && mpsinputField3(mpsi) == NULL)
             mpsinputInsertName(mpsi, "_BND_", TRUE);
       }
       else
       {
-         if (mpsinputField2(mpsi) != NULL && mpsinputField3(mpsi) == NULL)
-            mpsinputInsertName(mpsi, "_BND_", TRUE);
+         mpsinputSyntaxerror(mpsi);
+         return SCIP_OKAY;
       }
 
       if (mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL || mpsinputField3(mpsi) == NULL)

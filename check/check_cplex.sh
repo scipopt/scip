@@ -15,21 +15,24 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.sh,v 1.16 2006/01/03 12:22:38 bzfpfend Exp $
+# $Id: check_cplex.sh,v 1.17 2006/01/09 13:40:58 bzfpfend Exp $
 TSTNAME=$1
 CPLEXBIN=$2
-SETTINGS=$3
+SETNAME=$3
 BINNAME=$CPLEXBIN.$4
 TIMELIMIT=$5
 NODELIMIT=$6
 MEMLIMIT=$7
 FEASTOL=$8
 
-OUTFILE=results/check.$TSTNAME.$BINNAME.out
-ERRFILE=results/check.$TSTNAME.$BINNAME.err
-RESFILE=results/check.$TSTNAME.$BINNAME.res
-TEXFILE=results/check.$TSTNAME.$BINNAME.tex
-TMPFILE=results/check.$TSTNAME.$BINNAME.tmp
+OUTFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.out
+ERRFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.err
+RESFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.res
+TEXFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.tex
+TMPFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.tmp
+SETFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.prm
+
+SETTINGS=settings/$SETNAME.cpxset
 
 uname -a >$OUTFILE
 uname -a >$ERRFILE
@@ -40,9 +43,10 @@ for i in `cat $TSTNAME.test`
 do
     if [ -f $i ]
     then
+        rm -f $SETFILE
 	echo @01 $i ===========
 	echo @01 $i ===========                 >> $ERRFILE
-	if [ $SETTINGS != "default" ]
+	if [ $SETNAME != "default" ]
 	then
 	    cp $SETTINGS $TMPFILE
 	else
@@ -61,6 +65,7 @@ do
 	echo set mip tolerances mipgap 0.0      >> $TMPFILE
 	echo set mip limits nodes $NODELIMIT    >> $TMPFILE
 	echo set mip limits treememory $MEMLIMIT >> $TMPFILE
+        echo write $SETFILE                     >> $TMPFILE
 	echo read $i                            >> $TMPFILE
 	echo optimize                           >> $TMPFILE
 	echo quit                               >> $TMPFILE
