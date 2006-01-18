@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.342 2006/01/09 13:40:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.343 2006/01/18 14:53:10 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -9821,7 +9821,7 @@ SCIP_RETCODE SCIPnewProbingNode(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPtreeCreateProbingNode(scip->tree, scip->mem->solvemem, scip->set) );
+   SCIP_CALL( SCIPtreeCreateProbingNode(scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
 
    return SCIP_OKAY;
 }
@@ -10047,13 +10047,70 @@ SCIP_RETCODE SCIPsolveProbingLP(
       return SCIP_INVALIDCALL;
    }
 
+   /* load the LP state (if necessary) */
+   SCIP_CALL( SCIPtreeLoadProbingLPState(scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
+
    /* solve probing LP */
    SCIP_CALL( SCIPlpSolveAndEval(scip->lp, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
          itlim, FALSE, FALSE, lperror) );
 
    /* mark the probing node to have a solved LP */
    if( !(*lperror) )
-      SCIPtreeMarkProbingNodeHasLP(scip->tree);
+   {
+      SCIP_CALL( SCIPtreeMarkProbingNodeHasLP(scip->tree, scip->mem->solvemem, scip->lp) );
+   }
+
+   /* analyze an infeasible LP (not necessary in the root node)
+    * the infeasibility in probing is only proven, if all columns are in the LP (and no external pricers exist)
+    */
+   if( !scip->set->misc_exactsolve && SCIPtreeGetCurrentDepth(scip->tree) > 0
+      && (SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_INFEASIBLE
+         || SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OBJLIMIT)
+      && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
+   {
+      SCIP_CALL( SCIPconflictAnalyzeLP(scip->conflict, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
+            scip->tree, scip->lp, NULL) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** solves the LP at the current probing node (cannot be applied at preprocessing stage) and applies pricing
+ *  until the LP is solved to optimality; no separation is applied
+ */
+SCIP_RETCODE SCIPsolveProbingLPWithPricing(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             pretendroot,        /**< should the pricers be called as if we are at the root node? */
+   SCIP_Bool             displayinfo,        /**< should info lines be displayed after each pricing round? */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   )
+{
+   SCIP_Bool mustsepa;
+   int npricedcolvars;
+
+   assert(lperror != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsolveProbingLPWithPricing", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPtreeProbing(scip->tree) )
+   {
+      SCIPerrorMessage("not in probing mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* load the LP state (if necessary) */
+   SCIP_CALL( SCIPtreeLoadProbingLPState(scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
+
+   /* solve probing LP */
+   SCIP_CALL( SCIPpriceLoop(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
+         scip->pricestore, scip->branchcand, scip->eventqueue, pretendroot, displayinfo,
+         &npricedcolvars, &mustsepa, lperror) );
+
+   /* mark the probing node to have a solved LP */
+   if( !(*lperror) )
+   {
+      SCIP_CALL( SCIPtreeMarkProbingNodeHasLP(scip->tree, scip->mem->solvemem, scip->lp) );
+   }
 
    /* analyze an infeasible LP (not necessary in the root node)
     * the infeasibility in probing is only proven, if all columns are in the LP (and no external pricers exist)

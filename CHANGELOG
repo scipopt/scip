@@ -1,6 +1,9 @@
 current version
 ===============
 
+interface:
+- new method SCIPsolveProbingLPWithPricing()
+
 parameters:
 - new parameter constraints/linear/separateall
 

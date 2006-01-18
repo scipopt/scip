@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.31 2006/01/05 12:18:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.32 2006/01/18 14:53:11 bzfpfend Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -37,16 +37,26 @@
 
 
 
-/** child information (should not exceed the size of a pointer) */
-struct SCIP_Child
+/** probing node, possibly with solved LP, where bounds and constraints have been changed,
+ *  and rows and columns might have been added
+ */
+struct SCIP_Probingnode
 {
-   int                   arraypos;           /**< position of node in the children array */
+   SCIP_LPISTATE*        lpistate;           /**< LP state information */
+   int                   ncols;              /**< total number of columns of this node's LP */
+   int                   nrows;              /**< total number of rows of this node's LP */
 };
 
 /** sibling information (should not exceed the size of a pointer) */
 struct SCIP_Sibling
 {
    int                   arraypos;           /**< position of node in the siblings array */
+};
+
+/** child information (should not exceed the size of a pointer) */
+struct SCIP_Child
+{
+   int                   arraypos;           /**< position of node in the children array */
 };
 
 /** leaf information (should not exceed the size of a pointer) */
@@ -103,6 +113,7 @@ struct SCIP_Node
    SCIP_Real             priority;           /**< node selection priority assigned by the branching rule */
    union
    {
+      SCIP_PROBINGNODE*  probingnode;        /**< data for probing nodes */
       SCIP_SIBLING       sibling;            /**< data for sibling nodes */
       SCIP_CHILD         child;              /**< data for child nodes */
       SCIP_LEAF          leaf;               /**< data for leaf nodes */
@@ -164,6 +175,7 @@ struct SCIP_Tree
    SCIP_Bool             cutoffdelayed;      /**< the treeCutoff() call was delayed because of diving and has to be executed */
    SCIP_Bool             probinglpwasflushed;/**< was the LP flushed before we entered the probing mode? */
    SCIP_Bool             probinglpwassolved; /**< was the LP solved before we entered the probing mode? */
+   SCIP_Bool             probingloadlpistate;/**< must the LP state be reloaded because of a backtrack in probing? */
 };
 
 

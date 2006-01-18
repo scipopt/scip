@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.261 2006/01/05 12:18:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.262 2006/01/18 14:53:11 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3797,6 +3797,17 @@ extern
 SCIP_RETCODE SCIPsolveProbingLP(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   );
+
+/** solves the LP at the current probing node (cannot be applied at preprocessing stage) and applies pricing
+ *  until the LP is solved to optimality; no separation is applied
+ */
+extern
+SCIP_RETCODE SCIPsolveProbingLPWithPricing(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             pretendroot,        /**< should the pricers be called as if we are at the root node? */
+   SCIP_Bool             displayinfo,        /**< should info lines be displayed after each pricing round? */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    );
 

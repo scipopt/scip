@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.43 2006/01/04 16:26:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.44 2006/01/18 14:53:11 bzfpfend Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -98,6 +98,25 @@ SCIP_RETCODE SCIPseparationRound(
    SCIP_Bool             onlydelayed,        /**< should only delayed separators be called? */
    SCIP_Bool*            delayed,            /**< pointer to store whether a separator was delayed */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+   );
+
+/** solves the current LP completely with pricing in new variables */
+extern
+SCIP_RETCODE SCIPpriceLoop(
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Bool             pretendroot,        /**< should the pricers be called as if we are at the root node? */
+   SCIP_Bool             displayinfo,        /**< should info lines be displayed after each pricing round? */
+   int*                  npricedcolvars,     /**< pointer to store number of column variables after problem vars were priced */
+   SCIP_Bool*            mustsepa,           /**< pointer to store TRUE if a separation round should follow */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved error in LP solving occured */
    );
 
 /** main solving loop */

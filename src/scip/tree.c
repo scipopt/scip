@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.170 2006/01/05 13:00:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.171 2006/01/18 14:53:11 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -249,6 +249,85 @@ SCIP_RETCODE SCIPnodeReleaseLPIState(
       SCIPerrorMessage("node for releasing the LPI state is neither fork nor subroot\n");
       return SCIP_INVALIDDATA;
    }  /*lint !e788*/
+}
+
+/** creates probingnode data wihtout LP information */
+static
+SCIP_RETCODE probingnodeCreate(
+   SCIP_PROBINGNODE**    probingnode,        /**< pointer to probingnode data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   assert(probingnode != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, probingnode) );
+
+   (*probingnode)->lpistate = NULL;
+   (*probingnode)->ncols = SCIPlpGetNCols(lp);
+   (*probingnode)->nrows = SCIPlpGetNRows(lp);
+
+   SCIPdebugMessage("created probingnode information (%d cols, %d rows)\n", (*probingnode)->ncols, (*probingnode)->nrows);
+
+   return SCIP_OKAY;
+}
+
+/** updates LP information in probingnode data */
+static
+SCIP_RETCODE probingnodeUpdate(
+   SCIP_PROBINGNODE*     probingnode,        /**< probingnode data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   assert(probingnode != NULL);
+   assert(SCIPtreeIsPathComplete(tree));
+   assert(lp != NULL);
+
+   /* free old LP state */
+   if( probingnode->lpistate != NULL )
+   {
+      SCIP_CALL( SCIPlpFreeState(lp, blkmem, &probingnode->lpistate) );
+   }
+
+   /* get current LP state */
+   if( lp->flushed && lp->solved )
+   {
+      SCIP_CALL( SCIPlpGetState(lp, blkmem, &probingnode->lpistate) );
+   }
+   else
+      probingnode->lpistate = NULL;
+
+   probingnode->ncols = SCIPlpGetNCols(lp);
+   probingnode->nrows = SCIPlpGetNRows(lp);
+
+   SCIPdebugMessage("updated probingnode information (%d cols, %d rows)\n", probingnode->ncols, probingnode->nrows);
+
+   return SCIP_OKAY;
+}
+
+/** frees probingnode data */
+static
+SCIP_RETCODE probingnodeFree(
+   SCIP_PROBINGNODE**    probingnode,        /**< probingnode data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   assert(probingnode != NULL);
+   assert(*probingnode != NULL);
+
+   /* free the associated LP state */
+   if( (*probingnode)->lpistate != NULL )
+   {
+      SCIP_CALL( SCIPlpFreeState(lp, blkmem, &(*probingnode)->lpistate) );
+   }
+
+   BMSfreeBlockMemory(blkmem, probingnode);
+
+   return SCIP_OKAY;
 }
 
 /** initializes junction data */
@@ -862,6 +941,7 @@ SCIP_RETCODE SCIPnodeFree(
       assert(SCIPtreeProbing(tree));
       assert(SCIPnodeGetDepth(tree->probingroot) <= SCIPnodeGetDepth(*node));
       assert(SCIPnodeGetDepth(*node) > 0);
+      SCIP_CALL( probingnodeFree(&((*node)->data.probingnode), blkmem, set, lp) );
       break;
    case SCIP_NODETYPE_SIBLING:
       assert((*node)->data.sibling.arraypos >= 0);
@@ -1771,6 +1851,10 @@ void treeUpdatePathLPSize(
          break;
       case SCIP_NODETYPE_PROBINGNODE:
          assert(SCIPtreeProbing(tree));
+         assert(ncols <= node->data.probingnode->ncols);
+         assert(nrows <= node->data.probingnode->nrows);
+         ncols = node->data.probingnode->ncols;
+         nrows = node->data.probingnode->nrows;
          break;
       case SCIP_NODETYPE_SIBLING:
          SCIPerrorMessage("sibling cannot be in the active path\n");
@@ -2372,6 +2456,13 @@ void treeCheckPath(
       assert((int)(node->depth) == d);
       switch( SCIPnodeGetType(node) )
       {  
+      case SCIP_NODETYPE_PROBINGNODE:
+         assert(SCIPtreeProbing(tree));
+         assert(ncols <= node->data.probingnode->ncols);
+         assert(nrows <= node->data.probingnode->nrows);
+         ncols = node->data.probingnode->ncols;
+         nrows = node->data.probingnode->nrows;
+         break;
       case SCIP_NODETYPE_JUNCTION:
          break;
       case SCIP_NODETYPE_PSEUDOFORK:
@@ -2389,9 +2480,6 @@ void treeCheckPath(
       case SCIP_NODETYPE_FOCUSNODE:
       case SCIP_NODETYPE_REFOCUSNODE:
          assert(d == tree->pathlen-1 || SCIPtreeProbing(tree));
-         break;
-      case SCIP_NODETYPE_PROBINGNODE:
-         assert(SCIPtreeProbing(tree));
          break;
       default:
          SCIPerrorMessage("node at depth %d on active path has to be of type JUNCTION, PSEUDOFORK, FORK, SUBROOT, FOCUSNODE, REFOCUSNODE, or PROBINGNODE, but is %d\n",
@@ -2427,6 +2515,7 @@ SCIP_RETCODE SCIPtreeLoadLP(
    assert(tree->focusnode != NULL);
    assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
    assert(SCIPnodeGetDepth(tree->focusnode) == tree->pathlen-1);
+   assert(!SCIPtreeProbing(tree));
    assert(tree->focusnode == tree->path[tree->pathlen-1]);
    assert(blkmem != NULL);
    assert(set != NULL);
@@ -2552,6 +2641,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
    assert(tree->correctlpdepth < tree->pathlen);
    assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
    assert(SCIPnodeGetDepth(tree->focusnode) == tree->pathlen-1);
+   assert(!SCIPtreeProbing(tree));
    assert(tree->focusnode == tree->path[tree->pathlen-1]);
    assert(blkmem != NULL);
    assert(set != NULL);
@@ -3452,6 +3542,7 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->cutoffdelayed = FALSE;
    (*tree)->probinglpwasflushed = FALSE;
    (*tree)->probinglpwassolved = FALSE;
+   (*tree)->probingloadlpistate = FALSE;
 
    return SCIP_OKAY;
 }
@@ -3524,6 +3615,7 @@ SCIP_RETCODE SCIPtreeClear(
    tree->cutoffdelayed = FALSE;
    tree->probinglpwasflushed = FALSE;
    tree->probinglpwassolved = FALSE;
+   tree->probingloadlpistate = FALSE;
 
    return SCIP_OKAY;
 }
@@ -3910,7 +4002,8 @@ static
 SCIP_RETCODE treeCreateProbingNode(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    SCIP_NODE* currentnode;
@@ -3936,6 +4029,9 @@ SCIP_RETCODE treeCreateProbingNode(
    /* mark node to be a probing node */
    node->nodetype = SCIP_NODETYPE_PROBINGNODE; /*lint !e641*/
 
+   /* create the probingnode data */
+   SCIP_CALL( probingnodeCreate(&node->data.probingnode, blkmem, lp) );
+   
    /* make the current node the parent of the new probing node */
    SCIP_CALL( nodeAssignParent(node, blkmem, set, tree, currentnode, 0.0) );
    assert(SCIPnodeGetDepth(node) == tree->pathlen);
@@ -3964,7 +4060,7 @@ SCIP_RETCODE treeCreateProbingNode(
    /* count the new LP sizes of the path */
    treeUpdatePathLPSize(tree, tree->pathlen-1);
 
-   /* the current probing node does not yet a solved LP */
+   /* the current probing node does not yet have a solved LP */
    tree->probingnodehaslp = FALSE;
 
    return SCIP_OKAY;
@@ -3994,6 +4090,7 @@ SCIP_RETCODE SCIPtreeStartProbing(
    {
       tree->probinglpwasflushed = lp->flushed;
       tree->probinglpwassolved = lp->solved;
+      tree->probingloadlpistate = FALSE;
 
       /* remember the LP state in order to restore the LP solution quickly after probing */
       if( lp->flushed && lp->solved )
@@ -4003,7 +4100,7 @@ SCIP_RETCODE SCIPtreeStartProbing(
    }
 
    /* create temporary probing root node */
-   SCIP_CALL( treeCreateProbingNode(tree, blkmem, set) );
+   SCIP_CALL( treeCreateProbingNode(tree, blkmem, set, lp) );
    assert(SCIPtreeProbing(tree));
 
    return SCIP_OKAY;
@@ -4013,7 +4110,8 @@ SCIP_RETCODE SCIPtreeStartProbing(
 SCIP_RETCODE SCIPtreeCreateProbingNode(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {
    assert(SCIPtreeProbing(tree));
@@ -4022,7 +4120,88 @@ SCIP_RETCODE SCIPtreeCreateProbingNode(
       tree->pathlen, tree->pathlen-1 - SCIPnodeGetDepth(tree->probingroot));
 
    /* create temporary probing root node */
-   SCIP_CALL( treeCreateProbingNode(tree, blkmem, set) );
+   SCIP_CALL( treeCreateProbingNode(tree, blkmem, set, lp) );
+
+   return SCIP_OKAY;
+}
+
+/** loads the LP state for the current probing node */
+SCIP_RETCODE SCIPtreeLoadProbingLPState(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   assert(tree != NULL);
+   assert(SCIPtreeProbing(tree));
+
+   /* loading the LP state is only necessary if we backtracked */
+   if( tree->probingloadlpistate )
+   {
+      SCIP_NODE* node;
+      SCIP_LPISTATE* lpistate;
+
+      /* get the current probing node */
+      node = SCIPtreeGetCurrentNode(tree);
+      assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
+
+      /* search the last node where an LP state information was attached */
+      lpistate = NULL;
+      do
+      {
+         assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
+         assert(node->data.probingnode != NULL);
+         if( node->data.probingnode->lpistate != NULL )
+         {
+            lpistate = node->data.probingnode->lpistate;
+            break;
+         }
+         node = node->parent;
+         assert(node != NULL); /* the root node cannot be a probing node! */
+      }
+      while( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE );
+
+      /* if there was no LP information stored in the probing nodes, use the one stored before probing started */
+      if( lpistate == NULL )
+         lpistate = tree->probinglpistate;
+
+      /* set the LP state */
+      if( lpistate != NULL )
+      {
+         SCIP_CALL( SCIPlpFlush(lp, blkmem, set) );
+         SCIP_CALL( SCIPlpSetState(lp, blkmem, set, lpistate) );
+      }
+
+      /* now we don't need to load the LP state again until the next backtracking */
+      tree->probingloadlpistate = FALSE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** marks the probing node to have a solved LP relaxation */
+SCIP_RETCODE SCIPtreeMarkProbingNodeHasLP(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   SCIP_NODE* node;
+
+   assert(tree != NULL);
+   assert(SCIPtreeProbing(tree));
+
+   /* mark the probing node to have an LP */
+   tree->probingnodehaslp = TRUE;
+
+   /* get current probing node */
+   node = SCIPtreeGetCurrentNode(tree);
+   assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
+   assert(node->data.probingnode != NULL);
+
+   /* update LP information in probingnode data */
+   SCIP_CALL( probingnodeUpdate(node->data.probingnode, blkmem, tree, lp) );
 
    return SCIP_OKAY;
 }
@@ -4042,6 +4221,8 @@ SCIP_RETCODE treeBacktrackProbing(
    )
 {
    int newpathlen;
+   int ncols;
+   int nrows;
 
    assert(tree != NULL);
    assert(SCIPtreeProbing(tree));
@@ -4056,8 +4237,29 @@ SCIP_RETCODE treeBacktrackProbing(
    assert(SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE);
    assert(-1 <= probingdepth && probingdepth <= SCIPtreeGetProbingDepth(tree));
 
+   treeCheckPath(tree);
+
    newpathlen = SCIPnodeGetDepth(tree->probingroot) + probingdepth + 1;
    assert(newpathlen >= 1); /* at least root node of the tree remains active */
+
+   /* if the probing mode is exited we have to look into the probing root for the correct LP size;
+    * otherwise, the correct LP size is stored in the probing node to which we are backtracking
+    */
+   if( probingdepth == -1 )
+   {
+      assert(newpathlen < tree->pathlen);
+      assert(tree->path[newpathlen] == tree->probingroot);
+      ncols = tree->pathnlpcols[newpathlen];
+      nrows = tree->pathnlprows[newpathlen];
+   }
+   else
+   {
+      assert(newpathlen <= tree->pathlen);
+      assert(SCIPnodeGetType(tree->path[newpathlen-1]) == SCIP_NODETYPE_PROBINGNODE);
+      ncols = tree->pathnlpcols[newpathlen-1];
+      nrows = tree->pathnlprows[newpathlen-1];
+   }
+
    while( tree->pathlen > newpathlen )
    {
       assert(SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE);
@@ -4073,6 +4275,13 @@ SCIP_RETCODE treeBacktrackProbing(
    }
    assert(tree->pathlen == newpathlen);
 
+   treeCheckPath(tree);
+
+   /* undo LP extensions */
+   SCIP_CALL( SCIPlpShrinkCols(lp, ncols) );
+   SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, nrows) );
+   tree->probingloadlpistate = FALSE; /* LP state must be reloaded if the next LP is solved */
+
    /* if the highest cutoff or repropagation depth is inside the deleted part of the probing path,
     * reset them to infinity
     */
@@ -4080,6 +4289,9 @@ SCIP_RETCODE treeBacktrackProbing(
       tree->cutoffdepth = INT_MAX;
    if( tree->repropdepth >= tree->pathlen )
       tree->repropdepth = INT_MAX;
+
+   SCIPdebugMessage("probing backtracked to depth %d (%d cols, %d rows)\n", 
+      tree->pathlen-1, SCIPlpGetNCols(lp), SCIPlpGetNRows(lp));
 
    return SCIP_OKAY;
 }
@@ -4174,6 +4386,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    assert(tree->probinglpistate == NULL);
    tree->probinglpwasflushed = FALSE;
    tree->probinglpwassolved = FALSE;
+   tree->probingloadlpistate = FALSE;
 
    /* inform LP about end of probing mode */
    SCIP_CALL( SCIPlpEndProbing(lp) );
@@ -4498,7 +4711,6 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
 #undef SCIPtreeGetFocusDepth
 #undef SCIPtreeHasFocusNodeLP
 #undef SCIPtreeSetFocusNodeLP
-#undef SCIPtreeMarkProbingNodeHasLP
 #undef SCIPtreeIsFocusNodeLPConstructed
 #undef SCIPtreeGetCurrentNode
 #undef SCIPtreeGetCurrentDepth
@@ -4710,16 +4922,6 @@ void SCIPtreeSetFocusNodeLP(
    assert(tree != NULL);
 
    tree->focusnodehaslp = solvelp;
-}
-
-/** marks the probing node to have a solved LP relaxation */
-void SCIPtreeMarkProbingNodeHasLP(
-   SCIP_TREE*            tree                /**< branch and bound tree */
-   )
-{
-   assert(tree != NULL);
-
-   tree->probingnodehaslp = TRUE;
 }
 
 /** returns whether the LP of the focus node is already constructed */

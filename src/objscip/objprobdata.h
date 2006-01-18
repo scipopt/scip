@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.h,v 1.15 2006/01/03 12:22:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprobdata.h,v 1.16 2006/01/18 14:53:10 bzfpfend Exp $"
 
 /**@file   objprobdata.h
  * @brief  C++ wrapper for user problem data
@@ -82,7 +82,7 @@ public:
     */
    virtual SCIP_RETCODE scip_trans(
       SCIP*              scip,               /**< SCIP data structure */
-      ObjProbData** objprobdata,        /**< pointer to store the transformed problem data object */
+      ObjProbData**      objprobdata,        /**< pointer to store the transformed problem data object */
       SCIP_Bool*         deleteobject        /**< pointer to store whether SCIP should delete the object after solving */
       )
    {
