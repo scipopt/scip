@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique.h,v 1.4 2006/01/03 12:23:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique.h,v 1.5 2006/01/27 10:01:35 bzfpfend Exp $"
 
 /**@file   tclique.h
  * @brief  tclique user interface
@@ -43,6 +43,17 @@ typedef struct TCLIQUE_Data TCLIQUE_DATA; /**< user defined data to pass to new 
 #define TRUE  1                         /**< boolean value TRUE */
 #define FALSE 0                         /**< boolean value FALSE */
 #endif
+
+/** return status of the TCLIQUE algorithm */
+enum TCLIQUE_Status
+{
+   TCLIQUE_ERROR,                       /**< an error occurred */
+   TCLIQUE_NODELIMIT,                   /**< the node limit was reached */
+   TCLIQUE_USERABORT,                   /**< the user call back function aborted the solving process */
+   TCLIQUE_OPTIMAL                      /**< the optimal solution was found */
+};
+typedef enum TCLIQUE_Status TCLIQUE_STATUS;
+
 
 
 
@@ -264,7 +275,8 @@ void tcliqueMaxClique(
    TCLIQUE_WEIGHT   minweight,          /**< lower bound for weight of generated cliques */
    int              maxntreenodes,	/**< maximal number of nodes of b&b tree */
    int              maxnzeroextensions, /**< maximal number of zero-valued variables extending the clique */
-   int              fixednode           /**< node that is forced to be in the clique, or -1; must have positive weight */
+   int              fixednode,          /**< node that is forced to be in the clique, or -1; must have positive weight */
+   TCLIQUE_STATUS*  status              /**< pointer to store the status of the solving call */
    );
 
 #endif

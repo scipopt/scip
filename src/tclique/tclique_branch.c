@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.c,v 1.7 2006/01/03 12:23:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_branch.c,v 1.8 2006/01/27 10:01:35 bzfpfend Exp $"
 
 /**@file   tclique_branch.c
  * @brief  branch and bound part of algorithm for maximum cliques
@@ -738,7 +738,8 @@ TCLIQUE_Bool branch(
    int*             ntreenodes,         /**< pointer to store number of nodes of b&b tree */
    int              maxntreenodes,	/**< maximal number of nodes of b&b tree */
    int              maxnzeroextensions, /**< maximal number of zero-valued variables extending the clique */
-   int              fixednode           /**< node that is forced to be in the clique, or -1; must have positive weight */
+   int              fixednode,          /**< node that is forced to be in the clique, or -1; must have positive weight */
+   TCLIQUE_STATUS*  status              /**< pointer to store the status of the solving call */
    )
 {
    TCLIQUE_Bool stopsolving;
@@ -767,6 +768,7 @@ TCLIQUE_Bool branch(
    assert(maxfirstnodeweight >= 0);
    assert(*ntreenodes >= 0);
    assert(maxntreenodes >= 0);
+   assert(status != NULL);
 
    /* increase the number of nodes, and stop solving, if the node limit is exceeded */
    (*ntreenodes)++;
@@ -785,7 +787,10 @@ TCLIQUE_Bool branch(
    debugPrintf("\n");
 #endif
    if( *ntreenodes > maxntreenodes )
+   {
+      *status = TCLIQUE_NODELIMIT;
       return TRUE;
+   }
 
    weights = getweights(tcliquegraph);
    stopsolving = FALSE;
@@ -922,7 +927,7 @@ TCLIQUE_Bool branch(
             level, Vcurrent, nVcurrent, Vzero, nVzero, gsd, iscolored, K, weightK,
             maxcliquenodes, nmaxcliquenodes, maxcliqueweight,
             curcliquenodes, ncurcliquenodes, curcliqueweight, tmpcliquenodes,
-			      maxfirstnodeweight, ntreenodes, maxntreenodes, maxnzeroextensions, -1);
+            maxfirstnodeweight, ntreenodes, maxntreenodes, maxnzeroextensions, -1, status);
 
 	 /* if we had a fixed node, ignore all other nodes */
 	 if( fixednode >= 0 )
@@ -977,7 +982,8 @@ void tcliqueMaxClique(
    TCLIQUE_WEIGHT   minweight,          /**< lower bound for weight of generated cliques */
    int              maxntreenodes,	/**< maximal number of nodes of b&b tree */
    int              maxnzeroextensions, /**< maximal number of zero-valued variables extending the clique */
-   int              fixednode           /**< node that is forced to be in the clique, or -1; must have positive weight */
+   int              fixednode,          /**< node that is forced to be in the clique, or -1; must have positive weight */
+   TCLIQUE_STATUS*  status              /**< pointer to store the status of the solving call */
    )
 {
    CLIQUEHASH* cliquehash;
@@ -998,12 +1004,16 @@ void tcliqueMaxClique(
    TCLIQUE_WEIGHT curcliqueweight;
    int* tmpcliquenodes;
    int ntreenodes;
+   TCLIQUE_Bool userabort;
 
    assert(maxcliquenodes != NULL);
    assert(nmaxcliquenodes != NULL);
    assert(maxcliqueweight != NULL);
    assert(maxntreenodes >= 0);
    assert(maxnzeroextensions >= 0);
+   assert(status != NULL);
+
+   *status = TCLIQUE_OPTIMAL;
 
    /* use default graph callbacks, if NULL pointers are given */
    if( getnnodes == NULL )
@@ -1064,11 +1074,14 @@ void tcliqueMaxClique(
    mem = BMScreateChunkMemory(sizeof(LIST_ITV), CHUNK_SIZE, -1);
 
    /* branch to find maximum weight clique */
-   (void)branch(getnnodes, getweights, isedge, selectadjnodes, tcliquegraph, newsol, tcliquedata, mem, cliquehash, buffer,
-      0, V, nV, Vzero, nVzero, gsd, iscolored, K, 0,
+   userabort = branch(getnnodes, getweights, isedge, selectadjnodes, tcliquegraph, newsol, tcliquedata, mem, cliquehash,
+      buffer, 0, V, nV, Vzero, nVzero, gsd, iscolored, K, 0,
       maxcliquenodes, nmaxcliquenodes, maxcliqueweight,
       curcliquenodes, &ncurcliquenodes, &curcliqueweight, tmpcliquenodes,
-      maxfirstnodeweight, &ntreenodes, maxntreenodes, maxnzeroextensions, fixednode);
+      maxfirstnodeweight, &ntreenodes, maxntreenodes, maxnzeroextensions, fixednode, status);
+
+   if( userabort )
+      *status = TCLIQUE_USERABORT;
 
    /* delete own memory allocator for coloring */
    BMSdestroyChunkMemory(&mem);
