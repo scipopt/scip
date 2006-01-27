@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.24 2006/01/03 12:22:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.25 2006/01/27 11:43:39 bzfpfend Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -986,6 +986,7 @@ SCIP_RETCODE separateCuts(
    TCLIQUE_GRAPH* tcliquegraph;
    int* cliquenodes;
    TCLIQUE_WEIGHT cliqueweight;
+   TCLIQUE_STATUS tcliquestatus;
    int ncliquenodes;
    int maxtreenodes;
    int maxzeroextensions;
@@ -1041,7 +1042,7 @@ SCIP_RETCODE separateCuts(
    tcliqueMaxClique(tcliqueGetnnodesClique, tcliqueGetweightsClique, tcliqueIsedgeClique, tcliqueSelectadjnodesClique,
       tcliquegraph, tcliqueNewsolClique, (TCLIQUE_DATA*)sepadata,
       cliquenodes, &ncliquenodes, &cliqueweight, (int)sepadata->scaleval-1, (int)sepadata->scaleval+1,
-      maxtreenodes, maxzeroextensions, -1);
+      maxtreenodes, maxzeroextensions, -1, &tcliquestatus);
 
    /* frees data structures */
    SCIPfreeBufferArray(scip, &cliquenodes);
