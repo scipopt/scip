@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.61 2006/02/08 13:22:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.62 2006/02/08 14:10:29 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -135,7 +135,8 @@ struct SCIP_Set
                                               *   stronger conflict clauses? */
    SCIP_Bool             conf_allowlocal;    /**< should conflict clauses be generated that are only valid locally? */
    SCIP_Bool             conf_repropagate;   /**< should earlier nodes be repropagated in order to replace branching
-                                              *   decisions by deductions */
+                                              *   decisions by deductions? */
+   SCIP_Bool             conf_keepreprop;    /**< should clauses be kept for repropagation even if they are too long? */
    SCIP_Bool             conf_dynamic;       /**< should the conflict constraints be subject to aging? */
    SCIP_Bool             conf_removeable;    /**< should the conflict's relaxations be subject to LP aging and cleanup? */
    SCIP_Real             conf_scorefac;      /**< factor to decrease importance of variables' earlier conflict scores */

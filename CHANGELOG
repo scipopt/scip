@@ -7,6 +7,7 @@ interface:
 parameters:
 - new parameter constraints/linear/separateall
 - new parameter conflict/contboundlp
+- new parameter conflict/keepreprop
 
 features:
 - extensions to the LP are kept even if the LP is not solved at the current node; however, if the LP turned out to

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.166 2006/02/08 13:22:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.167 2006/02/08 14:10:29 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -86,7 +86,8 @@
                                                  *   stronger conflict clauses? */
 #define SCIP_DEFAULT_CONF_ALLOWLOCAL       TRUE /**< should conflict clauses be generated that are only valid locally? */
 #define SCIP_DEFAULT_CONF_REPROPAGATE      TRUE /**< should earlier nodes be repropagated in order to replace branching
-                                                 *   decisions by deductions */
+                                                 *   decisions by deductions? */
+#define SCIP_DEFAULT_CONF_KEEPREPROP       TRUE /**< should clauses be kept for repropagation even if they are too long? */
 #define SCIP_DEFAULT_CONF_DYNAMIC          TRUE /**< should the conflict constraints be subject to aging? */
 #define SCIP_DEFAULT_CONF_REMOVEABLE       TRUE /**< should the conflict's relaxations be subject to LP aging and cleanup? */
 #define SCIP_DEFAULT_CONF_SCOREFAC         0.98 /**< factor to decrease importance of variables' earlier conflict scores */
@@ -466,8 +467,13 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/repropagate",
-         "should earlier nodes be repropagated in order to replace branching decisions by deductions",
+         "should earlier nodes be repropagated in order to replace branching decisions by deductions?",
          &(*set)->conf_repropagate, SCIP_DEFAULT_CONF_REPROPAGATE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "conflict/keepreprop",
+         "should clauses be kept for repropagation even if they are too long?",
+         &(*set)->conf_keepreprop, SCIP_DEFAULT_CONF_KEEPREPROP,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/reconvclauses",

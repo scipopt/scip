@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.111 2006/02/08 13:22:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.112 2006/02/08 14:10:29 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1008,7 +1008,7 @@ SCIP_RETCODE SCIPconflictFlushClauses(
       if( clause->nvars > maxsize )
       {
          SCIPdebugMessage(" -> clause is too long: %d > %d literals\n", clause->nvars, maxsize);
-         if( clause->repropdepth < repropdepth )
+         if( set->conf_keepreprop && clause->repropdepth < repropdepth )
          {
             repropdepth = clause->repropdepth;
             repropclause = clause;
