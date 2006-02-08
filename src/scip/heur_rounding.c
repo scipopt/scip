@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.50 2006/01/03 12:22:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.51 2006/02/08 13:22:21 bzfpfend Exp $"
 
 /**@file   heur_rounding.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
@@ -187,8 +187,8 @@ SCIP_RETCODE selectRounding(
    SCIP_ROW*             row,                /**< LP row */
    int                   direction,          /**< should the activity be increased (+1) or decreased (-1)? */
    SCIP_VAR**            roundvar,           /**< pointer to store the rounding variable, returns NULL if impossible */
-   SCIP_Real*            oldsolval,          /**< old (fractional) solution value of rounding variable */
-   SCIP_Real*            newsolval           /**< new (rounded) solution value of rounding variable */
+   SCIP_Real*            oldsolval,          /**< pointer to store old (fractional) solution value of rounding variable */
+   SCIP_Real*            newsolval           /**< pointer to store new (rounded) solution value of rounding variable */
    )
 {
    SCIP_COL* col;

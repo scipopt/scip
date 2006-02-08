@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.54 2006/01/03 12:22:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.55 2006/02/08 13:22:22 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -3172,7 +3172,7 @@ SCIP_Bool SCIPrealToRational(
    }
 
    /* the simple denominators didn't work: calculate rational representation with arbitrary denominator */
-   epsilon = MIN(-mindelta, maxdelta);
+   epsilon = MIN(-mindelta, maxdelta)/2.0;
 
    b = val;
    a = EPSFLOOR(b, epsilon);

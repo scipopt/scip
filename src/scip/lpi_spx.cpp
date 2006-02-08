@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.58 2006/01/04 17:09:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.59 2006/02/08 13:22:21 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
- * @brief  LP interface for SOPLEX 1.2.2
+ * @brief  LP interface for SOPLEX 1.3.0
  * @author Tobias Achterberg
  */
 
@@ -155,6 +155,7 @@ public:
    void setObjUpLimit(Real limit)
    {
       m_objUpLimit = limit;
+      /*SPxSolver::setTerminationValue(limit); this is buggy in Soplex!*/
    }
 
    virtual Status solve()

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.29 2006/01/03 12:22:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.30 2006/02/08 13:22:21 bzfpfend Exp $"
 
 /**@file   heur_rootsoldiving.c
  * @brief  LP diving heuristic that changes variable's objective values using root LP solution as guide
@@ -31,7 +31,7 @@
 
 #define HEUR_NAME         "rootsoldiving"
 #define HEUR_DESC         "LP diving heuristic that changes variable's objective values using root LP solution as guide"
-#define HEUR_DISPCHAR     's'
+#define HEUR_DISPCHAR     'S'
 #define HEUR_PRIORITY     -1005000
 #define HEUR_FREQ         20
 #define HEUR_FREQOFS       5

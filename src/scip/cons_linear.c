@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.208 2006/01/09 13:40:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.209 2006/02/08 13:22:21 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2680,10 +2680,14 @@ SCIP_RETCODE applyFixings(
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
+   SCIP_VAR** aggrvars;
    SCIP_Real val;
+   SCIP_Real* aggrscalars;
    SCIP_Real fixedval;
    SCIP_Real aggrconst;
    int v;
+   int naggrvars;
+   int i;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -2708,7 +2712,6 @@ SCIP_RETCODE applyFixings(
 
          case SCIP_VARSTATUS_LOOSE:
          case SCIP_VARSTATUS_COLUMN:
-         case SCIP_VARSTATUS_MULTAGGR:
             ++v;
             break;
 
@@ -2729,6 +2732,26 @@ SCIP_RETCODE applyFixings(
          case SCIP_VARSTATUS_AGGREGATED:
             SCIP_CALL( addCoef(scip, cons, SCIPvarGetAggrVar(var), val * SCIPvarGetAggrScalar(var)) );
             aggrconst = SCIPvarGetAggrConstant(var);
+            if( !SCIPisInfinity(scip, -consdata->lhs) )
+            {
+               SCIP_CALL( chgLhs(scip, cons, consdata->lhs - val * aggrconst) );
+            }
+            if( !SCIPisInfinity(scip, consdata->rhs) )
+            {
+               SCIP_CALL( chgRhs(scip, cons, consdata->rhs - val * aggrconst) );
+            }
+            SCIP_CALL( delCoefPos(scip, cons, v) );
+            break;
+
+         case SCIP_VARSTATUS_MULTAGGR:
+            naggrvars = SCIPvarGetMultaggrNVars(var);
+            aggrvars = SCIPvarGetMultaggrVars(var);
+            aggrscalars = SCIPvarGetMultaggrScalars(var);
+            for( i = 0; i < naggrvars; ++i )
+            {
+               SCIP_CALL( addCoef(scip, cons, aggrvars[i], val * aggrscalars[i]) );
+            }
+            aggrconst = SCIPvarGetMultaggrConstant(var);
             if( !SCIPisInfinity(scip, -consdata->lhs) )
             {
                SCIP_CALL( chgLhs(scip, cons, consdata->lhs - val * aggrconst) );
@@ -3043,6 +3066,11 @@ SCIP_RETCODE tightenVarBounds(
    *cutoff = FALSE;
 
    var = consdata->vars[pos];
+
+   /* we cannot tighten bounds of multi-aggregated variables */
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+      return SCIP_OKAY;
+
    val = consdata->vals[pos];
    lhs = consdata->lhs;
    rhs = consdata->rhs;
@@ -4219,7 +4247,8 @@ SCIP_RETCODE convertBinaryEquality(
 }
 
 /* processes equality with more than two variables by multi-aggregating one of the variables and converting the equality
- * into an inequality
+ * into an inequality; if multi-aggregation is not possible, tries to identify one continuous or integer variable that is
+ * implicitly integral by this constraint
  */
 static
 SCIP_RETCODE convertLongEquality(
@@ -4232,14 +4261,17 @@ SCIP_RETCODE convertLongEquality(
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
    SCIP_Real* vals;
-   SCIP_VAR* var;
-   SCIP_Real val;
    SCIP_VARTYPE bestslacktype;
    SCIP_VARTYPE slacktype;
    SCIP_Real bestslackdomrng;
-   SCIP_Real slackdomrng;
-   SCIP_Bool integral;
+   SCIP_Bool coefszeroone;
+   SCIP_Bool coefsintegral;
+   SCIP_Bool varsintegral;
    int bestslackpos;
+   int ncontvars;
+   int contvarpos;
+   int nintvars;
+   int intvarpos;
    int v;
 
    assert(cutoff != NULL);
@@ -4258,35 +4290,69 @@ SCIP_RETCODE convertLongEquality(
    bestslackpos = -1;
    bestslacktype = SCIP_VARTYPE_BINARY;
    bestslackdomrng = 0.0;
-   integral = TRUE;
+   coefszeroone = TRUE;
+   coefsintegral = TRUE;
+   varsintegral = TRUE;
+   ncontvars = 0;
+   contvarpos = -1;
+   nintvars = 0;
+   intvarpos = -1;
    for( v = 0; v < consdata->nvars; ++v )
    {
+      SCIP_VAR* var;
+      SCIP_Real val;
+      SCIP_Real absval;
+      SCIP_Real varlb;
+      SCIP_Real varub;
+      SCIP_Bool iscont;
+      int maxnlocks;
+
       assert(vars != NULL);
       assert(vals != NULL);
-      var = vars[v];
-      val = vals[v];
 
+      var = vars[v];
       assert(!SCIPconsIsChecked(cons) || SCIPvarGetNLocksDown(var) >= 1); /* because variable is locked in this equality */
       assert(!SCIPconsIsChecked(cons) || SCIPvarGetNLocksUp(var) >= 1);
+      varlb = SCIPvarGetLbGlobal(var);
+      varub = SCIPvarGetUbGlobal(var);
+
+      val = vals[v];
+      absval = REALABS(val);
+      assert(SCIPisPositive(scip, absval));
 
       slacktype = SCIPvarGetType(var);
-      integral = integral && (slacktype != SCIP_VARTYPE_CONTINUOUS) && SCIPisIntegral(scip, val);
+      coefszeroone = coefszeroone && SCIPisEQ(scip, absval, 1.0);
+      coefsintegral = coefsintegral && SCIPisIntegral(scip, val);
+      varsintegral = varsintegral && (slacktype != SCIP_VARTYPE_CONTINUOUS);
+      iscont = (slacktype == SCIP_VARTYPE_CONTINUOUS || slacktype == SCIP_VARTYPE_IMPLINT);
+
+      /* update candidates for continuous -> implint and integer -> implint conversion */
+      if( iscont )
+      {
+         ncontvars++;
+         contvarpos = v;
+      }
+      else if( slacktype == SCIP_VARTYPE_INTEGER )
+      {
+         nintvars++;
+         intvarpos = v;
+      }
 
       /* check, if variable is already fixed or aggregated */
       if( !SCIPvarIsActive(var) )
          continue;
 
-      /* check, if variable is used in other constraints than this one */
-      if( SCIPvarGetNLocksDown(var) > 1 || SCIPvarGetNLocksUp(var) > 1
-         || (!SCIPconsIsChecked(cons) && (SCIPvarGetNLocksDown(var) > 0 || SCIPvarGetNLocksUp(var) > 0)) )
+      /* check, if variable is used in other constraints */
+      maxnlocks = SCIPconsIsChecked(cons) ? 1 : 0;
+      if( SCIPvarGetNLocksDown(var) > maxnlocks || SCIPvarGetNLocksUp(var) > maxnlocks )
          continue;
 
       /* check, if variable can be used as a slack variable */
-      if( slacktype == SCIP_VARTYPE_CONTINUOUS
-         || slacktype == SCIP_VARTYPE_IMPLINT
-         || (integral && SCIPisEQ(scip, REALABS(val), 1.0)) )
+      if( iscont || (coefsintegral && varsintegral && SCIPisEQ(scip, absval, 1.0)) )
       {
-         slackdomrng = SCIPvarGetUbGlobal(var) - SCIPvarGetLbGlobal(var);
+         SCIP_Real slackdomrng;
+
+         slackdomrng = (varub - varlb)*absval;
          if( bestslackpos == -1
             || slacktype > bestslacktype
             || (slacktype == bestslacktype && slackdomrng > bestslackdomrng) )
@@ -4299,7 +4365,7 @@ SCIP_RETCODE convertLongEquality(
    }
 
    /* if all coefficients and variables are integral, the right hand side must also be integral */
-   if( integral && !SCIPisFeasIntegral(scip, consdata->rhs) )
+   if( coefsintegral && varsintegral && !SCIPisFeasIntegral(scip, consdata->rhs) )
    {
       SCIPdebugMessage("linear equality <%s> is integer infeasible\n", SCIPconsGetName(cons));
       SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
@@ -4311,7 +4377,8 @@ SCIP_RETCODE convertLongEquality(
     * we cannot aggregate the variable, because the integrality condition would get lost
     */
    if( bestslackpos >= 0
-      && (bestslacktype == SCIP_VARTYPE_CONTINUOUS || bestslacktype == SCIP_VARTYPE_IMPLINT || integral) )
+      && (bestslacktype == SCIP_VARTYPE_CONTINUOUS || bestslacktype == SCIP_VARTYPE_IMPLINT
+         || (coefsintegral && varsintegral)) )
    {
       SCIP_VAR* slackvar;
       SCIP_Real* scalars;
@@ -4324,9 +4391,10 @@ SCIP_RETCODE convertLongEquality(
       SCIP_Bool infeasible;
       SCIP_Bool aggregated;
 
-      /* we found a slack variable that only occurs in this equality:
+      /* we found a slack variable that only occurs in at most one other constraint:
        *   a_1*x_1 + ... + a_k*x_k + a'*s == rhs  ->  s == rhs - a_1/a'*x_1 - ... - a_k/a'*x_k
        */
+      assert(bestslackpos < consdata->nvars);
 
       /* convert equality into inequality by deleting the slack variable:
        *  x + a*s == b, l <= s <= u   ->  b - a*u <= x <= b - a*l
@@ -4372,12 +4440,12 @@ SCIP_RETCODE convertLongEquality(
       for( v = 0; v < consdata->nvars; ++v )
       {
          scalars[v] = -consdata->vals[v]/slackcoef;
-         SCIPdebugPrintf(" %+g<%s>", scalars[v], SCIPvarGetName(consdata->vars[v]));
+         SCIPdebugPrintf(" %+g<%s>", scalars[v], SCIPvarGetName(vars[v]));
       }
       SCIPdebugPrintf(" %+g, bounds of <%s>: [%g,%g]\n", aggrconst, SCIPvarGetName(slackvar), slackvarlb, slackvarub);
 
       /* perform the multi-aggregation */
-      SCIP_CALL( SCIPmultiaggregateVar(scip, slackvar, consdata->nvars, consdata->vars, scalars, aggrconst,
+      SCIP_CALL( SCIPmultiaggregateVar(scip, slackvar, consdata->nvars, vars, scalars, aggrconst,
             &infeasible, &aggregated) );
       assert(aggregated);
 
@@ -4393,6 +4461,47 @@ SCIP_RETCODE convertLongEquality(
       }
 
       (*naggrvars)++;
+   }
+   else if( ncontvars == 1 )
+   {
+      SCIP_VAR* var;
+
+      assert(0 <= contvarpos && contvarpos < consdata->nvars);
+      var = vars[contvarpos];
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
+
+      if( coefsintegral
+         && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
+         && SCIPisEQ(scip, REALABS(vals[contvarpos]), 1.0)
+         && SCIPisFeasIntegral(scip, consdata->rhs) )
+      {
+         /* convert the continuous variable with coefficient 1.0 into an implicit integer variable */
+         SCIPdebugMessage("linear constraint <%s>: converting continuous variable <%s> to implicit integer variable\n",
+            SCIPconsGetName(cons), SCIPvarGetName(var));
+         SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT) );
+      }
+   }
+   else if( ncontvars == 0 && nintvars == 1 && !coefszeroone )
+   {
+      SCIP_VAR* var;
+
+      /* this seems to help for rococo instances, but does not for rout (where all coefficients are +/- 1.0)
+       *  -> we don't convert integers into implints if the row is a 0/1-row
+       */
+      assert(varsintegral);
+      assert(0 <= intvarpos && intvarpos < consdata->nvars);
+      var = vars[intvarpos];
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+
+      if( coefsintegral
+         && SCIPisEQ(scip, REALABS(vals[intvarpos]), 1.0)
+         && SCIPisFeasIntegral(scip, consdata->rhs) )
+      {
+         /* convert the integer variable with coefficient 1.0 into an implicit integer variable */
+         SCIPdebugMessage("linear constraint <%s>: converting integer variable <%s> to implicit integer variable\n",
+            SCIPconsGetName(cons), SCIPvarGetName(var));
+         SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT) );
+      }
    }
 
    return SCIP_OKAY;

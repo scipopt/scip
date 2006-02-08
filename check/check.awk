@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.29 2006/01/03 12:22:37 bzfpfend Exp $
+# $Id: check.awk,v 1.30 2006/02/08 13:22:20 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -177,11 +177,19 @@ BEGIN {
 /problem is solved/    { timeout = 0; }
 /^  Primal Bound     :/ {
    if( $4 == "infeasible" )
+   {
+      pb = 1e+20;
       feasible = 0;
+   }
    else if( $4 != "-" )
       pb = $4;
 }
-/^  Dual Bound       :/ { if( $4 != "-" ) db = $4; }
+/^  Dual Bound       :/ { 
+   if( $4 == "-" ) 
+      db = 1e+20;
+   else
+      db = $4;
+}
 #
 # iterations
 #

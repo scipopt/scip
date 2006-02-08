@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.82 2006/01/03 12:22:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.83 2006/02/08 13:22:22 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -248,6 +248,22 @@ SCIP_RETCODE SCIPprobFree(
    /* free constraint array */
    BMSfreeMemoryArrayNull(&(*prob)->conss);
    
+   /* free user problem data */
+   if( (*prob)->transformed )
+   {
+      if( (*prob)->probdeltrans != NULL )
+      {
+         SCIP_CALL( (*prob)->probdeltrans(set->scip, &(*prob)->probdata) );
+      }
+   }
+   else
+   {
+      if( (*prob)->probdelorig != NULL )
+      {
+         SCIP_CALL( (*prob)->probdelorig(set->scip, &(*prob)->probdata) );
+      }
+   }
+
    /* release problem variables */
    for( v = 0; v < (*prob)->nvars; ++v )
    {
@@ -267,22 +283,6 @@ SCIP_RETCODE SCIPprobFree(
 
    /* free deleted problem variables array */
    BMSfreeMemoryArrayNull(&(*prob)->deletedvars);
-
-   /* free user problem data */
-   if( (*prob)->transformed )
-   {
-      if( (*prob)->probdeltrans != NULL )
-      {
-         SCIP_CALL( (*prob)->probdeltrans(set->scip, &(*prob)->probdata) );
-      }
-   }
-   else
-   {
-      if( (*prob)->probdelorig != NULL )
-      {
-         SCIP_CALL( (*prob)->probdelorig(set->scip, &(*prob)->probdata) );
-      }
-   }
 
    /* free hash tables for names */
    SCIPhashtableFree(&(*prob)->varnames);
@@ -748,9 +748,16 @@ SCIP_RETCODE SCIPprobChgVarType(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+   assert(branchcand != NULL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL);
 
    if( SCIPvarGetType(var) == vartype )
       return SCIP_OKAY;
+
+   /* temporarily remove variable from branching candidates */
+   if( branchcand != NULL )
+   {
+      SCIP_CALL( SCIPbranchcandRemoveVar(branchcand, var) );
+   }
 
    /* temporarily remove variable from problem */
    probRemoveVar(prob, var);
@@ -762,7 +769,6 @@ SCIP_RETCODE SCIPprobChgVarType(
    probInsertVar(prob, var);
 
    /* update branching candidates */
-   assert(branchcand != NULL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL);
    if( branchcand != NULL )
    {
       SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );

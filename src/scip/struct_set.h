@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.60 2006/01/03 12:22:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.61 2006/02/08 13:22:22 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -131,6 +131,8 @@ struct SCIP_Set
    SCIP_Bool             conf_uselp;         /**< should infeasible LP conflict analysis be used? */
    SCIP_Bool             conf_usesb;         /**< should infeasible strong branching conflict analysis be used? */
    SCIP_Bool             conf_usepseudo;     /**< should pseudo solution conflict analysis be used? */
+   SCIP_Bool             conf_contboundlp;   /**< should solving of LPs exceeding the primal bound be continued to get
+                                              *   stronger conflict clauses? */
    SCIP_Bool             conf_allowlocal;    /**< should conflict clauses be generated that are only valid locally? */
    SCIP_Bool             conf_repropagate;   /**< should earlier nodes be repropagated in order to replace branching
                                               *   decisions by deductions */

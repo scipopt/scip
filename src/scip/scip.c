@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.343 2006/01/18 14:53:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.344 2006/02/08 13:22:22 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5796,6 +5796,8 @@ SCIP_RETCODE SCIPtightenVarLb(
    SCIP_CALL( checkStage(scip, "SCIPtightenVarLb", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    *infeasible = FALSE;
+   if( tightened != NULL )
+      *tightened = FALSE;
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
@@ -5812,11 +5814,7 @@ SCIP_RETCODE SCIPtightenVarLb(
    newbound = MIN(newbound, ub);
 
    if( !SCIPsetIsLbBetter(scip->set, newbound, lb) )
-   {
-      if( tightened != NULL )
-         *tightened = FALSE;
       return SCIP_OKAY;
-   }
 
    switch( scip->set->stage )
    {
@@ -5867,6 +5865,8 @@ SCIP_RETCODE SCIPtightenVarUb(
    SCIP_CALL( checkStage(scip, "SCIPtightenVarUb", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    *infeasible = FALSE;
+   if( tightened != NULL )
+      *tightened = FALSE;
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
 
@@ -5883,11 +5883,7 @@ SCIP_RETCODE SCIPtightenVarUb(
    newbound = MAX(newbound, lb);
 
    if( !SCIPsetIsUbBetter(scip->set, newbound, ub) )
-   {
-      if( tightened != NULL )
-         *tightened = FALSE;
       return SCIP_OKAY;
-   }
 
    switch( scip->set->stage )
    {
@@ -5940,6 +5936,8 @@ SCIP_RETCODE SCIPinferVarLbCons(
    SCIP_CALL( checkStage(scip, "SCIPinferVarLbCons", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    *infeasible = FALSE;
+   if( tightened != NULL )
+      *tightened = FALSE;
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
@@ -5956,11 +5954,7 @@ SCIP_RETCODE SCIPinferVarLbCons(
    newbound = MIN(newbound, ub);
 
    if( !SCIPsetIsLbBetter(scip->set, newbound, lb) )
-   {
-      if( tightened != NULL )
-         *tightened = FALSE;
       return SCIP_OKAY;
-   }
 
    switch( scip->set->stage )
    {
@@ -6014,6 +6008,8 @@ SCIP_RETCODE SCIPinferVarUbCons(
    SCIP_CALL( checkStage(scip, "SCIPinferVarUbCons", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    *infeasible = FALSE;
+   if( tightened != NULL )
+      *tightened = FALSE;
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
 
@@ -6030,11 +6026,7 @@ SCIP_RETCODE SCIPinferVarUbCons(
    newbound = MAX(newbound, lb);
 
    if( !SCIPsetIsUbBetter(scip->set, newbound, ub) )
-   {
-      if( tightened != NULL )
-         *tightened = FALSE;
       return SCIP_OKAY;
-   }
 
    switch( scip->set->stage )
    {
@@ -6181,6 +6173,8 @@ SCIP_RETCODE SCIPinferVarLbProp(
    SCIP_CALL( checkStage(scip, "SCIPinferVarLbProp", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    *infeasible = FALSE;
+   if( tightened != NULL )
+      *tightened = FALSE;
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
@@ -6197,11 +6191,7 @@ SCIP_RETCODE SCIPinferVarLbProp(
    newbound = MIN(newbound, ub);
 
    if( !SCIPsetIsLbBetter(scip->set, newbound, lb) )
-   {
-      if( tightened != NULL )
-         *tightened = FALSE;
       return SCIP_OKAY;
-   }
 
    switch( scip->set->stage )
    {
@@ -6255,6 +6245,8 @@ SCIP_RETCODE SCIPinferVarUbProp(
    SCIP_CALL( checkStage(scip, "SCIPinferVarUbProp", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    *infeasible = FALSE;
+   if( tightened != NULL )
+      *tightened = FALSE;
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
 
@@ -6271,11 +6263,7 @@ SCIP_RETCODE SCIPinferVarUbProp(
    newbound = MAX(newbound, lb);
 
    if( !SCIPsetIsUbBetter(scip->set, newbound, ub) )
-   {
-      if( tightened != NULL )
-         *tightened = FALSE;
       return SCIP_OKAY;
-   }
 
    switch( scip->set->stage )
    {
@@ -10028,18 +10016,18 @@ SCIP_RETCODE SCIPpropagateProbingImplications(
    return SCIP_OKAY;
 }
 
-/** solves the LP at the current probing node (cannot be applied at preprocessing stage);
- *  no separation or pricing is applied
- */
-SCIP_RETCODE SCIPsolveProbingLP(
+/** solves the LP at the current probing node (cannot be applied at preprocessing stage) with or without pricing */
+static
+SCIP_RETCODE solveProbingLP(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
+   SCIP_Bool             pricing,            /**< should pricing be applied? */
+   SCIP_Bool             pretendroot,        /**< should the pricers be called as if we are at the root node? */
+   SCIP_Bool             displayinfo,        /**< should info lines be displayed after each pricing round? */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
    assert(lperror != NULL);
-
-   SCIP_CALL( checkStage(scip, "SCIPsolveProbingLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    if( !SCIPtreeProbing(scip->tree) )
    {
@@ -10058,12 +10046,23 @@ SCIP_RETCODE SCIPsolveProbingLP(
    if( !(*lperror) )
    {
       SCIP_CALL( SCIPtreeMarkProbingNodeHasLP(scip->tree, scip->mem->solvemem, scip->lp) );
+
+      /* call pricing */
+      if( pricing )
+      {
+         SCIP_Bool mustsepa;
+         int npricedcolvars;
+
+         SCIP_CALL( SCIPpriceLoop(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
+               scip->pricestore, scip->branchcand, scip->eventqueue, pretendroot, displayinfo,
+               &npricedcolvars, &mustsepa, lperror) );
+      }
    }
 
    /* analyze an infeasible LP (not necessary in the root node)
     * the infeasibility in probing is only proven, if all columns are in the LP (and no external pricers exist)
     */
-   if( !scip->set->misc_exactsolve && SCIPtreeGetCurrentDepth(scip->tree) > 0
+   if( !(*lperror) && !scip->set->misc_exactsolve && SCIPtreeGetCurrentDepth(scip->tree) > 0
       && (SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_INFEASIBLE
          || SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OBJLIMIT)
       && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
@@ -10071,6 +10070,22 @@ SCIP_RETCODE SCIPsolveProbingLP(
       SCIP_CALL( SCIPconflictAnalyzeLP(scip->conflict, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
             scip->tree, scip->lp, NULL) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** solves the LP at the current probing node (cannot be applied at preprocessing stage);
+ *  no separation or pricing is applied
+ */
+SCIP_RETCODE SCIPsolveProbingLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsolveProbingLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( solveProbingLP(scip, itlim, FALSE, FALSE, FALSE, lperror) );
 
    return SCIP_OKAY;
 }
@@ -10085,44 +10100,9 @@ SCIP_RETCODE SCIPsolveProbingLPWithPricing(
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
-   SCIP_Bool mustsepa;
-   int npricedcolvars;
-
-   assert(lperror != NULL);
-
    SCIP_CALL( checkStage(scip, "SCIPsolveProbingLPWithPricing", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( !SCIPtreeProbing(scip->tree) )
-   {
-      SCIPerrorMessage("not in probing mode\n");
-      return SCIP_INVALIDCALL;
-   }
-
-   /* load the LP state (if necessary) */
-   SCIP_CALL( SCIPtreeLoadProbingLPState(scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
-
-   /* solve probing LP */
-   SCIP_CALL( SCIPpriceLoop(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
-         scip->pricestore, scip->branchcand, scip->eventqueue, pretendroot, displayinfo,
-         &npricedcolvars, &mustsepa, lperror) );
-
-   /* mark the probing node to have a solved LP */
-   if( !(*lperror) )
-   {
-      SCIP_CALL( SCIPtreeMarkProbingNodeHasLP(scip->tree, scip->mem->solvemem, scip->lp) );
-   }
-
-   /* analyze an infeasible LP (not necessary in the root node)
-    * the infeasibility in probing is only proven, if all columns are in the LP (and no external pricers exist)
-    */
-   if( !scip->set->misc_exactsolve && SCIPtreeGetCurrentDepth(scip->tree) > 0
-      && (SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_INFEASIBLE
-         || SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OBJLIMIT)
-      && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
-   {
-      SCIP_CALL( SCIPconflictAnalyzeLP(scip->conflict, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-            scip->tree, scip->lp, NULL) );
-   }
+   SCIP_CALL( solveProbingLP(scip, -1, TRUE, pretendroot, displayinfo, lperror) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.165 2006/01/03 12:22:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.166 2006/02/08 13:22:22 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -82,6 +82,8 @@
 #define SCIP_DEFAULT_CONF_USELP           FALSE /**< should infeasible LP conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USESB           FALSE /**< should infeasible strong branching conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USEPSEUDO       FALSE /**< should pseudo solution conflict analysis be used? */
+#define SCIP_DEFAULT_CONF_CONTBOUNDLP     FALSE /**< should solving of LPs exceeding the primal bound be continued to get
+                                                 *   stronger conflict clauses? */
 #define SCIP_DEFAULT_CONF_ALLOWLOCAL       TRUE /**< should conflict clauses be generated that are only valid locally? */
 #define SCIP_DEFAULT_CONF_REPROPAGATE      TRUE /**< should earlier nodes be repropagated in order to replace branching
                                                  *   decisions by deductions */
@@ -416,6 +418,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/usepseudo",
          "should pseudo solution conflict analysis be used?",
          &(*set)->conf_usepseudo, SCIP_DEFAULT_CONF_USEPSEUDO,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "conflict/contboundlp",
+         "should solving of LPs exceeding the primal bound be continued to get stronger conflict clauses?",
+         &(*set)->conf_contboundlp, SCIP_DEFAULT_CONF_CONTBOUNDLP,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "conflict/maxvarsfac",

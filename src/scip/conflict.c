@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.110 2006/01/03 12:22:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.111 2006/02/08 13:22:21 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -3747,9 +3747,11 @@ SCIP_RETCODE conflictAnalyzeLP(
       /* make sure, a dual feasible solution exists, that exceeds the objective limit;
        * With FASTMIP setting, CPLEX does not apply the final pivot to reach the dual solution exceeding the objective
        * limit. Therefore, we have turn off FASTMIP and resolve the problem.
+       * If the "contboundlp" setting is activated, we want to continue solving to the optimal value anyways, and we
+       * can leave the FASTMIP setting in place.
        */
       SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-      if( objval < lp->lpiuobjlim )
+      if( objval < lp->lpiuobjlim || set->conf_contboundlp )
       {
          SCIP_RETCODE retcode;
          int oldfastmip;
@@ -3760,14 +3762,25 @@ SCIP_RETCODE conflictAnalyzeLP(
 	 if( retcode != SCIP_PARAMETERUNKNOWN )
 	 {
 	    SCIP_CALL( retcode );
-	    if( !oldfastmip )
-	       return SCIP_OKAY;
 	 }
          else
+            oldfastmip = FALSE;
+
+         /* if the bound does not exceed the objective limit, but FASTMIP was not activated, something went wrong
+          * and we better ignore this conflict
+          */
+         if( objval < lp->lpiuobjlim && !oldfastmip )
             return SCIP_OKAY;
 
-         /* temporarily disable FASTMIP in LP solver */
-         SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_FASTMIP, FALSE) );
+         /* temporarily disable FASTMIP in LP solver, or remove the objective limit (depending on the contboundlp flag) */
+         if( set->conf_contboundlp )
+         {
+            SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, SCIPlpiInfinity(lpi)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_FASTMIP, FALSE) );
+         }
 
          /* start LP timer */
          SCIPclockStart(stat->conflictlptime, set);
@@ -3795,8 +3808,15 @@ SCIP_RETCODE conflictAnalyzeLP(
             valid = (SCIPlpiIsObjlimExc(lpi) || SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsOptimal(lpi));
          }
 
-         /* reinstall FASTMIP in LP solver */
-         SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_FASTMIP, oldfastmip) );
+         /* reinstall FASTMIP or objective limit in LP solver */
+         if( set->conf_contboundlp )
+         {
+            SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, lp->lpiuobjlim) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_FASTMIP, oldfastmip) );
+         }
 
          /* abort, if the LP produced an error */
          if( !valid )

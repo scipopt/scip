@@ -6,6 +6,7 @@ interface:
 
 parameters:
 - new parameter constraints/linear/separateall
+- new parameter conflict/contboundlp
 
 features:
 - extensions to the LP are kept even if the LP is not solved at the current node; however, if the LP turned out to
@@ -15,6 +16,7 @@ fixed bugs:
 - fixed bug with invalid lazy updates after a restart where the LP is not solved again (e.g., due to all variables
   being fixed)
 - fixed bug in MPS file reader with OBJSENSE
+- fixed numerical bug in SCIPrealToRational() [thanks to Anders Schack-Nielsen]
 
 
 SCIP version 0.81

@@ -14,7 +14,7 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.2 2006/01/03 12:22:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.3 2006/02/08 13:22:21 bzfpfend Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -1633,10 +1633,11 @@ void* BMSreallocBlockMemory_call(
 {
    void* newptr;
 
-   assert((ptr == NULL) == (oldsize == 0));
-
    if( ptr == NULL )
+   {
+      assert(oldsize == 0);
       return BMSallocBlockMemory_call(blkmem, newsize, filename, line);
+   }
 
    alignSize(&oldsize);
    alignSize(&newsize);
@@ -1713,7 +1714,7 @@ void BMSfreeBlockMemory_call(
       blkmem->memused -= size;
       assert(blkmem->memused >= 0);
    }
-   else
+   else if( size != 0 )
    {
       printErrorHeader(filename, line);
       printError("Tried to free null block pointer\n");
