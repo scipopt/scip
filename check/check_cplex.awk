@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.16 2006/01/09 13:40:58 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.17 2006/02/23 12:40:31 bzfpfend Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -44,9 +44,9 @@ BEGIN {
     printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &     Nodes &     Time \\\\\n") > TEXFILE;
     printf("\\midrule\n")                                            >TEXFILE;
 
-    printf("------------------+-------+------+--------------+--------------+------+---------------+-------+------+-------\n");
-    printf("Name              | Conss | Vars |   Dual Bound | Primal Bound | Gap% |               | Nodes | Time |       \n");
-    printf("------------------+-------+------+--------------+--------------+------+---------------+-------+------+-------\n");
+    printf("-------------------------+-------+------+--------------+--------------+------+---------------+-------+------+-------\n");
+    printf("Name                     | Conss | Vars |   Dual Bound | Primal Bound | Gap% |               | Nodes | Time |       \n");
+    printf("-------------------------+-------+------+--------------+--------------+------+---------------+-------+------+-------\n");
 
     nprobs   = 0;
     sbab     = 0;
@@ -56,8 +56,10 @@ BEGIN {
     nodegeom = 1.0;
     timegeom = 1.0;
     failtime = 0.0;
+    timeouttime = 0.0;
     fail     = 0;
     pass     = 0;
+    timeouts = 0;
 }
 /=opt=/ { solfeasible[$2] = 1; sol[$2] = $3; }  # get optimum
 /=inf=/ { solfeasible[$2] = 0; sol[$2] = 0.0; } # problem infeasible
@@ -114,24 +116,60 @@ BEGIN {
     }
     opti = ($2 == "optimal") ? 1 : 0;
 }
+/^MIP - Integer/  { # since CPLEX 10.0
+    if ($4 == "infeasible." || $4 == "infeasible")
+    {
+	db = 1e+20;
+	pb = 1e+20;
+	absgap = 0.0;
+        feasible = 0;
+    }
+    else
+    {
+	db = $NF;
+	pb = $NF;
+	absgap = 0.0;
+        feasible = 1;
+    }
+    opti = ($4 == "optimal") ? 1 : 0;
+}
 /^Solution limit exceeded, integer feasible:/ {
    pb = $8;
+   timeout = 1;
+}
+/^MIP - Solution limit exceeded, integer feasible:/ { # since CPLEX 10.0
+   pb = $10;
    timeout = 1;
 }
 /^Time/  {
     pb = ($4 == "no") ? 1e+75 : $8;
     timeout = 1;
 }
+/^MIP - Time/  { # since CPLEX 10.0
+    pb = ($6 == "no") ? 1e+75 : $10;
+    timeout = 1;
+}
 /^Node/ {
     pb = ($4 == "no") ? 1e+75 : $8;
+    timeout = 1;
+}
+/^MIP - Node/ { # since CPLEX 10.0
+    pb = ($6 == "no") ? 1e+75 : $10;
     timeout = 1;
 }
 /^Tree/  {
     pb = ($4 == "no") ? 1e+75 : $8;
     timeout = 1;
 }
+/^MIP - Tree/  { # since CPLEX 10.0
+    pb = ($6 == "no") ? 1e+75 : $10;
+    timeout = 1;
+}
 /^Error/  {
     pb = ($3 == "no") ? 1e+75 : $7;
+}
+/^MIP - Error/  { # since CPLEX 10.0
+    pb = ($5 == "no") ? 1e+75 : $9;
 }
 /cuts applied/ { 
     cuts += $NF;
@@ -181,7 +219,7 @@ BEGIN {
    printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
       pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
    
-   printf("%-19s %6d %6d %14.9g %14.9g %6s                 %7d %6.1f ",
+   printf("%-26s %6d %6d %14.9g %14.9g %6s                 %7d %6.1f ",
       prob, cons, vars, db, pb, gapstr, bbnodes, tottime);
    
    if (sol[prob] == "")
@@ -193,11 +231,17 @@ BEGIN {
          if ((abs(pb - db) > 1e-4) || (abs(pb - sol[prob]) > 1e-6*max(abs(pb),1.0)))
          {
             if (timeout)
+            {
                printf("timeout\n");
+               timeouttime += tottime;
+               timeouts++;
+            }
             else
+            {
                printf("fail\n");
-            failtime += tottime;
-            fail++;
+               failtime += tottime;
+               fail++;
+            }
          }
          else
          {
@@ -210,11 +254,17 @@ BEGIN {
          if (feasible)
          {
             if (timeout)
+            {
                printf("timeout\n");
+               timeouttime += tottime;
+               timeouts++;
+            }
             else
+            {
                printf("fail\n");
-            failtime += tottime;
-            fail++;
+               failtime += tottime;
+               fail++;
+            }
          }
          else
          {
@@ -248,10 +298,10 @@ END {
     printf("------------------+-------+------+--------------+--------------+------+---------------+-------+------+-------\n");
     
     printf("\n");
-    printf("------------------------[Nodes]---------------[Time]------\n");
-    printf("  Cnt  Pass  Fail  total(k)     geom.     total     geom. \n");
-    printf("----------------------------------------------------------\n");
-    printf("%5d %5d %5d %9d %9.1f %9.1f %9.1f\n",
-       nprobs, pass, fail, sbab / 1000, nodegeom, stottime, timegeom);
-    printf("----------------------------------------------------------\n");
+    printf("------------------------------[Nodes]---------------[Time]------\n");
+    printf("  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom. \n");
+    printf("----------------------------------------------------------------\n");
+    printf("%5d %5d %5d %5d %9d %9.1f %9.1f %9.1f\n",
+       nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom);
+    printf("----------------------------------------------------------------\n");
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.36 2006/01/03 12:22:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.37 2006/02/23 12:40:32 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -142,7 +142,10 @@ SCIP_RETCODE SCIPconflictFree(
 /** initializes the propagation conflict analysis by clearing the conflict candidate queue */
 extern
 SCIP_RETCODE SCIPconflictInit(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob                /**< problem data */
    );
 
 /** adds variable's bound to conflict candidate queue */

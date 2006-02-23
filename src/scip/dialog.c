@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.29 2006/01/03 12:22:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.30 2006/02/23 12:40:34 bzfpfend Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -167,6 +167,75 @@ SCIP_RETCODE removeHistory(
 
 #endif
 
+/** frees a single linelist entry, but not its successors */
+static
+void linelistFree(
+   SCIP_LINELIST**       linelist            /**< pointer to line list */
+   )
+{
+   assert(linelist != NULL);
+
+   BMSfreeMemoryArray(&(*linelist)->inputline);
+   BMSfreeMemory(linelist);
+}
+
+/** frees a linelist entry and all of its successors */
+static
+void linelistFreeAll(
+   SCIP_LINELIST**       linelist            /**< pointer to line list */
+   )
+{
+   assert(linelist != NULL);
+
+   while( *linelist != NULL )
+   {
+      SCIP_LINELIST* nextline;
+
+      nextline = (*linelist)->nextline;
+      linelistFree(linelist);
+      *linelist = nextline;
+   }
+}
+
+/** reads a line of input from stdin or from the stored input lines in the input list */
+static
+SCIP_RETCODE readInputLine(
+   SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
+   const char*           prompt              /**< prompt to display */
+   )
+{
+   assert(dialoghdlr != NULL);
+   assert(dialoghdlr->buffer != NULL);
+   assert(dialoghdlr->bufferpos < dialoghdlr->buffersize);
+   assert(dialoghdlr->buffer[dialoghdlr->bufferpos] == '\0');
+
+   if( dialoghdlr->inputlist == NULL )
+   {
+      /* read a line from stdin */
+      SCIP_CALL( readLine(dialoghdlr, prompt) );
+   }
+   else
+   {
+      SCIP_LINELIST* nextline;
+
+      /* copy the next input line into the input buffer */
+      (void)strncpy(&dialoghdlr->buffer[dialoghdlr->bufferpos], dialoghdlr->inputlist->inputline,
+         dialoghdlr->buffersize - dialoghdlr->bufferpos);
+      dialoghdlr->buffer[dialoghdlr->buffersize-1] = '\0';
+
+      /* free the input line */
+      nextline = dialoghdlr->inputlist->nextline;
+      if( dialoghdlr->inputlistptr == &(dialoghdlr->inputlist->nextline) )
+         dialoghdlr->inputlistptr = &dialoghdlr->inputlist;
+      linelistFree(&dialoghdlr->inputlist);
+      dialoghdlr->inputlist = nextline;
+      assert(dialoghdlr->inputlistptr != NULL);
+      assert(*dialoghdlr->inputlistptr == NULL);
+   }
+
+   return SCIP_OKAY;
+}
+
 
 
 
@@ -183,6 +252,8 @@ SCIP_RETCODE SCIPdialoghdlrCreate(
    
    SCIP_ALLOC( BMSallocMemory(dialoghdlr) );
    (*dialoghdlr)->rootdialog = NULL;
+   (*dialoghdlr)->inputlist = NULL;
+   (*dialoghdlr)->inputlistptr = &(*dialoghdlr)->inputlist;
    (*dialoghdlr)->buffersize = SCIP_MAXSTRLEN;
    (*dialoghdlr)->nprotectedhistelems = -1;
    SCIP_ALLOC( BMSallocMemoryArray(&(*dialoghdlr)->buffer, (*dialoghdlr)->buffersize) );
@@ -200,6 +271,7 @@ SCIP_RETCODE SCIPdialoghdlrFree(
    assert(dialoghdlr != NULL);
    
    SCIP_CALL( SCIPdialoghdlrSetRoot(*dialoghdlr, NULL) );
+   linelistFreeAll(&(*dialoghdlr)->inputlist);
    BMSfreeMemoryArray(&(*dialoghdlr)->buffer);
    BMSfreeMemory(dialoghdlr);
 
@@ -322,8 +394,8 @@ const char* SCIPdialoghdlrGetWord(
          prompt = p;
       }
 
-      /* read command line from stdin */
-      SCIP_CALL_ABORT( readLine(dialoghdlr, prompt) );
+      /* read command line from stdin or from the input line list */
+      SCIP_CALL_ABORT( readInputLine(dialoghdlr, prompt) );
 
       /* strip trailing spaces */
       len = (int)strlen(&dialoghdlr->buffer[dialoghdlr->bufferpos]);
@@ -364,6 +436,28 @@ const char* SCIPdialoghdlrGetWord(
       dialoghdlr->bufferpos++;
 
    return firstword;
+}
+
+/** adds a single line of input to the dialog handler which is treated as if the user entered the command line */
+SCIP_RETCODE SCIPdialoghdlrAddInputLine(
+   SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
+   const char*           inputline           /**< input line to add */
+   )
+{
+   SCIP_LINELIST* linelist;
+
+   assert(dialoghdlr != NULL);
+   assert(dialoghdlr->inputlistptr != NULL);
+   assert(*dialoghdlr->inputlistptr == NULL);
+   assert(inputline != NULL);
+
+   SCIP_ALLOC( BMSallocMemory(&linelist) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&linelist->inputline, inputline, strlen(inputline)+1) );
+   linelist->nextline = NULL;
+   *dialoghdlr->inputlistptr = linelist;
+   dialoghdlr->inputlistptr = &linelist->nextline;
+   
+   return SCIP_OKAY;
 }
 
 /** adds a command to the command history of the dialog handler; if a dialog is given, the command is preceeded

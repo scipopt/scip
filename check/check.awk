@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.30 2006/02/08 13:22:20 bzfpfend Exp $
+# $Id: check.awk,v 1.31 2006/02/23 12:40:31 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -47,12 +47,12 @@ BEGIN {
 #    printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &     Nodes &     Time \\\\\n") > TEXFILE;
     printf("\\midrule\n")                                            >TEXFILE;
 
-    printf("------------------+-------+------+--------------+--------------+------+-------+-------+-------+------+------+------+------+-------\n");
-    printf("Name              | Conss | Vars |   Dual Bound | Primal Bound | Gap% | Confs |  Lits | Nodes | Time | BTim | OTim | CTim |       \n");
-    printf("------------------+-------+------+--------------+--------------+------+-------+-------+-------+------+------+------+------+-------\n");
-#    printf("------------------+-------+------+--------------+--------------+------+-------+------+-------\n");
-#    printf("Name              | Conss | Vars |   Dual Bound | Primal Bound | Gap% | Nodes | Time |       \n");
-#    printf("------------------+-------+------+--------------+--------------+------+-------+------+-------\n");
+    printf("------------------+------+-------+------+--------------+--------------+------+-------+-------+-------+------+------+------+------+-------\n");
+    printf("Name              | Type | Conss | Vars |   Dual Bound | Primal Bound | Gap% | Confs |  Lits | Nodes | Time | BTim | OTim | CTim |       \n");
+    printf("------------------+------+-------+------+--------------+--------------+------+-------+-------+-------+------+------+------+------+-------\n");
+#    printf("------------------+------+-------+------+--------------+--------------+------+-------+------+-------\n");
+#    printf("Name              | Type | Conss | Vars |   Dual Bound | Primal Bound | Gap% | Nodes | Time |       \n");
+#    printf("------------------+------+-------+------+--------------+--------------+------+-------+------+-------\n");
 
     nprobs = 0;
     sbab = 0;
@@ -97,6 +97,10 @@ BEGIN {
     for( i = 2; i <= n; i++ )
        pprob = pprob "\\_" a[i];
     vars = 0;
+    binvars = 0;
+    intvars = 0;
+    implvars = 0;
+    contvars = 0;
     cons = 0;
     timeout = 0;
     feasible = 1;
@@ -150,13 +154,13 @@ BEGIN {
 /^  applied globally :/ {
    if( inconflict == 1 )
    {
-      confclauses += $6; confliterals += $6 * $7;
+      confclauses += $7; confliterals += $7 * $8;
    }
 }
 /^  applied locally  :/ {
    if( inconflict == 1 )
    {
-      confclauses += $6; confliterals += $6 * $7;
+      confclauses += $7; confliterals += $7 * $8;
    }
 }
 /^Separators         :/ { inconflict = 0; }
@@ -167,7 +171,13 @@ BEGIN {
 #
 # problem size
 #
-/^  Variables        :/ { vars = $3; }
+/^  Variables        :/ {
+   vars = $3;
+   intvars = $6;
+   implvars = $8;
+   contvars = $11;
+   binvars = vars - intvars - implvars - contvars;
+}
 /^  Constraints      :/ { cons = $3; }
 #
 # solution
@@ -241,17 +251,36 @@ BEGIN {
    else
       gapstr = " Large";
 
+   if( vars == 0 )
+      probtype = "--";
+   else if( binvars == 0 && intvars == 0 )
+      probtype = "LP";
+   else if( contvars == 0 )
+   {
+      if( intvars == 0 && implvars == 0 )
+         probtype = "BP";
+      else
+         probtype = "IP";
+   }
+   else
+   {
+      if( intvars == 0 )
+         probtype = "01MIP";
+      else
+         probtype = "MIP";
+   }
+
    printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s & %8d & %7.1f &%s%8d &%s%7.1f & %7.1f & %7.1f & %7.1f \\\\\n",
       pprob, cons, vars, db, pb, gapstr, confclauses, (confclauses > 0 ? confliterals / confclauses : 0.0), 
       markersym, bbnodes, markersym, tottime, tottime - conftime - overheadtime, overheadtime, conftime) >TEXFILE;
 #   printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
 #      pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
    
-   printf("%-19s %6d %6d %14.9g %14.9g %6s %7d %7.1f %7d %6.1f %6.1f %6.1f %6.1f ",
-      shortprob, cons, vars, db, pb, gapstr, confclauses, (confclauses > 0 ? confliterals / confclauses : 0.0), 
+   printf("%-19s %-6s %6d %6d %14.9g %14.9g %6s %7d %7.1f %7d %6.1f %6.1f %6.1f %6.1f ",
+      shortprob, probtype, cons, vars, db, pb, gapstr, confclauses, (confclauses > 0 ? confliterals / confclauses : 0.0), 
       bbnodes, tottime, tottime - conftime - overheadtime, overheadtime, conftime);
-#   printf("%-19s %6d %6d %14.9g %14.9g %6s %7d %6.1f ",
-#      shortprob, cons, vars, db, pb, gapstr, bbnodes, tottime);
+#   printf("%-19s %-6s %6d %6d %14.9g %14.9g %6s %7d %6.1f ",
+#      shortprob, probtype, cons, vars, db, pb, gapstr, bbnodes, tottime);
    
    if( aborted )
    {
@@ -358,8 +387,8 @@ END {
     printf("\\end{table}\n")                                              >TEXFILE;
     printf("\\end{document}\n")                                           >TEXFILE;
     
-    printf("------------------+-------+------+--------------+--------------+------+-------+-------+-------+------+------+------+------+-------\n");
-#    printf("------------------+-------+------+--------------+--------------+------+-------+------+-------\n");
+    printf("------------------+------+-------+------+--------------+--------------+------+-------+-------+-------+------+------+------+------+-------\n");
+#    printf("------------------+------+-------+------+--------------+--------------+------+-------+------+-------\n");
     
     printf("\n");
     printf("------------------------------[Nodes]---------------[Time]-----------[Basic Time]-------[Overhead Time]-----[Conflict Time]-\n");

@@ -38,9 +38,13 @@ conflict/minmaxvars = 30
 # [type: int, range: [-1,2147483647], default: -1]
 conflict/maxunfixed = -1
 
-# maximal number of LP resolving loops during conflict analysis
-# [type: int, range: [0,2147483647], default: 100]
-conflict/maxlploops = 100
+# maximal number of LP resolving loops during conflict analysis (-1: no limit)
+# [type: int, range: [-1,2147483647], default: 0]
+conflict/maxlploops = 0
+
+# maximal number of LP iterations in each LP resolving loop (-1: no limit)
+# [type: int, range: [-1,2147483647], default: 0]
+conflict/lpiterations = 0
 
 # number of depth levels up to which first UIP's are used in conflict analysis (-1: use All-FirstUIP rule)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -58,9 +62,17 @@ conflict/maxclauses = 10
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 conflict/allowlocal = TRUE
 
-# should earlier nodes be repropagated in order to replace branching decisions by deductions
+# should conflict clauses be attached only to the local subtree where they can be useful?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+conflict/settlelocal = TRUE
+
+# should earlier nodes be repropagated in order to replace branching decisions by deductions?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 conflict/repropagate = TRUE
+
+# should clauses be kept for repropagation even if they are too long?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+conflict/keepreprop = TRUE
 
 # should reconvergence clauses be created for UIPs of last depth level?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -278,9 +290,13 @@ presolving/abortfac = 0.0001
 # [type: int, range: [-1,2147483647], default: -1]
 presolving/maxrestarts = -1
 
-# fraction of bounds that changed in the root node triggering a restart with preprocessing (0.0: restart only after complete root node evaluation)
+# fraction of integer variables that were fixed in the root node triggering a restart with preprocessing (0.0: restart only after complete root node evaluation)
 # [type: real, range: [0,1], default: 0]
 presolving/restartfac = 0
+
+# fraction of integer variables that were globally fixed during the solving process triggering a restart with preprocessing
+# [type: real, range: [0,1], default: 1]
+presolving/subrestartfac = 1
 
 # maximal number of variables priced in per pricing round
 # [type: int, range: [1,2147483647], default: 100]
@@ -301,10 +317,6 @@ propagating/maxrounds = 100
 # maximal number of propagation rounds in the root node (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: 1000]
 propagating/maxroundsroot = 1000
-
-# frequency for applying reduced cost fixing (-1: never; 0: only root LP)
-# [type: int, range: [-1,2147483647], default: 1]
-propagating/redcostfreq = 1
 
 # maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separation (0.0: only on current best node, 1.0: on all nodes)
 # [type: real, range: [0,1], default: 0.2]
@@ -445,6 +457,10 @@ constraints/linear/maxpresolpairrounds = -1
 # maximal allowed relative gain in maximum norm for constraint aggregation (0.0: disable constraint aggregation)
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
 constraints/linear/maxaggrnormscale = 0
+
+# should all constraints be subject to cover cut generation instead of only the ones with non-zero dual value?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/linear/separateall = FALSE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
@@ -985,6 +1001,22 @@ branching/relpscost/maxdepth = -1
 # maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching rule (0.0: only on current best node, 1.0: on all nodes)
 # [type: real, range: [0,1], default: 1]
 branching/relpscost/maxbounddist = 1
+
+# weight in score calculations for conflict score
+# [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: 0]
+branching/relpscost/conflictweight = 0
+
+# weight in score calculations for inference score
+# [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: 0]
+branching/relpscost/inferenceweight = 0
+
+# weight in score calculations for cutoff score
+# [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: 0]
+branching/relpscost/cutoffweight = 0
+
+# weight in score calculations for pseudo cost score
+# [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: 1]
+branching/relpscost/pscostweight = 1
 
 # minimal value for minimum pseudo cost size to regard pseudo cost value as reliable
 # [type: real, range: [0,1.79769313486232e+308], default: 1]
@@ -1650,6 +1682,22 @@ heuristics/rounding/freqofs = 0
 # [type: int, range: [-1,2147483647], default: -1]
 heuristics/rounding/maxdepth = -1
 
+# priority of heuristic <shifting>
+# [type: int, range: [-2147483648,2147483647], default: -5000]
+heuristics/shifting/priority = -5000
+
+# frequency for calling primal heuristic <shifting> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/shifting/freq = 10
+
+# frequency offset for calling primal heuristic <shifting>
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/shifting/freqofs = 0
+
+# maximal depth level to call primal heuristic <shifting> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/shifting/maxdepth = -1
+
 # priority of heuristic <simplerounding>
 # [type: int, range: [-2147483648,2147483647], default: 0]
 heuristics/simplerounding/priority = 0
@@ -1681,6 +1729,18 @@ propagating/pseudoobj/delay = FALSE
 # maximal number of variables to look at in a single propagation round (-1: process all variables)
 # [type: int, range: [-1,2147483647], default: 100]
 propagating/pseudoobj/maxcands = 100
+
+# priority of propagator <rootredcost>
+# [type: int, range: [-2147483648,2147483647], default: 1000000]
+propagating/rootredcost/priority = 1000000
+
+# frequency for calling propagator <rootredcost> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 1]
+propagating/rootredcost/freq = 1
+
+# should propagator be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+propagating/rootredcost/delay = FALSE
 
 # priority of separator <clique>
 # [type: int, range: [-2147483648,2147483647], default: -5000]
@@ -1869,6 +1929,18 @@ separating/intobj/freq = -1
 # should separator be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/intobj/delay = FALSE
+
+# priority of separator <redcost>
+# [type: int, range: [-2147483648,2147483647], default: 10000000]
+separating/redcost/priority = 10000000
+
+# frequency for calling separator <redcost> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 1]
+separating/redcost/freq = 1
+
+# should separator be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/redcost/delay = FALSE
 
 # priority of separator <strongcg>
 # [type: int, range: [-2147483648,2147483647], default: -2000]

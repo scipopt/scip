@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.42 2006/01/03 12:22:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.43 2006/02/23 12:40:36 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -49,8 +49,6 @@ struct SCIP_Stat
    SCIP_Longint          nsblpiterations;    /**< number of simplex iterations used in strong branching */
    SCIP_Longint          nrootsblpiterations;/**< number of simplex iterations used in strong branching at the root node */
    SCIP_Longint          nconflictlpiterations;/**< number of simplex iterations used in conflict analysis */
-   SCIP_Longint          nredcoststrcalls;   /**< number of times, reduced cost strengthening was called */
-   SCIP_Longint          nredcoststrfound;   /**< number of reduced cost strengthenings found */
    SCIP_Longint          nnodes;             /**< number of nodes processed in current run (including focus node) */
    SCIP_Longint          ntotalnodes;        /**< total number of nodes processed in all runs (including focus node) */
    SCIP_Longint          ncreatednodes;      /**< total number of nodes created */
@@ -66,7 +64,6 @@ struct SCIP_Stat
    SCIP_Longint          lastdivenode;       /**< last node where LP diving was applied */
    SCIP_Longint          lastconflictnode;   /**< last node where conflict analysis was applied */
    SCIP_Longint          domchgcount;        /**< internal counter, where all domain changes are counted */
-   SCIP_Longint          nrootboundchgs;     /**< total number of bound changes generated in the root node */
    SCIP_Longint          nrepropboundchgs;   /**< total number of bound changes generated in repropagating nodes */
    SCIP_Longint          nboundchgs;         /**< total number of bound changes generated in the tree */
    SCIP_Longint          nholechgs;          /**< total number of hole changes generated in the tree */
@@ -82,7 +79,6 @@ struct SCIP_Stat
    SCIP_CLOCK*           conflictlptime;     /**< conflict analysis LP solution time */
    SCIP_CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
    SCIP_CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
-   SCIP_CLOCK*           redcoststrtime;     /**< time needed for reduced cost strengthening */
    SCIP_CLOCK*           nodeactivationtime; /**< time needed for path switching and activating nodes */
    SCIP_HISTORY*         glbhistory;         /**< global history information over all variables */
    SCIP_HISTORY*         glbhistorycrun;     /**< global history information over all variables for current run */
@@ -91,7 +87,10 @@ struct SCIP_Stat
    SCIP_STATUS           status;             /**< SCIP solving status */
    SCIP_BRANCHDIR        lastbranchdir;      /**< direction of the last branching */
    int                   nruns;              /**< number of branch and bound runs on current problem, including current run */
+   int                   nrootboundchgs;     /**< total number of bound changes generated in the root node */
    int                   nrootboundchgsrun;  /**< total number of bound changes generated in the root node of current run */
+   int                   nrootintfixings;    /**< total number of global fixings of integer variables */
+   int                   nrootintfixingsrun; /**< total number of global fixings of integer variables of current run */
    int                   nvaridx;            /**< number of used variable indices */
    int                   ncolidx;            /**< number of used column indices */
    int                   nrowidx;            /**< number of used row indices */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.344 2006/02/08 13:22:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.345 2006/02/23 12:40:35 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -30,6 +30,7 @@
 
 #include <stdarg.h>
 #include <assert.h>
+#include <string.h>
 
 #include "scip/def.h"
 #include "scip/retcode.h"
@@ -2287,6 +2288,32 @@ SCIP_RETCODE SCIPaddDialogEntry(
    return SCIP_OKAY;
 }
 
+/** adds a single line of input which is treated as if the user entered the command line */
+SCIP_RETCODE SCIPaddDialogInputLine(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           inputline           /**< input line to add */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPaddDialogInputLine", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   SCIP_CALL( SCIPdialoghdlrAddInputLine(scip->dialoghdlr, inputline) );
+
+   return SCIP_OKAY;
+}
+
+/** adds a single line of input to the command history which can be accessed with the cursor keys */
+SCIP_RETCODE SCIPaddDialogHistoryLine(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           inputline           /**< input line to add */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPaddDialogHistoryLine", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   SCIP_CALL( SCIPdialoghdlrAddHistory(scip->dialoghdlr, NULL, inputline) );
+
+   return SCIP_OKAY;
+}
+
 /** starts interactive mode of SCIP by executing the root dialog */
 SCIP_RETCODE SCIPstartInteraction(
    SCIP*                 scip                /**< SCIP data structure */
@@ -3487,15 +3514,14 @@ SCIP_RETCODE SCIPaddConsNode(
             SCIPconsGetName(cons), cons->validdepth, validdepth);
          return SCIP_INVALIDDATA;
       }
-      if( validdepth == 0 )
+      if( validdepth <= SCIPtreeGetEffectiveRootDepth(scip->tree) )
          SCIPconsSetLocal(cons, FALSE);
       else
          cons->validdepth = validdepth;
    }
 
-   if( SCIPnodeGetDepth(node) == 0 )
+   if( SCIPnodeGetDepth(node) <= SCIPtreeGetEffectiveRootDepth(scip->tree) )
    {
-      assert(node == scip->tree->root);
       SCIPconsSetLocal(cons, FALSE);
       SCIP_CALL( SCIPprobAddCons(scip->transprob, scip->set, scip->stat, cons) );
    }
@@ -3549,7 +3575,7 @@ SCIP_RETCODE SCIPdelConsNode(
 
    SCIP_CALL( checkStage(scip, "SCIPdelConsNode", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( SCIPnodeGetDepth(node) == 0 )
+   if( SCIPnodeGetDepth(node) <= SCIPtreeGetEffectiveRootDepth(scip->tree) )
    {
       SCIP_CALL( SCIPconsDelete(cons, scip->mem->solvemem, scip->set, scip->stat, scip->transprob) );
    }
@@ -4450,6 +4476,7 @@ SCIP_RETCODE freeSolve(
 
    /* clear the LP, and flush the changes to clear the LP of the solver */
    SCIP_CALL( SCIPlpReset(scip->lp, scip->mem->solvemem, scip->set, scip->stat) );
+   SCIPlpInvalidateRootObjval(scip->lp);
 
    /* clear all row references in internal data structures */
    SCIP_CALL( SCIPcutpoolClear(scip->cutpool, scip->mem->solvemem, scip->set, scip->lp) );
@@ -4693,8 +4720,8 @@ SCIP_RETCODE SCIPsolve(
          /* free the solving process data in order to restart */
          assert(scip->set->stage == SCIP_STAGE_SOLVING);
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
-            "(run %d) restarting after %d root node bound changes\n\n",
-            scip->stat->nruns, scip->stat->nrootboundchgsrun);
+            "(run %d, node %lld) restarting after %d global fixings of integer variables\n\n",
+            scip->stat->nruns, scip->stat->nnodes, scip->stat->nrootintfixingsrun);
          SCIP_CALL( SCIPfreeSolve(scip) );
          assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
       }
@@ -5307,7 +5334,7 @@ SCIP_RETCODE SCIPgetVarStrongbranch(
    SCIP_CALL( SCIPcolGetStrongbranch(col, scip->set, scip->stat, scip->lp, itlim,
          down, up, downvalid, upvalid, lperror) );
 
-   /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough
+   /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
     * declare the sub nodes infeasible
     */
    if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->set->misc_exactsolve )
@@ -5771,6 +5798,92 @@ SCIP_RETCODE SCIPchgVarUbNode(
 
    SCIP_CALL( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp,
          scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** changes global lower bound of variable; if possible, adjust bound to integral value; also tightens the local bound,
+ *  if the global bound is better than the local bound
+ */
+SCIP_RETCODE SCIPchgVarLbGlobal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Real             newbound            /**< new value for bound */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPchgVarLbGlobal", FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPvarAdjustLb(var, scip->set, &newbound);
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      SCIP_CALL( SCIPvarChgLbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      SCIP_CALL( SCIPvarChgLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      SCIP_CALL( SCIPvarChgLbOriginal(var, scip->set, newbound) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_TRANSFORMING:
+      SCIP_CALL( SCIPvarChgLbGlobal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp,
+            scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
+      return SCIP_OKAY;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_ERROR;
+   }  /*lint !e788*/
+
+   return SCIP_OKAY;
+}
+
+/** changes global upper bound of variable; if possible, adjust bound to integral value; also tightens the local bound,
+ *  if the global bound is better than the local bound
+ */
+SCIP_RETCODE SCIPchgVarUbGlobal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Real             newbound            /**< new value for bound */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPchgVarUbGlobal", FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPvarAdjustUb(var, scip->set, &newbound);
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      SCIP_CALL( SCIPvarChgUbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      SCIP_CALL( SCIPvarChgUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      SCIP_CALL( SCIPvarChgUbOriginal(var, scip->set, newbound) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_TRANSFORMING:
+      SCIP_CALL( SCIPvarChgUbGlobal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp,
+            scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
+      return SCIP_OKAY;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_ERROR;
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -7680,7 +7793,7 @@ SCIP_RETCODE SCIPinitConflictAnalysis(
 {
    SCIP_CALL( checkStage(scip, "SCIPinitConflictAnalysis", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPconflictInit(scip->conflict) );
+   SCIP_CALL( SCIPconflictInit(scip->conflict, scip->set, scip->stat, scip->transprob) );
 
    return SCIP_OKAY;
 }
@@ -8447,6 +8560,40 @@ SCIP_Real SCIPgetPseudoObjval(
    return SCIPlpGetPseudoObjval(scip->lp, scip->set);
 }
 
+/** gets the objective value of the root node LP; returns SCIP_INVALID if the root node LP was not (yet) solved */
+SCIP_Real SCIPgetLPRootObjval(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetLPRootObjval", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPlpGetRootObjval(scip->lp);
+}
+
+/** gets part of the objective value of the root node LP that results from COLUMN variables only;
+ *  returns SCIP_INVALID if the root node LP was not (yet) solved
+ */
+SCIP_Real SCIPgetLPRootColumnObjval(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetLPRootColumnObjval", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPlpGetRootColumnObjval(scip->lp);
+}
+
+/** gets part of the objective value of the root node LP that results from LOOSE variables only;
+ *  returns SCIP_INVALID if the root node LP was not (yet) solved
+ */
+SCIP_Real SCIPgetLPRootLooseObjval(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetLPRootLooseObjval", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPlpGetRootLooseObjval(scip->lp);
+}
+
 /** gets current LP columns along with the current number of LP columns */
 SCIP_RETCODE SCIPgetLPColsData(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8745,6 +8892,30 @@ SCIP_RETCODE SCIPgetLPI(
    *lpi = SCIPlpGetLPI(scip->lp);
 
    return SCIP_OKAY;
+}
+
+
+
+
+/*
+ * LP column methods
+ */
+
+/** returns the reduced costs of a column in the last LP */
+SCIP_Real SCIPgetColRedcost(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COL*             col                 /**< LP column */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetColRedcost", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
+   {
+      SCIPerrorMessage("cannot get reduced costs, because node LP is not processed\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   return SCIPcolGetRedcost(col, scip->stat, scip->lp);
 }
 
 
@@ -11366,6 +11537,16 @@ SCIP_NODE* SCIPgetCurrentNode(
    return SCIPtreeGetCurrentNode(scip->tree);
 }
 
+/** returns whether the current node is already solved and only propagated again */
+SCIP_Bool SCIPinRepropagation(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPinRepropagation", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPtreeInRepropagation(scip->tree);
+}
+
 /** gets children of focus node along with the number of children */
 SCIP_RETCODE SCIPgetChildren(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -12249,6 +12430,76 @@ SCIP_Real SCIPgetAvgPseudocostCountCurrentRun(
    return SCIPhistoryGetPseudocostCount(scip->stat->glbhistorycrun, dir) / MAX(scip->transprob->nvars, 1);
 }
 
+/** gets the average pseudo cost score value over all variables, assuming a fractionality of 0.5 */
+SCIP_Real SCIPgetAvgPseudocostScore(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_Real pscostdown;
+   SCIP_Real pscostup;
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetAvgPseudocostScore", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   pscostdown = SCIPhistoryGetPseudocost(scip->stat->glbhistory, -0.5);
+   pscostup = SCIPhistoryGetPseudocost(scip->stat->glbhistory, +0.5);
+
+   return SCIPbranchGetScore(scip->set, NULL, pscostdown, pscostup);
+}
+
+/** gets the average pseudo cost score value over all variables, assuming a fractionality of 0.5,
+ *  only using the pseudo cost information of the current run
+ */
+SCIP_Real SCIPgetAvgPseudocostScoreCurrentRun(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_Real pscostdown;
+   SCIP_Real pscostup;
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetAvgPseudocostScoreCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   pscostdown = SCIPhistoryGetPseudocost(scip->stat->glbhistorycrun, -0.5);
+   pscostup = SCIPhistoryGetPseudocost(scip->stat->glbhistorycrun, +0.5);
+
+   return SCIPbranchGetScore(scip->set, NULL, pscostdown, pscostup);
+}
+
+/** gets the average conflict score value over all variables */
+SCIP_Real SCIPgetAvgConflictScore(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_Real conflictscoredown;
+   SCIP_Real conflictscoreup;
+   SCIP_Real scale;
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetAvgConflictScore", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   scale = scip->transprob->nvars * scip->stat->conflictscoreweight;
+   conflictscoredown = SCIPhistoryGetConflictScore(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS) / scale;
+   conflictscoreup = SCIPhistoryGetConflictScore(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS) / scale;
+
+   return SCIPbranchGetScore(scip->set, NULL, conflictscoredown, conflictscoreup);
+}
+
+/** gets the average conflict score value over all variables, only using the pseudo cost information of the current run */
+SCIP_Real SCIPgetAvgConflictScoreCurrentRun(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_Real conflictscoredown;
+   SCIP_Real conflictscoreup;
+   SCIP_Real scale;
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetAvgConflictScoreCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   scale = scip->transprob->nvars * scip->stat->conflictscoreweight;
+   conflictscoredown = SCIPhistoryGetConflictScore(scip->stat->glbhistorycrun, SCIP_BRANCHDIR_DOWNWARDS) / scale;
+   conflictscoreup = SCIPhistoryGetConflictScore(scip->stat->glbhistorycrun, SCIP_BRANCHDIR_UPWARDS) / scale;
+
+   return SCIPbranchGetScore(scip->set, NULL, conflictscoredown, conflictscoreup);
+}
+
 /** returns the average number of inferences found after branching in given direction over all variables */
 SCIP_Real SCIPgetAvgInferences(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -12273,6 +12524,38 @@ SCIP_Real SCIPgetAvgInferencesCurrentRun(
    return SCIPhistoryGetAvgInferences(scip->stat->glbhistorycrun, dir);
 }
 
+/** gets the average inference score value over all variables */
+SCIP_Real SCIPgetAvgInferenceScore(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_Real inferencesdown;
+   SCIP_Real inferencesup;
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetAvgInferenceScore", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   inferencesdown = SCIPhistoryGetAvgInferences(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS);
+   inferencesup = SCIPhistoryGetAvgInferences(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS);
+
+   return SCIPbranchGetScore(scip->set, NULL, inferencesdown, inferencesup);
+}
+
+/** gets the average inference score value over all variables, only using the pseudo cost information of the current run */
+SCIP_Real SCIPgetAvgInferenceScoreCurrentRun(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_Real inferencesdown;
+   SCIP_Real inferencesup;
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetAvgInferenceScoreCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   inferencesdown = SCIPhistoryGetAvgInferences(scip->stat->glbhistorycrun, SCIP_BRANCHDIR_DOWNWARDS);
+   inferencesup = SCIPhistoryGetAvgInferences(scip->stat->glbhistorycrun, SCIP_BRANCHDIR_UPWARDS);
+
+   return SCIPbranchGetScore(scip->set, NULL, inferencesdown, inferencesup);
+}
+
 /** returns the average number of cutoffs found after branching in given direction over all variables */
 SCIP_Real SCIPgetAvgCutoffs(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -12295,6 +12578,38 @@ SCIP_Real SCIPgetAvgCutoffsCurrentRun(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetAvgCutoffsCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    return SCIPhistoryGetAvgCutoffs(scip->stat->glbhistorycrun, dir);
+}
+
+/** gets the average cutoff score value over all variables */
+SCIP_Real SCIPgetAvgCutoffScore(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_Real cutoffsdown;
+   SCIP_Real cutoffsup;
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetAvgCutoffScore", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   cutoffsdown = SCIPhistoryGetAvgCutoffs(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS);
+   cutoffsup = SCIPhistoryGetAvgCutoffs(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS);
+
+   return SCIPbranchGetScore(scip->set, NULL, cutoffsdown, cutoffsup);
+}
+
+/** gets the average cutoff score value over all variables, only using the pseudo cost information of the current run */
+SCIP_Real SCIPgetAvgCutoffScoreCurrentRun(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_Real cutoffsdown;
+   SCIP_Real cutoffsup;
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetAvgCutoffScoreCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   cutoffsdown = SCIPhistoryGetAvgCutoffs(scip->stat->glbhistorycrun, SCIP_BRANCHDIR_DOWNWARDS);
+   cutoffsup = SCIPhistoryGetAvgCutoffs(scip->stat->glbhistorycrun, SCIP_BRANCHDIR_UPWARDS);
+
+   return SCIPbranchGetScore(scip->set, NULL, cutoffsdown, cutoffsup);
 }
 
 /** outputs original problem to file stream */
@@ -12433,8 +12748,8 @@ void printPresolverStatistics(
    }
 
    /* root node bound changes */
-   SCIPmessageFPrintInfo(file, "  root node        :          -          -          - %10"SCIP_LONGINT_FORMAT"          -          -          -          -\n",
-      scip->stat->nrootboundchgs);
+   SCIPmessageFPrintInfo(file, "  root node        :          - %10d          - %10d          -          -          -          -\n",
+      scip->stat->nrootintfixings, scip->stat->nrootboundchgs);
 
 #if 0
    /* print total */
@@ -12539,11 +12854,6 @@ void printPropagatorStatistics(
    assert(scip->set != NULL);
 
    SCIPmessageFPrintInfo(file, "Propagators        :       Time      Calls    Cutoffs    DomReds\n");
-
-   SCIPmessageFPrintInfo(file, "  reduced cost str.: %10.2f %10"SCIP_LONGINT_FORMAT"          - %10"SCIP_LONGINT_FORMAT"\n",
-      SCIPclockGetTime(scip->stat->redcoststrtime),
-      scip->stat->nredcoststrcalls,
-      scip->stat->nredcoststrfound);
 
    for( i = 0; i < scip->set->nprops; ++i )
       SCIPmessageFPrintInfo(file, "  %-17.17s: %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT"\n",
@@ -13008,10 +13318,8 @@ SCIP_RETCODE SCIPprintBranchingStatistics(
    )
 {
    SCIP_VAR** vars;
-   SCIP_Real* depths;
-   SCIP_Real depth;
+   int totalnstrongbranchs;
    int v;
-   int i;
 
    SCIP_CALL( checkStage(scip, "SCIPprintBranchingHistory", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
@@ -13028,28 +13336,30 @@ SCIP_RETCODE SCIPprintBranchingStatistics(
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, scip->transprob->nvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &depths, scip->transprob->nvars) );
       for( v = 0; v < scip->transprob->nvars; ++v )
       {
-         depth = SCIPvarGetAvgBranchdepth(scip->transprob->vars[v], SCIP_BRANCHDIR_DOWNWARDS)
-            + SCIPvarGetAvgBranchdepth(scip->transprob->vars[v], SCIP_BRANCHDIR_UPWARDS);
-         for( i = v; i > 0 && depth < depths[i-1]; i-- )
-         {
+         SCIP_VAR* var;
+         int i;
+
+         var = scip->transprob->vars[v];
+         for( i = v; i > 0 && strcmp(SCIPvarGetName(var), SCIPvarGetName(vars[i-1])) < 0; i-- )
             vars[i] = vars[i-1];
-            depths[i] = depths[i-1];
-         }
-         vars[i] = scip->transprob->vars[v];
-         depths[i] = depth;
+         vars[i] = var;
       }
 
       SCIPmessageFPrintInfo(file, "                                      locks              branchings              inferences      cutoffs            LP gain   \n");
       SCIPmessageFPrintInfo(file, "variable          prio   factor   down     up  depth    down      up    sb     down       up   down     up      down        up\n");
 
+      totalnstrongbranchs = 0;
       for( v = 0; v < scip->transprob->nvars; ++v )
       {
          if( SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_DOWNWARDS) > 0
             || SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_UPWARDS) > 0 )
          {
+            int nstrongbranchs;
+
+            nstrongbranchs = SCIPgetVarNStrongbranchs(scip, vars[v]);
+            totalnstrongbranchs += nstrongbranchs;
             SCIPmessageFPrintInfo(file, "%-16s %5d %8.1f %6d %6d %6.1f %7"SCIP_LONGINT_FORMAT" %7"SCIP_LONGINT_FORMAT" %5d %8.1f %8.1f %5.1f%% %5.1f%% %9.1f %9.1f\n",
                SCIPvarGetName(vars[v]),
                SCIPvarGetBranchPriority(vars[v]),
@@ -13060,7 +13370,7 @@ SCIP_RETCODE SCIPprintBranchingStatistics(
                   + SCIPvarGetAvgBranchdepth(vars[v], SCIP_BRANCHDIR_UPWARDS))/2.0 - 1.0,
                SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_DOWNWARDS),
                SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_UPWARDS),
-               SCIPgetVarNStrongbranchs(scip, vars[v]),
+               nstrongbranchs,
                SCIPvarGetAvgInferences(vars[v], scip->stat, SCIP_BRANCHDIR_DOWNWARDS),
                SCIPvarGetAvgInferences(vars[v], scip->stat, SCIP_BRANCHDIR_UPWARDS),
                100.0 * SCIPvarGetAvgCutoffs(vars[v], scip->stat, SCIP_BRANCHDIR_DOWNWARDS),
@@ -13069,7 +13379,25 @@ SCIP_RETCODE SCIPprintBranchingStatistics(
                SCIPvarGetPseudocost(vars[v], scip->stat, +1.0));
          }
       }
-      SCIPfreeBufferArray(scip, &depths);
+      SCIPmessageFPrintInfo(file, "total                                                %7"SCIP_LONGINT_FORMAT" %7"SCIP_LONGINT_FORMAT" %5d %8.1f %8.1f %5.1f%% %5.1f%% %9.1f %9.1f\n",
+         SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS),
+         SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS),
+         totalnstrongbranchs,
+         SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS) > 0
+         ? (SCIP_Real)SCIPhistoryGetNInferences(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS)
+         / (SCIP_Real)SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS) : 0.0,
+         SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS) > 0
+         ? (SCIP_Real)SCIPhistoryGetNInferences(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS)
+         / (SCIP_Real)SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS) : 0.0,
+         SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS) > 0
+         ? (SCIP_Real)SCIPhistoryGetNCutoffs(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS)
+         / (SCIP_Real)SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS) : 0.0,
+         SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS) > 0
+         ? (SCIP_Real)SCIPhistoryGetNCutoffs(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS)
+         / (SCIP_Real)SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS) : 0.0,
+         SCIPhistoryGetPseudocost(scip->stat->glbhistory, -1.0),
+         SCIPhistoryGetPseudocost(scip->stat->glbhistory, +1.0));
+
       SCIPfreeBufferArray(scip, &vars);
 
       return SCIP_OKAY;

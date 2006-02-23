@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.51 2006/02/08 13:22:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.52 2006/02/23 12:40:36 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -67,6 +67,7 @@
 #include "scip/presol_probing.h"
 #include "scip/presol_trivial.h"
 #include "scip/prop_pseudoobj.h"
+#include "scip/prop_rootredcost.h"
 #include "scip/reader_cnf.h"
 #include "scip/reader_lp.h"
 #include "scip/reader_mps.h"
@@ -77,6 +78,7 @@
 #include "scip/sepa_gomory.h"
 #include "scip/sepa_impliedbounds.h"
 #include "scip/sepa_intobj.h"
+#include "scip/sepa_redcost.h"
 #include "scip/sepa_strongcg.h"
 #include "scip/scipdefplugins.h"
 #include "scip/debug.h"
@@ -148,11 +150,13 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurShifting(scip) );
    SCIP_CALL( SCIPincludeHeurSimplerounding(scip) );
    SCIP_CALL( SCIPincludePropPseudoobj(scip) );
+   SCIP_CALL( SCIPincludePropRootredcost(scip) );
    SCIP_CALL( SCIPincludeSepaClique(scip) );
    SCIP_CALL( SCIPincludeSepaCmir(scip) );
    SCIP_CALL( SCIPincludeSepaGomory(scip) );
    SCIP_CALL( SCIPincludeSepaImpliedbounds(scip) );
    SCIP_CALL( SCIPincludeSepaIntobj(scip) );
+   SCIP_CALL( SCIPincludeSepaRedcost(scip) );
    SCIP_CALL( SCIPincludeSepaStrongcg(scip) );
    SCIP_CALL( SCIPincludeDispDefault(scip) );
    SCIP_CALL( SCIPincludeDialogDefault(scip) );

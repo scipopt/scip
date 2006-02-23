@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.14 2006/01/03 12:22:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.15 2006/02/23 12:40:35 bzfpfend Exp $"
 
 /**@file   prop_pseudoobj.c
  * @brief  pseudoobj propagator
@@ -131,7 +131,7 @@ SCIP_DECL_PROPFREE(propFreePseudoobj)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
 
-   /* free branching rule data */
+   /* free propagator data */
    propdata = SCIPpropGetData(prop);
    SCIPfreeMemory(scip, &propdata);
    SCIPpropSetData(prop, NULL);

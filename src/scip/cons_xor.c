@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.40 2006/01/03 12:22:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.41 2006/02/23 12:40:34 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -750,7 +750,10 @@ SCIP_RETCODE propagateCons(
       return SCIP_OKAY;
 
    /* increase age of constraint; age is reset to zero, if a conflict or a propagation was found */
-   SCIP_CALL( SCIPincConsAge(scip, cons) );
+   if( !SCIPinRepropagation(scip) )
+   {
+      SCIP_CALL( SCIPincConsAge(scip, cons) );
+   }
 
    /* propagation can not be applied, if we have at least two unfixed variables left;
     * that means, we only have to watch (i.e. capture events) of two variables, and switch to other variables

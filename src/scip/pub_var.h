@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.59 2006/01/03 12:22:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.60 2006/02/23 12:40:35 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -745,6 +745,14 @@ SCIP_Real SCIPvarGetRootSol(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** returns the reduced costs of the variable in the root node's relaxation, if the root relaxation is not yet completely
+ *  solved, or the variable was no column of the root LP, SCIP_INVALID is returned
+ */
+extern
+SCIP_Real SCIPvarGetRootRedcost(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 /** returns a weighted average solution value of the variable in all feasible primal solutions found so far */
 extern
 SCIP_Real SCIPvarGetAvgSol(
@@ -950,6 +958,12 @@ SCIP_BOUNDTYPE SCIPbdchginfoGetInferBoundtype(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
+/** returns whether the bound change information belongs to a redundant bound change */
+extern
+SCIP_Bool SCIPbdchginfoIsRedundant(
+   SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
+   );
+
 /** returns whether the bound change has an inference reason (constraint or propagator), that can be resolved */
 extern
 SCIP_Bool SCIPbdchginfoHasInferenceReason(
@@ -979,6 +993,7 @@ SCIP_Bool SCIPbdchginfoHasInferenceReason(
 #define SCIPbdchginfoGetInferProp(bdchginfo)      (bdchginfo)->inferencedata.reason.prop
 #define SCIPbdchginfoGetInferInfo(bdchginfo)      (bdchginfo)->inferencedata.info
 #define SCIPbdchginfoGetInferBoundtype(bdchginfo) (SCIP_BOUNDTYPE)((bdchginfo)->inferboundtype)
+#define SCIPbdchginfoIsRedundant(bdchginfo)       (bdchginfo)->redundant
 #define SCIPbdchginfoHasInferenceReason(bdchginfo)                      \
    (((bdchginfo)->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER)          \
       || ((bdchginfo)->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && (bdchginfo)->inferencedata.reason.prop != NULL))

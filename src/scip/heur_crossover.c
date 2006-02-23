@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.3 2006/01/03 12:22:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.4 2006/02/23 12:40:34 bzfpfend Exp $"
 
 /**@file   heur_crossover.c
  * @brief  crossover primal heuristic
@@ -400,6 +400,12 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    if( nsubnodes < heurdata->minnodes )
        return SCIP_OKAY;
 
+   /* check whether there is enough time left (at least 10 seconds) */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   timelimit -= SCIPgetTotalTime(scip);
+   if( timelimit < 10.0 )
+      return SCIP_OKAY;
+
    *result = SCIP_DIDNOTFIND;
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -414,9 +420,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
   
    /* set limits for the subproblem */
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) ); 
- 
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit - SCIPgetTotalTime(scip) + 10.0) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
 
    /* forbid recursive call of heuristics solving subMIPs */
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) ); 
@@ -492,6 +496,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    }
    SCIPfreeBufferArray(scip, &subvars);
    SCIP_CALL( SCIPfree(&subscip) );
+
    return SCIP_OKAY;
 }
 

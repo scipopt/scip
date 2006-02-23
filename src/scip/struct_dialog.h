@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_dialog.h,v 1.12 2006/01/03 12:22:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_dialog.h,v 1.13 2006/02/23 12:40:36 bzfpfend Exp $"
 
 /**@file   struct_dialog.h
  * @brief  datastructures for user interface dialog
@@ -48,10 +48,19 @@ struct SCIP_Dialog
    SCIP_Bool             issubmenu;          /**< is the dialog a submenu? */
 };
 
+/** linked list of single input lines */
+struct SCIP_Linelist
+{
+   char*                 inputline;          /**< single line of input */
+   SCIP_LINELIST*        nextline;           /**< next input line */
+};
+
 /** dialog handler */
 struct SCIP_Dialoghdlr
 {
    SCIP_DIALOG*          rootdialog;         /**< main (root) dialog */
+   SCIP_LINELIST*        inputlist;          /**< list of input lines that are processed before stdin inputs */
+   SCIP_LINELIST**       inputlistptr;       /**< pointer to the ending nextline pointer of the list (which points to 0) */
    char*                 buffer;             /**< command buffer */
    int                   buffersize;         /**< size of command buffer */
    int                   bufferpos;          /**< position of first unprocessed character in buffer */

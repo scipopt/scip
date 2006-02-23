@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.171 2006/01/18 14:53:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.172 2006/02/23 12:40:37 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -755,7 +755,8 @@ SCIP_RETCODE nodeReleaseParent(
 
    assert(node != NULL);
    assert(blkmem != NULL);
-   
+   assert(tree != NULL);
+
    SCIPdebugMessage("releasing parent-child relationship of node %p at depth %d of type %d with parent %p of type %d\n",
       node, node->depth, SCIPnodeGetType(node), node->parent,
       node->parent != NULL ? (int)SCIPnodeGetType(node->parent) : -1);
@@ -763,8 +764,10 @@ SCIP_RETCODE nodeReleaseParent(
    if( parent != NULL )
    {
       SCIP_Bool freeParent;
+      SCIP_Bool singleChild;
 
       freeParent = FALSE;
+      singleChild = FALSE;
       switch( SCIPnodeGetType(parent) )
       {
       case SCIP_NODETYPE_FOCUSNODE:
@@ -795,24 +798,28 @@ SCIP_RETCODE nodeReleaseParent(
          assert(parent->data.junction.nchildren > 0);
          parent->data.junction.nchildren--;
          freeParent = (parent->data.junction.nchildren == 0); /* free parent if it has no more children */
+         singleChild = (parent->data.junction.nchildren == 1);
          break;
       case SCIP_NODETYPE_PSEUDOFORK:
          assert(parent->data.pseudofork != NULL);
          assert(parent->data.pseudofork->nchildren > 0);
          parent->data.pseudofork->nchildren--;
          freeParent = (parent->data.pseudofork->nchildren == 0); /* free parent if it has no more children */
+         singleChild = (parent->data.pseudofork->nchildren == 1);
          break;
       case SCIP_NODETYPE_FORK:
          assert(parent->data.fork != NULL);
          assert(parent->data.fork->nchildren > 0);
          parent->data.fork->nchildren--;
          freeParent = (parent->data.fork->nchildren == 0); /* free parent if it has no more children */
+         singleChild = (parent->data.fork->nchildren == 1);
          break;
       case SCIP_NODETYPE_SUBROOT:
          assert(parent->data.subroot != NULL);
          assert(parent->data.subroot->nchildren > 0);
          parent->data.subroot->nchildren--;
          freeParent = (parent->data.subroot->nchildren == 0); /* free parent if it has no more children */
+         singleChild = (parent->data.subroot->nchildren == 1);
          break;
       case SCIP_NODETYPE_REFOCUSNODE:
          /* the only possible child a refocused node can have in its refocus state is the probing root node;
@@ -824,7 +831,7 @@ SCIP_RETCODE nodeReleaseParent(
          freeParent = FALSE;
          break;
       default:
-         SCIPerrorMessage("unknown node type\n");
+         SCIPerrorMessage("unknown node type %d\n", SCIPnodeGetType(parent));
          return SCIP_INVALIDDATA;
       }
 
@@ -832,6 +839,14 @@ SCIP_RETCODE nodeReleaseParent(
       if( freeParent && !parent->active )
       {
          SCIP_CALL( SCIPnodeFree(&node->parent, blkmem, set, tree, lp) );
+      }
+
+      /* update the effective root depth */
+      assert(tree->effectiverootdepth >= 0);
+      if( singleChild && SCIPnodeGetDepth(parent) == tree->effectiverootdepth )
+      {
+         tree->effectiverootdepth++;
+         SCIPdebugMessage("new effective root depth: %d\n", tree->effectiverootdepth);
       }
    }
 
@@ -988,7 +1003,7 @@ SCIP_RETCODE SCIPnodeFree(
       SCIPerrorMessage("cannot free node as long it is refocused\n");
       return SCIP_INVALIDDATA;
    default:
-      SCIPerrorMessage("unknown node type\n");
+      SCIPerrorMessage("unknown node type %d\n", SCIPnodeGetType(*node));
       return SCIP_INVALIDDATA;
    }
 
@@ -1053,14 +1068,17 @@ void SCIPnodePropagateAgain(
    assert(stat != NULL);
    assert(tree != NULL);
 
-   node->reprop = TRUE;
-   if( node->active )
-      tree->repropdepth = MIN(tree->repropdepth, (int)node->depth);
-
-   SCIPvbcMarkedRepropagateNode(stat->vbc, stat, node);
-
-   SCIPdebugMessage("marked %s node %p at depth %d to be propagated again (repropdepth: %d)\n", 
-      node->active ? "active" : "inactive", node, node->depth, tree->repropdepth);
+   if( !node->reprop )
+   {
+      node->reprop = TRUE;
+      if( node->active )
+         tree->repropdepth = MIN(tree->repropdepth, (int)node->depth);
+      
+      SCIPvbcMarkedRepropagateNode(stat->vbc, stat, node);
+      
+      SCIPdebugMessage("marked %s node %p at depth %d to be propagated again (repropdepth: %d)\n", 
+         node->active ? "active" : "inactive", node, node->depth, tree->repropdepth);
+   }
 }
 
 /** marks node, that it is completely propagated in the current repropagation subtree level */
@@ -1361,12 +1379,15 @@ SCIP_RETCODE SCIPnodeAddCons(
    assert(node != NULL);
    assert(cons != NULL);
    assert(cons->validdepth <= node->depth);
+   assert(tree != NULL);
+   assert(tree->effectiverootdepth >= 0);
+   assert(tree->root != NULL);
 
    /* if node is the root, mark constraint to be globally valid */
-   if( node->depth == 0 )
+   if( node->depth <= tree->effectiverootdepth )
    {
-      assert(node == tree->root);
       SCIPconsSetLocal(cons, FALSE);
+      node = tree->root;
    }
 
    /* add constraint addition to the node's constraint set change data, and activate constraint if node is active */
@@ -1442,9 +1463,12 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_FOCUSNODE
       || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE
       || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_CHILD
-      || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_REFOCUSNODE);
+      || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_REFOCUSNODE
+      || node->depth == 0);
    assert(set != NULL);
    assert(tree != NULL);
+   assert(tree->effectiverootdepth >= 0);
+   assert(tree->root != NULL);
    assert(var != NULL);
    assert(node->active || (infercons == NULL && inferprop == NULL));
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE || !probingchange);
@@ -1467,8 +1491,16 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    }
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
-   oldlb = SCIPvarGetLbLocal(var);
-   oldub = SCIPvarGetUbLocal(var);
+   if( node->depth == 0 )
+   {
+      oldlb = SCIPvarGetLbGlobal(var);
+      oldub = SCIPvarGetUbGlobal(var);
+   }
+   else
+   {
+      oldlb = SCIPvarGetLbLocal(var);
+      oldub = SCIPvarGetUbLocal(var);
+   }
    assert(SCIPsetIsLT(set, oldlb, oldub));
 
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
@@ -1493,13 +1525,13 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    }
    
    SCIPdebugMessage(" -> transformed to active variable <%s>: old bounds=[%g,%g], new %s bound: %g, obj: %g\n",
-      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-      boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound, SCIPvarGetObj(var));
+      SCIPvarGetName(var), oldlb, oldub, boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound,
+      SCIPvarGetObj(var));
 
    stat->nboundchgs++;
 
    /* if the node is the root node: change local and global bound immediately */
-   if( node->depth == 0 )
+   if( node->depth <= tree->effectiverootdepth )
    {
       assert(node->active);
       assert((SCIP_NODETYPE)node->nodetype != SCIP_NODETYPE_PROBINGNODE);
@@ -1510,8 +1542,11 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
 
       if( set->stage == SCIP_STAGE_SOLVING )
       {
-         stat->nrootboundchgs++;
-         stat->nrootboundchgsrun++;
+         /* the root should be repropagated due to the bound change */
+         SCIPnodePropagateAgain(tree->root, set, stat, tree);
+         SCIPdebugMessage("marked root node to be repropagated due to global bound change <%s>:[%g,%g] -> [%g,%g] found in depth %d\n",
+            SCIPvarGetName(var), oldlb, oldub, boundtype == SCIP_BOUNDTYPE_LOWER ? newbound : oldlb,
+            boundtype == SCIP_BOUNDTYPE_LOWER ? oldub : newbound, node->depth);
       }
 
       return SCIP_OKAY;
@@ -1683,7 +1718,7 @@ SCIP_RETCODE SCIPnodePropagateImplics(
 
    *cutoff = FALSE;
 
-   /* propagate all fixings of binary performed at this node */
+   /* propagate all fixings of binary variables performed at this node */
    nboundchgs = SCIPdomchgGetNBoundchgs(node->domchg);
    for( i = 0; i < nboundchgs && !(*cutoff); ++i )
    {
@@ -1691,6 +1726,11 @@ SCIP_RETCODE SCIPnodePropagateImplics(
       SCIP_VAR* var;
 
       boundchg = SCIPdomchgGetBoundchg(node->domchg, i);
+      
+      /* ignore redundant bound changes */
+      if( SCIPboundchgIsRedundant(boundchg) )
+         continue;
+
       var = SCIPboundchgGetVar(boundchg);
       if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
       {
@@ -1889,7 +1929,7 @@ void treeUpdatePathLPSize(
          SCIPerrorMessage("node cannot be of type REFOCUSNODE at this point\n");
          SCIPABORT();
       default:
-         SCIPerrorMessage("unknown node type\n");
+         SCIPerrorMessage("unknown node type %d\n", SCIPnodeGetType(node));
          SCIPABORT();
       }
       tree->pathnlpcols[i] = ncols;
@@ -3483,7 +3523,34 @@ SCIP_RETCODE SCIPnodeFocus(
    /* if the old focus node is a dead end (has no children), delete it */
    if( oldfocusnode != NULL && SCIPnodeGetType(oldfocusnode) == SCIP_NODETYPE_DEADEND )
    {
+      int oldeffectiverootdepth;
+
+      oldeffectiverootdepth = tree->effectiverootdepth;
       SCIP_CALL( SCIPnodeFree(&oldfocusnode, blkmem, set, tree, lp) );
+      assert(oldeffectiverootdepth <= tree->effectiverootdepth);
+      assert(tree->effectiverootdepth < tree->pathlen || *node == NULL);
+      if( tree->effectiverootdepth > oldeffectiverootdepth && *node != NULL )
+      {
+         int d;
+
+         /* promote the constraint set and bound changes up to the new effective root to be global changes */
+         SCIPdebugMessage("effective root is now at depth %d: applying constraint set and bound changes to global problem\n",
+            tree->effectiverootdepth);
+         for( d = oldeffectiverootdepth+1; d <= tree->effectiverootdepth; ++d )
+         {
+            SCIP_Bool nodecutoff;
+
+            SCIPdebugMessage(" -> applying constraint set changes of depth %d\n", d);
+            SCIP_CALL( SCIPconssetchgMakeGlobal(&tree->path[d]->conssetchg, blkmem, set, stat, prob) );
+            SCIPdebugMessage(" -> applying bound changes of depth %d\n", d);
+            SCIP_CALL( SCIPdomchgApplyGlobal(tree->path[d]->domchg, blkmem, set, stat, lp, branchcand, eventqueue, &nodecutoff) );
+            if( nodecutoff )
+            {
+               SCIPnodeCutoff(tree->path[d], set, stat, tree);
+               *cutoff = TRUE;
+            }
+         }
+      }
    }
    assert(*cutoff || SCIPtreeIsPathComplete(tree));
 
@@ -3532,6 +3599,7 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->nsiblings = 0;
    (*tree)->pathlen = 0;
    (*tree)->pathsize = 0;
+   (*tree)->effectiverootdepth = 0;
    (*tree)->correctlpdepth = -1;
    (*tree)->cutoffdepth = INT_MAX;
    (*tree)->repropdepth = INT_MAX;
@@ -3606,6 +3674,7 @@ SCIP_RETCODE SCIPtreeClear(
    tree->nchildren = 0;
    tree->nsiblings = 0;
    tree->pathlen = 0;
+   tree->effectiverootdepth = 0;
    tree->correctlpdepth = -1;
    tree->cutoffdepth = INT_MAX;
    tree->repropdepth = INT_MAX;
@@ -4712,9 +4781,11 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
 #undef SCIPtreeHasFocusNodeLP
 #undef SCIPtreeSetFocusNodeLP
 #undef SCIPtreeIsFocusNodeLPConstructed
+#undef SCIPtreeInRepropagation
 #undef SCIPtreeGetCurrentNode
 #undef SCIPtreeGetCurrentDepth
 #undef SCIPtreeHasCurrentNodeLP
+#undef SCIPtreeGetEffectiveRootDepth
 
 /** gets the type of the node */
 SCIP_NODETYPE SCIPnodeGetType(
@@ -4786,7 +4857,7 @@ SCIP_Bool SCIPnodeIsPropagatedAgain(
    return node->reprop;
 }
 
-/** gets number of children */
+/** gets number of children of the focus node */
 int SCIPtreeGetNChildren(
    SCIP_TREE*            tree                /**< branch and bound tree */
    )
@@ -4796,7 +4867,7 @@ int SCIPtreeGetNChildren(
    return tree->nchildren;
 }
 
-/** gets number of siblings */
+/** gets number of siblings of the focus node  */
 int SCIPtreeGetNSiblings(
    SCIP_TREE*            tree                /**< branch and bound tree */
    )
@@ -4806,7 +4877,7 @@ int SCIPtreeGetNSiblings(
    return tree->nsiblings;
 }
 
-/** gets number of leaves */
+/** gets number of leaves in the tree (excluding children and siblings of focus nodes) */
 int SCIPtreeGetNLeaves(
    SCIP_TREE*            tree                /**< branch and bound tree */
    )
@@ -4816,7 +4887,7 @@ int SCIPtreeGetNLeaves(
    return SCIPnodepqLen(tree->leaves);
 }
    
-/** gets number of nodes (children + siblings + leaves) */
+/** gets number of open nodes in the tree (children + siblings + leaves) */
 int SCIPtreeGetNNodes(
    SCIP_TREE*            tree                /**< branch and bound tree */
    )
@@ -4934,6 +5005,16 @@ SCIP_Bool SCIPtreeIsFocusNodeLPConstructed(
    return tree->focuslpconstructed;
 }
 
+/** returns whether the focus node is already solved and only propagated again */
+SCIP_Bool SCIPtreeInRepropagation(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return (tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE);
+}
+
 /** gets current node of the tree, i.e. the last node in the active path, or NULL if no current node exists */
 SCIP_NODE* SCIPtreeGetCurrentNode(
    SCIP_TREE*            tree                /**< branch and bound tree */
@@ -4988,5 +5069,16 @@ int SCIPtreeGetProbingDepth(
    assert(SCIPtreeProbing(tree));
 
    return SCIPtreeGetCurrentDepth(tree) - SCIPnodeGetDepth(tree->probingroot);
+}
+
+/** returns the depth of the effective root node (i.e. the first depth level of a node with at least two children) */
+int SCIPtreeGetEffectiveRootDepth(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->effectiverootdepth >= 0);
+
+   return tree->effectiverootdepth;
 }
 

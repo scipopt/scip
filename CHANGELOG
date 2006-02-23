@@ -3,22 +3,45 @@ current version
 
 interface:
 - new method SCIPsolveProbingLPWithPricing()
+- new methods SCIPcolGetMinPrimsol() and SCIPcolGetMaxPrimsol()
+- new method SCIPgetColRedcost()
+- new method SCIPvarGetRootRedcost()
+- new methods SCIPgetLPRootObjval(), SCIPgetLPRootColumnObjval(), and SCIPgetLPRootLooseObjval()
+- new methods SCIPchgVarLbRoot() and SCIPchgVarUbRoot()
+- new method SCIPinRepropagation()
+- new methods SCIPgetAvgPseudocostScore(), SCIPgetAvgPseudocostScoreCurrentRun(), SCIPgetAvgConflictScore(),
+  SCIPgetAvgConflictScoreCurrentRun(), SCIPgetAvgInferenceScore(), SCIPgetAvgInferenceScoreCurrentRun(),
+  SCIPgetAvgCutoffScore(), and SCIPgetAvgCutoffScoreCurrentRun()
+- new methods SCIPaddDialogInputLine() and SCIPaddDialogHistoryLine()
+
+plugins:
+- new primal heuristic "shifting"
+- new separator "redcost" which replaces the internal reduced cost strengthening
+- new propagator "rootredcost" which applies reduced cost fixing at the root node whenever a best new primal solution
+  was found
 
 parameters:
 - new parameter constraints/linear/separateall
-- new parameter conflict/contboundlp
+- new parameter conflict/lpiterations
 - new parameter conflict/keepreprop
+- removed parameter propagating/redcostfreq, because reduced cost strengthening is now an external separator plugin
+- new parameters branching/relpscost/conflictweight, branching/relpscost/inferenceweight,
+  branching/relpscost/cutoffweight, and branching/relpscost/pscostweight
+- new parameter conflict/settlelocal
 
 features:
 - extensions to the LP are kept even if the LP is not solved at the current node; however, if the LP turned out to
   be numerically instable, the extensions of the current node are still discarded
-- new primal heuristic "shifting"
+- slightly changed priorities of constraint handlers
+- command line syntax changed to support batch modus without piping stdin with "<" or "|" operators
 
 fixed bugs:
 - fixed bug with invalid lazy updates after a restart where the LP is not solved again (e.g., due to all variables
   being fixed)
 - fixed bug in MPS file reader with OBJSENSE
 - fixed numerical bug in SCIPrealToRational() [thanks to Anders Schack-Nielsen]
+- fixed bug in crossover heuristic with negative timelimit
+- fixed bugs resulting from inactive general integer variables being member of the variable bounds array of a variable
 
 
 SCIP version 0.81

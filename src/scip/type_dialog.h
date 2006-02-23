@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_dialog.h,v 1.10 2006/01/03 12:22:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_dialog.h,v 1.11 2006/02/23 12:40:37 bzfpfend Exp $"
 
 /**@file   type_dialog.h
  * @brief  type definitions for user interface dialog
@@ -30,6 +30,7 @@
 typedef struct SCIP_Dialog SCIP_DIALOG;           /**< user interface dialog */
 typedef struct SCIP_DialogData SCIP_DIALOGDATA;   /**< user defined dialog data */
 typedef struct SCIP_Dialoghdlr SCIP_DIALOGHDLR;   /**< dialog handler */
+typedef struct SCIP_Linelist SCIP_LINELIST;       /**< linked list of single input lines */
 
 
 /** execution method of dialog

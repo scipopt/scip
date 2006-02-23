@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.83 2006/02/08 13:22:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.84 2006/02/23 12:40:35 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -848,6 +848,9 @@ SCIP_RETCODE SCIPprobAddCons(
    assert(cons->addconssetchg == NULL);
    assert(cons->addarraypos == -1);
 
+   SCIPdebugMessage("adding constraint <%s> to global problem -> %d constraints\n",
+      SCIPconsGetName(cons), prob->nconss+1);
+
    /* mark the constraint as problem constraint, and remember the constraint's position */
    cons->addconssetchg = NULL;
    cons->addarraypos = prob->nconss;
@@ -874,7 +877,10 @@ SCIP_RETCODE SCIPprobAddCons(
    if( prob->transformed )
    {
       /* activate constraint */
-      SCIP_CALL( SCIPconsActivate(cons, set, stat, -1) );
+      if( !SCIPconsIsActive(cons) )
+      {
+         SCIP_CALL( SCIPconsActivate(cons, set, stat, -1) );
+      }
 
       /* if constraint is a check-constraint, lock roundings of constraint's variables */
       if( SCIPconsIsChecked(cons) )
@@ -1060,6 +1066,9 @@ void SCIPprobCheckObjIntegral(
 /** remembers the current solution as root solution in the problem variables */
 void SCIPprobStoreRootSol(
    SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             roothaslp           /**< is the root solution from LP? */
    )
 {
@@ -1069,7 +1078,10 @@ void SCIPprobStoreRootSol(
    assert(prob->transformed);
 
    for( v = 0; v < prob->nvars; ++v )
-      SCIPvarStoreRootSol(prob->vars[v], roothaslp);
+      SCIPvarStoreRootSol(prob->vars[v], stat, lp, roothaslp);
+
+   if( roothaslp )
+      SCIPlpStoreRootObjval(lp, set);
 }
 
 /** informs problem, that the presolving process was finished, and updates all internal data structures */

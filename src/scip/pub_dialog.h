@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_dialog.h,v 1.10 2006/01/03 12:22:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_dialog.h,v 1.11 2006/02/23 12:40:35 bzfpfend Exp $"
 
 /**@file   pub_dialog.h
  * @brief  public methods for user interface dialog
@@ -64,6 +64,13 @@ const char* SCIPdialoghdlrGetWord(
    SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
    SCIP_DIALOG*          dialog,             /**< current dialog */
    const char*           prompt              /**< prompt to display, or NULL to display the current dialog's path */
+   );
+
+/** adds a single line of input to the dialog handler which is treated as if the user entered the command line */
+extern
+SCIP_RETCODE SCIPdialoghdlrAddInputLine(
+   SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
+   const char*           inputline           /**< input line to add */
    );
 
 /** adds a command to the command history of the dialog handler; if a dialog is given, the command is preceeded

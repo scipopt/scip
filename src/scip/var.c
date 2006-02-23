@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.197 2006/01/03 12:23:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.198 2006/02/23 12:40:37 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -302,6 +302,7 @@ SCIP_RETCODE varAddLbchginfo(
    var->lbchginfos[var->nlbchginfos].bdchgidx.pos = pos;
    var->lbchginfos[var->nlbchginfos].boundchgtype = boundchgtype; /*lint !e641*/
    var->lbchginfos[var->nlbchginfos].boundtype = SCIP_BOUNDTYPE_LOWER; /*lint !e641*/
+   var->lbchginfos[var->nlbchginfos].redundant = FALSE;
    var->lbchginfos[var->nlbchginfos].inferboundtype = inferboundtype; /*lint !e641*/
    var->lbchginfos[var->nlbchginfos].inferencedata.var = infervar;
    var->lbchginfos[var->nlbchginfos].inferencedata.info = inferinfo;
@@ -373,6 +374,7 @@ SCIP_RETCODE varAddUbchginfo(
    var->ubchginfos[var->nubchginfos].bdchgidx.pos = pos;
    var->ubchginfos[var->nubchginfos].boundchgtype = boundchgtype; /*lint !e641*/
    var->ubchginfos[var->nubchginfos].boundtype = SCIP_BOUNDTYPE_UPPER; /*lint !e641*/
+   var->ubchginfos[var->nubchginfos].redundant = FALSE;
    var->ubchginfos[var->nubchginfos].inferboundtype = inferboundtype; /*lint !e641*/
    var->ubchginfos[var->nubchginfos].inferencedata.var = infervar;
    var->ubchginfos[var->nubchginfos].inferencedata.info = inferinfo;
@@ -425,6 +427,10 @@ SCIP_RETCODE SCIPboundchgApply(
    assert(cutoff != NULL);
 
    *cutoff = FALSE;
+
+   /* ignore redundant bound changes */
+   if( boundchg->redundant )
+      return SCIP_OKAY;
 
    var = boundchg->var;
    assert(var != NULL);
@@ -485,8 +491,8 @@ SCIP_RETCODE SCIPboundchgApply(
          {
             SCIPdebugMessage(" -> cutoff: new lower bound of <%s>[%g,%g]: %g\n",
                SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
-            boundchg->var = NULL;
             *cutoff = TRUE;
+            boundchg->redundant = TRUE; /* bound change has not entered the lbchginfos array of the variable! */
          }
       }
       else
@@ -495,7 +501,7 @@ SCIP_RETCODE SCIPboundchgApply(
          SCIPdebugMessage(" -> inactive %s: new lower bound of <%s>[%g,%g]: %g\n",
             (SCIP_BOUNDCHGTYPE)boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING ? "branching" : "inference",
             SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
-         boundchg->var = NULL;
+         boundchg->redundant = TRUE;
       }
       break;
 
@@ -551,8 +557,8 @@ SCIP_RETCODE SCIPboundchgApply(
          {
             SCIPdebugMessage(" -> cutoff: new upper bound of <%s>[%g,%g]: %g\n",
                SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
-            boundchg->var = NULL;
             *cutoff = TRUE;
+            boundchg->redundant = TRUE; /* bound change has not entered the ubchginfos array of the variable! */
          }
       }
       else
@@ -561,7 +567,7 @@ SCIP_RETCODE SCIPboundchgApply(
          SCIPdebugMessage(" -> inactive %s: new upper bound of <%s>[%g,%g]: %g\n",
             (SCIP_BOUNDCHGTYPE)boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING ? "branching" : "inference",
             SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
-         boundchg->var = NULL;
+         boundchg->redundant = TRUE;
       }
       break;
 
@@ -571,7 +577,7 @@ SCIP_RETCODE SCIPboundchgApply(
    }
 
    /* update the branching and inference history */
-   if( !boundchg->applied && boundchg->var != NULL )
+   if( !boundchg->applied && !boundchg->redundant )
    {
       assert(var == boundchg->var);
       
@@ -608,6 +614,10 @@ SCIP_RETCODE SCIPboundchgUndo(
    assert(boundchg != NULL);
    assert(stat != NULL);
 
+   /* ignore redundant bound changes */
+   if( boundchg->redundant )
+      return SCIP_OKAY;
+
    var = boundchg->var;
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
@@ -620,7 +630,7 @@ SCIP_RETCODE SCIPboundchgUndo(
       assert(var->nlbchginfos >= 0);
       assert(var->lbchginfos != NULL);
       assert(var->lbchginfos[var->nlbchginfos].newbound == var->locdom.lb); /*lint !e777*/
-      assert(boundchg->newbound == var->locdom.lb); /*lint !e777*/
+      assert(boundchg->newbound <= var->locdom.lb); /* current lb might be larger to intermediate global bound change */
 
       SCIPdebugMessage("removed lower bound change info of var <%s>[%g,%g]: depth=%d, pos=%d, %g -> %g\n",
          SCIPvarGetName(var), var->locdom.lb, var->locdom.ub,
@@ -637,7 +647,7 @@ SCIP_RETCODE SCIPboundchgUndo(
       assert(var->nubchginfos >= 0);
       assert(var->ubchginfos != NULL);
       assert(var->ubchginfos[var->nubchginfos].newbound == var->locdom.ub); /*lint !e777*/
-      assert(boundchg->newbound == var->locdom.ub); /*lint !e777*/
+      assert(boundchg->newbound >= var->locdom.ub); /* current ub might be smaller to intermediate global bound change */
 
       SCIPdebugMessage("removed upper bound change info of var <%s>[%g,%g]: depth=%d, pos=%d, %g -> %g\n",
          SCIPvarGetName(var), var->locdom.lb, var->locdom.ub,
@@ -657,6 +667,31 @@ SCIP_RETCODE SCIPboundchgUndo(
    /* update last branching variable */
    if( (SCIP_BOUNDCHGTYPE)boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
       stat->lastbranchvar = NULL;
+
+   return SCIP_OKAY;
+}
+
+/** applies single bound change to the global problem by changing the global bound of the corresponding variable */
+static
+SCIP_RETCODE boundchgApplyGlobal(
+   SCIP_BOUNDCHG*        boundchg,           /**< bound change to apply */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Bool*            cutoff              /**< pointer to store whether an infeasible bound change was detected */
+   )
+{
+   assert(boundchg != NULL);
+
+   SCIPdebugMessage("applying global bound change: <%s>[%g,%g] %s %g\n",
+      SCIPvarGetName(boundchg->var), SCIPvarGetLbGlobal(boundchg->var), SCIPvarGetUbGlobal(boundchg->var),
+      boundchg->boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", boundchg->newbound);
+
+   SCIP_CALL( SCIPvarChgBdGlobal(boundchg->var, blkmem, set, stat, lp, branchcand, eventqueue, 
+         boundchg->newbound, boundchg->boundtype) );
 
    return SCIP_OKAY;
 }
@@ -887,7 +922,7 @@ SCIP_RETCODE SCIPdomchgMakeStatic(
             {
                /* shrink dynamic size arrays to their minimal sizes */
                SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs,
-                              (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) );
+                     (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) );
                BMSfreeBlockMemoryArrayNull(blkmem, &(*domchg)->domchgdyn.holechgs, (*domchg)->domchgdyn.holechgssize);
             
                /* convert into static domain change */
@@ -899,7 +934,7 @@ SCIP_RETCODE SCIPdomchgMakeStatic(
          {
             /* shrink dynamic size arrays to their minimal sizes */
             SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs,
-                           (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) );
+                  (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) );
             SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.holechgs,
                            (*domchg)->domchgdyn.holechgssize, (*domchg)->domchgdyn.nholechgs) );
 
@@ -976,71 +1011,6 @@ SCIP_RETCODE domchgEnsureHolechgsSize(
    return SCIP_OKAY;
 }
 
-#if 0
-static
-SCIP_RETCODE domchgCleanupBdchgs(
-   SCIP_DOMCHG*          domchg,             /**< domain change to apply */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   int                   firstremoved        /**< array position of first deactivated bound change */
-   )
-{
-   SCIP_VAR* var;
-   int i;
-   int j;
-   int k;
-
-   assert(domchg != NULL);
-   assert(0 <= firstremoved && firstremoved < domchg->domchgbound.nboundchgs);
-   assert(domchg->domchgbound.boundchgs[firstremoved].var == NULL);
-
-#ifndef NDEBUG
-   for( i = 0; i < firstremoved; ++i )
-      assert(domchg->domchgbound.boundchgs[i].var != NULL);
-#endif
-
-   /* remove empty slots in bound change arrays by pushing the active bound changes to the front */
-   i = firstremoved;
-   for( j = i+1; j < domchg->domchgbound.nboundchgs; ++j )
-   {
-      var = domchg->domchgbound.boundchgs[j].var;
-      if( var != NULL )
-      {
-         domchg->domchgbound.boundchgs[i] = domchg->domchgbound.boundchgs[j];
-      }            
-   }
-}
-#endif
-
-/** shrinks bound change array of domain change to the given number of elements */
-static
-SCIP_RETCODE domchgShrinkBdchgs(
-   SCIP_DOMCHG*          domchg,             /**< domain change to apply */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   int                   newnbdchgs          /**< new number of bound changes */
-   )
-{
-   assert(domchg != NULL);
-   assert(newnbdchgs < (int)domchg->domchgbound.nboundchgs);
-
-   if( (SCIP_DOMCHGTYPE)domchg->domchgbound.domchgtype != SCIP_DOMCHGTYPE_DYNAMIC )
-   {
-      if( newnbdchgs == 0 )
-      {
-         BMSfreeBlockMemoryArray(blkmem, &domchg->domchgbound.boundchgs, domchg->domchgbound.nboundchgs);
-      }
-      else
-      {
-         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &domchg->domchgbound.boundchgs, domchg->domchgbound.nboundchgs, 
-               newnbdchgs) );
-      }
-   }
-   domchg->domchgbound.nboundchgs = newnbdchgs; /*lint !e732*/
-   assert((int)domchg->domchgbound.nboundchgs == newnbdchgs);
-
-   return SCIP_OKAY;
-}
-
 /** applies domain change */
 SCIP_RETCODE SCIPdomchgApply(
    SCIP_DOMCHG*          domchg,             /**< domain change to apply */
@@ -1055,7 +1025,6 @@ SCIP_RETCODE SCIPdomchgApply(
    )
 {
    int i;
-   int j;
 
    assert(cutoff != NULL);
 
@@ -1065,42 +1034,19 @@ SCIP_RETCODE SCIPdomchgApply(
    if( domchg == NULL )
       return SCIP_OKAY;
 
-   /* apply bound changes, removing inactive bound changes immediately */
-   j = 0;
+   /* apply bound changes */
    for( i = 0; i < (int)domchg->domchgbound.nboundchgs; ++i )
    {
-      assert(j <= i);
       SCIP_CALL( SCIPboundchgApply(&domchg->domchgbound.boundchgs[i], blkmem, set, stat, lp,
-            branchcand, eventqueue, depth, j, cutoff) );
+            branchcand, eventqueue, depth, i, cutoff) );
       if( *cutoff )
          break;
-      if( domchg->domchgbound.boundchgs[i].var != NULL )
-      {
-         if( j < i )
-            domchg->domchgbound.boundchgs[j] = domchg->domchgbound.boundchgs[i];
-         j++;
-      }
-      else
-      {
-         /* release inference data of inactive bound change */
-         SCIP_CALL( boundchgReleaseData(&domchg->domchgbound.boundchgs[i], blkmem, set) );
-      }
    }
-   SCIPdebugMessage(" -> %d bound changes (%d active)\n", domchg->domchgbound.nboundchgs, j);
+   SCIPdebugMessage(" -> %d bound changes\n", domchg->domchgbound.nboundchgs);
 
-   /* release inference data of all bound changes from the point on where a cutoff was detected */
+   /* mark all bound changes after a cutoff redundant */
    for( ; i < (int)domchg->domchgbound.nboundchgs; ++i )
-   {
-      assert(*cutoff);
-      SCIP_CALL( boundchgReleaseData(&domchg->domchgbound.boundchgs[i], blkmem, set) );
-   }
-
-   /* clean up deactivated bound changes and all bound changes from the point on where a cutoff was detected */
-   if( j < (int)domchg->domchgbound.nboundchgs )
-   {
-      SCIP_CALL( domchgShrinkBdchgs(domchg, blkmem, j) );
-   }
-   assert((int)domchg->domchgbound.nboundchgs == j);
+      domchg->domchgbound.boundchgs[i].redundant = TRUE;
 
    /* apply holelist changes */
    if( domchg->domchgdyn.domchgtype != SCIP_DOMCHGTYPE_BOUND ) /*lint !e641*/
@@ -1144,6 +1090,44 @@ SCIP_RETCODE SCIPdomchgUndo(
       SCIP_CALL( SCIPboundchgUndo(&domchg->domchgbound.boundchgs[i], blkmem, set, stat, lp, branchcand, eventqueue) );
    }
    SCIPdebugMessage(" -> %d bound changes\n", domchg->domchgbound.nboundchgs);
+
+   return SCIP_OKAY;
+}
+
+/** applies domain change to the global problem */
+SCIP_RETCODE SCIPdomchgApplyGlobal(
+   SCIP_DOMCHG*          domchg,             /**< domain change to apply */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Bool*            cutoff              /**< pointer to store whether an infeasible domain change was detected */
+   )
+{
+   int i;
+
+   assert(cutoff != NULL);
+
+   *cutoff = FALSE;
+
+   if( domchg == NULL )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("applying domain changes at %p to the global problem\n", domchg);
+
+   /* apply bound changes */
+   for( i = 0; i < (int)domchg->domchgbound.nboundchgs; ++i )
+   {
+      SCIP_CALL( boundchgApplyGlobal(&domchg->domchgbound.boundchgs[i], blkmem, set, stat, lp,
+            branchcand, eventqueue, cutoff) );
+      if( *cutoff )
+         break;
+   }
+   SCIPdebugMessage(" -> %d global bound changes\n", domchg->domchgbound.nboundchgs);
+
+   /**@todo globally apply holelist changes - how can this be done without confusing pointer updates? */
 
    return SCIP_OKAY;
 }
@@ -1227,6 +1211,7 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    boundchg->boundtype = boundtype; /*lint !e641*/
    boundchg->inferboundtype = inferboundtype; /*lint !e641*/
    boundchg->applied = FALSE;
+   boundchg->redundant = FALSE;
    (*domchg)->domchgdyn.nboundchgs++;
 
    /* capture branching and inference data associated with the bound changes */
@@ -1591,6 +1576,10 @@ SCIP_RETCODE varRemoveImplicsVbs(
       }
    }
 
+   /**@todo variable bounds like x <= b*z + d with z general integer are not removed from x's vbd arrays, because
+    *       z has no link (like in the binary case) to x
+    */
+
    return SCIP_OKAY;
 }
 
@@ -1648,6 +1637,7 @@ SCIP_RETCODE varCreate(
    (*var)->obj = obj;
    (*var)->branchfactor = 1.0;
    (*var)->rootsol = 0.0;
+   (*var)->rootredcost = SCIP_INVALID;
    (*var)->primsolavg = 0.5 * (lb + ub);
    (*var)->glbdom.holelist = NULL;
    (*var)->glbdom.lb = lb;
@@ -3976,6 +3966,28 @@ SCIP_RETCODE varEventGubChanged(
    return SCIP_OKAY;
 }
 
+/** increases root bound change statistics after a global bound change */
+static            
+void varIncRootboundchgs(
+   SCIP_VAR*             var,                /**< problem variable to change */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
+   )
+{
+   assert(set != NULL);
+   assert(stat != NULL);
+
+   if( SCIPvarIsActive(var) && SCIPvarIsTransformed(var) && set->stage == SCIP_STAGE_SOLVING )
+   {
+      stat->nrootboundchgs++;
+      stat->nrootboundchgsrun++;
+      if( SCIPvarIsIntegral(var) && SCIPvarGetLbGlobal(var) + 0.5 > SCIPvarGetUbGlobal(var) )
+      {
+         stat->nrootintfixings++;
+         stat->nrootintfixingsrun++;
+      }
+   }
+}
 
 /* forward declaration, because both methods call each other recursively */
 
@@ -3985,6 +3997,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -3997,6 +4010,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -4011,6 +4025,8 @@ SCIP_RETCODE varProcessChgLbGlobal(
    assert(SCIPsetIsEQ(set, newbound, adjustedLb(set, SCIPvarGetType(var), newbound)));
    assert(var->glbdom.lb <= var->locdom.lb);
    assert(var->locdom.ub <= var->glbdom.ub);
+   assert(set != NULL);
+   assert(stat != NULL);
 
    SCIPdebugMessage("process changing global lower bound of <%s> from %f to %f\n", var->name, var->glbdom.lb, newbound);
 
@@ -4025,6 +4041,35 @@ SCIP_RETCODE varProcessChgLbGlobal(
    var->glbdom.lb = newbound;
    assert(var->glbdom.lb <= var->locdom.lb);
    assert(var->locdom.ub <= var->glbdom.ub);
+
+   /* update the root bound changes counters */
+   varIncRootboundchgs(var, set, stat);
+
+   /* update the lbchginfos array by replacing worse local bounds with the new global bound and changing the
+    * redundant bound changes to be branching decisions
+    */
+   for( i = 0; i < var->nlbchginfos; ++i )
+   {
+      assert(var->lbchginfos[i].var == var);
+
+      if( var->lbchginfos[i].oldbound < var->glbdom.lb )
+      {
+         SCIPdebugMessage(" -> adjust lower bound change <%s>: %g -> %g due to new global lower bound %g\n",
+            SCIPvarGetName(var), var->lbchginfos[i].oldbound, var->lbchginfos[i].newbound, var->glbdom.lb);
+         var->lbchginfos[i].oldbound = var->glbdom.lb;
+         if( SCIPsetIsLE(set, var->lbchginfos[i].newbound, var->glbdom.lb) )
+         {
+            /* this bound change is redundant due to the new global bound */
+            var->lbchginfos[i].newbound = var->glbdom.lb;
+            var->lbchginfos[i].boundchgtype = SCIP_BOUNDCHGTYPE_BRANCHING;
+            var->lbchginfos[i].redundant = TRUE;
+         }
+         else
+            break; /* from now on, the remaining local bound changes are not redundant */
+      }
+      else
+         break; /* from now on, the remaining local bound changes are not redundant */
+   }
 
    /* remove redundant implications and variable bounds */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
@@ -4044,11 +4089,12 @@ SCIP_RETCODE varProcessChgLbGlobal(
    {
       parentvar = var->parentvars[i];
       assert(parentvar != NULL);
+      assert(!SCIPvarIsActive(parentvar) || SCIPvarIsOriginal(parentvar));
 
       switch( SCIPvarGetStatus(parentvar) )
       {
       case SCIP_VARSTATUS_ORIGINAL:
-         SCIP_CALL( varProcessChgLbGlobal(parentvar, blkmem, set, lp, branchcand, eventqueue, newbound) );
+         SCIP_CALL( varProcessChgLbGlobal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
          break;
          
       case SCIP_VARSTATUS_COLUMN:
@@ -4066,7 +4112,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
             assert((SCIPsetIsInfinity(set, -parentvar->glbdom.lb) && SCIPsetIsInfinity(set, -oldbound))
                || SCIPsetIsEQ(set, parentvar->glbdom.lb,
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
-            SCIP_CALL( varProcessChgLbGlobal(parentvar, blkmem, set, lp, branchcand, eventqueue,
+            SCIP_CALL( varProcessChgLbGlobal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue,
                   parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
          else
@@ -4076,7 +4122,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
             assert((SCIPsetIsInfinity(set, parentvar->glbdom.ub) && SCIPsetIsInfinity(set, -oldbound))
                || SCIPsetIsEQ(set, parentvar->glbdom.ub,
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
-            SCIP_CALL( varProcessChgUbGlobal(parentvar, blkmem, set, lp, branchcand, eventqueue,
+            SCIP_CALL( varProcessChgUbGlobal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue,
                   parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
          break;
@@ -4085,7 +4131,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
          assert(parentvar->negatedvar != NULL);
          assert(SCIPvarGetStatus(parentvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert(parentvar->negatedvar->negatedvar == parentvar);
-         SCIP_CALL( varProcessChgUbGlobal(parentvar, blkmem, set, lp, branchcand, eventqueue, 
+         SCIP_CALL( varProcessChgUbGlobal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue, 
                parentvar->data.negate.constant - newbound) );
          break;
 
@@ -4104,6 +4150,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -4118,6 +4165,8 @@ SCIP_RETCODE varProcessChgUbGlobal(
    assert(SCIPsetIsEQ(set, newbound, adjustedUb(set, SCIPvarGetType(var), newbound)));
    assert(var->glbdom.lb <= var->locdom.lb);
    assert(var->locdom.ub <= var->glbdom.ub);
+   assert(set != NULL);
+   assert(stat != NULL);
 
    SCIPdebugMessage("process changing global upper bound of <%s> from %f to %f\n", var->name, var->glbdom.ub, newbound);
 
@@ -4132,6 +4181,34 @@ SCIP_RETCODE varProcessChgUbGlobal(
    var->glbdom.ub = newbound;
    assert(var->glbdom.lb <= var->locdom.lb);
    assert(var->locdom.ub <= var->glbdom.ub);
+
+   /* update the root bound changes counters */
+   varIncRootboundchgs(var, set, stat);
+
+   /* update the ubchginfos array by replacing worse local bounds with the new global bound and changing the
+    * redundant bound changes to be branching decisions
+    */
+   for( i = 0; i < var->nubchginfos; ++i )
+   {
+      assert(var->ubchginfos[i].var == var);
+      if( var->ubchginfos[i].oldbound > var->glbdom.ub )
+      {
+         SCIPdebugMessage(" -> adjust upper bound change <%s>: %g -> %g due to new global upper bound %g\n",
+            SCIPvarGetName(var), var->ubchginfos[i].oldbound, var->ubchginfos[i].newbound, var->glbdom.ub);
+         var->ubchginfos[i].oldbound = var->glbdom.ub;
+         if( SCIPsetIsGE(set, var->ubchginfos[i].newbound, var->glbdom.ub) )
+         {
+            /* this bound change is redundant due to the new global bound */
+            var->ubchginfos[i].newbound = var->glbdom.ub;
+            var->ubchginfos[i].boundchgtype = SCIP_BOUNDCHGTYPE_BRANCHING;
+            var->ubchginfos[i].redundant = TRUE;
+         }
+         else
+            break; /* from now on, the remaining local bound changes are not redundant */
+      }
+      else
+         break; /* from now on, the remaining local bound changes are not redundant */
+   }
 
    /* remove redundant implications and variable bounds */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
@@ -4151,11 +4228,12 @@ SCIP_RETCODE varProcessChgUbGlobal(
    {
       parentvar = var->parentvars[i];
       assert(parentvar != NULL);
+      assert(!SCIPvarIsActive(parentvar) || SCIPvarIsOriginal(parentvar));
 
       switch( SCIPvarGetStatus(parentvar) )
       {
       case SCIP_VARSTATUS_ORIGINAL:
-         SCIP_CALL( varProcessChgUbGlobal(parentvar, blkmem, set, lp, branchcand, eventqueue, newbound) );
+         SCIP_CALL( varProcessChgUbGlobal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
          break;
          
       case SCIP_VARSTATUS_COLUMN:
@@ -4173,7 +4251,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
             assert((SCIPsetIsInfinity(set, parentvar->glbdom.ub) && SCIPsetIsInfinity(set, oldbound))
                || SCIPsetIsEQ(set, parentvar->glbdom.ub,
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
-            SCIP_CALL( varProcessChgUbGlobal(parentvar, blkmem, set, lp, branchcand, eventqueue,
+            SCIP_CALL( varProcessChgUbGlobal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue,
                   parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
          else 
@@ -4183,7 +4261,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
             assert((SCIPsetIsInfinity(set, -parentvar->glbdom.lb) && SCIPsetIsInfinity(set, oldbound))
                || SCIPsetIsEQ(set, parentvar->glbdom.lb,
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
-            SCIP_CALL( varProcessChgLbGlobal(parentvar, blkmem, set, lp, branchcand, eventqueue,
+            SCIP_CALL( varProcessChgLbGlobal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue,
                   parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
          break;
@@ -4192,7 +4270,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
          assert(parentvar->negatedvar != NULL);
          assert(SCIPvarGetStatus(parentvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert(parentvar->negatedvar->negatedvar == parentvar);
-         SCIP_CALL( varProcessChgLbGlobal(parentvar, blkmem, set, lp, branchcand, eventqueue,
+         SCIP_CALL( varProcessChgLbGlobal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue,
                parentvar->data.negate.constant - newbound) );
          break;
 
@@ -4249,7 +4327,7 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
          {
             SCIP_CALL( SCIPvarChgLbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
          }
-         SCIP_CALL( varProcessChgLbGlobal(var, blkmem, set, lp, branchcand, eventqueue, newbound) );
+         SCIP_CALL( varProcessChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       }
       break;
          
@@ -4259,7 +4337,7 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
       {
          SCIP_CALL( SCIPvarChgLbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       }
-      SCIP_CALL( varProcessChgLbGlobal(var, blkmem, set, lp, branchcand, eventqueue, newbound) );
+      SCIP_CALL( varProcessChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       break;
 
    case SCIP_VARSTATUS_FIXED:
@@ -4358,7 +4436,7 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
          {
             SCIP_CALL( SCIPvarChgUbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
          }
-         SCIP_CALL( varProcessChgUbGlobal(var, blkmem, set, lp, branchcand, eventqueue, newbound) );
+         SCIP_CALL( varProcessChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       }
       break;
          
@@ -4368,7 +4446,7 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
       {
          SCIP_CALL( SCIPvarChgUbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       }
-      SCIP_CALL( varProcessChgUbGlobal(var, blkmem, set, lp, branchcand, eventqueue, newbound) );
+      SCIP_CALL( varProcessChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       break;
 
    case SCIP_VARSTATUS_FIXED:
@@ -7675,12 +7753,16 @@ SCIP_Real SCIPvarGetSol(
 /** remembers the current solution as root solution in the problem variables */
 void SCIPvarStoreRootSol(
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             roothaslp           /**< is the root solution from LP? */
    )
 {
    assert(var != NULL);
 
    var->rootsol = SCIPvarGetSol(var, roothaslp);
+   if( roothaslp && SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+      var->rootredcost = SCIPcolGetRedcost(SCIPvarGetCol(var), stat, lp);
 }
 
 /** returns the solution of the variable in the root node's relaxation, if the root relaxation is not yet completely
@@ -7733,6 +7815,39 @@ SCIP_Real SCIPvarGetRootSol(
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
       return 0.0;
+   }
+}
+
+/** returns the reduced costs of the variable in the root node's relaxation, if the root relaxation is not yet completely
+ *  solved, or the variable was no column of the root LP, SCIP_INVALID is returned
+ */
+SCIP_Real SCIPvarGetRootRedcost(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar == NULL )
+         return SCIP_INVALID;
+      return SCIPvarGetRootRedcost(var->data.original.transvar);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      return var->rootredcost;
+
+   case SCIP_VARSTATUS_FIXED:
+   case SCIP_VARSTATUS_AGGREGATED:
+   case SCIP_VARSTATUS_MULTAGGR:
+   case SCIP_VARSTATUS_NEGATED:
+      return 0.0;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      return SCIP_INVALID;
    }
 }
 
@@ -9067,7 +9182,13 @@ SCIP_BDCHGINFO* SCIPvarGetLbchgInfo(
       {
          assert(var->lbchginfos[i].var == var);
          assert((SCIP_BOUNDTYPE)var->lbchginfos[i].boundtype == SCIP_BOUNDTYPE_LOWER);
-         
+
+         /* if we reached the (due to global bounds) redundant bound changes, return NULL */
+         if( var->lbchginfos[i].redundant )
+            return NULL;
+         assert(var->lbchginfos[i].oldbound < var->lbchginfos[i].newbound);
+
+         /* if we reached the bound change index, return the current bound change info */
          if( !SCIPbdchgidxIsEarlier(bdchgidx, &var->lbchginfos[i].bdchgidx) )
             return &var->lbchginfos[i];
       }
@@ -9079,6 +9200,12 @@ SCIP_BDCHGINFO* SCIPvarGetLbchgInfo(
          assert(var->lbchginfos[i].var == var);
          assert((SCIP_BOUNDTYPE)var->lbchginfos[i].boundtype == SCIP_BOUNDTYPE_LOWER);
          
+         /* if we reached the (due to global bounds) redundant bound changes, return NULL */
+         if( var->lbchginfos[i].redundant )
+            return NULL;
+         assert(var->lbchginfos[i].oldbound < var->lbchginfos[i].newbound);
+
+         /* if we reached the bound change index, return the current bound change info */
          if( SCIPbdchgidxIsEarlier(&var->lbchginfos[i].bdchgidx, bdchgidx) )
             return &var->lbchginfos[i];
       }
@@ -9110,6 +9237,12 @@ SCIP_BDCHGINFO* SCIPvarGetUbchgInfo(
          assert(var->ubchginfos[i].var == var);
          assert((SCIP_BOUNDTYPE)var->ubchginfos[i].boundtype == SCIP_BOUNDTYPE_UPPER);
          
+         /* if we reached the (due to global bounds) redundant bound changes, return NULL */
+         if( var->ubchginfos[i].redundant )
+            return NULL;
+         assert(var->ubchginfos[i].oldbound > var->ubchginfos[i].newbound);
+
+         /* if we reached the bound change index, return the current bound change info */
          if( !SCIPbdchgidxIsEarlier(bdchgidx, &var->ubchginfos[i].bdchgidx) )
             return &var->ubchginfos[i];
       }
@@ -9121,6 +9254,12 @@ SCIP_BDCHGINFO* SCIPvarGetUbchgInfo(
          assert(var->ubchginfos[i].var == var);
          assert((SCIP_BOUNDTYPE)var->ubchginfos[i].boundtype == SCIP_BOUNDTYPE_UPPER);
          
+         /* if we reached the (due to global bounds) redundant bound changes, return NULL */
+         if( var->ubchginfos[i].redundant )
+            return NULL;
+         assert(var->ubchginfos[i].oldbound > var->ubchginfos[i].newbound);
+
+         /* if we reached the bound change index, return the current bound change info */
          if( SCIPbdchgidxIsEarlier(&var->ubchginfos[i].bdchgidx, bdchgidx) )
             return &var->ubchginfos[i];
       }
@@ -9366,8 +9505,10 @@ SCIP_BDCHGIDX* SCIPvarGetLastBdchgIndex(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
    /* get depths of last bound change infos for the lower and upper bound */
-   lbchgidx = (var->nlbchginfos > 0 ? &var->lbchginfos[var->nlbchginfos-1].bdchgidx : &initbdchgidx);
-   ubchgidx = (var->nubchginfos > 0 ? &var->ubchginfos[var->nubchginfos-1].bdchgidx : &initbdchgidx);
+   lbchgidx = (var->nlbchginfos > 0 && !var->lbchginfos[var->nlbchginfos-1].redundant
+      ? &var->lbchginfos[var->nlbchginfos-1].bdchgidx : &initbdchgidx);
+   ubchgidx = (var->nubchginfos > 0 && !var->ubchginfos[var->nubchginfos-1].redundant
+      ? &var->ubchginfos[var->nubchginfos-1].bdchgidx : &initbdchgidx);
 
    if( SCIPbdchgidxIsEarlierNonNull(lbchgidx, ubchgidx) )
       return ubchgidx;
@@ -9425,6 +9566,10 @@ SCIP_Bool SCIPvarWasFixedEarlier(
    assert(SCIPvarGetType(var2) == SCIP_VARTYPE_BINARY);
    assert(var1->nlbchginfos + var1->nubchginfos <= 1);
    assert(var2->nlbchginfos + var2->nubchginfos <= 1);
+   assert(var1->nlbchginfos == 0 || !var1->lbchginfos[0].redundant); /* otherwise, var would be globally fixed */
+   assert(var1->nubchginfos == 0 || !var1->ubchginfos[0].redundant); /* otherwise, var would be globally fixed */
+   assert(var2->nlbchginfos == 0 || !var2->lbchginfos[0].redundant); /* otherwise, var would be globally fixed */
+   assert(var2->nubchginfos == 0 || !var2->ubchginfos[0].redundant); /* otherwise, var would be globally fixed */
 
    if( var1->nlbchginfos == 1 )
       bdchgidx1 = &var1->lbchginfos[0].bdchgidx;
@@ -9475,6 +9620,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPboundchgGetVar
 #undef SCIPboundchgGetBoundchgtype
 #undef SCIPboundchgGetBoundtype
+#undef SCIPboundchgIsRedundant
 #undef SCIPdomchgGetNBoundchgs
 #undef SCIPdomchgGetBoundchg
 #undef SCIPvarGetName
@@ -9551,6 +9697,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPbdchginfoGetInferProp
 #undef SCIPbdchginfoGetInferInfo
 #undef SCIPbdchginfoGetInferBoundtype
+#undef SCIPbdchginfoIsRedundant
 #undef SCIPbdchginfoHasInferenceReason
 
 /** returns the new value of the bound in the bound change data */
@@ -9591,6 +9738,16 @@ SCIP_BOUNDTYPE SCIPboundchgGetBoundtype(
    assert(boundchg != NULL);
 
    return (SCIP_BOUNDTYPE)(boundchg->boundtype);
+}
+
+/** returns whether the bound change is redundant due to a more global bound that is at least as strong */
+SCIP_Bool SCIPboundchgIsRedundant(
+   SCIP_BOUNDCHG*        boundchg            /**< bound change data */
+   )
+{
+   assert(boundchg != NULL);
+
+   return boundchg->redundant;
 }
 
 /** returns the number of bound changes in the domain change data */
@@ -10489,6 +10646,17 @@ SCIP_BOUNDTYPE SCIPbdchginfoGetInferBoundtype(
       || (SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
 
    return (SCIP_BOUNDTYPE)(bdchginfo->inferboundtype);
+}
+
+/** returns whether the bound change information belongs to a redundant bound change */
+SCIP_Bool SCIPbdchginfoIsRedundant(
+   SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
+   )
+{
+   assert(bdchginfo != NULL);
+   assert(bdchginfo->redundant == (bdchginfo->oldbound == bdchginfo->newbound));
+
+   return bdchginfo->redundant;
 }
 
 /** returns whether the bound change has an inference reason (constraint or propagator), that can be resolved */

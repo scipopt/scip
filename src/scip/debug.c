@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.18 2006/01/03 12:22:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.19 2006/02/23 12:40:34 bzfpfend Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -272,6 +272,9 @@ SCIP_RETCODE isSolutionInNode(
          for( i = 0; i < domchgbound->nboundchgs && *solcontained; ++i )
          {
             SCIP_Real varsol;
+
+            if( SCIPboundchgIsRedundant(&boundchgs[i]) )
+               continue;
 
             /* get solution value of variable */
             SCIP_CALL( getSolutionValue(boundchgs[i].var, &varsol) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.89 2006/01/18 14:53:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.90 2006/02/23 12:40:37 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -446,25 +446,25 @@ SCIP_RETCODE SCIPtreeEndProbing(
  * type validity.
  */
 
-/** gets number of children */
+/** gets number of children of the focus node  */
 extern
 int SCIPtreeGetNChildren(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
-/** gets number of siblings */
+/** gets number of siblings of the focus node  */
 extern
 int SCIPtreeGetNSiblings(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
-/** gets number of leaves */
+/** gets number of leaves in the tree (excluding children and siblings of focus nodes) */
 extern
 int SCIPtreeGetNLeaves(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
-/** gets number of nodes (children + siblings + leaves) */
+/** gets number of open nodes in the tree (children + siblings + leaves) */
 extern   
 int SCIPtreeGetNNodes(
    SCIP_TREE*            tree                /**< branch and bound tree */
@@ -525,6 +525,12 @@ SCIP_Bool SCIPtreeIsFocusNodeLPConstructed(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
+/** returns whether the focus node is already solved and only propagated again */
+extern
+SCIP_Bool SCIPtreeInRepropagation(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   );
+
 /** gets current node of the tree, i.e. the last node in the active path, or NULL if no current node exists */
 extern
 SCIP_NODE* SCIPtreeGetCurrentNode(
@@ -540,6 +546,12 @@ int SCIPtreeGetCurrentDepth(
 /** returns, whether the LP was or is to be solved in the current node */
 extern
 SCIP_Bool SCIPtreeHasCurrentNodeLP(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   );
+
+/** returns the depth of the effective root node (i.e. the first depth level of a node with at least two children) */
+extern
+int SCIPtreeGetEffectiveRootDepth(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
@@ -563,9 +575,12 @@ SCIP_Bool SCIPtreeHasCurrentNodeLP(
 #define SCIPtreeHasFocusNodeLP(tree)    (tree)->focusnodehaslp
 #define SCIPtreeSetFocusNodeLP(tree,solvelp)  ((tree)->focusnodehaslp = solvelp)
 #define SCIPtreeIsFocusNodeLPConstructed(tree) (tree)->focuslpconstructed
+#define SCIPtreeInRepropagation(tree)   ((tree)->focusnode != NULL \
+      && SCIPnodeGetType((tree)->focusnode) == SCIP_NODETYPE_REFOCUSNODE)
 #define SCIPtreeGetCurrentNode(tree)    ((tree)->pathlen > 0 ? (tree)->path[(tree)->pathlen-1] : NULL)
 #define SCIPtreeGetCurrentDepth(tree)   ((tree)->pathlen-1)
 #define SCIPtreeHasCurrentNodeLP(tree)  (SCIPtreeProbing(tree) ? (tree)->probingnodehaslp : SCIPtreeHasFocusNodeLP(tree))
+#define SCIPtreeGetEffectiveRootDepth(tree) ((tree)->effectiverootdepth)
 
 #endif
 

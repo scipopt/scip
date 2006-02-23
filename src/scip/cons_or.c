@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.51 2006/01/03 12:22:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.52 2006/02/23 12:40:33 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -845,7 +845,10 @@ SCIP_RETCODE propagateCons(
    }
 
    /* increase age of constraint; age is reset to zero, if a conflict or a propagation was found */
-   SCIP_CALL( SCIPincConsAge(scip, cons) );
+   if( !SCIPinRepropagation(scip) )
+   {
+      SCIP_CALL( SCIPincConsAge(scip, cons) );
+   }
 
    /* if one of the operator variables was fixed to TRUE, the resultant can be fixed to TRUE (rule (1)) */
    if( !consdata->nofixedone )

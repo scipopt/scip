@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.40 2006/01/03 12:22:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.41 2006/02/23 12:40:37 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -90,6 +90,7 @@ struct SCIP_BoundChg
    unsigned int          boundtype:1;        /**< type of bound for var: lower or upper bound */
    unsigned int          inferboundtype:1;   /**< type of bound for inference var (see inference data): lower or upper bound */
    unsigned int          applied:1;          /**< was this bound change applied at least once? */
+   unsigned int          redundant:1;        /**< is this bound change redundant? */
 };
 
 /** bound change index representing the time of the bound change in path from root to current node */
@@ -110,6 +111,7 @@ struct SCIP_BdChgInfo
    unsigned int          boundchgtype:2;     /**< bound change type: branching decision or infered bound change */
    unsigned int          boundtype:1;        /**< type of bound for var: lower or upper bound */
    unsigned int          inferboundtype:1;   /**< type of bound for inference var (see inference data): lower or upper bound */
+   unsigned int          redundant:1;        /**< does the bound change info belong to a redundant bound change? */
 };
 
 /** tracks changes of the variables' domains (static arrays, bound changes only) */
@@ -195,6 +197,7 @@ struct SCIP_Var
    SCIP_Real             obj;                /**< objective function value of variable */
    SCIP_Real             branchfactor;       /**< factor to weigh variable's branching score with */
    SCIP_Real             rootsol;            /**< primal solution of variable in root node, or SCIP_INVALID */
+   SCIP_Real             rootredcost;        /**< reduced costs of variable in root node, or SCIP_INVALID */
    SCIP_Real             primsolavg;         /**< weighted average of all values of variable in primal feasible solutions */
    SCIP_DOM              glbdom;             /**< domain of variable in global problem */
    SCIP_DOM              locdom;             /**< domain of variable in current subproblem */

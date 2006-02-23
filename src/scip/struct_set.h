@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.62 2006/02/08 14:10:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.63 2006/02/23 12:40:36 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -119,7 +119,10 @@ struct SCIP_Set
    int                   conf_minmaxvars;    /**< minimal absolute maximum of variables involved in a conflict clause */
    int                   conf_maxunfixed;    /**< maximal number of unfixed variables at insertion depth of conflict clause
                                               *   (-1: no limit) */
-   int                   conf_maxlploops;    /**< maximal number of LP resolving loops during conflict analysis */
+   int                   conf_maxlploops;    /**< maximal number of LP resolving loops during conflict analysis
+                                              *   (-1: no limit) */
+   int                   conf_lpiterations;  /**< maximal number of LP iterations in each LP resolving loop
+                                              *   (-1: no limit) */
    int                   conf_fuiplevels;    /**< number of depth levels up to which first UIP's are used in conflict
                                               *   analysis (-1: use All-FirstUIP rule) */
    int                   conf_interclauses;  /**< maximal number of intermediate conflict clauses generated in conflict
@@ -131,9 +134,9 @@ struct SCIP_Set
    SCIP_Bool             conf_uselp;         /**< should infeasible LP conflict analysis be used? */
    SCIP_Bool             conf_usesb;         /**< should infeasible strong branching conflict analysis be used? */
    SCIP_Bool             conf_usepseudo;     /**< should pseudo solution conflict analysis be used? */
-   SCIP_Bool             conf_contboundlp;   /**< should solving of LPs exceeding the primal bound be continued to get
-                                              *   stronger conflict clauses? */
    SCIP_Bool             conf_allowlocal;    /**< should conflict clauses be generated that are only valid locally? */
+   SCIP_Bool             conf_settlelocal;   /**< should conflict clauses be attached only to the local subtree where they
+                                              *   can be useful? */
    SCIP_Bool             conf_repropagate;   /**< should earlier nodes be repropagated in order to replace branching
                                               *   decisions by deductions? */
    SCIP_Bool             conf_keepreprop;    /**< should clauses be kept for repropagation even if they are too long? */
@@ -215,8 +218,12 @@ struct SCIP_Set
    SCIP_Real             presol_abortfac;    /**< abort presolve, if l.t. this frac of the problem was changed in last round */
    int                   presol_maxrounds;   /**< maximal number of presolving rounds (-1: unlimited) */
    int                   presol_maxrestarts; /**< maximal number of restarts (-1: unlimited) */
-   SCIP_Real             presol_restartfac;  /**< fraction of bounds that changed in the root node triggering a restart with
-                                              *   preprocessing (0.0: restart only after complete root node evaluation) */
+   SCIP_Real             presol_restartfac;  /**< fraction of integer variables that were fixed in the root node
+                                              *   triggering a restart with preprocessing (0.0: restart only after
+                                              *   complete root node evaluation) */
+   SCIP_Real             presol_subrestartfac;/**< fraction of integer variables that were globally fixed during the
+                                               *   solving process triggering a restart with preprocessing */
+
 
    /* pricing settings */
    SCIP_Real             price_abortfac;     /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
@@ -226,7 +233,6 @@ struct SCIP_Set
    /* propagation settings */
    int                   prop_maxrounds;     /**< maximal number of propagation rounds per node (-1: unlimited) */
    int                   prop_maxroundsroot; /**< maximal number of propagation rounds in the root node (-1: unlimited) */
-   int                   prop_redcostfreq;   /**< frequency for applying reduced cost fixing (-1: never; 0: only root LP) */
 
    /* separation settings */
    SCIP_Real             sepa_maxbounddist;  /**< maximal relative distance from current node's dual bound to primal bound

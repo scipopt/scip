@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.167 2006/02/08 14:10:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.168 2006/02/23 12:40:36 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -70,7 +70,10 @@
 #define SCIP_DEFAULT_CONF_MINMAXVARS         30 /**< minimal absolute maximum of variables involved in a conflict clause */
 #define SCIP_DEFAULT_CONF_MAXUNFIXED         -1 /**< maximal number of unfixed variables at insertion depth of conflict
                                                  *   clause (-1: no limit) */
-#define SCIP_DEFAULT_CONF_MAXLPLOOPS        100 /**< maximal number of LP resolving loops during conflict analysis */
+#define SCIP_DEFAULT_CONF_MAXLPLOOPS          0 /**< maximal number of LP resolving loops during conflict analysis
+                                                 *   (-1: no limit) */
+#define SCIP_DEFAULT_CONF_LPITERATIONS        0 /**< maximal number of LP iterations in each LP resolving loop
+                                                 *   (-1: no limit) */
 #define SCIP_DEFAULT_CONF_FUIPLEVELS         -1 /**< number of depth levels up to which first UIP's are used in conflict
                                                  *   analysis (-1: use All-FirstUIP rule) */
 #define SCIP_DEFAULT_CONF_INTERCLAUSES        1 /**< maximal number of intermediate conflict clauses generated in conflict
@@ -82,9 +85,9 @@
 #define SCIP_DEFAULT_CONF_USELP           FALSE /**< should infeasible LP conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USESB           FALSE /**< should infeasible strong branching conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USEPSEUDO       FALSE /**< should pseudo solution conflict analysis be used? */
-#define SCIP_DEFAULT_CONF_CONTBOUNDLP     FALSE /**< should solving of LPs exceeding the primal bound be continued to get
-                                                 *   stronger conflict clauses? */
 #define SCIP_DEFAULT_CONF_ALLOWLOCAL       TRUE /**< should conflict clauses be generated that are only valid locally? */
+#define SCIP_DEFAULT_CONF_SETTLELOCAL      TRUE /**< should conflict clauses be attached only to the local subtree where
+                                                 *   they can be useful? */
 #define SCIP_DEFAULT_CONF_REPROPAGATE      TRUE /**< should earlier nodes be repropagated in order to replace branching
                                                  *   decisions by deductions? */
 #define SCIP_DEFAULT_CONF_KEEPREPROP       TRUE /**< should clauses be kept for repropagation even if they are too long? */
@@ -171,8 +174,11 @@
                                                  *   in last presolve round */
 #define SCIP_DEFAULT_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds (-1: unlimited) */
 #define SCIP_DEFAULT_PRESOL_MAXRESTARTS      -1 /**< maximal number of restarts (-1: unlimited) */
-#define SCIP_DEFAULT_PRESOL_RESTARTFAC      0.0 /**< fraction of bounds that changed in the root node triggering a restart with
-                                                 *   preprocessing (0.0: restart only after complete root node evaluation) */
+#define SCIP_DEFAULT_PRESOL_RESTARTFAC      0.0 /**< fraction of integer variables that were fixed in the root node
+                                                 *   triggering a restart with preprocessing (0.0: restart only after
+                                                 *   complete root node evaluation) */
+#define SCIP_DEFAULT_PRESOL_SUBRESTARTFAC   1.0 /**< fraction of integer variables that were globally fixed during the
+                                                 *   solving process triggering a restart with preprocessing */
 
 
 /* Pricing */
@@ -187,7 +193,6 @@
 
 #define SCIP_DEFAULT_PROP_MAXROUNDS         100 /**< maximal number of propagation rounds per node (-1: unlimited) */
 #define SCIP_DEFAULT_PROP_MAXROUNDSROOT    1000 /**< maximal number of propagation rounds in root node (-1: unlimited) */
-#define SCIP_DEFAULT_PROP_REDCOSTFREQ         1 /**< frequency for reduced cost fixing (-1: never; 0: only root LP) */
 
 
 /* Separation */
@@ -420,11 +425,6 @@ SCIP_RETCODE SCIPsetCreate(
          "should pseudo solution conflict analysis be used?",
          &(*set)->conf_usepseudo, SCIP_DEFAULT_CONF_USEPSEUDO,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
-         "conflict/contboundlp",
-         "should solving of LPs exceeding the primal bound be continued to get stronger conflict clauses?",
-         &(*set)->conf_contboundlp, SCIP_DEFAULT_CONF_CONTBOUNDLP,
-         NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "conflict/maxvarsfac",
          "maximal fraction of binary variables involved in a conflict clause",
@@ -442,8 +442,13 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "conflict/maxlploops",
-         "maximal number of LP resolving loops during conflict analysis",
-         &(*set)->conf_maxlploops, SCIP_DEFAULT_CONF_MAXLPLOOPS, 0, INT_MAX,
+         "maximal number of LP resolving loops during conflict analysis (-1: no limit)",
+         &(*set)->conf_maxlploops, SCIP_DEFAULT_CONF_MAXLPLOOPS, -1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
+         "conflict/lpiterations",
+         "maximal number of LP iterations in each LP resolving loop (-1: no limit)",
+         &(*set)->conf_lpiterations, SCIP_DEFAULT_CONF_LPITERATIONS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "conflict/fuiplevels",
@@ -464,6 +469,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/allowlocal",
          "should conflict clauses be generated that are only valid locally?",
          &(*set)->conf_allowlocal, SCIP_DEFAULT_CONF_ALLOWLOCAL,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "conflict/settlelocal",
+         "should conflict clauses be attached only to the local subtree where they can be useful?",
+         &(*set)->conf_settlelocal, SCIP_DEFAULT_CONF_SETTLELOCAL,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/repropagate",
@@ -775,8 +785,13 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "presolving/restartfac",
-         "fraction of bounds that changed in the root node triggering a restart with preprocessing (0.0: restart only after complete root node evaluation)",
+         "fraction of integer variables that were fixed in the root node triggering a restart with preprocessing (0.0: restart only after complete root node evaluation)",
          &(*set)->presol_restartfac, SCIP_DEFAULT_PRESOL_RESTARTFAC, 0.0, 1.0,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
+         "presolving/subrestartfac",
+         "fraction of integer variables that were globally fixed during the solving process triggering a restart with preprocessing",
+         &(*set)->presol_subrestartfac, SCIP_DEFAULT_PRESOL_SUBRESTARTFAC, 0.0, 1.0,
          NULL, NULL) );
 
    /* pricing parameters */
@@ -806,11 +821,6 @@ SCIP_RETCODE SCIPsetCreate(
          "propagating/maxroundsroot",
          "maximal number of propagation rounds in the root node (-1: unlimited)",
          &(*set)->prop_maxroundsroot, SCIP_DEFAULT_PROP_MAXROUNDSROOT, -1, INT_MAX,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
-         "propagating/redcostfreq",
-         "frequency for applying reduced cost fixing (-1: never; 0: only root LP)",
-         &(*set)->prop_redcostfreq, SCIP_DEFAULT_PROP_REDCOSTFREQ, -1, INT_MAX,
          NULL, NULL) );
 
    /* separation parameters */

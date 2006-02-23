@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.262 2006/01/18 14:53:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.263 2006/02/23 12:40:36 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1212,6 +1212,20 @@ SCIP_RETCODE SCIPaddDialogEntry(
    SCIP_DIALOG*          subdialog           /**< subdialog to add as menu entry in dialog */
    );
 
+/** adds a single line of input which is treated as if the user entered the command line */
+extern
+SCIP_RETCODE SCIPaddDialogInputLine(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           inputline           /**< input line to add */
+   );
+
+/** adds a single line of input to the command history which can be accessed with the cursor keys */
+extern
+SCIP_RETCODE SCIPaddDialogHistoryLine(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           inputline           /**< input line to add */
+   );
+
 /** starts interactive mode of SCIP by executing the root dialog */
 extern
 SCIP_RETCODE SCIPstartInteraction(
@@ -2034,6 +2048,26 @@ extern
 SCIP_RETCODE SCIPchgVarUbNode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node,               /**< node to change bound at, or NULL for current node */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Real             newbound            /**< new value for bound */
+   );
+
+/** changes global lower bound of variable; if possible, adjust bound to integral value; also tightens the local bound,
+ *  if the global bound is better than the local bound
+ */
+extern
+SCIP_RETCODE SCIPchgVarLbGlobal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Real             newbound            /**< new value for bound */
+   );
+
+/** changes global upper bound of variable; if possible, adjust bound to integral value; also tightens the local bound,
+ *  if the global bound is better than the local bound
+ */
+extern
+SCIP_RETCODE SCIPchgVarUbGlobal(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
    SCIP_Real             newbound            /**< new value for bound */
    );
@@ -3018,6 +3052,28 @@ SCIP_Real SCIPgetPseudoObjval(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets the objective value of the root node LP; returns SCIP_INVALID if the root node LP was not (yet) solved */
+extern
+SCIP_Real SCIPgetLPRootObjval(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets part of the objective value of the root node LP that results from COLUMN variables only;
+ *  returns SCIP_INVALID if the root node LP was not (yet) solved
+ */
+extern
+SCIP_Real SCIPgetLPRootColumnObjval(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets part of the objective value of the root node LP that results from LOOSE variables only;
+ *  returns SCIP_INVALID if the root node LP was not (yet) solved
+ */
+extern
+SCIP_Real SCIPgetLPRootLooseObjval(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets current LP columns along with the current number of LP columns */
 extern
 SCIP_RETCODE SCIPgetLPColsData(
@@ -3171,6 +3227,25 @@ extern
 SCIP_RETCODE SCIPgetLPI(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LPI**            lpi                 /**< pointer to store the LP interface */
+   );
+
+/**@} */
+
+
+
+
+/*
+ * LP column methods
+ */
+
+/**@name LP Column Methods */
+/**@{ */
+
+/** returns the reduced costs of a column in the last LP */
+extern
+SCIP_Real SCIPgetColRedcost(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COL*             col                 /**< LP column */
    );
 
 /**@} */
@@ -4370,6 +4445,12 @@ SCIP_NODE* SCIPgetCurrentNode(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns whether the current node is already solved and only propagated again */
+extern
+SCIP_Bool SCIPinRepropagation(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets children of focus node along with the number of children */
 extern
 SCIP_RETCODE SCIPgetChildren(
@@ -4881,6 +4962,32 @@ SCIP_Real SCIPgetAvgPseudocostCountCurrentRun(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
+/** gets the average pseudo cost score value over all variables, assuming a fractionality of 0.5 */
+extern
+SCIP_Real SCIPgetAvgPseudocostScore(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets the average pseudo cost score value over all variables, assuming a fractionality of 0.5,
+ *  only using the pseudo cost information of the current run
+ */
+extern
+SCIP_Real SCIPgetAvgPseudocostScoreCurrentRun(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets the average conflict score value over all variables */
+extern
+SCIP_Real SCIPgetAvgConflictScore(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets the average conflict score value over all variables, only using the pseudo cost information of the current run */
+extern
+SCIP_Real SCIPgetAvgConflictScoreCurrentRun(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** returns the average number of inferences found after branching in given direction over all variables */
 extern
 SCIP_Real SCIPgetAvgInferences(
@@ -4897,6 +5004,18 @@ SCIP_Real SCIPgetAvgInferencesCurrentRun(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
+/** gets the average inference score value over all variables */
+extern
+SCIP_Real SCIPgetAvgInferenceScore(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets the average inference score value over all variables */
+extern
+SCIP_Real SCIPgetAvgInferenceScoreCurrentRun(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** returns the average number of cutoffs found after branching in given direction over all variables */
 extern
 SCIP_Real SCIPgetAvgCutoffs(
@@ -4911,6 +5030,18 @@ extern
 SCIP_Real SCIPgetAvgCutoffsCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/** gets the average cutoff score value over all variables */
+extern
+SCIP_Real SCIPgetAvgCutoffScore(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets the average cutoff score value over all variables, only using the pseudo cost information of the current run */
+extern
+SCIP_Real SCIPgetAvgCutoffScoreCurrentRun(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** outputs original problem to file stream */

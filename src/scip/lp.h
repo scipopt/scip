@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.113 2006/01/03 12:22:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.114 2006/02/23 12:40:35 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -834,6 +834,19 @@ SCIP_Real SCIPlpGetLooseObjval(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** remembers the current LP objective value as root solution value */
+extern
+void SCIPlpStoreRootObjval(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** invalidates the root LP solution value */
+extern
+void SCIPlpInvalidateRootObjval(
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
 /** gets current pseudo objective value */
 extern
 SCIP_Real SCIPlpGetPseudoObjval(
@@ -1124,6 +1137,28 @@ SCIP_Real SCIPlpGetObjNorm(
    SCIP_LP*              lp                  /**< LP data */
    );
 
+/** gets the objective value of the root node LP; returns SCIP_INVALID if the root node LP was not (yet) solved */
+extern
+SCIP_Real SCIPlpGetRootObjval(
+   SCIP_LP*              lp                  /**< LP data */
+   );
+
+/** gets part of the objective value of the root node LP that results from COLUMN variables only;
+ *  returns SCIP_INVALID if the root node LP was not (yet) solved
+ */
+extern
+SCIP_Real SCIPlpGetRootColumnObjval(
+   SCIP_LP*              lp                  /**< LP data */
+   );
+
+/** gets part of the objective value of the root node LP that results from LOOSE variables only;
+ *  returns SCIP_INVALID if the root node LP was not (yet) solved
+ */
+extern
+SCIP_Real SCIPlpGetRootLooseObjval(
+   SCIP_LP*              lp                  /**< LP data */
+   );
+
 /** gets the LP solver interface */
 extern
 SCIP_LPI* SCIPlpGetLPI(
@@ -1175,6 +1210,9 @@ void SCIPlpMarkDivingObjChanged(
 #define SCIPlpGetNewrows(lp)            (&((lp)->rows[(lp)->firstnewrow]))
 #define SCIPlpGetNNewrows(lp)           ((lp)->nrows - (lp)->firstnewrow)
 #define SCIPlpGetObjNorm(lp)            (SQRT((lp)->objsqrnorm))
+#define SCIPlpGetRootObjval(lp)         (MIN((lp)->rootlpobjval + (lp)->rootlooseobjval, SCIP_INVALID))
+#define SCIPlpGetRootColumnObjval(lp)   ((lp)->rootlpobjval)
+#define SCIPlpGetRootLooseObjval(lp)    ((lp)->rootlooseobjval)
 #define SCIPlpGetLPI(lp)                (lp)->lpi
 #define SCIPlpIsSolved(lp)              ((lp)->flushed && (lp)->solved)
 #define SCIPlpIsSolBasic(lp)            ((lp)->solisbasic)

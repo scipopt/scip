@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.149 2006/02/08 13:22:20 bzfpfend Exp $
+# $Id: Makefile,v 1.150 2006/02/23 12:40:30 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -25,7 +25,7 @@ ARCH            :=      $(shell uname -m | \
                         sed \
 			-e s/sun../sparc/ \
 			-e s/i.86/x86/ \
-                        -e s/^[0-9]86/x86/ \
+                        -e s/[0-9]86/x86/ \
 			-e s/IP../mips/ \
 			-e s/9000..../hppa/ \
 			-e s/Power\ Macintosh/ppc/ \
@@ -38,7 +38,7 @@ HOSTNAME	:=	$(shell uname -n | tr '[:upper:]' '[:lower:]')
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		:=	0.81b
+VERSION		:=	0.81c
 
 TIME     	=  	3600
 NODES           =       2100000000
@@ -146,6 +146,20 @@ ifeq ($(LPS),cpx)
 FLAGS		+=	-I$(LIBDIR)/cpxinc
 LPSLDFLAGS	=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)
 LPILIBOBJ	=	scip/lpi_cpx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
+endif
+
+ifeq ($(LPS),cpx903)
+FLAGS		+=	-I$(LIBDIR)/cpx903inc
+LPSLDFLAGS	=	$(LINKCC_l)cplex903.$(OSTYPE).$(ARCH).$(COMP)
+LPILIBOBJ	=	scip/lpi_cpx903.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
+endif
+
+ifeq ($(LPS),xprs)
+FLAGS		+=	-I$(LIBDIR)/xprsinc
+LPSLDFLAGS	=	$(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)
+LPILIBOBJ	=	scip/lpi_xprs.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 endif
 
@@ -323,6 +337,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/presol_probing.o \
 			scip/presol_trivial.o \
 			scip/prop_pseudoobj.o \
+			scip/prop_rootredcost.o \
 			scip/reader_cnf.o \
 			scip/reader_lp.o \
 			scip/reader_mps.o \
@@ -333,6 +348,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/sepa_gomory.o \
 			scip/sepa_impliedbounds.o \
 			scip/sepa_intobj.o \
+			scip/sepa_redcost.o \
 			scip/sepa_strongcg.o \
 			tclique/tclique_branch.o \
 			tclique/tclique_coloring.o \
@@ -378,12 +394,12 @@ OBJSCIPLIBDEP	=	$(SRCDIR)/depend.objsciplib.$(OPT)
 MAINNAME	=	scip
 
 ifeq ($(LINKER),C)
-MAINOBJ		=	cmain.o
+MAINOBJ		=	scipshell.o cmain.o
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
 MAINDEP		=	$(SRCDIR)/depend.cmain.$(OPT)
 endif
 ifeq ($(LINKER),CPP)
-MAINOBJ		=	cppmain.o
+MAINOBJ		=	scipshell.o cppmain.o
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.cpp))
 MAINDEP		=	$(SRCDIR)/depend.cppmain.$(OPT)
 endif
@@ -614,7 +630,4 @@ endif
 		@echo "LAST_ZIMPL=$(ZIMPL)" >> $(LASTSETTINGS)
 
 
-
-
 # --- EOF ---------------------------------------------------------------------
-# DO NOT DELETE

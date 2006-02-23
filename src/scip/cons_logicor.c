@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.95 2006/01/03 12:22:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.96 2006/02/23 12:40:33 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -34,9 +34,15 @@
 
 #define CONSHDLR_NAME          "logicor"
 #define CONSHDLR_DESC          "logic or constraints"
+#if 0 /*????????????????????*/
 #define CONSHDLR_SEPAPRIORITY   +800000 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY   +800000 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY  -800000 /**< priority of the constraint handler for checking feasibility */
+#else
+#define CONSHDLR_SEPAPRIORITY    +10000 /**< priority of the constraint handler for separation */
+#define CONSHDLR_ENFOPRIORITY  -2000000 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_CHECKPRIORITY -2000000 /**< priority of the constraint handler for checking feasibility */
+#endif
 #define CONSHDLR_SEPAFREQ             0 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
@@ -58,7 +64,11 @@
 
 
 /**@todo make this a parameter setting */
+#if 1 /*???????????????? test which AGEINCREASE formula is better! */
 #define AGEINCREASE(n) (1.0 + 0.2*n)
+#else
+#define AGEINCREASE(n) (0.1*n)
+#endif
 
 
 /** constraint handler data */
@@ -494,7 +504,7 @@ SCIP_RETCODE processWatchedVars(
        * remember the variable and disable the constraint
        */
       SCIPdebugMessage(" -> disabling constraint <%s> (watchedvar1 fixed to 1.0)\n", SCIPconsGetName(cons));
-      SCIP_CALL( switchWatchedvars(scip, cons, eventhdlr, consdata->watchedvar1, -1) );
+      /*???????????????SCIP_CALL( switchWatchedvars(scip, cons, eventhdlr, consdata->watchedvar1, -1) );*/
       SCIP_CALL( SCIPdisableCons(scip, cons) );
       return SCIP_OKAY;
    }
@@ -504,7 +514,7 @@ SCIP_RETCODE processWatchedVars(
        * remember the variable and disable the constraint
        */
       SCIPdebugMessage(" -> disabling constraint <%s> (watchedvar2 fixed to 1.0)\n", SCIPconsGetName(cons));
-      SCIP_CALL( switchWatchedvars(scip, cons, eventhdlr, consdata->watchedvar2, -1) );
+      /*???????????????SCIP_CALL( switchWatchedvars(scip, cons, eventhdlr, consdata->watchedvar2, -1) );*/
       SCIP_CALL( SCIPdisableCons(scip, cons) );
       return SCIP_OKAY;
    }
@@ -528,7 +538,7 @@ SCIP_RETCODE processWatchedVars(
              */
             SCIPdebugMessage(" -> disabling constraint <%s> (variable <%s> fixed to 1.0)\n", 
                SCIPconsGetName(cons), SCIPvarGetName(vars[v]));
-            SCIP_CALL( switchWatchedvars(scip, cons, eventhdlr, v, -1) );
+            /*???????????????SCIP_CALL( switchWatchedvars(scip, cons, eventhdlr, v, -1) );*/
             SCIP_CALL( SCIPdisableCons(scip, cons) );
             return SCIP_OKAY;
          }
@@ -596,7 +606,7 @@ SCIP_RETCODE processWatchedVars(
          SCIP_CALL( SCIPinferBinvarCons(scip, vars[watchedvar1], TRUE, cons, 0, &infeasible, NULL) );
          assert(!infeasible);
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
-         SCIP_CALL( switchWatchedvars(scip, cons, eventhdlr, watchedvar1, -1) );
+         /*???????????????SCIP_CALL( switchWatchedvars(scip, cons, eventhdlr, watchedvar1, -1) );*/
          SCIP_CALL( SCIPdisableCons(scip, cons) );
          *reduceddom = TRUE;
       }
@@ -668,7 +678,7 @@ SCIP_RETCODE checkCons(
             conshdlr = SCIPconsGetHdlr(cons);
             conshdlrdata = SCIPconshdlrGetData(conshdlr);
             assert(conshdlrdata != NULL);
-            SCIP_CALL( switchWatchedvars(scip, cons, conshdlrdata->eventhdlr, v, -1) );
+            /*???????????????SCIP_CALL( switchWatchedvars(scip, cons, conshdlrdata->eventhdlr, v, -1) );*/
             SCIP_CALL( SCIPdisableCons(scip, cons) );
 
             return SCIP_OKAY;

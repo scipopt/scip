@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.122 2006/01/04 17:09:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.123 2006/02/23 12:40:33 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -36,7 +36,7 @@
 #define CONSHDLR_NAME          "knapsack"
 #define CONSHDLR_DESC          "knapsack constraint of the form  a^T x <= b, x binary"
 #define CONSHDLR_SEPAPRIORITY   +600000 /**< priority of the constraint handler for separation */
-#define CONSHDLR_ENFOPRIORITY   +600000 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_ENFOPRIORITY   -600000 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY  -600000 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_SEPAFREQ             0 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
@@ -1951,7 +1951,10 @@ SCIP_RETCODE propagateCons(
    SCIPdebugMessage("propagating knapsack constraint <%s>\n", SCIPconsGetName(cons));
 
    /* increase age of constraint; age is reset to zero, if a conflict or a propagation was found */
-   SCIP_CALL( SCIPincConsAge(scip, cons) );
+   if( !SCIPinRepropagation(scip) )
+   {
+      SCIP_CALL( SCIPincConsAge(scip, cons) );
+   }
 
    do
    {

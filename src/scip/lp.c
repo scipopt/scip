@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.214 2006/01/03 12:22:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.215 2006/02/23 12:40:34 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6076,6 +6076,8 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->looseobjval = 0.0;
    (*lp)->looseobjvalinf = 0;
    (*lp)->nloosevars = 0;
+   (*lp)->rootlpobjval = SCIP_INVALID;
+   (*lp)->rootlooseobjval = SCIP_INVALID;
    (*lp)->cutoffbound = SCIPsetInfinity(set);
    (*lp)->objsqrnorm = 0.0;
    (*lp)->objsumnorm = 0.0;
@@ -6853,13 +6855,16 @@ void getClosestVlb(
       
       for( i = 0; i < nvlbs; i++ )
       {
-         SCIP_Real vlbsol;
-         
-         vlbsol = vlbcoefs[i] * SCIPvarGetLPSol(vlbvars[i]) + vlbconsts[i];
-         if( vlbsol > *closestvlb )
+         if( SCIPvarIsActive(vlbvars[i]) )
          {
-            *closestvlb = vlbsol;
-            *closestvlbidx = i;
+            SCIP_Real vlbsol;
+            
+            vlbsol = vlbcoefs[i] * SCIPvarGetLPSol(vlbvars[i]) + vlbconsts[i];
+            if( vlbsol > *closestvlb )
+            {
+               *closestvlb = vlbsol;
+               *closestvlbidx = i;
+            }
          }
       }
    }
@@ -6894,13 +6899,16 @@ void getClosestVub(
       
       for( i = 0; i < nvubs; i++ )
       {
-         SCIP_Real vubsol;
-         
-         vubsol = vubcoefs[i] * SCIPvarGetLPSol(vubvars[i]) + vubconsts[i];
-         if( vubsol < *closestvub )
+         if( SCIPvarIsActive(vubvars[i]) )
          {
-            *closestvub = vubsol;
-            *closestvubidx = i;
+            SCIP_Real vubsol;
+            
+            vubsol = vubcoefs[i] * SCIPvarGetLPSol(vubvars[i]) + vubconsts[i];
+            if( vubsol < *closestvub )
+            {
+               *closestvub = vubsol;
+               *closestvubidx = i;
+            }
          }
       }
    }
@@ -7062,6 +7070,7 @@ void transformMIRRow(
             int zidx;
 
             assert(0 <= bestlbtype && bestlbtype < SCIPvarGetNVlbs(var));
+            assert(SCIPvarIsActive(vlbvars[bestlbtype]));
             zidx = SCIPvarGetProbindex(vlbvars[bestlbtype]);
             assert(0 <= zidx && zidx < v);
                
@@ -7089,6 +7098,7 @@ void transformMIRRow(
             int zidx;
 
             assert(0 <= bestubtype && bestubtype < SCIPvarGetNVubs(var));
+            assert(SCIPvarIsActive(vubvars[bestubtype]));
             zidx = SCIPvarGetProbindex(vubvars[bestubtype]);
             assert(zidx >= 0);
                
@@ -7316,6 +7326,7 @@ void roundMIRRow(
             vbb = SCIPvarGetVubCoefs(var);
             vbd = SCIPvarGetVubConstants(var);
          }
+         assert(SCIPvarIsActive(vbz[vbidx]));
          zidx =  SCIPvarGetProbindex(vbz[vbidx]);
          assert(0 <= zidx && zidx < v);
 
@@ -7961,6 +7972,7 @@ void transformStrongCGRow(
             int zidx;
 
             assert(0 <= bestlbtype && bestlbtype < SCIPvarGetNVlbs(var));
+            assert(SCIPvarIsActive(vlbvars[bestlbtype]));
             zidx = SCIPvarGetProbindex(vlbvars[bestlbtype]);
             assert(0 <= zidx && zidx < v);
                
@@ -7988,6 +8000,7 @@ void transformStrongCGRow(
             int zidx;
 
             assert(0 <= bestubtype && bestubtype < SCIPvarGetNVubs(var));
+            assert(SCIPvarIsActive(vubvars[bestubtype]));
             zidx = SCIPvarGetProbindex(vubvars[bestubtype]);
             assert(zidx >= 0);
                
@@ -9761,6 +9774,29 @@ SCIP_Real SCIPlpGetLooseObjval(
       return -SCIPsetInfinity(set);
    else
       return lp->looseobjval;
+}
+
+/** remembers the current LP objective value as root solution value */
+void SCIPlpStoreRootObjval(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(lp != NULL);
+
+   lp->rootlpobjval = SCIPlpGetColumnObjval(lp);
+   lp->rootlooseobjval = SCIPlpGetLooseObjval(lp, set);
+}
+
+/** invalidates the root LP solution value */
+void SCIPlpInvalidateRootObjval(
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   assert(lp != NULL);
+
+   lp->rootlpobjval = SCIP_INVALID;
+   lp->rootlooseobjval = SCIP_INVALID;
 }
 
 /** gets current pseudo objective value */
@@ -11740,6 +11776,8 @@ SCIP_RETCODE SCIPlpWrite(
 #undef SCIPcolGetUb
 #undef SCIPcolGetBestBound
 #undef SCIPcolGetPrimsol
+#undef SCIPcolGetMinPrimsol
+#undef SCIPcolGetMaxPrimsol
 #undef SCIPcolGetBasisStatus
 #undef SCIPcolGetVar
 #undef SCIPcolIsIntegral
@@ -11784,6 +11822,9 @@ SCIP_RETCODE SCIPlpWrite(
 #undef SCIPlpGetNewrows
 #undef SCIPlpGetNNewrows
 #undef SCIPlpGetObjNorm
+#undef SCIPlpGetRootObjval
+#undef SCIPlpGetRootColumnObjval
+#undef SCIPlpGetRootLooseObjval
 #undef SCIPlpGetLPI
 #undef SCIPlpIsSolved
 #undef SCIPlpIsSolBasic
@@ -11845,6 +11886,26 @@ SCIP_Real SCIPcolGetPrimsol(
       return col->primsol;
    else
       return 0.0;
+}
+
+/** gets the minimal LP solution value, this column ever assumed */
+SCIP_Real SCIPcolGetMinPrimsol(
+   SCIP_COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->minprimsol;
+}
+
+/** gets the maximal LP solution value, this column ever assumed */
+SCIP_Real SCIPcolGetMaxPrimsol(
+   SCIP_COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->maxprimsol;
 }
 
 /** gets the basis status of a column in the LP solution; only valid for LPs with status SCIP_LPSOLSTAT_OPTIMAL
@@ -12318,6 +12379,40 @@ SCIP_Real SCIPlpGetObjNorm(
    assert(lp != NULL);
 
    return SQRT(lp->objsqrnorm);
+}
+
+/** gets the objective value of the root node LP; returns SCIP_INVALID if the root node LP was not (yet) solved */
+SCIP_Real SCIPlpGetRootObjval(
+   SCIP_LP*              lp                  /**< LP data */
+   )
+{
+   assert(lp != NULL);
+
+   return MIN(lp->rootlpobjval + lp->rootlooseobjval, SCIP_INVALID);
+}
+
+/** gets part of the objective value of the root node LP that results from COLUMN variables only;
+ *  returns SCIP_INVALID if the root node LP was not (yet) solved
+ */
+SCIP_Real SCIPlpGetRootColumnObjval(
+   SCIP_LP*              lp                  /**< LP data */
+   )
+{
+   assert(lp != NULL);
+
+   return lp->rootlpobjval;
+}
+
+/** gets part of the objective value of the root node LP that results from LOOSE variables only;
+ *  returns SCIP_INVALID if the root node LP was not (yet) solved
+ */
+SCIP_Real SCIPlpGetRootLooseObjval(
+   SCIP_LP*              lp                  /**< LP data */
+   )
+{
+   assert(lp != NULL);
+
+   return lp->rootlooseobjval;
 }
 
 /** gets the LP solver interface */

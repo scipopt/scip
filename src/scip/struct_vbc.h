@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_vbc.h,v 1.10 2006/01/03 12:22:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_vbc.h,v 1.11 2006/02/23 12:40:37 bzfpfend Exp $"
 
 /**@file   struct_vbc.h
  * @brief  datastructures for VBC Tool output
@@ -29,6 +29,7 @@
 #include <stdio.h>
 
 #include "scip/def.h"
+#include "scip/type_vbc.h"
 #include "scip/type_misc.h"
 
 
@@ -38,6 +39,8 @@ struct SCIP_Vbc
    FILE*                 file;               /**< file to store VBC information */
    SCIP_HASHMAP*         nodenum;            /**< hash map for mapping nodes to node numbers */
    SCIP_Longint          timestep;           /**< time step counter for non real time output */
+   SCIP_NODE*            lastnode;           /**< last node that was colored */
+   SCIP_VBCCOLOR         lastcolor;          /**< last color that was used */
    SCIP_Bool             userealtime;        /**< should the real solving time be used instead of a time step counter? */
 };
 

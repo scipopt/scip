@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.32 2006/01/18 14:53:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.33 2006/02/23 12:40:36 bzfpfend Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -165,6 +165,7 @@ struct SCIP_Tree
    int                   nsiblings;          /**< number of siblings of focus node (number of used slots in siblings vector) */
    int                   pathlen;            /**< length of the current path */
    int                   pathsize;           /**< number of available slots in path arrays */
+   int                   effectiverootdepth; /**< first depth with node with at least two children */
    int                   correctlpdepth;     /**< depth to which current LP data corresponds to LP data of active path */
    int                   cutoffdepth;        /**< depth of first node in active path that is marked being cutoff */
    int                   repropdepth;        /**< depth of first node in active path that has to be propagated again */

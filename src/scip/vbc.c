@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.19 2006/01/03 12:23:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.20 2006/02/23 12:40:38 bzfpfend Exp $"
 
 /**@file   vbc.c
  * @brief  methods for VBC Tool output
@@ -37,41 +37,6 @@
 #include "scip/struct_vbc.h"
 
 
-
-
-/** node colors in VBC output:
- *   1: indian red
- *   2: green
- *   3: light gray
- *   4: red
- *   5: blue
- *   6: black
- *   7: light pink
- *   8: cyan
- *   9: dark green
- *  10: brown
- *  11: orange
- *  12: yellow
- *  13: pink
- *  14: purple
- *  15: light blue
- *  16: muddy green
- *  17: white
- *  18: light grey
- *  19: light grey
- *  20: light grey
- */
-enum VBCColor
-{
-   SCIP_VBCCOLOR_UNSOLVED   =  3,       /**< color for newly created, unsolved nodes */
-   SCIP_VBCCOLOR_SOLVED     =  2,       /**< color for solved nodes */
-   SCIP_VBCCOLOR_CUTOFF     =  4,       /**< color for nodes that were cut off */
-   SCIP_VBCCOLOR_CONFLICT   = 15,       /**< color for nodes where a conflict clause was found */
-   SCIP_VBCCOLOR_MARKREPROP = 11,       /**< color for nodes that were marked to be repropagated */
-   SCIP_VBCCOLOR_REPROP     = 12,       /**< color for repropagated nodes */
-   SCIP_VBCCOLOR_SOLUTION   = -1        /**< color for solved nodes, where a solution has been found */
-};
-typedef enum VBCColor VBCCOLOR;
 
 
 /** returns the branching variable of the node, or NULL */
@@ -103,6 +68,8 @@ SCIP_RETCODE SCIPvbcCreate(
    (*vbc)->file = NULL;
    (*vbc)->nodenum = NULL;
    (*vbc)->timestep = 0;
+   (*vbc)->lastnode = NULL;
+   (*vbc)->lastcolor = -1;
    (*vbc)->userealtime = FALSE;
 
    return SCIP_OKAY;
@@ -139,6 +106,8 @@ SCIP_RETCODE SCIPvbcInit(
       "storing VBC information in file <%s>\n", set->vbc_filename);
    vbc->file = fopen(set->vbc_filename, "w");
    vbc->timestep = 0;
+   vbc->lastnode = NULL;
+   vbc->lastcolor = -1;
    vbc->userealtime = set->vbc_realtime;
 
    if( vbc->file == NULL )
@@ -269,13 +238,13 @@ void vbcSetColor(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node,               /**< node to change color for */
-   VBCCOLOR         color               /**< new color of node, or -1 */
+   SCIP_VBCCOLOR         color               /**< new color of node, or -1 */
    )
 {
    assert(vbc != NULL);
    assert(node != NULL);
 
-   if( vbc->file != NULL && (int)color != -1 )
+   if( vbc->file != NULL && (int)color != -1 && (node != vbc->lastnode || color != vbc->lastcolor) )
    {
       int nodenum;
 
@@ -283,6 +252,8 @@ void vbcSetColor(
       assert(nodenum > 0);
       printTime(vbc, stat);
       SCIPmessageFPrintInfo(vbc->file, "P %d %d\n", nodenum, color);
+      vbc->lastnode = node;
+      vbc->lastcolor = color;
    }
 }
 

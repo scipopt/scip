@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.106 2006/01/03 12:23:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.107 2006/02/23 12:40:38 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -82,6 +82,19 @@ SCIP_RETCODE SCIPboundchgUndo(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   );
+
+/** applies domain change to the global problem */
+extern
+SCIP_RETCODE SCIPdomchgApplyGlobal(
+   SCIP_DOMCHG*          domchg,             /**< domain change to apply */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Bool*            cutoff              /**< pointer to store whether an infeasible domain change was detected */
    );
 
 /** frees domain change data */
@@ -191,6 +204,12 @@ int SCIPdomchgGetNBoundchgs(
    SCIP_DOMCHG*          domchg              /**< domain change data */
    );
 
+/** returns whether the bound change is redundant due to a more global bound that is at least as strong */
+extern
+SCIP_Bool SCIPboundchgIsRedundant(
+   SCIP_BOUNDCHG*        boundchg            /**< bound change data */
+   );
+
 /** returns a particular bound change in the domain change data */
 extern
 SCIP_BOUNDCHG* SCIPdomchgGetBoundchg(
@@ -208,6 +227,7 @@ SCIP_BOUNDCHG* SCIPdomchgGetBoundchg(
 #define SCIPboundchgGetVar(boundchg)           ((boundchg)->var)
 #define SCIPboundchgGetBoundchgtype(boundchg)  ((SCIP_BOUNDCHGTYPE)((boundchg)->boundchgtype))
 #define SCIPboundchgGetBoundtype(boundchg)     ((SCIP_BOUNDTYPE)((boundchg)->boundtype))
+#define SCIPboundchgIsRedundant(boundchg)      ((boundchg)->redundant)
 #define SCIPdomchgGetNBoundchgs(domchg)        ((domchg) != NULL ? (domchg)->domchgbound.nboundchgs : 0)
 #define SCIPdomchgGetBoundchg(domchg, pos)     (&(domchg)->domchgbound.boundchgs[pos])
 
@@ -824,6 +844,8 @@ SCIP_Real SCIPvarGetUbLP(
 extern
 void SCIPvarStoreRootSol(
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             roothaslp           /**< is the root solution from LP? */
    );
 

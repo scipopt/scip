@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.71 2006/01/09 13:40:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.72 2006/02/23 12:40:36 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -58,7 +58,6 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->conflictlptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->lpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->pseudosoltime, SCIP_CLOCKTYPE_DEFAULT) );
-   SCIP_CALL( SCIPclockCreate(&(*stat)->redcoststrtime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
 
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistory, blkmem) );
@@ -95,7 +94,6 @@ SCIP_RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->conflictlptime);
    SCIPclockFree(&(*stat)->lpsoltime);
    SCIPclockFree(&(*stat)->pseudosoltime);
-   SCIPclockFree(&(*stat)->redcoststrtime);
    SCIPclockFree(&(*stat)->nodeactivationtime);
 
    SCIPhistoryFree(&(*stat)->glbhistory, blkmem);
@@ -147,7 +145,6 @@ void SCIPstatReset(
    SCIPclockReset(stat->conflictlptime);
    SCIPclockReset(stat->lpsoltime);
    SCIPclockReset(stat->pseudosoltime);
-   SCIPclockReset(stat->redcoststrtime);
    SCIPclockReset(stat->nodeactivationtime);
 
    SCIPhistoryReset(stat->glbhistory);
@@ -165,18 +162,17 @@ void SCIPstatReset(
    stat->nsblpiterations = 0;
    stat->nrootsblpiterations = 0;
    stat->nconflictlpiterations = 0;
-   stat->nredcoststrcalls = 0;
-   stat->nredcoststrfound = 0;
    stat->ntotalnodes = 0;
    stat->ncreatednodes = 0;
    stat->nlpsolsfound = 0;
    stat->npssolsfound = 0;
    stat->domchgcount = 0;
-   stat->nrootboundchgs = 0;
    stat->nrepropboundchgs = 0;
    stat->nboundchgs = 0;
    stat->nholechgs = 0;
    stat->nruns = 0;
+   stat->nrootboundchgs = 0;
+   stat->nrootintfixings = 0;
    stat->nvaridx = stat->marked_nvaridx;
    stat->ncolidx = stat->marked_ncolidx;
    stat->nrowidx = stat->marked_nrowidx;
@@ -258,6 +254,7 @@ void SCIPstatResetCurrentRun(
    stat->status = SCIP_STATUS_UNKNOWN;
    stat->lastbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
    stat->nrootboundchgsrun = 0;
+   stat->nrootintfixingsrun = 0;
    stat->npricerounds = 0;
    stat->nseparounds = 0;
    stat->maxdepth = -1;

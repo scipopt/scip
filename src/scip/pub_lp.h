@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.32 2006/01/03 12:22:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.33 2006/02/23 12:40:35 bzfpfend Exp $"
 
 /**@file   pub_lp.h
  * @brief  public methods for LP management
@@ -88,6 +88,18 @@ SCIP_Real SCIPcolGetBestBound(
 /** gets the primal LP solution of a column */
 extern
 SCIP_Real SCIPcolGetPrimsol(
+   SCIP_COL*             col                 /**< LP column */
+   );
+
+/** gets the minimal LP solution value, this column ever assumed */
+extern
+SCIP_Real SCIPcolGetMinPrimsol(
+   SCIP_COL*             col                 /**< LP column */
+   );
+
+/** gets the maximal LP solution value, this column ever assumed */
+extern
+SCIP_Real SCIPcolGetMaxPrimsol(
    SCIP_COL*             col                 /**< LP column */
    );
 
@@ -193,6 +205,8 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
 #define SCIPcolGetUb(col)               (col)->ub
 #define SCIPcolGetBestBound(col)        ((col)->obj >= 0.0 ? (col)->lb : (col)->ub)
 #define SCIPcolGetPrimsol(col)          ((col)->lppos >= 0 ? (col)->primsol : 0.0)
+#define SCIPcolGetMinPrimsol(col)       ((col)->minprimsol)
+#define SCIPcolGetMaxPrimsol(col)       ((col)->maxprimsol)
 #define SCIPcolGetBasisStatus(col)      ((col)->basisstatus)
 #define SCIPcolGetVar(col)              (col)->var
 #define SCIPcolIsIntegral(col)          (col)->integral

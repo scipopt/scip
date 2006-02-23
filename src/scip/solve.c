@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.205 2006/01/18 14:53:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.206 2006/02/23 12:40:36 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -293,176 +293,6 @@ SCIP_RETCODE SCIPpropagateDomains(
    return SCIP_OKAY;
 }
 
-/** strengthens variable's bounds looking at reduced costs */
-static
-SCIP_RETCODE redcostStrengthening(
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
-   )
-{
-   SCIP_NODE* node;
-   SCIP_COL** cols;
-   SCIP_VAR* var;
-   SCIP_Real lpobjval;
-   SCIP_Real redcost;
-   SCIP_Real oldlb;
-   SCIP_Real oldub;
-   SCIP_Real newbd;
-   SCIP_Bool strengthen;
-   int ncols;
-   int c;
-
-   assert(set != NULL);
-   assert(tree != NULL);
-   assert(lp->flushed);
-   assert(lp->solved);
-   assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
-   assert(primal != NULL);
-   assert(SCIPsetIsLT(set, SCIPlpGetObjval(lp, set), primal->cutoffbound) );
-
-   /* we cannot apply reduced cost fixing, if we want to solve exactly */
-   /**@todo implement reduced cost fixing with interval arithmetics */
-   if( set->misc_exactsolve )
-      return SCIP_OKAY;
-
-   /* we cannot apply reduced cost strengthening, if no simplex basis is available */
-   if( !SCIPlpIsSolBasic(lp) )
-      return SCIP_OKAY;
-
-   /* reduced cost strengthening can only be applied, if we have an upper bound on the LP value */
-   if( SCIPsetIsInfinity(set, primal->cutoffbound) )
-      return SCIP_OKAY;
-
-   /* get LP columns */
-   cols = SCIPlpGetCols(lp);
-   ncols = SCIPlpGetNCols(lp);
-   if( ncols == 0 )
-      return SCIP_OKAY;
-
-   stat->nredcoststrcalls++;
-   node = SCIPtreeGetFocusNode(tree);
-   assert(node != NULL);
-   assert(SCIPnodeGetType(node) == SCIP_NODETYPE_FOCUSNODE);
-
-   /* start redcost strengthening timer */
-   SCIPclockStart(stat->redcoststrtime, set);
-
-   /* get LP objective value */
-   lpobjval = SCIPlpGetObjval(lp, set);
-
-   /* check reduced costs for non-basic columns */
-   for( c = 0; c < ncols; ++c )
-   {
-      switch( cols[c]->basisstatus )
-      {
-      case SCIP_BASESTAT_LOWER:
-         redcost = SCIPcolGetRedcost(cols[c], stat, lp);
-         assert(!SCIPsetIsFeasNegative(set, redcost));
-         if( SCIPsetIsFeasPositive(set, redcost) )
-         {
-            var = SCIPcolGetVar(cols[c]);
-            oldlb = SCIPvarGetLbLocal(var);
-            oldub = SCIPvarGetUbLocal(var);
-            assert(SCIPsetIsEQ(set, oldlb, SCIPcolGetLb(cols[c])));
-            assert(SCIPsetIsEQ(set, oldub, SCIPcolGetUb(cols[c])));
-            if( SCIPsetIsFeasLT(set, oldlb, oldub) )
-            {
-               /* calculate reduced cost based bound */
-               newbd = (primal->cutoffbound - lpobjval) / redcost + oldlb;
-
-               /* check, if new bound is good enough:
-                *  - integer variables: take all possible strengthenings
-                *  - continuous variables: strengthening must cut part of the variable's dynamic range, and
-                *                          at least 20% of the current domain
-                */
-               if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
-               {
-                  SCIPvarAdjustUb(var, set, &newbd);
-                  strengthen = (newbd < oldub - 0.5);
-               }
-               else
-                  strengthen = (newbd < cols[c]->maxprimsol && newbd <= 0.2 * oldlb + 0.8 * oldub);
-
-               if( strengthen )
-               {
-                  /* strengthen upper bound */
-                  SCIPdebugMessage("redcost strengthening upper bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
-                     SCIPvarGetName(var), oldlb, oldub, oldlb, newbd, primal->cutoffbound, lpobjval, redcost);
-                  SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, tree, lp, branchcand, eventqueue,
-                        var, newbd, SCIP_BOUNDTYPE_UPPER, FALSE) );
-                  stat->nredcoststrfound++;
-               }
-            }
-         }
-         break;
-
-      case SCIP_BASESTAT_BASIC:
-         break;
-
-      case SCIP_BASESTAT_UPPER:
-         redcost = SCIPcolGetRedcost(cols[c], stat, lp);
-         assert(!SCIPsetIsFeasPositive(set, redcost));
-         if( SCIPsetIsFeasNegative(set, redcost) )
-         {
-            var = SCIPcolGetVar(cols[c]);
-            oldlb = SCIPvarGetLbLocal(var);
-            oldub = SCIPvarGetUbLocal(var);
-            assert(SCIPsetIsEQ(set, oldlb, SCIPcolGetLb(cols[c])));
-            assert(SCIPsetIsEQ(set, oldub, SCIPcolGetUb(cols[c])));
-            if( SCIPsetIsFeasLT(set, oldlb, oldub) )
-            {
-               /* calculate reduced cost based bound */
-               newbd = (primal->cutoffbound - lpobjval) / redcost + oldub;
-
-               /* check, if new bound is good enough:
-                *  - integer variables: take all possible strengthenings
-                *  - continuous variables: strengthening must cut part of the variable's dynamic range, and
-                *                          at least 20% of the current domain
-                */
-               if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
-               {
-                  SCIPvarAdjustLb(var, set, &newbd);
-                  strengthen = (newbd > oldlb + 0.5);
-               }
-               else
-                  strengthen = (newbd > cols[c]->minprimsol && newbd >= 0.8 * oldlb + 0.2 * oldub);
-
-               /* check, if new bound is good enough: at least 20% strengthening for continuous variables */
-               if( strengthen )
-               {
-                  /* strengthen lower bound */
-                  SCIPdebugMessage("redcost strengthening lower bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
-                     SCIPvarGetName(var), oldlb, oldub, newbd, oldub, primal->cutoffbound, lpobjval, redcost);
-                  SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, tree, lp, branchcand, eventqueue,
-                        var, newbd, SCIP_BOUNDTYPE_LOWER, FALSE) );
-                  stat->nredcoststrfound++;
-               }
-            }
-         }
-         break;
-
-      case SCIP_BASESTAT_ZERO:
-         assert(SCIPsetIsFeasZero(set, SCIPcolGetRedcost(cols[c], stat, lp)));
-         break;
-
-      default:
-         SCIPerrorMessage("invalid basis state\n");
-         return SCIP_INVALIDDATA;
-      }
-   }
-
-   /* stop redcost strengthening activation timer */
-   SCIPclockStop(stat->redcoststrtime, set);
-
-   return SCIP_OKAY;
-}
-
 /** returns whether the given variable with the old LP solution value should lead to an update of the pseudo cost entry */
 static
 SCIP_Bool isPseudocostUpdateValid(
@@ -570,6 +400,9 @@ SCIP_RETCODE updatePseudocost(
             nboundchgs = node->domchg->domchgbound.nboundchgs;
             for( i = 0; i < nboundchgs; ++i )
             {
+               /* we even collect redundant bound changes, since they were not redundant in the LP branching decision
+                * and therefore should be regarded in the pseudocost updates
+                */ 
                if( (SCIP_BOUNDCHGTYPE)boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
                {
                   var = boundchgs[i].var;
@@ -1437,97 +1270,12 @@ SCIP_RETCODE priceAndCutLoop(
       assert(lp->solved);
 
       /* solve the LP with pricing in new variables */
-#if 1 /*????????????????*/
       if( mustprice )
       {
          SCIP_CALL( SCIPpriceLoop(blkmem, set, stat, prob, tree, lp, pricestore, branchcand, eventqueue,
                root, root, &npricedcolvars, &mustsepa, lperror) );
          mustprice = FALSE;
       }
-#else /*??????????????????????*/
-      /* if the LP is unbounded, we don't need to price */
-      mustprice = mustprice && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
-
-      /* if all the variables are already in the LP, we don't need to price */
-      mustprice = mustprice && !SCIPprobAllColsInLP(prob, set, lp);
-
-      /* pricing (has to be done completely to get a valid lower bound) */
-      while( !(*cutoff) && !(*lperror) && mustprice )
-      {
-         assert(lp->flushed);
-         assert(lp->solved);
-         assert(SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
-
-         /* price problem variables */
-         SCIPdebugMessage("problem variable pricing\n");
-         assert(SCIPpricestoreGetNVars(pricestore) == 0);
-         assert(SCIPpricestoreGetNBoundResets(pricestore) == 0);
-         SCIP_CALL( SCIPpricestoreAddProbVars(pricestore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue) );
-         npricedcolvars = prob->ncolvars;
-
-         /* if no additional problem variables were found, call external pricers to create additional problem variables */
-         if( SCIPpricestoreGetNVars(pricestore) == 0 )
-         {
-            SCIP_Bool enoughvars;
-            int p;
-
-            SCIPdebugMessage("external variable pricing\n");
-
-            /* sort pricer algorithms by priority */
-            SCIPsetSortPricers(set);
-
-            /* call external pricer algorithms, that are active for the current problem */
-            enoughvars = FALSE;
-            for( p = 0; p < set->nactivepricers && !enoughvars; ++p )
-            {
-               SCIP_CALL( SCIPpricerExec(set->pricers[p], set, prob, lp) );
-               enoughvars = enoughvars || (SCIPpricestoreGetNVars(pricestore) >= SCIPsetGetPriceMaxvars(set, root)/2);
-            }
-         }
-
-         /* apply the priced variables to the LP */
-         SCIP_CALL( SCIPpricestoreApplyVars(pricestore, blkmem, set, stat, prob, tree, lp) );
-         assert(SCIPpricestoreGetNVars(pricestore) == 0);
-         assert(!lp->flushed || lp->solved);
-         mustprice = !lp->flushed || (prob->ncolvars != npricedcolvars);
-         mustsepa = mustsepa || !lp->flushed;
-
-         /* after adding columns, the LP should be primal feasible such that primal simplex is applicable;
-          * if LP was infeasible, we have to use dual simplex
-          */
-         SCIPdebugMessage("pricing: solve LP\n");
-         SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, TRUE, FALSE, lperror) );
-         assert(lp->flushed);
-         assert(lp->solved || *lperror);
-
-         /* reset bounds temporarily set by pricer to their original values */
-         SCIPdebugMessage("pricing: reset bounds\n");
-         SCIP_CALL( SCIPpricestoreResetBounds(pricestore, blkmem, set, stat, lp, branchcand, eventqueue) );
-         assert(SCIPpricestoreGetNVars(pricestore) == 0);
-         assert(SCIPpricestoreGetNBoundResets(pricestore) == 0);
-         assert(!lp->flushed || lp->solved);
-         mustprice = mustprice || !lp->flushed || (prob->ncolvars != npricedcolvars);
-         mustsepa = mustsepa || !lp->flushed;
-
-         /* solve LP again after resetting bounds (with dual simplex) */
-         SCIPdebugMessage("pricing: solve LP after resetting bounds\n");
-         SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, FALSE, FALSE, lperror) );
-         assert(lp->flushed);
-         assert(lp->solved || *lperror);
-
-         /* increase pricing round counter */
-         stat->npricerounds++;
-
-         /* display node information line for root node */
-         if( root && mustprice && (SCIP_VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_FULL )
-         {
-            SCIP_CALL( SCIPdispPrintLine(set, stat, NULL, TRUE) );
-         }
-
-         /* if the LP is unbounded, we can stop pricing */
-         mustprice = mustprice && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
-      }
-#endif /*????????????????????*/
       assert(lp->flushed);
       assert(lp->solved);
 
@@ -1651,16 +1399,6 @@ SCIP_RETCODE priceAndCutLoop(
          }
          else
          {
-            /* apply reduced cost bound strengthening */
-            if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && !mustprice && prob->ncolvars == npricedcolvars )
-            {
-               if( (set->prop_redcostfreq == 0 && root)
-                  || (set->prop_redcostfreq > 0 && actdepth % set->prop_redcostfreq == 0) )
-               {
-                  SCIP_CALL( redcostStrengthening(blkmem, set, stat, primal, tree, lp, branchcand, eventqueue) );
-               }
-            }
-
             /* apply found cuts */
             SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, tree, lp, branchcand, eventqueue, cutoff) );
 
@@ -2183,6 +1921,7 @@ SCIP_RETCODE solveNode(
 {
    SCIP_NODE* focusnode;
    SCIP_Longint lastdomchgcount;
+   SCIP_Real restartfac;
    int lastlpcount;
    int actdepth;
    int nlperrors;
@@ -2217,7 +1956,8 @@ SCIP_RETCODE solveNode(
    assert(SCIPnodeGetType(focusnode) == SCIP_NODETYPE_FOCUSNODE);
    actdepth = SCIPnodeGetDepth(focusnode);
 
-   SCIPdebugMessage("Processing node %"SCIP_LONGINT_FORMAT" in depth %d, %d siblings\n", stat->nnodes, actdepth, tree->nsiblings);
+   SCIPdebugMessage("Processing node %"SCIP_LONGINT_FORMAT" in depth %d, %d siblings\n",
+      stat->nnodes, actdepth, tree->nsiblings);
    SCIPdebugMessage("current pseudosolution: obj=%g\n", SCIPlpGetPseudoObjval(lp, set));
    /*debug(SCIPprobPrintPseudoSol(prob, set));*/
 
@@ -2276,11 +2016,18 @@ SCIP_RETCODE solveNode(
       /* domain propagation */
       if( propagate && !(*cutoff) )
       {
+         SCIP_Bool lpwasflushed;
+
+         lpwasflushed = lp->flushed;
+
          SCIP_CALL( propagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, fullpropagation, cutoff) );
          fullpropagation = FALSE;
 
          /* check, if the path was cutoff */
          *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);
+
+         /* if the LP was flushed and is now no longer flushed, a bound change occurred, and the LP has to be resolved */
+         solvelp = solvelp || (lpwasflushed && !lp->flushed);
       }
       assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
@@ -2569,7 +2316,8 @@ SCIP_RETCODE solveNode(
       *restart = *restart
          || (actdepth == 0
             && (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts)
-            && set->presol_restartfac > 0.0 && stat->nrootboundchgsrun > set->presol_restartfac * prob->nvars);
+            && set->presol_restartfac > 0.0
+            && stat->nrootintfixingsrun > set->presol_restartfac * (prob->nvars - prob->ncontvars));
 
       SCIPdebugMessage("node solving iteration finished: cutoff=%d, propagateagain=%d, solverelaxagain=%d, solvelpagain=%d, nlperrors=%d, restart=%d\n",
          *cutoff, propagateagain, solverelaxagain, solvelpagain, nlperrors, *restart);
@@ -2588,15 +2336,17 @@ SCIP_RETCODE solveNode(
    }
 
    /* check for final restart */
+   restartfac = set->presol_subrestartfac;
+   if( actdepth == 0 )
+      restartfac = MIN(restartfac, set->presol_restartfac);
    *restart = *restart
-      || (actdepth == 0
-         && (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts)
-         && stat->nrootboundchgsrun > set->presol_restartfac * prob->nvars);
+      || ((set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts)
+         && stat->nrootintfixingsrun > restartfac * (prob->nvars - prob->ncontvars));
 
    /* remember root LP solution */
    if( actdepth == 0 && !(*cutoff) && !(*restart) && !(*unbounded) )
    {
-      SCIPprobStoreRootSol(prob, SCIPtreeHasFocusNodeLP(tree));
+      SCIPprobStoreRootSol(prob, set, stat, lp, SCIPtreeHasFocusNodeLP(tree));
    }
 
    /* check for cutoff */
@@ -2704,6 +2454,7 @@ SCIP_RETCODE SCIPsolveCIP(
    SCIP_NODE* focusnode;
    SCIP_NODE* nextnode;
    SCIP_EVENT event;
+   SCIP_Real restartfac;
    int nnodes;
    int depth;
    SCIP_Bool cutoff;
@@ -2727,9 +2478,11 @@ SCIP_RETCODE SCIPsolveCIP(
    assert(restart != NULL);
 
    /* check for immediate restart (if problem solving marked to be restarted was aborted) */
-   *restart = (SCIPtreeGetCurrentDepth(tree) == 0
-      && (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts)
-      && stat->nrootboundchgsrun > set->presol_restartfac * prob->nvars);
+   restartfac = set->presol_subrestartfac;
+   if( SCIPtreeGetCurrentDepth(tree) == 0 )
+      restartfac = MIN(restartfac, set->presol_restartfac);
+   *restart = (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts)
+      && stat->nrootintfixingsrun > restartfac * (prob->nvars - prob->ncontvars);
 
    /* switch status to UNKNOWN */
    stat->status = SCIP_STATUS_UNKNOWN;
@@ -2921,8 +2674,8 @@ SCIP_RETCODE SCIPsolveCIP(
       /* display node information line */
       SCIP_CALL( SCIPdispPrintLine(set, stat, NULL, (SCIPnodeGetDepth(focusnode) == 0) && infeasible && !foundsol) );
 
-      SCIPdebugMessage("Processing of node in depth %d finished. %d siblings, %d children, %d leaves left\n",
-         SCIPnodeGetDepth(focusnode), tree->nsiblings, tree->nchildren, SCIPtreeGetNLeaves(tree));
+      SCIPdebugMessage("Processing of node %"SCIP_LONGINT_FORMAT" in depth %d finished. %d siblings, %d children, %d leaves left\n",
+         stat->nnodes, SCIPnodeGetDepth(focusnode), tree->nsiblings, tree->nchildren, SCIPtreeGetNLeaves(tree));
       SCIPdebugMessage("**********************************************************************\n");
    }
    assert(SCIPbufferGetNUsed(set->buffer) == 0);

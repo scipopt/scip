@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.103 2006/01/03 12:22:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.104 2006/02/23 12:40:33 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -34,7 +34,7 @@
 #define CONSHDLR_NAME          "setppc"
 #define CONSHDLR_DESC          "set partitioning / packing / covering constraints"
 #define CONSHDLR_SEPAPRIORITY   +700000 /**< priority of the constraint handler for separation */
-#define CONSHDLR_ENFOPRIORITY   +700000 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_ENFOPRIORITY   -700000 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY  -700000 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_SEPAFREQ             0 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
@@ -56,6 +56,7 @@
 #define CONFLICTHDLR_PRIORITY  LINCONSUPGD_PRIORITY
 
 /*#define VARUSES*/  /* activate variable usage counting, that is necessary for LP and pseudo branching */
+/*#define BRANCHLP*/ /* BRANCHLP is only useful if the ENFOPRIORITY is set to a positive value */
 #ifdef BRANCHLP
 #define MINBRANCHWEIGHT             0.3  /**< minimum weight of both sets in binary set branching */
 #define MAXBRANCHWEIGHT             0.7  /**< maximum weight of both sets in binary set branching */

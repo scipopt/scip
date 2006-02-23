@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.209 2006/02/08 13:22:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.210 2006/02/23 12:40:33 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -89,6 +89,7 @@
 #define KNAPSACKRELAX_MAXSCALE   1000.0 /**< maximal allowed scaling factor in knapsack rational relaxation */
 
 #define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
+#define MAXSCALEDCOEF             1e+06 /**< maximal coefficient value after scaling */
 
 
 /** constraint data for linear constraints */
@@ -2461,6 +2462,7 @@ SCIP_RETCODE normalizeCons(
    SCIP_Longint maxmult;
    SCIP_Real epsilon;
    SCIP_Real feastol;
+   SCIP_Real maxabsval;
    SCIP_Bool success;
    int nvars;
    int mult;
@@ -2489,11 +2491,15 @@ SCIP_RETCODE normalizeCons(
 
    /* calculate the maximal multiplier for common divisor calculation:
     *   |p/q - val| < epsilon  and  q < feastol/epsilon  =>  |p - q*val| < feastol
-    * which means, a value of feastol/epsilon should be used as maximal multiplier
+    * which means, a value of feastol/epsilon should be used as maximal multiplier;
+    * additionally, we don't want to scale the constraint if this would lead to too
+    * large coefficients
     */
    epsilon = SCIPepsilon(scip);
    feastol = SCIPfeastol(scip);
    maxmult = (SCIP_Longint)(feastol/epsilon + feastol);
+   maxabsval = consdataGetMaxAbsval(consdata);
+   maxmult = MIN(maxmult, MAXSCALEDCOEF/MAX(maxabsval, 1.0));
 
    /*
     * multiplication with +1 or -1
@@ -3476,7 +3482,7 @@ SCIP_RETCODE separateRelaxedKnapsack(
          for( j = 0; j < nvlb; j++ )
          {
             /* use only vlb with binary variable z */
-            if( SCIPvarGetType(zvlb[j]) == SCIP_VARTYPE_BINARY )
+            if( SCIPvarGetType(zvlb[j]) == SCIP_VARTYPE_BINARY && SCIPvarIsActive(zvlb[j]) )
             {
                SCIP_Real vlbsol;
 
@@ -3534,7 +3540,7 @@ SCIP_RETCODE separateRelaxedKnapsack(
          for( j = 0; j < nvub; j++ )
          {
             /* use only vub with active binary variable z */
-            if( SCIPvarGetType(zvub[j]) == SCIP_VARTYPE_BINARY )
+            if( SCIPvarGetType(zvub[j]) == SCIP_VARTYPE_BINARY && SCIPvarIsActive(zvub[j])  )
             {
                SCIP_Real vubsol;
 
@@ -3776,7 +3782,10 @@ SCIP_RETCODE propagateCons(
    if( !SCIPconsIsModifiable(cons) )
    {
       /* increase age of constraint; age is reset to zero, if a conflict or a propagation was found */
-      SCIP_CALL( SCIPincConsAge(scip, cons) );
+      if( !SCIPinRepropagation(scip) )
+      {
+         SCIP_CALL( SCIPincConsAge(scip, cons) );
+      }
 
       /* tighten the variable's bounds */
       if( tightenbounds )

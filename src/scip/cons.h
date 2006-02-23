@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.101 2006/01/03 12:22:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.102 2006/02/23 12:40:33 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -343,6 +343,16 @@ SCIP_RETCODE SCIPconssetchgUndo(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< dynamic problem statistics */
+   );
+
+/** applies constraint set change to the global problem and deletes the constraint set change data */
+extern
+SCIP_RETCODE SCIPconssetchgMakeGlobal(
+   SCIP_CONSSETCHG**     conssetchg,         /**< pointer to constraint set change data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob                /**< problem data */
    );
 
 
