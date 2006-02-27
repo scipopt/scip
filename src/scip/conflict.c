@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.113 2006/02/23 12:40:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.114 2006/02/27 18:35:22 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -540,7 +540,7 @@ SCIP_Bool clauseIsRedundant(
    /* check, if all literals in clause2 are also present in clause1;
     * we can stop immediately, if more literals are remaining in clause2 than in clause1
     */
-   for( i1 = 0, i2 = 0; i2 < clause2->nvars && clause1->nvars - i1 < clause2->nvars - i2; ++i1, ++i2 )
+   for( i1 = 0, i2 = 0; i2 < clause2->nvars && clause1->nvars - i1 >= clause2->nvars - i2; ++i1, ++i2 )
    {
       int idx;
 
@@ -1580,6 +1580,7 @@ SCIP_RETCODE conflictAddClause(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
    int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
    SCIP_Bool*            success,            /**< pointer to store whether the conflict set is valid */
    int*                  nliterals           /**< pointer to store the number of literals in the generated clause */
@@ -1647,7 +1648,7 @@ SCIP_RETCODE conflictAddClause(
    /* if all branching variables are in the conflict set, the conflict clause is of no use;
     * don't use clauses that are only valid in the probing path but not in the problem tree
     */
-   if( insertdepth < currentdepth && insertdepth <= focusdepth )
+   if( (diving || insertdepth < currentdepth) && insertdepth <= focusdepth )
    {
       *nliterals = conflict->nconflictvars + conflict->ntmpconflictvars;
       SCIPdebugMessage(" -> final conflict clause has %d literals\n", *nliterals);
@@ -1861,6 +1862,7 @@ SCIP_RETCODE conflictCreateReconvergenceClauses(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
    int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
    SCIP_BDCHGINFO*       firstuip,           /**< first UIP of conflict graph */
    int*                  nreconvclauses,     /**< pointer to store the number of generated reconvergence clauses */
@@ -2021,7 +2023,7 @@ SCIP_RETCODE conflictCreateReconvergenceClauses(
             SCIPbdchginfoGetDepth(uip), conflict->nconflictvars, nresolutions);
 
          /* call the conflict handlers to create a conflict clause */
-         SCIP_CALL( conflictAddClause(conflict, blkmem, set, stat, tree, validdepth, &success, &nlits) );
+         SCIP_CALL( conflictAddClause(conflict, blkmem, set, stat, tree, diving, validdepth, &success, &nlits) );
          if( success )
          {
             (*nreconvclauses)++;
@@ -2046,6 +2048,7 @@ SCIP_RETCODE conflictAnalyze(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
    int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
    SCIP_Bool             mustresolve,        /**< should the conflict set only be used, if a resolution was applied? */
    int*                  nclauses,           /**< pointer to store the number of generated conflict clauses */
@@ -2147,7 +2150,7 @@ SCIP_RETCODE conflictAnalyze(
          /* call the conflict handlers to create a conflict clause */
          SCIPdebugMessage("creating intermediate clause after %d resolutions up to depth %d (valid at depth %d): %d conflict vars, %d vars in queue\n",
             nresolutions, bdchgdepth, validdepth, conflict->nconflictvars, SCIPpqueueNElems(conflict->binbdchgqueue));
-         SCIP_CALL( conflictAddClause(conflict, blkmem, set, stat, tree, validdepth, &success, &nlits) );
+         SCIP_CALL( conflictAddClause(conflict, blkmem, set, stat, tree, diving, validdepth, &success, &nlits) );
          lastclausenresolutions = nresolutions;
          lastclauseresoldepth = bdchgdepth;
          if( success )
@@ -2249,7 +2252,7 @@ SCIP_RETCODE conflictAnalyze(
       SCIP_Bool success;
 
       /* call the conflict handlers to create a conflict clause */
-      SCIP_CALL( conflictAddClause(conflict, blkmem, set, stat, tree, validdepth, &success, &nlits) );
+      SCIP_CALL( conflictAddClause(conflict, blkmem, set, stat, tree, diving, validdepth, &success, &nlits) );
       if( success )
       {
          (*nclauses)++;
@@ -2260,7 +2263,7 @@ SCIP_RETCODE conflictAnalyze(
    /* produce reconvergence clauses defined by succeeding UIP's of the last depth level */
    if( set->conf_reconvclauses && firstuip != NULL && SCIPbdchginfoHasInferenceReason(firstuip) )
    {
-      SCIP_CALL( conflictCreateReconvergenceClauses(conflict, blkmem, set, stat, prob, tree, validdepth, firstuip,
+      SCIP_CALL( conflictCreateReconvergenceClauses(conflict, blkmem, set, stat, prob, tree, diving, validdepth, firstuip,
             nreconvclauses, nreconvliterals) );
    }
 
@@ -2315,7 +2318,7 @@ SCIP_RETCODE SCIPconflictAnalyze(
    conflict->npropcalls++;
 
    /* analyze the conflict set, and create a conflict constraint on success */
-   SCIP_CALL( conflictAnalyze(conflict, blkmem, set, stat, prob, tree, validdepth, TRUE,
+   SCIP_CALL( conflictAnalyze(conflict, blkmem, set, stat, prob, tree, FALSE, validdepth, TRUE,
          &nclauses, &nliterals, &nreconvclauses, &nreconvliterals) );
    conflict->npropsuccess += (nclauses > 0);
    conflict->npropconfclauses += nclauses;
@@ -3504,6 +3507,7 @@ SCIP_RETCODE conflictAnalyzeRemainingBdchgs(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
    int*                  lbchginfoposs,      /**< positions of currently active lower bound change infos in variables' arrays */
    int*                  ubchginfoposs,      /**< positions of currently active upper bound change infos in variables' arrays */
    int*                  nclauses,           /**< pointer to store the number of generated conflict clauses */
@@ -3604,7 +3608,7 @@ SCIP_RETCODE conflictAnalyzeRemainingBdchgs(
    if( v == nvars )
    {
       /* analyze the conflict set, and create conflict constraints on success */
-      SCIP_CALL( conflictAnalyze(conflict, blkmem, set, stat, prob, tree, 0, FALSE,
+      SCIP_CALL( conflictAnalyze(conflict, blkmem, set, stat, prob, tree, diving, 0, FALSE,
             nclauses, nliterals, nreconvclauses, nreconvliterals) );
    }
 
@@ -4104,7 +4108,7 @@ SCIP_RETCODE conflictAnalyzeLP(
       /* analyze the conflict starting with remaining bound changes */
       if( valid )
       {
-         SCIP_CALL( conflictAnalyzeRemainingBdchgs(conflict, blkmem, set, stat, prob, tree,
+         SCIP_CALL( conflictAnalyzeRemainingBdchgs(conflict, blkmem, set, stat, prob, tree, diving, 
                lbchginfoposs, ubchginfoposs, nclauses, nliterals, nreconvclauses, nreconvliterals) );
       }
 
@@ -4685,7 +4689,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
             curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
       /* analyze conflict on remaining bound changes */
-      SCIP_CALL( conflictAnalyzeRemainingBdchgs(conflict, blkmem, set, stat, prob, tree,
+      SCIP_CALL( conflictAnalyzeRemainingBdchgs(conflict, blkmem, set, stat, prob, tree, FALSE,
             lbchginfoposs, ubchginfoposs, &nclauses, &nliterals, &nreconvclauses, &nreconvliterals) );
       conflict->npseudosuccess += (nclauses > 0);
       conflict->npseudoconfclauses += nclauses;

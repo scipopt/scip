@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.4 2006/02/23 12:40:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.5 2006/02/27 18:35:23 bzfpfend Exp $"
 
 /**@file   heur_crossover.c
  * @brief  crossover primal heuristic
@@ -415,6 +415,28 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    SCIP_CALL( SCIPcreate(&subscip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
  
+   success = FALSE;
+   /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
+   createSubproblem(scip, subscip, subvars, nusedsols, heurdata->minfixingrate, &success);
+   heurdata->lastsol = sols[nusedsols-1];
+  
+   /* if creation of subscip was aborted (e.g. due to number of fixings), free subscip and abort */
+   if( !success )
+   {
+      int nbinvars;
+      int nintvars;
+      *result = SCIP_DIDNOTRUN;
+      SCIP_CALL( SCIPfreeTransform(subscip) );
+      SCIP_CALL( SCIPgetVarsData(subscip, NULL, NULL, &nbinvars, &nintvars, NULL, NULL) );
+      for( i = 0; i < nbinvars + nintvars; i++ )
+      {
+         SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
+      }
+      SCIPfreeBufferArray(scip, &subvars);
+      SCIP_CALL( SCIPfree(&subscip) );
+      return SCIP_OKAY;
+   }
+   
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
   
@@ -447,28 +469,6 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) ); 
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
 
-   success = FALSE;
-   /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
-   createSubproblem(scip, subscip, subvars, nusedsols, heurdata->minfixingrate, &success);
-   heurdata->lastsol = sols[nusedsols-1];
-  
-   /* if creation of subscip was aborted (e.g. due to number of fixings), free subscip and abort */
-   if( !success )
-   {
-      int nbinvars;
-      int nintvars;
-      *result = SCIP_DIDNOTRUN;
-      SCIP_CALL( SCIPfreeTransform(subscip) );
-      SCIP_CALL( SCIPgetVarsData(subscip, NULL, NULL, &nbinvars, &nintvars, NULL, NULL) );
-      for( i = 0; i < nbinvars + nintvars; i++ )
-      {
-         SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
-      }
-      SCIPfreeBufferArray(scip, &subvars);
-      SCIP_CALL( SCIPfree(&subscip) );
-      return SCIP_OKAY;
-   }
-   
    /* add an objective cutoff */
    SCIP_CALL( SCIPsetObjlimit(subscip, SCIPgetSolTransObj(scip, sols[0]) - SCIPsumepsilon(scip)) );
 

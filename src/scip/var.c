@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.198 2006/02/23 12:40:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.199 2006/02/27 18:35:23 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -4089,7 +4089,6 @@ SCIP_RETCODE varProcessChgLbGlobal(
    {
       parentvar = var->parentvars[i];
       assert(parentvar != NULL);
-      assert(!SCIPvarIsActive(parentvar) || SCIPvarIsOriginal(parentvar));
 
       switch( SCIPvarGetStatus(parentvar) )
       {
@@ -4228,7 +4227,6 @@ SCIP_RETCODE varProcessChgUbGlobal(
    {
       parentvar = var->parentvars[i];
       assert(parentvar != NULL);
-      assert(!SCIPvarIsActive(parentvar) || SCIPvarIsOriginal(parentvar));
 
       switch( SCIPvarGetStatus(parentvar) )
       {
