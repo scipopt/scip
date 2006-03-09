@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.h,v 1.25 2006/03/09 12:52:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.h,v 1.26 2006/03/09 18:41:02 bzfpfend Exp $"
 
 /**@file   cons_setppc.h
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -110,6 +110,27 @@ SCIP_RETCODE SCIPaddCoefSetppc(
    SCIP_VAR*             var                 /**< variable to add to the constraint */
    );
 
+/** gets number of variables in set partitioning / packing / covering constraint */
+extern
+int SCIPgetNVarsSetppc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets array of variables in set partitioning / packing / covering constraint */
+extern
+SCIP_VAR** SCIPgetVarsSetppc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets type of set partitioning / packing / covering constraint */
+extern
+SCIP_SETPPCTYPE SCIPgetTypeSetppc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
 /** gets the dual solution of the set partitioning / packing / covering constraint in the current LP */
 extern
 SCIP_Real SCIPgetDualsolSetppc(
@@ -129,26 +150,6 @@ SCIP_Real SCIPgetDualfarkasSetppc(
  */
 extern
 SCIP_ROW* SCIPgetRowSetppc(
-   SCIP_CONS*            cons                /**< constraint data */
-   );
-
-/** gets array of variables in set partitioning / packing / covering constraint */
-extern
-SCIP_VAR** SCIPgetVarsSetppc(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
-   );
-
-/** gets number of variables in set partitioning / packing / covering constraint */
-extern
-int SCIPgetNVarsSetppc(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
-   );
-
-/** gets type of set partitioning / packing / covering constraint */
-extern
-SCIP_SETPPCTYPE SCIPgetTypeSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );

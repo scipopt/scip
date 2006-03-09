@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.97 2006/03/09 12:52:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.98 2006/03/09 18:41:01 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -1914,6 +1914,46 @@ SCIP_RETCODE SCIPcreateConsLogicor(
    return SCIP_OKAY;
 }
 
+/** gets number of variables in logic or constraint */
+int SCIPgetNVarsLogicor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a logic or constraint\n");
+      SCIPABORT();
+   }
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->nvars;
+}
+
+/** gets array of variables in logic or constraint */
+SCIP_VAR** SCIPgetVarsLogicor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a logic or constraint\n");
+      SCIPABORT();
+   }
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->vars;
+}
+
 /** gets the dual solution of the logic or constraint in the current LP */
 SCIP_Real SCIPgetDualsolLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1964,6 +2004,7 @@ SCIP_Real SCIPgetDualfarkasLogicor(
  *  the user must not modify the row!
  */
 SCIP_ROW* SCIPgetRowLogicor(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
@@ -1979,45 +2020,5 @@ SCIP_ROW* SCIPgetRowLogicor(
    assert(consdata != NULL);
 
    return consdata->row;
-}
-
-/** gets array of variables in logic or constraint */
-SCIP_VAR** SCIPgetVarsLogicor(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
-   )
-{
-   SCIP_CONSDATA* consdata;
-
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a logic or constraint\n");
-      SCIPABORT();
-   }
-   
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   return consdata->vars;
-}
-
-/** gets number of variables in logic or constraint */
-int SCIPgetNVarsLogicor(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
-   )
-{
-   SCIP_CONSDATA* consdata;
-
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a logic or constraint\n");
-      SCIPABORT();
-   }
-   
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   return consdata->nvars;
 }
 

@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.h,v 1.14 2006/03/09 12:52:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.h,v 1.15 2006/03/09 18:41:02 bzfpfend Exp $"
 
 /**@file   cons_varbound.h
- * @brief  constraint handler for varbound constraints
+ * @brief  constraint handler for variable bound constraints
  * @author Tobias Achterberg
  */
 
@@ -30,13 +30,13 @@
 #include "scip/scip.h"
 
 
-/** creates the handler for varbound constraints and includes it in SCIP */
+/** creates the handler for variable bound constraints and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeConshdlrVarbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a varbound constraint: lhs <= x + c*y <= rhs */
+/** creates and captures a variable bound constraint: lhs <= x + c*y <= rhs */
 extern
 SCIP_RETCODE SCIPcreateConsVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -58,14 +58,49 @@ SCIP_RETCODE SCIPcreateConsVarbound(
    SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    );
 
-/** gets the dual solution of the varbound constraint in the current LP */
+/** gets left hand side of variable bound constraint lhs <= x + c*y <= rhs */
+extern
+SCIP_Real SCIPgetLhsVarbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets right hand side of variable bound constraint lhs <= x + c*y <= rhs */
+extern
+SCIP_Real SCIPgetRhsVarbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets bounded variable x of variable bound constraint lhs <= x + c*y <= rhs */
+extern
+SCIP_VAR* SCIPgetVarVarbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets bounding variable y of variable bound constraint lhs <= x + c*y <= rhs */
+extern
+SCIP_VAR* SCIPgetVbdvarVarbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets bound coefficient c of variable bound constraint lhs <= x + c*y <= rhs */
+extern
+SCIP_Real SCIPgetVbdcoefVarbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets the dual solution of the variable bound constraint in the current LP */
 extern
 SCIP_Real SCIPgetDualsolVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** gets the dual farkas value of the varbound constraint in the current infeasible LP */
+/** gets the dual farkas value of the variable bound constraint in the current infeasible LP */
 extern
 SCIP_Real SCIPgetDualfarkasVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -77,6 +112,7 @@ SCIP_Real SCIPgetDualfarkasVarbound(
  */
 extern
 SCIP_ROW* SCIPgetRowVarbound(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 

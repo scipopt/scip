@@ -17,8 +17,6 @@ interface:
 - method SCIPgetNConflictClausesFoundNode() renamed to SCIPgetNConflictConssFoundNode()
 - method SCIPgetNConflictClausesApplied() renamed to SCIPgetNConflictConssApplied()
 - new method SCIPgetFocusDepth()
-- new methods SCIPgetRowKnapsack(), SCIPgetRowLinear(), SCIPgetRowLogicor(), SCIPgetRowSetppc(), and SCIPgetRowVarbound()
-  for obtaining the linear relaxation of a corresponding constraint
 
 plugins:
 - new primal heuristic "shifting"
@@ -26,6 +24,15 @@ plugins:
 - new propagator "rootredcost" which applies reduced cost fixing at the root node whenever a best new primal solution
   was found
 - new constraint handler "bounddisjunction"
+- new methods SCIPgetRowKnapsack(), SCIPgetRowLinear(), SCIPgetRowLogicor(), SCIPgetRowSetppc(), and SCIPgetRowVarbound()
+  for obtaining the linear relaxation of a corresponding constraint
+- new methods SCIPgetNVarsAnd() and SCIPgetVarsAnd()
+- new methods SCIPgetWeightsKnapsack(), SCIPgetNVarsKnapsack(), SCIPgetVarsKnapsack(), and SCIPgetWeightsKnapsack()
+- new methods SCIPgetNVarsLinear(), SCIPgetVarsLinear(), and SCIPgetValsLinear()
+- new methods SCIPgetNVarsOr() and SCIPgetVarsOr()
+- new methods SCIPgetLhsVarbound(), SCIPgetRhsVarbound(), SCIPgetVarVarbound(), SCIPgetVbdvarVarbound(), and
+  SCIPgetVbdcoefVarbound()
+- new methods SCIPgetNVarsXor() and SCIPgetVarsXor()
 
 parameters:
 - new parameter constraints/linear/separateall

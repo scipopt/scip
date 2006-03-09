@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.44 2006/03/09 12:52:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.45 2006/03/09 18:41:02 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
- * @brief  constraint handler for varbound constraints
+ * @brief  constraint handler for variable bound constraints
  * @author Tobias Achterberg
  */
 
@@ -40,7 +40,7 @@
 #define CONSHDLR_SEPAFREQ             0 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
-                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -48,12 +48,12 @@
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define EVENTHDLR_NAME         "varbound"
-#define EVENTHDLR_DESC         "bound change event handler for varbound constraints"
+#define EVENTHDLR_DESC         "bound change event handler for variable bound constraints"
 
 #define LINCONSUPGD_PRIORITY     +50000
 
 
-/** varbound constraint data */
+/** variable bound constraint data */
 struct SCIP_ConsData
 {
    SCIP_Real             vbdcoef;            /**< coefficient c of bounding variable y */
@@ -62,7 +62,7 @@ struct SCIP_ConsData
    SCIP_VAR*             var;                /**< variable x that has variable bound */
    SCIP_VAR*             vbdvar;             /**< binary, integer or implicit integer bounding variable y */
    SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
-   unsigned int          propagated:1;       /**< is the varbound constraint already propagated? */
+   unsigned int          propagated:1;       /**< is the variable bound constraint already propagated? */
 };
 
 
@@ -93,7 +93,7 @@ typedef enum Proprule PROPRULE;
 static
 SCIP_RETCODE catchEvents(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata            /**< varbound constraint data */
+   SCIP_CONSDATA*        consdata            /**< variable bound constraint data */
    )
 {
    SCIP_EVENTHDLR* eventhdlr;
@@ -116,7 +116,7 @@ SCIP_RETCODE catchEvents(
 static
 SCIP_RETCODE dropEvents(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata            /**< varbound constraint data */
+   SCIP_CONSDATA*        consdata            /**< variable bound constraint data */
    )
 {
    SCIP_EVENTHDLR* eventhdlr;
@@ -135,11 +135,11 @@ SCIP_RETCODE dropEvents(
    return SCIP_OKAY;
 }
 
-/** creates a varbound constraint data object */
+/** creates a variable bound constraint data object */
 static
 SCIP_RETCODE consdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA**       consdata,           /**< pointer to store the varbound constraint data */
+   SCIP_CONSDATA**       consdata,           /**< pointer to store the variable bound constraint data */
    SCIP_VAR*             var,                /**< variable x that has variable bound */
    SCIP_VAR*             vbdvar,             /**< binary, integer or implicit integer bounding variable y */
    SCIP_Real             vbdcoef,            /**< coefficient c of bounding variable y */
@@ -189,11 +189,11 @@ SCIP_RETCODE consdataCreate(
    return SCIP_OKAY;
 }   
 
-/** frees a varbound constraint data */
+/** frees a variable bound constraint data */
 static
 SCIP_RETCODE consdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA**       consdata            /**< pointer to the varbound constraint */
+   SCIP_CONSDATA**       consdata            /**< pointer to the variable bound constraint */
    )
 {
    assert(consdata != NULL);
@@ -216,11 +216,11 @@ SCIP_RETCODE consdataFree(
    return SCIP_OKAY;
 }
 
-/** creates LP row corresponding to varbound constraint */
+/** creates LP row corresponding to variable bound constraint */
 static 
 SCIP_RETCODE createRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< varbound constraint */
+   SCIP_CONS*            cons                /**< variable bound constraint */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -237,11 +237,11 @@ SCIP_RETCODE createRelaxation(
    return SCIP_OKAY;
 }  
 
-/** adds linear relaxation of varbound constraint to the LP */
+/** adds linear relaxation of variable bound constraint to the LP */
 static 
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< varbound constraint */
+   SCIP_CONS*            cons                /**< variable bound constraint */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -255,18 +255,18 @@ SCIP_RETCODE addRelaxation(
    }
    assert(consdata->row != NULL);
 
-   SCIPdebugMessage("adding relaxation of varbound constraint <%s>: ", SCIPconsGetName(cons));
+   SCIPdebugMessage("adding relaxation of variable bound constraint <%s>: ", SCIPconsGetName(cons));
    SCIPdebug( SCIProwPrint(consdata->row, NULL) );
    SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE) );
 
    return SCIP_OKAY;
 }
 
-/** separates the given varbound constraint */
+/** separates the given variable bound constraint */
 static
 SCIP_RETCODE separateCons(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< varbound constraint */
+   SCIP_CONS*            cons,               /**< variable bound constraint */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    SCIP_Bool*            separated           /**< pointer to store whether a cut was found */
    )
@@ -279,7 +279,7 @@ SCIP_RETCODE separateCons(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIPdebugMessage("separating varbound constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMessage("separating variable bound constraint <%s>\n", SCIPconsGetName(cons));
 
    *separated = FALSE;
 
@@ -303,11 +303,11 @@ SCIP_RETCODE separateCons(
    return SCIP_OKAY;
 }
 
-/** returns whether the given solution is feasible for the given varbound constraint */
+/** returns whether the given solution is feasible for the given variable bound constraint */
 static
 SCIP_Bool checkCons(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< varbound constraint */
+   SCIP_CONS*            cons,               /**< variable bound constraint */
    SCIP_SOL*             sol,                /**< solution to check, NULL for current solution */
    SCIP_Bool             checklprows         /**< should LP rows be checked? */
    )
@@ -317,7 +317,7 @@ SCIP_Bool checkCons(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIPdebugMessage("checking varbound constraint <%s> for feasibility of solution %p (lprows=%d)\n",
+   SCIPdebugMessage("checking variable bound constraint <%s> for feasibility of solution %p (lprows=%d)\n",
       SCIPconsGetName(cons), sol, checklprows);
 
    if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
@@ -333,11 +333,11 @@ SCIP_Bool checkCons(
       return TRUE;
 }
 
-/** propagation methode for varbound constraint */
+/** propagation methode for variable bound constraint */
 static
 SCIP_RETCODE propagateCons(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< varbound constraint */
+   SCIP_CONS*            cons,               /**< variable bound constraint */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
    int*                  nchgbds,            /**< pointer to count number of bound changes */
    int*                  ndelconss           /**< pointer to count number of deleted constraints, or NULL */
@@ -360,7 +360,7 @@ SCIP_RETCODE propagateCons(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIPdebugMessage("propagating varbound constraint <%s>: %g <= <%s> + %g<%s> <= %g\n",
+   SCIPdebugMessage("propagating variable bound constraint <%s>: %g <= <%s> + %g<%s> <= %g\n",
       SCIPconsGetName(cons), consdata->lhs, SCIPvarGetName(consdata->var), consdata->vbdcoef,
       SCIPvarGetName(consdata->vbdvar), consdata->rhs);
 
@@ -496,7 +496,7 @@ SCIP_RETCODE propagateCons(
    /* if one of the two variables is fixed, the constraint is redundant */
    if( SCIPisFeasEQ(scip, xlb, xub) || SCIPisFeasEQ(scip, ylb, yub) )
    {
-      SCIPdebugMessage("varbound constraint <%s> is redundant: <%s>[%g,%g], <%s>[%g,%g]\n",
+      SCIPdebugMessage("variable bound constraint <%s> is redundant: <%s>[%g,%g], <%s>[%g,%g]\n",
          SCIPconsGetName(cons), 
          SCIPvarGetName(consdata->var), SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var),
          SCIPvarGetName(consdata->vbdvar), SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar));
@@ -596,11 +596,11 @@ SCIP_RETCODE resolvePropagation(
    return SCIP_OKAY;
 }
 
-/** replaces fixed and aggregated variables in varbound constraint by active problem variables */
+/** replaces fixed and aggregated variables in variable bound constraint by active problem variables */
 static
 SCIP_RETCODE applyFixings(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< varbound constraint */
+   SCIP_CONS*            cons,               /**< variable bound constraint */
    SCIP_Bool*            cutoff,             /**< pointer to store whether an infeasibility was detected */
    int*                  nchgbds,            /**< pointer to count number of bound changes */
    int*                  ndelconss           /**< pointer to count number of deleted constraints */
@@ -644,7 +644,7 @@ SCIP_RETCODE applyFixings(
       SCIP_Real scalar;
       SCIP_Real constant;
 
-      SCIPdebugMessage("varbound constraint <%s> has equal variable and vbd variable <%s>\n",
+      SCIPdebugMessage("variable bound constraint <%s> has equal variable and vbd variable <%s>\n",
          SCIPconsGetName(cons), SCIPvarGetName(var));
 
       /*      lhs <= a1*z + b1 + c(a2*z + b2) <= rhs
@@ -725,7 +725,7 @@ SCIP_RETCODE applyFixings(
       /* apply aggregation on x */
       if( SCIPisZero(scip, varscalar) )
       {
-         SCIPdebugMessage("varbound constraint <%s>: variable <%s> is fixed to %g\n",
+         SCIPdebugMessage("variable bound constraint <%s>: variable <%s> is fixed to %g\n",
             SCIPconsGetName(cons), SCIPvarGetName(consdata->var), varconstant);
 
          /* x is fixed to varconstant: update bounds of y and delete the variable bound constraint */
@@ -827,7 +827,7 @@ SCIP_RETCODE applyFixings(
       /* apply aggregation on y */
       if( SCIPisZero(scip, vbdvarscalar) )
       {
-         SCIPdebugMessage("varbound constraint <%s>: vbd variable <%s> is fixed to %g\n",
+         SCIPdebugMessage("variable bound constraint <%s>: vbd variable <%s> is fixed to %g\n",
             SCIPconsGetName(cons), SCIPvarGetName(consdata->vbdvar), vbdvarconstant);
 
          /* y is fixed to vbdvarconstant: update bounds of x and delete the variable bound constraint */
@@ -884,7 +884,7 @@ SCIP_RETCODE applyFixings(
    /* delete a redundant constraint */
    if( redundant )
    {
-      SCIPdebugMessage(" -> varbound constraint <%s> is redundant\n", SCIPconsGetName(cons));
+      SCIPdebugMessage(" -> variable bound constraint <%s> is redundant\n", SCIPconsGetName(cons));
       SCIP_CALL( SCIPdelCons(scip, cons) );
       (*ndelconss)++;
    }
@@ -1303,7 +1303,7 @@ SCIP_DECL_CONSPRINT(consPrintVarbound)
  * Linear constraint upgrading
  */
 
-/** tries to upgrade a linear constraint into a varbound constraint */
+/** tries to upgrade a linear constraint into a variable bound constraint */
 static
 SCIP_DECL_LINCONSUPGD(linconsUpgdVarbound)
 {  /*lint --e{715}*/
@@ -1327,7 +1327,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdVarbound)
       SCIP_Real vbdrhs;
       int vbdind;
 
-      SCIPdebugMessage("upgrading constraint <%s> to varbound constraint\n", SCIPconsGetName(cons));
+      SCIPdebugMessage("upgrading constraint <%s> to variable bound constraint\n", SCIPconsGetName(cons));
 
       /* decide which variable we want to use as bounding variable y */
       if( SCIPvarGetType(vars[0]) < SCIPvarGetType(vars[1]) )
@@ -1357,7 +1357,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdVarbound)
          vbdrhs = SCIPisInfinity(scip, -lhs) ? SCIPinfinity(scip) : lhs/vals[1-vbdind];
       }
 
-      /* create the bin Varbound constraint (an automatically upgraded constraint is always unmodifiable) */
+      /* create the bin variable bound constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));
       SCIP_CALL( SCIPcreateConsVarbound(scip, upgdcons, SCIPconsGetName(cons), var, vbdvar, vbdcoef, vbdlhs, vbdrhs,
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
@@ -1397,7 +1397,7 @@ SCIP_DECL_EVENTEXEC(eventExecVarbound)
  * constraint specific interface methods
  */
 
-/** creates the handler for varbound constraints and includes it in SCIP */
+/** creates the handler for variable bound constraints and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrVarbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -1405,7 +1405,7 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
-   /* create varbound constraint handler data */
+   /* create variable bound constraint handler data */
    conshdlrdata = NULL;
 
    /* include constraint handler */
@@ -1435,7 +1435,7 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
    return SCIP_OKAY;
 }
 
-/** creates and captures a varbound constraint: lhs <= x + c*y <= rhs */
+/** creates and captures a variable bound constraint: lhs <= x + c*y <= rhs */
 SCIP_RETCODE SCIPcreateConsVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -1459,11 +1459,11 @@ SCIP_RETCODE SCIPcreateConsVarbound(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
 
-   /* find the varbound constraint handler */
+   /* find the variable bound constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      SCIPerrorMessage("varbound constraint handler not found\n");
+      SCIPerrorMessage("variable bound constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 
@@ -1477,7 +1477,107 @@ SCIP_RETCODE SCIPcreateConsVarbound(
    return SCIP_OKAY;
 }
 
-/** gets the dual solution of the varbound constraint in the current LP */
+/** gets left hand side of variable bound constraint lhs <= x + c*y <= rhs */
+SCIP_Real SCIPgetLhsVarbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a variable bound constraint\n");
+      SCIPABORT();
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->lhs;
+}
+
+/** gets right hand side of variable bound constraint lhs <= x + c*y <= rhs */
+SCIP_Real SCIPgetRhsVarbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a variable bound constraint\n");
+      SCIPABORT();
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->rhs;
+}
+
+/** gets bounded variable x of variable bound constraint lhs <= x + c*y <= rhs */
+SCIP_VAR* SCIPgetVarVarbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a variable bound constraint\n");
+      SCIPABORT();
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->var;
+}
+
+/** gets bounding variable y of variable bound constraint lhs <= x + c*y <= rhs */
+SCIP_VAR* SCIPgetVbdvarVarbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a variable bound constraint\n");
+      SCIPABORT();
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->vbdvar;
+}
+
+/** gets bound coefficient c of variable bound constraint lhs <= x + c*y <= rhs */
+SCIP_Real SCIPgetVbdcoefVarbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a variable bound constraint\n");
+      SCIPABORT();
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->vbdcoef;
+}
+
+/** gets the dual solution of the variable bound constraint in the current LP */
 SCIP_Real SCIPgetDualsolVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -1487,7 +1587,7 @@ SCIP_Real SCIPgetDualsolVarbound(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not a varbound constraint\n");
+      SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
    }
    
@@ -1500,7 +1600,7 @@ SCIP_Real SCIPgetDualsolVarbound(
       return 0.0;
 }
 
-/** gets the dual farkas value of the varbound constraint in the current infeasible LP */
+/** gets the dual farkas value of the variable bound constraint in the current infeasible LP */
 SCIP_Real SCIPgetDualfarkasVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -1510,7 +1610,7 @@ SCIP_Real SCIPgetDualfarkasVarbound(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not a varbound constraint\n");
+      SCIPerrorMessage("constraint is not a variable bound constraint\n");
       SCIPABORT();
    }
    
@@ -1527,6 +1627,7 @@ SCIP_Real SCIPgetDualfarkasVarbound(
  *  the user must not modify the row!
  */
 SCIP_ROW* SCIPgetRowVarbound(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
 {

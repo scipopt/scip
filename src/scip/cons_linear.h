@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.h,v 1.44 2006/03/09 12:52:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.h,v 1.45 2006/03/09 18:41:01 bzfpfend Exp $"
 
 /**@file   cons_linear.h
  * @brief  constraint handler for linear constraints
@@ -154,6 +154,27 @@ SCIP_RETCODE SCIPchgRhsLinear(
    SCIP_Real             rhs                 /**< new right hand side */
    );
 
+/** gets the number of variables in the linear constraint */
+extern
+int SCIPgetNVarsLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets the array of variables in the linear constraint; the user must not modify this array! */
+extern
+SCIP_VAR** SCIPgetVarsLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets the array of coefficient values in the linear constraint; the user must not modify this array! */
+extern
+SCIP_Real* SCIPgetValsLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
 /** gets the activity of the linear constraint in the given solution */
 extern
 SCIP_Real SCIPgetActivityLinear(
@@ -189,6 +210,7 @@ SCIP_Real SCIPgetDualfarkasLinear(
  */
 extern
 SCIP_ROW* SCIPgetRowLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 

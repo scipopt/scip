@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.h,v 1.10 2006/01/03 12:22:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.h,v 1.11 2006/03/09 18:41:03 bzfpfend Exp $"
 
 /**@file   cons_xor.h
  * @brief  constraint handler for xor constraints
@@ -54,6 +54,20 @@ SCIP_RETCODE SCIPcreateConsXor(
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
    SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   );
+
+/** gets number of variables in xor constraint */
+extern
+int SCIPgetNVarsXor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets array of variables in xor constraint */
+extern
+SCIP_VAR** SCIPgetVarsXor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
    );
 
 #endif
