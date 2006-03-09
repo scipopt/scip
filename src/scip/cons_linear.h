@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.h,v 1.43 2006/01/03 12:22:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.h,v 1.44 2006/03/09 12:52:17 bzfpfend Exp $"
 
 /**@file   cons_linear.h
  * @brief  constraint handler for linear constraints
@@ -181,6 +181,14 @@ SCIP_Real SCIPgetDualsolLinear(
 extern
 SCIP_Real SCIPgetDualfarkasLinear(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** returns the linear relaxation of the given linear constraint; may return NULL if no LP row was yet created;
+ *  the user must not modify the row!
+ */
+extern
+SCIP_ROW* SCIPgetRowLinear(
    SCIP_CONS*            cons                /**< constraint data */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.210 2006/02/23 12:40:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.211 2006/03/09 12:52:17 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3011,7 +3011,7 @@ SCIP_RETCODE resolvePropagation(
    return SCIP_OKAY;
 }
 
-/** analyzes conflicting bounds on given constraint, and adds conflict clause to problem */
+/** analyzes conflicting bounds on given constraint, and adds conflict constraint to problem */
 static
 SCIP_RETCODE analyzeConflict(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3477,7 +3477,7 @@ SCIP_RETCODE separateRelaxedKnapsack(
          dvlb = SCIPvarGetVlbConstants(var);
 
          /* search for lb or vlb with maximal bound value */
-         bestlbsol = SCIPvarGetLbLocal(var);
+         bestlbsol = SCIPvarGetLbGlobal(var);
          bestlbtype = -1;
          for( j = 0; j < nvlb; j++ )
          {
@@ -3504,7 +3504,7 @@ SCIP_RETCODE separateRelaxedKnapsack(
          {
             rhs -= valscale * knapvals[i] * bestlbsol;
             SCIPdebugMessage(" -> non-binary variable %+g<%s> replaced with lower bound %g (rhs=%g)\n",
-               valscale * knapvals[i], SCIPvarGetName(var), bestlbsol, rhs);
+               valscale * knapvals[i], SCIPvarGetName(var), SCIPvarGetLbGlobal(var), rhs);
          }
          else
          {
@@ -3535,7 +3535,7 @@ SCIP_RETCODE separateRelaxedKnapsack(
          dvub = SCIPvarGetVubConstants(var);
 
          /* search for ub or vub with minimal bound value */
-         bestubsol = SCIPvarGetUbLocal(var);
+         bestubsol = SCIPvarGetUbGlobal(var);
          bestubtype = -1;
          for( j = 0; j < nvub; j++ )
          {
@@ -3562,7 +3562,7 @@ SCIP_RETCODE separateRelaxedKnapsack(
          {
             rhs -= valscale * knapvals[i] * bestubsol;
             SCIPdebugMessage(" -> non-binary variable %+g<%s> replaced with upper bound %g (rhs=%g)\n",
-               valscale * knapvals[i], SCIPvarGetName(var), bestubsol, rhs);
+               valscale * knapvals[i], SCIPvarGetName(var), SCIPvarGetUbGlobal(var), rhs);
          }
          else
          {
@@ -6420,15 +6420,14 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
 static
 SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
 {  /*lint --e{715}*/
-   SCIP_CONS* cons;
-   SCIP_CONS* upgdcons;
+   SCIP_VAR** vars;
    SCIP_Real* vals;
-   char consname[SCIP_MAXSTRLEN];
-   int v;
+   SCIP_Real lhs;
+   int i;
 
    assert(conflicthdlr != NULL);
    assert(strcmp(SCIPconflicthdlrGetName(conflicthdlr), CONFLICTHDLR_NAME) == 0);
-   assert(conflictvars != NULL || nconflictvars == 0);
+   assert(bdchginfos != NULL || nbdchginfos == 0);
    assert(result != NULL);
 
    /* don't process already resolved conflicts */
@@ -6438,32 +6437,60 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
       return SCIP_OKAY;
    }
 
-   /* create array of ones for storing the coefficients: x1 + ... + xk >= 1 */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nconflictvars) );
-   for( v = 0; v < nconflictvars; ++v )
-      vals[v] = 1.0;
+   *result = SCIP_DIDNOTFIND;
 
-   /* create a constraint out of the conflict set */
-   sprintf(consname, "cf%"SCIP_LONGINT_FORMAT, SCIPgetNConflictClausesApplied(scip));
-   SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname, nconflictvars, conflictvars, vals, 1.0, SCIPinfinity(scip),
-         FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removeable) );
-
-   /* release the vals buffer */
-   SCIPfreeBufferArray(scip, &vals);
-
-   /** try to automatically convert a linear constraint into a more specific and more specialized constraint */
-   SCIP_CALL( SCIPupgradeConsLinear(scip, cons, &upgdcons) );
-   if( upgdcons != NULL )
+   /* create array of variables and coefficients: sum_{i \in P} x_i - sum_{i \in N} x_i >= 1 - |N| */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nbdchginfos) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nbdchginfos) );
+   lhs = 1.0;
+   for( i = 0; i < nbdchginfos; ++i )
    {
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-      cons = upgdcons;
+      vars[i] = SCIPbdchginfoGetVar(bdchginfos[i]);
+
+      /* we can only treat binary variables */
+      /**@todo extend linear conflict constraints to some non-binary cases */
+      if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_BINARY )
+         break;
+
+      /* check whether the variable is fixed to zero (P) or one (N) in the conflict set */
+      if( SCIPbdchginfoGetNewbound(bdchginfos[i]) < 0.5 )
+         vals[i] = 1.0;
+      else
+      {
+         vals[i] = -1.0;
+         lhs -= 1.0;
+      }
    }
 
-   /* add constraint to SCIP */
-   SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   if( i == nbdchginfos )
+   {
+      SCIP_CONS* cons;
+      SCIP_CONS* upgdcons;
+      char consname[SCIP_MAXSTRLEN];
 
-   *result = SCIP_CONSADDED;
+      /* create a constraint out of the conflict set */
+      sprintf(consname, "cf%"SCIP_LONGINT_FORMAT, SCIPgetNConflictConssApplied(scip));
+      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname, nbdchginfos, vars, vals, lhs, SCIPinfinity(scip),
+            FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removeable) );
+
+      /** try to automatically convert a linear constraint into a more specific and more specialized constraint */
+      SCIP_CALL( SCIPupgradeConsLinear(scip, cons, &upgdcons) );
+      if( upgdcons != NULL )
+      {
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+         cons = upgdcons;
+      }
+      
+      /* add constraint to SCIP */
+      SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      
+      *result = SCIP_CONSADDED;
+   }
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
@@ -6821,6 +6848,27 @@ SCIP_Real SCIPgetDualfarkasLinear(
       return SCIProwGetDualfarkas(consdata->row);
    else
       return 0.0;
+}
+
+/** returns the linear relaxation of the given linear constraint; may return NULL if no LP row was yet created;
+ *  the user must not modify the row!
+ */
+SCIP_ROW* SCIPgetRowLinear(
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not linear\n");
+      SCIPABORT();
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->row;
 }
 
 /** tries to automatically convert a linear constraint into a more specific and more specialized constraint */

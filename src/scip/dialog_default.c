@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.57 2006/01/03 12:22:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.58 2006/03/09 12:52:18 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -39,8 +39,9 @@ SCIP_RETCODE dialogExecMenu(
    SCIP_DIALOG**         nextdialog          /**< pointer to store next dialog to execute */
    )
 {
-   const char* command;
+   char* command;
    SCIP_Bool again;
+   SCIP_Bool endoffile;
    int nfound;
 
    do
@@ -48,8 +49,13 @@ SCIP_RETCODE dialogExecMenu(
       again = FALSE;
 
       /* get the next word of the command string */
-      command = SCIPdialoghdlrGetWord(dialoghdlr, dialog, NULL);
-      
+      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, NULL, &command, &endoffile) );
+      if( endoffile )
+      {
+         *nextdialog = NULL;
+         return SCIP_OKAY;
+      }
+
       /* exit to the root dialog, if command is empty */
       if( command[0] == '\0' )
       {
@@ -159,7 +165,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecConflictgraph)
 {  /*lint --e{715}*/
    SCIP_RETCODE retcode;
-   const char* filename;
+   SCIP_Bool endoffile;
+   char* filename;
+
+   assert(nextdialog != NULL);
+
+   *nextdialog = NULL;
 
    if( !SCIPisTransformed(scip) )
    {
@@ -168,7 +179,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecConflictgraph)
    }
    else
    {
-      filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
+      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
+      if( endoffile )
+      {
+         *nextdialog = NULL;
+         return SCIP_OKAY;
+      }
 
       if( filename[0] != '\0' )
       {
@@ -638,8 +654,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayValue)
 {  /*lint --e{715}*/
    SCIP_SOL* sol;
    SCIP_VAR* var;
-   const char* varname;
+   char* varname;
    SCIP_Real solval;
+   SCIP_Bool endoffile;
 
    SCIPdialogMessage(scip, NULL, "\n");
 
@@ -655,7 +672,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayValue)
    }
    else
    {
-      varname = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter variable name: ");
+      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter variable name: ", &varname, &endoffile) );
+      if( endoffile )
+      {
+         *nextdialog = NULL;
+         return SCIP_OKAY;
+      }
 
       if( varname[0] != '\0' )
       {
@@ -858,9 +880,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecQuit)
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecRead)
 {  /*lint --e{715}*/
    SCIP_RETCODE retcode;
-   const char* filename;
+   char* filename;
+   SCIP_Bool endoffile;
 
-   filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
 
    if( filename[0] != '\0' )
    {
@@ -894,9 +922,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecRead)
 /** dialog execution method for the set load command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLoad)
 {  /*lint --e{715}*/
-   const char* filename;
+   char* filename;
+   SCIP_Bool endoffile;
 
-   filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
 
    if( filename[0] != '\0' )
    {
@@ -922,9 +956,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLoad)
 /** dialog execution method for the set save command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSave)
 {  /*lint --e{715}*/
-   const char* filename;
+   char* filename;
+   SCIP_Bool endoffile;
 
-   filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
 
    if( filename[0] != '\0' )
    {
@@ -942,9 +982,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSave)
 /** dialog execution method for the set diffsave command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetDiffsave)
 {  /*lint --e{715}*/
-   const char* filename;
+   char* filename;
+   SCIP_Bool endoffile;
 
-   filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
 
    if( filename[0] != '\0' )
    {
@@ -965,11 +1011,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
    SCIP_RETCODE retcode;
    SCIP_PARAM* param;
    char prompt[SCIP_MAXSTRLEN];
-   const char* valuestr;
+   char* valuestr;
    int intval;
    SCIP_Longint longintval;
    SCIP_Real realval;
    char charval;
+   SCIP_Bool endoffile;
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -982,7 +1029,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
    case SCIP_PARAMTYPE_BOOL:
       snprintf(prompt, SCIP_MAXSTRLEN, "current value: %s, new value (TRUE/FALSE): ",
          SCIPparamGetBool(param) ? "TRUE" : "FALSE");
-      valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
+      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
+      if( endoffile )
+      {
+         *nextdialog = NULL;
+         return SCIP_OKAY;
+      }
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
 
@@ -1015,7 +1067,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
    case SCIP_PARAMTYPE_INT:
       snprintf(prompt, SCIP_MAXSTRLEN, "current value: %d, new value [%d,%d]: ",
          SCIPparamGetInt(param), SCIPparamGetIntMin(param), SCIPparamGetIntMax(param));
-      valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
+      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
+      if( endoffile )
+      {
+         *nextdialog = NULL;
+         return SCIP_OKAY;
+      }
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
 
@@ -1037,7 +1094,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
    case SCIP_PARAMTYPE_LONGINT:
       snprintf(prompt, SCIP_MAXSTRLEN, "current value: %"SCIP_LONGINT_FORMAT", new value [%"SCIP_LONGINT_FORMAT",%"SCIP_LONGINT_FORMAT"]: ",
          SCIPparamGetLongint(param), SCIPparamGetLongintMin(param), SCIPparamGetLongintMax(param));
-      valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
+      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
+      if( endoffile )
+      {
+         *nextdialog = NULL;
+         return SCIP_OKAY;
+      }
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
 
@@ -1059,7 +1121,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
    case SCIP_PARAMTYPE_REAL:
       snprintf(prompt, SCIP_MAXSTRLEN, "current value: %g, new value [%g,%g]: ",
          SCIPparamGetReal(param), SCIPparamGetRealMin(param), SCIPparamGetRealMax(param));
-      valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
+      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
+      if( endoffile )
+      {
+         *nextdialog = NULL;
+         return SCIP_OKAY;
+      }
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
 
@@ -1080,7 +1147,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
    case SCIP_PARAMTYPE_CHAR:
       snprintf(prompt, SCIP_MAXSTRLEN, "current value: <%c>, new value: ", SCIPparamGetChar(param));
-      valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
+      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
+      if( endoffile )
+      {
+         *nextdialog = NULL;
+         return SCIP_OKAY;
+      }
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
 
@@ -1101,7 +1173,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
    case SCIP_PARAMTYPE_STRING:
       snprintf(prompt, SCIP_MAXSTRLEN, "current value: <%s>, new value: ", SCIPparamGetString(param));
-      valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
+      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
+      if( endoffile )
+      {
+         *nextdialog = NULL;
+         return SCIP_OKAY;
+      }
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
 
@@ -1184,8 +1261,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection)
 {  /*lint --e{715}*/
    SCIP_VAR* var;
    char prompt[SCIP_MAXSTRLEN];
-   const char* valuestr;
+   char* valuestr;
    int direction;
+   SCIP_Bool endoffile;
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -1197,7 +1275,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection)
    }
 
    /* get variable name from user */
-   valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "variable name: ");
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "variable name: ", &valuestr, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
    if( valuestr[0] == '\0' )
       return SCIP_OKAY;
 
@@ -1227,7 +1310,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection)
       return SCIP_INVALIDDATA;
    }
    snprintf(prompt, SCIP_MAXSTRLEN, "current value: %d, new value: ", direction);
-   valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
    snprintf(prompt, SCIP_MAXSTRLEN, "%s %s", SCIPvarGetName(var), valuestr);
    if( valuestr[0] == '\0' )
       return SCIP_OKAY;
@@ -1263,8 +1351,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority)
 {  /*lint --e{715}*/
    SCIP_VAR* var;
    char prompt[SCIP_MAXSTRLEN];
-   const char* valuestr;
+   char* valuestr;
    int priority;
+   SCIP_Bool endoffile;
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -1276,7 +1365,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority)
    }
 
    /* get variable name from user */
-   valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "variable name: ");
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "variable name: ", &valuestr, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
    if( valuestr[0] == '\0' )
       return SCIP_OKAY;
 
@@ -1290,7 +1384,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority)
 
    /* get new branching priority from user */
    snprintf(prompt, SCIP_MAXSTRLEN, "current value: %d, new value: ", SCIPvarGetBranchPriority(var));
-   valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
    snprintf(prompt, SCIP_MAXSTRLEN, "%s %s", SCIPvarGetName(var), valuestr);
    if( valuestr[0] == '\0' )
       return SCIP_OKAY;
@@ -1314,8 +1413,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority)
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
 {  /*lint --e{715}*/
    char prompt[SCIP_MAXSTRLEN];
-   const char* valuestr;
+   char* valuestr;
    SCIP_Real objlim;
+   SCIP_Bool endoffile;
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -1328,7 +1428,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
 
    /* get new objective limit from user */
    snprintf(prompt, SCIP_MAXSTRLEN, "current value: %g, new value: ", SCIPgetObjlimit(scip));
-   valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
    if( valuestr[0] == '\0' )
       return SCIP_OKAY;
 
@@ -1360,11 +1465,17 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteProblem)
 {  /*lint --e{715}*/
-   const char* filename;
+   char* filename;
+   SCIP_Bool endoffile;
 
    SCIPdialogMessage(scip, NULL, "\n");
 
-   filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
    if( filename[0] != '\0' )
    {
       FILE* file;
@@ -1396,11 +1507,17 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteProblem)
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
 {  /*lint --e{715}*/
-   const char* filename;
+   char* filename;
+   SCIP_Bool endoffile;
 
    SCIPdialogMessage(scip, NULL, "\n");
 
-   filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
    if( filename[0] != '\0' )
    {
       FILE* file;
@@ -1435,11 +1552,17 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteStatistics)
 {  /*lint --e{715}*/
-   const char* filename;
+   char* filename;
+   SCIP_Bool endoffile;
 
    SCIPdialogMessage(scip, NULL, "\n");
 
-   filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
    if( filename[0] != '\0' )
    {
       FILE* file;
@@ -1471,11 +1594,17 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteStatistics)
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteTransproblem)
 {  /*lint --e{715}*/
-   const char* filename;
+   char* filename;
+   SCIP_Bool endoffile;
 
    SCIPdialogMessage(scip, NULL, "\n");
 
-   filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
    if( filename[0] != '\0' )
    {
       FILE* file;

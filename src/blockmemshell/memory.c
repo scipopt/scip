@@ -14,7 +14,7 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.3 2006/02/08 13:22:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.4 2006/03/09 12:52:16 bzfpfend Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -338,7 +338,7 @@ void BMSclearMemory_call(
    size_t                size                /**< size of memory element */
    )
 {
-   assert(ptr != NULL);
+   assert(ptr != NULL || size == 0);
 
    memset(ptr, 0, size);
 }
@@ -350,8 +350,8 @@ void BMScopyMemory_call(
    size_t                size                /**< size of memory element to copy */
    )
 {
-   assert(ptr != NULL);
-   assert(source != NULL);
+   assert(ptr != NULL || size == 0);
+   assert(source != NULL || size == 0);
    
    memcpy(ptr, source, size);
 }
@@ -366,7 +366,7 @@ void* BMSduplicateMemory_call(
 {
    void* ptr;
 
-   assert(source != NULL);
+   assert(source != NULL || size == 0);
 
    ptr = BMSallocMemory_call(size, filename, line);
    if( ptr != NULL )

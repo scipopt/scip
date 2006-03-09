@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.h,v 1.22 2006/01/03 12:22:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.h,v 1.23 2006/03/09 12:52:18 bzfpfend Exp $"
 
 /**@file   cons_logicor.h
  * @brief  constraint handler for logicor constraints
@@ -67,6 +67,14 @@ SCIP_Real SCIPgetDualsolLogicor(
 extern
 SCIP_Real SCIPgetDualfarkasLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** returns the linear relaxation of the given logic or constraint; may return NULL if no LP row was yet created;
+ *  the user must not modify the row!
+ */
+extern
+SCIP_ROW* SCIPgetRowLogicor(
    SCIP_CONS*            cons                /**< constraint data */
    );
 

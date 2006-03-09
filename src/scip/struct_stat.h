@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.43 2006/02/23 12:40:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.44 2006/03/09 12:52:21 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -58,13 +58,14 @@ struct SCIP_Stat
    SCIP_Longint          nbacktracks;        /**< number of times, the new node was chosen from the leaves queue */
    SCIP_Longint          ndelayedcutoffs;    /**< number of times, the selected node was from a cut off subtree */
    SCIP_Longint          nreprops;           /**< number of times, a solved node is repropagated again */
+   SCIP_Longint          nrepropboundchgs;   /**< number of bound changes generated in repropagating nodes */
+   SCIP_Longint          nrepropcutoffs;     /**< number of times, a repropagated node was cut off */
    SCIP_Longint          nlpsolsfound;       /**< number of CIP-feasible LP solutions found so far */
    SCIP_Longint          npssolsfound;       /**< number of CIP-feasible pseudo solutions found so far */
    SCIP_Longint          lastdispnode;       /**< last node for which an information line was displayed */
    SCIP_Longint          lastdivenode;       /**< last node where LP diving was applied */
    SCIP_Longint          lastconflictnode;   /**< last node where conflict analysis was applied */
    SCIP_Longint          domchgcount;        /**< internal counter, where all domain changes are counted */
-   SCIP_Longint          nrepropboundchgs;   /**< total number of bound changes generated in repropagating nodes */
    SCIP_Longint          nboundchgs;         /**< total number of bound changes generated in the tree */
    SCIP_Longint          nholechgs;          /**< total number of hole changes generated in the tree */
    SCIP_Real             rootlowerbound;     /**< lower bound of root node */
@@ -129,6 +130,7 @@ struct SCIP_Stat
    int                   npresolupgdconss;   /**< number of presolving constraint upgrades in current run */
    int                   npresolchgcoefs;    /**< number of presolving coefficient changes in current run */
    int                   npresolchgsides;    /**< number of presolving side changes in current run */
+   int                   solindex;           /**< consecutively numbered solution index */
    SCIP_Bool             memsavemode;        /**< should algorithms be switched to memory saving mode? */
    SCIP_Bool             userinterrupt;      /**< has the user asked to interrupt the solving process? */
 };

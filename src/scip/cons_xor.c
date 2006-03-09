@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.41 2006/02/23 12:40:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.42 2006/03/09 12:52:18 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -680,7 +680,7 @@ SCIP_RETCODE separateCons(
    return SCIP_OKAY;
 }
 
-/** analyzes conflicting assignment on given constraint, and adds conflict clause to problem */
+/** analyzes conflicting assignment on given constraint, and adds conflict constraint to problem */
 static
 SCIP_RETCODE analyzeConflict(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -816,7 +816,7 @@ SCIP_RETCODE propagateCons(
          SCIPconsGetName(cons), odd ? "infeasible" : "feasible");
       if( odd )
       {
-         /* use conflict analysis to get a conflict clause out of the conflicting assignment */
+         /* use conflict analysis to get a conflict constraint out of the conflicting assignment */
          SCIP_CALL( analyzeConflict(scip, cons) );
 
          *cutoff = TRUE;

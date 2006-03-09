@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.34 2006/01/03 12:22:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.35 2006/03/09 12:52:21 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -465,8 +465,8 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - SCIP_SUCCESS    : the conflicting bound change has been successfully resolved by adding all reason bounds
  *  - SCIP_DIDNOTFIND : the conflicting bound change could not be resolved and has to be put into the conflict set
  */
-#define SCIP_DECL_CONSRESPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, SCIP_VAR* infervar, int inferinfo, \
-      SCIP_BOUNDTYPE boundtype, SCIP_BDCHGIDX* bdchgidx, SCIP_RESULT* result)
+#define SCIP_DECL_CONSRESPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, \
+      SCIP_VAR* infervar, int inferinfo, SCIP_BOUNDTYPE boundtype, SCIP_BDCHGIDX* bdchgidx, SCIP_RESULT* result)
 
 /** variable rounding lock method of constraint handler
  *

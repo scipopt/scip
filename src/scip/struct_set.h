@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.63 2006/02/23 12:40:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.64 2006/03/09 12:52:20 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -115,33 +115,36 @@ struct SCIP_Set
    SCIP_Bool             branch_preferbinary;/**< should branching on binary variables be preferred? */
 
    /* conflict analysis settings */
-   SCIP_Real             conf_maxvarsfac;    /**< maximal fraction of binary variables involved in a conflict clause */
-   int                   conf_minmaxvars;    /**< minimal absolute maximum of variables involved in a conflict clause */
-   int                   conf_maxunfixed;    /**< maximal number of unfixed variables at insertion depth of conflict clause
-                                              *   (-1: no limit) */
+   SCIP_Real             conf_maxvarsfac;    /**< maximal fraction of variables involved in a conflict constraint */
+   int                   conf_minmaxvars;    /**< minimal absolute maximum of variables involved in a conflict constraint */
    int                   conf_maxlploops;    /**< maximal number of LP resolving loops during conflict analysis
                                               *   (-1: no limit) */
    int                   conf_lpiterations;  /**< maximal number of LP iterations in each LP resolving loop
                                               *   (-1: no limit) */
    int                   conf_fuiplevels;    /**< number of depth levels up to which first UIP's are used in conflict
                                               *   analysis (-1: use All-FirstUIP rule) */
-   int                   conf_interclauses;  /**< maximal number of intermediate conflict clauses generated in conflict
-                                              *   graph (-1: use every intermediate clause) */
-   int                   conf_maxclauses;    /**< maximal number of conflict clauses accepted at an infeasible node
-                                              *   (-1: use all generated conflict clauses) */
-   SCIP_Bool             conf_reconvclauses; /**< should reconvergence clauses be created for UIPs of last depth level? */
+   int                   conf_interconss;    /**< maximal number of intermediate conflict constraints generated in conflict
+                                              *   graph (-1: use every intermediate constraint) */
+   int                   conf_maxconss;      /**< maximal number of conflict constraints accepted at an infeasible node
+                                              *   (-1: use all generated conflict constraints) */
+   int                   conf_reconvlevels;  /**< number of depth levels up to which UIP reconvergence constraints are
+                                              *   generated (-1: generate reconvergence constraints in all depth levels) */
    SCIP_Bool             conf_useprop;       /**< should propagation conflict analysis be used? */
-   SCIP_Bool             conf_uselp;         /**< should infeasible LP conflict analysis be used? */
-   SCIP_Bool             conf_usesb;         /**< should infeasible strong branching conflict analysis be used? */
+   SCIP_Bool             conf_useinflp;      /**< should infeasible LP conflict analysis be used? */
+   SCIP_Bool             conf_useboundlp;    /**< should bound exceeding LP conflict analysis be used? */
+   SCIP_Bool             conf_usesb;         /**< should infeasible/bound exceeding strong branching conflict analysis be
+                                              *   used? */
    SCIP_Bool             conf_usepseudo;     /**< should pseudo solution conflict analysis be used? */
-   SCIP_Bool             conf_allowlocal;    /**< should conflict clauses be generated that are only valid locally? */
-   SCIP_Bool             conf_settlelocal;   /**< should conflict clauses be attached only to the local subtree where they
-                                              *   can be useful? */
+   SCIP_Bool             conf_preferbinary;  /**< should binary conflicts be preferred? */
+   SCIP_Bool             conf_allowlocal;    /**< should conflict constraints be generated that are only valid locally? */
+   SCIP_Bool             conf_settlelocal;   /**< should conflict constraints be attached only to the local subtree where
+                                              *   they can be useful? */
    SCIP_Bool             conf_repropagate;   /**< should earlier nodes be repropagated in order to replace branching
                                               *   decisions by deductions? */
-   SCIP_Bool             conf_keepreprop;    /**< should clauses be kept for repropagation even if they are too long? */
+   SCIP_Bool             conf_keepreprop;    /**< should constraints be kept for repropagation even if they are too long? */
    SCIP_Bool             conf_dynamic;       /**< should the conflict constraints be subject to aging? */
    SCIP_Bool             conf_removeable;    /**< should the conflict's relaxations be subject to LP aging and cleanup? */
+   SCIP_Real             conf_depthscorefac; /**< score factor for depth level in bound relaxation heuristic of LP analysis */
    SCIP_Real             conf_scorefac;      /**< factor to decrease importance of variables' earlier conflict scores */
 
    /* constraint settings */

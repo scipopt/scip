@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.104 2006/02/23 12:40:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.105 2006/03/09 12:52:18 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -864,7 +864,7 @@ SCIP_RETCODE applyFixings(
 }
 
 /** analyzes conflicting assignment on given constraint where all of the variables where assigned to zero,
- *  and adds conflict clause to problem
+ *  and adds conflict constraint to problem
  */
 static
 SCIP_RETCODE analyzeConflictZero(
@@ -898,7 +898,7 @@ SCIP_RETCODE analyzeConflictZero(
 }
 
 /** analyzes conflicting assignment on given constraint where two of the variables where assigned to one,
- *  and adds conflict clause to problem
+ *  and adds conflict constraint to problem
  */
 static
 SCIP_RETCODE analyzeConflictOne(
@@ -1056,7 +1056,7 @@ SCIP_RETCODE processFixings(
 
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
-         /* use conflict analysis to get a conflict clause out of the conflicting assignment */
+         /* use conflict analysis to get a conflict constraint out of the conflicting assignment */
          SCIP_CALL( analyzeConflictOne(scip, cons) );
 
          *cutoff = TRUE;
@@ -1090,7 +1090,7 @@ SCIP_RETCODE processFixings(
             *addcut = TRUE;
          else
          {
-            /* use conflict analysis to get a conflict clause out of the conflicting assignment */
+            /* use conflict analysis to get a conflict constraint out of the conflicting assignment */
             SCIP_CALL( analyzeConflictZero(scip, cons) );
 
             *cutoff = TRUE;
@@ -3341,12 +3341,12 @@ SCIP_DECL_EVENTEXEC(eventExecSetppc)
 static
 SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
 {  /*lint --e{715}*/
-   SCIP_CONS* cons;
-   char consname[SCIP_MAXSTRLEN];
+   SCIP_VAR** vars;
+   int i;
    
    assert(conflicthdlr != NULL);
    assert(strcmp(SCIPconflicthdlrGetName(conflicthdlr), CONFLICTHDLR_NAME) == 0);
-   assert(conflictvars != NULL || nconflictvars == 0);
+   assert(bdchginfos != NULL || nbdchginfos == 0);
    assert(result != NULL);
 
    /* don't process already resolved conflicts */
@@ -3356,14 +3356,42 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
       return SCIP_OKAY;
    }
 
-   /* create a constraint out of the conflict set */
-   sprintf(consname, "cf%"SCIP_LONGINT_FORMAT, SCIPgetNConflictClausesApplied(scip));
-   SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, consname, nconflictvars, conflictvars, 
-         FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removeable) );
-   SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   *result = SCIP_DIDNOTFIND;
 
-   *result = SCIP_CONSADDED;
+   /* create array of variables in conflict constraint */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nbdchginfos) );
+   for( i = 0; i < nbdchginfos; ++i )
+   {
+      vars[i] = SCIPbdchginfoGetVar(bdchginfos[i]);
+
+      /* we can only treat binary variables */
+      if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_BINARY )
+         break;
+
+      /* if the variable is fixed to one in the conflict set, we have to use its negation */
+      if( SCIPbdchginfoGetNewbound(bdchginfos[i]) > 0.5 )
+      {
+         SCIP_CALL( SCIPgetNegatedVar(scip, vars[i], &vars[i]) );
+      }
+   }
+
+   if( i == nbdchginfos )
+   {
+      SCIP_CONS* cons;
+      char consname[SCIP_MAXSTRLEN];
+
+      /* create a constraint out of the conflict set */
+      sprintf(consname, "cf%"SCIP_LONGINT_FORMAT, SCIPgetNConflictConssApplied(scip));
+      SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, consname, nbdchginfos, vars, 
+            FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removeable) );
+      SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      
+      *result = SCIP_CONSADDED;
+   }
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
@@ -3556,6 +3584,27 @@ SCIP_Real SCIPgetDualfarkasSetppc(
       return SCIProwGetDualfarkas(consdata->row);
    else
       return 0.0;
+}
+
+/** returns the linear relaxation of the given set partitioning / packing / covering constraint; may return NULL if no
+ *  LP row was yet created; the user must not modify the row!
+ */
+SCIP_ROW* SCIPgetRowSetppc(
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a set partitioning / packing / covering constraint\n");
+      SCIPABORT();
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->row;
 }
 
 /** gets array of variables in set partitioning / packing / covering constraint */

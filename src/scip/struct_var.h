@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.41 2006/02/23 12:40:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.42 2006/03/09 12:52:21 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -199,6 +199,8 @@ struct SCIP_Var
    SCIP_Real             rootsol;            /**< primal solution of variable in root node, or SCIP_INVALID */
    SCIP_Real             rootredcost;        /**< reduced costs of variable in root node, or SCIP_INVALID */
    SCIP_Real             primsolavg;         /**< weighted average of all values of variable in primal feasible solutions */
+   SCIP_Real             conflictlb;         /**< maximal lower bound of variable in the current conflict */
+   SCIP_Real             conflictub;         /**< minimal upper bound of variable in the current conflict */
    SCIP_DOM              glbdom;             /**< domain of variable in global problem */
    SCIP_DOM              locdom;             /**< domain of variable in current subproblem */
    union
@@ -241,8 +243,8 @@ struct SCIP_Var
    int                   nlbchginfos;        /**< number of lower bound changes from root node to current node */
    int                   ubchginfossize;     /**< available slots in ubchginfos array */
    int                   nubchginfos;        /**< number of upper bound changes from root node to current node */
-   int                   conflictsetcount;   /**< number of last conflict set, this variable was member of */
-   int                   conflictqueuecount; /**< number of last conflict analysis call, the variable was in the queue */
+   int                   conflictlbcount;    /**< number of last conflict, the lower bound was member of */
+   int                   conflictubcount;    /**< number of last conflict, the upper bound was member of */
    unsigned int          initial:1;          /**< TRUE iff var's column should be present in the initial root LP */
    unsigned int          removeable:1;       /**< TRUE iff var's column is removeable from the LP (due to aging or cleanup) */
    unsigned int          deleted:1;          /**< TRUE iff variable was deleted from the problem */

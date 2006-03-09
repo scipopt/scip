@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.42 2006/02/23 12:40:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.43 2006/03/09 12:52:16 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -71,6 +71,28 @@ struct SCIP_BranchruleData
 /*
  * local methods
  */
+
+/** calculates an overall score value for the given individual score values */
+static
+SCIP_Real calcScore(
+   SCIP_BRANCHRULEDATA*  branchruledata,     /**< branching rule data */
+   SCIP_Real             conflictscore,      /**< conflict score of current variable */
+   SCIP_Real             avgconflictscore,   /**< average conflict score */
+   SCIP_Real             inferencescore,     /**< inference score of current variable */
+   SCIP_Real             avginferencescore,  /**< average inference score */
+   SCIP_Real             cutoffscore,        /**< cutoff score of current variable */
+   SCIP_Real             avgcutoffscore,     /**< average cutoff score */
+   SCIP_Real             pscostscore,        /**< pscost score of current variable */
+   SCIP_Real             avgpscostscore      /**< average pscost score */
+   )
+{
+   assert(branchruledata != NULL);
+
+   return branchruledata->conflictweight * (1.0 - 1.0/(1.0+conflictscore/avgconflictscore))
+      + branchruledata->inferenceweight * (1.0 - 1.0/(1.0+inferencescore/avginferencescore))
+      + branchruledata->cutoffweight * (1.0 - 1.0/(1.0+cutoffscore/avgcutoffscore))
+      + branchruledata->pscostweight * (1.0 - 1.0/(1.0+pscostscore/avgpscostscore));
+}
 
 /** adds given index and direction to bound change arrays */
 static
@@ -409,10 +431,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
          }
 
          /* combine the four score values */
-         score = branchruledata->conflictweight * conflictscore/avgconflictscore
-            + branchruledata->inferenceweight * inferencescore/avginferencescore
-            + branchruledata->cutoffweight * cutoffscore/avgcutoffscore
-            + branchruledata->pscostweight * pscostscore/avgpscostscore;
+         score = calcScore(branchruledata, conflictscore, avgconflictscore, inferencescore, avginferencescore,
+            cutoffscore, avgcutoffscore, pscostscore, avgpscostscore);
 
          if( usesb )
          {
@@ -557,7 +577,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
             assert(allcolsinlp);
             assert(!exactsolve);
             
-            /* if for both infeasibilities, a conflict clause was created, we don't need to fix the variable by hand,
+            /* if for both infeasibilities, a conflict constraint was created, we don't need to fix the variable by hand,
              * but better wait for the next propagation round to fix them as an inference, and potentially produce a
              * cutoff that can be analyzed
              */
@@ -603,10 +623,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
             inferencescore = SCIPgetVarAvgInferenceScore(scip, lpcands[c]);
             cutoffscore = SCIPgetVarAvgCutoffScore(scip, lpcands[c]);
             pscostscore = SCIPgetBranchScore(scip, lpcands[c], downgain, upgain);
-            score = branchruledata->conflictweight * conflictscore/avgconflictscore
-               + branchruledata->inferenceweight * inferencescore/avginferencescore
-               + branchruledata->cutoffweight * cutoffscore/avgcutoffscore
-               + branchruledata->pscostweight * pscostscore/avgpscostscore;
+            score = calcScore(branchruledata, conflictscore, avgconflictscore, inferencescore, avginferencescore,
+               cutoffscore, avgcutoffscore, pscostscore, avgpscostscore);
             if( SCIPisSumGE(scip, score, bestsbscore) )
             {
                SCIP_Real fracscore;

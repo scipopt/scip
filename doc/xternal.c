@@ -23,7 +23,7 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@mainpage SCIP (Solving Constraint Integer Programs)
- * @version  0.81c
+ * @version  0.81d
  * @author   Tobias Achterberg
  * @author   Timo Berthold
  * @author   Thorsten Koch

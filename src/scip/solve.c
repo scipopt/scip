@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.206 2006/02/23 12:40:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.207 2006/03/09 12:52:20 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -287,8 +287,8 @@ SCIP_RETCODE SCIPpropagateDomains(
    /* apply domain propagation */
    SCIP_CALL( propagateDomains(blkmem, set, stat, tree, depth, maxproprounds, TRUE, cutoff) );
 
-   /* flush the conflict clause storage */
-   SCIP_CALL( SCIPconflictFlushClauses(conflict, blkmem, set, stat, prob, tree) );
+   /* flush the conflict set storage */
+   SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, prob, tree) );
 
    return SCIP_OKAY;
 }
@@ -1940,7 +1940,7 @@ SCIP_RETCODE solveNode(
    assert(tree != NULL);
    assert(primal != NULL);
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
-   assert(SCIPconflictGetNClauses(conflict) == 0);
+   assert(SCIPconflictGetNConflicts(conflict) == 0);
    assert(cutoff != NULL);
    assert(unbounded != NULL);
    assert(infeasible != NULL);
@@ -2323,10 +2323,10 @@ SCIP_RETCODE solveNode(
          *cutoff, propagateagain, solverelaxagain, solvelpagain, nlperrors, *restart);
    }
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
-   assert(*cutoff || SCIPconflictGetNClauses(conflict) == 0);
+   assert(*cutoff || SCIPconflictGetNConflicts(conflict) == 0);
 
-   /* flush the conflict clause storage */
-   SCIP_CALL( SCIPconflictFlushClauses(conflict, blkmem, set, stat, prob, tree) );
+   /* flush the conflict set storage */
+   SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, prob, tree) );
 
    /* check for too many LP errors */
    if( nlperrors >= MAXNLPERRORS )

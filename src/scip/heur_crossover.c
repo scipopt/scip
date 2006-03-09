@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.5 2006/02/27 18:35:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.6 2006/03/09 12:52:19 bzfpfend Exp $"
 
 /**@file   heur_crossover.c
  * @brief  crossover primal heuristic
@@ -439,7 +439,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-  
+
    /* set limits for the subproblem */
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) ); 
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
@@ -465,7 +465,8 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 
    /* disable conflict analysis */
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) ); 
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/uselp", FALSE) ); 
+   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) ); 
+   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) ); 
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) ); 
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
 

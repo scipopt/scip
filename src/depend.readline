@@ -1,1 +1,1 @@
-./scip/dialog.c
+./scip/dialog.c ./scip/old/dialog.c ./scip/bla/dialog.c ./scip/genconf/dialog.c

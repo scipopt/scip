@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.30 2006/02/23 12:40:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.31 2006/03/09 12:52:18 bzfpfend Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -54,15 +54,24 @@
 static
 SCIP_RETCODE readLine(
    SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
-   const char*           prompt              /**< prompt to display */
+   const char*           prompt,             /**< prompt to display */
+   SCIP_Bool*            endoffile           /**< pointer to store whether the end of the input file was reached */
    )
 {
    char* s;
 
+   assert(endoffile != NULL);
+
    s = readline(prompt);
-   (void)strncpy(&dialoghdlr->buffer[dialoghdlr->bufferpos], s,
-      (unsigned int)(dialoghdlr->buffersize - dialoghdlr->bufferpos));
-   free(s);
+   if( s != NULL )
+   {
+      (void)strncpy(&dialoghdlr->buffer[dialoghdlr->bufferpos], s,
+         (unsigned int)(dialoghdlr->buffersize - dialoghdlr->bufferpos));
+      free(s);
+      *endoffile = FALSE;
+   }
+   else
+      *endoffile = TRUE;
 
    return SCIP_OKAY;
 }
@@ -112,7 +121,8 @@ SCIP_RETCODE removeHistory(
 static
 SCIP_RETCODE readLine(
    SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
-   const char*           prompt              /**< prompt to display */
+   const char*           prompt,             /**< prompt to display */
+   SCIP_Bool*            endoffile           /**< pointer to store whether the end of the input file was reached */
    )
 {
    char* s;
@@ -121,17 +131,25 @@ SCIP_RETCODE readLine(
    assert(dialoghdlr->buffer != NULL);
    assert(dialoghdlr->bufferpos < dialoghdlr->buffersize);
    assert(dialoghdlr->buffer[dialoghdlr->bufferpos] == '\0');
+   assert(endoffile != NULL);
 
-   /* display prompt */
-   SCIPmessagePrintDialog(prompt);
+   /* check for EOF (due to Ctrl-D or unexpected end of piped-in file) */
+   if( feof(stdin) )
+      *endoffile = TRUE;
+   else
+   {
+      /* display prompt */
+      SCIPmessagePrintDialog(prompt);
+      
+      /* read line from stdin */
+      (void)fgets(&dialoghdlr->buffer[dialoghdlr->bufferpos], dialoghdlr->buffersize - dialoghdlr->bufferpos, stdin);
 
-   /* read line from stdin */
-   (void)fgets(&dialoghdlr->buffer[dialoghdlr->bufferpos], dialoghdlr->buffersize - dialoghdlr->bufferpos, stdin);
-
-   /* replace newline with \0 */
-   s = strchr(&dialoghdlr->buffer[dialoghdlr->bufferpos], '\n');
-   if( s != NULL )
-      *s = '\0';
+      /* replace newline with \0 */
+      s = strchr(&dialoghdlr->buffer[dialoghdlr->bufferpos], '\n');
+      if( s != NULL )
+         *s = '\0';
+      *endoffile = FALSE;
+   }
 
    return SCIP_OKAY;
 }
@@ -201,18 +219,22 @@ void linelistFreeAll(
 static
 SCIP_RETCODE readInputLine(
    SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
-   const char*           prompt              /**< prompt to display */
+   const char*           prompt,             /**< prompt to display */
+   SCIP_Bool*            endoffile           /**< pointer to store whether the end of the input file was reached */
    )
 {
    assert(dialoghdlr != NULL);
    assert(dialoghdlr->buffer != NULL);
    assert(dialoghdlr->bufferpos < dialoghdlr->buffersize);
    assert(dialoghdlr->buffer[dialoghdlr->bufferpos] == '\0');
+   assert(endoffile != NULL);
+
+   *endoffile = FALSE;
 
    if( dialoghdlr->inputlist == NULL )
    {
       /* read a line from stdin */
-      SCIP_CALL( readLine(dialoghdlr, prompt) );
+      SCIP_CALL( readLine(dialoghdlr, prompt, endoffile) );
    }
    else
    {
@@ -363,10 +385,12 @@ SCIP_Bool SCIPdialoghdlrIsBufferEmpty(
 /** returns the next word in the handler's command buffer; if the buffer is empty, displays the given prompt or the 
  *  current dialog's path and asks the user for further input; the user must not free or modify the returned string
  */
-const char* SCIPdialoghdlrGetWord(
+SCIP_RETCODE SCIPdialoghdlrGetWord(
    SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
    SCIP_DIALOG*          dialog,             /**< current dialog */
-   const char*           prompt              /**< prompt to display, or NULL to display the current dialog's path */
+   const char*           prompt,             /**< prompt to display, or NULL to display the current dialog's path */
+   char**                inputword,          /**< pointer to store the next word in the handler's command buffer */
+   SCIP_Bool*            endoffile           /**< pointer to store whether the end of the input file was reached */
    )
 {
    char path[SCIP_MAXSTRLEN];
@@ -376,6 +400,10 @@ const char* SCIPdialoghdlrGetWord(
    assert(dialoghdlr != NULL);
    assert(dialoghdlr->buffer != NULL);
    assert(dialoghdlr->bufferpos < dialoghdlr->buffersize);
+   assert(inputword != NULL);
+   assert(endoffile != NULL);
+
+   *endoffile = FALSE;
 
    /* get input from the user, if the buffer is empty */
    if( SCIPdialoghdlrIsBufferEmpty(dialoghdlr) )
@@ -395,7 +423,7 @@ const char* SCIPdialoghdlrGetWord(
       }
 
       /* read command line from stdin or from the input line list */
-      SCIP_CALL_ABORT( readInputLine(dialoghdlr, prompt) );
+      SCIP_CALL( readInputLine(dialoghdlr, prompt, endoffile) );
 
       /* strip trailing spaces */
       len = (int)strlen(&dialoghdlr->buffer[dialoghdlr->bufferpos]);
@@ -408,7 +436,7 @@ const char* SCIPdialoghdlrGetWord(
       /* insert command in command history */
       if( dialoghdlr->buffer[dialoghdlr->bufferpos] != '\0' )
       {
-         SCIP_CALL_ABORT( SCIPdialoghdlrAddHistory(dialoghdlr, NULL, &dialoghdlr->buffer[dialoghdlr->bufferpos]) );
+         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, NULL, &dialoghdlr->buffer[dialoghdlr->bufferpos]) );
       }
    }
 
@@ -435,7 +463,9 @@ const char* SCIPdialoghdlrGetWord(
    while( isspace(dialoghdlr->buffer[dialoghdlr->bufferpos]) )
       dialoghdlr->bufferpos++;
 
-   return firstword;
+   *inputword = firstword;
+
+   return SCIP_OKAY;
 }
 
 /** adds a single line of input to the dialog handler which is treated as if the user entered the command line */

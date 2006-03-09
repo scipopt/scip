@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.h,v 1.17 2006/02/23 12:40:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.h,v 1.18 2006/03/09 12:52:18 bzfpfend Exp $"
 
 /**@file   debug.h
  * @brief  methods for debugging
@@ -102,6 +102,7 @@ SCIP_RETCODE SCIPdebugCheckImplic(
    SCIP_Real             implbound           /**< bound b    in implication y <= b or y >= b */
    );
 
+#if 0 /*?????????????????????? update this method to the general conflict constraints */
 /** checks whether given conflict is valid for the debugging solution */
 extern
 SCIP_RETCODE SCIPdebugCheckConflict(
@@ -111,6 +112,7 @@ SCIP_RETCODE SCIPdebugCheckConflict(
    SCIP_VAR**            conflictset,        /**< variables in the conflict set */
    int                   nliterals           /**< number of literals in the conflict set */
    );
+#endif
 
 /** creates the debugging propagator and includes it in SCIP */
 extern

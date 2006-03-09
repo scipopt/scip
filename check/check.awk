@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.31 2006/02/23 12:40:31 bzfpfend Exp $
+# $Id: check.awk,v 1.32 2006/03/09 12:52:15 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -203,7 +203,7 @@ BEGIN {
 #
 # iterations
 #
-/^  nodes            :/ { bbnodes = $3 }
+/^  nodes \(total\)    :/ { bbnodes = $4 }
 /^  primal LP        :/ { primlps = $5; primiter = $6; }
 /^  dual LP          :/ { duallps = $5; dualiter = $6; }
 /^  strong branching :/ { sblps = $5; sbiter = $6; }

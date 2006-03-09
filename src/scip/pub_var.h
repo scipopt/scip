@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.60 2006/02/23 12:40:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.61 2006/03/09 12:52:19 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -970,6 +970,15 @@ SCIP_Bool SCIPbdchginfoHasInferenceReason(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
+/** for two bound change informations belonging to the same variable and bound, returns whether the first bound change
+ *  has a tighter new bound as the second bound change
+ */
+extern
+SCIP_Bool SCIPbdchginfoIsTighter(
+   SCIP_BDCHGINFO*       bdchginfo1,         /**< first bound change information */
+   SCIP_BDCHGINFO*       bdchginfo2          /**< second bound change information */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -997,6 +1006,8 @@ SCIP_Bool SCIPbdchginfoHasInferenceReason(
 #define SCIPbdchginfoHasInferenceReason(bdchginfo)                      \
    (((bdchginfo)->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER)          \
       || ((bdchginfo)->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && (bdchginfo)->inferencedata.reason.prop != NULL))
+#define SCIPbdchginfoIsTighter(bdchginfo1,bdchginfo2) ((bdchginfo1)->boundtype == SCIP_BOUNDTYPE_LOWER \
+      ? (bdchginfo1)->newbound > bdchginfo2->newbound : (bdchginfo1)->newbound < bdchginfo2->newbound)
 
 #endif
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.h,v 1.24 2006/01/03 12:22:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.h,v 1.25 2006/03/09 12:52:18 bzfpfend Exp $"
 
 /**@file   cons_setppc.h
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -121,6 +121,14 @@ SCIP_Real SCIPgetDualsolSetppc(
 extern
 SCIP_Real SCIPgetDualfarkasSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** returns the linear relaxation of the given set partitioning / packing / covering constraint; may return NULL if no
+ *  LP row was yet created; the user must not modify the row!
+ */
+extern
+SCIP_ROW* SCIPgetRowSetppc(
    SCIP_CONS*            cons                /**< constraint data */
    );
 

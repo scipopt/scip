@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.263 2006/02/23 12:40:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.264 2006/03/09 12:52:20 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1882,10 +1882,10 @@ SCIP_RETCODE SCIPgetVarStrongbranch(
                                               *   otherwise, it can only be used as an estimate value */
    SCIP_Bool*            downinf,            /**< pointer to store whether the downwards branch is infeasible, or NULL */
    SCIP_Bool*            upinf,              /**< pointer to store whether the upwards branch is infeasible, or NULL */
-   SCIP_Bool*            downconflict,       /**< pointer to store whether a conflict clause was created for an infeasible
-                                              *   downwards branch, or NULL */
-   SCIP_Bool*            upconflict,         /**< pointer to store whether a conflict clause was created for an infeasible
-                                              *   upwards branch, or NULL */
+   SCIP_Bool*            downconflict,       /**< pointer to store whether a conflict constraint was created for an
+                                              *   infeasible downwards branch, or NULL */
+   SCIP_Bool*            upconflict,         /**< pointer to store whether a conflict constraint was created for an
+                                              *   infeasible upwards branch, or NULL */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    );
 
@@ -4776,31 +4776,41 @@ int SCIPgetNCutsApplied(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** get total number of clauses found in conflict analysis (conflict and reconvergence clauses) */
+/** get total number of constraints found in conflict analysis (conflict and reconvergence constraints) */
 extern
-SCIP_Longint SCIPgetNConflictClausesFound(
+SCIP_Longint SCIPgetNConflictConssFound(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** get number of conflict clauses found so far at the current node */
+/** get number of conflict constraints found so far at the current node */
 extern
-int SCIPgetNConflictClausesFoundNode(
+int SCIPgetNConflictConssFoundNode(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** get total number of conflict clauses added to the problem */
+/** get total number of conflict constraints added to the problem */
 extern
-SCIP_Longint SCIPgetNConflictClausesApplied(
+SCIP_Longint SCIPgetNConflictConssApplied(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets depth of current node, or -1 if no current node exists */
+/** gets depth of current node, or -1 if no current node exists; in probing, the current node is the last probing node,
+ *  such that the depth includes the probing path
+ */
 extern
 int SCIPgetDepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets maximal depth of all processed nodes in current branch and bound run */
+/** gets depth of the focus node, or -1 if no focus node exists; the focus node is the currently processed node in the
+ *  branching tree, excluding the nodes of the probing path
+ */
+extern
+int SCIPgetFocusDepth(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets maximal depth of all processed nodes in current branch and bound run (excluding probing nodes) */
 extern
 int SCIPgetMaxDepth(
    SCIP*                 scip                /**< SCIP data structure */

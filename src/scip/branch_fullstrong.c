@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.46 2006/01/03 12:22:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.47 2006/03/09 12:52:16 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -249,9 +249,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
                assert(allcolsinlp);
                assert(!exactsolve);
             
-               /* if for both infeasibilities, a conflict clause was created, we don't need to fix the variable by hand,
-                * but better wait for the next propagation round to fix them as an inference, and potentially produce a
-                * cutoff that can be analyzed
+               /* if for both infeasibilities, a conflict constraint was created, we don't need to fix the variable by
+                * hand, but better wait for the next propagation round to fix them as an inference, and potentially
+                * produce a cutoff that can be analyzed
                 */
                if( allowaddcons && downinf == downconflict && upinf == upconflict )
                {

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.107 2006/02/23 12:40:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.108 2006/03/09 12:52:21 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -166,6 +166,24 @@ SCIP_RETCODE SCIPdomchgAddHolechg(
    SCIP_HOLELIST**       ptr,                /**< changed list pointer */
    SCIP_HOLELIST*        newlist,            /**< new value of list pointer */
    SCIP_HOLELIST*        oldlist             /**< old value of list pointer */
+   );
+
+/** creates an artificial bound change information object with depth = INT_MAX and pos = -1 */
+extern
+SCIP_RETCODE SCIPbdchginfoCreate(
+   SCIP_BDCHGINFO**      bdchginfo,          /**< pointer to store bound change information */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             var,                /**< active variable that changed the bounds */
+   SCIP_BOUNDTYPE        boundtype,          /**< type of bound for var: lower or upper bound */
+   SCIP_Real             oldbound,           /**< old value for bound */
+   SCIP_Real             newbound            /**< new value for bound */
+   );
+
+/** frees a bound change information object */
+extern
+void SCIPbdchginfoFree(
+   SCIP_BDCHGINFO**      bdchginfo,          /**< pointer to store bound change information */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 #ifndef NDEBUG

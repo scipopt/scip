@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.20 2006/02/23 12:40:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.21 2006/03/09 12:52:22 bzfpfend Exp $"
 
 /**@file   vbc.c
  * @brief  methods for VBC Tool output
@@ -300,7 +300,7 @@ void SCIPvbcCutoffNode(
    vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_CUTOFF);
 }
 
-/** changes the color of the node to the color of nodes where a conflict clause was found */
+/** changes the color of the node to the color of nodes where a conflict constraint was found */
 void SCIPvbcFoundConflict(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */

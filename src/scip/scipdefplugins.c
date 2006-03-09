@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.52 2006/02/23 12:40:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.53 2006/03/09 12:52:20 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -31,6 +31,7 @@
 #include "scip/branch_pscost.h"
 #include "scip/branch_relpscost.h"
 #include "scip/cons_and.h"
+#include "scip/cons_bounddisjunction.h"
 #include "scip/cons_conjunction.h"
 #include "scip/cons_integral.h"
 #include "scip/cons_knapsack.h"
@@ -96,8 +97,9 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL( SCIPincludeConshdlrLinear(scip) );
+   SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be first due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
+   SCIP_CALL( SCIPincludeConshdlrBounddisjunction(scip) );
    SCIP_CALL( SCIPincludeConshdlrConjunction(scip) );
    SCIP_CALL( SCIPincludeConshdlrIntegral(scip) );
    SCIP_CALL( SCIPincludeConshdlrKnapsack(scip) );

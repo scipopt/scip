@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_sol.h,v 1.13 2006/01/03 12:22:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_sol.h,v 1.14 2006/03/09 12:52:19 bzfpfend Exp $"
 
 /**@file   pub_sol.h
  * @brief  public methods for primal CIP solutions
@@ -78,6 +78,12 @@ SCIP_HEUR* SCIPsolGetHeur(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
+/** returns unique index of given solution */
+extern
+int SCIPsolGetIndex(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -90,6 +96,7 @@ SCIP_HEUR* SCIPsolGetHeur(
 #define SCIPsolGetRunnum(sol)           (sol)->runnum
 #define SCIPsolGetDepth(sol)            (sol)->depth
 #define SCIPsolGetHeur(sol)             (sol)->heur
+#define SCIPsolGetIndex(sol)            (sol)->index
 
 #endif
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.19 2006/02/23 12:40:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.20 2006/03/09 12:52:18 bzfpfend Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -580,6 +580,7 @@ SCIP_RETCODE SCIPdebugCheckImplic(
    return SCIP_OKAY;
 }
 
+#if 0 /*?????????????????????? update this method to the general conflict constraints */
 /** checks whether given conflict is valid for the debugging solution */
 SCIP_RETCODE SCIPdebugCheckConflict(
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -627,6 +628,7 @@ SCIP_RETCODE SCIPdebugCheckConflict(
 
    return SCIP_OKAY;
 }
+#endif
 
 
 /** propagator to force finding the debugging solution */

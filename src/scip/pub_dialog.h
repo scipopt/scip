@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_dialog.h,v 1.11 2006/02/23 12:40:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_dialog.h,v 1.12 2006/03/09 12:52:19 bzfpfend Exp $"
 
 /**@file   pub_dialog.h
  * @brief  public methods for user interface dialog
@@ -60,10 +60,12 @@ SCIP_Bool SCIPdialoghdlrIsBufferEmpty(
  *  current dialog's path and asks the user for further input; the user must not free or modify the returned string
  */
 extern
-const char* SCIPdialoghdlrGetWord(
+SCIP_RETCODE SCIPdialoghdlrGetWord(
    SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
    SCIP_DIALOG*          dialog,             /**< current dialog */
-   const char*           prompt              /**< prompt to display, or NULL to display the current dialog's path */
+   const char*           prompt,             /**< prompt to display, or NULL to display the current dialog's path */
+   char**                inputword,          /**< pointer to store the next word in the handler's command buffer */
+   SCIP_Bool*            endoffile           /**< pointer to store whether the end of the input file was reached */
    );
 
 /** adds a single line of input to the dialog handler which is treated as if the user entered the command line */

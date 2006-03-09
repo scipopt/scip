@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.172 2006/02/23 12:40:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.173 2006/03/09 12:52:21 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -211,7 +211,8 @@ void SCIPnodeCaptureLPIState(
 {
    assert(node != NULL);
 
-   SCIPdebugMessage("capture %d times LPI state of node %p at depth %d (current: %d)\n", nuses, node, node->depth, 
+   SCIPdebugMessage("capture %d times LPI state of node #%"SCIP_LONGINT_FORMAT" at depth %d (current: %d)\n",
+      nuses, SCIPnodeGetNumber(node), SCIPnodeGetDepth(node),
       SCIPnodeGetType(node) == SCIP_NODETYPE_FORK ? node->data.fork->nlpistateref : node->data.subroot->nlpistateref);
 
    switch( SCIPnodeGetType(node) )
@@ -237,7 +238,8 @@ SCIP_RETCODE SCIPnodeReleaseLPIState(
 {
    assert(node != NULL);
 
-   SCIPdebugMessage("release LPI state of node %p at depth %d (current: %d)\n", node, node->depth,
+   SCIPdebugMessage("release LPI state of node #%"SCIP_LONGINT_FORMAT" at depth %d (current: %d)\n",
+      SCIPnodeGetNumber(node), SCIPnodeGetDepth(node),
       SCIPnodeGetType(node) == SCIP_NODETYPE_FORK ? node->data.fork->nlpistateref : node->data.subroot->nlpistateref);
    switch( SCIPnodeGetType(node) )
    {  
@@ -727,7 +729,8 @@ SCIP_RETCODE nodeAssignParent(
          return SCIP_MAXDEPTHLEVEL;
       }
    }
-   SCIPdebugMessage("assigning parent %p to node %p at depth %d\n", parent, node, node->depth);
+   SCIPdebugMessage("assigning parent #%"SCIP_LONGINT_FORMAT" to node #%"SCIP_LONGINT_FORMAT" at depth %d\n",
+      parent != NULL ? SCIPnodeGetNumber(parent) : -1, SCIPnodeGetNumber(node), SCIPnodeGetDepth(node));
 
    /* register node in the childlist of the focus (the parent) node */
    if( SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD )
@@ -757,8 +760,9 @@ SCIP_RETCODE nodeReleaseParent(
    assert(blkmem != NULL);
    assert(tree != NULL);
 
-   SCIPdebugMessage("releasing parent-child relationship of node %p at depth %d of type %d with parent %p of type %d\n",
-      node, node->depth, SCIPnodeGetType(node), node->parent,
+   SCIPdebugMessage("releasing parent-child relationship of node #%"SCIP_LONGINT_FORMAT" at depth %d of type %d with parent #%"SCIP_LONGINT_FORMAT" of type %d\n",
+      SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPnodeGetType(node), 
+      node->parent != NULL ? SCIPnodeGetNumber(node->parent) : -1,
       node->parent != NULL ? (int)SCIPnodeGetType(node->parent) : -1);
    parent = node->parent;
    if( parent != NULL )
@@ -846,7 +850,8 @@ SCIP_RETCODE nodeReleaseParent(
       if( singleChild && SCIPnodeGetDepth(parent) == tree->effectiverootdepth )
       {
          tree->effectiverootdepth++;
-         SCIPdebugMessage("new effective root depth: %d\n", tree->effectiverootdepth);
+         SCIPdebugMessage("unlinked node #%"SCIP_LONGINT_FORMAT" in depth %d -> new effective root depth: %d\n", 
+            SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->effectiverootdepth);
       }
    }
 
@@ -917,7 +922,7 @@ SCIP_RETCODE SCIPnodeCreateChild(
    /* output node creation to VBC file */
    SCIP_CALL( SCIPvbcNewChild(stat->vbc, stat, *node) );
 
-   SCIPdebugMessage("created child node %p at depth %d\n", *node, (*node)->depth);
+   SCIPdebugMessage("created child node #%"SCIP_LONGINT_FORMAT" at depth %d\n", SCIPnodeGetNumber(*node), (*node)->depth);
 
    return SCIP_OKAY;
 }
@@ -939,7 +944,8 @@ SCIP_RETCODE SCIPnodeFree(
    assert(blkmem != NULL);
    assert(tree != NULL);
 
-   SCIPdebugMessage("free node %p at depth %d of type %d\n", *node, (*node)->depth, SCIPnodeGetType(*node));
+   SCIPdebugMessage("free node #%"SCIP_LONGINT_FORMAT" at depth %d of type %d\n",
+      SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), SCIPnodeGetType(*node));
 
    /* inform solution debugger, that the node has been freed */
    SCIP_CALL( SCIPdebugRemoveNode(*node) ); /*lint !e506 !e774*/
@@ -1051,8 +1057,8 @@ void SCIPnodeCutoff(
 
    SCIPvbcCutoffNode(stat->vbc, stat, node);
 
-   SCIPdebugMessage("cutting off %s node %p at depth %d (cutoffdepth: %d)\n", 
-      node->active ? "active" : "inactive", node, node->depth, tree->cutoffdepth);
+   SCIPdebugMessage("cutting off %s node #%"SCIP_LONGINT_FORMAT" at depth %d (cutoffdepth: %d)\n", 
+      node->active ? "active" : "inactive", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->cutoffdepth);
 }
 
 /** marks node, that propagation should be applied again the next time, a node of its subtree is focused */
@@ -1076,8 +1082,8 @@ void SCIPnodePropagateAgain(
       
       SCIPvbcMarkedRepropagateNode(stat->vbc, stat, node);
       
-      SCIPdebugMessage("marked %s node %p at depth %d to be propagated again (repropdepth: %d)\n", 
-         node->active ? "active" : "inactive", node, node->depth, tree->repropdepth);
+      SCIPdebugMessage("marked %s node #%"SCIP_LONGINT_FORMAT" at depth %d to be propagated again (repropdepth: %d)\n", 
+         node->active ? "active" : "inactive", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->repropdepth);
    }
 }
 
@@ -1166,7 +1172,8 @@ SCIP_RETCODE nodeRepropagate(
    assert(SCIPeventqueueIsDelayed(eventqueue));
    assert(cutoff != NULL);
 
-   SCIPdebugMessage("propagating again node %p at depth %d\n", node, node->depth);
+   SCIPdebugMessage("propagating again node #%"SCIP_LONGINT_FORMAT" at depth %d\n", 
+      SCIPnodeGetNumber(node), SCIPnodeGetDepth(node));
    initialreprop = node->reprop;
 
    SCIPvbcRepropagatedNode(stat->vbc, stat, node);
@@ -1202,7 +1209,7 @@ SCIP_RETCODE nodeRepropagate(
    /* propagate the domains again */
    oldnboundchgs = stat->nboundchgs;
    SCIP_CALL( SCIPpropagateDomains(blkmem, set, stat, prob, tree, conflict, SCIPnodeGetDepth(node), 0, cutoff) );
-   assert(!node->reprop);
+   assert(!node->reprop || *cutoff);
    assert(node->parent == NULL || node->repropsubtreemark == node->parent->repropsubtreemark);
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_REFOCUSNODE);
    assert(tree->focusnode == node);
@@ -1216,6 +1223,8 @@ SCIP_RETCODE nodeRepropagate(
    assert(stat->nboundchgs >= oldnboundchgs);
    stat->nreprops++;
    stat->nrepropboundchgs += stat->nboundchgs - oldnboundchgs;
+   if( *cutoff )
+      stat->nrepropcutoffs++;
 
    SCIPdebugMessage("repropagation %"SCIP_LONGINT_FORMAT" at depth %d changed %"SCIP_LONGINT_FORMAT" bounds (total reprop bound changes: %"SCIP_LONGINT_FORMAT"), cutoff: %d\n",
       stat->nreprops, node->depth, stat->nboundchgs - oldnboundchgs, stat->nrepropboundchgs, *cutoff);
@@ -1290,8 +1299,8 @@ SCIP_RETCODE nodeActivate(
    assert(!SCIPtreeProbing(tree));
    assert(cutoff != NULL);
 
-   SCIPdebugMessage("activate node %p at depth %d of type %d (reprop subtree mark: %d)\n",
-      node, node->depth, SCIPnodeGetType(node), node->repropsubtreemark);
+   SCIPdebugMessage("activate node #%"SCIP_LONGINT_FORMAT" at depth %d of type %d (reprop subtree mark: %d)\n",
+      SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPnodeGetType(node), node->repropsubtreemark);
 
    /* apply domain and constraint set changes */
    SCIP_CALL( SCIPconssetchgApply(node->conssetchg, blkmem, set, stat, node->depth) );
@@ -1304,7 +1313,7 @@ SCIP_RETCODE nodeActivate(
    /* check if the domain change produced a cutoff */
    if( *cutoff )
    {
-      /* try to repropagate the node to see, if the propagation also leads to a conflict and a conflict clause
+      /* try to repropagate the node to see, if the propagation also leads to a conflict and a conflict constraint
        * could be generated; if propagation conflict analysis is turned off, repropagating the node makes no
        * sense, since it is already cut off
        */
@@ -1347,8 +1356,8 @@ SCIP_RETCODE nodeDeactivate(
    assert(node->active);
    assert(tree != NULL);
 
-   SCIPdebugMessage("deactivate node %p at depth %d of type %d  (reprop subtree mark: %d)\n",
-      node, node->depth, SCIPnodeGetType(node), node->repropsubtreemark);
+   SCIPdebugMessage("deactivate node #%"SCIP_LONGINT_FORMAT" at depth %d of type %d  (reprop subtree mark: %d)\n",
+      SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPnodeGetType(node), node->repropsubtreemark);
 
    /* undo domain and constraint set changes */
    SCIP_CALL( SCIPdomchgUndo(node->domchg, blkmem, set, stat, lp, branchcand, eventqueue) );
@@ -1714,7 +1723,8 @@ SCIP_RETCODE SCIPnodePropagateImplics(
       || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
    assert(cutoff != NULL);
 
-   SCIPdebugMessage("implication graph propagation of node %p in depth %d\n", node, SCIPnodeGetDepth(node));
+   SCIPdebugMessage("implication graph propagation of node #%"SCIP_LONGINT_FORMAT" in depth %d\n",
+      SCIPnodeGetNumber(node), SCIPnodeGetDepth(node));
 
    *cutoff = FALSE;
 
@@ -2562,8 +2572,9 @@ SCIP_RETCODE SCIPtreeLoadLP(
    assert(lp != NULL);
    assert(initroot != NULL);
 
-   SCIPdebugMessage("load LP for current fork node %p at depth %d\n", 
-      tree->focuslpfork, tree->focuslpfork == NULL ? -1 : (int)(tree->focuslpfork->depth));
+   SCIPdebugMessage("load LP for current fork node #%"SCIP_LONGINT_FORMAT" at depth %d\n", 
+      tree->focuslpfork == NULL ? -1 : SCIPnodeGetNumber(tree->focuslpfork),
+      tree->focuslpfork == NULL ? -1 : SCIPnodeGetDepth(tree->focuslpfork));
    SCIPdebugMessage("-> old LP has %d cols and %d rows\n", SCIPlpGetNCols(lp), SCIPlpGetNRows(lp));
    SCIPdebugMessage("-> correct LP has %d cols and %d rows\n", 
       tree->correctlpdepth >= 0 ? tree->pathnlpcols[tree->correctlpdepth] : 0,
@@ -2687,8 +2698,9 @@ SCIP_RETCODE SCIPtreeLoadLPState(
    assert(set != NULL);
    assert(lp != NULL);
 
-   SCIPdebugMessage("load LP state for current fork node %p at depth %d\n", 
-      tree->focuslpstatefork, tree->focuslpstatefork == NULL ? -1 : (int)(tree->focuslpstatefork->depth));
+   SCIPdebugMessage("load LP state for current fork node #%"SCIP_LONGINT_FORMAT" at depth %d\n", 
+      tree->focuslpstatefork == NULL ? -1 : SCIPnodeGetNumber(tree->focuslpstatefork),
+      tree->focuslpstatefork == NULL ? -1 : SCIPnodeGetDepth(tree->focuslpstatefork));
 
    lpstatefork = tree->focuslpstatefork;
 
@@ -2780,8 +2792,10 @@ SCIP_RETCODE nodeToLeaf(
       || SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_SUBROOT);
 
    /* convert node into leaf */
-   SCIPdebugMessage("convert node %p at depth %d to leaf with lpstatefork %p at depth %d\n",
-      *node, (*node)->depth, lpstatefork, lpstatefork == NULL ? -1 : (int)(lpstatefork->depth));
+   SCIPdebugMessage("convert node #%"SCIP_LONGINT_FORMAT" at depth %d to leaf with lpstatefork #%"SCIP_LONGINT_FORMAT" at depth %d\n",
+      SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node),
+      lpstatefork == NULL ? -1 : SCIPnodeGetNumber(lpstatefork),
+      lpstatefork == NULL ? -1 : SCIPnodeGetDepth(lpstatefork));
    (*node)->nodetype = SCIP_NODETYPE_LEAF; /*lint !e641*/
    (*node)->data.leaf.lpstatefork = lpstatefork;
 
@@ -2839,7 +2853,8 @@ SCIP_RETCODE focusnodeToDeadend(
    assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
    assert(tree->nchildren == 0);
 
-   SCIPdebugMessage("focusnode to deadend %p at depth %d\n", tree->focusnode, tree->focusnode->depth);
+   SCIPdebugMessage("focusnode #%"SCIP_LONGINT_FORMAT" to deadend at depth %d\n",
+      SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
    tree->focusnode->nodetype = SCIP_NODETYPE_DEADEND; /*lint !e641*/
 
@@ -2867,7 +2882,8 @@ SCIP_RETCODE focusnodeToJunction(
    assert(tree->focusnode->active); /* otherwise, no children could be created at the focus node */
    assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
 
-   SCIPdebugMessage("focusnode %p to junction at depth %d\n", tree->focusnode, tree->focusnode->depth);
+   SCIPdebugMessage("focusnode #%"SCIP_LONGINT_FORMAT" to junction at depth %d\n",
+      SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
    /* convert node into junction */
    tree->focusnode->nodetype = SCIP_NODETYPE_JUNCTION; /*lint !e641*/
@@ -2906,7 +2922,8 @@ SCIP_RETCODE focusnodeToPseudofork(
    assert(tree->nchildren > 0);
    assert(lp != NULL);
 
-   SCIPdebugMessage("focusnode %p to pseudofork at depth %d\n", tree->focusnode, tree->focusnode->depth);
+   SCIPdebugMessage("focusnode #%"SCIP_LONGINT_FORMAT" to pseudofork at depth %d\n",
+      SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
    /* create pseudofork data */
    SCIP_CALL( pseudoforkCreate(&pseudofork, blkmem, tree, lp) );
@@ -2951,7 +2968,8 @@ SCIP_RETCODE focusnodeToFork(
    assert(lp->flushed);
    assert(lp->solved || lp->resolvelperror);
 
-   SCIPdebugMessage("focusnode %p to fork at depth %d\n", tree->focusnode, tree->focusnode->depth);
+   SCIPdebugMessage("focusnode #%"SCIP_LONGINT_FORMAT" to fork at depth %d\n",
+      SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
    /* usually, the LP should be solved to optimality; otherwise, numerical troubles occured,
     * and we have to forget about the LP and transform the node into a junction (see below)
@@ -3046,7 +3064,8 @@ SCIP_RETCODE focusnodeToSubroot(
    assert(lp->flushed);
    assert(lp->solved);
 
-   SCIPdebugMessage("focusnode %p to subroot at depth %d\n", tree->focusnode, tree->focusnode->depth);
+   SCIPdebugMessage("focusnode #%"SCIP_LONGINT_FORMAT" to subroot at depth %d\n",
+      SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
    /* usually, the LP should be solved to optimality; otherwise, numerical troubles occured,
     * and we have to forget about the LP and transform the node into a junction (see below)
@@ -3236,8 +3255,9 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(lp != NULL);
    assert(cutoff != NULL);
 
-   SCIPdebugMessage("focussing node %p of type %d in depth %d\n",
-      *node, *node != NULL ? (int)SCIPnodeGetType(*node) : 0, *node != NULL ? SCIPnodeGetDepth(*node) : 0);
+   SCIPdebugMessage("focussing node #%"SCIP_LONGINT_FORMAT" of type %d in depth %d\n",
+      *node != NULL ? SCIPnodeGetNumber(*node) : -1, *node != NULL ? (int)SCIPnodeGetType(*node) : 0,
+      *node != NULL ? SCIPnodeGetDepth(*node) : -1);
 
    /* remember old cutoff depth in order to know, whether the children and siblings can be deleted */
    oldcutoffdepth = tree->cutoffdepth;
@@ -3528,8 +3548,8 @@ SCIP_RETCODE SCIPnodeFocus(
       oldeffectiverootdepth = tree->effectiverootdepth;
       SCIP_CALL( SCIPnodeFree(&oldfocusnode, blkmem, set, tree, lp) );
       assert(oldeffectiverootdepth <= tree->effectiverootdepth);
-      assert(tree->effectiverootdepth < tree->pathlen || *node == NULL);
-      if( tree->effectiverootdepth > oldeffectiverootdepth && *node != NULL )
+      assert(tree->effectiverootdepth < tree->pathlen || *node == NULL || *cutoff);
+      if( tree->effectiverootdepth > oldeffectiverootdepth && *node != NULL && !(*cutoff) )
       {
          int d;
 
@@ -3881,8 +3901,8 @@ SCIP_RETCODE SCIPtreeCutoff(
       node = tree->siblings[i];
       if( SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
       {
-         SCIPdebugMessage("cut off sibling %p at depth %d with lowerbound=%g at position %d\n", 
-            node, node->depth, node->lowerbound, i);
+         SCIPdebugMessage("cut off sibling #%"SCIP_LONGINT_FORMAT" at depth %d with lowerbound=%g at position %d\n", 
+            SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), node->lowerbound, i);
          SCIPvbcCutoffNode(stat->vbc, stat, node);
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, tree, lp) );
       }
@@ -3894,8 +3914,8 @@ SCIP_RETCODE SCIPtreeCutoff(
       node = tree->children[i];
       if( SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
       {
-         SCIPdebugMessage("cut off child %p at depth %d with lowerbound=%g at position %d\n",
-            node, node->depth, node->lowerbound, i);
+         SCIPdebugMessage("cut off child #%"SCIP_LONGINT_FORMAT" at depth %d with lowerbound=%g at position %d\n",
+            SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), node->lowerbound, i);
          SCIPvbcCutoffNode(stat->vbc, stat, node);
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, tree, lp) );
       }
@@ -4109,15 +4129,16 @@ SCIP_RETCODE treeCreateProbingNode(
    if( tree->probingroot == NULL )
    {
       tree->probingroot = node;
-      SCIPdebugMessage("created probing root node %p at depth %d\n", node, SCIPnodeGetDepth(node));
+      SCIPdebugMessage("created probing root node #%"SCIP_LONGINT_FORMAT" at depth %d\n",
+         SCIPnodeGetNumber(node), SCIPnodeGetDepth(node));
    }
    else
    {
       assert(SCIPnodeGetType(tree->probingroot) == SCIP_NODETYPE_PROBINGNODE);
       assert(SCIPnodeGetDepth(tree->probingroot) < SCIPnodeGetDepth(node));
 
-      SCIPdebugMessage("created probing child node %p at depth %d, probing depth %d\n", 
-         node, SCIPnodeGetDepth(node), SCIPnodeGetDepth(node) - SCIPnodeGetDepth(tree->probingroot));
+      SCIPdebugMessage("created probing child node #%"SCIP_LONGINT_FORMAT" at depth %d, probing depth %d\n", 
+         SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPnodeGetDepth(node) - SCIPnodeGetDepth(tree->probingroot));
    }
 
    /* create the new active path */
@@ -4679,7 +4700,7 @@ SCIP_NODE* SCIPtreeGetLowerboundNode(
       assert(tree->children[i] != NULL);
       if( SCIPsetIsLE(set, tree->children[i]->lowerbound, lowerbound) )
       {
-         if( SCIPsetIsLT(set, tree->children[i]->lowerbound, lowerbound) || tree->childrenprio[i] < bestprio )
+         if( SCIPsetIsLT(set, tree->children[i]->lowerbound, lowerbound) || tree->childrenprio[i] > bestprio )
          {
             lowerboundnode = tree->children[i]; 
             lowerbound = lowerboundnode->lowerbound; 
@@ -4694,7 +4715,7 @@ SCIP_NODE* SCIPtreeGetLowerboundNode(
       assert(tree->siblings[i] != NULL);
       if( SCIPsetIsLE(set, tree->siblings[i]->lowerbound, lowerbound) )
       {
-         if( SCIPsetIsLT(set, tree->siblings[i]->lowerbound, lowerbound) || tree->siblingsprio[i] < bestprio )
+         if( SCIPsetIsLT(set, tree->siblings[i]->lowerbound, lowerbound) || tree->siblingsprio[i] > bestprio )
          {
             lowerboundnode = tree->siblings[i]; 
             lowerbound = lowerboundnode->lowerbound; 

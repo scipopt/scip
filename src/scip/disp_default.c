@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.60 2006/01/03 12:22:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.61 2006/03/09 12:52:19 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -495,7 +495,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputConflicts)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONFLICTS) == 0);
    assert(scip != NULL);
 
-   SCIPdispLongint(file, SCIPgetNConflictClausesApplied(scip), DISP_WIDT_CONFLICTS);
+   SCIPdispLongint(file, SCIPgetNConflictConssApplied(scip), DISP_WIDT_CONFLICTS);
 
    return SCIP_OKAY;
 }

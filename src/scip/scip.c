@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.345 2006/02/23 12:40:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.346 2006/03/09 12:52:19 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3617,7 +3617,7 @@ SCIP_RETCODE SCIPdelConsLocal(
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_SOLVING:
       node = SCIPtreeGetCurrentNode(scip->tree);
-      if( SCIPnodeGetDepth(node) == 0 )
+      if( SCIPnodeGetDepth(node) <= SCIPtreeGetEffectiveRootDepth(scip->tree) )
       {
          SCIP_CALL( SCIPconsDelete(cons, scip->mem->solvemem, scip->set, scip->stat, scip->transprob) );
       }
@@ -3793,7 +3793,7 @@ SCIP_RETCODE transformProb(
    SCIP_CALL( SCIPlpCreate(&scip->lp, scip->set, scip->stat, SCIPprobGetName(scip->origprob)) );
    SCIP_CALL( SCIPprimalCreate(&scip->primal) );
    SCIP_CALL( SCIPtreeCreate(&scip->tree, scip->set, SCIPsetGetNodesel(scip->set, scip->stat)) );
-   SCIP_CALL( SCIPconflictCreate(&scip->conflict, scip->set) );
+   SCIP_CALL( SCIPconflictCreate(&scip->conflict, scip->mem->solvemem, scip->set) );
    SCIP_CALL( SCIPcliquetableCreate(&scip->cliquetable) );
 
    /* copy problem in solve memory */
@@ -4529,7 +4529,7 @@ SCIP_RETCODE freeTransform(
    /* free transformed problem data structures */
    SCIP_CALL( SCIPprobFree(&scip->transprob, scip->mem->solvemem, scip->set, scip->stat, scip->lp) );
    SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->solvemem) );
-   SCIP_CALL( SCIPconflictFree(&scip->conflict) );
+   SCIP_CALL( SCIPconflictFree(&scip->conflict, scip->mem->solvemem) );
    SCIP_CALL( SCIPtreeFree(&scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
    SCIP_CALL( SCIPprimalFree(&scip->primal, scip->mem->solvemem) );
    SCIP_CALL( SCIPlpFree(&scip->lp, scip->mem->solvemem, scip->set) );
@@ -5289,10 +5289,10 @@ SCIP_RETCODE SCIPgetVarStrongbranch(
                                               *   otherwise, it can only be used as an estimate value */
    SCIP_Bool*            downinf,            /**< pointer to store whether the downwards branch is infeasible, or NULL */
    SCIP_Bool*            upinf,              /**< pointer to store whether the upwards branch is infeasible, or NULL */
-   SCIP_Bool*            downconflict,       /**< pointer to store whether a conflict clause was created for an infeasible
-                                              *   downwards branch, or NULL */
-   SCIP_Bool*            upconflict,         /**< pointer to store whether a conflict clause was created for an infeasible
-                                              *   upwards branch, or NULL */
+   SCIP_Bool*            downconflict,       /**< pointer to store whether a conflict constraint was created for an
+                                              *   infeasible downwards branch, or NULL */
+   SCIP_Bool*            upconflict,         /**< pointer to store whether a conflict constraint was created for an
+                                              *   infeasible upwards branch, or NULL */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
@@ -5351,7 +5351,7 @@ SCIP_RETCODE SCIPgetVarStrongbranch(
 
       /* analyze infeasible strong branching sub problems:
        * because the strong branching's bound change is necessary for infeasibility, it cannot be undone;
-       * therefore, infeasible strong branchings on non-binary variables will not produce a valid conflict clause
+       * therefore, infeasible strong branchings on non-binary variables will not produce a valid conflict constraint
        */
       if( scip->set->conf_usesb && scip->set->nconflicthdlrs > 0
          && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
@@ -12084,44 +12084,48 @@ int SCIPgetNCutsApplied(
    return SCIPsepastoreGetNCutsApplied(scip->sepastore);
 }
 
-/** get total number of clauses found in conflict analysis (conflict and reconvergence clauses) */
-SCIP_Longint SCIPgetNConflictClausesFound(
+/** get total number of constraints found in conflict analysis (conflict and reconvergence constraints) */
+SCIP_Longint SCIPgetNConflictConssFound(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNConflictClausesFound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNConflictConssFound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   return SCIPconflictGetNPropConflictClauses(scip->conflict)
-      + SCIPconflictGetNPropReconvergenceClauses(scip->conflict)
-      + SCIPconflictGetNLPConflictClauses(scip->conflict)
-      + SCIPconflictGetNLPReconvergenceClauses(scip->conflict)
-      + SCIPconflictGetNStrongbranchConflictClauses(scip->conflict)
-      + SCIPconflictGetNStrongbranchReconvergenceClauses(scip->conflict)
-      + SCIPconflictGetNPseudoConflictClauses(scip->conflict)
-      + SCIPconflictGetNPseudoReconvergenceClauses(scip->conflict);
+   return SCIPconflictGetNPropConflictConss(scip->conflict)
+      + SCIPconflictGetNPropReconvergenceConss(scip->conflict)
+      + SCIPconflictGetNInfeasibleLPConflictConss(scip->conflict)
+      + SCIPconflictGetNInfeasibleLPReconvergenceConss(scip->conflict)
+      + SCIPconflictGetNBoundexceedingLPConflictConss(scip->conflict)
+      + SCIPconflictGetNBoundexceedingLPReconvergenceConss(scip->conflict)
+      + SCIPconflictGetNStrongbranchConflictConss(scip->conflict)
+      + SCIPconflictGetNStrongbranchReconvergenceConss(scip->conflict)
+      + SCIPconflictGetNPseudoConflictConss(scip->conflict)
+      + SCIPconflictGetNPseudoReconvergenceConss(scip->conflict);
 }
 
-/** get number of conflict clauses found so far at the current node */
-int SCIPgetNConflictClausesFoundNode(
+/** get number of conflict constraints found so far at the current node */
+int SCIPgetNConflictConssFoundNode(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNConflictClausesFoundNode", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNConflictConssFoundNode", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   return SCIPconflictGetNClauses(scip->conflict);
+   return SCIPconflictGetNConflicts(scip->conflict);
 }
 
-/** get total number of conflict clauses added to the problem */
-SCIP_Longint SCIPgetNConflictClausesApplied(
+/** get total number of conflict constraints added to the problem */
+SCIP_Longint SCIPgetNConflictConssApplied(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNConflictClausesApplied", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNConflictConssApplied", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   return SCIPconflictGetNAppliedClauses(scip->conflict);
+   return SCIPconflictGetNAppliedConss(scip->conflict);
 }
 
-/** gets depth of current node, or -1 if no current node exists */
+/** gets depth of current node, or -1 if no current node exists; in probing, the current node is the last probing node,
+ *  such that the depth includes the probing path
+ */
 int SCIPgetDepth(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -12131,7 +12135,19 @@ int SCIPgetDepth(
    return SCIPtreeGetCurrentDepth(scip->tree);
 }
 
-/** gets maximal depth of all processed nodes in current branch and bound run */
+/** gets depth of the focus node, or -1 if no focus node exists; the focus node is the currently processed node in the
+ *  branching tree, excluding the nodes of the probing path
+ */
+int SCIPgetFocusDepth(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetFocusDepth", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIPtreeGetFocusDepth(scip->tree);
+}
+
+/** gets maximal depth of all processed nodes in current branch and bound run (excluding probing nodes) */
 int SCIPgetMaxDepth(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -12875,62 +12891,75 @@ void printConflictStatistics(
       SCIPconflictGetPropTime(scip->conflict),
       SCIPconflictGetNPropCalls(scip->conflict),
       SCIPconflictGetNPropSuccess(scip->conflict),
-      SCIPconflictGetNPropConflictClauses(scip->conflict),
-      SCIPconflictGetNPropConflictClauses(scip->conflict) > 0
+      SCIPconflictGetNPropConflictConss(scip->conflict),
+      SCIPconflictGetNPropConflictConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNPropConflictLiterals(scip->conflict)
-      / (SCIP_Real)SCIPconflictGetNPropConflictClauses(scip->conflict) : 0,
-      SCIPconflictGetNPropReconvergenceClauses(scip->conflict),
-      SCIPconflictGetNPropReconvergenceClauses(scip->conflict) > 0
+      / (SCIP_Real)SCIPconflictGetNPropConflictConss(scip->conflict) : 0,
+      SCIPconflictGetNPropReconvergenceConss(scip->conflict),
+      SCIPconflictGetNPropReconvergenceConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNPropReconvergenceLiterals(scip->conflict)
-      / (SCIP_Real)SCIPconflictGetNPropReconvergenceClauses(scip->conflict) : 0);
+      / (SCIP_Real)SCIPconflictGetNPropReconvergenceConss(scip->conflict) : 0);
    SCIPmessageFPrintInfo(file, "  infeasible LP    : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT"\n",
-      SCIPconflictGetLPTime(scip->conflict),
-      SCIPconflictGetNLPCalls(scip->conflict),
-      SCIPconflictGetNLPSuccess(scip->conflict),
-      SCIPconflictGetNLPConflictClauses(scip->conflict),
-      SCIPconflictGetNLPConflictClauses(scip->conflict) > 0
-      ? (SCIP_Real)SCIPconflictGetNLPConflictLiterals(scip->conflict)
-      / (SCIP_Real)SCIPconflictGetNLPConflictClauses(scip->conflict) : 0,
-      SCIPconflictGetNLPReconvergenceClauses(scip->conflict),
-      SCIPconflictGetNLPReconvergenceClauses(scip->conflict) > 0
-      ? (SCIP_Real)SCIPconflictGetNLPReconvergenceLiterals(scip->conflict)
-      / (SCIP_Real)SCIPconflictGetNLPReconvergenceClauses(scip->conflict) : 0,
-      SCIPconflictGetNLPIterations(scip->conflict));
+      SCIPconflictGetInfeasibleLPTime(scip->conflict),
+      SCIPconflictGetNInfeasibleLPCalls(scip->conflict),
+      SCIPconflictGetNInfeasibleLPSuccess(scip->conflict),
+      SCIPconflictGetNInfeasibleLPConflictConss(scip->conflict),
+      SCIPconflictGetNInfeasibleLPConflictConss(scip->conflict) > 0
+      ? (SCIP_Real)SCIPconflictGetNInfeasibleLPConflictLiterals(scip->conflict)
+      / (SCIP_Real)SCIPconflictGetNInfeasibleLPConflictConss(scip->conflict) : 0,
+      SCIPconflictGetNInfeasibleLPReconvergenceConss(scip->conflict),
+      SCIPconflictGetNInfeasibleLPReconvergenceConss(scip->conflict) > 0
+      ? (SCIP_Real)SCIPconflictGetNInfeasibleLPReconvergenceLiterals(scip->conflict)
+      / (SCIP_Real)SCIPconflictGetNInfeasibleLPReconvergenceConss(scip->conflict) : 0,
+      SCIPconflictGetNInfeasibleLPIterations(scip->conflict));
+   SCIPmessageFPrintInfo(file, "  bound exceed. LP : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT"\n",
+      SCIPconflictGetBoundexceedingLPTime(scip->conflict),
+      SCIPconflictGetNBoundexceedingLPCalls(scip->conflict),
+      SCIPconflictGetNBoundexceedingLPSuccess(scip->conflict),
+      SCIPconflictGetNBoundexceedingLPConflictConss(scip->conflict),
+      SCIPconflictGetNBoundexceedingLPConflictConss(scip->conflict) > 0
+      ? (SCIP_Real)SCIPconflictGetNBoundexceedingLPConflictLiterals(scip->conflict)
+      / (SCIP_Real)SCIPconflictGetNBoundexceedingLPConflictConss(scip->conflict) : 0,
+      SCIPconflictGetNBoundexceedingLPReconvergenceConss(scip->conflict),
+      SCIPconflictGetNBoundexceedingLPReconvergenceConss(scip->conflict) > 0
+      ? (SCIP_Real)SCIPconflictGetNBoundexceedingLPReconvergenceLiterals(scip->conflict)
+      / (SCIP_Real)SCIPconflictGetNBoundexceedingLPReconvergenceConss(scip->conflict) : 0,
+      SCIPconflictGetNBoundexceedingLPIterations(scip->conflict));
    SCIPmessageFPrintInfo(file, "  strong branching : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT"\n",
       SCIPconflictGetStrongbranchTime(scip->conflict),
       SCIPconflictGetNStrongbranchCalls(scip->conflict),
       SCIPconflictGetNStrongbranchSuccess(scip->conflict),
-      SCIPconflictGetNStrongbranchConflictClauses(scip->conflict),
-      SCIPconflictGetNStrongbranchConflictClauses(scip->conflict) > 0
+      SCIPconflictGetNStrongbranchConflictConss(scip->conflict),
+      SCIPconflictGetNStrongbranchConflictConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNStrongbranchConflictLiterals(scip->conflict)
-      / (SCIP_Real)SCIPconflictGetNStrongbranchConflictClauses(scip->conflict) : 0,
-      SCIPconflictGetNStrongbranchReconvergenceClauses(scip->conflict),
-      SCIPconflictGetNStrongbranchReconvergenceClauses(scip->conflict) > 0
+      / (SCIP_Real)SCIPconflictGetNStrongbranchConflictConss(scip->conflict) : 0,
+      SCIPconflictGetNStrongbranchReconvergenceConss(scip->conflict),
+      SCIPconflictGetNStrongbranchReconvergenceConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNStrongbranchReconvergenceLiterals(scip->conflict)
-      / (SCIP_Real)SCIPconflictGetNStrongbranchReconvergenceClauses(scip->conflict) : 0,
+      / (SCIP_Real)SCIPconflictGetNStrongbranchReconvergenceConss(scip->conflict) : 0,
       SCIPconflictGetNStrongbranchIterations(scip->conflict));
    SCIPmessageFPrintInfo(file, "  pseudo solution  : %10.2f %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10"SCIP_LONGINT_FORMAT" %10.1f %10"SCIP_LONGINT_FORMAT" %10.1f          -\n",
       SCIPconflictGetPseudoTime(scip->conflict),
       SCIPconflictGetNPseudoCalls(scip->conflict),
       SCIPconflictGetNPseudoSuccess(scip->conflict),
-      SCIPconflictGetNPseudoConflictClauses(scip->conflict),
-      SCIPconflictGetNPseudoConflictClauses(scip->conflict) > 0
+      SCIPconflictGetNPseudoConflictConss(scip->conflict),
+      SCIPconflictGetNPseudoConflictConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNPseudoConflictLiterals(scip->conflict)
-      / (SCIP_Real)SCIPconflictGetNPseudoConflictClauses(scip->conflict) : 0,
-      SCIPconflictGetNPseudoReconvergenceClauses(scip->conflict),
-      SCIPconflictGetNPseudoReconvergenceClauses(scip->conflict) > 0
+      / (SCIP_Real)SCIPconflictGetNPseudoConflictConss(scip->conflict) : 0,
+      SCIPconflictGetNPseudoReconvergenceConss(scip->conflict),
+      SCIPconflictGetNPseudoReconvergenceConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNPseudoReconvergenceLiterals(scip->conflict)
-      / (SCIP_Real)SCIPconflictGetNPseudoReconvergenceClauses(scip->conflict) : 0);
+      / (SCIP_Real)SCIPconflictGetNPseudoReconvergenceConss(scip->conflict) : 0);
    SCIPmessageFPrintInfo(file, "  applied globally :          -          -          - %10"SCIP_LONGINT_FORMAT" %10.1f          -          -          -\n",
-      SCIPconflictGetNAppliedGlobalClauses(scip->conflict),
-      SCIPconflictGetNAppliedGlobalClauses(scip->conflict) > 0
+      SCIPconflictGetNAppliedGlobalConss(scip->conflict),
+      SCIPconflictGetNAppliedGlobalConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNAppliedGlobalLiterals(scip->conflict)
-      / (SCIP_Real)SCIPconflictGetNAppliedGlobalClauses(scip->conflict) : 0);
+      / (SCIP_Real)SCIPconflictGetNAppliedGlobalConss(scip->conflict) : 0);
    SCIPmessageFPrintInfo(file, "  applied locally  :          -          -          - %10"SCIP_LONGINT_FORMAT" %10.1f          -          -          -\n",
-      SCIPconflictGetNAppliedLocalClauses(scip->conflict),
-      SCIPconflictGetNAppliedLocalClauses(scip->conflict) > 0
+      SCIPconflictGetNAppliedLocalConss(scip->conflict),
+      SCIPconflictGetNAppliedLocalConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNAppliedLocalLiterals(scip->conflict)
-      / (SCIP_Real)SCIPconflictGetNAppliedLocalClauses(scip->conflict) : 0);
+      / (SCIP_Real)SCIPconflictGetNAppliedLocalConss(scip->conflict) : 0);
 }
 
 static
@@ -13164,8 +13193,8 @@ void printTreeStatistics(
    SCIPmessageFPrintInfo(file, "  backtracks       : %10"SCIP_LONGINT_FORMAT" (%.1f%%)\n", scip->stat->nbacktracks,
       scip->stat->nnodes > 0 ? 100.0 * (SCIP_Real)scip->stat->nbacktracks / (SCIP_Real)scip->stat->nnodes : 0.0);
    SCIPmessageFPrintInfo(file, "  delayed cutoffs  : %10"SCIP_LONGINT_FORMAT"\n", scip->stat->ndelayedcutoffs);
-   SCIPmessageFPrintInfo(file, "  repropagations   : %10"SCIP_LONGINT_FORMAT" (%"SCIP_LONGINT_FORMAT" domain reductions)\n",
-      scip->stat->nreprops, scip->stat->nrepropboundchgs);
+   SCIPmessageFPrintInfo(file, "  repropagations   : %10"SCIP_LONGINT_FORMAT" (%"SCIP_LONGINT_FORMAT" domain reductions, %"SCIP_LONGINT_FORMAT" cutoffs)\n",
+      scip->stat->nreprops, scip->stat->nrepropboundchgs, scip->stat->nrepropcutoffs);
    SCIPmessageFPrintInfo(file, "  avg switch length: %10.2f\n",
       scip->stat->nnodes > 0
       ? (SCIP_Real)(scip->stat->nactivatednodes + scip->stat->ndeactivatednodes) / (SCIP_Real)scip->stat->nnodes : 0.0);

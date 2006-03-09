@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.43 2006/01/03 12:22:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.44 2006/03/09 12:52:18 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -1521,5 +1521,26 @@ SCIP_Real SCIPgetDualfarkasVarbound(
       return SCIProwGetDualfarkas(consdata->row);
    else
       return 0.0;
+}
+
+/** returns the linear relaxation of the given variable bound constraint; may return NULL if no LP row was yet created;
+ *  the user must not modify the row!
+ */
+SCIP_ROW* SCIPgetRowVarbound(
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a variable bound constraint\n");
+      SCIPABORT();
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->row;
 }
 

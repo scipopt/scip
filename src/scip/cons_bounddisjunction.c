@@ -14,11 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.97 2006/03/09 12:52:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.1 2006/03/09 12:52:17 bzfpfend Exp $"
 
-/**@file   cons_logicor.c
- * @brief  constraint handler for logic or constraints
- *         (equivalent to set covering, but algorithms are suited for depth first search)
+/**@file   cons_bounddisjunction.c
+ * @brief  constraint handler for bound disjunction constraints
  * @author Tobias Achterberg
  */
 
@@ -28,39 +27,30 @@
 #include <string.h>
 #include <limits.h>
 
-#include "scip/cons_logicor.h"
-#include "scip/cons_linear.h"
+#include "scip/cons_bounddisjunction.h"
 
 
-#define CONSHDLR_NAME          "logicor"
-#define CONSHDLR_DESC          "logic or constraints"
-#if 0 /*????????????????????*/
-#define CONSHDLR_SEPAPRIORITY   +800000 /**< priority of the constraint handler for separation */
-#define CONSHDLR_ENFOPRIORITY   +800000 /**< priority of the constraint handler for constraint enforcing */
-#define CONSHDLR_CHECKPRIORITY  -800000 /**< priority of the constraint handler for checking feasibility */
-#else
-#define CONSHDLR_SEPAPRIORITY    +10000 /**< priority of the constraint handler for separation */
-#define CONSHDLR_ENFOPRIORITY  -2000000 /**< priority of the constraint handler for constraint enforcing */
-#define CONSHDLR_CHECKPRIORITY -2000000 /**< priority of the constraint handler for checking feasibility */
-#endif
-#define CONSHDLR_SEPAFREQ             0 /**< frequency for separating cuts; zero means to separate only in the root node */
+#define CONSHDLR_NAME          "bounddisjunction"
+#define CONSHDLR_DESC          "bound disjunction constraints"
+#define CONSHDLR_SEPAPRIORITY         0 /**< priority of the constraint handler for separation */
+#define CONSHDLR_ENFOPRIORITY  -3000000 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_CHECKPRIORITY -3000000 /**< priority of the constraint handler for checking feasibility */
+#define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
-                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define LINCONSUPGD_PRIORITY    +800000
+#define EVENTHDLR_NAME         "bounddisjunction"
+#define EVENTHDLR_DESC         "event handler for bound disjunction constraints"
 
-#define EVENTHDLR_NAME         "logicor"
-#define EVENTHDLR_DESC         "event handler for logic or constraints"
-
-#define CONFLICTHDLR_NAME      "logicor"
-#define CONFLICTHDLR_DESC      "conflict handler creating logic or constraints"
-#define CONFLICTHDLR_PRIORITY  LINCONSUPGD_PRIORITY
+#define CONFLICTHDLR_NAME      "bounddisjunction"
+#define CONFLICTHDLR_DESC      "conflict handler creating bound disjunction constraints"
+#define CONFLICTHDLR_PRIORITY  -3000000
 
 
 /**@todo make this a parameter setting */
@@ -77,18 +67,18 @@ struct SCIP_ConshdlrData
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for events on watched variables */
 };
 
-/** logic or constraint data */
+/** bound disjunction constraint data */
 struct SCIP_ConsData
 {
-   SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
-   SCIP_VAR**            vars;               /**< variables of the constraint */
-   int                   varssize;           /**< size of vars array */
+   SCIP_VAR**            vars;               /**< variables of the literals in the constraint */
+   SCIP_BOUNDTYPE*       boundtypes;         /**< types of bounds of the literals (lower or upper bounds) */
+   SCIP_Real*            bounds;             /**< bounds of the literals */
+   int                   varssize;           /**< size of vars, boundtypes, and bounds arrays */
    int                   nvars;              /**< number of variables in the constraint */
    int                   watchedvar1;        /**< position of the first watched variable */
    int                   watchedvar2;        /**< position of the second watched variable */
    int                   filterpos1;         /**< event filter position of first watched variable */
    int                   filterpos2;         /**< event filter position of second watched variable */
-   unsigned int          impladded:1;        /**< was the 2-variable logic or constraint already added as implication? */
 };
 
 
@@ -98,37 +88,89 @@ struct SCIP_ConsData
  * Local methods
  */
 
-#if 0
-/** installs rounding locks for the given variable in the given logic or constraint */
-static
-SCIP_RETCODE lockRounding(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< logic or constraint */
-   SCIP_VAR*             var                 /**< variable of constraint entry */
-   )
-{
-   /* rounding down may violate the constraint */
-   SCIP_CALL( SCIPlockVarCons(scip, var, cons, TRUE, FALSE) );
-
-   return SCIP_OKAY;
-}
-#endif
-
-/** removes rounding locks for the given variable in the given logic or constraint */
+/** removes rounding locks for the given variable in the given bound disjunction constraint */
 static
 SCIP_RETCODE unlockRounding(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< logic or constraint */
-   SCIP_VAR*             var                 /**< variable of constraint entry */
+   SCIP_CONS*            cons,               /**< bound disjunction constraint */
+   SCIP_CONSDATA*        consdata,           /**< bound disjunction constraint data */
+   int                   pos                 /**< position of the variable in the constraint */
    )
 {
-   /* rounding down may violate the constraint */
-   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, FALSE) );
+   assert(consdata != NULL);
+   assert(0 <= pos && pos < consdata->nvars);
+
+   if( consdata->boundtypes[pos] == SCIP_BOUNDTYPE_LOWER )
+   {
+      /* rounding down may violate the constraint */
+      SCIP_CALL( SCIPunlockVarCons(scip, consdata->vars[pos], cons, TRUE, FALSE) );
+   }
+   else
+   {
+      /* rounding up may violate the constraint */
+      SCIP_CALL( SCIPunlockVarCons(scip, consdata->vars[pos], cons, FALSE, TRUE) );
+   }
 
    return SCIP_OKAY;
 }
 
-/** creates constaint handler data for logic or constraint handler */
+/** catches the events on a single variable of the bound disjunction constraint */
+static
+SCIP_RETCODE catchEvents(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< bound disjunction constraint */
+   SCIP_CONSDATA*        consdata,           /**< bound disjunction constraint data */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   int                   pos,                /**< position of the variable in the constraint */
+   int*                  filterpos           /**< pointer to store position of event filter entry, or NULL */
+   )
+{
+   assert(consdata != NULL);
+   assert(0 <= pos && pos < consdata->nvars);
+
+   if( consdata->boundtypes[pos] == SCIP_BOUNDTYPE_LOWER )
+   {
+      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED,
+            eventhdlr, (SCIP_EVENTDATA*)cons, filterpos) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_LBTIGHTENED | SCIP_EVENTTYPE_UBRELAXED,
+            eventhdlr, (SCIP_EVENTDATA*)cons, filterpos) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** drops the events on a single variable of the bound disjunction constraint */
+static
+SCIP_RETCODE dropEvents(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< bound disjunction constraint */
+   SCIP_CONSDATA*        consdata,           /**< bound disjunction constraint data */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   int                   pos,                /**< position of the variable in the constraint */
+   int                   filterpos           /**< position of event filter entry returned by SCIPcatchVarEvent(), or -1 */
+   )
+{
+   assert(consdata != NULL);
+   assert(0 <= pos && pos < consdata->nvars);
+
+   if( consdata->boundtypes[pos] == SCIP_BOUNDTYPE_LOWER )
+   {
+      SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED,
+            eventhdlr, (SCIP_EVENTDATA*)cons, filterpos) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_LBTIGHTENED | SCIP_EVENTTYPE_UBRELAXED,
+            eventhdlr, (SCIP_EVENTDATA*)cons, filterpos) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** creates constaint handler data for bound disjunction constraint handler */
 static
 SCIP_RETCODE conshdlrdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -143,14 +185,14 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    if( (*conshdlrdata)->eventhdlr == NULL )
    {
-      SCIPerrorMessage("event handler for logic or constraints not found\n");
+      SCIPerrorMessage("event handler for bound disjunction constraints not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
    
    return SCIP_OKAY;
 }
 
-/** frees constraint handler data for logic or constraint handler */
+/** frees constraint handler data for bound disjunction constraint handler */
 static
 SCIP_RETCODE conshdlrdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -165,30 +207,37 @@ SCIP_RETCODE conshdlrdataFree(
    return SCIP_OKAY;
 }
 
-/** creates a logic or constraint data object */
+/** creates a bound disjunction constraint data object */
 static
 SCIP_RETCODE consdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA**       consdata,           /**< pointer to store the logic or constraint data */
+   SCIP_CONSDATA**       consdata,           /**< pointer to store the bound disjunction constraint data */
    int                   nvars,              /**< number of variables in the constraint */
-   SCIP_VAR**            vars                /**< variables of the constraint */
+   SCIP_VAR**            vars,               /**< variables of the literals in the constraint */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< types of bounds of the literals (lower or upper bounds) */
+   SCIP_Real*            bounds              /**< bounds of the literals */
    )
 {
    assert(consdata != NULL);
    assert(nvars == 0 || vars != NULL);
+   assert(nvars == 0 || boundtypes != NULL);
+   assert(nvars == 0 || bounds != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
 
-   (*consdata)->row = NULL;
    if( nvars > 0 )
    {
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->boundtypes, boundtypes, nvars) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->bounds, bounds, nvars) );
       (*consdata)->varssize = nvars;
       (*consdata)->nvars = nvars;
    }
    else
    {
       (*consdata)->vars = NULL;
+      (*consdata)->boundtypes = NULL;
+      (*consdata)->bounds = NULL;
       (*consdata)->varssize = 0;
       (*consdata)->nvars = 0;
    }
@@ -196,7 +245,6 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->watchedvar2 = -1;
    (*consdata)->filterpos1 = -1;
    (*consdata)->filterpos2 = -1;
-   (*consdata)->impladded = FALSE;
 
    /* get transformed variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
@@ -207,33 +255,29 @@ SCIP_RETCODE consdataCreate(
    return SCIP_OKAY;
 }   
 
-/** frees a logic or constraint data */
+/** frees a bound disjunction constraint data */
 static
 SCIP_RETCODE consdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA**       consdata            /**< pointer to the logic or constraint */
+   SCIP_CONSDATA**       consdata            /**< pointer to the bound disjunction constraint */
    )
 {
    assert(consdata != NULL);
    assert(*consdata != NULL);
 
-   /* release the row */
-   if( (*consdata)->row != NULL )
-   {
-      SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
-   }
-
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vars, (*consdata)->varssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->boundtypes, (*consdata)->varssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->bounds, (*consdata)->varssize);
    SCIPfreeBlockMemory(scip, consdata);
 
    return SCIP_OKAY;
 }
 
-/** prints logic or constraint to file stream */
+/** prints bound disjunction constraint to file stream */
 static
 void consdataPrint(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSDATA*        consdata,           /**< logic or constraint data */
+   SCIP_CONSDATA*        consdata,           /**< bound disjunction constraint data */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
@@ -242,13 +286,14 @@ void consdataPrint(
    assert(consdata != NULL);
 
    /* print coefficients */
-   SCIPinfoMessage(scip, file, "logicor(");
+   SCIPinfoMessage(scip, file, "bounddisjunction(");
    for( v = 0; v < consdata->nvars; ++v )
    {
       assert(consdata->vars[v] != NULL);
       if( v > 0 )
          SCIPinfoMessage(scip, file, ", ");
-      SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName(consdata->vars[v]));
+      SCIPinfoMessage(scip, file, "<%s> %s %g", SCIPvarGetName(consdata->vars[v]),
+         consdata->boundtypes[v] == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", consdata->bounds[v]);
    }
    SCIPinfoMessage(scip, file, ")\n");
 }
@@ -257,7 +302,7 @@ void consdataPrint(
 static
 SCIP_RETCODE switchWatchedvars(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< logic or constraint */
+   SCIP_CONS*            cons,               /**< bound disjunction constraint */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    int                   watchedvar1,        /**< new first watched variable */
    int                   watchedvar2         /**< new second watched variable */
@@ -291,30 +336,22 @@ SCIP_RETCODE switchWatchedvars(
    if( consdata->watchedvar1 != -1 && consdata->watchedvar1 != watchedvar1 )
    {
       assert(consdata->filterpos1 != -1);
-      SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar1],
-            SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED, eventhdlr, (SCIP_EVENTDATA*)cons,
-            consdata->filterpos1) );
+      SCIP_CALL( dropEvents(scip, cons, consdata, eventhdlr, consdata->watchedvar1, consdata->filterpos1) );
    }
    if( consdata->watchedvar2 != -1 && consdata->watchedvar2 != watchedvar2 )
    {
       assert(consdata->filterpos2 != -1);
-      SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar2],
-            SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED, eventhdlr, (SCIP_EVENTDATA*)cons, 
-            consdata->filterpos2) );
+      SCIP_CALL( dropEvents(scip, cons, consdata, eventhdlr, consdata->watchedvar2, consdata->filterpos2) );
    }
 
    /* catch events on new watched variables */
    if( watchedvar1 != -1 && watchedvar1 != consdata->watchedvar1 )
    {
-      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[watchedvar1],
-            SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED, eventhdlr, (SCIP_EVENTDATA*)cons,
-            &consdata->filterpos1) );
+      SCIP_CALL( catchEvents(scip, cons, consdata, eventhdlr, watchedvar1, &consdata->filterpos1) );
    }
    if( watchedvar2 != -1 && watchedvar2 != consdata->watchedvar2 )
    {
-      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[watchedvar2],
-            SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED, eventhdlr, (SCIP_EVENTDATA*)cons,
-            &consdata->filterpos2) );
+      SCIP_CALL( catchEvents(scip, cons, consdata, eventhdlr, watchedvar2, &consdata->filterpos2) );
    }
 
    /* set the new watched variables */
@@ -324,11 +361,11 @@ SCIP_RETCODE switchWatchedvars(
    return SCIP_OKAY;
 }
 
-/** deletes coefficient at given position from logic or constraint data */
+/** deletes coefficient at given position from bound disjunction constraint data */
 static
 SCIP_RETCODE delCoefPos(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< logic or constraint */
+   SCIP_CONS*            cons,               /**< bound disjunction constraint */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    int                   pos                 /**< position of coefficient to delete */
    )
@@ -343,7 +380,7 @@ SCIP_RETCODE delCoefPos(
    assert(SCIPconsIsTransformed(cons) == SCIPvarIsTransformed(consdata->vars[pos]));
 
    /* remove the rounding locks of variable */
-   SCIP_CALL( unlockRounding(scip, cons, consdata->vars[pos]) );
+   SCIP_CALL( unlockRounding(scip, cons, consdata, pos) );
 
    if( SCIPconsIsTransformed(cons) )
    {
@@ -362,6 +399,8 @@ SCIP_RETCODE delCoefPos(
 
    /* move the last variable to the free slot */
    consdata->vars[pos] = consdata->vars[consdata->nvars-1];
+   consdata->boundtypes[pos] = consdata->boundtypes[consdata->nvars-1];
+   consdata->bounds[pos] = consdata->bounds[consdata->nvars-1];
    consdata->nvars--;
 
    /* if the last variable (that moved) was watched, update the watched position */
@@ -375,17 +414,16 @@ SCIP_RETCODE delCoefPos(
    return SCIP_OKAY;
 }
 
-/** deletes all zero-fixed variables, checks for variables fixed to one */
+/** deletes all variables with global bounds violating the literal, checks for global bounds satistying the literal */
 static
-SCIP_RETCODE applyFixings(
+SCIP_RETCODE applyGlobalBounds(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< logic or constraint */
+   SCIP_CONS*            cons,               /**< bound disjunction constraint */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    SCIP_Bool*            redundant           /**< returns whether a variable fixed to one exists in the constraint */
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_VAR* var;
    int v;
 
    assert(eventhdlr != NULL);
@@ -399,25 +437,28 @@ SCIP_RETCODE applyFixings(
    v = 0;
    while( v < consdata->nvars )
    {
+      SCIP_VAR* var;
+
       var = consdata->vars[v];
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
 
-      if( SCIPvarGetLbGlobal(var) > 0.5 )
+      if( consdata->boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
       {
-         assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
-         *redundant = TRUE;
-         return SCIP_OKAY;
+         if( SCIPisFeasGE(scip, SCIPvarGetLbGlobal(var), consdata->bounds[v]) )
+         {
+            *redundant = TRUE;
+            return SCIP_OKAY;
+         }
+         else if( SCIPisFeasLT(scip, SCIPvarGetUbGlobal(var), consdata->bounds[v]) )
+         {
+            SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+         }
+         else
+            ++v;
       }
-      else if( SCIPvarGetUbGlobal(var) < 0.5 )
-      {
-         assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
-         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
-      }
-      else
-         ++v;
    }
 
-   SCIPdebugMessage("after fixings: ");
+   SCIPdebugMessage("after global bounds: ");
    SCIPdebug(consdataPrint(scip, consdata, NULL));
 
    return SCIP_OKAY;
@@ -427,7 +468,7 @@ SCIP_RETCODE applyFixings(
 static
 SCIP_RETCODE analyzeConflict(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< logic or constraint that detected the conflict */
+   SCIP_CONS*            cons                /**< bound disjunction constraint that detected the conflict */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -440,17 +481,52 @@ SCIP_RETCODE analyzeConflict(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
+   /* initialize conflict analysis, and add all bounds of infeasible constraint to conflict candidate queue */
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
    for( v = 0; v < consdata->nvars; ++v )
    {
-      SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
+      /* the opposite bound is in conflict with this literal */
+      SCIP_CALL( SCIPaddConflictBd(scip, consdata->vars[v], SCIPboundtypeOpposite(consdata->boundtypes[v]), NULL) );
    }
 
    /* analyze the conflict */
    SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 
    return SCIP_OKAY;
+}
+
+/** returns whether literal at the given position is satisfied in the local bounds */
+static
+SCIP_Bool isLiteralSatisfied(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< bound disjunction constraint data */
+   int                   pos                 /**< position of the literal */
+   )
+{
+   assert(consdata != NULL);
+   assert(0 <= pos && pos < consdata->nvars);
+
+   if( consdata->boundtypes[pos] == SCIP_BOUNDTYPE_LOWER )
+      return SCIPisFeasGE(scip, SCIPvarGetLbLocal(consdata->vars[pos]), consdata->bounds[pos]);
+   else
+      return SCIPisFeasLE(scip, SCIPvarGetUbLocal(consdata->vars[pos]), consdata->bounds[pos]);
+}
+
+/** returns whether literal at the given position is violated in the local bounds */
+static
+SCIP_Bool isLiteralViolated(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< bound disjunction constraint data */
+   int                   pos                 /**< position of the literal */
+   )
+{
+   assert(consdata != NULL);
+   assert(0 <= pos && pos < consdata->nvars);
+
+   if( consdata->boundtypes[pos] == SCIP_BOUNDTYPE_LOWER )
+      return SCIPisFeasLT(scip, SCIPvarGetUbLocal(consdata->vars[pos]), consdata->bounds[pos]);
+   else
+      return SCIPisFeasGT(scip, SCIPvarGetLbLocal(consdata->vars[pos]), consdata->bounds[pos]);
 }
 
 /** disables or deletes the given constraint, depending on the current depth */
@@ -472,20 +548,22 @@ SCIP_RETCODE disableCons(
    return SCIP_OKAY;
 }
 
-/** checks constraint for violation only looking at the watched variables, applies fixings if possible */
+/** checks constraint for violation only looking at the watched variables, applies bound changes if possible */
 static
 SCIP_RETCODE processWatchedVars(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< logic or constraint to be processed */
+   SCIP_CONS*            cons,               /**< bound disjunction constraint to be processed */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
+   SCIP_Bool*            infeasible,         /**< pointer to store TRUE, if the constraint is infeasible in current bounds */
    SCIP_Bool*            reduceddom,         /**< pointer to store TRUE, if a domain reduction was found */
-   SCIP_Bool*            addcut,             /**< pointer to store whether this constraint must be added as a cut */
    SCIP_Bool*            mustcheck           /**< pointer to store whether this constraint must be checked for feasibility */
    )
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
+   SCIP_BOUNDTYPE* boundtypes;
+   SCIP_Real* bounds;
    SCIP_Longint nbranchings1;
    SCIP_Longint nbranchings2;
    int nvars;
@@ -497,49 +575,51 @@ SCIP_RETCODE processWatchedVars(
    assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
    assert(cutoff != NULL);
    assert(reduceddom != NULL);
-   assert(addcut != NULL);
    assert(mustcheck != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->watchedvar1 == -1 || consdata->watchedvar1 != consdata->watchedvar2);
 
-   *addcut = FALSE;
    *mustcheck = FALSE;
 
    SCIPdebugMessage("processing watched variables of constraint <%s>\n", SCIPconsGetName(cons));
 
-   vars = consdata->vars;
    nvars = consdata->nvars;
+   vars = consdata->vars;
+   boundtypes = consdata->boundtypes;
+   bounds = consdata->bounds;
    assert(nvars == 0 || vars != NULL);
+   assert(nvars == 0 || boundtypes != NULL);
+   assert(nvars == 0 || bounds != NULL);
 
-   /* check watched variables if they are fixed to one */
-   if( consdata->watchedvar1 >= 0 && SCIPvarGetLbLocal(vars[consdata->watchedvar1]) > 0.5 )
+   /* check watched variables if they are satisfying the literal */
+   if( consdata->watchedvar1 >= 0 && isLiteralSatisfied(scip, consdata, consdata->watchedvar1) )
    {
-      /* the variable is fixed to one, making the constraint redundant -> disable the constraint */
-      SCIPdebugMessage(" -> disabling constraint <%s> (watchedvar1 fixed to 1.0)\n", SCIPconsGetName(cons));
+      /* the literal is satisfied, making the constraint redundant */
+      SCIPdebugMessage(" -> disabling constraint <%s> (watchedvar1 satisfied)\n", SCIPconsGetName(cons));
       SCIP_CALL( disableCons(scip, cons) );
       return SCIP_OKAY;
    }
-   if( consdata->watchedvar2 >= 0 && SCIPvarGetLbLocal(vars[consdata->watchedvar2]) > 0.5 )
+   if( consdata->watchedvar2 >= 0 && isLiteralSatisfied(scip, consdata, consdata->watchedvar2) )
    {
-      /* the variable is fixed to one, making the constraint redundant -> disable the constraint */
-      SCIPdebugMessage(" -> disabling constraint <%s> (watchedvar2 fixed to 1.0)\n", SCIPconsGetName(cons));
+      /* the literal is satisfied, making the constraint redundant */
+      SCIPdebugMessage(" -> disabling constraint <%s> (watchedvar2 satisfied)\n", SCIPconsGetName(cons));
       SCIP_CALL( disableCons(scip, cons) );
       return SCIP_OKAY;
    }
 
-   /* check if watched variables are still unfixed */
+   /* check if watched variables are still undecided */
    watchedvar1 = -1;
    watchedvar2 = -1;
    nbranchings1 = SCIP_LONGINT_MAX;
    nbranchings2 = SCIP_LONGINT_MAX;
-   if( consdata->watchedvar1 >= 0 && SCIPvarGetUbLocal(vars[consdata->watchedvar1]) > 0.5 )
+   if( consdata->watchedvar1 >= 0 && !isLiteralViolated(scip, consdata, consdata->watchedvar1) )
    {
       watchedvar1 = consdata->watchedvar1;
       nbranchings1 = -1; /* prefer keeping the watched variable */
    }
-   if( consdata->watchedvar2 >= 0 && SCIPvarGetUbLocal(vars[consdata->watchedvar2]) > 0.5 )
+   if( consdata->watchedvar2 >= 0 && !isLiteralViolated(scip, consdata, consdata->watchedvar2) )
    {
       if( watchedvar1 == -1 )
       {
@@ -563,22 +643,22 @@ SCIP_RETCODE processWatchedVars(
       for( v = 0; v < nvars; ++v )
       {
          SCIP_Longint nbranchings;
-
+         
          /* don't process the watched variables again */
          if( v == consdata->watchedvar1 || v == consdata->watchedvar2 )
             continue;
 
-         /* check, if the variable is fixed */
-         if( SCIPvarGetUbLocal(vars[v]) < 0.5 )
+         /* check, if the literal is violated */
+         if( isLiteralViolated(scip, consdata, v) )
             continue;
-         
+
          /* check, if the literal is satisfied */
-         if( SCIPvarGetLbLocal(vars[v]) > 0.5 )
+         if( isLiteralSatisfied(scip, consdata, v) )
          {
             assert(v != consdata->watchedvar1);
             assert(v != consdata->watchedvar2);
             
-            /* the variable is fixed to one, making the constraint redundant;
+            /* the literal is satisfied, making the constraint redundant;
              * make sure, the feasible variable is watched and disable the constraint
              */
             SCIPdebugMessage(" -> disabling constraint <%s> (variable <%s> fixed to 1.0)\n", 
@@ -594,10 +674,10 @@ SCIP_RETCODE processWatchedVars(
             SCIP_CALL( disableCons(scip, cons) );
             return SCIP_OKAY;
          }
-         
-         /* the variable is unfixed and can be used as watched variable */
-         nbranchings = SCIPvarGetNBranchingsCurrentRun(vars[v], SCIP_BRANCHDIR_DOWNWARDS);
-         assert(nbranchings >= 0);
+      
+         /* the literal is still undecided and can be used as watched variable */
+         nbranchings = SCIPvarGetNBranchingsCurrentRun(vars[v], 
+            boundtypes[v] == SCIP_BOUNDTYPE_LOWER ? SCIP_BRANCHDIR_DOWNWARDS : SCIP_BRANCHDIR_UPWARDS);
          if( nbranchings < nbranchings2 )
          {
             if( nbranchings < nbranchings1 )
@@ -620,18 +700,17 @@ SCIP_RETCODE processWatchedVars(
 
    if( watchedvar1 == -1 )
    {
-      /* there is no unfixed variable left -> the constraint is infeasible
-       *  - a modifiable constraint must be added as a cut and further pricing must be performed in the LP solving loop
+      /* there is no undecided literal left -> the constraint is infeasible
+       *  - a modifiable constraint is infeasible
        *  - an unmodifiable constraint is infeasible and the node can be cut off
        */
       assert(watchedvar2 == -1);
 
       SCIPdebugMessage(" -> constraint <%s> is infeasible\n", SCIPconsGetName(cons));
+      *infeasible = TRUE;
 
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
-      if( SCIPconsIsModifiable(cons) )
-         *addcut = TRUE;
-      else
+      if( !SCIPconsIsModifiable(cons) )
       {
          /* use conflict analysis to get a conflict constraint out of the conflicting assignment */
          SCIP_CALL( analyzeConflict(scip, cons) );
@@ -642,23 +721,33 @@ SCIP_RETCODE processWatchedVars(
    }
    else if( watchedvar2 == -1 )
    {
-      /* there is only one unfixed variable:
+      /* there is only one undecided literal:
        * - a modifiable constraint must be checked manually
-       * - an unmodifiable constraint is feasible and can be disabled after the remaining variable is fixed to one
+       * - an unmodifiable constraint is feasible and can be disabled after the remaining literal is satisfied
        */
       assert(0 <= watchedvar1 && watchedvar1 < nvars);
-      assert(SCIPisEQ(scip, SCIPvarGetLbLocal(vars[watchedvar1]), 0.0));
-      assert(SCIPisEQ(scip, SCIPvarGetUbLocal(vars[watchedvar1]), 1.0));
+      assert(!isLiteralViolated(scip, consdata, watchedvar1));
+      assert(!isLiteralSatisfied(scip, consdata, watchedvar1));
       if( SCIPconsIsModifiable(cons) )
          *mustcheck = TRUE;
       else
       {
          SCIP_Bool infbdchg;
 
-         /* fixed remaining variable to one and disable constraint; make sure, the fixed-to-one variable is watched */
-         SCIPdebugMessage(" -> single-literal constraint <%s> (fix <%s> to 1.0) at depth %d\n", 
-            SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar1]), SCIPgetDepth(scip));
-         SCIP_CALL( SCIPinferBinvarCons(scip, vars[watchedvar1], TRUE, cons, 0, &infbdchg, NULL) );
+         /* satisfy remaining literal and disable constraint; make sure, the fixed-to-one variable is watched */
+         SCIPdebugMessage(" -> single-literal constraint <%s> (change bound <%s> %s %g) at depth %d\n", 
+            SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar1]), 
+            boundtypes[watchedvar1] == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", bounds[watchedvar1], SCIPgetDepth(scip));
+         if( boundtypes[watchedvar1] == SCIP_BOUNDTYPE_LOWER )
+         {
+            SCIP_CALL( SCIPinferVarLbCons(scip, vars[watchedvar1], bounds[watchedvar1], cons, watchedvar1,
+                  &infbdchg, NULL) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPinferVarUbCons(scip, vars[watchedvar1], bounds[watchedvar1], cons, watchedvar1,
+                  &infbdchg, NULL) );
+         }
          assert(!infbdchg);
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
          if( watchedvar1 != consdata->watchedvar1 ) /* keep one of the watched variables */
@@ -671,16 +760,16 @@ SCIP_RETCODE processWatchedVars(
    }
    else
    {
-      SCIPdebugMessage(" -> new watched variables <%s> and <%s> of constraint <%s> are still unfixed\n",
+      SCIPdebugMessage(" -> new watched variables <%s> and <%s> of constraint <%s> are still undecided\n",
          SCIPvarGetName(vars[watchedvar1]), SCIPvarGetName(vars[watchedvar2]), SCIPconsGetName(cons));
 
       /* switch to the new watched variables */
       SCIP_CALL( switchWatchedvars(scip, cons, eventhdlr, watchedvar1, watchedvar2) );
 
-      /* there are at least two unfixed variables -> the constraint must be checked manually */
+      /* there are at least two undecided variables -> the constraint must be checked manually */
       *mustcheck = TRUE;
 
-      /* disable propagation of constraint until a watched variable gets fixed */
+      /* disable propagation of constraint until the corresponding bound of a watched variable changed */
       SCIP_CALL( SCIPdisableConsPropagation(scip, cons) );
 
       /* increase aging counter */
@@ -694,15 +783,16 @@ SCIP_RETCODE processWatchedVars(
 static
 SCIP_RETCODE checkCons(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< logic or constraint to be checked */
+   SCIP_CONS*            cons,               /**< bound disjunction constraint to be checked */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool*            violated            /**< pointer to store whether the given solution violates the constraint */
    )
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
+   SCIP_BOUNDTYPE* boundtypes;
+   SCIP_Real* bounds;
    SCIP_Real solval;
-   SCIP_Real sum;
    int nvars;
    int v;
 
@@ -712,31 +802,34 @@ SCIP_RETCODE checkCons(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   vars = consdata->vars;
    nvars = consdata->nvars;
+   vars = consdata->vars;
+   boundtypes = consdata->boundtypes;
+   bounds = consdata->bounds;
+   assert(nvars == 0 || vars != NULL);
+   assert(nvars == 0 || boundtypes != NULL);
+   assert(nvars == 0 || bounds != NULL);
    
-   /* if we should check the current LP or pseudo solution, look for a fixed-to-one variable in order to disable
+   /* if we should check the current LP or pseudo solution, look for a satisfied literal in order to disable
     * the constraint
     */
    if( sol == NULL )
    {
       for( v = 0; v < nvars; ++v )
       {
-         if( SCIPvarGetLbLocal(vars[v]) > 0.5 )
+         if( isLiteralSatisfied(scip, consdata, v) )
          {
             SCIP_CONSHDLR* conshdlr;
             SCIP_CONSHDLRDATA* conshdlrdata;
 
-            SCIPdebugMessage(" -> disabling constraint <%s> (variable <%s> fixed to 1.0)\n", 
-               SCIPconsGetName(cons), SCIPvarGetName(vars[v]));
+            SCIPdebugMessage(" -> disabling constraint <%s> (literal <%s> %s %g is satisfied)\n", 
+               SCIPconsGetName(cons), SCIPvarGetName(vars[v]), boundtypes[v] == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", 
+               bounds[v]);
 
-            /* the variable is fixed to one: disable the constraint; watch the feasible variable to reenable
-             * the constraint if it is no longer fixed to one
-             */
+            /* the literal is satisfied: disable the constraint */
             conshdlr = SCIPconsGetHdlr(cons);
             conshdlrdata = SCIPconshdlrGetData(conshdlr);
             assert(conshdlrdata != NULL);
-            /*???????????????SCIP_CALL( switchWatchedvars(scip, cons, conshdlrdata->eventhdlr, v, -1) );*/
             SCIP_CALL( disableCons(scip, cons) );
 
             return SCIP_OKAY;
@@ -744,143 +837,17 @@ SCIP_RETCODE checkCons(
       }
    }
 
-   /* calculate the constraint's activity */
-   sum = 0.0;
-   solval = 0.0;
-   for( v = 0; v < nvars && sum < 1.0; ++v )
+   /* check the given solution */
+   *violated = TRUE;
+   for( v = 0; v < nvars; ++v )
    {
-      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY);
       solval = SCIPgetSolVal(scip, sol, vars[v]);
-      assert(SCIPisFeasGE(scip, solval, 0.0) && SCIPisFeasLE(scip, solval, 1.0));
-      sum += solval;
-   }
-
-   *violated = SCIPisFeasLT(scip, sum, 1.0);
-
-   return SCIP_OKAY;
-}
-
-/** creates an LP row in a logic or constraint data object */
-static
-SCIP_RETCODE createRow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< logic or constraint */
-   )
-{
-   SCIP_CONSDATA* consdata;
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(consdata->row == NULL);
-
-   SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons), 1.0, SCIPinfinity(scip),
-         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
-   
-   SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->row, consdata->nvars, consdata->vars, 1.0) );
-
-   return SCIP_OKAY;
-}
-
-/** adds logic or constraint as cut to the LP */
-static
-SCIP_RETCODE addCut(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< logic or constraint */
-   SCIP_SOL*             sol                 /**< primal CIP solution, NULL for current LP solution */
-   )
-{
-   SCIP_CONSDATA* consdata;
-   
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   
-   if( consdata->row == NULL )
-   {
-      /* convert logic or constraint data into LP row */
-      SCIP_CALL( createRow(scip, cons) );
-   }
-   assert(consdata->row != NULL);
-   assert(!SCIProwIsInLP(consdata->row));
-
-   SCIPdebugMessage("adding constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
-
-   /* insert LP row as cut */
-   SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
-
-   return SCIP_OKAY;
-}
-
-/** checks constraint for violation, and adds it as a cut if possible */
-static
-SCIP_RETCODE separateCons(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< logic or constraint to be separated */
-   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
-   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
-   SCIP_Bool*            separated,          /**< pointer to store TRUE, if a cut was found */
-   SCIP_Bool*            reduceddom          /**< pointer to store TRUE, if a domain reduction was found */
-   )
-{
-   SCIP_Bool addcut;
-   SCIP_Bool mustcheck;
-
-   assert(cons != NULL);
-   assert(SCIPconsGetHdlr(cons) != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
-   assert(cutoff != NULL);
-   assert(separated != NULL);
-   assert(reduceddom != NULL);
-
-   SCIPdebugMessage("separating constraint <%s>\n", SCIPconsGetName(cons));
-
-   /* update and check the watched variables, if they were changed since last processing */
-   if( sol == NULL && SCIPconsIsPropagationEnabled(cons) )
-   {
-      SCIP_CALL( processWatchedVars(scip, cons, eventhdlr, cutoff, reduceddom, &addcut, &mustcheck) );
-   }
-   else
-   {
-      addcut = FALSE;
-      mustcheck = TRUE;
-   }
-
-   if( mustcheck )
-   {
-      SCIP_CONSDATA* consdata;
-
-      assert(!addcut);
-      
-      consdata = SCIPconsGetData(cons);
-      assert(consdata != NULL);
-
-      /* variable's fixings didn't give us any information -> we have to check the constraint */
-      if( sol == NULL && consdata->row != NULL )
+      if( (boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPisFeasGE(scip, solval, bounds[v]))
+         || (boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPisFeasLE(scip, solval, bounds[v])) )
       {
-         /* skip constraints already in the LP */
-         if( SCIProwIsInLP(consdata->row) )
-            return SCIP_OKAY;
-         else
-         {
-            SCIP_Real feasibility;
-            
-            assert(!SCIProwIsInLP(consdata->row));
-            feasibility = SCIPgetRowLPFeasibility(scip, consdata->row);
-            addcut = SCIPisFeasNegative(scip, feasibility);
-         }
+         *violated = FALSE;
+         break;
       }
-      else
-      {
-         SCIP_CALL( checkCons(scip, cons, sol, &addcut) );
-      }
-   }
-
-   if( addcut )
-   {
-      /* insert LP row as cut */
-      SCIP_CALL( addCut(scip, cons, sol) );
-      SCIP_CALL( SCIPresetConsAge(scip, cons) );
-      *separated = TRUE;
    }
 
    return SCIP_OKAY;
@@ -888,17 +855,15 @@ SCIP_RETCODE separateCons(
 
 /** enforces the pseudo solution on the given constraint */
 static
-SCIP_RETCODE enforcePseudo(
+SCIP_RETCODE enforceCurrentSol(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< logic or constraint to be separated */
+   SCIP_CONS*            cons,               /**< bound disjunction constraint to be separated */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
    SCIP_Bool*            infeasible,         /**< pointer to store TRUE, if the constraint was infeasible */
-   SCIP_Bool*            reduceddom,         /**< pointer to store TRUE, if a domain reduction was found */
-   SCIP_Bool*            solvelp             /**< pointer to store TRUE, if the LP has to be solved */
+   SCIP_Bool*            reduceddom          /**< pointer to store TRUE, if a domain reduction was found */
    )
 {
-   SCIP_Bool addcut;
    SCIP_Bool mustcheck;
 
    assert(!SCIPhasCurrentNodeLP(scip));
@@ -908,24 +873,18 @@ SCIP_RETCODE enforcePseudo(
    assert(cutoff != NULL);
    assert(infeasible != NULL);
    assert(reduceddom != NULL);
-   assert(solvelp != NULL);
 
    /* update and check the watched variables, if they were changed since last processing */
    if( SCIPconsIsPropagationEnabled(cons) )
    {
-      SCIP_CALL( processWatchedVars(scip, cons, eventhdlr, cutoff, reduceddom, &addcut, &mustcheck) );
+      SCIP_CALL( processWatchedVars(scip, cons, eventhdlr, cutoff, infeasible, reduceddom, &mustcheck) );
    }
    else
-   {
-      addcut = FALSE;
       mustcheck = TRUE;
-   }
 
    if( mustcheck )
    {
       SCIP_Bool violated;
-
-      assert(!addcut);
 
       SCIP_CALL( checkCons(scip, cons, NULL, &violated) );
       if( violated )
@@ -934,12 +893,6 @@ SCIP_RETCODE enforcePseudo(
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
          *infeasible = TRUE;
       }
-   }
-   else if( addcut )
-   {
-      /* a cut must be added to the LP -> we have to solve the LP immediately */
-      SCIP_CALL( SCIPresetConsAge(scip, cons) );
-      *solvelp = TRUE;
    }
 
    return SCIP_OKAY;
@@ -954,7 +907,7 @@ SCIP_RETCODE enforcePseudo(
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
-SCIP_DECL_CONSFREE(consFreeLogicor)
+SCIP_DECL_CONSFREE(consFreeBounddisjunction)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
@@ -975,58 +928,39 @@ SCIP_DECL_CONSFREE(consFreeLogicor)
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#define consInitLogicor NULL
+#define consInitBounddisjunction NULL
 
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitLogicor NULL
+#define consExitBounddisjunction NULL
 
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreLogicor NULL
+#define consInitpreBounddisjunction NULL
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreLogicor NULL
+#define consExitpreBounddisjunction NULL
 
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolLogicor NULL
+#define consInitsolBounddisjunction NULL
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-static
-SCIP_DECL_CONSEXITSOL(consExitsolLogicor)
-{  /*lint --e{715}*/
-   SCIP_CONSDATA* consdata;
-   int c;
-
-   /* release the rows of all constraints */
-   for( c = 0; c < nconss; ++c )
-   {
-      consdata = SCIPconsGetData(conss[c]);
-      assert(consdata != NULL);
-
-      if( consdata->row != NULL )
-      {
-         SCIP_CALL( SCIPreleaseRow(scip, &consdata->row) );
-      }
-   }
-
-   return SCIP_OKAY;
-}
+#define consExitsolBounddisjunction NULL
 
 
 /** frees specific constraint data */
 static
-SCIP_DECL_CONSDELETE(consDeleteLogicor)
+SCIP_DECL_CONSDELETE(consDeleteBounddisjunction)
 {  /*lint --e{715}*/
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(consdata != NULL);
    assert(*consdata != NULL);
 
-   /* free LP row and logic or constraint */
+   /* free LP row and bound disjunction constraint */
    SCIP_CALL( consdataFree(scip, consdata) );
 
    return SCIP_OKAY;
@@ -1035,12 +969,12 @@ SCIP_DECL_CONSDELETE(consDeleteLogicor)
 
 /** transforms constraint data into data belonging to the transformed problem */ 
 static
-SCIP_DECL_CONSTRANS(consTransLogicor)
+SCIP_DECL_CONSTRANS(consTransBounddisjunction)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* sourcedata;
    SCIP_CONSDATA* targetdata;
 
-   /*debugMessage("Trans method of logic or constraints\n");*/
+   /*debugMessage("Trans method of bound disjunction constraints\n");*/
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -1050,10 +984,10 @@ SCIP_DECL_CONSTRANS(consTransLogicor)
 
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
-   assert(sourcedata->row == NULL);  /* in original problem, there cannot be LP rows */
 
    /* create constraint data for target constraint */
-   SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars) );
+   SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars,
+         sourcedata->boundtypes, sourcedata->bounds) );
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -1067,176 +1001,25 @@ SCIP_DECL_CONSTRANS(consTransLogicor)
 
 
 /** LP initialization method of constraint handler */
-static
-SCIP_DECL_CONSINITLP(consInitlpLogicor)
-{  /*lint --e{715}*/
-   int c;
-
-   for( c = 0; c < nconss; ++c )
-   {
-      if( SCIPconsIsInitial(conss[c]) )
-      {
-         SCIP_CALL( addCut(scip, conss[c], NULL) );
-      }
-   }
-
-   return SCIP_OKAY;
-}
+#define consInitlpBounddisjunction NULL
 
 
 /** separation method of constraint handler for LP solutions */
-static
-SCIP_DECL_CONSSEPALP(consSepalpLogicor)
-{  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool cutoff;
-   SCIP_Bool separated;
-   SCIP_Bool reduceddom;
-   int c;
-
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(nconss == 0 || conss != NULL);
-   assert(result != NULL);
-
-   SCIPdebugMessage("separating %d/%d logic or constraints\n", nusefulconss, nconss);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   cutoff = FALSE;
-   separated = FALSE;
-   reduceddom = FALSE;
-
-   /* check all useful logic or constraints for feasibility */
-   for( c = 0; c < nusefulconss && !cutoff; ++c )
-   {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
-   }
-
-   /* combine logic or constraints to get more cuts */
-   /**@todo further cuts of logic or constraints */
-
-   /* return the correct result */
-   if( cutoff )
-      *result = SCIP_CUTOFF;
-   else if( reduceddom )
-      *result = SCIP_REDUCEDDOM;
-   else if( separated )
-      *result = SCIP_SEPARATED;
-   else
-      *result = SCIP_DIDNOTFIND;
-
-   return SCIP_OKAY;
-}
+#define consSepalpBounddisjunction NULL
 
 
 /** separation method of constraint handler for arbitrary primal solutions */
-static
-SCIP_DECL_CONSSEPASOL(consSepasolLogicor)
-{  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool cutoff;
-   SCIP_Bool separated;
-   SCIP_Bool reduceddom;
-   int c;
-
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(nconss == 0 || conss != NULL);
-   assert(result != NULL);
-
-   SCIPdebugMessage("separating %d/%d logic or constraints\n", nusefulconss, nconss);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   cutoff = FALSE;
-   separated = FALSE;
-   reduceddom = FALSE;
-
-   /* check all useful logic or constraints for feasibility */
-   for( c = 0; c < nusefulconss && !cutoff; ++c )
-   {
-      SCIP_CALL( separateCons(scip, conss[c], sol, conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
-   }
-
-   /* combine logic or constraints to get more cuts */
-   /**@todo further cuts of logic or constraints */
-
-   /* return the correct result */
-   if( cutoff )
-      *result = SCIP_CUTOFF;
-   else if( reduceddom )
-      *result = SCIP_REDUCEDDOM;
-   else if( separated )
-      *result = SCIP_SEPARATED;
-   else
-      *result = SCIP_DIDNOTFIND;
-
-   return SCIP_OKAY;
-}
+#define consSepasolBounddisjunction NULL
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
-SCIP_DECL_CONSENFOLP(consEnfolpLogicor)
-{  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool cutoff;
-   SCIP_Bool separated;
-   SCIP_Bool reduceddom;
-   int c;
-
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(nconss == 0 || conss != NULL);
-   assert(result != NULL);
-
-   SCIPdebugMessage("LP enforcing %d logic or constraints\n", nconss);
-
-   *result = SCIP_FEASIBLE;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   cutoff = FALSE;
-   separated = FALSE;
-   reduceddom = FALSE;
-
-   /* check all useful logic or constraints for feasibility */
-   for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
-   {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
-   }
-
-   /* check all obsolete logic or constraints for feasibility */
-   for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
-   {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
-   }
-
-   /* return the correct result */
-   if( cutoff )
-      *result = SCIP_CUTOFF;
-   else if( separated )
-      *result = SCIP_SEPARATED;
-   else if( reduceddom )
-      *result = SCIP_REDUCEDDOM;
-
-   return SCIP_OKAY;
-}
-
-
-/** constraint enforcing method of constraint handler for pseudo solutions */
-static
-SCIP_DECL_CONSENFOPS(consEnfopsLogicor)
+SCIP_DECL_CONSENFOLP(consEnfolpBounddisjunction)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool cutoff;
    SCIP_Bool infeasible;
    SCIP_Bool reduceddom;
-   SCIP_Bool solvelp;
    int c;
 
    assert(conshdlr != NULL);
@@ -1244,7 +1027,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsLogicor)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("pseudo enforcing %d logic or constraints\n", nconss);
+   SCIPdebugMessage("LP enforcing %d bound disjunction constraints\n", nconss);
 
    *result = SCIP_FEASIBLE;
 
@@ -1254,20 +1037,60 @@ SCIP_DECL_CONSENFOPS(consEnfopsLogicor)
    cutoff = FALSE;
    infeasible = FALSE;
    reduceddom = FALSE;
-   solvelp = FALSE;
 
-   /* check all logic or constraints for feasibility */
-   for( c = 0; c < nconss && !cutoff && !reduceddom && !solvelp; ++c )
+   /* check all bound disjunction constraints for feasibility */
+   for( c = 0; c < nconss && !cutoff && !reduceddom; ++c )
    {
-      SCIP_CALL( enforcePseudo(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &infeasible, &reduceddom, &solvelp) );
+      SCIP_CALL( enforceCurrentSol(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &infeasible, &reduceddom) );
    }
 
    if( cutoff )
       *result = SCIP_CUTOFF;
    else if( reduceddom )
       *result = SCIP_REDUCEDDOM;
-   else if( solvelp )
-      *result = SCIP_SOLVELP;
+   else if( infeasible )
+      *result = SCIP_INFEASIBLE;
+   
+   return SCIP_OKAY;
+}
+
+
+/** constraint enforcing method of constraint handler for pseudo solutions */
+static
+SCIP_DECL_CONSENFOPS(consEnfopsBounddisjunction)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool cutoff;
+   SCIP_Bool infeasible;
+   SCIP_Bool reduceddom;
+   int c;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(nconss == 0 || conss != NULL);
+   assert(result != NULL);
+
+   SCIPdebugMessage("pseudo enforcing %d bound disjunction constraints\n", nconss);
+
+   *result = SCIP_FEASIBLE;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   cutoff = FALSE;
+   infeasible = FALSE;
+   reduceddom = FALSE;
+
+   /* check all bound disjunction constraints for feasibility */
+   for( c = 0; c < nconss && !cutoff && !reduceddom; ++c )
+   {
+      SCIP_CALL( enforceCurrentSol(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &infeasible, &reduceddom) );
+   }
+
+   if( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( reduceddom )
+      *result = SCIP_REDUCEDDOM;
    else if( infeasible )
       *result = SCIP_INFEASIBLE;
    
@@ -1277,7 +1100,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsLogicor)
 
 /** feasibility check method of constraint handler for integral solutions */
 static
-SCIP_DECL_CONSCHECK(consCheckLogicor)
+SCIP_DECL_CONSCHECK(consCheckBounddisjunction)
 {  /*lint --e{715}*/
    SCIP_CONS* cons;
    SCIP_CONSDATA* consdata;
@@ -1290,23 +1113,21 @@ SCIP_DECL_CONSCHECK(consCheckLogicor)
 
    *result = SCIP_FEASIBLE;
 
-   /* check all logic or constraints for feasibility */
+   /* check all bound disjunction constraints for feasibility */
    for( c = 0; c < nconss; ++c )
    {
+      SCIP_Bool violated;
+
       cons = conss[c];
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
-      if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
-      {
-         SCIP_Bool violated;
 
-         SCIP_CALL( checkCons(scip, cons, sol, &violated) );
-         if( violated )
-         {
-            /* constraint is violated */
-            *result = SCIP_INFEASIBLE;
-            return SCIP_OKAY;
-         }
+      SCIP_CALL( checkCons(scip, cons, sol, &violated) );
+      if( violated )
+      {
+         /* constraint is violated */
+         *result = SCIP_INFEASIBLE;
+         return SCIP_OKAY;
       }
    }
    
@@ -1316,12 +1137,12 @@ SCIP_DECL_CONSCHECK(consCheckLogicor)
 
 /** domain propagation method of constraint handler */
 static
-SCIP_DECL_CONSPROP(consPropLogicor)
+SCIP_DECL_CONSPROP(consPropBounddisjunction)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool cutoff;
+   SCIP_Bool infeasible;
    SCIP_Bool reduceddom;
-   SCIP_Bool addcut;
    SCIP_Bool mustcheck;
    int c;
 
@@ -1334,12 +1155,14 @@ SCIP_DECL_CONSPROP(consPropLogicor)
    assert(conshdlrdata != NULL);
 
    cutoff = FALSE;
+   infeasible = FALSE;
    reduceddom = FALSE;
 
-   /* propagate all useful logic or constraints */
+   /* propagate all useful bound disjunction constraints */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
-      SCIP_CALL( processWatchedVars(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &reduceddom, &addcut, &mustcheck) );
+      SCIP_CALL( processWatchedVars(scip, conss[c], conshdlrdata->eventhdlr,
+            &cutoff, &infeasible, &reduceddom, &mustcheck) );
    }
 
    /* return the correct result */
@@ -1356,14 +1179,14 @@ SCIP_DECL_CONSPROP(consPropLogicor)
 
 /** presolving method of constraint handler */
 static
-SCIP_DECL_CONSPRESOL(consPresolLogicor)
+SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS* cons;
    SCIP_CONSDATA* consdata;
    SCIP_Bool infeasible;
    SCIP_Bool redundant;
-   SCIP_Bool fixed;
+   SCIP_Bool tightened;
    int c;
 
    assert(conshdlr != NULL);
@@ -1384,7 +1207,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
-      SCIPdebugMessage("presolving logic or constraint <%s>\n", SCIPconsGetName(cons));
+      SCIPdebugMessage("presolving bound disjunction constraint <%s>\n", SCIPconsGetName(cons));
 
       /* force presolving the constraint in the initial round */
       if( nrounds == 0 )
@@ -1392,15 +1215,15 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
          SCIP_CALL( SCIPenableConsPropagation(scip, cons) );
       }
 
-      /* remove all variables that are fixed to zero, check redundancy due to fixed-to-one variable */
-      SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr, &redundant) );
+      /* remove all literals that are violated in global bounds, check redundancy due to global bounds */
+      SCIP_CALL( applyGlobalBounds(scip, cons, conshdlrdata->eventhdlr, &redundant) );
 
       /**@todo find pairs of negated variables in constraint: constraint is redundant */
       /**@todo find sets of equal variables in constraint: multiple entries of variable can be replaced by single entry */
 
       if( redundant )
       {
-         SCIPdebugMessage("logic or constraint <%s> is redundant\n", SCIPconsGetName(cons));
+         SCIPdebugMessage("bound disjunction constraint <%s> is redundant\n", SCIPconsGetName(cons));
          SCIP_CALL( SCIPdelCons(scip, cons) );
          (*ndelconss)++;
          *result = SCIP_SUCCESS;
@@ -1409,58 +1232,49 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
       else if( !SCIPconsIsModifiable(cons) )
       {
          /* if unmodifiable constraint has no variables, it is infeasible,
-          * if unmodifiable constraint has only one variable, this one can be fixed and the constraint deleted
+          * if unmodifiable constraint has only one variable, the literal can be satisfied and the constraint deleted
           */
          if( consdata->nvars == 0 )
          {
-            SCIPdebugMessage("logic or constraint <%s> is infeasible\n", SCIPconsGetName(cons));
+            SCIPdebugMessage("bound disjunction constraint <%s> is infeasible\n", SCIPconsGetName(cons));
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;
          }
          else if( consdata->nvars == 1 )
          {
-            SCIPdebugMessage("logic or constraint <%s> has only one variable not fixed to 0.0\n",
+            SCIPdebugMessage("bound disjunction constraint <%s> has only one undecided literal\n",
                SCIPconsGetName(cons));
             
             assert(consdata->vars != NULL);
-            assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->vars[0]), 0.0));
-            assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(consdata->vars[0]), 1.0));
-            
-            SCIP_CALL( SCIPfixVar(scip, consdata->vars[0], 1.0, &infeasible, &fixed) );
+            assert(!isLiteralSatisfied(scip, consdata, 0));
+            assert(!isLiteralViolated(scip, consdata, 0));
+
+            if( consdata->boundtypes[0] == SCIP_BOUNDTYPE_LOWER )
+            {
+               SCIP_CALL( SCIPtightenVarLb(scip, consdata->vars[0], consdata->bounds[0], &infeasible, &tightened) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPtightenVarUb(scip, consdata->vars[0], consdata->bounds[0], &infeasible, &tightened) );
+            }
             if( infeasible )
             {
                SCIPdebugMessage(" -> infeasible fixing\n");
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
-            assert(fixed);
-            (*nfixedvars)++;
+            assert(tightened);
+            (*nchgbds)++;
 
             SCIP_CALL( SCIPdelCons(scip, cons) );
             (*ndelconss)++;
             *result = SCIP_SUCCESS;
             continue;
          }
-         else if( consdata->nvars == 2 && !consdata->impladded )
-         {
-            SCIP_Bool implinfeasible;
-            int nimplbdchgs;
-
-            /* a two-variable logicor constraint x + y >= 1 yields the implication x == 0 -> y == 1 */
-            SCIP_CALL( SCIPaddVarImplication(scip, consdata->vars[0], FALSE, consdata->vars[1],
-                  SCIP_BOUNDTYPE_LOWER, 1.0, &implinfeasible, &nimplbdchgs) );
-            *nchgbds += nimplbdchgs;
-            if( implinfeasible )
-            {
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
-            }
-            consdata->impladded = TRUE;
-         }
       }
    }
    
-   /**@todo preprocess pairs of logic or constraints */
+   /**@todo preprocess pairs of bound disjunction constraints */
 
    return SCIP_OKAY;
 }
@@ -1468,10 +1282,12 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
 
 /** propagation conflict resolving method of constraint handler */
 static
-SCIP_DECL_CONSRESPROP(consRespropLogicor)
+SCIP_DECL_CONSRESPROP(consRespropBounddisjunction)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
-   SCIP_Bool infervarfound;
+   SCIP_VAR** vars;
+   SCIP_BOUNDTYPE* boundtypes;
+   SCIP_Real* bounds;
    int v;
 
    assert(conshdlr != NULL);
@@ -1482,30 +1298,40 @@ SCIP_DECL_CONSRESPROP(consRespropLogicor)
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(0 <= inferinfo && inferinfo < consdata->nvars);
+   assert(consdata->vars[inferinfo] == infervar);
 
-   SCIPdebugMessage("conflict resolving method of logic or constraint handler\n");
+   vars = consdata->vars;
+   boundtypes = consdata->boundtypes;
+   bounds = consdata->bounds;
+   assert(vars != NULL);
+   assert(boundtypes != NULL);
+   assert(bounds != NULL);
 
-   /* the only deductions are variables infered to 1.0 on logic or constraints where all other variables
-    * are assigned to zero
+   SCIPdebugMessage("conflict resolving method of bound disjunction constraint handler\n");
+
+   /* the only deductions are bounds tightened to a literal's bound on bound disjunction constraints where all other
+    * literals are violated
     */
-   assert(SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5); /* the inference variable must be assigned to one */
+   assert((boundtypes[inferinfo] == SCIP_BOUNDTYPE_LOWER
+         && SCIPisFeasGE(scip, SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE), bounds[inferinfo]))
+      || (boundtypes[inferinfo] == SCIP_BOUNDTYPE_UPPER
+         && SCIPisFeasLE(scip, SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE), bounds[inferinfo])));
 
-   infervarfound = FALSE;
    for( v = 0; v < consdata->nvars; ++v )
    {
-      if( consdata->vars[v] != infervar )
+      if( v != inferinfo )
       {
-         /* the reason variable must have been assigned to zero */
-         assert(SCIPvarGetUbAtIndex(consdata->vars[v], bdchgidx, FALSE) < 0.5);
-         SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
-      }
-      else
-      {
-         assert(!infervarfound);
-         infervarfound = TRUE;
+         assert(consdata->vars[v] != infervar || consdata->boundtypes[v] != consdata->boundtypes[inferinfo]);
+
+         /* the reason literal must have been violated */
+         assert((boundtypes[v] == SCIP_BOUNDTYPE_LOWER
+               && SCIPisFeasLT(scip, SCIPvarGetUbAtIndex(vars[v], bdchgidx, TRUE), bounds[v]))
+            || (boundtypes[v] == SCIP_BOUNDTYPE_UPPER
+               && SCIPisFeasGT(scip, SCIPvarGetLbAtIndex(vars[v], bdchgidx, TRUE), bounds[v])));
+         SCIP_CALL( SCIPaddConflictBd(scip, vars[v], SCIPboundtypeOpposite(boundtypes[v]), bdchgidx) );
       }
    }
-   assert(infervarfound);
 
    *result = SCIP_SUCCESS;
 
@@ -1515,7 +1341,7 @@ SCIP_DECL_CONSRESPROP(consRespropLogicor)
 
 /** variable rounding lock method of constraint handler */
 static
-SCIP_DECL_CONSLOCK(consLockLogicor)
+SCIP_DECL_CONSLOCK(consLockBounddisjunction)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    int i;
@@ -1526,7 +1352,14 @@ SCIP_DECL_CONSLOCK(consLockLogicor)
    /* lock every single coefficient */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos, nlocksneg) );
+      if( consdata->boundtypes[i] == SCIP_BOUNDTYPE_LOWER )
+      {
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos, nlocksneg) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlocksneg, nlockspos) );
+      }
    }
 
    return SCIP_OKAY;
@@ -1535,7 +1368,7 @@ SCIP_DECL_CONSLOCK(consLockLogicor)
 
 /** constraint activation notification method of constraint handler */
 static
-SCIP_DECL_CONSACTIVE(consActiveLogicor)
+SCIP_DECL_CONSACTIVE(consActiveBounddisjunction)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
@@ -1551,20 +1384,18 @@ SCIP_DECL_CONSACTIVE(consActiveLogicor)
    assert(consdata != NULL);
    assert(consdata->watchedvar1 == -1 || consdata->watchedvar1 != consdata->watchedvar2);
 
-   SCIPdebugMessage("activating information for logic or constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMessage("activating information for bound disjunction constraint <%s>\n", SCIPconsGetName(cons));
    SCIPdebug(consdataPrint(scip, consdata, NULL));
 
    /* catch events on watched variables */
    if( consdata->watchedvar1 != -1 )
    {
-      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[consdata->watchedvar1],
-            SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*)cons,
+      SCIP_CALL( catchEvents(scip, cons, consdata, conshdlrdata->eventhdlr, consdata->watchedvar1,
             &consdata->filterpos1) );
    }
    if( consdata->watchedvar2 != -1 )
    {
-      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[consdata->watchedvar2],
-            SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*)cons,
+      SCIP_CALL( catchEvents(scip, cons, consdata, conshdlrdata->eventhdlr, consdata->watchedvar2,
             &consdata->filterpos2) );
    }
 
@@ -1574,7 +1405,7 @@ SCIP_DECL_CONSACTIVE(consActiveLogicor)
 
 /** constraint deactivation notification method of constraint handler */
 static
-SCIP_DECL_CONSDEACTIVE(consDeactiveLogicor)
+SCIP_DECL_CONSDEACTIVE(consDeactiveBounddisjunction)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
@@ -1590,23 +1421,19 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLogicor)
    assert(consdata != NULL);
    assert(consdata->watchedvar1 == -1 || consdata->watchedvar1 != consdata->watchedvar2);
 
-   SCIPdebugMessage("deactivating information for logic or constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugMessage("deactivating information for bound disjunction constraint <%s>\n", SCIPconsGetName(cons));
    SCIPdebug(consdataPrint(scip, consdata, NULL));
 
    /* drop events on watched variables */
    if( consdata->watchedvar1 != -1 )
    {
       assert(consdata->filterpos1 != -1);
-      SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar1],
-            SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*)cons,
-            consdata->filterpos1) );
+      SCIP_CALL( dropEvents(scip, cons, consdata, conshdlrdata->eventhdlr, consdata->watchedvar1, consdata->filterpos1) );
    }
    if( consdata->watchedvar2 != -1 )
    {
       assert(consdata->filterpos2 != -1);
-      SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar2],
-            SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*)cons,
-            consdata->filterpos2) );
+      SCIP_CALL( dropEvents(scip, cons, consdata, conshdlrdata->eventhdlr, consdata->watchedvar2, consdata->filterpos2) );
    }
 
    return SCIP_OKAY;
@@ -1614,117 +1441,18 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLogicor)
 
 
 /** constraint enabling notification method of constraint handler */
-#define consEnableLogicor NULL
+#define consEnableBounddisjunction NULL
 
 
 /** constraint disabling notification method of constraint handler */
-#define consDisableLogicor NULL
+#define consDisableBounddisjunction NULL
 
 
 /** constraint display method of constraint handler */
 static
-SCIP_DECL_CONSPRINT(consPrintLogicor)
+SCIP_DECL_CONSPRINT(consPrintBounddisjunction)
 {  /*lint --e{715}*/
    consdataPrint(scip, SCIPconsGetData(cons), file);
-
-   return SCIP_OKAY;
-}
-
-
-
-
-/*
- * upgrading of linear constraints
- */
-
-/** creates and captures a normalized (with all coefficients +1) logic or constraint */
-static
-SCIP_RETCODE createNormalizedLogicor(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*           name,               /**< name of constraint */
-   int                   nvars,              /**< number of variables in the constraint */
-   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Real*            vals,               /**< array with coefficients (+1.0 or -1.0) */
-   int                   mult,               /**< multiplier on the coefficients(+1 or -1) */
-   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
-   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
-   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
-   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   SCIP_Bool             local,              /**< is constraint only valid locally? */
-   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
-   )
-{
-   SCIP_VAR** transvars;
-   int v;
-
-   assert(nvars == 0 || vars != NULL);
-   assert(nvars == 0 || vals != NULL);
-   assert(mult == +1 || mult == -1);
-
-   /* get temporary memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &transvars, nvars) );
-
-   /* negate positive or negative variables */
-   for( v = 0; v < nvars; ++v )
-   {
-      if( mult * vals[v] > 0.0 )
-         transvars[v] = vars[v];
-      else
-      {
-         SCIP_CALL( SCIPgetNegatedVar(scip, vars[v], &transvars[v]) );
-      }
-      assert(transvars[v] != NULL);
-   }
-
-   /* create the constraint */
-   SCIP_CALL( SCIPcreateConsLogicor(scip, cons, name, nvars, transvars,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable) );
-
-   /* free temporary memory */
-   SCIPfreeBufferArray(scip, &transvars);
-
-   return SCIP_OKAY;
-}
-
-static
-SCIP_DECL_LINCONSUPGD(linconsUpgdLogicor)
-{  /*lint --e{715}*/
-   assert(upgdcons != NULL);
-
-   /* check, if linear constraint can be upgraded to logic or constraint
-    * - logic or constraints consist only of binary variables with a
-    *   coefficient of +1.0 or -1.0 (variables with -1.0 coefficients can be negated):
-    *        lhs     <= x1 + ... + xp - y1 - ... - yn <= rhs
-    * - negating all variables y = (1-Y) with negative coefficients gives:
-    *        lhs + n <= x1 + ... + xp + Y1 + ... + Yn <= rhs + n
-    * - negating all variables x = (1-X) with positive coefficients and multiplying with -1 gives:
-    *        p - rhs <= X1 + ... + Xp + y1 + ... + yn <= p - lhs
-    * - logic or constraints have left hand side of +1.0, and right hand side of +infinity: x(S) >= 1.0
-    *    -> without negations:  (lhs == 1 - n  and  rhs == +inf)  or  (lhs == -inf  and  rhs = p - 1)
-    */
-   if( nposbin + nnegbin == nvars && ncoeffspone + ncoeffsnone == nvars
-      && ((SCIPisEQ(scip, lhs, 1.0 - ncoeffsnone) && SCIPisInfinity(scip, rhs))
-         || (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, ncoeffspone - 1.0))) )
-   {
-      int mult;
-
-      SCIPdebugMessage("upgrading constraint <%s> to logic or constraint\n", SCIPconsGetName(cons));
-      
-      /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
-      mult = SCIPisInfinity(scip, rhs) ? +1 : -1;
-      
-      /* create the logic or constraint (an automatically upgraded constraint is always unmodifiable) */
-      assert(!SCIPconsIsModifiable(cons));
-      SCIP_CALL( createNormalizedLogicor(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
-            SCIPconsIsDynamic(cons), SCIPconsIsRemoveable(cons)) );
-   }
 
    return SCIP_OKAY;
 }
@@ -1737,21 +1465,21 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdLogicor)
  */
 
 static
-SCIP_DECL_EVENTEXEC(eventExecLogicor)
+SCIP_DECL_EVENTEXEC(eventExecBounddisjunction)
 {  /*lint --e{715}*/
    assert(eventhdlr != NULL);
    assert(eventdata != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
 
-   SCIPdebugMessage("exec method of event handler for logic or constraints\n");
+   /*SCIPdebugMessage("exec method of event handler for bound disjunction constraints\n");*/
 
-   if( SCIPeventGetType(event) == SCIP_EVENTTYPE_LBRELAXED )
+   if( (SCIPeventGetType(event) & SCIP_EVENTTYPE_BOUNDRELAXED) != 0 )
    {
       SCIP_CALL( SCIPenableCons(scip, (SCIP_CONS*)eventdata) );
    }
    else
-      assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_UBTIGHTENED);
+      assert((SCIPeventGetType(event) & SCIP_EVENTTYPE_BOUNDTIGHTENED) != 0);
 
    SCIP_CALL( SCIPenableConsPropagation(scip, (SCIP_CONS*)eventdata) );
 
@@ -1766,9 +1494,13 @@ SCIP_DECL_EVENTEXEC(eventExecLogicor)
  */
 
 static
-SCIP_DECL_CONFLICTEXEC(conflictExecLogicor)
+SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
+   SCIP_BOUNDTYPE* boundtypes;
+   SCIP_Real* bounds;
+   SCIP_CONS* cons;
+   char consname[SCIP_MAXSTRLEN];
    int i;
 
    assert(conflicthdlr != NULL);
@@ -1783,41 +1515,47 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLogicor)
       return SCIP_OKAY;
    }
 
-   *result = SCIP_DIDNOTFIND;
-
-   /* create array of variables in conflict constraint */
+   /* create array of variables, boundtypes, and bound values in conflict constraint */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nbdchginfos) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &boundtypes, nbdchginfos) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bounds, nbdchginfos) );
    for( i = 0; i < nbdchginfos; ++i )
    {
       vars[i] = SCIPbdchginfoGetVar(bdchginfos[i]);
-
-      /* we can only treat binary variables */
-      if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_BINARY )
-         break;
-
-      /* if the variable is fixed to one in the conflict set, we have to use its negation */
-      if( SCIPbdchginfoGetNewbound(bdchginfos[i]) > 0.5 )
+      boundtypes[i] = SCIPboundtypeOpposite(SCIPbdchginfoGetBoundtype(bdchginfos[i]));
+      bounds[i] = SCIPbdchginfoGetNewbound(bdchginfos[i]);
+      /* for continuous variables, we can only use the relaxed version of the bounds negation: !(x <= u) -> x >= u */
+      if( SCIPvarIsIntegral(vars[i]) )
       {
-         SCIP_CALL( SCIPgetNegatedVar(scip, vars[i], &vars[i]) );
+         assert(SCIPisIntegral(scip, bounds[i]));
+         bounds[i] += (boundtypes[i] == SCIP_BOUNDTYPE_LOWER ? +1.0 : -1.0);
+      }
+      else if( (boundtypes[i] == SCIP_BOUNDTYPE_LOWER && SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(vars[i]), bounds[i]))
+         || (boundtypes[i] == SCIP_BOUNDTYPE_UPPER && SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(vars[i]), bounds[i])) )
+      {
+         /* the literal is satisfied in global bounds (may happen due to weak "negation" of continuous variables)
+          * -> discard the conflict constraint
+          */
+         break;
       }
    }
-
+      
+   /* create a constraint out of the conflict set */
    if( i == nbdchginfos )
    {
-      SCIP_CONS* cons;
-      char consname[SCIP_MAXSTRLEN];
-      
-      /* create a constraint out of the conflict set */
       sprintf(consname, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
-      SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, consname, nbdchginfos, vars, 
+      SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, consname, nbdchginfos, vars, boundtypes, bounds,
             FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removeable) );
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-      
       *result = SCIP_CONSADDED;
    }
+   else
+      *result = SCIP_DIDNOTFIND;
 
    /* free temporary memory */
+   SCIPfreeBufferArray(scip, &bounds);
+   SCIPfreeBufferArray(scip, &boundtypes);
    SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
@@ -1830,8 +1568,8 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLogicor)
  * constraint specific interface methods
  */
 
-/** creates the handler for logic or constraints and includes it in SCIP */
-SCIP_RETCODE SCIPincludeConshdlrLogicor(
+/** creates the handler for bound disjunction constraints and includes it in SCIP */
+SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -1839,12 +1577,12 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
 
    /* create event handler for events on watched variables */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         NULL, NULL, NULL, NULL, NULL, NULL, eventExecLogicor,
+         NULL, NULL, NULL, NULL, NULL, NULL, eventExecBounddisjunction,
          NULL) );
 
-   /* create conflict handler for logic or constraints */
+   /* create conflict handler for bound disjunction constraints */
    SCIP_CALL( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
-         NULL, NULL, NULL, NULL, NULL, conflictExecLogicor,
+         NULL, NULL, NULL, NULL, NULL, conflictExecBounddisjunction,
          NULL) );
 
    /* create constraint handler data */
@@ -1855,31 +1593,30 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         consFreeLogicor, consInitLogicor, consExitLogicor, 
-         consInitpreLogicor, consExitpreLogicor, consInitsolLogicor, consExitsolLogicor,
-         consDeleteLogicor, consTransLogicor, 
-         consInitlpLogicor, consSepalpLogicor, consSepasolLogicor, 
-         consEnfolpLogicor, consEnfopsLogicor, consCheckLogicor, 
-         consPropLogicor, consPresolLogicor, consRespropLogicor, consLockLogicor,
-         consActiveLogicor, consDeactiveLogicor,
-         consEnableLogicor, consDisableLogicor,
-         consPrintLogicor,
+         consFreeBounddisjunction, consInitBounddisjunction, consExitBounddisjunction, 
+         consInitpreBounddisjunction, consExitpreBounddisjunction, consInitsolBounddisjunction, consExitsolBounddisjunction,
+         consDeleteBounddisjunction, consTransBounddisjunction, 
+         consInitlpBounddisjunction, consSepalpBounddisjunction, consSepasolBounddisjunction, 
+         consEnfolpBounddisjunction, consEnfopsBounddisjunction, consCheckBounddisjunction, 
+         consPropBounddisjunction, consPresolBounddisjunction, consRespropBounddisjunction, consLockBounddisjunction,
+         consActiveBounddisjunction, consDeactiveBounddisjunction,
+         consEnableBounddisjunction, consDisableBounddisjunction,
+         consPrintBounddisjunction,
          conshdlrdata) );
-
-   /* include the linear constraint to logicor constraint upgrade in the linear constraint handler */
-   SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdLogicor, LINCONSUPGD_PRIORITY) );
 
    return SCIP_OKAY;
 }
 
 
-/** creates and captures a logic or constraint */
-SCIP_RETCODE SCIPcreateConsLogicor(
+/** creates and captures a bound disjunction constraint */
+SCIP_RETCODE SCIPcreateConsBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    int                   nvars,              /**< number of variables in the constraint */
-   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
+   SCIP_VAR**            vars,               /**< variables of the literals in the constraint */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< types of bounds of the literals (lower or upper bounds) */
+   SCIP_Real*            bounds,             /**< bounds of the literals */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
@@ -1896,16 +1633,16 @@ SCIP_RETCODE SCIPcreateConsLogicor(
 
    assert(scip != NULL);
 
-   /* find the logicor constraint handler */
+   /* find the bounddisjunction constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      SCIPerrorMessage("logic or constraint handler not found\n");
+      SCIPerrorMessage("bound disjunction constraint handler not found\n");
       return SCIP_INVALIDCALL;
    }
 
    /* create the constraint specific data */
-   SCIP_CALL( consdataCreate(scip, &consdata, nvars, vars) );
+   SCIP_CALL( consdataCreate(scip, &consdata, nvars, vars, boundtypes, bounds) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
@@ -1914,8 +1651,8 @@ SCIP_RETCODE SCIPcreateConsLogicor(
    return SCIP_OKAY;
 }
 
-/** gets the dual solution of the logic or constraint in the current LP */
-SCIP_Real SCIPgetDualsolLogicor(
+/** gets number of variables in bound disjunction constraint */
+int SCIPgetNVarsBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
@@ -1924,21 +1661,18 @@ SCIP_Real SCIPgetDualsolLogicor(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not a logic or constraint\n");
+      SCIPerrorMessage("constraint is not a bound disjunction constraint\n");
       SCIPABORT();
    }
    
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->row != NULL )
-      return SCIProwGetDualsol(consdata->row);
-   else
-      return 0.0;
+   return consdata->nvars;
 }
 
-/** gets the dual farkas value of the logic or constraint in the current infeasible LP */
-SCIP_Real SCIPgetDualfarkasLogicor(
+/** gets array of variables in bound disjunction constraint */
+SCIP_VAR** SCIPgetVarsBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
@@ -1947,51 +1681,7 @@ SCIP_Real SCIPgetDualfarkasLogicor(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not a logic or constraint\n");
-      SCIPABORT();
-   }
-   
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   if( consdata->row != NULL )
-      return SCIProwGetDualfarkas(consdata->row);
-   else
-      return 0.0;
-}
-
-/** returns the linear relaxation of the given logic or constraint; may return NULL if no LP row was yet created;
- *  the user must not modify the row!
- */
-SCIP_ROW* SCIPgetRowLogicor(
-   SCIP_CONS*            cons                /**< constraint data */
-   )
-{
-   SCIP_CONSDATA* consdata;
-
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a logic or constraint\n");
-      SCIPABORT();
-   }
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   return consdata->row;
-}
-
-/** gets array of variables in logic or constraint */
-SCIP_VAR** SCIPgetVarsLogicor(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
-   )
-{
-   SCIP_CONSDATA* consdata;
-
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a logic or constraint\n");
+      SCIPerrorMessage("constraint is not a bound disjunction constraint\n");
       SCIPABORT();
    }
    
@@ -2001,8 +1691,8 @@ SCIP_VAR** SCIPgetVarsLogicor(
    return consdata->vars;
 }
 
-/** gets number of variables in logic or constraint */
-int SCIPgetNVarsLogicor(
+/** gets array of bound types in bound disjunction constraint */
+SCIP_BOUNDTYPE* SCIPgetBoundtypesBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
@@ -2011,13 +1701,33 @@ int SCIPgetNVarsLogicor(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not a logic or constraint\n");
+      SCIPerrorMessage("constraint is not a bound disjunction constraint\n");
       SCIPABORT();
    }
    
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   return consdata->nvars;
+   return consdata->boundtypes;
+}
+
+/** gets array of bounds in bound disjunction constraint */
+SCIP_Real* SCIPgetBoundsBounddisjunction(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not a bound disjunction constraint\n");
+      SCIPABORT();
+   }
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->bounds;
 }
 

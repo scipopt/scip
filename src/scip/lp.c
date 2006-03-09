@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.215 2006/02/23 12:40:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.216 2006/03/09 12:52:19 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -3247,7 +3247,7 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
 
    *down = col->sbdown;
    *up = col->sbup;
-   if( down != NULL )
+   if( downvalid != NULL )
       *downvalid = col->sbdownvalid;
    if( upvalid != NULL )
       *upvalid = col->sbupvalid;
@@ -5030,8 +5030,10 @@ SCIP_Real SCIProwGetObjParallelism(
    prod = row->sqrnorm * lp->objsqrnorm;
 
    parallelism = SCIPsetIsPositive(set, prod) ? REALABS(row->objprod) / SQRT(prod) : 0.0;
-   assert(SCIPsetIsGE(set, parallelism, 0.0));
-   assert(SCIPsetIsLE(set, parallelism, 1.0));
+   assert(SCIPsetIsSumGE(set, parallelism, 0.0));
+   assert(SCIPsetIsSumLE(set, parallelism, 1.0));
+   parallelism = MIN(parallelism, 1.0);
+   parallelism = MAX(parallelism, 0.0);
 
    return parallelism;
 }
@@ -7656,7 +7658,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
       act = 0.0;
       for( i = 0; i < prob->nvars; ++i )
          act += mircoef[i] * SCIPvarGetLPSol(prob->vars[i]);
-      assert(SCIPsetIsFeasEQ(set, act/10.0, *cutactivity/10.0));
+      assert(EPSZ(SCIPrelDiff(act, *cutactivity), 1e-04)); /* the values only have to be roughly equal */
    }
 #endif
 
@@ -9560,7 +9562,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
    /* check whether we need a proof of unboundness or infeasibility by a primal or dual ray */
    needprimalray = TRUE;
-   needdualray = (!SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve || set->conf_uselp);
+   needdualray = (!SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve || set->conf_useinflp);
 
    /* flush changes to the LP solver */
    SCIP_CALL( SCIPlpFlush(lp, blkmem, set) );

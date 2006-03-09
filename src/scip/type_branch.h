@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_branch.h,v 1.15 2006/01/03 12:22:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_branch.h,v 1.16 2006/03/09 12:52:21 bzfpfend Exp $"
 
 /**@file   type_branch.h
  * @brief  type definitions for branching rules
@@ -88,7 +88,7 @@ typedef struct SCIP_BranchruleData SCIP_BRANCHRULEDATA; /**< branching method sp
  *
  *  possible return values for *result (if more than one applies, the first in the list should be used):
  *  - SCIP_CUTOFF     : the current node was detected to be infeasible
- *  - SCIP_CONSADDED  : an additional constraint (e.g. a conflict clause) was generated; this result code must not be
+ *  - SCIP_CONSADDED  : an additional constraint (e.g. a conflict constraint) was generated; this result code must not be
  *                      returned, if allowaddcons is FALSE
  *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current LP solution infeasible
  *  - SCIP_SEPARATED  : a cutting plane was generated
@@ -108,7 +108,7 @@ typedef struct SCIP_BranchruleData SCIP_BRANCHRULEDATA; /**< branching method sp
  *
  *  possible return values for *result (if more than one applies, the first in the list should be used):
  *  - SCIP_CUTOFF     : the current node was detected to be infeasible
- *  - SCIP_CONSADDED  : an additional constraint (e.g. a conflict clause) was generated; this result code must not be
+ *  - SCIP_CONSADDED  : an additional constraint (e.g. a conflict constraint) was generated; this result code must not be
  *                      returned, if allowaddcons is FALSE
  *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current pseudo solution infeasible
  *  - SCIP_BRANCHED   : branching was applied

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.52 2006/02/23 12:40:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.53 2006/03/09 12:52:18 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -733,7 +733,7 @@ SCIP_RETCODE separateCons(
    return SCIP_OKAY;
 }
 
-/** analyzes conflicting FALSE assignment to resultant of given constraint, and adds conflict clause to problem */
+/** analyzes conflicting FALSE assignment to resultant of given constraint, and adds conflict constraint to problem */
 static
 SCIP_RETCODE analyzeConflictZero(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -764,7 +764,7 @@ SCIP_RETCODE analyzeConflictZero(
    return SCIP_OKAY;
 }
 
-/** analyzes conflicting TRUE assignment to resultant of given constraint, and adds conflict clause to problem */
+/** analyzes conflicting TRUE assignment to resultant of given constraint, and adds conflict constraint to problem */
 static
 SCIP_RETCODE analyzeConflictOne(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -862,7 +862,7 @@ SCIP_RETCODE propagateCons(
          SCIP_CALL( SCIPinferBinvarCons(scip, resvar, TRUE, cons, (int)PROPRULE_1, &infeasible, &tightened) );
          if( infeasible )
          {
-            /* use conflict analysis to get a conflict clause out of the conflicting assignment */
+            /* use conflict analysis to get a conflict constraint out of the conflicting assignment */
             SCIP_CALL( analyzeConflictZero(scip, cons, i) );
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
             *cutoff = TRUE;
@@ -894,7 +894,7 @@ SCIP_RETCODE propagateCons(
          SCIP_CALL( SCIPinferBinvarCons(scip, vars[i], FALSE, cons, (int)PROPRULE_2, &infeasible, &tightened) );
          if( infeasible )
          {
-            /* use conflict analysis to get a conflict clause out of the conflicting assignment */
+            /* use conflict analysis to get a conflict constraint out of the conflicting assignment */
             SCIP_CALL( analyzeConflictZero(scip, cons, i) );
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
             *cutoff = TRUE;
@@ -980,7 +980,7 @@ SCIP_RETCODE propagateCons(
       SCIP_CALL( SCIPinferBinvarCons(scip, resvar, FALSE, cons, (int)PROPRULE_3, &infeasible, &tightened) );
       if( infeasible )
       {
-         /* use conflict analysis to get a conflict clause out of the conflicting assignment */
+         /* use conflict analysis to get a conflict constraint out of the conflicting assignment */
          SCIP_CALL( analyzeConflictOne(scip, cons) );
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
          *cutoff = TRUE;
@@ -1010,7 +1010,7 @@ SCIP_RETCODE propagateCons(
       SCIP_CALL( SCIPinferBinvarCons(scip, vars[watchedvar1], TRUE, cons, (int)PROPRULE_4, &infeasible, &tightened) );
       if( infeasible )
       {
-         /* use conflict analysis to get a conflict clause out of the conflicting assignment */
+         /* use conflict analysis to get a conflict constraint out of the conflicting assignment */
          SCIP_CALL( analyzeConflictOne(scip, cons) );
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
          *cutoff = TRUE;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.73 2006/01/03 12:22:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.74 2006/03/09 12:52:20 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -227,6 +227,8 @@ void solStamp(
    sol->nodenum = stat->nnodes;
    sol->runnum = stat->nruns;
    sol->depth = SCIPtreeGetCurrentDepth(tree);
+   sol->index = stat->solindex;
+   stat->solindex++;
 }
 
 /** creates primal CIP solution, initialized to zero */
@@ -1294,6 +1296,7 @@ SCIP_RETCODE SCIPsolPrint(
 #undef SCIPsolGetHeur
 #undef SCIPsolGetPrimalIndex
 #undef SCIPsolSetPrimalIndex
+#undef SCIPsolGetIndex
 
 /** gets origin of solution */
 SCIP_SOLORIGIN SCIPsolGetOrigin(
@@ -1374,4 +1377,14 @@ void SCIPsolSetPrimalIndex(
    assert(sol != NULL);
 
    sol->primalindex = primalindex;
+}
+
+/** returns unique index of given solution */
+int SCIPsolGetIndex(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+
+   return sol->index;
 }

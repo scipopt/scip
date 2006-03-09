@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_stat.h,v 1.10 2006/01/03 12:23:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_stat.h,v 1.11 2006/03/09 12:52:21 bzfpfend Exp $"
 
 /**@file   type_stat.h
  * @brief  type definitions for problem statistics
@@ -38,7 +38,7 @@ enum SCIP_Status
    SCIP_STATUS_GAPLIMIT      =  5,      /**< the solving process was interrupted because the gap limit was reached */
    SCIP_STATUS_SOLLIMIT      =  6,      /**< the solving process was interrupted because the solution limit was reached */
    SCIP_STATUS_BESTSOLLIMIT  =  7,      /**< the solving process was interrupted because the solution improvement limit
-                                              *   was reached */
+                                         *   was reached */
    SCIP_STATUS_OPTIMAL       =  8,      /**< the problem was solved to optimality, an optimal solution is available */
    SCIP_STATUS_INFEASIBLE    =  9,      /**< the problem was proven to be infeasible */
    SCIP_STATUS_UNBOUNDED     = 10,      /**< the problem was proven to be unbounded */

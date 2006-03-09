@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.168 2006/02/23 12:40:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.169 2006/03/09 12:52:20 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -66,33 +66,40 @@
 
 /* Conflict Analysis */
 
-#define SCIP_DEFAULT_CONF_MAXVARSFAC       0.02 /**< maximal fraction of binary variables involved in a conflict clause */
-#define SCIP_DEFAULT_CONF_MINMAXVARS         30 /**< minimal absolute maximum of variables involved in a conflict clause */
+#define SCIP_DEFAULT_CONF_MAXVARSFAC       0.02 /**< maximal fraction of variables involved in a conflict constraint */
+#define SCIP_DEFAULT_CONF_MINMAXVARS         30 /**< minimal absolute maximum of variables involved in a conflict constraint */
+#if 0 /*?????????????????????*/
 #define SCIP_DEFAULT_CONF_MAXUNFIXED         -1 /**< maximal number of unfixed variables at insertion depth of conflict
                                                  *   clause (-1: no limit) */
+#endif
 #define SCIP_DEFAULT_CONF_MAXLPLOOPS          0 /**< maximal number of LP resolving loops during conflict analysis
                                                  *   (-1: no limit) */
 #define SCIP_DEFAULT_CONF_LPITERATIONS        0 /**< maximal number of LP iterations in each LP resolving loop
                                                  *   (-1: no limit) */
 #define SCIP_DEFAULT_CONF_FUIPLEVELS         -1 /**< number of depth levels up to which first UIP's are used in conflict
                                                  *   analysis (-1: use All-FirstUIP rule) */
-#define SCIP_DEFAULT_CONF_INTERCLAUSES        1 /**< maximal number of intermediate conflict clauses generated in conflict
-                                                 *   graph (-1: use every intermediate clause) */
-#define SCIP_DEFAULT_CONF_MAXCLAUSES         10 /**< maximal number of conflict clauses accepted at an infeasible node
-                                                 *   (-1: use all generated conflict clauses) */
-#define SCIP_DEFAULT_CONF_RECONVCLAUSES    TRUE /**< should reconvergence clauses be created for UIPs of last depth level? */
+#define SCIP_DEFAULT_CONF_INTERCONSS          1 /**< maximal number of intermediate conflict constraints generated in
+                                                 *   conflict graph (-1: use every intermediate constraint) */
+#define SCIP_DEFAULT_CONF_MAXCONSS           10 /**< maximal number of conflict constraints accepted at an infeasible node
+                                                 *   (-1: use all generated conflict constraints) */
+#define SCIP_DEFAULT_CONF_RECONVLEVELS        1 /**< number of depth levels up to which UIP reconvergence constraints are
+                                                 *   generated (-1: generate reconvergence constraints in all depth levels) */
 #define SCIP_DEFAULT_CONF_USEPROP         FALSE /**< should propagation conflict analysis be used? */
-#define SCIP_DEFAULT_CONF_USELP           FALSE /**< should infeasible LP conflict analysis be used? */
-#define SCIP_DEFAULT_CONF_USESB           FALSE /**< should infeasible strong branching conflict analysis be used? */
+#define SCIP_DEFAULT_CONF_USEINFLP        FALSE /**< should infeasible LP conflict analysis be used? */
+#define SCIP_DEFAULT_CONF_USEBOUNDLP      FALSE /**< should bound exceeding LP conflict analysis be used? */
+#define SCIP_DEFAULT_CONF_USESB           FALSE /**< should infeasible/bound exceeding strong branching conflict analysis
+                                                 *   be used? */
 #define SCIP_DEFAULT_CONF_USEPSEUDO       FALSE /**< should pseudo solution conflict analysis be used? */
-#define SCIP_DEFAULT_CONF_ALLOWLOCAL       TRUE /**< should conflict clauses be generated that are only valid locally? */
-#define SCIP_DEFAULT_CONF_SETTLELOCAL      TRUE /**< should conflict clauses be attached only to the local subtree where
-                                                 *   they can be useful? */
+#define SCIP_DEFAULT_CONF_PREFERBINARY    FALSE /**< should binary conflicts be preferred? */
+#define SCIP_DEFAULT_CONF_ALLOWLOCAL       TRUE /**< should conflict constraints be generated that are only valid locally? */
+#define SCIP_DEFAULT_CONF_SETTLELOCAL      TRUE /**< should conflict constraints be attached only to the local subtree
+                                                 *   where they can be useful? */
 #define SCIP_DEFAULT_CONF_REPROPAGATE      TRUE /**< should earlier nodes be repropagated in order to replace branching
                                                  *   decisions by deductions? */
-#define SCIP_DEFAULT_CONF_KEEPREPROP       TRUE /**< should clauses be kept for repropagation even if they are too long? */
+#define SCIP_DEFAULT_CONF_KEEPREPROP       TRUE /**< should constraints be kept for repropagation even if they are too long? */
 #define SCIP_DEFAULT_CONF_DYNAMIC          TRUE /**< should the conflict constraints be subject to aging? */
 #define SCIP_DEFAULT_CONF_REMOVEABLE       TRUE /**< should the conflict's relaxations be subject to LP aging and cleanup? */
+#define SCIP_DEFAULT_CONF_DEPTHSCOREFAC     1.0 /**< score factor for depth level in bound relaxation heuristic of LP analysis */
 #define SCIP_DEFAULT_CONF_SCOREFAC         0.98 /**< factor to decrease importance of variables' earlier conflict scores */
 
 
@@ -411,13 +418,18 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->conf_useprop, SCIP_DEFAULT_CONF_USEPROP,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
-         "conflict/uselp",
+         "conflict/useinflp",
          "should infeasible LP conflict analysis be used?",
-         &(*set)->conf_uselp, SCIP_DEFAULT_CONF_USELP,
+         &(*set)->conf_useinflp, SCIP_DEFAULT_CONF_USEINFLP,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "conflict/useboundlp",
+         "should bound exceeding LP conflict analysis be used?",
+         &(*set)->conf_useboundlp, SCIP_DEFAULT_CONF_USEBOUNDLP,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/usesb",
-         "should infeasible strong branching conflict analysis be used?",
+         "should infeasible/bound exceeding strong branching conflict analysis be used?",
          &(*set)->conf_usesb, SCIP_DEFAULT_CONF_USESB,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
@@ -427,19 +439,21 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "conflict/maxvarsfac",
-         "maximal fraction of binary variables involved in a conflict clause",
+         "maximal fraction of variables involved in a conflict constraint",
          &(*set)->conf_maxvarsfac, SCIP_DEFAULT_CONF_MAXVARSFAC, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "conflict/minmaxvars",
-         "minimal absolute maximum of variables involved in a conflict clause",
+         "minimal absolute maximum of variables involved in a conflict constraint",
          &(*set)->conf_minmaxvars, SCIP_DEFAULT_CONF_MINMAXVARS, 0, INT_MAX,
          NULL, NULL) );
+#if 0 /*?????????????????????*/
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "conflict/maxunfixed",
          "maximal number of unfixed variables at insertion depth of conflict clause (-1: no limit)",
          &(*set)->conf_maxunfixed, SCIP_DEFAULT_CONF_MAXUNFIXED, -1, INT_MAX,
          NULL, NULL) );
+#endif
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "conflict/maxlploops",
          "maximal number of LP resolving loops during conflict analysis (-1: no limit)",
@@ -456,23 +470,33 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->conf_fuiplevels, SCIP_DEFAULT_CONF_FUIPLEVELS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
-         "conflict/interclauses",
-         "maximal number of intermediate conflict clauses generated in conflict graph (-1: use every intermediate clause)",
-         &(*set)->conf_interclauses, SCIP_DEFAULT_CONF_INTERCLAUSES, -1, INT_MAX,
+         "conflict/interconss",
+         "maximal number of intermediate conflict constraints generated in conflict graph (-1: use every intermediate constraint)",
+         &(*set)->conf_interconss, SCIP_DEFAULT_CONF_INTERCONSS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
-         "conflict/maxclauses",
-         "maximal number of conflict clauses accepted at an infeasible node (-1: use all generated conflict clauses)",
-         &(*set)->conf_maxclauses, SCIP_DEFAULT_CONF_MAXCLAUSES, -1, INT_MAX,
+         "conflict/reconvlevels",
+         "number of depth levels up to which UIP reconvergence constraints are generated (-1: generate reconvergence constraints in all depth levels)",
+         &(*set)->conf_reconvlevels, SCIP_DEFAULT_CONF_RECONVLEVELS, -1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
+         "conflict/maxconss",
+         "maximal number of conflict constraints accepted at an infeasible node (-1: use all generated conflict constraints)",
+         &(*set)->conf_maxconss, SCIP_DEFAULT_CONF_MAXCONSS, -1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "conflict/preferbinary",
+         "should binary conflicts be preferred?",
+         &(*set)->conf_preferbinary, SCIP_DEFAULT_CONF_PREFERBINARY,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/allowlocal",
-         "should conflict clauses be generated that are only valid locally?",
+         "should conflict constraints be generated that are only valid locally?",
          &(*set)->conf_allowlocal, SCIP_DEFAULT_CONF_ALLOWLOCAL,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/settlelocal",
-         "should conflict clauses be attached only to the local subtree where they can be useful?",
+         "should conflict constraints be attached only to the local subtree where they can be useful?",
          &(*set)->conf_settlelocal, SCIP_DEFAULT_CONF_SETTLELOCAL,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
@@ -482,13 +506,8 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/keepreprop",
-         "should clauses be kept for repropagation even if they are too long?",
+         "should constraints be kept for repropagation even if they are too long?",
          &(*set)->conf_keepreprop, SCIP_DEFAULT_CONF_KEEPREPROP,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
-         "conflict/reconvclauses",
-         "should reconvergence clauses be created for UIPs of last depth level?",
-         &(*set)->conf_reconvclauses, SCIP_DEFAULT_CONF_RECONVCLAUSES,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/dynamic",
@@ -499,6 +518,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/removeable",
          "should the conflict's relaxations be subject to LP aging and cleanup?",
          &(*set)->conf_removeable, SCIP_DEFAULT_CONF_REMOVEABLE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
+         "conflict/depthscorefac",
+         "score factor for depth level in bound relaxation heuristic of LP analysis",
+         &(*set)->conf_depthscorefac, SCIP_DEFAULT_CONF_DEPTHSCOREFAC, SCIP_REAL_MIN, SCIP_REAL_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "conflict/scorefac",

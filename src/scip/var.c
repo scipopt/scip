@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.199 2006/02/27 18:35:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.200 2006/03/09 12:52:21 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -689,6 +689,10 @@ SCIP_RETCODE boundchgApplyGlobal(
    SCIPdebugMessage("applying global bound change: <%s>[%g,%g] %s %g\n",
       SCIPvarGetName(boundchg->var), SCIPvarGetLbGlobal(boundchg->var), SCIPvarGetUbGlobal(boundchg->var),
       boundchg->boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", boundchg->newbound);
+
+   /* ignore redundant bound changes */
+   if( boundchg->redundant )
+      return SCIP_OKAY;
 
    SCIP_CALL( SCIPvarChgBdGlobal(boundchg->var, blkmem, set, stat, lp, branchcand, eventqueue, 
          boundchg->newbound, boundchg->boundtype) );
@@ -1639,6 +1643,8 @@ SCIP_RETCODE varCreate(
    (*var)->rootsol = 0.0;
    (*var)->rootredcost = SCIP_INVALID;
    (*var)->primsolavg = 0.5 * (lb + ub);
+   (*var)->conflictlb = SCIP_REAL_MIN;
+   (*var)->conflictub = SCIP_REAL_MAX;
    (*var)->glbdom.holelist = NULL;
    (*var)->glbdom.lb = lb;
    (*var)->glbdom.ub = ub;
@@ -1675,8 +1681,8 @@ SCIP_RETCODE varCreate(
    (*var)->nlbchginfos = 0;
    (*var)->ubchginfossize = 0;
    (*var)->nubchginfos = 0;
-   (*var)->conflictsetcount = 0;
-   (*var)->conflictqueuecount = 0;
+   (*var)->conflictlbcount = 0;
+   (*var)->conflictubcount = 0;
    (*var)->initial = initial;
    (*var)->removeable = removeable;
    (*var)->deleted = FALSE;
@@ -2037,15 +2043,8 @@ void SCIPvarInitSolve(
    assert(var != NULL);
 
    SCIPhistoryReset(var->historycrun);
-   var->conflictsetcount = 0;
-   var->conflictqueuecount = 0;
-
-   /* the negations of active problem variables can also be member of a conflict set */
-   if( var->negatedvar != NULL )
-   {
-      var->negatedvar->conflictsetcount = 0;
-      var->negatedvar->conflictqueuecount = 0;
-   }
+   var->conflictlbcount = 0;
+   var->conflictubcount = 0;
 }
 
 /** outputs variable information into file stream */
@@ -9158,6 +9157,46 @@ SCIP_Real SCIPvarGetAvgCutoffsCurrentRun(
  * information methods for bound changes
  */
 
+/** creates an artificial bound change information object with depth = INT_MAX and pos = -1 */
+SCIP_RETCODE SCIPbdchginfoCreate(
+   SCIP_BDCHGINFO**      bdchginfo,          /**< pointer to store bound change information */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             var,                /**< active variable that changed the bounds */
+   SCIP_BOUNDTYPE        boundtype,          /**< type of bound for var: lower or upper bound */
+   SCIP_Real             oldbound,           /**< old value for bound */
+   SCIP_Real             newbound            /**< new value for bound */
+   )
+{
+   assert(bdchginfo != NULL);
+   
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, bdchginfo) );
+   (*bdchginfo)->oldbound = oldbound;
+   (*bdchginfo)->newbound = newbound;
+   (*bdchginfo)->var = var;
+   (*bdchginfo)->inferencedata.var = var;
+   (*bdchginfo)->inferencedata.reason.prop = NULL;
+   (*bdchginfo)->inferencedata.info = 0;
+   (*bdchginfo)->bdchgidx.depth = INT_MAX;
+   (*bdchginfo)->bdchgidx.pos = -1;
+   (*bdchginfo)->boundchgtype = SCIP_BOUNDCHGTYPE_BRANCHING;
+   (*bdchginfo)->boundtype = boundtype;
+   (*bdchginfo)->inferboundtype = boundtype;
+   (*bdchginfo)->redundant = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** frees a bound change information object */
+void SCIPbdchginfoFree(
+   SCIP_BDCHGINFO**      bdchginfo,          /**< pointer to store bound change information */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   assert(bdchginfo != NULL);
+
+   BMSfreeBlockMemory(blkmem, bdchginfo);
+}
+
 /** returns the bound change information for the last lower bound change on given active problem variable before or
  *  after the bound change with the given index was applied;
  *  returns NULL, if no change to the lower bound was applied up to this point of time
@@ -9697,6 +9736,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPbdchginfoGetInferBoundtype
 #undef SCIPbdchginfoIsRedundant
 #undef SCIPbdchginfoHasInferenceReason
+#undef SCIPbdchginfoIsTighter
 
 /** returns the new value of the bound in the bound change data */
 SCIP_Real SCIPboundchgGetNewbound(
@@ -10667,4 +10707,22 @@ SCIP_Bool SCIPbdchginfoHasInferenceReason(
    return ((SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER)
       || ((SCIP_BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
          && bdchginfo->inferencedata.reason.prop != NULL);
+}
+
+/** for two bound change informations belonging to the same variable and bound, returns whether the first bound change
+ *  has a tighter new bound as the second bound change
+ */
+SCIP_Bool SCIPbdchginfoIsTighter(
+   SCIP_BDCHGINFO*       bdchginfo1,         /**< first bound change information */
+   SCIP_BDCHGINFO*       bdchginfo2          /**< second bound change information */
+   )
+{
+   assert(bdchginfo1 != NULL);
+   assert(bdchginfo2 != NULL);
+   assert(bdchginfo1->var == bdchginfo2->var);
+   assert(bdchginfo1->boundtype == bdchginfo2->boundtype);
+
+   return (bdchginfo1->boundtype == SCIP_BOUNDTYPE_LOWER
+      ? bdchginfo1->newbound > bdchginfo2->newbound
+      : bdchginfo1->newbound < bdchginfo2->newbound);
 }

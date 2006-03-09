@@ -16,9 +16,13 @@ conflict/useprop = FALSE
 
 # should infeasible LP conflict analysis be used?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
-conflict/uselp = FALSE
+conflict/useinflp = FALSE
 
-# should infeasible strong branching conflict analysis be used?
+# should bound exceeding LP conflict analysis be used?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+conflict/useboundlp = FALSE
+
+# should infeasible/bound exceeding strong branching conflict analysis be used?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 conflict/usesb = FALSE
 
@@ -26,17 +30,13 @@ conflict/usesb = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 conflict/usepseudo = FALSE
 
-# maximal fraction of binary variables involved in a conflict clause
+# maximal fraction of variables involved in a conflict constraint
 # [type: real, range: [0,1.79769313486232e+308], default: 0.02]
 conflict/maxvarsfac = 0.02
 
-# minimal absolute maximum of variables involved in a conflict clause
+# minimal absolute maximum of variables involved in a conflict constraint
 # [type: int, range: [0,2147483647], default: 30]
 conflict/minmaxvars = 30
-
-# maximal number of unfixed variables at insertion depth of conflict clause (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-conflict/maxunfixed = -1
 
 # maximal number of LP resolving loops during conflict analysis (-1: no limit)
 # [type: int, range: [-1,2147483647], default: 0]
@@ -50,19 +50,27 @@ conflict/lpiterations = 0
 # [type: int, range: [-1,2147483647], default: -1]
 conflict/fuiplevels = -1
 
-# maximal number of intermediate conflict clauses generated in conflict graph (-1: use every intermediate clause)
+# maximal number of intermediate conflict constraints generated in conflict graph (-1: use every intermediate constraint)
 # [type: int, range: [-1,2147483647], default: 1]
-conflict/interclauses = 1
+conflict/interconss = 1
 
-# maximal number of conflict clauses accepted at an infeasible node (-1: use all generated conflict clauses)
+# number of depth levels up to which UIP reconvergence constraints are generated (-1: generate reconvergence constraints in all depth levels)
+# [type: int, range: [-1,2147483647], default: 1]
+conflict/reconvlevels = 1
+
+# maximal number of conflict constraints accepted at an infeasible node (-1: use all generated conflict constraints)
 # [type: int, range: [-1,2147483647], default: 10]
-conflict/maxclauses = 10
+conflict/maxconss = 10
 
-# should conflict clauses be generated that are only valid locally?
+# should binary conflicts be preferred?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+conflict/preferbinary = FALSE
+
+# should conflict constraints be generated that are only valid locally?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 conflict/allowlocal = TRUE
 
-# should conflict clauses be attached only to the local subtree where they can be useful?
+# should conflict constraints be attached only to the local subtree where they can be useful?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 conflict/settlelocal = TRUE
 
@@ -70,13 +78,9 @@ conflict/settlelocal = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 conflict/repropagate = TRUE
 
-# should clauses be kept for repropagation even if they are too long?
+# should constraints be kept for repropagation even if they are too long?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 conflict/keepreprop = TRUE
-
-# should reconvergence clauses be created for UIPs of last depth level?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-conflict/reconvclauses = TRUE
 
 # should the conflict constraints be subject to aging?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -85,6 +89,10 @@ conflict/dynamic = TRUE
 # should the conflict's relaxations be subject to LP aging and cleanup?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 conflict/removeable = TRUE
+
+# score factor for depth level in bound relaxation heuristic of LP analysis
+# [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: 1]
+conflict/depthscorefac = 1
 
 # factor to decrease importance of variables' earlier conflict scores
 # [type: real, range: [1e-06,1], default: 0.98]
@@ -489,6 +497,38 @@ constraints/and/delayprop = FALSE
 # should presolving method be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/and/delaypresol = FALSE
+
+# priority of conflict handler <bounddisjunction>
+# [type: int, range: [-2147483648,2147483647], default: -3000000]
+conflict/bounddisjunction/priority = -3000000
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/bounddisjunction/sepafreq = -1
+
+# frequency for propagating domains (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 1]
+constraints/bounddisjunction/propfreq = 1
+
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
+# [type: int, range: [-1,2147483647], default: 100]
+constraints/bounddisjunction/eagerfreq = 100
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/bounddisjunction/maxprerounds = -1
+
+# should separation method be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/bounddisjunction/delaysepa = FALSE
+
+# should propagation method be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/bounddisjunction/delayprop = FALSE
+
+# should presolving method be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/bounddisjunction/delaypresol = FALSE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]

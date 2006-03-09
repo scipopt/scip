@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.h,v 1.29 2006/01/03 12:22:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.h,v 1.30 2006/03/09 12:52:17 bzfpfend Exp $"
 
 /**@file   cons_knapsack.h
  * @brief  constraint handler for knapsack constraints
@@ -77,6 +77,14 @@ SCIP_Real SCIPgetDualsolKnapsack(
 extern
 SCIP_Real SCIPgetDualfarkasKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** returns the linear relaxation of the given knapsack constraint; may return NULL if no LP row was yet created;
+ *  the user must not modify the row!
+ */
+extern
+SCIP_ROW* SCIPgetRowKnapsack(
    SCIP_CONS*            cons                /**< constraint data */
    );
 

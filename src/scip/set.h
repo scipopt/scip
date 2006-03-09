@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.91 2006/01/03 12:22:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.92 2006/03/09 12:52:20 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -1136,16 +1136,16 @@ SCIP_Bool SCIPsetIsSumRelGE(
 
 
 #define SCIPsetAllocBufferArray(set,ptr,num)    ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), \
-                                                         (int)((num)*sizeof(**(ptr)))) )
-#define SCIPsetDuplicateBufferArray(set,ptr,source,num) \
-                                                     ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source, \
-                                                         (int)((num)*sizeof(**(ptr)))) )
+         (int)((num)*sizeof(**(ptr)))) )
+#define SCIPsetDuplicateBufferArray(set,ptr,source,num)                 \
+   ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source,  \
+      (int)((num)*sizeof(**(ptr)))) )
 #define SCIPsetReallocBufferArray(set,ptr,num)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), \
-                                                         (int)((num)*sizeof(**(ptr)))) )
+         (int)((num)*sizeof(**(ptr)))) )
 #define SCIPsetFreeBufferArray(set,ptr)         ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0*sizeof(**(ptr))) )
 #define SCIPsetAllocBufferSize(set,ptr,size)    ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), size) )
-#define SCIPsetDuplicateBufferSize(set,ptr,source,size) \
-                                                     ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source, size) )
+#define SCIPsetDuplicateBufferSize(set,ptr,source,size)                 \
+   ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source, size) )
 #define SCIPsetReallocBufferSize(set,ptr,size)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), size) )
 #define SCIPsetFreeBufferSize(set,ptr)          ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) )
 

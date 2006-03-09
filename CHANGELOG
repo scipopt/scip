@@ -13,12 +13,19 @@ interface:
   SCIPgetAvgConflictScoreCurrentRun(), SCIPgetAvgInferenceScore(), SCIPgetAvgInferenceScoreCurrentRun(),
   SCIPgetAvgCutoffScore(), and SCIPgetAvgCutoffScoreCurrentRun()
 - new methods SCIPaddDialogInputLine() and SCIPaddDialogHistoryLine()
+- method SCIPgetNConflictClausesFound() renamed to SCIPgetNConflictConssFound()
+- method SCIPgetNConflictClausesFoundNode() renamed to SCIPgetNConflictConssFoundNode()
+- method SCIPgetNConflictClausesApplied() renamed to SCIPgetNConflictConssApplied()
+- new method SCIPgetFocusDepth()
+- new methods SCIPgetRowKnapsack(), SCIPgetRowLinear(), SCIPgetRowLogicor(), SCIPgetRowSetppc(), and SCIPgetRowVarbound()
+  for obtaining the linear relaxation of a corresponding constraint
 
 plugins:
 - new primal heuristic "shifting"
 - new separator "redcost" which replaces the internal reduced cost strengthening
 - new propagator "rootredcost" which applies reduced cost fixing at the root node whenever a best new primal solution
   was found
+- new constraint handler "bounddisjunction"
 
 parameters:
 - new parameter constraints/linear/separateall
@@ -28,12 +35,21 @@ parameters:
 - new parameters branching/relpscost/conflictweight, branching/relpscost/inferenceweight,
   branching/relpscost/cutoffweight, and branching/relpscost/pscostweight
 - new parameter conflict/settlelocal
+- removed parameter conflict/maxunfixed
+- parameter conflict/maxclauses renamed to conflict/maxconss
+- parameter conflict/interclauses renamed to conflict/interconss
+- parameter conflict/reconvclauses replaced by conflict/reconvlevels
+- new parameter conflict/depthscorefac
+- changed default value of parameter constraints/obsoleteage to -1
+- parameter conflict/uselp replaced by conflict/useinflp and conflict/useboundlp
 
 features:
 - extensions to the LP are kept even if the LP is not solved at the current node; however, if the LP turned out to
   be numerically instable, the extensions of the current node are still discarded
 - slightly changed priorities of constraint handlers
 - command line syntax changed to support batch modus without piping stdin with "<" or "|" operators
+- now, conflict constraints are also created if they were generated in strong branching or diving with insertion depth
+  equal to the current depth
 
 fixed bugs:
 - fixed bug with invalid lazy updates after a restart where the LP is not solved again (e.g., due to all variables
@@ -42,6 +58,8 @@ fixed bugs:
 - fixed numerical bug in SCIPrealToRational() [thanks to Anders Schack-Nielsen]
 - fixed bug in crossover heuristic with negative timelimit
 - fixed bugs resulting from inactive general integer variables being member of the variable bounds array of a variable
+- removed bug in conflict analysis with wrong redundancy check
+- fixed bug that unexpected end of stdin (Ctrl-D or piped-in file without "quit" command) gives a segmentation fault
 
 
 SCIP version 0.81

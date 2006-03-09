@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.138 2006/02/23 12:40:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.139 2006/03/09 12:52:16 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4018,14 +4018,20 @@ SCIP_RETCODE SCIPconssetchgMakeGlobal(
       assert(cons != NULL);
       assert(!cons->update);
 
+      /* because we first have to delete the constraint, we have to capture it in order to not loose it */
+      SCIPconsCapture(cons);
+
+      /* delete constraint addition from constraint set change data */
+      SCIP_CALL( conssetchgDelAddedCons(*conssetchg, blkmem, set, i) );
+
       /* don't move deleted constraints to the global problem */
       if( !cons->deleted )
       {
          SCIP_CALL( SCIPprobAddCons(prob, set, stat, cons) );
       }
 
-      /* delete constraint addition from constraint set change data */
-      SCIP_CALL( conssetchgDelAddedCons(*conssetchg, blkmem, set, i) );
+      /* release constraint */
+      SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
    }
    assert((*conssetchg)->naddedconss == 0); /* should be empty now */
 
