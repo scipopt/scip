@@ -40,7 +40,6 @@ parameters:
 - parameter conflict/interclauses renamed to conflict/interconss
 - parameter conflict/reconvclauses replaced by conflict/reconvlevels
 - new parameter conflict/depthscorefac
-- changed default value of parameter constraints/obsoleteage to -1
 - parameter conflict/uselp replaced by conflict/useinflp and conflict/useboundlp
 
 features:
