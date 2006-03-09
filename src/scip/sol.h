@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.51 2006/01/03 12:22:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.52 2006/03/09 17:31:22 bzfberth Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -76,6 +76,7 @@ SCIP_RETCODE SCIPsolCopy(
    SCIP_SOL**            sol,                /**< pointer to store the copy of the primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_SOL*             sourcesol           /**< primal CIP solution to copy */
    );

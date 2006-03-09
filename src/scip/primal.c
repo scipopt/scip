@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.77 2006/01/03 12:22:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.78 2006/03/09 17:31:21 bzfberth Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -621,7 +621,7 @@ SCIP_RETCODE SCIPprimalAddSol(
       SCIP_SOL* solcopy;
 
       /* create a copy of the solution */
-      SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, primal, sol) );
+      SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, stat, primal, sol) );
       
       /* insert copied solution into solution storage */
       SCIP_CALL( primalAddSol(primal, blkmem, set, stat, prob, tree, lp, eventfilter, solcopy, insertpos) );
@@ -777,7 +777,7 @@ SCIP_RETCODE SCIPprimalTrySol(
       SCIP_SOL* solcopy;
       
       /* create a copy of the solution */
-      SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, primal, sol) );
+      SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, stat, primal, sol) );
       
       /* insert copied solution into solution storage */
       SCIP_CALL( primalAddSol(primal, blkmem, set, stat, prob, tree, lp, eventfilter, solcopy, insertpos) );

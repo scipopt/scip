@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.74 2006/03/09 12:52:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.75 2006/03/09 17:31:21 bzfberth Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -227,8 +227,6 @@ void solStamp(
    sol->nodenum = stat->nnodes;
    sol->runnum = stat->nruns;
    sol->depth = SCIPtreeGetCurrentDepth(tree);
-   sol->index = stat->solindex;
-   stat->solindex++;
 }
 
 /** creates primal CIP solution, initialized to zero */
@@ -253,6 +251,8 @@ SCIP_RETCODE SCIPsolCreate(
    (*sol)->solorigin = SCIP_SOLORIGIN_ZERO;
    (*sol)->obj = 0.0;
    (*sol)->primalindex = -1;
+   (*sol)->index = stat->solindex;
+   stat->solindex++;
    solStamp(*sol, stat, tree);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
@@ -282,6 +282,8 @@ SCIP_RETCODE SCIPsolCreateOriginal(
    (*sol)->solorigin = SCIP_SOLORIGIN_ORIGINAL;
    (*sol)->obj = 0.0;
    (*sol)->primalindex = -1;
+   (*sol)->index = stat->solindex;
+   stat->solindex++;
    solStamp(*sol, stat, tree);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
@@ -294,6 +296,7 @@ SCIP_RETCODE SCIPsolCopy(
    SCIP_SOL**            sol,                /**< pointer to store the copy of the primal CIP solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_SOL*             sourcesol           /**< primal CIP solution to copy */
    )
@@ -312,6 +315,8 @@ SCIP_RETCODE SCIPsolCopy(
    (*sol)->solorigin = sourcesol->solorigin;
    (*sol)->runnum = sourcesol->runnum;
    (*sol)->depth = sourcesol->depth;
+   (*sol)->index = stat->solindex;
+   stat->solindex++;
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -408,6 +413,8 @@ SCIP_RETCODE SCIPsolCreateUnknown(
    (*sol)->solorigin = SCIP_SOLORIGIN_UNKNOWN;
    (*sol)->obj = 0.0;
    (*sol)->primalindex = -1;
+   (*sol)->index = stat->solindex;
+   stat->solindex++;
    solStamp(*sol, stat, tree);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
