@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.346 2006/03/09 12:52:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.347 2006/03/09 15:13:17 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -10817,9 +10817,8 @@ SCIP_Real SCIPgetSolVal(
       SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
       if( origvar == NULL )
       {
-         SCIPerrorMessage("cannot get value of transformed variable <%s> for original space solution\n",
-            SCIPvarGetName(var));
-         SCIPABORT();
+         /* the variable has no original counterpart: in the original solution, it has a value of zero */
+         return 0.0;
       }
       assert(!SCIPvarIsTransformed(var));
 
