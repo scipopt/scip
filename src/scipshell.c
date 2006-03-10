@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipshell.c,v 1.1 2006/02/23 12:40:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipshell.c,v 1.2 2006/03/10 14:29:01 bzfpfend Exp $"
 
 /**@file   scipshell.c
  * @brief  SCIP command line interface
@@ -29,6 +29,67 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scipshell.h"
+
+
+/*
+ * Message Handler
+ */
+
+/** message handler data */
+struct SCIP_MessagehdlrData
+{
+   FILE*                 logfile;            /**< log file where to copy messages into */
+};
+
+/** prints a message to the given file stream and writes the same messate to the log file */
+static
+void logMessage(
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file,               /**< file stream to print message into */
+   const char*           msg                 /**< message to print */
+   )
+{
+   SCIP_MESSAGEHDLRDATA* messagehdlrdata;
+
+   messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
+   assert(messagehdlrdata != NULL);
+   assert(messagehdlrdata->logfile != NULL);
+
+   fputs(msg, file);
+   fflush(file);
+
+   fputs(msg, messagehdlrdata->logfile);
+   fflush(messagehdlrdata->logfile);
+}
+
+/** error message print method of message handler */
+static
+SCIP_DECL_MESSAGEERROR(messageErrorLog)
+{
+   logMessage(messagehdlr, file, msg);
+}
+
+/** warning message print method of message handler */
+static
+SCIP_DECL_MESSAGEWARNING(messageWarningLog)
+{
+   logMessage(messagehdlr, file, msg);
+}
+
+/** dialog message print method of message handler */
+static
+SCIP_DECL_MESSAGEDIALOG(messageDialogLog)
+{
+   logMessage(messagehdlr, file, msg);
+}
+
+/** info message print method of message handler */
+static
+SCIP_DECL_MESSAGEINFO(messageInfoLog)
+{
+   logMessage(messagehdlr, file, msg);
+}
+
 
 
 static
@@ -106,6 +167,7 @@ SCIP_RETCODE SCIPrunShell(
    SCIP* scip = NULL;
    char* probname = NULL;
    char* settingsname = NULL;
+   char* logname = NULL;
    SCIP_Bool paramerror;
    SCIP_Bool interactive;
    int i;
@@ -137,14 +199,14 @@ SCIP_RETCODE SCIPrunShell(
    interactive = FALSE;
    for( i = 1; i < argc; ++i )
    {
-      if( strcmp(argv[i], "-f") == 0 )
+      if( strcmp(argv[i], "-l") == 0 )
       {
          i++;
          if( i < argc )
-            probname = argv[i];
+            logname = argv[i];
          else
          {
-            printf("missing problem filename after parameter '-f'\n");
+            printf("missing log filename after parameter '-l'\n");
             paramerror = TRUE;
          }
       }
@@ -156,6 +218,17 @@ SCIP_RETCODE SCIPrunShell(
          else
          {
             printf("missing settings filename after parameter '-s'\n");
+            paramerror = TRUE;
+         }
+      }
+      else if( strcmp(argv[i], "-f") == 0 )
+      {
+         i++;
+         if( i < argc )
+            probname = argv[i];
+         else
+         {
+            printf("missing problem filename after parameter '-f'\n");
             paramerror = TRUE;
          }
       }
@@ -222,36 +295,78 @@ SCIP_RETCODE SCIPrunShell(
 
    if( !paramerror )
    {
-      /*****************
-       * Load settings *
-       *****************/
-      
-      if( settingsname != NULL )
+      SCIP_MESSAGEHDLR* messagehdlr;
+      SCIP_MESSAGEHDLRDATA* messagehdlrdata;
+      SCIP_Bool error;
+
+      /***********************************
+       * create log file message handler *
+       ***********************************/
+
+      messagehdlr = NULL;
+      messagehdlrdata = NULL;
+      error = FALSE;
+      if( logname != NULL )
       {
-         SCIP_CALL( readParams(scip, settingsname) );
-      }
-      else
-      {
-         SCIP_CALL( readParams(scip, NULL) );
+         SCIP_CALL( SCIPallocMemory(scip, &messagehdlrdata) );
+         messagehdlrdata->logfile = fopen(logname, "a"); /* append to log file */
+         if( messagehdlrdata->logfile == NULL )
+         {
+            SCIPerrorMessage("cannot open log file <%s> for writing\n", logname);
+            error = TRUE;
+         }
+         SCIP_CALL( SCIPcreateMessagehdlr(&messagehdlr, FALSE, 
+               messageErrorLog, messageWarningLog, messageDialogLog, messageInfoLog,
+               messagehdlrdata) );
+         SCIP_CALL( SCIPsetMessagehdlr(messagehdlr) );
       }
 
-      /**************
-       * Start SCIP *
-       **************/
+      if( !error )
+      {
+         /*****************
+          * Load settings *
+          *****************/
 
-      if( probname != NULL )
-      {
-         SCIP_CALL( fromCommandLine(scip, probname) );
-      }
-      else
-      {
-         SCIPinfoMessage(scip, NULL, "\n");
-         SCIP_CALL( SCIPstartInteraction(scip) );
+         if( settingsname != NULL )
+         {
+            SCIP_CALL( readParams(scip, settingsname) );
+         }
+         else
+         {
+            SCIP_CALL( readParams(scip, NULL) );
+         }
+
+         /**************
+          * Start SCIP *
+          **************/
+
+         if( probname != NULL )
+         {
+            SCIP_CALL( fromCommandLine(scip, probname) );
+         }
+         else
+         {
+            SCIPinfoMessage(scip, NULL, "\n");
+            SCIP_CALL( SCIPstartInteraction(scip) );
+         }
+
+         /******************
+          * Close log file *
+          ******************/
+
+         if( messagehdlrdata != NULL )
+         {
+            SCIP_CALL( SCIPsetDefaultMessagehdlr() );
+            SCIP_CALL( SCIPfreeMessagehdlr(&messagehdlr) );
+            fclose(messagehdlrdata->logfile);
+            SCIPfreeMemory(scip, &messagehdlrdata);
+         }
       }
    }
    else
    {
-      printf("\nsyntax: %s [-s <settings>] [-f <problem>] [-b <batchfile>] [-c \"command\"]\n"
+      printf("\nsyntax: %s [-l <logfile>] [-s <settings>] [-f <problem>] [-b <batchfile>] [-c \"command\"]\n"
+         "  -l <logfile>  : copy output into log file\n"
          "  -s <settings> : load parameter settings (.set) file\n"
          "  -f <problem>  : load and solve problem file\n"
          "  -b <batchfile>: load and execute dialog command batch file (can be used multiple times)\n"

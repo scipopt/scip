@@ -56,6 +56,12 @@ features:
 - command line syntax changed to support batch modus without piping stdin with "<" or "|" operators
 - now, conflict constraints are also created if they were generated in strong branching or diving with insertion depth
   equal to the current depth
+- advanced command line syntax:
+  -l <logfile>  : copy output into log file
+  -s <settings> : load parameter settings (.set) file
+  -f <problem>  : load and solve problem file
+  -b <batchfile>: load and execute dialog command batch file (can be used multiple times)
+  -c "command"  : execute single line of dialog commands (can be used multiple times)
 
 fixed bugs:
 - fixed bug with invalid lazy updates after a restart where the LP is not solved again (e.g., due to all variables

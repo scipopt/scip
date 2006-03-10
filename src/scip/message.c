@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.c,v 1.22 2006/01/03 12:22:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: message.c,v 1.23 2006/03/10 14:29:01 bzfpfend Exp $"
 
 /**@file   message.c
  * @brief  message output methods
@@ -84,14 +84,15 @@ void bufferMessage(
    )
 {
    assert(outmsg != NULL);
-   assert(strlen(msg) < SCIP_MAXSTRLEN);
+   assert(msg == NULL || strlen(msg) < SCIP_MAXSTRLEN);
 
    *outmsg = '\0';
 
    /* should the buffer be flushed? */
    if( msg == NULL )
    {
-      strncpy(outmsg, buffer, SCIP_MAXSTRLEN);
+      if( buffer != NULL )
+         strncpy(outmsg, buffer, SCIP_MAXSTRLEN);
       (*bufferlen) = 0;
       assert(strlen(outmsg) < SCIP_MAXSTRLEN);
       return;
