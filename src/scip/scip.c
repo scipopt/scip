@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.347 2006/03/09 15:13:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.348 2006/03/13 15:35:54 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5926,7 +5926,7 @@ SCIP_RETCODE SCIPtightenVarLb(
    }
    newbound = MIN(newbound, ub);
 
-   if( !SCIPsetIsLbBetter(scip->set, newbound, lb) )
+   if( !SCIPsetIsLbBetter(scip->set, newbound, lb, ub) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -5995,7 +5995,7 @@ SCIP_RETCODE SCIPtightenVarUb(
    }
    newbound = MAX(newbound, lb);
 
-   if( !SCIPsetIsUbBetter(scip->set, newbound, ub) )
+   if( !SCIPsetIsUbBetter(scip->set, newbound, lb, ub) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -6066,7 +6066,7 @@ SCIP_RETCODE SCIPinferVarLbCons(
    }
    newbound = MIN(newbound, ub);
 
-   if( !SCIPsetIsLbBetter(scip->set, newbound, lb) )
+   if( !SCIPsetIsLbBetter(scip->set, newbound, lb, ub) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -6138,7 +6138,7 @@ SCIP_RETCODE SCIPinferVarUbCons(
    }
    newbound = MAX(newbound, lb);
 
-   if( !SCIPsetIsUbBetter(scip->set, newbound, ub) )
+   if( !SCIPsetIsUbBetter(scip->set, newbound, lb, ub) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -6303,7 +6303,7 @@ SCIP_RETCODE SCIPinferVarLbProp(
    }
    newbound = MIN(newbound, ub);
 
-   if( !SCIPsetIsLbBetter(scip->set, newbound, lb) )
+   if( !SCIPsetIsLbBetter(scip->set, newbound, lb, ub) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -6375,7 +6375,7 @@ SCIP_RETCODE SCIPinferVarUbProp(
    }
    newbound = MAX(newbound, lb);
 
-   if( !SCIPsetIsUbBetter(scip->set, newbound, ub) )
+   if( !SCIPsetIsUbBetter(scip->set, newbound, lb, ub) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -14582,28 +14582,30 @@ SCIP_Real SCIPfeasFrac(
    return SCIPsetFeasFrac(scip->set, val);
 }
 
-/** checks, if the first given lower bound is tighter (w.r.t. bound strengthening epsilon) than the second one */
+/** checks, if the given new lower bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
 SCIP_Bool SCIPisLbBetter(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             lb1,                /**< first lower bound to compare */
-   SCIP_Real             lb2                 /**< second lower bound to compare */
+   SCIP_Real             newlb,              /**< new lower bound */
+   SCIP_Real             oldlb,              /**< old lower bound */
+   SCIP_Real             oldub               /**< old upper bound */
    )
 {
    assert(scip != NULL);
 
-   return SCIPsetIsLbBetter(scip->set, lb1, lb2);
+   return SCIPsetIsLbBetter(scip->set, newlb, oldlb, oldub);
 }
 
-/** checks, if the first given upper bound is tighter (w.r.t. bound strengthening epsilon) than the second one */
+/** checks, if the given new upper bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
 SCIP_Bool SCIPisUbBetter(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             ub1,                /**< first upper bound to compare */
-   SCIP_Real             ub2                 /**< second upper bound to compare */
+   SCIP_Real             newub,              /**< new upper bound */
+   SCIP_Real             oldlb,              /**< old lower bound */
+   SCIP_Real             oldub               /**< old upper bound */
    )
 {
    assert(scip != NULL);
 
-   return SCIPsetIsUbBetter(scip->set, ub1, ub2);
+   return SCIPsetIsUbBetter(scip->set, newub, oldlb, oldub);
 }
 
 /** checks, if relative difference of values is in range of epsilon */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.213 2006/03/13 14:08:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.214 2006/03/13 15:35:54 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3102,7 +3102,7 @@ SCIP_RETCODE tightenVarBounds(
 
          newub = (rhs - minresactivity)/val;
          newub = SCIPfeasCeil(scip, newub/BOUNDSCALETOL) * BOUNDSCALETOL;
-         if( SCIPisUbBetter(scip, newub, ub) )
+         if( SCIPisUbBetter(scip, newub, lb, ub) )
          {
             /* tighten upper bound */
             SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newub=%.9f\n",
@@ -3136,7 +3136,7 @@ SCIP_RETCODE tightenVarBounds(
 
          newlb = (lhs - maxresactivity)/val;
          newlb = SCIPfeasFloor(scip, newlb/BOUNDSCALETOL) * BOUNDSCALETOL;
-         if( SCIPisLbBetter(scip, newlb, lb) )
+         if( SCIPisLbBetter(scip, newlb, lb, ub) )
          {
             /* tighten lower bound */
             SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newlb=%.9f\n",
@@ -3174,7 +3174,7 @@ SCIP_RETCODE tightenVarBounds(
 
          newlb = (rhs - minresactivity)/val;
          newlb = SCIPfeasFloor(scip, newlb/BOUNDSCALETOL) * BOUNDSCALETOL;
-         if( SCIPisLbBetter(scip, newlb, lb) )
+         if( SCIPisLbBetter(scip, newlb, lb, ub) )
          {
             /* tighten lower bound */
             SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newlb=%.9f\n",
@@ -3208,7 +3208,7 @@ SCIP_RETCODE tightenVarBounds(
 
          newub = (lhs - maxresactivity)/val;
          newub = SCIPfeasCeil(scip, newub/BOUNDSCALETOL) * BOUNDSCALETOL;
-         if( SCIPisUbBetter(scip, newub, ub) )
+         if( SCIPisUbBetter(scip, newub, lb, ub) )
          {
             /* tighten upper bound */
             SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g], newub=%.9f\n",

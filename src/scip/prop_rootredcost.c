@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_rootredcost.c,v 1.1 2006/02/23 12:41:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_rootredcost.c,v 1.2 2006/03/13 15:35:54 bzfberth Exp $"
 
 /**@file   prop_rootredcost.c
  * @brief  reduced cost strengthening at the root node
@@ -186,7 +186,7 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
             strengthen = (newub < oldub - 0.5);
          }
          else if( root )
-            strengthen = SCIPisUbBetter(scip, newub, oldub);
+            strengthen = SCIPisUbBetter(scip, newub, oldlb, oldub);
          else
             strengthen = (newub <= 0.2 * oldlb + 0.8 * oldub);
 
@@ -228,7 +228,7 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
             strengthen = (newlb > oldlb + 0.5);
          }
          else if( root )
-            strengthen = SCIPisLbBetter(scip, newlb, oldlb);
+            strengthen = SCIPisLbBetter(scip, newlb, oldlb, oldub);
          else
             strengthen = (newlb >= 0.8 * oldlb + 0.2 * oldub);
 

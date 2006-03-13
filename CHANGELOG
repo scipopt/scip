@@ -17,6 +17,8 @@ interface:
 - method SCIPgetNConflictClausesFoundNode() renamed to SCIPgetNConflictConssFoundNode()
 - method SCIPgetNConflictClausesApplied() renamed to SCIPgetNConflictConssApplied()
 - new method SCIPgetFocusDepth()
+- methods SCIPisLbBetter() and SCIPisUbBetter() have an additional parameter and slightly different meaning
+  (they now compare the bound improvement *relatively* to the width of the domain and the bound itself)
 
 plugins:
 - new primal heuristic "shifting"

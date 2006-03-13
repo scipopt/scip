@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.30 2006/01/03 12:22:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.31 2006/03/13 15:35:54 bzfberth Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -715,7 +715,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
             /* check for bound tightenings */
             oldlb = SCIPvarGetLbGlobal(vars[j]);
             oldub = SCIPvarGetUbGlobal(vars[j]);
-            if( SCIPisLbBetter(scip, newlb, oldlb) )
+            if( SCIPisLbBetter(scip, newlb, oldlb, oldub) )
             {
                /* in both probings, variable j is deduced to be at least newlb: tighten lower bound */
                SCIP_CALL( SCIPtightenVarLb(scip, vars[j], newlb, &cutoff, &tightened) );
@@ -730,7 +730,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
                   presoldata->ntotaluseless = 0;
                }
             }
-            if( SCIPisUbBetter(scip, newub, oldub) && !cutoff )
+            if( SCIPisUbBetter(scip, newub, oldlb, oldub) && !cutoff )
             {
                /* in both probings, variable j is deduced to be at most newub: tighten upper bound */
                SCIP_CALL( SCIPtightenVarUb(scip, vars[j], newub, &cutoff, &tightened) );

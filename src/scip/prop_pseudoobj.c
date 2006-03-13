@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.15 2006/02/23 12:40:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.16 2006/03/13 15:35:54 bzfberth Exp $"
 
 /**@file   prop_pseudoobj.c
  * @brief  pseudoobj propagator
@@ -229,7 +229,7 @@ SCIP_DECL_PROPEXEC(propExecPseudoobj)
          SCIP_Bool tightened;
 
          newub = lb + (cutoffbound - pseudoobjval)/obj;
-         if( SCIPisUbBetter(scip, newub, ub) )
+         if( SCIPisUbBetter(scip, newub, lb, ub) )
          {
             SCIPdebugMessage(" -> new upper bound of variable <%s>[%.10f,%.10f]: %.10f\n", SCIPvarGetName(var), lb, ub, newub);
             SCIP_CALL( SCIPinferVarUbProp(scip, var, newub, prop, 0, &infeasible, &tightened) );
@@ -245,7 +245,7 @@ SCIP_DECL_PROPEXEC(propExecPseudoobj)
          SCIP_Bool tightened;
 
          newlb = ub + (cutoffbound - pseudoobjval)/obj;
-         if( SCIPisLbBetter(scip, newlb, lb) )
+         if( SCIPisLbBetter(scip, newlb, lb, ub) )
          {
             SCIPdebugMessage(" -> new lower bound of variable <%s>[%g,%g]: %g\n", SCIPvarGetName(var), lb, ub, newlb);
             SCIP_CALL( SCIPinferVarLbProp(scip, var, newlb, prop, 0, &infeasible, &tightened) );

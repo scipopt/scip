@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.264 2006/03/09 12:52:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.265 2006/03/13 15:35:55 bzfberth Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -5546,20 +5546,21 @@ SCIP_Real SCIPfeasFrac(
    SCIP_Real             val                 /**< value to process */
    );
 
-/** checks, if the first given lower bound is tighter (w.r.t. bound strengthening epsilon) than the second one */
+/** checks, if the given new lower bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
 extern
 SCIP_Bool SCIPisLbBetter(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             lb1,                /**< first lower bound to compare */
-   SCIP_Real             lb2                 /**< second lower bound to compare */
+   SCIP_Real             newlb,              /**< new lower bound */
+   SCIP_Real             oldlb,              /**< old lower bound */
+   SCIP_Real             oldub               /**< old upper bound */
    );
 
-/** checks, if the first given upper bound is tighter (w.r.t. bound strengthening epsilon) than the second one */
-extern
+/** checks, if the given new upper bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
 SCIP_Bool SCIPisUbBetter(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             ub1,                /**< first upper bound to compare */
-   SCIP_Real             ub2                 /**< second upper bound to compare */
+   SCIP_Real             newub,              /**< new upper bound */
+   SCIP_Real             oldlb,              /**< old lower bound */
+   SCIP_Real             oldub               /**< old upper bound */
    );
 
 /** checks, if relative difference of values is in range of epsilon */
@@ -5688,8 +5689,8 @@ SCIP_Bool SCIPisSumRelGE(
 #define SCIPfeasFrac(scip, val)                   SCIPsetFeasFrac((scip)->set, val)
 
                                                                                 
-#define SCIPisLbBetter(scip, lb1, lb2)            SCIPsetIsLbBetter(scip->set, lb1, lb2)
-#define SCIPisUbBetter(scip, ub1, ub2)            SCIPsetIsUbBetter(scip->set, ub1, ub2)
+#define SCIPisLbBetter(scip, newlb, oldlb, oldub) SCIPsetIsLbBetter(scip->set, newlb, oldlb, oldub)
+#define SCIPisUbBetter(scip, newub, oldlb, oldub) SCIPsetIsUbBetter(scip->set, newub, oldlb, oldub)
                                                                                 
 #define SCIPisRelEQ(scip, val1, val2)             SCIPsetIsRelEQ((scip)->set, val1, val2)    
 #define SCIPisRelLT(scip, val1, val2)             SCIPsetIsRelLT((scip)->set, val1, val2)    
