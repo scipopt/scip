@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.212 2006/03/09 18:41:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.213 2006/03/13 14:08:27 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -5928,6 +5928,7 @@ SCIP_DECL_CONSPROP(consPropLinear)
 }
 
 
+#define MAXCONSPRESOLROUNDS 10
 /** presolving method of constraint handler */
 static
 SCIP_DECL_CONSPRESOL(consPresolLinear)
@@ -5975,6 +5976,8 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
    firstupgradetry = INT_MAX;
    for( c = 0; c < nconss && !cutoff && !SCIPpressedCtrlC(scip); ++c )
    {
+      int npresolrounds;
+
       cons = conss[c];
       assert(SCIPconsIsActive(cons));
       consdata = SCIPconsGetData(cons);
@@ -6011,10 +6014,15 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       SCIPdebugMessage("presolving linear constraint <%s>\n", SCIPconsGetName(cons));
       SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
 
-      /* apply presolving as long as possible on the single constraint */
-      while( !consdata->presolved )
+      /* apply presolving as long as possible on the single constraint (however, abort after a certain number of rounds
+       * to avoid nearly infinite cycling due to very small bound changes)
+       */
+      npresolrounds = 0;
+      while( !consdata->presolved && npresolrounds < MAXCONSPRESOLROUNDS )
       {
          assert(!cutoff);
+
+         npresolrounds++;
 
          /* mark constraint being presolved and propagated */
          consdata->presolved = TRUE;

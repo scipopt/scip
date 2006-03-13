@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rins.c,v 1.7 2006/01/03 12:22:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rins.c,v 1.8 2006/03/13 14:08:28 bzfberth Exp $"
 
 /**@file   heur_rins.c
  * @brief  RINS primal heuristic
@@ -24,7 +24,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
-#include <stdio.h>
+/* #include <stdio.h> ??????????? */
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/cons_linear.h"
@@ -210,6 +210,7 @@ SCIP_RETCODE createSubproblem(
    return SCIP_OKAY;
 }
 
+
 /** creates a new solution for the original problem by copying the solution of the subproblem */
 static
 SCIP_RETCODE createNewSol(
@@ -253,7 +254,6 @@ SCIP_RETCODE createNewSol(
 
    return SCIP_OKAY;
 }
-
 
 /*
  * Callback methods of primal heuristic
@@ -320,6 +320,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    SCIP_VAR** subvars;                       /* subproblem's variables              */
   
    SCIP_Real timelimit;                      /* timelimit for the subproblem        */
+   SCIP_Real memorylimit;
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem */
    int nvars;                     
    int i;   
@@ -338,7 +339,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
 
    *result = SCIP_DELAYED;
 
-   /* only call heuristic, if an optimal LP solution is at hand */
+   /* only call heuristic, if an optimal LP solution and a feasible solution are at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL || SCIPgetNSols(scip) <= 0  )
       return SCIP_OKAY;
    
@@ -369,6 +370,14 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    if( nsubnodes < heurdata->minnodes )
       return SCIP_OKAY;
 
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   timelimit -= SCIPgetSolvingTime(scip);
+   SCIP_CALL( SCIPgetRealParam(subscip, "limits/memory", &memorylimit) );
+   memorylimit -= SCIPgetMemUsed(scip);
+   if( timelimit < 10.0 || memorylimit <= 0.0 )
+      return SCIP_OKAY;
+
    *result = SCIP_DIDNOTFIND;
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -384,8 +393,8 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    /* set limits for the subproblem */
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) ); 
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 3) );
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit - SCIPgetTotalTime(scip) + 10.0) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
    /* forbid recursive call of heuristics solving subMIPs */
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
@@ -408,7 +417,8 @@ SCIP_DECL_HEUREXEC(heurExecRins)
 
    /* disable conflict analysis */
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) ); 
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/uselp", FALSE) ); 
+   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) ); 
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
 
@@ -452,6 +462,26 @@ SCIP_DECL_HEUREXEC(heurExecRins)
       if( success && SCIPgetNBestSolsFound(subscip) > 0 )
          heurdata->nsuccesses++;
    }
+//    /* check the status of the sub-MIP  ??????????????????? */
+//    switch( SCIPgetStatus(subscip) )
+//    {
+//    case SCIP_STATUS_OPTIMAL:
+//    case SCIP_STATUS_BESTSOLLIMIT:
+//       heurdata->limitstatus = DECREASENODELIMIT;
+//       break;
+//    case SCIP_STATUS_NODELIMIT:
+//       heurdata->limitstatus = INCREASENODELIMIT;
+//       break;
+
+//    case SCIP_STATUS_INFEASIBLE:
+//    case SCIP_STATUS_INFORUNBD:
+//       heurdata->limitstatus = MAINTAINNODELIMIT;
+//       break;
+//    default:
+//       heurdata->limitstatus = MAINTAINNODELIMIT;
+//       SCIPdebugMessage(" -> unexpected sub-MIP status <%d>: leave node limit unchanged \n", SCIPgetStatus(subscip));
+//       break;
+//    }
 
    /* free subproblem */
    SCIP_CALL( SCIPfreeTransform(subscip) );
@@ -461,7 +491,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    }
    SCIPfreeBufferArray(scip, &subvars);
    SCIP_CALL( SCIPfree(&subscip) );
-
+ 
    return SCIP_OKAY;
 }
 

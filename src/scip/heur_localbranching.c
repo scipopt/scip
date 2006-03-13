@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.7 2006/01/03 12:22:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.8 2006/03/13 14:08:28 bzfberth Exp $"
 
 /**@file   heur_localbranching.c
  * @brief  localbranching primal heuristic
@@ -350,6 +350,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIP_Longint maxnnodes;                   /* maximum number of subnodes                            */
    SCIP_Longint nsubnodes;                   /* nodelimit for subscip                                 */
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem                   */
+   SCIP_Real memorylimit;
    int nvars;
    int i;
    
@@ -415,6 +416,14 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    if( nsubnodes < heurdata->curminnodes )
       return SCIP_OKAY;
 
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   timelimit -= SCIPgetSolvingTime(scip);
+   SCIP_CALL( SCIPgetRealParam(subscip, "limits/memory", &memorylimit) );
+   memorylimit -= SCIPgetMemUsed(scip);
+   if( timelimit < 10.0 || memorylimit <= 0.0 )
+      return SCIP_OKAY;
+
    *result = SCIP_DIDNOTFIND;
 
    nvars = SCIPgetNVars(scip);
@@ -429,8 +438,8 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    /* set limits for the subproblem */
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) ); 
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 1) );
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit - SCIPgetTotalTime(scip) + 10 ) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
    /* forbid recursive call of heuristics solving subMIPs */
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
@@ -459,7 +468,8 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
 
    /* disable conflict analysis */
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) ); 
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/uselp", FALSE) ); 
+   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) ); 
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
  
