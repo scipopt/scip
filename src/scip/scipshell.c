@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipshell.c,v 1.2 2006/03/10 14:29:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipshell.c,v 1.1 2006/03/16 14:43:07 bzfpfend Exp $"
 
 /**@file   scipshell.c
  * @brief  SCIP command line interface
@@ -28,7 +28,7 @@
 
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
-#include "scipshell.h"
+#include "scip/scipshell.h"
 
 
 /*
@@ -95,24 +95,16 @@ SCIP_DECL_MESSAGEINFO(messageInfoLog)
 static
 SCIP_RETCODE readParams(
    SCIP*                      scip,               /**< SCIP data structure */
-   const char*                filename            /**< parameter file name, or NULL */
+   const char*                filename            /**< parameter file name */
    )
 {
-   if( filename != NULL )
+   if( SCIPfileExists(filename) )
    {
-      if( SCIPfileExists(filename) )
-      {
-         SCIPinfoMessage(scip, NULL, "reading parameter file <%s>\n", filename);
-         SCIP_CALL( SCIPreadParams(scip, filename) );
-      }
-      else
-         SCIPinfoMessage(scip, NULL, "parameter file <%s> not found - using default parameters\n", filename);
+      SCIPinfoMessage(scip, NULL, "reading parameter file <%s>\n", filename);
+      SCIP_CALL( SCIPreadParams(scip, filename) );
    }
-   else if( SCIPfileExists("scip.set") )
-   {
-      SCIPinfoMessage(scip, NULL, "reading parameter file <scip.set>\n");
-      SCIP_CALL( SCIPreadParams(scip, "scip.set") );
-   }
+   else
+      SCIPinfoMessage(scip, NULL, "parameter file <%s> not found - using default parameters\n", filename);
 
    return SCIP_OKAY;
 }
@@ -158,38 +150,20 @@ SCIP_RETCODE fromCommandLine(
    return SCIP_OKAY;
 }
 
-/** evaluates command line parameters and runs SCIP appropriately */
-SCIP_RETCODE SCIPrunShell(
-   int                        argc,
-   char**                     argv
+/** evaluates command line parameters and runs SCIP appropriately in the given SCIP instance */
+SCIP_RETCODE SCIPprocessShellArguments(
+   SCIP*                      scip,               /**< SCIP data structure */
+   int                        argc,               /**< number of shell parameters */
+   char**                     argv,               /**< array with shell parameters */
+   const char*                defaultsetname      /**< name of default settings file */
    )
 {
-   SCIP* scip = NULL;
    char* probname = NULL;
    char* settingsname = NULL;
    char* logname = NULL;
    SCIP_Bool paramerror;
    SCIP_Bool interactive;
    int i;
-
-   /***********************
-    * Version information *
-    ***********************/
-
-   SCIPprintVersion(NULL);
-
-
-   /*********
-    * Setup *
-    *********/
-
-   /* initialize SCIP */
-   SCIP_CALL( SCIPcreate(&scip) );
-   SCIPinfoMessage(scip, NULL, "\n");
-
-   /* include default SCIP plugins */
-   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
-
 
    /********************
     * Parse parameters *
@@ -331,9 +305,9 @@ SCIP_RETCODE SCIPrunShell(
          {
             SCIP_CALL( readParams(scip, settingsname) );
          }
-         else
+         else if( defaultsetname != NULL )
          {
-            SCIP_CALL( readParams(scip, NULL) );
+            SCIP_CALL( readParams(scip, defaultsetname) );
          }
 
          /**************
@@ -374,7 +348,46 @@ SCIP_RETCODE SCIPrunShell(
          argv[0]);
    }
 
-   
+   return SCIP_OKAY;
+}
+
+/** creates a SCIP instance with default plugins, evaluates command line parameters, runs SCIP appropriately,
+ *  and frees the SCIP instance
+ */
+SCIP_RETCODE SCIPrunShell(
+   int                        argc,               /**< number of shell parameters */
+   char**                     argv,               /**< array with shell parameters */
+   const char*                defaultsetname      /**< name of default settings file */
+   )
+{
+   SCIP* scip = NULL;
+
+   /***********************
+    * Version information *
+    ***********************/
+
+   SCIPprintVersion(NULL);
+
+
+   /*********
+    * Setup *
+    *********/
+
+   /* initialize SCIP */
+   SCIP_CALL( SCIPcreate(&scip) );
+   SCIPinfoMessage(scip, NULL, "\n");
+
+   /* include default SCIP plugins */
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
+
+
+   /**********************************
+    * Process command line arguments *
+    **********************************/
+
+   SCIP_CALL( SCIPprocessShellArguments(scip, argc, argv, defaultsetname) );
+
+
    /********************
     * Deinitialization *
     ********************/

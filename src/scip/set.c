@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.170 2006/03/13 15:35:55 bzfberth Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.171 2006/03/16 14:43:07 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -126,6 +126,8 @@
 #define SCIP_DEFAULT_LIMIT_MEMORY         1e+20 /**< maximal memory usage in MB */
 #define SCIP_DEFAULT_LIMIT_GAP              0.0 /**< solving stops, if the gap is below the given value */
 #define SCIP_DEFAULT_LIMIT_NODES           -1LL /**< maximal number of nodes to process (-1: no limit) */
+#define SCIP_DEFAULT_LIMIT_STALLNODES      -1LL /**< solving stops, if the given number of nodes was processed since the
+                                                 *   last improvement of the primal solution value (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_SOLUTIONS         -1 /**< solving stops, if given number of sols were found (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_BESTSOL           -1 /**< solving stops, if given number of solution improvements were found
                                                  *   (-1: no limit) */
@@ -581,6 +583,11 @@ SCIP_RETCODE SCIPsetCreate(
          "limits/nodes",
          "maximal number of nodes to process (-1: no limit)",
          &(*set)->limit_nodes, SCIP_DEFAULT_LIMIT_NODES, -1LL, SCIP_LONGINT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddLongintParam(*set, blkmem,
+         "limits/stallnodes",
+         "solving stops, if the given number of nodes was processed since the last improvement of the primal solution value (-1: no limit)",
+         &(*set)->limit_stallnodes, SCIP_DEFAULT_LIMIT_STALLNODES, -1LL, SCIP_LONGINT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "limits/memory",

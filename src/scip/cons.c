@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.139 2006/03/09 12:52:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.140 2006/03/16 14:43:06 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -44,9 +44,9 @@
 #define AGERESETAVG_INIT         100.0  /**< initial value of the exponentially decaying weighted sum for ages */
 #define AGERESETAVG_DECAY        0.0005 /**< weight of a new addend in the exponentially decaing sum */
 #define AGERESETAVG_AGELIMIT     2.0    /**< in dynamic setting, a constraint is deleted if its age exceeds the
-                                              *   average reset age by this factor */
+                                         *   average reset age by this factor */
 #define AGERESETAVG_OBSOLETEAGE  1.8    /**< in dynamic setting, a constraint is marked obsolete if its age exceeds the
-                                              *   average reset age by this factor */
+                                         *   average reset age by this factor */
 
 
 

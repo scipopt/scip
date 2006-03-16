@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cmain.c,v 1.85 2006/02/23 12:40:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cmain.c,v 1.86 2006/03/16 14:43:05 bzfpfend Exp $"
 
 /**@file   cmain.c
  * @brief  main file for C compilation
@@ -27,7 +27,7 @@
 #include <string.h>
 
 #include "scip/scip.h"
-#include "scipshell.h"
+#include "scip/scipshell.h"
 
 
 int
@@ -51,7 +51,7 @@ main(
    /**@todo use aging in all constraint handlers */
    /**@todo try to not use the first but the shortest constraint as reason for a deduction */
 
-   retcode = SCIPrunShell(argc, argv);
+   retcode = SCIPrunShell(argc, argv, "scip.set");
    if( retcode != SCIP_OKAY )
    {
       SCIPprintError(retcode, stderr);

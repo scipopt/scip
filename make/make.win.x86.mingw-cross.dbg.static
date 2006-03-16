@@ -1,10 +1,10 @@
-#--- $Id: make.win.x86.mingw-cross.dbg.static,v 1.2 2005/09/06 17:08:01 bzfpfend Exp $
+#--- $Id: make.win.x86.mingw-cross.dbg.static,v 1.3 2006/03/16 14:43:05 bzfpfend Exp $
 FLAGS		+=	# -DROUNDING_FE
 CFLAGS		=	-O -g
 CFLAGS		+=	$(GCCWARN)
 CXXFLAGS	+=	$(GXXWARN)
 ARFLAGS		=	crs
-LDFLAGS		+=	-lncurses -lm -static
+LDFLAGS		+=	-lm -static
 EXEEXTENSION	=	.exe
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.207 2006/03/09 12:52:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.208 2006/03/16 14:43:07 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -78,6 +78,8 @@ SCIP_Bool SCIPsolveIsStopped(
    }
    else if( set->limit_nodes >= 0 && stat->nnodes >= set->limit_nodes )
       stat->status = SCIP_STATUS_NODELIMIT;
+   else if( set->limit_stallnodes >= 0 && stat->nnodes >= stat->bestsolnode + set->limit_stallnodes )
+      stat->status = SCIP_STATUS_STALLNODELIMIT;
    else if( SCIPclockGetTime(stat->solvingtime) >= set->limit_time )
       stat->status = SCIP_STATUS_TIMELIMIT;
    else if( SCIPgetMemUsed(set->scip) >= set->limit_memory*1024.0*1024.0 )

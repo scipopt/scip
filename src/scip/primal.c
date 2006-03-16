@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.78 2006/03/09 17:31:21 bzfberth Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.79 2006/03/16 14:43:06 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -417,6 +417,8 @@ SCIP_RETCODE primalAddSol(
    int pos;
 
    assert(primal != NULL);
+   assert(set != NULL);
+   assert(stat != NULL);
    assert(sol != NULL);
    assert(0 <= insertpos && insertpos < set->limit_maxsol);
 
@@ -487,6 +489,7 @@ SCIP_RETCODE primalAddSol(
       /* issue BESTLPSOLVED event */
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_BESTSOLFOUND) );
       primal->nbestsolsfound++;
+      stat->bestsolnode = stat->nnodes;
    }
    else
    {

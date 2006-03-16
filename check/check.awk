@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.32 2006/03/09 12:52:15 bzfpfend Exp $
+# $Id: check.awk,v 1.33 2006/03/16 14:43:04 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -74,6 +74,7 @@ BEGIN {
     overheadtottime = 0.0;
     overheadtimegeom = 1.0;
     basictimegeom = 1.0;
+    timelimit = 0.0;
 }
 /=opt=/ { solfeasible[$2] = 1; sol[$2] = $3; }  # get optimum
 /=inf=/ { solfeasible[$2] = 0; sol[$2] = 0.0; } # problem infeasible
@@ -123,6 +124,7 @@ BEGIN {
     aborted = 1;
 }
 /^SCIP> loaded parameter file/ { settings = $5; sub(/<settings\//, "", settings); sub(/.set>/, "", settings); }
+/^SCIP> parameter <limits\/time> set to/ { timelimit = $6; }
 #
 # conflict analysis
 #
@@ -269,6 +271,9 @@ BEGIN {
       else
          probtype = "MIP";
    }
+
+   if( aborted && tottime == 0.0 )
+      tottime = timelimit;
 
    printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s & %8d & %7.1f &%s%8d &%s%7.1f & %7.1f & %7.1f & %7.1f \\\\\n",
       pprob, cons, vars, db, pb, gapstr, confclauses, (confclauses > 0 ? confliterals / confclauses : 0.0), 

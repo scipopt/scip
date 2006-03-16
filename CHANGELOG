@@ -1,6 +1,9 @@
 current version
 ===============
 
+compiling:
+- removed ncurses and pthread libraries from the Makefile; pthread is now only linked if CPLEX is used
+
 interface:
 - new method SCIPsolveProbingLPWithPricing()
 - new methods SCIPcolGetMinPrimsol() and SCIPcolGetMaxPrimsol()
@@ -19,6 +22,7 @@ interface:
 - new method SCIPgetFocusDepth()
 - methods SCIPisLbBetter() and SCIPisUbBetter() have an additional parameter and slightly different meaning
   (they now compare the bound improvement *relatively* to the width of the domain and the bound itself)
+- new solution status code SCIP_STATUS_STALLNODELIMIT
 
 plugins:
 - new primal heuristic "shifting"
@@ -50,6 +54,7 @@ parameters:
 - parameter conflict/reconvclauses replaced by conflict/reconvlevels
 - new parameter conflict/depthscorefac
 - parameter conflict/uselp replaced by conflict/useinflp and conflict/useboundlp
+- new parameter limits/stallnodes
 
 features:
 - extensions to the LP are kept even if the LP is not solved at the current node; however, if the LP turned out to

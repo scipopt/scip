@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.8 2006/03/13 14:08:28 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.9 2006/03/16 14:43:06 bzfpfend Exp $"
 
 /**@file   heur_localbranching.c
  * @brief  localbranching primal heuristic
@@ -510,6 +510,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       break;
 
    case SCIP_STATUS_NODELIMIT:
+   case SCIP_STATUS_STALLNODELIMIT:
       heurdata->callstatus = EXECUTE;
       heurdata->curneighborhoodsize = (heurdata->emptyneighborhoodsize + heurdata->curneighborhoodsize)/2;
       heurdata->curminnodes *= 2;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipshell.h,v 1.1 2006/02/23 12:40:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipshell.h,v 1.1 2006/03/16 14:43:07 bzfpfend Exp $"
 
 /**@file   scipshell.h
  * @brief  SCIP command line interface
@@ -29,11 +29,23 @@
 #include "scip/type_retcode.h"
 
 
-/** evaluates command line parameters and runs SCIP appropriately */
+/** evaluates command line parameters and runs SCIP appropriately in the given SCIP instance */
+extern
+SCIP_RETCODE SCIPprocessShellArguments(
+   SCIP*                      scip,               /**< SCIP data structure */
+   int                        argc,               /**< number of shell parameters */
+   char**                     argv,               /**< array with shell parameters */
+   const char*                defaultsetname      /**< name of default settings file */
+   );
+
+/** creates a SCIP instance with default plugins, evaluates command line parameters, runs SCIP appropriately,
+ *  and frees the SCIP instance
+ */
 extern
 SCIP_RETCODE SCIPrunShell(
-   int                        argc,
-   char**                     argv
+   int                        argc,               /**< number of shell parameters */
+   char**                     argv,               /**< array with shell parameters */
+   const char*                defaultsetname      /**< name of default settings file */
    );
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.12 2006/02/23 12:40:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.13 2006/03/16 14:43:05 bzfpfend Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for C++ compilation
@@ -28,7 +28,7 @@
 extern "C"
 {
 #include "scip/scip.h"
-#include "scipshell.h"
+#include "scip/scipshell.h"
 }
 
 int
@@ -39,7 +39,7 @@ main(
 {
    SCIP_RETCODE retcode;
 
-   retcode = SCIPrunShell(argc, argv);
+   retcode = SCIPrunShell(argc, argv, "scip.set");
    if( retcode != SCIP_OKAY )
    {
       SCIPprintError(retcode, stderr);

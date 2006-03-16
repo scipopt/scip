@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.151 2006/03/09 12:52:15 bzfpfend Exp $
+# $Id: Makefile,v 1.152 2006/03/16 14:43:04 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -86,7 +86,7 @@ FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF
 OFLAGS		=
 CFLAGS		=	
 CXXFLAGS	=	
-LDFLAGS		=	$(LINKCC_l)pthread $(LINKCC_l)m
+LDFLAGS		=	$(LINKCC_l)m 
 ARFLAGS		=	cr
 DFLAGS		=	-MM
 
@@ -144,14 +144,14 @@ LPILIBNAME	=	lpi$(LPS)
 
 ifeq ($(LPS),cpx)
 FLAGS		+=	-I$(LIBDIR)/cpxinc
-LPSLDFLAGS	=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)
+LPSLDFLAGS	=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP) $(LINKCC_l)pthread
 LPILIBOBJ	=	scip/lpi_cpx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 endif
 
 ifeq ($(LPS),cpx903)
 FLAGS		+=	-I$(LIBDIR)/cpx903inc
-LPSLDFLAGS	=	$(LINKCC_l)cplex903.$(OSTYPE).$(ARCH).$(COMP)
+LPSLDFLAGS	=	$(LINKCC_l)cplex903.$(OSTYPE).$(ARCH).$(COMP) $(LINKCC_l)pthread
 LPILIBOBJ	=	scip/lpi_cpx903.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 endif
@@ -281,6 +281,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/retcode.o \
 			scip/scip.o \
 			scip/scipdefplugins.o \
+			scip/scipshell.o \
 			scip/sepa.o \
 			scip/sepastore.o \
 			scip/set.o \
@@ -395,12 +396,12 @@ OBJSCIPLIBDEP	=	$(SRCDIR)/depend.objsciplib.$(OPT)
 MAINNAME	=	scip
 
 ifeq ($(LINKER),C)
-MAINOBJ		=	scipshell.o cmain.o
+MAINOBJ		=	cmain.o
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
 MAINDEP		=	$(SRCDIR)/depend.cmain.$(OPT)
 endif
 ifeq ($(LINKER),CPP)
-MAINOBJ		=	scipshell.o cppmain.o
+MAINOBJ		=	cppmain.o
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.cpp))
 MAINDEP		=	$(SRCDIR)/depend.cppmain.$(OPT)
 endif
