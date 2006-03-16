@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.200 2006/03/09 12:52:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.201 2006/03/16 16:31:18 bzfberth Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -41,8 +41,6 @@
 #include "scip/cons.h"
 #include "scip/prop.h"
 #include "scip/debug.h"
-
-
 
 
 /*
@@ -685,6 +683,10 @@ SCIP_RETCODE boundchgApplyGlobal(
    )
 {
    assert(boundchg != NULL);
+
+   /* ignore redundant bound changes */
+   if( boundchg->redundant )
+      return SCIP_OKAY;
 
    SCIPdebugMessage("applying global bound change: <%s>[%g,%g] %s %g\n",
       SCIPvarGetName(boundchg->var), SCIPvarGetLbGlobal(boundchg->var), SCIPvarGetUbGlobal(boundchg->var),

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.h,v 1.2 2006/01/03 12:22:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_crossover.h,v 1.3 2006/03/16 16:31:16 bzfberth Exp $"
 
 /**@file   heur_crossover.h
  * @brief  crossover primal heuristic
@@ -28,7 +28,6 @@
 
 
 #include "scip/scip.h"
-
 
 /** creates the crossover primal heuristic and includes it in SCIP */
 extern
