@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.101 2006/03/16 16:31:14 bzfberth Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.102 2006/03/16 19:57:02 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -164,7 +164,6 @@
 #define SCIP_HASHSIZE_CLIQUES    131101 /**< size of hash table in clique tables */
 #define SCIP_HASHSIZE_PARAMS       4099 /**< size of hash table in parameter name tables */
 #define SCIP_HASHSIZE_VBC        131101 /**< size of hash map for node -> nodenum mapping used for VBC output */
-#define SCIP_HASHSIZE_SOLS        11113 /**< size of hash table for solution tuples in crossover heuristic */
 
 /*#define BMS_NOBLOCKMEM*/
 

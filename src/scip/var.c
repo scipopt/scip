@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.201 2006/03/16 16:31:18 bzfberth Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.202 2006/03/16 19:57:03 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -691,10 +691,6 @@ SCIP_RETCODE boundchgApplyGlobal(
    SCIPdebugMessage("applying global bound change: <%s>[%g,%g] %s %g\n",
       SCIPvarGetName(boundchg->var), SCIPvarGetLbGlobal(boundchg->var), SCIPvarGetUbGlobal(boundchg->var),
       boundchg->boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", boundchg->newbound);
-
-   /* ignore redundant bound changes */
-   if( boundchg->redundant )
-      return SCIP_OKAY;
 
    SCIP_CALL( SCIPvarChgBdGlobal(boundchg->var, blkmem, set, stat, lp, branchcand, eventqueue, 
          boundchg->newbound, boundchg->boundtype) );

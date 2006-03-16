@@ -39,6 +39,7 @@ plugins:
 - new methods SCIPgetLhsVarbound(), SCIPgetRhsVarbound(), SCIPgetVarVarbound(), SCIPgetVbdvarVarbound(), and
   SCIPgetVbdcoefVarbound()
 - new methods SCIPgetNVarsXor() and SCIPgetVarsXor()
+- knapsack presolver now generates cliques in the clique table (this essentially solves neos1.mps)
 
 parameters:
 - new parameter constraints/linear/separateall
@@ -69,6 +70,7 @@ features:
   -f <problem>  : load and solve problem file
   -b <batchfile>: load and execute dialog command batch file (can be used multiple times)
   -c "command"  : execute single line of dialog commands (can be used multiple times)
+- added removal of bound-redundant rows from the LP during root node LP solving loop
 
 fixed bugs:
 - fixed bug with invalid lazy updates after a restart where the LP is not solved again (e.g., due to all variables
@@ -79,6 +81,7 @@ fixed bugs:
 - fixed bugs resulting from inactive general integer variables being member of the variable bounds array of a variable
 - removed bug in conflict analysis with wrong redundancy check
 - fixed bug that unexpected end of stdin (Ctrl-D or piped-in file without "quit" command) gives a segmentation fault
+- fixed bug in knapsack constraint disaggregation that may lead to acceptance of infeasible solutions
 
 
 SCIP version 0.81

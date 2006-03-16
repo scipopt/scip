@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.6 2006/01/03 12:22:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.7 2006/03/16 19:57:03 bzfpfend Exp $"
 
 /**@file   heur_octane.c
  * @brief  octane primal heuristic based on Balas, Ceria, Dawande, Margot, and Pataki
@@ -38,7 +38,7 @@
 #define HEUR_MAXDEPTH         -1
 #define HEUR_PSEUDONODES      FALSE     /**< call heuristic at nodes where only a pseudo solution exist? */
 #define HEUR_DURINGPLUNGING   TRUE      /**< call heuristic during plunging? (should be FALSE for diving heuristics!) */
-#define HEUR_DURINGLPLOOP     FALSE     /* call heuristic during the LP price-and-cut loop? */
+#define HEUR_DURINGLPLOOP     FALSE     /**< call heuristic during the LP price-and-cut loop? */
 #define HEUR_AFTERNODE        TRUE      /**< call heuristic after or before the current node was solved? */
 #define DEFAULT_FMAX          100       /**< {0,1}-points to be checked */
 #define DEFAULT_FFIRST        10        /**< {0,1}-points to be generated at first */     

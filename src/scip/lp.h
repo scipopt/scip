@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.114 2006/02/23 12:40:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.115 2006/03/16 19:57:03 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -491,7 +491,7 @@ SCIP_Real SCIProwGetSolFeasibility(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
-/** returns the minimal activity of a row w.r.t. the column's bounds */
+/** returns the minimal activity of a row w.r.t. the columns' bounds */
 extern
 SCIP_Real SCIProwGetMinActivity(
    SCIP_ROW*             row,                /**< LP row */
@@ -499,9 +499,17 @@ SCIP_Real SCIProwGetMinActivity(
    SCIP_STAT*            stat                /**< problem statistics data */
    );
 
-/** returns the maximal activity of a row w.r.t. the column's bounds */
+/** returns the maximal activity of a row w.r.t. the columns' bounds */
 extern
 SCIP_Real SCIProwGetMaxActivity(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics data */
+   );
+
+/** returns whether the row is unmodifiable and redundant w.r.t. the columns' bounds */
+extern
+SCIP_Bool SCIProwIsRedundant(
    SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< problem statistics data */
@@ -1018,6 +1026,15 @@ SCIP_RETCODE SCIPlpCleanupAll(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool             root                /**< are we at the root node? */
+   );
+
+/** removes all redundant rows that were added at the current node */
+extern
+SCIP_RETCODE SCIPlpRemoveRedundantRows(
+   SCIP_LP*              lp,                 /**< current LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
    );
 
 /** initiates LP diving */

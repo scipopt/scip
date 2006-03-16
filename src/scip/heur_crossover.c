@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.7 2006/03/16 16:31:14 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.8 2006/03/16 19:57:02 bzfpfend Exp $"
 
 /**@file   heur_crossover.c
  * @brief  crossover primal heuristic
@@ -53,6 +53,7 @@
 
 #define BESTSOLS              FALSE         /* two different types of solution selection strategies                */
 #define RANDOMIZED            TRUE          /* two different types of solution selection strategies                */
+#define HASHSIZE_SOLS         11113         /* size of hash table for solution tuples in crossover heuristic       */
 
 
 /*
@@ -622,7 +623,7 @@ SCIP_DECL_HEURINIT(heurInitCrossover)
    heurdata->nextnodenumber = 0;
     
    /* initialize hash table */
-   SCIP_CALL( SCIPhashtableCreate(&heurdata->hashtable, SCIPblkmem(scip), SCIP_HASHSIZE_SOLS,
+   SCIP_CALL( SCIPhashtableCreate(&heurdata->hashtable, SCIPblkmem(scip), HASHSIZE_SOLS,
          hashGetKeySols, hashKeyEqSols, hashKeyValSols) );
    assert(heurdata->hashtable != NULL );
 

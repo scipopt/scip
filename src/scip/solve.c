@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.208 2006/03/16 14:43:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.209 2006/03/16 19:57:03 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1409,7 +1409,15 @@ SCIP_RETCODE priceAndCutLoop(
                /* if a new bound change (e.g. a cut with only one column) was found, propagate domains again */
                if( stat->domchgcount != olddomchgcount )
                {
+                  /* propagate domains */
                   SCIP_CALL( propagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, cutoff) );
+
+                  /* in the root node, remove redundant rows permanently from the LP */
+                  if( root )
+                  {
+                     SCIP_CALL( SCIPlpFlush(lp, blkmem, set) );
+                     SCIP_CALL( SCIPlpRemoveRedundantRows(lp, blkmem, set, stat) );
+                  }
                }
 
                mustprice = mustprice || !lp->flushed || (prob->ncolvars != npricedcolvars);

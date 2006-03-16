@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.216 2006/03/09 12:52:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.217 2006/03/16 19:57:03 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -4749,7 +4749,7 @@ void rowCalcActivityBounds(
    assert(!row->integral || maxinfinite || EPSISINT(row->maxactivity - row->constant, SCIP_DEFAULT_SUMEPSILON));
 }
 
-/** returns the minimal activity of a row w.r.t. the column's bounds */
+/** returns the minimal activity of a row w.r.t. the columns' bounds */
 SCIP_Real SCIProwGetMinActivity(
    SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -4770,7 +4770,7 @@ SCIP_Real SCIProwGetMinActivity(
    return row->minactivity;
 }
    
-/** returns the maximal activity of a row w.r.t. the column's bounds */
+/** returns the maximal activity of a row w.r.t. the columns' bounds */
 SCIP_Real SCIProwGetMaxActivity(
    SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -4790,7 +4790,38 @@ SCIP_Real SCIProwGetMaxActivity(
 
    return row->maxactivity;
 }
-   
+
+/** returns whether the row is unmodifiable and redundant w.r.t. the columns' bounds */
+SCIP_Bool SCIProwIsRedundant(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics data */
+   )
+{
+   assert(row != NULL);
+
+   if( row->modifiable )
+      return FALSE;
+   if( !SCIPsetIsInfinity(set, -row->lhs) )
+   {
+      SCIP_Real minactivity;
+
+      minactivity = SCIProwGetMinActivity(row, set, stat);
+      if( SCIPsetIsFeasLT(set, minactivity, row->lhs) )
+         return FALSE;
+   }
+   if( !SCIPsetIsInfinity(set, row->rhs) )
+   {
+      SCIP_Real maxactivity;
+
+      maxactivity = SCIProwGetMaxActivity(row, set, stat);
+      if( SCIPsetIsFeasGT(set, maxactivity, row->rhs) )
+         return FALSE;
+   }
+
+   return TRUE;
+}
+
 /** gets maximal absolute value of row vector coefficients */
 SCIP_Real SCIProwGetMaxval(
    SCIP_ROW*             row,                /**< LP row */
@@ -10968,7 +10999,6 @@ SCIP_RETCODE lpDelRowset(
       if( rowdstat[r] == -1 )
       {
          assert(row != NULL);
-         assert(row->removeable);
 
          /* mark row to be deleted from the LPI and update row arrays of all linked columns */
          markRowDeleted(row);
@@ -10981,7 +11011,8 @@ SCIP_RETCODE lpDelRowset(
          assert(lp->lpirows[r] == NULL);
          assert(lp->rows[r] == NULL);
          lp->nrows--;
-         lp->nremoveablerows--;
+         if( row->removeable )
+            lp->nremoveablerows--;
          lp->nlpirows--;
       }
       else if( rowdstat[r] < r )
@@ -11421,6 +11452,73 @@ SCIP_RETCODE SCIPlpCleanupAll(
    {
       SCIP_CALL( lpCleanupRows(lp, blkmem, set, stat, 0) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** removes all redundant rows that were added at the current node */
+SCIP_RETCODE SCIPlpRemoveRedundantRows(
+   SCIP_LP*              lp,                 /**< current LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
+   )
+{
+   SCIP_ROW** rows;
+   SCIP_ROW** lpirows;
+   int* rowdstat;
+   int nrows;
+   int ndelrows;
+   int r;
+
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->ncols == lp->nlpicols);
+   assert(lp->nrows == lp->nlpirows);
+   assert(!lp->diving);
+   assert(stat != NULL);
+   assert(lp->validsollp == stat->lpcount);
+   assert(lp->firstnewrow <= lp->nrows);
+
+   if( lp->firstnewrow == lp->nrows )
+      return SCIP_OKAY;
+
+   nrows = lp->nrows;
+   rows = lp->rows;
+   lpirows = lp->lpirows;
+
+   /* get temporary memory */
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &rowdstat, nrows) );
+
+   /* mark redundant rows to be deleted */
+   ndelrows = 0;
+   BMSclearMemoryArray(rowdstat, nrows);
+   for( r = lp->firstnewrow; r < nrows; ++r )
+   {
+      assert(rows[r] == lpirows[r]);
+      assert(rows[r]->lppos == r);
+      assert(rows[r]->lpipos == r);
+      if( SCIProwIsRedundant(lpirows[r], set, stat) )
+      {
+         SCIPdebugMessage("row <%s> is redundant: sides=[%g,%g], act=[%g,%g]\n",
+            SCIProwGetName(lpirows[r]), SCIProwGetLhs(lpirows[r]), SCIProwGetRhs(lpirows[r]),
+            SCIProwGetMinActivity(lpirows[r], set, stat), SCIProwGetMaxActivity(lpirows[r], set, stat));
+         rowdstat[r] = 1;
+         ndelrows++;
+      }
+   }
+
+   SCIPdebugMessage("removing %d/%d redundant rows from LP\n", ndelrows, nrows);
+
+   /* delete the marked rows in the LP solver interface, update the LP respectively */
+   if( ndelrows > 0 )
+   {
+      SCIP_CALL( lpDelRowset(lp, blkmem, set, rowdstat) );
+   }
+   assert(lp->nrows == nrows - ndelrows);
+
+   /* release temporary memory */
+   SCIPsetFreeBufferArray(set, &rowdstat);
 
    return SCIP_OKAY;
 }
