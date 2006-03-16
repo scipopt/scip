@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.349 2006/03/16 14:43:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.350 2006/03/16 14:44:38 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -587,7 +587,7 @@ SCIP_RETCODE SCIPprintStatus(
       SCIPmessageFPrintInfo(file, "node limit reached");
       break;
    case SCIP_STATUS_STALLNODELIMIT:
-      SCIPmessageFPrintInfo(file, "primal stall node limit reached");
+      SCIPmessageFPrintInfo(file, "stall node limit reached");
       break;
    case SCIP_STATUS_TIMELIMIT:
       SCIPmessageFPrintInfo(file, "time limit reached");
