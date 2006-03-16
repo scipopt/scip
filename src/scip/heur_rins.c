@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rins.c,v 1.9 2006/03/16 16:31:17 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_rins.c,v 1.10 2006/03/16 16:53:10 bzfberth Exp $"
 
 /**@file   heur_rins.c
  * @brief  RINS primal heuristic
@@ -464,26 +464,6 @@ SCIP_DECL_HEUREXEC(heurExecRins)
       if( success && SCIPgetNBestSolsFound(subscip) > 0 )
          heurdata->nsuccesses++;
    }
-//    /* check the status of the sub-MIP  ??????????????????? */
-//    switch( SCIPgetStatus(subscip) )
-//    {
-//    case SCIP_STATUS_OPTIMAL:
-//    case SCIP_STATUS_BESTSOLLIMIT:
-//       heurdata->limitstatus = DECREASENODELIMIT;
-//       break;
-//    case SCIP_STATUS_NODELIMIT:
-//       heurdata->limitstatus = INCREASENODELIMIT;
-//       break;
-
-//    case SCIP_STATUS_INFEASIBLE:
-//    case SCIP_STATUS_INFORUNBD:
-//       heurdata->limitstatus = MAINTAINNODELIMIT;
-//       break;
-//    default:
-//       heurdata->limitstatus = MAINTAINNODELIMIT;
-//       SCIPdebugMessage(" -> unexpected sub-MIP status <%d>: leave node limit unchanged \n", SCIPgetStatus(subscip));
-//       break;
-//    }
 
    /* free subproblem */
    SCIP_CALL( SCIPfreeTransform(subscip) );
