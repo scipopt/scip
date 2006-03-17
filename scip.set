@@ -134,6 +134,10 @@ limits/time = 1e+20
 # [type: longint, range: [-1,9223372036854775807], default: -1]
 limits/nodes = -1
 
+# solving stops, if the given number of nodes was processed since the last improvement of the primal solution value (-1: no limit)
+# [type: longint, range: [-1,9223372036854775807], default: -1]
+limits/stallnodes = -1
+
 # maximal memory usage in MB; reported memory usage is lower than real memory usage!
 # [type: real, range: [0,1.79769313486232e+308], default: 1e+20]
 limits/memory = 1e+20
@@ -1166,7 +1170,7 @@ heuristics/crossover/maxnodes = 5000
 # [type: int, range: [0,2147483647], default: 500]
 heuristics/crossover/minnodes = 500
 
-# number of solutions to be takten into account
+# number of solutions to be taken into account
 # [type: int, range: [2,2147483647], default: 3]
 heuristics/crossover/nusedsols = 3
 
@@ -1181,6 +1185,10 @@ heuristics/crossover/nodesquot = 0.1
 # minimum percentage of integer variables that have to be fixed 
 # [type: real, range: [0,1], default: 0.666]
 heuristics/crossover/minfixingrate = 0.666
+
+# should the choice which sols to take be randomized?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/crossover/randomization = TRUE
 
 # priority of heuristic <feaspump>
 # [type: int, range: [-2147483648,2147483647], default: -1000000]
@@ -1659,8 +1667,8 @@ heuristics/rins/nwaitingnodes = 200
 heuristics/rins/minimprove = 0.01
 
 # minimum percentage of integer variables that have to be fixed 
-# [type: real, range: [0,1], default: 0.666]
-heuristics/rins/minfixingrate = 0.666
+# [type: real, range: [0,1], default: 0]
+heuristics/rins/minfixingrate = 0
 
 # priority of heuristic <rootsoldiving>
 # [type: int, range: [-2147483648,2147483647], default: -1005000]
