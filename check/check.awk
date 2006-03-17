@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.33 2006/03/16 14:43:04 bzfpfend Exp $
+# $Id: check.awk,v 1.34 2006/03/17 14:24:24 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -54,15 +54,22 @@ BEGIN {
 #    printf("Name              | Type | Conss | Vars |   Dual Bound | Primal Bound | Gap% | Nodes | Time |       \n");
 #    printf("------------------+------+-------+------+--------------+--------------+------+-------+------+-------\n");
 
+    timegeomshift = 1.0;
+    nodegeomshift = 1.0;
+    sblpgeomshift = 1.0;
+
     nprobs = 0;
     sbab = 0;
     slp = 0;
     ssim = 0;
     ssblp = 0;
     stottime = 0.0;
-    nodegeom = 1.0;
-    timegeom = 1.0;
-    sblpgeom = 1.0;
+    nodegeom = nodegeomshift;
+    timegeom = timegeomshift;
+    sblpgeom = sblpgeomshift;
+    conftimegeom = timegeomshift;
+    basictimegeom = timegeomshift;
+    overheadtimegeom = timegeomshift;
     timeouttime = 0.0;
     timeouts = 0;
     failtime = 0.0;
@@ -70,10 +77,7 @@ BEGIN {
     pass = 0;
     settings = "default";
     conftottime = 0.0;
-    conftimegeom = 1.0;
     overheadtottime = 0.0;
-    overheadtimegeom = 1.0;
-    basictimegeom = 1.0;
     timelimit = 0.0;
 }
 /=opt=/ { solfeasible[$2] = 1; sol[$2] = $3; }  # get optimum
@@ -355,26 +359,21 @@ BEGIN {
    }
    
    basictime = tottime - conftime - overheadtime;
-   if( tottime < 1.0 )
-      tottime = 1.0;
-   timegeom = timegeom^((nprobs-1)/nprobs) * tottime^(1.0/nprobs);
-   if( bbnodes < 1 )
-      bbnodes = 1;
-   nodegeom = nodegeom^((nprobs-1)/nprobs) * bbnodes^(1.0/nprobs);
-   if( sblps < 1 )
-      sblps = 1;
-   sblpgeom = sblpgeom^((nprobs-1)/nprobs) * sblps^(1.0/nprobs);
-   if( conftime < 1.0 )
-      conftime = 1.0;
-   conftimegeom = conftimegeom^((nprobs-1)/nprobs) * conftime^(1.0/nprobs);
-   if( overheadtime < 1.0 )
-      overheadtime = 1.0;
-   overheadtimegeom = overheadtimegeom^((nprobs-1)/nprobs) * overheadtime^(1.0/nprobs);
-   if( basictime < 1.0 )
-      basictime = 1.0;
-   basictimegeom = basictimegeom^((nprobs-1)/nprobs) * basictime^(1.0/nprobs);
+   nodegeom = nodegeom^((nprobs-1)/nprobs) * (bbnodes+nodegeomshift)^(1.0/nprobs);
+   sblpgeom = sblpgeom^((nprobs-1)/nprobs) * (sblps+sblpgeomshift)^(1.0/nprobs);
+   timegeom = timegeom^((nprobs-1)/nprobs) * (tottime+timegeomshift)^(1.0/nprobs);
+   conftimegeom = conftimegeom^((nprobs-1)/nprobs) * (conftime+timegeomshift)^(1.0/nprobs);
+   overheadtimegeom = overheadtimegeom^((nprobs-1)/nprobs) * (overheadtime+timegeomshift)^(1.0/nprobs);
+   basictimegeom = basictimegeom^((nprobs-1)/nprobs) * (basictime+timegeomshift)^(1.0/nprobs);
 }
-END {   
+END {
+   nodegeom -= nodegeomshift;
+   sblpgeom -= sblpgeomshift;
+   timegeom -= timegeomshift;
+   conftimegeom -= timegeomshift;
+   overheadtimegeom -= timegeomshift;
+   basictimegeom -= timegeomshift;
+
     printf("\\midrule\n")                                                 >TEXFILE;
     printf("%-14s (%2d) &        &        &                &                &        &          &         & %9d & %8.1f & %7.1f & %7.1f & %7.1f \\\\\n",
        "Total", nprobs, sbab, stottime, stottime - conftottime - overheadtottime, overheadtottime, conftottime) >TEXFILE;
