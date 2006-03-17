@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.98 2006/03/09 18:41:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.99 2006/03/17 12:39:11 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -715,6 +715,7 @@ SCIP_RETCODE checkCons(
    vars = consdata->vars;
    nvars = consdata->nvars;
    
+#if 0 /*????????????????????*/
    /* if we should check the current LP or pseudo solution, look for a fixed-to-one variable in order to disable
     * the constraint
     */
@@ -743,6 +744,7 @@ SCIP_RETCODE checkCons(
          }
       }
    }
+#endif
 
    /* calculate the constraint's activity */
    sum = 0.0;

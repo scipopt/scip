@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_tree.h,v 1.17 2006/01/18 14:53:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_tree.h,v 1.18 2006/03/17 12:39:12 bzfpfend Exp $"
 
 /**@file   type_tree.h
  * @brief  type definitions for branch and bound tree
@@ -52,6 +52,7 @@ typedef struct SCIP_Pseudofork SCIP_PSEUDOFORK;   /**< data for pseudo fork node
 typedef struct SCIP_Fork SCIP_FORK;               /**< data for fork nodes */
 typedef struct SCIP_Subroot SCIP_SUBROOT;         /**< data for subroot nodes */
 typedef struct SCIP_Node SCIP_NODE;               /**< node data structure */
+typedef struct SCIP_PendingBdchg SCIP_PENDINGBDCHG; /**< bound change information for pending bound changes */
 typedef struct SCIP_Tree SCIP_TREE;               /**< branch and bound tree */
 
 

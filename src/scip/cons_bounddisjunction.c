@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.1 2006/03/09 12:52:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.2 2006/03/17 12:39:11 bzfpfend Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @brief  constraint handler for bound disjunction constraints
@@ -809,7 +809,8 @@ SCIP_RETCODE checkCons(
    assert(nvars == 0 || vars != NULL);
    assert(nvars == 0 || boundtypes != NULL);
    assert(nvars == 0 || bounds != NULL);
-   
+
+#if 0 /*???????????????????????*/   
    /* if we should check the current LP or pseudo solution, look for a satisfied literal in order to disable
     * the constraint
     */
@@ -830,12 +831,14 @@ SCIP_RETCODE checkCons(
             conshdlr = SCIPconsGetHdlr(cons);
             conshdlrdata = SCIPconshdlrGetData(conshdlr);
             assert(conshdlrdata != NULL);
+            /*???????????????SCIP_CALL( switchWatchedvars(scip, cons, conshdlrdata->eventhdlr, v, -1) );*/
             SCIP_CALL( disableCons(scip, cons) );
 
             return SCIP_OKAY;
          }
       }
    }
+#endif
 
    /* check the given solution */
    *violated = TRUE;

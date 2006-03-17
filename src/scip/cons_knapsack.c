@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.126 2006/03/16 19:57:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.127 2006/03/17 12:39:11 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -3090,8 +3090,8 @@ SCIP_RETCODE addCliques(
    if( consdata->cliquesadded || consdata->nvars == 0 )
       return SCIP_OKAY;
 
-   /* make sure, the items are sorted by non-increasing weight */
-   assert(consdata->merged);
+   /* make sure, the items are merged and sorted by non-increasing weight */
+   SCIP_CALL( mergeMultiples(scip, cons) );
    sortItems(consdata);
 
    /* get temporary memory */

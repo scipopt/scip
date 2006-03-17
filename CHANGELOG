@@ -82,6 +82,8 @@ fixed bugs:
 - removed bug in conflict analysis with wrong redundancy check
 - fixed bug that unexpected end of stdin (Ctrl-D or piped-in file without "quit" command) gives a segmentation fault
 - fixed bug in knapsack constraint disaggregation that may lead to acceptance of infeasible solutions
+- fixed bug with inconsistent data structures after a global bound was changed at a local subproblem and the
+  local bounds are not contained anymore in the new global bounds
 
 
 SCIP version 0.81

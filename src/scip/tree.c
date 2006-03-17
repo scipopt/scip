@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.173 2006/03/09 12:52:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.174 2006/03/17 12:39:12 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -99,6 +99,30 @@ SCIP_RETCODE treeEnsurePathMem(
       tree->pathsize = newsize;
    }
    assert(num <= tree->pathsize);
+
+   return SCIP_OKAY;
+}
+
+/** resizes pendingbdchgs array to be able to store at least num nodes */
+static
+SCIP_RETCODE treeEnsurePendingbdchgsMem(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimal number of node slots in path */
+   )
+{
+   assert(tree != NULL);
+   assert(set != NULL);
+
+   if( num > tree->pendingbdchgssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      SCIP_ALLOC( BMSreallocMemoryArray(&tree->pendingbdchgs, newsize) );
+      tree->pendingbdchgssize = newsize;
+   }
+   assert(num <= tree->pendingbdchgssize);
 
    return SCIP_OKAY;
 }
@@ -1440,6 +1464,40 @@ SCIP_RETCODE SCIPnodeDelCons(
    return SCIP_OKAY;
 }
 
+/** adds the given bound change to the list of pending bound changes */
+static
+SCIP_RETCODE treeAddPendingBdchg(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE*            node,               /**< node to add bound change to */
+   SCIP_VAR*             var,                /**< variable to change the bounds for */
+   SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
+   SCIP_CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
+   SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
+   int                   inferinfo,          /**< user information for inference to help resolving the conflict */
+   SCIP_Bool             probingchange       /**< is the bound change a temporary setting due to probing? */
+   )
+{
+   assert(tree != NULL);
+
+   /* make sure that enough memory is allocated for the pendingbdchgs array */
+   SCIP_CALL( treeEnsurePendingbdchgsMem(tree, set, tree->npendingbdchgs+1) );
+
+   /* add the bound change to the pending list */
+   tree->pendingbdchgs[tree->npendingbdchgs].node = node;
+   tree->pendingbdchgs[tree->npendingbdchgs].var = var;
+   tree->pendingbdchgs[tree->npendingbdchgs].newbound = newbound;
+   tree->pendingbdchgs[tree->npendingbdchgs].boundtype = boundtype;
+   tree->pendingbdchgs[tree->npendingbdchgs].infercons = infercons;
+   tree->pendingbdchgs[tree->npendingbdchgs].inferprop = inferprop;
+   tree->pendingbdchgs[tree->npendingbdchgs].inferinfo = inferinfo;
+   tree->pendingbdchgs[tree->npendingbdchgs].probingchange = probingchange;
+   tree->npendingbdchgs++;
+
+   return SCIP_OKAY;
+}
+
 /** adds bound change with inference information to focus node, child of focus node, or probing node;
  *  if possible, adjusts bound to integral value;
  *  at most one of infercons and inferprop may be non-NULL
@@ -1537,6 +1595,36 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       SCIPvarGetName(var), oldlb, oldub, boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound,
       SCIPvarGetObj(var));
 
+   /* if the bound change takes place at an active node but is conflicting with the current local bounds,
+    * we cannot apply it immediately because this would introduce inconsistencies to the bound change data structures
+    * in the tree and to the bound change information data in the variable;
+    * instead we have to remember the bound change as a pending bound change and mark the affected nodes on the active
+    * path to be infeasible
+    */
+   if( node->active )
+   {
+      int conflictingdepth;
+
+      conflictingdepth = SCIPvarGetConflictingBdchgDepth(var, set, boundtype, newbound);
+      if( conflictingdepth >= 0 )
+      {
+         assert(conflictingdepth < tree->pathlen);
+
+         SCIPdebugMessage(" -> bound change <%s> %s %g violates current local bounds [%g,%g] since depth %d: remember for later application\n",
+            SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", newbound,
+            SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), conflictingdepth);
+
+         /* remember the pending bound change */
+         SCIP_CALL( treeAddPendingBdchg(tree, set, node, var, newbound, boundtype, infercons, inferprop, inferinfo, 
+               probingchange) );
+
+         /* mark the node with the conflicting bound change to be cut off */
+         SCIPnodeCutoff(tree->path[conflictingdepth], set, stat, tree);
+
+         return SCIP_OKAY;
+      }
+   }
+         
    stat->nboundchgs++;
 
    /* if the node is the root node: change local and global bound immediately */
@@ -1621,6 +1709,13 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    {
       SCIP_Bool cutoff;
 
+      /**@todo if the node is active, it currently must either be the effective root (see above) or the current node;
+       *       if a bound change to an intermediate active node should be added, we must make sure, the bound change
+       *       information array of the variable stays sorted (new info must be sorted in instead of putting it to
+       *       the end of the array), and we should identify now redundant bound changes that are applied at a
+       *       later node on the active path
+       */
+      assert(SCIPtreeGetCurrentNode(tree) == node); 
       SCIP_CALL( SCIPboundchgApply(&node->domchg->domchgdyn.boundchgs[node->domchg->domchgdyn.nboundchgs-1],
             blkmem, set, stat, lp, branchcand, eventqueue, node->depth, node->domchg->domchgdyn.nboundchgs-1, &cutoff) );
       assert(node->domchg->domchgdyn.boundchgs[node->domchg->domchgdyn.nboundchgs-1].var == var);
@@ -1678,6 +1773,46 @@ SCIP_RETCODE SCIPnodeAddHolechg(
    SCIP_CALL( SCIPdomchgAddHolechg(&node->domchg, blkmem, set, ptr, newlist, oldlist) );
 
    /**@todo apply hole change on active nodes and issue event */
+
+   return SCIP_OKAY;
+}
+
+/** applies the pending bound changes */
+static
+SCIP_RETCODE treeApplyPendingBdchgs(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   )
+{
+   int npendingbdchgs;
+   int i;
+
+   assert(tree != NULL);
+
+   npendingbdchgs = tree->npendingbdchgs;
+   for( i = 0; i < npendingbdchgs; ++i )
+   {
+      assert(SCIPnodeGetDepth(tree->pendingbdchgs[i].node) < tree->cutoffdepth);
+      assert(SCIPvarGetConflictingBdchgDepth(tree->pendingbdchgs[i].var, set, tree->pendingbdchgs[i].boundtype,
+            tree->pendingbdchgs[i].newbound) == -1);
+
+      SCIPdebugMessage("applying pending bound change <%s>[%g,%g] %s %g\n", SCIPvarGetName(tree->pendingbdchgs[i].var),
+         SCIPvarGetLbLocal(tree->pendingbdchgs[i].var), SCIPvarGetUbLocal(tree->pendingbdchgs[i].var), 
+         tree->pendingbdchgs[i].boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+         tree->pendingbdchgs[i].newbound);
+
+      SCIP_CALL( SCIPnodeAddBoundinfer(tree->pendingbdchgs[i].node, blkmem, set, stat, tree, lp, branchcand, eventqueue,
+            tree->pendingbdchgs[i].var, tree->pendingbdchgs[i].newbound, tree->pendingbdchgs[i].boundtype,
+            tree->pendingbdchgs[i].infercons, tree->pendingbdchgs[i].inferprop, tree->pendingbdchgs[i].inferinfo,
+            tree->pendingbdchgs[i].probingchange) );
+      assert(tree->npendingbdchgs == npendingbdchgs); /* this time, the bound change can be applied! */
+   }
+   tree->npendingbdchgs = 0;
 
    return SCIP_OKAY;
 }
@@ -2295,6 +2430,9 @@ SCIP_RETCODE treeSwitchPath(
       SCIP_CALL( nodeDeactivate(tree->path[i], blkmem, set, stat, tree, lp, branchcand, eventqueue) );
    }
    tree->pathlen = forkdepth+1;
+
+   /* apply the pending bound changes */
+   SCIP_CALL( treeApplyPendingBdchgs(tree, blkmem, set, stat, lp, branchcand, eventqueue) );
 
    /* create the new active path */
    SCIP_CALL( treeEnsurePathMem(tree, set, focusnodedepth+1) );
@@ -3612,6 +3750,9 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->pathnlpcols = NULL;
    (*tree)->pathnlprows = NULL;
    (*tree)->probinglpistate = NULL;
+   (*tree)->pendingbdchgs = NULL;
+   (*tree)->pendingbdchgssize = 0;
+   (*tree)->npendingbdchgs = 0;
    (*tree)->focuslpstateforklpcount = -1;
    (*tree)->childrensize = 0;
    (*tree)->nchildren = 0;
@@ -3663,6 +3804,7 @@ SCIP_RETCODE SCIPtreeFree(
    BMSfreeMemoryArrayNull(&(*tree)->siblingsprio);
    BMSfreeMemoryArrayNull(&(*tree)->pathnlpcols);
    BMSfreeMemoryArrayNull(&(*tree)->pathnlprows);
+   BMSfreeMemoryArrayNull(&(*tree)->pendingbdchgs);
 
    BMSfreeMemory(tree);
 
@@ -3699,6 +3841,7 @@ SCIP_RETCODE SCIPtreeClear(
    tree->cutoffdepth = INT_MAX;
    tree->repropdepth = INT_MAX;
    tree->repropsubtreecount = 0;
+   tree->npendingbdchgs = 0;
    tree->focusnodehaslp = FALSE;
    tree->probingnodehaslp = FALSE;
    tree->cutoffdelayed = FALSE;

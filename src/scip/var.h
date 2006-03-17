@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.108 2006/03/09 12:52:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.109 2006/03/17 12:39:12 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -695,6 +695,17 @@ SCIP_RETCODE SCIPvarResetBounds(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** returns at which depth in the tree a bound change was applied to the variable that conflicts with the
+ *  given bound; returns -1 if the bound does not conflict with the current local bounds of the variable
+ */
+extern
+int SCIPvarGetConflictingBdchgDepth(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BOUNDTYPE        boundtype,          /**< bound type of the conflicting bound */
+   SCIP_Real             bound               /**< conflicting bound */
    );
 
 /** informs variable x about a globally valid variable lower bound x >= b*z + d with integer variable z;

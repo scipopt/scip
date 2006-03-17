@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.350 2006/03/16 14:44:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.351 2006/03/17 12:39:11 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4086,7 +4086,7 @@ SCIP_RETCODE presolveRound(
             scip->branchcand) );
 
       /* if we work off the delayed presolvers, we stop immediately if a reduction was found */
-      if( onlydelayed && (result == SCIP_SUCCESS /*???????????????? || result == SCIP_DELAYED*/) )
+      if( onlydelayed && result == SCIP_SUCCESS )
       {
          *delayed = TRUE;
          aborted = TRUE;
@@ -4127,7 +4127,7 @@ SCIP_RETCODE presolveRound(
             scip->branchcand) );
 
       /* if we work off the delayed presolvers, we stop immediately if a reduction was found */
-      if( onlydelayed && (result == SCIP_SUCCESS /*???????????????? || result == SCIP_DELAYED*/) )
+      if( onlydelayed && result == SCIP_SUCCESS )
       {
          *delayed = TRUE;
          aborted = TRUE;
@@ -4168,7 +4168,7 @@ SCIP_RETCODE presolveRound(
             scip->branchcand) );
 
       /* if we work off the delayed presolvers, we stop immediately if a reduction was found */
-      if( onlydelayed && (result == SCIP_SUCCESS /*???????????????? || result == SCIP_DELAYED*/) )
+      if( onlydelayed && result == SCIP_SUCCESS )
       {
          *delayed = TRUE;
          aborted = TRUE;
@@ -8618,7 +8618,7 @@ SCIP_RETCODE SCIPgetLPColsData(
       if( cols != NULL )
          *cols = NULL;
       if( ncols != NULL )
-         *ncols = 0; /*???????????????scip->tree->pathnlpcols[scip->tree->pathlen-1];*/
+         *ncols = 0;
    }
 
    return SCIP_OKAY;
@@ -8647,7 +8647,7 @@ int SCIPgetNLPCols(
    if( SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
       return SCIPlpGetNCols(scip->lp);
    else
-      return 0; /*???????????????scip->tree->pathnlpcols[scip->tree->pathlen-1];*/
+      return 0;
 }
 
 /** gets current LP rows along with the current number of LP rows */
@@ -8671,7 +8671,7 @@ SCIP_RETCODE SCIPgetLPRowsData(
       if( rows != NULL )
          *rows = NULL;
       if( nrows != NULL )
-         *nrows = 0; /*??????????????scip->tree->pathnlprows[scip->tree->pathlen-1];*/
+         *nrows = 0;
    }
 
    return SCIP_OKAY;
@@ -8700,7 +8700,7 @@ int SCIPgetNLPRows(
    if( SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
       return SCIPlpGetNRows(scip->lp);
    else
-      return 0; /*???????????????scip->tree->pathnlprows[scip->tree->pathlen-1];*/
+      return 0;
 }
 
 /** returns TRUE iff all columns, i.e. every variable with non-empty column w.r.t. all ever created rows, are present

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.171 2006/03/16 14:43:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.172 2006/03/17 12:39:12 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -68,10 +68,6 @@
 
 #define SCIP_DEFAULT_CONF_MAXVARSFAC       0.02 /**< maximal fraction of variables involved in a conflict constraint */
 #define SCIP_DEFAULT_CONF_MINMAXVARS         30 /**< minimal absolute maximum of variables involved in a conflict constraint */
-#if 0 /*?????????????????????*/
-#define SCIP_DEFAULT_CONF_MAXUNFIXED         -1 /**< maximal number of unfixed variables at insertion depth of conflict
-                                                 *   clause (-1: no limit) */
-#endif
 #define SCIP_DEFAULT_CONF_MAXLPLOOPS          0 /**< maximal number of LP resolving loops during conflict analysis
                                                  *   (-1: no limit) */
 #define SCIP_DEFAULT_CONF_LPITERATIONS        0 /**< maximal number of LP iterations in each LP resolving loop
@@ -449,13 +445,6 @@ SCIP_RETCODE SCIPsetCreate(
          "minimal absolute maximum of variables involved in a conflict constraint",
          &(*set)->conf_minmaxvars, SCIP_DEFAULT_CONF_MINMAXVARS, 0, INT_MAX,
          NULL, NULL) );
-#if 0 /*?????????????????????*/
-   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
-         "conflict/maxunfixed",
-         "maximal number of unfixed variables at insertion depth of conflict clause (-1: no limit)",
-         &(*set)->conf_maxunfixed, SCIP_DEFAULT_CONF_MAXUNFIXED, -1, INT_MAX,
-         NULL, NULL) );
-#endif
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "conflict/maxlploops",
          "maximal number of LP resolving loops during conflict analysis (-1: no limit)",

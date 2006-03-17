@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.115 2006/03/09 12:52:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.116 2006/03/17 12:39:11 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1300,18 +1300,6 @@ SCIP_RETCODE SCIPconflictFlushConss(
                conflictset->validdepth, cutoffdepth);
             continue;
          }
-
-#if 0 /*?????????????????? remove this! */
-         /* ignore conflict sets that are only valid in the current node (which is cut off); if the conflict analysis was
-          * applied in strong branching, probing, or diving, the current node is not cut off -> the conflict set is useful
-          */
-         if( conflictset->insertdepth >= focusdepth && conflictset->conflictdepth != INT_MAX )
-         {
-            SCIPdebugMessage(" -> ignoring conflict set with insertdepth %d >= focusdepth %d\n",
-               conflictset->validdepth, focusdepth);
-            continue;
-         }
-#endif
 
          /* if no conflict bounds exist, the node and its sub tree in the conflict set's valid depth can be
           * cut off completely
@@ -3096,13 +3084,7 @@ SCIP_RETCODE addCand(
    /* in the infeasibility or dual bound proof, the variable's bound is chosen to maximize the proof's activity */
    if( proofcoef > 0.0 )
    {
-#if 1 /*????????????????????*/
       assert(ubchginfopos >= 0); /* otherwise, undoBdchgsProof() should already have relaxed the local bound */
-#else
-      /* if bound is global, nothing has to be done */
-      if( ubchginfopos == -1 )
-         return SCIP_OKAY;
-#endif
 
       /* calculate the difference of current bound to the previous bound the variable was set to */
       if( ubchginfopos == var->nubchginfos )
@@ -3124,13 +3106,7 @@ SCIP_RETCODE addCand(
    }
    else
    {
-#if 1 /*????????????????????*/
       assert(lbchginfopos >= 0); /* otherwise, undoBdchgsProof() should already have relaxed the local bound */
-#else
-      /* if bound is global, nothing has to be done */
-      if( lbchginfopos == -1 )
-         return SCIP_OKAY;
-#endif
 
       /* calculate the difference of current bound to the previous bound the variable was set to */
       if( lbchginfopos == var->nlbchginfos )
@@ -3345,29 +3321,6 @@ SCIP_RETCODE undoBdchgsProof(
          SCIP_CALL( addCand(set, currentdepth, var, lbchginfoposs[v], ubchginfoposs[v], proofcoefs[v],
                prooflhs, proofact, &cands, &candscores, &newbounds, &proofactdeltas, &candssize, &ncands, 0) );
       }
-#if 0 /*????????????????????????? remove this!*/
-      assert(-1 <= pos && pos < ncands);
-      if( pos == -1 )
-      {
-         assert(SCIPsetIsZero(set, proofcoefs[v])
-            || (SCIPsetIsPositive(set, proofcoefs[v]) && ubchginfoposs[v] == -1)
-            || (SCIPsetIsNegative(set, proofcoefs[v]) && lbchginfoposs[v] == -1));
-
-         /* variable can be relaxed to global bounds */
-         SCIPdebugMessage(" -> relaxing variable <%s>[%g,%g] to [%g,%g]: proofcoef=%g, %g <= %g\n",
-            SCIPvarGetName(var), curvarlbs[v], curvarubs[v], SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
-            proofcoefs[v], prooflhs, proofact);
-         curvarlbs[v] = SCIPvarGetLbGlobal(var);
-         curvarubs[v] = SCIPvarGetUbGlobal(var);
-         lbchginfoposs[v] = -1;
-         ubchginfoposs[v] = -1;
-         if( nbdchgs != NULL )
-         {
-            SCIP_CALL( addBdchg(set, var, curvarlbs[v], curvarubs[v],
-                  bdchginds, bdchgoldlbs, bdchgoldubs, bdchgnewlbs, bdchgnewubs, bdchgssize, nbdchgs) );
-         }
-      }
-#endif
    }
 
    /* try to undo remaining local bound changes while still keeping the proof row violated:

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.33 2006/02/23 12:40:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.34 2006/03/17 12:39:12 bzfpfend Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -133,6 +133,19 @@ struct SCIP_Node
    unsigned int          repropsubtreemark:9;/**< subtree repropagation marker for subtree repropagation */
 };
 
+/** bound change information for pending bound changes */
+struct SCIP_PendingBdchg
+{
+   SCIP_NODE*            node;               /**< node to add bound change to */
+   SCIP_VAR*             var;                /**< variable to change the bounds for */
+   SCIP_Real             newbound;           /**< new value for bound */
+   SCIP_BOUNDTYPE        boundtype;          /**< type of bound: lower or upper bound */
+   SCIP_CONS*            infercons;          /**< constraint that deduced the bound change, or NULL */
+   SCIP_PROP*            inferprop;          /**< propagator that deduced the bound change, or NULL */
+   int                   inferinfo;          /**< user information for inference to help resolving the conflict */
+   SCIP_Bool             probingchange;      /**< is the bound change a temporary setting due to probing? */
+};
+
 /** branch and bound tree */
 struct SCIP_Tree
 {
@@ -158,6 +171,9 @@ struct SCIP_Tree
    int*                  pathnlprows;        /**< array with number of LP rows for each problem in active path (except
                                               *   newly added rows of the focus node) */
    SCIP_LPISTATE*        probinglpistate;    /**< LP state information before probing started */
+   SCIP_PENDINGBDCHG*    pendingbdchgs;      /**< array of pending bound changes, or NULL */
+   int                   pendingbdchgssize;  /**< size of pendingbdchgs array */
+   int                   npendingbdchgs;     /**< number of pending bound changes */
    int                   focuslpstateforklpcount; /**< LP number of last solved LP in current LP state fork, or -1 if unknown */
    int                   childrensize;       /**< available slots in children vector */
    int                   nchildren;          /**< number of children of focus node (number of used slots in children vector) */

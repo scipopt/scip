@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.202 2006/03/16 19:57:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.203 2006/03/17 12:39:12 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -9565,6 +9565,68 @@ int SCIPvarGetLastBdchgDepth(
    assert(bdchgidx != NULL);
 
    return bdchgidx->depth;
+}
+
+/** returns at which depth in the tree a bound change was applied to the variable that conflicts with the
+ *  given bound; returns -1 if the bound does not conflict with the current local bounds of the variable
+ */
+int SCIPvarGetConflictingBdchgDepth(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BOUNDTYPE        boundtype,          /**< bound type of the conflicting bound */
+   SCIP_Real             bound               /**< conflicting bound */
+   )
+{
+   int i;
+
+   assert(var != NULL);
+
+   if( boundtype == SCIP_BOUNDTYPE_LOWER )
+   {
+      /* check if the bound is in conflict with the current local bounds */
+      if( SCIPsetIsLE(set, bound, var->locdom.ub) )
+         return -1;
+
+      /* local bounds are in conflict with the given bound -> there must be at least one conflicting change! */
+      assert(var->nubchginfos > 0);
+      assert(SCIPsetIsGT(set, bound, var->ubchginfos[var->nubchginfos-1].newbound));
+
+      /* search for the first conflicting bound change */
+      for( i = var->nubchginfos-1; i > 0 && SCIPsetIsGT(set, bound, var->ubchginfos[i-1].newbound); --i )
+      {
+         assert(var->ubchginfos[i].var == var); /* perform sanity check on the search for the first conflicting bound */
+         assert(var->ubchginfos[i].boundtype == SCIP_BOUNDTYPE_UPPER);
+      }
+      assert(SCIPsetIsGT(set, bound, var->ubchginfos[i].newbound));             /* bound change i is conflicting */
+      assert(i == 0 || SCIPsetIsLE(set, bound, var->ubchginfos[i-1].newbound)); /* bound change i-1 is not conflicting */
+
+      /* return the depth at which the first conflicting bound change took place */
+      return var->ubchginfos[i].bdchgidx.depth;
+   }
+   else
+   {
+      assert(boundtype == SCIP_BOUNDTYPE_UPPER);
+
+      /* check if the bound is in conflict with the current local bounds */
+      if( SCIPsetIsGE(set, bound, var->locdom.lb) )
+         return -1;
+
+      /* local bounds are in conflict with the given bound -> there must be at least one conflicting change! */
+      assert(var->nlbchginfos > 0);
+      assert(SCIPsetIsLT(set, bound, var->lbchginfos[var->nlbchginfos-1].newbound));
+
+      /* search for the first conflicting bound change */
+      for( i = var->nlbchginfos-1; i > 0 && SCIPsetIsLT(set, bound, var->lbchginfos[i-1].newbound); --i )
+      {
+         assert(var->lbchginfos[i].var == var); /* perform sanity check on the search for the first conflicting bound */
+         assert(var->lbchginfos[i].boundtype == SCIP_BOUNDTYPE_LOWER);
+      }
+      assert(SCIPsetIsLT(set, bound, var->lbchginfos[i].newbound));             /* bound change i is conflicting */
+      assert(i == 0 || SCIPsetIsGE(set, bound, var->lbchginfos[i-1].newbound)); /* bound change i-1 is not conflicting */
+
+      /* return the depth at which the first conflicting bound change took place */
+      return var->lbchginfos[i].bdchgidx.depth;
+   }
 }
 
 /** returns whether the first binary variable was fixed earlier than the second one;
