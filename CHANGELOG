@@ -66,6 +66,7 @@ features:
   equal to the current depth
 - advanced command line syntax:
   -l <logfile>  : copy output into log file
+  -q            : suppress screen messages
   -s <settings> : load parameter settings (.set) file
   -f <problem>  : load and solve problem file
   -b <batchfile>: load and execute dialog command batch file (can be used multiple times)

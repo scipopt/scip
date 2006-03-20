@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipshell.c,v 1.1 2006/03/16 14:43:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipshell.c,v 1.2 2006/03/20 09:58:57 bzfpfend Exp $"
 
 /**@file   scipshell.c
  * @brief  SCIP command line interface
@@ -39,6 +39,7 @@
 struct SCIP_MessagehdlrData
 {
    FILE*                 logfile;            /**< log file where to copy messages into */
+   SCIP_Bool             quiet;              /**< should screen messages be suppressed? */
 };
 
 /** prints a message to the given file stream and writes the same messate to the log file */
@@ -53,13 +54,17 @@ void logMessage(
 
    messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
    assert(messagehdlrdata != NULL);
-   assert(messagehdlrdata->logfile != NULL);
 
-   fputs(msg, file);
-   fflush(file);
-
-   fputs(msg, messagehdlrdata->logfile);
-   fflush(messagehdlrdata->logfile);
+   if( !messagehdlrdata->quiet )
+   {
+      fputs(msg, file);
+      fflush(file);
+   }
+   if( messagehdlrdata->logfile != NULL )
+   {
+      fputs(msg, messagehdlrdata->logfile);
+      fflush(messagehdlrdata->logfile);
+   }
 }
 
 /** error message print method of message handler */
@@ -161,6 +166,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
    char* probname = NULL;
    char* settingsname = NULL;
    char* logname = NULL;
+   SCIP_Bool quiet;
    SCIP_Bool paramerror;
    SCIP_Bool interactive;
    int i;
@@ -169,6 +175,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
     * Parse parameters *
     ********************/
    
+   quiet = FALSE;
    paramerror = FALSE;
    interactive = FALSE;
    for( i = 1; i < argc; ++i )
@@ -184,6 +191,8 @@ SCIP_RETCODE SCIPprocessShellArguments(
             paramerror = TRUE;
          }
       }
+      else if( strcmp(argv[i], "-q") == 0 )
+         quiet = TRUE;
       else if( strcmp(argv[i], "-s") == 0 )
       {
          i++;
@@ -280,15 +289,21 @@ SCIP_RETCODE SCIPprocessShellArguments(
       messagehdlr = NULL;
       messagehdlrdata = NULL;
       error = FALSE;
-      if( logname != NULL )
+      if( logname != NULL || quiet )
       {
          SCIP_CALL( SCIPallocMemory(scip, &messagehdlrdata) );
-         messagehdlrdata->logfile = fopen(logname, "a"); /* append to log file */
-         if( messagehdlrdata->logfile == NULL )
+         if( logname != NULL )
          {
-            SCIPerrorMessage("cannot open log file <%s> for writing\n", logname);
-            error = TRUE;
+            messagehdlrdata->logfile = fopen(logname, "a"); /* append to log file */
+            if( messagehdlrdata->logfile == NULL )
+            {
+               SCIPerrorMessage("cannot open log file <%s> for writing\n", logname);
+               error = TRUE;
+            }
          }
+         else
+            messagehdlrdata->logfile = NULL;
+         messagehdlrdata->quiet = quiet;
          SCIP_CALL( SCIPcreateMessagehdlr(&messagehdlr, FALSE, 
                messageErrorLog, messageWarningLog, messageDialogLog, messageInfoLog,
                messagehdlrdata) );
@@ -332,15 +347,17 @@ SCIP_RETCODE SCIPprocessShellArguments(
          {
             SCIP_CALL( SCIPsetDefaultMessagehdlr() );
             SCIP_CALL( SCIPfreeMessagehdlr(&messagehdlr) );
-            fclose(messagehdlrdata->logfile);
+            if( messagehdlrdata->logfile != NULL )
+               fclose(messagehdlrdata->logfile);
             SCIPfreeMemory(scip, &messagehdlrdata);
          }
       }
    }
    else
    {
-      printf("\nsyntax: %s [-l <logfile>] [-s <settings>] [-f <problem>] [-b <batchfile>] [-c \"command\"]\n"
+      printf("\nsyntax: %s [-l <logfile>] [-q] [-s <settings>] [-f <problem>] [-b <batchfile>] [-c \"command\"]\n"
          "  -l <logfile>  : copy output into log file\n"
+         "  -q            : suppress screen messages\n"
          "  -s <settings> : load parameter settings (.set) file\n"
          "  -f <problem>  : load and solve problem file\n"
          "  -b <batchfile>: load and execute dialog command batch file (can be used multiple times)\n"
