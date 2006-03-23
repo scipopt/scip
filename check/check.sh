@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.23 2006/03/23 17:33:23 bzfpfend Exp $
+# $Id: check.sh,v 1.24 2006/03/23 17:42:07 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -49,7 +49,6 @@ do
 	if [ $FEASTOL != "default" ]
 	then
 	    echo set numerics feastol $FEASTOL    >> $TMPFILE
-	    echo set numerics sumepsilon $FEASTOL >> $TMPFILE
 	fi
 	echo set limits time $TIMELIMIT        >> $TMPFILE
 	echo set limits nodes $NODELIMIT       >> $TMPFILE
