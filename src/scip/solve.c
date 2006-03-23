@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.209 2006/03/16 19:57:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.210 2006/03/23 17:33:23 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -434,7 +434,7 @@ SCIP_RETCODE updatePseudocost(
        * is equally spread on all bound changes that lead to valid pseudo cost updates
        */
       weight = nvalidupdates > 0 ? 1.0 / (SCIP_Real)nvalidupdates : 1.0;
-      lpgain = SCIPlpGetObjval(lp, set) - tree->focuslpstatefork->lowerbound;
+      lpgain = (SCIPlpGetObjval(lp, set) - tree->focuslpstatefork->lowerbound) * weight;
       lpgain = MAX(lpgain, 0.0);
       for( i = 0; i < nupdates; ++i )
       {

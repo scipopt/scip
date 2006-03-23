@@ -86,7 +86,11 @@ fixed bugs:
 - fixed bug in knapsack constraint disaggregation that may lead to acceptance of infeasible solutions
 - fixed bug with inconsistent data structures after a global bound was changed at a local subproblem and the
   local bounds are not contained anymore in the new global bounds
-- fixed bug in LP reader with potentially uninitialized pointers
+- fixed bug in LP reader with potentially uninitialized pointers [thanks to Martin Mueller]
+- fixed bug in SCIPcliqueSearchVar() [thanks to Anders Schack-Nielsen]
+- fixed bug in SCIPcliqueAddVar() [thanks to Anders Schack-Nielsen]
+- fixed bug in updatePseudocost() with wrong lpgain distribution on multiple branching variables
+  [thanks to Anders Schack-Nielsen]
 
 
 SCIP version 0.81

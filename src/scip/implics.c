@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.16 2006/01/03 12:22:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.17 2006/03/23 17:33:23 bzfpfend Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -1121,6 +1121,7 @@ int SCIPcliqueSearchVar(
                if( clique->values[i] == value )
                   return i;
             }
+            return -1;
          }
          return middle;
       }
@@ -1177,7 +1178,10 @@ SCIP_RETCODE SCIPcliqueAddVar(
    }
    clique->vars[i] = var;
    for( ; i > 0 && clique->vars[i-1] == var && clique->values[i-1] > value; --i )
+   {
       clique->values[i] = clique->values[i-1];
+      *oppositeentry = TRUE;
+   }
    clique->values[i] = value;
    clique->nvars++;
    clique->eventsissued = FALSE;
