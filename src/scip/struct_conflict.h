@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_conflict.h,v 1.23 2006/03/09 12:52:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_conflict.h,v 1.24 2006/03/23 14:04:48 bzfpfend Exp $"
 
 /**@file   struct_conflict.h
  * @brief  datastructures for conflict analysis
@@ -120,7 +120,7 @@ struct SCIP_Conflict
    SCIP_CLOCK*           sbanalyzetime;      /**< time used for strong branching LP conflict analysis */
    SCIP_CLOCK*           pseudoanalyzetime;  /**< time used for pseudo solution conflict analysis */
    SCIP_PQUEUE*          bdchgqueue;         /**< unprocessed conflict bound changes */
-   SCIP_PQUEUE*          nonbinbdchgqueue;   /**< unprocessed conflict non-binary bound changes (if processed separately) */
+   SCIP_PQUEUE*          forcedbdchgqueue;   /**< unprocessed conflict bound changes that must be resolved */
    SCIP_CONFLICTSET*     conflictset;        /**< bound changes resembling the current conflict set */
    SCIP_CONFLICTSET**    conflictsets;       /**< conflict sets found at the current node */
    SCIP_Real*            conflictsetscores;  /**< score values of the conflict sets found at the current node */

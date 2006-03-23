@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.25 2006/01/03 12:22:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.26 2006/03/23 14:04:48 bzfpfend Exp $"
 
 /**@file   heur_guideddiving.c
  * @brief  LP diving heuristic that chooses fixings in direction of average of feasible solutions
@@ -299,10 +299,18 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
    bestcandmayroundup = FALSE;
    startnlpcands = nlpcands;
    while( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
-      && (bestcandmayrounddown || bestcandmayroundup
+      && (FALSE /*??????????????bestcandmayrounddown || bestcandmayroundup*/
+#if 1 /*?????????????????????*/
          || divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
-         || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations && objval < searchbound)) )
+         || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations && objval < searchbound)
+#else
+         || divedepth < maxdepth
+         || nlpcands <= startnlpcands - divedepth/2
+         || (nlpcands <= startnlpcands - divedepth/5 && divedepth < maxdivedepth
+            && heurdata->nlpiterations < maxnlpiterations && objval < searchbound)
+#endif
+          ) )
    {
       SCIP_CALL( SCIPnewProbingNode(scip) );
       divedepth++;

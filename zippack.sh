@@ -1,5 +1,5 @@
 #!/bin/sh
-VERSION="0.81e"
+VERSION="0.81f"
 NAME="scip-$VERSION"
 ln -s . $NAME
 zip release/$NAME.zip $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile $NAME/doc/* $NAME/lib \

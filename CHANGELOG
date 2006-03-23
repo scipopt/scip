@@ -40,6 +40,7 @@ plugins:
   SCIPgetVbdcoefVarbound()
 - new methods SCIPgetNVarsXor() and SCIPgetVarsXor()
 - knapsack presolver now generates cliques in the clique table (this essentially solves neos1.mps)
+- LP and MPS file readers are now able to parse lazy constraints and user cuts sections
 
 parameters:
 - new parameter constraints/linear/separateall
@@ -85,6 +86,7 @@ fixed bugs:
 - fixed bug in knapsack constraint disaggregation that may lead to acceptance of infeasible solutions
 - fixed bug with inconsistent data structures after a global bound was changed at a local subproblem and the
   local bounds are not contained anymore in the new global bounds
+- fixed bug in LP reader with potentially uninitialized pointers
 
 
 SCIP version 0.81

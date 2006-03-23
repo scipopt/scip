@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.10 2006/03/09 12:52:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.11 2006/03/23 14:04:48 bzfpfend Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -79,6 +79,8 @@ struct LpInput
    int                  linepos;
    LPSECTION            section;
    SCIP_OBJSENSE        objsense;
+   SCIP_Bool            inlazyconstraints;
+   SCIP_Bool            inusercuts;
    SCIP_Bool            haserror;
 };
 typedef struct LpInput LPINPUT;
@@ -386,6 +388,8 @@ SCIP_Bool isNewSection(
          {
             SCIPdebugMessage("(line %d) new section: CONSTRAINTS\n", lpinput->linenumber);
             lpinput->section = LP_CONSTRAINTS;
+            lpinput->inlazyconstraints = FALSE;
+            lpinput->inusercuts = FALSE;
             return TRUE;
          }
          else
@@ -406,6 +410,8 @@ SCIP_Bool isNewSection(
          {
             SCIPdebugMessage("(line %d) new section: CONSTRAINTS\n", lpinput->linenumber);
             lpinput->section = LP_CONSTRAINTS;
+            lpinput->inlazyconstraints = FALSE;
+            lpinput->inusercuts = FALSE;
             return TRUE;
          }
          else
@@ -420,7 +426,53 @@ SCIP_Bool isNewSection(
    {
       SCIPdebugMessage("(line %d) new section: CONSTRAINTS\n", lpinput->linenumber);
       lpinput->section = LP_CONSTRAINTS;
+      lpinput->inlazyconstraints = FALSE;
+      lpinput->inusercuts = FALSE;
       return TRUE;
+   }
+
+   if( strcasecmp(lpinput->token, "LAZY") == 0 )
+   {
+      char s[LP_MAX_LINELEN];
+
+      strncpy(s, lpinput->token, LP_MAX_LINELEN);
+      s[LP_MAX_LINELEN-1] = '\0';
+      if( getNextToken(lpinput) )
+      {
+         if( strcasecmp(lpinput->token, "CONSTRAINTS") == 0 )
+         {
+            SCIPdebugMessage("(line %d) new section: CONSTRAINTS (lazy)\n", lpinput->linenumber);
+            lpinput->section = LP_CONSTRAINTS;
+            lpinput->inlazyconstraints = TRUE;
+            lpinput->inusercuts = FALSE;
+            return TRUE;
+         }
+         else
+            pushToken(lpinput, lpinput->token);
+      }
+      pushToken(lpinput, s);
+   }
+
+   if( strcasecmp(lpinput->token, "USER") == 0 )
+   {
+      char s[LP_MAX_LINELEN];
+
+      strncpy(s, lpinput->token, LP_MAX_LINELEN);
+      s[LP_MAX_LINELEN-1] = '\0';
+      if( getNextToken(lpinput) )
+      {
+         if( strcasecmp(lpinput->token, "CUTS") == 0 )
+         {
+            SCIPdebugMessage("(line %d) new section: CONSTRAINTS (user cuts)\n", lpinput->linenumber);
+            lpinput->section = LP_CONSTRAINTS;
+            lpinput->inlazyconstraints = FALSE;
+            lpinput->inusercuts = TRUE;
+            return TRUE;
+         }
+         else
+            pushToken(lpinput, lpinput->token);
+      }
+      pushToken(lpinput, s);
    }
 
    if( strcasecmp(lpinput->token, "BOUNDS") == 0
@@ -639,7 +691,8 @@ SCIP_RETCODE readCoefficients(
    char*                 name,               /**< pointer to store the name of the line */
    SCIP_VAR***           vars,               /**< pointer to store the array with variables (must be freed by caller) */
    SCIP_Real**           coefs,              /**< pointer to store the array with coefficients (must be freed by caller) */
-   int*                  ncoefs              /**< pointer to store the number of coefficients */
+   int*                  ncoefs,             /**< pointer to store the number of coefficients */
+   SCIP_Bool*            newsection          /**< pointer to store whether a new section was encountered */
    )
 {
    SCIP_Bool havesign;
@@ -653,9 +706,13 @@ SCIP_RETCODE readCoefficients(
    assert(vars != NULL);
    assert(coefs != NULL);
    assert(ncoefs != NULL);
+   assert(newsection != NULL);
 
+   *vars = NULL;
+   *coefs = NULL;
    *name = '\0';
    *ncoefs = 0;
+   *newsection = FALSE;
 
    /* read the first token, which may be the name of the line */
    if( getNextToken(lpinput) )
@@ -664,7 +721,10 @@ SCIP_RETCODE readCoefficients(
       
       /* check if we reached a new section */
       if( isNewSection(lpinput) )
+      {
+         *newsection = TRUE;
          return SCIP_OKAY;
+      }
 
       /* remember the token */
       strncpy(firsttoken, lpinput->token, LP_MAX_LINELEN);
@@ -699,8 +759,6 @@ SCIP_RETCODE readCoefficients(
    havesign = FALSE;
    havevalue = FALSE;
    *ncoefs = 0;
-   *vars = NULL;
-   *coefs = NULL;
    coefssize = 0;
    while( getNextToken(lpinput) )
    {
@@ -708,7 +766,10 @@ SCIP_RETCODE readCoefficients(
 
       /* check if we reached a new section */
       if( isNewSection(lpinput) )
+      {
+         *newsection = TRUE;
          return SCIP_OKAY;
+      }
 
       /* check if we reached an equation sense */
       if( isSense(lpinput, NULL) )
@@ -789,11 +850,12 @@ SCIP_RETCODE readObjective(
    SCIP_VAR** vars;
    SCIP_Real* coefs;
    int ncoefs;
+   SCIP_Bool newsection;
 
    assert(lpinput != NULL);
 
    /* read the objective coefficients */
-   SCIP_CALL( readCoefficients(scip, lpinput, name, &vars, &coefs, &ncoefs) );
+   SCIP_CALL( readCoefficients(scip, lpinput, name, &vars, &coefs, &ncoefs, &newsection) );
    if( !hasError(lpinput) )
    {
       int i;
@@ -823,6 +885,7 @@ SCIP_RETCODE readConstraints(
    SCIP_CONS* cons;
    SCIP_VAR** vars;
    SCIP_Real* coefs;
+   SCIP_Bool newsection;
    LPSENSE sense;
    SCIP_Real sidevalue;
    SCIP_Real lhs;
@@ -844,11 +907,15 @@ SCIP_RETCODE readConstraints(
    assert(lpinput != NULL);
 
    /* read the objective coefficients */
-   SCIP_CALL( readCoefficients(scip, lpinput, name, &vars, &coefs, &ncoefs) );
+   SCIP_CALL( readCoefficients(scip, lpinput, name, &vars, &coefs, &ncoefs, &newsection) );
    if( hasError(lpinput) )
       goto TERMINATE;
-   if( ncoefs == 0 && lpinput->section != LP_CONSTRAINTS )
+   if( newsection )
+   {
+      if( ncoefs > 0 )
+         syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='");
       goto TERMINATE;
+   }
 
    /* read the constraint sense */
    if( !getNextToken(lpinput) || !isSense(lpinput, &sense) )
@@ -903,19 +970,20 @@ SCIP_RETCODE readConstraints(
    /* create and add the linear constraint */
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamicconss", &dynamicconss) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamicrows", &dynamicrows) );
-   initial = !dynamicrows;
+   initial = !dynamicrows && !lpinput->inlazyconstraints && !lpinput->inusercuts;
    separate = TRUE;
-   enforce = TRUE;
-   check = TRUE;
+   enforce = !lpinput->inusercuts;
+   check = !lpinput->inusercuts;
    propagate = TRUE;
    local = FALSE;
    modifiable = FALSE;
    dynamic = dynamicconss;
-   removeable = dynamicrows;
+   removeable = dynamicrows || lpinput->inlazyconstraints || lpinput->inusercuts;
    SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, ncoefs, vars, coefs, lhs, rhs,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIPdebugMessage("(line %d) created constraint: ", lpinput->linenumber);
+   SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber, 
+      lpinput->inlazyconstraints ? " (lazy)" : (lpinput->inusercuts ? " (user cut)" : ""));
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -1315,6 +1383,8 @@ SCIP_DECL_READERREAD(readerReadLp)
    lpinput.linepos = 0;
    lpinput.section = LP_START;
    lpinput.objsense = SCIP_OBJSENSE_MINIMIZE;
+   lpinput.inlazyconstraints = FALSE;
+   lpinput.inusercuts = FALSE;
    lpinput.haserror = FALSE;
 
    /* read the file */

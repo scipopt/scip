@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.116 2006/03/17 12:39:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.117 2006/03/23 14:04:48 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1167,7 +1167,11 @@ int conflictCalcMaxsize(
    assert(set != NULL);
    assert(prob != NULL);
 
+#if 1 /*??????????????? try to change this! current implementation uses nbinvars; better might be nvars */
    maxsize = (int)(set->conf_maxvarsfac * prob->nbinvars);
+#else
+   maxsize = (int)(set->conf_maxvarsfac * prob->nvars);
+#endif
    maxsize = MAX(maxsize, set->conf_minmaxvars);
 
    return maxsize;
@@ -1529,7 +1533,7 @@ SCIP_RETCODE SCIPconflictCreate(
    SCIP_CALL( SCIPclockCreate(&(*conflict)->pseudoanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPpqueueCreate(&(*conflict)->bdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
          conflictBdchginfoComp) );
-   SCIP_CALL( SCIPpqueueCreate(&(*conflict)->nonbinbdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
+   SCIP_CALL( SCIPpqueueCreate(&(*conflict)->forcedbdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
          conflictBdchginfoComp) );
    SCIP_CALL( conflictsetCreate(&(*conflict)->conflictset, blkmem) );
    (*conflict)->conflictsets = NULL;
@@ -1602,7 +1606,7 @@ SCIP_RETCODE SCIPconflictFree(
    SCIPclockFree(&(*conflict)->sbanalyzetime);
    SCIPclockFree(&(*conflict)->pseudoanalyzetime);
    SCIPpqueueFree(&(*conflict)->bdchgqueue);
-   SCIPpqueueFree(&(*conflict)->nonbinbdchgqueue);
+   SCIPpqueueFree(&(*conflict)->forcedbdchgqueue);
    conflictsetFree(&(*conflict)->conflictset, blkmem);
    BMSfreeMemoryArrayNull(&(*conflict)->conflictsets);
    BMSfreeMemoryArrayNull(&(*conflict)->conflictsetscores);
@@ -1621,7 +1625,7 @@ void conflictClear(
    assert(conflict != NULL);
 
    SCIPpqueueClear(conflict->bdchgqueue);
-   SCIPpqueueClear(conflict->nonbinbdchgqueue);
+   SCIPpqueueClear(conflict->forcedbdchgqueue);
    conflictsetClear(conflict->conflictset);
 }
 
@@ -1764,6 +1768,28 @@ SCIP_RETCODE conflictAddConflictBound(
    return SCIP_OKAY;
 }
 
+#if 0 /*??????????????????????*/
+/** returns whether the negation of the given bound change would lead to a globally valid literal */
+static
+SCIP_RETCODE isBoundchgUseless(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_BOUNDTYPE boundtype;
+   SCIP_Real bound;
+
+   var = SCIPbdchginfoGetVar(bdchginfo);
+   boundtype = SCIPbdchginfoGetBoundtype(bdchginfo);
+   bound = SCIPbdchginfoGetNewbound(bdchginfo);
+
+   return (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
+      && ((boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasGE(set, bound, SCIPvarGetUbGlobal(var)))
+         || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasLE(set, bound, SCIPvarGetLbGlobal(var)))));
+}
+#endif
+
 /** adds given bound change information to the conflict candidate queue */
 static
 SCIP_RETCODE conflictQueueBound(
@@ -1783,13 +1809,18 @@ SCIP_RETCODE conflictQueueBound(
    if( !conflictMarkBoundCheckPresence(conflict, bdchginfo) )
    {
       /* insert the bound change into the conflict queue */
+#if 1 /*??????????????????????? should useless bound changes be identified and resolved first? */
       if( !set->conf_preferbinary || SCIPvarGetType(SCIPbdchginfoGetVar(bdchginfo)) == SCIP_VARTYPE_BINARY )
+#else
+      if( (!set->conf_preferbinary || SCIPvarGetType(SCIPbdchginfoGetVar(bdchginfo)) == SCIP_VARTYPE_BINARY)
+         && !isBoundchgUseless(set, bdchginfo) )
+#endif
       {
          SCIP_CALL( SCIPpqueueInsert(conflict->bdchgqueue, (void*)bdchginfo) );
       }
       else
       {
-         SCIP_CALL( SCIPpqueueInsert(conflict->nonbinbdchgqueue, (void*)bdchginfo) );
+         SCIP_CALL( SCIPpqueueInsert(conflict->forcedbdchgqueue, (void*)bdchginfo) );
       }
 
 #ifdef SCIP_CONFGRAPH
@@ -1926,8 +1957,8 @@ SCIP_BDCHGINFO* conflictRemoveCand(
 
    assert(conflict != NULL);
 
-   if( SCIPpqueueNElems(conflict->nonbinbdchgqueue) > 0 )
-      bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueRemove(conflict->nonbinbdchgqueue));
+   if( SCIPpqueueNElems(conflict->forcedbdchgqueue) > 0 )
+      bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueRemove(conflict->forcedbdchgqueue));
    else
       bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueRemove(conflict->bdchgqueue));
    assert(bdchginfo == NULL || !SCIPbdchginfoIsRedundant(bdchginfo));
@@ -1958,8 +1989,8 @@ SCIP_BDCHGINFO* conflictFirstCand(
 
    assert(conflict != NULL);
 
-   if( SCIPpqueueNElems(conflict->nonbinbdchgqueue) > 0 )
-      bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueFirst(conflict->nonbinbdchgqueue));
+   if( SCIPpqueueNElems(conflict->forcedbdchgqueue) > 0 )
+      bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueFirst(conflict->forcedbdchgqueue));
    else
       bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueFirst(conflict->bdchgqueue));
    assert(bdchginfo == NULL || !SCIPbdchginfoIsRedundant(bdchginfo));
@@ -1975,6 +2006,7 @@ SCIP_RETCODE conflictAddConflictset(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   int                   validdepth,         /**< minimal depth level at which the conflict set is valid */
    SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
    SCIP_Bool             repropagate,        /**< should the constraint trigger a repropagation? */
    SCIP_Bool*            success,            /**< pointer to store whether the conflict set is valid */
@@ -1983,9 +2015,7 @@ SCIP_RETCODE conflictAddConflictset(
 {
    SCIP_CONFLICTSET* conflictset;
    SCIP_BDCHGINFO** bdchginfos;
-   SCIP_BDCHGINFO** nonbinbdchginfos;
    int nbdchginfos;
-   int nnonbinbdchginfos;
    int currentdepth;
    int focusdepth;
    int i;
@@ -1997,12 +2027,14 @@ SCIP_RETCODE conflictAddConflictset(
    assert(tree != NULL);
    assert(success != NULL);
    assert(nliterals != NULL);
+   assert(SCIPpqueueNElems(conflict->forcedbdchgqueue) == 0);
 
    *success = FALSE;
    *nliterals = 0;
 
    /* check, whether local conflicts are allowed */
-   if( !set->conf_allowlocal && conflict->conflictset->validdepth > 0 )
+   validdepth = MAX(validdepth, conflict->conflictset->validdepth);
+   if( !set->conf_allowlocal && validdepth > 0 )
       return SCIP_OKAY;
 
    focusdepth = SCIPtreeGetFocusDepth(tree);
@@ -2010,29 +2042,23 @@ SCIP_RETCODE conflictAddConflictset(
    assert(currentdepth == tree->pathlen-1);
    assert(focusdepth <= currentdepth);
    assert(0 <= conflict->conflictset->validdepth && conflict->conflictset->validdepth <= currentdepth);
+   assert(0 <= validdepth && validdepth <= currentdepth);
 
    /* get the elements of the bound change queue */
    bdchginfos = (SCIP_BDCHGINFO**)SCIPpqueueElems(conflict->bdchgqueue);
    nbdchginfos = SCIPpqueueNElems(conflict->bdchgqueue);
-   nonbinbdchginfos = (SCIP_BDCHGINFO**)SCIPpqueueElems(conflict->nonbinbdchgqueue);
-   nnonbinbdchginfos = SCIPpqueueNElems(conflict->nonbinbdchgqueue);
 
    /* create a copy of the current conflict set, allocating memory for the additional elements of the queue */
-   SCIP_CALL( conflictsetCopy(&conflictset, blkmem, conflict->conflictset, nbdchginfos + nnonbinbdchginfos) );
+   SCIP_CALL( conflictsetCopy(&conflictset, blkmem, conflict->conflictset, nbdchginfos) );
+   conflictset->validdepth = validdepth;
    conflictset->repropagate = repropagate;
 
    /* add the queue elements to the conflict set */
-   SCIPdebugMessage("adding %d variables from the queue as temporary conflict variables\n", 
-      nbdchginfos + nnonbinbdchginfos);
+   SCIPdebugMessage("adding %d variables from the queue as temporary conflict variables\n", nbdchginfos);
    for( i = 0; i < nbdchginfos; ++i )
    {
       assert(!SCIPbdchginfoIsRedundant(bdchginfos[i]));
       SCIP_CALL( conflictsetAddBound(conflictset, blkmem, set, bdchginfos[i]) );
-   }
-   for( i = 0; i < nnonbinbdchginfos; ++i )
-   {
-      assert(!SCIPbdchginfoIsRedundant(nonbinbdchginfos[i]));
-      SCIP_CALL( conflictsetAddBound(conflictset, blkmem, set, nonbinbdchginfos[i]) );
    }
 
    /* calculate the depth, at which the conflictset should be inserted */
@@ -2117,21 +2143,23 @@ SCIP_RETCODE conflictResolveBound(
          SCIPvarGetType(actvar), SCIPvarGetName(actvar),
          SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
          SCIPbdchginfoGetNewbound(bdchginfo));
-      SCIPdebugMessage(" - conflict set   :");
+      SCIPdebugMessage(" - conflict set       :");
       for( i = 0; i < conflict->conflictset->nbdchginfos; ++i )
          SCIPdebugPrintf(" [%d:<%s> %s %g]", SCIPbdchginfoGetDepth(conflict->conflictset->bdchginfos[i]), 
             SCIPvarGetName(SCIPbdchginfoGetVar(conflict->conflictset->bdchginfos[i])),
             SCIPbdchginfoGetBoundtype(conflict->conflictset->bdchginfos[i]) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(conflict->conflictset->bdchginfos[i]));
       SCIPdebugPrintf("\n");
-      SCIPdebugMessage(" - candidate queue:");
-      for( i = 0; i < SCIPpqueueNElems(conflict->nonbinbdchgqueue); ++i )
+      SCIPdebugMessage(" - forced candidates  :");
+      for( i = 0; i < SCIPpqueueNElems(conflict->forcedbdchgqueue); ++i )
       {
-         SCIP_BDCHGINFO* info = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->nonbinbdchgqueue)[i]);
+         SCIP_BDCHGINFO* info = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->forcedbdchgqueue)[i]);
          SCIPdebugPrintf(" [%d:<%s> %s %g]", SCIPbdchginfoGetDepth(info), SCIPvarGetName(SCIPbdchginfoGetVar(info)),
             SCIPbdchginfoGetBoundtype(info) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(info));
       }
+      SCIPdebugPrintf("\n");
+      SCIPdebugMessage(" - optional candidates:");
       for( i = 0; i < SCIPpqueueNElems(conflict->bdchgqueue); ++i )
       {
          SCIP_BDCHGINFO* info = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->bdchgqueue)[i]);
@@ -2254,12 +2282,27 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
 {
    SCIP_BDCHGINFO* uip;
    int firstuipdepth;
+   int focusdepth;
+   int currentdepth;
+   int maxvaliddepth;
 
    assert(conflict != NULL);
    assert(firstuip != NULL);
    assert(nreconvconss != NULL);
    assert(nreconvliterals != NULL);
    assert(!SCIPbdchginfoIsRedundant(firstuip));
+
+   focusdepth = SCIPtreeGetFocusDepth(tree);
+   currentdepth = SCIPtreeGetCurrentDepth(tree);
+   assert(currentdepth == tree->pathlen-1);
+   assert(focusdepth <= currentdepth);
+
+   /* check, whether local constraints are allowed; however, don't generate reconvergence constraints that are only valid
+    * in the probing path and not in the problem tree (i.e. that exceed the focusdepth)
+    */
+   maxvaliddepth = (set->conf_allowlocal ? MIN(currentdepth-1, focusdepth) : 0);
+   if( validdepth > maxvaliddepth )
+      return SCIP_OKAY;
 
    firstuipdepth = SCIPbdchginfoGetDepth(firstuip);
 
@@ -2312,10 +2355,14 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
       bdchginfo = conflictFirstCand(conflict);
       nextuip = NULL;
       nresolutions = 0;
-      while( bdchginfo != NULL )
+      while( bdchginfo != NULL && validdepth <= maxvaliddepth )
       {
          SCIP_BDCHGINFO* nextbdchginfo;
+         SCIP_Bool forceresolve;
          int bdchgdepth;
+
+         /* check if the next bound change must be resolved in every case */
+         forceresolve = (SCIPpqueueNElems(conflict->forcedbdchgqueue) > 0);
 
          /* remove currently processed candidate and get next conflicting bound from the conflict candidate queue */
          assert(bdchginfo == conflictFirstCand(conflict));
@@ -2324,7 +2371,8 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
          bdchgdepth = SCIPbdchginfoGetDepth(bdchginfo);
          assert(bdchginfo != NULL);
          assert(!SCIPbdchginfoIsRedundant(bdchginfo));
-         assert(nextbdchginfo == NULL || SCIPbdchginfoGetDepth(bdchginfo) >= SCIPbdchginfoGetDepth(nextbdchginfo));
+         assert(nextbdchginfo == NULL || SCIPbdchginfoGetDepth(bdchginfo) >= SCIPbdchginfoGetDepth(nextbdchginfo)
+            || forceresolve);
          assert(bdchgdepth <= firstuipdepth);
 
          /* bound changes that are higher in the tree than the valid depth of the conflict can be ignored;
@@ -2343,18 +2391,31 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
              *  - the starting uip has to be resolved
              *  - a bound change should be resolved, if it is in the fuip's depth level and not the
              *    next uip (i.e., if it is not the last bound change in the fuip's depth level)
+             *  - a forced bound change must be resolved in any case
              */
             resolved = FALSE;
             if( bdchginfo == uip
                || (bdchgdepth == firstuipdepth
                   && nextbdchginfo != NULL
-                  && SCIPbdchginfoGetDepth(nextbdchginfo) == bdchgdepth) )
+                  && SCIPbdchginfoGetDepth(nextbdchginfo) == bdchgdepth)
+               || forceresolve )
             {
                SCIP_CALL( conflictResolveBound(conflict, set, bdchginfo, validdepth, &resolved) );
             }
 
             if( resolved )
                nresolutions++;
+            else if( forceresolve )
+            {
+               /* variable cannot enter the conflict clause: we have to make the conflict clause local, s.t.
+                * the unresolved bound change is active in the whole sub tree of the conflict clause
+                */
+               assert(bdchgdepth >= validdepth);
+               validdepth = bdchgdepth;
+               
+               SCIPdebugMessage("couldn't resolve forced bound change on <%s> -> new valid depth: %d\n",
+                  SCIPvarGetName(actvar), validdepth);
+            }
             else if( bdchginfo != uip )
             {
                assert(conflict->conflictset != NULL);
@@ -2388,7 +2449,7 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
       /* if only one propagation was resolved, the reconvergence constraint is already member of the constraint set
        * (it is exactly the constraint that produced the propagation)
        */
-      if( nextuip != NULL && nresolutions >= 2 && bdchginfo == NULL )
+      if( nextuip != NULL && nresolutions >= 2 && bdchginfo == NULL && validdepth <= maxvaliddepth )
       {
          int nlits;
          SCIP_Bool success;
@@ -2400,7 +2461,8 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
             SCIPbdchginfoGetDepth(uip), conflict->conflictset->nbdchginfos, nresolutions);
 
          /* call the conflict handlers to create a conflict set */
-         SCIP_CALL( conflictAddConflictset(conflict, blkmem, set, stat, tree, diving, FALSE, &success, &nlits) );
+         SCIP_CALL( conflictAddConflictset(conflict, blkmem, set, stat, tree, validdepth, diving, FALSE,
+               &success, &nlits) );
          if( success )
          {
             (*nreconvconss)++;
@@ -2473,8 +2535,8 @@ SCIP_RETCODE conflictAnalyze(
    if( mustresolve )
       resolvedepth = MIN(resolvedepth, currentdepth);
 
-   SCIPdebugMessage("analyzing conflict with %d conflict candidates and starting conflict set of size %d in depth %d (resolvedepth=%d)\n",
-      SCIPpqueueNElems(conflict->bdchgqueue) + SCIPpqueueNElems(conflict->nonbinbdchgqueue),
+   SCIPdebugMessage("analyzing conflict with %d+%d conflict candidates and starting conflict set of size %d in depth %d (resolvedepth=%d)\n",
+      SCIPpqueueNElems(conflict->forcedbdchgqueue), SCIPpqueueNElems(conflict->bdchgqueue),
       conflict->conflictset->nbdchginfos, currentdepth, resolvedepth);
 
    *nconss = 0;
@@ -2500,12 +2562,16 @@ SCIP_RETCODE conflictAnalyze(
    lastconsresoldepth = (mustresolve ? currentdepth : INT_MAX);
    bdchginfo = conflictFirstCand(conflict);
    nfirstuips = 0;
-   while( bdchginfo != NULL )
+   while( bdchginfo != NULL && validdepth <= maxvaliddepth )
    {
       SCIP_BDCHGINFO* nextbdchginfo;
+      SCIP_Bool forceresolve;
       int bdchgdepth;
 
       assert(!SCIPbdchginfoIsRedundant(bdchginfo));
+
+      /* check if the next bound change must be resolved in every case */
+      forceresolve = (SCIPpqueueNElems(conflict->forcedbdchgqueue) > 0);
 
       /* resolve next bound change in queue */
       bdchgdepth = SCIPbdchginfoGetDepth(bdchginfo);
@@ -2527,24 +2593,28 @@ SCIP_RETCODE conflictAnalyze(
 
       /* create intermediate conflict constraint */
       assert(nresolutions >= lastconsnresolutions);
-      if( nresolutions == lastconsnresolutions )
-         lastconsresoldepth = bdchgdepth; /* all intermediate depth levels consisted of only unresolved bound changes */
-      else if( bdchgdepth < lastconsresoldepth && (set->conf_interconss == -1 || *nconss < set->conf_interconss) )
+      if( !forceresolve )
       {
-         int nlits;
-         SCIP_Bool success;
-
-         /* call the conflict handlers to create a conflict set */
-         SCIPdebugMessage("creating intermediate conflictset after %d resolutions up to depth %d (valid at depth %d): %d conflict bounds, %d bounds in queue\n",
-            nresolutions, bdchgdepth, validdepth, conflict->conflictset->nbdchginfos,
-            SCIPpqueueNElems(conflict->bdchgqueue) + SCIPpqueueNElems(conflict->nonbinbdchgqueue));
-         SCIP_CALL( conflictAddConflictset(conflict, blkmem, set, stat, tree, diving, TRUE, &success, &nlits) );
-         lastconsnresolutions = nresolutions;
-         lastconsresoldepth = bdchgdepth;
-         if( success )
+         if( nresolutions == lastconsnresolutions )
+            lastconsresoldepth = bdchgdepth; /* all intermediate depth levels consisted of only unresolved bound changes */
+         else if( bdchgdepth < lastconsresoldepth && (set->conf_interconss == -1 || *nconss < set->conf_interconss) )
          {
-            (*nconss)++;
-            (*nliterals) += nlits;
+            int nlits;
+            SCIP_Bool success;
+            
+            /* call the conflict handlers to create a conflict set */
+            SCIPdebugMessage("creating intermediate conflictset after %d resolutions up to depth %d (valid at depth %d): %d conflict bounds, %d bounds in queue\n",
+               nresolutions, bdchgdepth, validdepth, conflict->conflictset->nbdchginfos,
+               SCIPpqueueNElems(conflict->bdchgqueue));
+            SCIP_CALL( conflictAddConflictset(conflict, blkmem, set, stat, tree, validdepth, diving, TRUE,
+                  &success, &nlits) );
+            lastconsnresolutions = nresolutions;
+            lastconsresoldepth = bdchgdepth;
+            if( success )
+            {
+               (*nconss)++;
+               (*nliterals) += nlits;
+            }
          }
       }
 
@@ -2554,7 +2624,8 @@ SCIP_RETCODE conflictAnalyze(
       nextbdchginfo = conflictFirstCand(conflict);
       assert(bdchginfo != NULL);
       assert(!SCIPbdchginfoIsRedundant(bdchginfo));
-      assert(nextbdchginfo == NULL || SCIPbdchginfoGetDepth(bdchginfo) >= SCIPbdchginfoGetDepth(nextbdchginfo));
+      assert(nextbdchginfo == NULL || SCIPbdchginfoGetDepth(bdchginfo) >= SCIPbdchginfoGetDepth(nextbdchginfo)
+         || forceresolve);
 
       /* we don't need to resolve bound changes that are already active in the valid depth of the current conflict set,
        * because the conflict set can only be added locally at the valid depth, and all bound changes applied in this
@@ -2575,21 +2646,34 @@ SCIP_RETCODE conflictAnalyze(
 
          /* check if we want to resolve the bound change in this depth level
           *  - bound changes should be resolved, if
-          *     (i)  we must apply at least one resolution and didn't resolve a bound change yet, or
-          *     (ii) their depth level is at least equal to the minimal resolving depth, and
-          *          they are not the last remaining conflicting bound change in their depth level
+          *     (i)   we must apply at least one resolution and didn't resolve a bound change yet, or
+          *     (ii)  their depth level is at least equal to the minimal resolving depth, and
+          *           they are not the last remaining conflicting bound change in their depth level
+          *     (iii) the bound change resolving is forced (i.e., the forced queue was non-empty)
           */
          resolved = FALSE;
          if( (mustresolve && nresolutions == 0)
             || (bdchgdepth >= resolvedepth
                && nextbdchginfo != NULL
-               && SCIPbdchginfoGetDepth(nextbdchginfo) == bdchgdepth) )
+               && SCIPbdchginfoGetDepth(nextbdchginfo) == bdchgdepth)
+            || forceresolve )
          {
             SCIP_CALL( conflictResolveBound(conflict, set, bdchginfo, validdepth, &resolved) );
          }
 
          if( resolved )
             nresolutions++;
+         else if( forceresolve )
+         {
+            /* variable cannot enter the conflict clause: we have to make the conflict clause local, s.t.
+             * the unresolved bound change is active in the whole sub tree of the conflict clause
+             */
+            assert(bdchgdepth >= validdepth);
+            validdepth = bdchgdepth;
+
+            SCIPdebugMessage("couldn't resolve forced bound change on <%s> -> new valid depth: %d\n",
+               SCIPvarGetName(actvar), validdepth);
+         }
          else
          {
             /* if this is a UIP (the last bound change in its depth level), it can be used to generate a
@@ -2613,18 +2697,19 @@ SCIP_RETCODE conflictAnalyze(
        */
       bdchginfo = conflictFirstCand(conflict);
    }
-   assert(validdepth <= maxvaliddepth);
 
    /* check, if a valid conflict set was found */
    if( bdchginfo == NULL
       && nresolutions > lastconsnresolutions
-      && (!mustresolve || nresolutions > 0 || conflict->conflictset->nbdchginfos == 0) )
+      && validdepth <= maxvaliddepth
+      && (!mustresolve || nresolutions > 0 || conflict->conflictset->nbdchginfos == 0)
+      && SCIPpqueueNElems(conflict->forcedbdchgqueue) == 0 )
    {
       int nlits;
       SCIP_Bool success;
 
       /* call the conflict handlers to create a conflict set */
-      SCIP_CALL( conflictAddConflictset(conflict, blkmem, set, stat, tree, diving, TRUE, &success, &nlits) );
+      SCIP_CALL( conflictAddConflictset(conflict, blkmem, set, stat, tree, validdepth, diving, TRUE, &success, &nlits) );
       if( success )
       {
          (*nconss)++;
@@ -2633,7 +2718,7 @@ SCIP_RETCODE conflictAnalyze(
    }
 
    /* produce reconvergence constraints defined by succeeding UIP's of the last depth level */
-   if( set->conf_reconvlevels != 0 )
+   if( set->conf_reconvlevels != 0 && validdepth <= maxvaliddepth )
    {
       int reconvlevels;
       int i;
@@ -2697,7 +2782,7 @@ SCIP_RETCODE SCIPconflictAnalyze(
 
    /* check, if the conflict set will get too large with high probability */
    if( conflict->conflictset->nbdchginfos + SCIPpqueueNElems(conflict->bdchgqueue)
-      + SCIPpqueueNElems(conflict->nonbinbdchgqueue) >= 2*conflictCalcMaxsize(set, prob) )
+      + SCIPpqueueNElems(conflict->forcedbdchgqueue) >= 2*conflictCalcMaxsize(set, prob) )
       return SCIP_OKAY;
 
    SCIPdebugMessage("analyzing conflict after infeasible propagation in depth %d\n", SCIPtreeGetCurrentDepth(tree));

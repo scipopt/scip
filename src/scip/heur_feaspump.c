@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.39 2006/01/03 12:22:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.40 2006/03/23 14:04:48 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -36,21 +36,21 @@
 #define HEUR_FREQ             20
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_PSEUDONODES      FALSE      /* call heuristic at nodes where only a pseudo solution exist? */
-#define HEUR_DURINGPLUNGING   FALSE      /* call heuristic during plunging? (should be FALSE for diving heuristics!) */
+#define HEUR_PSEUDONODES      FALSE     /* call heuristic at nodes where only a pseudo solution exist? */
+#define HEUR_DURINGPLUNGING   FALSE     /* call heuristic during plunging? (should be FALSE for diving heuristics!) */
 #define HEUR_DURINGLPLOOP     FALSE     /* call heuristic during the LP price-and-cut loop? */
 #define HEUR_AFTERNODE        TRUE      /* call heuristic after or before the current node was solved? */
 
 #define DEFAULT_MAXLPITERQUOT    0.01   /**< maximal fraction of diving LP iterations compared to node LP iterations */
 #define DEFAULT_MAXLPITEROFS     1000   /**< additional number of allowed LP iterations */
 #define DEFAULT_MAXSOLS             5   /**< total number of feasible solutions found up to which heuristic is called
-                                              *   (-1: no limit) */
+                                         *   (-1: no limit) */
 #define DEFAULT_MAXLOOPS        10000   /**< maximal number of pumping rounds (-1: no limit) */
 #define DEFAULT_MINFLIPS           10   /**< minimum number of random variables to flip, if a 1-cycle is encountered */
 #define DEFAULT_CYCLELENGTH         3   /**< maximum length of cycles to be checked explicitly in each round */
 #define DEFAULT_PERTURBFREQ       100   /**< number of iterations until a random perturbation is forced */
 #define DEFAULT_OBJFACTOR         1.0   /**< factor by which the regard of the objective is decreased in each round, 
-                                              *   1.0 for dynamic, depending on solutions already found */
+                                         *   1.0 for dynamic, depending on solutions already found */
 
 #define MINLPITER               10000   /**< minimal number of LP iterations allowed in each LP solving call */
 
@@ -563,7 +563,8 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       /* update iteration count */
       heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
       nfracs = SCIPgetNLPBranchCands(scip);
-      SCIPdebugMessage(" -> number of iterations: %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT"\n", heurdata->nlpiterations, maxnlpiterations);
+      SCIPdebugMessage(" -> number of iterations: %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT"\n", 
+         heurdata->nlpiterations, maxnlpiterations);
 
       /* swap the last solutions */
       tmpsol = lastroundedsols[heurdata->cyclelength-1];

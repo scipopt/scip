@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.19 2006/03/17 14:24:24 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.20 2006/03/23 14:04:47 bzfpfend Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -48,8 +48,8 @@ BEGIN {
     printf("Name                     | Conss | Vars |   Dual Bound | Primal Bound | Gap% |               | Nodes | Time |                    |       \n");
     printf("-------------------------+-------+------+--------------+--------------+------+---------------+-------+------+--------------------+-------\n");
 
-    timegeomshift = 1.0;
-    nodegeomshift = 1.0;
+    timegeomshift = 0.0;
+    nodegeomshift = 0.0;
 
     nprobs   = 0;
     sbab     = 0;
@@ -189,9 +189,8 @@ BEGIN {
    bbnodes   = $11;
 }
 /^=ready=/ {
-   sbab     += bbnodes;
-   scut     += cuts;
-   stottime += tottime;
+   bbnodes = max(bbnodes, 1); # CPLEX reports 0 nodes if the primal heuristics find the optimal solution in the root node
+
    nprobs++;
     
    optimal = 0;
@@ -286,8 +285,11 @@ BEGIN {
       }
    }
    
-   timegeom = timegeom^((nprobs-1)/nprobs) * (tottime+timegeomshift)^(1.0/nprobs);
-   nodegeom = nodegeom^((nprobs-1)/nprobs) * (bbnodes+nodegeomshift)^(1.0/nprobs);
+   sbab     += bbnodes;
+   scut     += cuts;
+   stottime += tottime;
+   timegeom = timegeom^((nprobs-1)/nprobs) * max(tottime+timegeomshift, 1.0)^(1.0/nprobs);
+   nodegeom = nodegeom^((nprobs-1)/nprobs) * max(bbnodes+nodegeomshift, 1.0)^(1.0/nprobs);
 }
 END {
    nodegeom -= nodegeomshift;

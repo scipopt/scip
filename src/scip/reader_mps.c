@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.64 2006/01/09 13:40:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.65 2006/03/23 14:04:48 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  MPS file reader
@@ -49,7 +49,17 @@
 
 enum MpsSection
 {
-   MPS_NAME, MPS_OBJSEN, MPS_OBJNAME, MPS_ROWS, MPS_COLUMNS, MPS_RHS, MPS_RANGES, MPS_BOUNDS, MPS_ENDATA
+   MPS_NAME,
+   MPS_OBJSEN,
+   MPS_OBJNAME,
+   MPS_ROWS,
+   MPS_USERCUTS,
+   MPS_LAZYCONS,
+   MPS_COLUMNS,
+   MPS_RHS,
+   MPS_RANGES,
+   MPS_BOUNDS,
+   MPS_ENDATA
 };
 typedef enum MpsSection MPSSECTION;
 
@@ -601,6 +611,10 @@ SCIP_RETCODE readName(
 
    if (!strncmp(mpsinputField0(mpsi), "ROWS", 4))
       mpsinputSetSection(mpsi, MPS_ROWS);
+   else if (!strncmp(mpsinputField0(mpsi), "USERCUTS", 8))
+      mpsinputSetSection(mpsi, MPS_USERCUTS);
+   else if (!strncmp(mpsinputField0(mpsi), "LAZYCONS", 8))
+      mpsinputSetSection(mpsi, MPS_LAZYCONS);
    else if (!strncmp(mpsinputField0(mpsi), "OBJSEN", 6))
       mpsinputSetSection(mpsi, MPS_OBJSEN);
    else if (!strncmp(mpsinputField0(mpsi), "OBJNAME", 7))
@@ -640,7 +654,7 @@ SCIP_RETCODE readObjsen(
       return SCIP_OKAY;
    }
 
-   /* Look for ROWS or OBJNAME Section */
+   /* Look for ROWS, USERCUTS, LAZYCONS, or OBJNAME Section */
    if (!mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL)
    {
       mpsinputSyntaxerror(mpsi);
@@ -649,6 +663,10 @@ SCIP_RETCODE readObjsen(
 
    if (!strcmp(mpsinputField0(mpsi), "ROWS"))
       mpsinputSetSection(mpsi, MPS_ROWS);
+   else if (!strcmp(mpsinputField0(mpsi), "USERCUTS"))
+      mpsinputSetSection(mpsi, MPS_USERCUTS);
+   else if (!strcmp(mpsinputField0(mpsi), "LAZYCONS"))
+      mpsinputSetSection(mpsi, MPS_LAZYCONS);
    else if (!strcmp(mpsinputField0(mpsi), "OBJNAME"))
       mpsinputSetSection(mpsi, MPS_OBJNAME);
    else
@@ -678,24 +696,25 @@ SCIP_RETCODE readObjname(
 
    mpsinputSetObjname(mpsi, mpsinputField1(mpsi));
    
-   /* Look for ROWS Section */
+   /* Look for ROWS, USERCUTS, or LAZYCONS Section */
    if (!mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL)
    {
       mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
-   if (strcmp(mpsinputField0(mpsi), "ROWS"))
-   {
+   if (!strcmp(mpsinputField0(mpsi), "ROWS"))
+      mpsinputSetSection(mpsi, MPS_ROWS);
+   else if (!strcmp(mpsinputField0(mpsi), "USERCUTS"))
+      mpsinputSetSection(mpsi, MPS_USERCUTS);
+   else if (!strcmp(mpsinputField0(mpsi), "LAZYCONS"))
+      mpsinputSetSection(mpsi, MPS_LAZYCONS);
+   else
       mpsinputSyntaxerror(mpsi);
-      return SCIP_OKAY;
-   }
-
-   mpsinputSetSection(mpsi, MPS_ROWS);
 
    return SCIP_OKAY;
 }
 
-/* Process ROWS section. 
+/* Process ROWS, USERCUTS, or LAZYCONS section. 
  */
 static 
 SCIP_RETCODE readRows(
@@ -707,12 +726,16 @@ SCIP_RETCODE readRows(
    {
       if (mpsinputField0(mpsi) != NULL)
       {
-         /*printf("Objective name : %s\n", mpsinputObjname(mpsi));*/
-
-         if (strcmp(mpsinputField0(mpsi), "COLUMNS"))
-            break;
-
-         mpsinputSetSection(mpsi, MPS_COLUMNS);
+         if (!strcmp(mpsinputField0(mpsi), "ROWS"))
+            mpsinputSetSection(mpsi, MPS_ROWS);
+         else if (!strcmp(mpsinputField0(mpsi), "USERCUTS"))
+            mpsinputSetSection(mpsi, MPS_USERCUTS);
+         else if (!strcmp(mpsinputField0(mpsi), "LAZYCONS"))
+            mpsinputSetSection(mpsi, MPS_LAZYCONS);
+         else if (!strcmp(mpsinputField0(mpsi), "COLUMNS"))
+            mpsinputSetSection(mpsi, MPS_COLUMNS);
+         else
+            mpsinputSyntaxerror(mpsi);
 
          return SCIP_OKAY;
       }
@@ -726,6 +749,15 @@ SCIP_RETCODE readRows(
          SCIP_CONS* cons;
          SCIP_Bool dynamicrows;
          SCIP_Bool dynamicconss;
+         SCIP_Bool initial;
+         SCIP_Bool separate;
+         SCIP_Bool enforce;
+         SCIP_Bool check;
+         SCIP_Bool propagate;
+         SCIP_Bool local;
+         SCIP_Bool modifiable;
+         SCIP_Bool dynamic;
+         SCIP_Bool removeable;
 
          cons = SCIPfindCons(scip, mpsinputField2(mpsi));
          if( cons != NULL )
@@ -733,20 +765,29 @@ SCIP_RETCODE readRows(
 
          SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamicconss", &dynamicconss) );
          SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamicrows", &dynamicrows) );
+         initial = !dynamicrows && (mpsinputSection(mpsi) == MPS_ROWS);
+         separate = TRUE;
+         enforce = (mpsinputSection(mpsi) != MPS_USERCUTS);
+         check = (mpsinputSection(mpsi) != MPS_USERCUTS);
+         propagate = TRUE;
+         local = FALSE;
+         modifiable = FALSE;
+         dynamic = dynamicconss;
+         removeable = dynamicrows || (mpsinputSection(mpsi) != MPS_ROWS);
 
          switch(*mpsinputField1(mpsi))
          {
          case 'G' :
             SCIP_CALL( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 0.0, SCIPinfinity(scip), 
-                  !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable) );
             break;
          case 'E' :
-            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 0.0, 0.0, 
-                  !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
+            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 0.0, 0.0,
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable) );
             break;
          case 'L' :
             SCIP_CALL( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, -SCIPinfinity(scip), 0.0,
-                  !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable) );
             break;
          default :
             mpsinputSyntaxerror(mpsi);
@@ -1303,7 +1344,9 @@ SCIP_RETCODE readMps(
    {
       SCIP_CALL( readObjname(mpsi) );
    }
-   if (mpsinputSection(mpsi) == MPS_ROWS)
+   while (mpsinputSection(mpsi) == MPS_ROWS
+      || mpsinputSection(mpsi) == MPS_USERCUTS
+      || mpsinputSection(mpsi) == MPS_LAZYCONS)
    {
       SCIP_CALL( readRows(mpsi, scip) );
    }

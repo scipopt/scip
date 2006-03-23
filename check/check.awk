@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.34 2006/03/17 14:24:24 bzfpfend Exp $
+# $Id: check.awk,v 1.35 2006/03/23 14:04:47 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -54,9 +54,9 @@ BEGIN {
 #    printf("Name              | Type | Conss | Vars |   Dual Bound | Primal Bound | Gap% | Nodes | Time |       \n");
 #    printf("------------------+------+-------+------+--------------+--------------+------+-------+------+-------\n");
 
-    timegeomshift = 1.0;
-    nodegeomshift = 1.0;
-    sblpgeomshift = 1.0;
+    timegeomshift = 0.0;
+    nodegeomshift = 0.0;
+    sblpgeomshift = 0.0;
 
     nprobs = 0;
     sbab = 0;
@@ -221,15 +221,6 @@ BEGIN {
 # Output
 #
 /^=ready=/ {
-   lps = primlps + duallps;
-   simplex = primiter + dualiter;
-   stottime += tottime;
-   sbab += bbnodes;
-   slp += lps;
-   ssim += simplex;
-   ssblp += sblps;
-   conftottime += conftime;
-   overheadtottime += overheadtime;
    nprobs++;
 
    optimal = 0;
@@ -358,13 +349,22 @@ BEGIN {
       }
    }
    
+   lps = primlps + duallps;
+   simplex = primiter + dualiter;
+   stottime += tottime;
+   sbab += bbnodes;
+   slp += lps;
+   ssim += simplex;
+   ssblp += sblps;
+   conftottime += conftime;
+   overheadtottime += overheadtime;
    basictime = tottime - conftime - overheadtime;
-   nodegeom = nodegeom^((nprobs-1)/nprobs) * (bbnodes+nodegeomshift)^(1.0/nprobs);
-   sblpgeom = sblpgeom^((nprobs-1)/nprobs) * (sblps+sblpgeomshift)^(1.0/nprobs);
-   timegeom = timegeom^((nprobs-1)/nprobs) * (tottime+timegeomshift)^(1.0/nprobs);
-   conftimegeom = conftimegeom^((nprobs-1)/nprobs) * (conftime+timegeomshift)^(1.0/nprobs);
-   overheadtimegeom = overheadtimegeom^((nprobs-1)/nprobs) * (overheadtime+timegeomshift)^(1.0/nprobs);
-   basictimegeom = basictimegeom^((nprobs-1)/nprobs) * (basictime+timegeomshift)^(1.0/nprobs);
+   nodegeom = nodegeom^((nprobs-1)/nprobs) * max(bbnodes+nodegeomshift, 1.0)^(1.0/nprobs);
+   sblpgeom = sblpgeom^((nprobs-1)/nprobs) * max(sblps+sblpgeomshift, 1.0)^(1.0/nprobs);
+   timegeom = timegeom^((nprobs-1)/nprobs) * max(tottime+timegeomshift, 1.0)^(1.0/nprobs);
+   conftimegeom = conftimegeom^((nprobs-1)/nprobs) * max(conftime+timegeomshift, 1.0)^(1.0/nprobs);
+   overheadtimegeom = overheadtimegeom^((nprobs-1)/nprobs) * max(overheadtime+timegeomshift, 1.0)^(1.0/nprobs);
+   basictimegeom = basictimegeom^((nprobs-1)/nprobs) * max(basictime+timegeomshift, 1.0)^(1.0/nprobs);
 }
 END {
    nodegeom -= nodegeomshift;
