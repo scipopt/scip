@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.218 2006/03/23 17:33:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.219 2006/03/24 10:30:00 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6851,7 +6851,7 @@ void cleanupMIRRow(
             bd = cutislocal ? SCIPvarGetUbLocal(prob->vars[v]) : SCIPvarGetUbGlobal(prob->vars[v]);
             rhsinf = rhsinf || SCIPsetIsInfinity(set, bd);
          }
-         *mirrhs -= MIN(bd * mircoef[v], 0.0); /* be on the safe side w.r.t. numerics */
+         *mirrhs -= bd * mircoef[v];
          mircoef[v] = 0.0;
       }
    }
