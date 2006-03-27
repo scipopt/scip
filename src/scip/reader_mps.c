@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.65 2006/03/23 14:04:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.66 2006/03/27 09:34:30 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  MPS file reader
@@ -773,7 +773,7 @@ SCIP_RETCODE readRows(
          local = FALSE;
          modifiable = FALSE;
          dynamic = dynamicconss;
-         removeable = dynamicrows || (mpsinputSection(mpsi) != MPS_ROWS);
+         removeable = dynamicrows || (mpsinputSection(mpsi) == MPS_USERCUTS);
 
          switch(*mpsinputField1(mpsi))
          {
