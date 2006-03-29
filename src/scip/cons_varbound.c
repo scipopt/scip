@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.45 2006/03/09 18:41:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.46 2006/03/29 13:39:35 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for variable bound constraints
@@ -989,10 +989,8 @@ SCIP_DECL_CONSINITLP(consInitlpVarbound)
 
    for( i = 0; i < nconss; i++ )
    {
-      if( SCIPconsIsInitial(conss[i]) )
-      {
-         SCIP_CALL( addRelaxation(scip, conss[i]) );
-      }
+      assert(SCIPconsIsInitial(conss[i]));
+      SCIP_CALL( addRelaxation(scip, conss[i]) );
    }
 
    return SCIP_OKAY;

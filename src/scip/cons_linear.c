@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.214 2006/03/13 15:35:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.215 2006/03/29 13:39:35 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -5640,10 +5640,8 @@ SCIP_DECL_CONSINITLP(consInitlpLinear)
 
    for( c = 0; c < nconss; ++c )
    {
-      if( SCIPconsIsInitial(conss[c]) )
-      {
-         SCIP_CALL( addRelaxation(scip, conss[c], NULL) );
-      }
+      assert(SCIPconsIsInitial(conss[c]));
+      SCIP_CALL( addRelaxation(scip, conss[c], NULL) );
    }
 
    return SCIP_OKAY;

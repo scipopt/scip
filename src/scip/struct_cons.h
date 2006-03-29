@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.39 2006/01/03 12:22:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.40 2006/03/29 13:39:36 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -46,6 +46,7 @@ struct SCIP_Cons
                                               *   constraint is from global problem */
    int                   addarraypos;        /**< position of constraint in the conssetchg's/prob's addedconss/conss array */
    int                   consspos;           /**< position of constraint in the handler's conss array */
+   int                   initconsspos;       /**< position of constraint in the handler's initconss array */
    int                   sepaconsspos;       /**< position of constraint in the handler's sepaconss array */
    int                   enfoconsspos;       /**< position of constraint in the handler's enfoconss array */
    int                   checkconsspos;      /**< position of constraint in the handler's checkconss array */
@@ -83,6 +84,7 @@ struct SCIP_Cons
    unsigned int          updatepropdisable:1;/**< TRUE iff constraint's propagation has to be disabled in update phase */
    unsigned int          updateobsolete:1;   /**< TRUE iff obsolete status of constraint has to be updated in update phase */
    unsigned int          updatefree:1;       /**< TRUE iff constraint has to be freed in update phase */
+   unsigned int          updateactcurrent:1; /**< TRUE iff delayed constraint activation happened at current node */
 };
 
 /** tracks additions and removals of the set of active constraints */
@@ -140,6 +142,7 @@ struct SCIP_Conshdlr
    SCIP_DECL_CONSPRINT   ((*consprint));     /**< constraint display method */
    SCIP_CONSHDLRDATA*    conshdlrdata;       /**< constraint handler data */
    SCIP_CONS**           conss;              /**< array with all transformed constraints, active ones preceed incative ones */
+   SCIP_CONS**           initconss;          /**< array with active constraints that must enter the LP with their initial representation */
    SCIP_CONS**           sepaconss;          /**< array with active constraints that must be separated during LP processing */
    SCIP_CONS**           enfoconss;          /**< array with active constraints that must be enforced during node processing */
    SCIP_CONS**           checkconss;         /**< array with active constraints that must be checked for feasibility */
@@ -163,6 +166,8 @@ struct SCIP_Conshdlr
    int                   nactiveconss;       /**< total number of active constraints */
    int                   maxnactiveconss;    /**< maximal number of active constraints existing at the same time */
    int                   startnactiveconss;  /**< number of active constraints existing when problem solving started */
+   int                   initconsssize;      /**< size of initconss array */
+   int                   ninitconss;         /**< number of active constraints that must enter the LP */
    int                   sepaconsssize;      /**< size of sepaconss array */
    int                   nsepaconss;         /**< number of active constraints that may be separated during LP processing */
    int                   nusefulsepaconss;   /**< number of non-obsolete active constraints that should be separated */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.102 2006/02/23 12:40:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.103 2006/03/29 13:39:35 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -314,6 +314,7 @@ SCIP_RETCODE SCIPconssetchgAddAddedCons(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_CONS*            cons,               /**< added constraint */
    int                   depth,              /**< depth of constraint set change's node */
+   SCIP_Bool             currentnode,        /**< does the constraint set change belong to the current node? */
    SCIP_Bool             active              /**< is the constraint set change currently active? */
    );
 
@@ -333,7 +334,8 @@ SCIP_RETCODE SCIPconssetchgApply(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   int                   depth               /**< depth of constraint set change's node */
+   int                   depth,              /**< depth of constraint set change's node */
+   SCIP_Bool             currentnode         /**< does the constraint set change belong to the current node? */
    );
 
 /** undoes constraint set change */
@@ -515,7 +517,8 @@ SCIP_RETCODE SCIPconsActivate(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   int                   depth               /**< depth in the tree where the constraint activation takes place, or -1 for global problem */
+   int                   depth,              /**< depth in the tree where the constraint activation takes place, or -1 for global problem */
+   SCIP_Bool             currentnode         /**< does the constraint activation take place at the current node? */
    );
 
 /** deactivates constraint or marks constraint to be deactivated in next update */

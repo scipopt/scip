@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.39 2006/01/03 12:22:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.40 2006/03/29 13:39:34 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -259,11 +259,10 @@ public:
       SCIP_CONS**        targetcons          /**< pointer to store created target constraint */
       ) = 0;
 
-   /** LP initialization method of constraint handler
+   /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved)
     *
-    *  Puts the LP relaxations of all "initial" constraints into the LP. The method should scan the constraints
-    *  array for constraints that are marked initial via calls to SCIPconsIsInitial() and put the LP relaxation
-    *  of all initial constraints to the LP with calls to SCIPaddCut().
+    *  Puts the LP relaxations of all "initial" constraints into the LP. The method should put a canonic LP relaxation
+    *  of all given constraints to the LP with calls to SCIPaddCut().
     */
    virtual SCIP_RETCODE scip_initlp(
       SCIP*              scip,               /**< SCIP data structure */

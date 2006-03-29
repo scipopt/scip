@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.54 2006/03/09 18:41:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.55 2006/03/29 13:39:35 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -1246,10 +1246,8 @@ SCIP_DECL_CONSINITLP(consInitlpOr)
 
    for( i = 0; i < nconss; i++ )
    {
-      if( SCIPconsIsInitial(conss[i]) )
-      {
-         SCIP_CALL( addRelaxation(scip, conss[i]) );
-      }
+      assert(SCIPconsIsInitial(conss[i]));
+      SCIP_CALL( addRelaxation(scip, conss[i]) );
    }
 
    return SCIP_OKAY;

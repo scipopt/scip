@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.174 2006/03/17 12:39:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.175 2006/03/29 13:39:36 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1327,7 +1327,8 @@ SCIP_RETCODE nodeActivate(
       SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPnodeGetType(node), node->repropsubtreemark);
 
    /* apply domain and constraint set changes */
-   SCIP_CALL( SCIPconssetchgApply(node->conssetchg, blkmem, set, stat, node->depth) );
+   SCIP_CALL( SCIPconssetchgApply(node->conssetchg, blkmem, set, stat, node->depth,
+         (SCIPtreeGetCurrentDepth(tree) == node->depth)) );
    SCIP_CALL( SCIPdomchgApply(node->domchg, blkmem, set, stat, lp, branchcand, eventqueue, node->depth, cutoff) );
 
    /* mark node active */
@@ -1424,7 +1425,8 @@ SCIP_RETCODE SCIPnodeAddCons(
    }
 
    /* add constraint addition to the node's constraint set change data, and activate constraint if node is active */
-   SCIP_CALL( SCIPconssetchgAddAddedCons(&node->conssetchg, blkmem, set, stat, cons, node->depth, node->active) );
+   SCIP_CALL( SCIPconssetchgAddAddedCons(&node->conssetchg, blkmem, set, stat, cons, node->depth, node->active,
+         (SCIPtreeGetCurrentDepth(tree) == node->depth)) );
    assert(node->conssetchg != NULL);
    assert(node->conssetchg->addedconss != NULL);
    assert(!node->active || SCIPconsIsActive(cons));

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.210 2006/03/23 17:33:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.211 2006/03/29 13:39:36 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -485,9 +485,9 @@ SCIP_RETCODE nodeUpdateLowerboundLP(
    return SCIP_OKAY;
 }
 
-/** constructs the LP of the root node */
+/** constructs the initial LP of the current node */
 static
-SCIP_RETCODE initRootLP(
+SCIP_RETCODE initLP(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -498,6 +498,7 @@ SCIP_RETCODE initRootLP(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Bool             root,               /**< is this the initial root LP? */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
@@ -505,45 +506,55 @@ SCIP_RETCODE initRootLP(
    int v;
    int h;
 
+   assert(set != NULL);
    assert(prob != NULL);
    assert(lp != NULL);
-   assert(SCIPlpGetNCols(lp) == 0);
-   assert(SCIPlpGetNRows(lp) == 0);
-   assert(lp->nremoveablecols == 0);
-   assert(lp->nremoveablerows == 0);
    assert(cutoff != NULL);
 
    *cutoff = FALSE;
 
-   /* inform pricing and separation storage, that LP is now filled with initial data */
-   SCIPpricestoreStartInitialLP(pricestore);
+   /* at the root node, we have to add the initial variables as columns */
+   if( root )
+   {
+      assert(SCIPlpGetNCols(lp) == 0);
+      assert(SCIPlpGetNRows(lp) == 0);
+      assert(lp->nremoveablecols == 0);
+      assert(lp->nremoveablerows == 0);
+
+      /* inform pricing storage, that LP is now filled with initial data */
+      SCIPpricestoreStartInitialLP(pricestore);
+
+      /* add all initial variables to LP */
+      SCIPdebugMessage("init LP: initial columns\n");
+      for( v = 0; v < prob->nvars; ++v )
+      {
+         var = prob->vars[v];
+         assert(SCIPvarGetProbindex(var) >= 0);
+
+         if( SCIPvarIsInitial(var) )
+         {
+            SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, lp, var, 0.0, TRUE) );
+         }
+      }
+      assert(lp->nremoveablecols == 0);
+      SCIP_CALL( SCIPpricestoreApplyVars(pricestore, blkmem, set, stat, prob, tree, lp) );
+
+      /* inform pricing storage, that initial LP setup is now finished */
+      SCIPpricestoreEndInitialLP(pricestore);
+   }
+
+   /* inform separation storage, that LP is now filled with initial data */
    SCIPsepastoreStartInitialLP(sepastore);
 
-   /* add all initial variables to LP */
-   SCIPdebugMessage("init root LP: initial columns\n");
-   for( v = 0; v < prob->nvars; ++v )
-   {
-      var = prob->vars[v];
-      assert(SCIPvarGetProbindex(var) >= 0);
-
-      if( SCIPvarIsInitial(var) )
-      {
-         SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, lp, var, 0.0, TRUE) );
-      }
-   }
-   assert(lp->nremoveablecols == 0);
-   SCIP_CALL( SCIPpricestoreApplyVars(pricestore, blkmem, set, stat, prob, tree, lp) );
-
    /* add LP relaxations of all initial constraints to LP */
-   SCIPdebugMessage("init root LP: initial rows\n");
+   SCIPdebugMessage("init LP: initial rows\n");
    for( h = 0; h < set->nconshdlrs; ++h )
    {
       SCIP_CALL( SCIPconshdlrInitLP(set->conshdlrs[h], blkmem, set, stat) );
    }
    SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, tree, lp, branchcand, eventqueue, cutoff) );
 
-   /* inform pricing and separation storage, that initial LP setup is now finished */
-   SCIPpricestoreEndInitialLP(pricestore);
+   /* inform separation storage, that initial LP setup is now finished */
    SCIPsepastoreEndInitialLP(sepastore);
 
    return SCIP_OKAY;
@@ -579,11 +590,9 @@ SCIP_RETCODE SCIPconstructCurrentLP(
       assert(initroot || SCIPnodeGetDepth(SCIPtreeGetFocusNode(tree)) > 0);
       assert(SCIPtreeIsFocusNodeLPConstructed(tree));
       
-      /* init root node LP */
-      if( initroot )
-      {
-         SCIP_CALL( initRootLP(blkmem, set, stat, prob, tree, lp, pricestore, sepastore, branchcand, eventqueue, cutoff) );
-      }
+      /* setup initial LP relaxation of node */
+      SCIP_CALL( initLP(blkmem, set, stat, prob, tree, lp, pricestore, sepastore, branchcand, eventqueue, initroot,
+            cutoff) );
    }
 
    return SCIP_OKAY;

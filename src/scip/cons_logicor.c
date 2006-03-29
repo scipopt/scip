@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.99 2006/03/17 12:39:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.100 2006/03/29 13:39:35 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -1076,10 +1076,8 @@ SCIP_DECL_CONSINITLP(consInitlpLogicor)
 
    for( c = 0; c < nconss; ++c )
    {
-      if( SCIPconsIsInitial(conss[c]) )
-      {
-         SCIP_CALL( addCut(scip, conss[c], NULL) );
-      }
+      assert(SCIPconsIsInitial(conss[c]));
+      SCIP_CALL( addCut(scip, conss[c], NULL) );
    }
 
    return SCIP_OKAY;

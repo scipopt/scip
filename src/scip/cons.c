@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.140 2006/03/16 14:43:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.141 2006/03/29 13:39:34 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -76,6 +76,30 @@ SCIP_RETCODE conshdlrEnsureConssMem(
       conshdlr->consssize = newsize;
    }
    assert(num <= conshdlr->consssize);
+
+   return SCIP_OKAY;
+}
+
+/** resizes initconss array to be able to store at least num constraints */
+static
+SCIP_RETCODE conshdlrEnsureInitconssMem(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimal number of slots in array */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(set != NULL);
+
+   if( num > conshdlr->initconsssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      SCIP_ALLOC( BMSreallocMemoryArray(&conshdlr->initconss, newsize) );
+      conshdlr->initconsssize = newsize;
+   }
+   assert(num <= conshdlr->initconsssize);
 
    return SCIP_OKAY;
 }
@@ -225,6 +249,14 @@ void checkConssArrays(
       assert(!conshdlr->conss[c]->original);
       assert(conshdlr->conss[c]->active == (c < conshdlr->nactiveconss));
       assert(conshdlr->conss[c]->consspos == c);
+   }
+
+   for( c = 0; c < conshdlr->ninitconss; ++c )
+   {
+      assert(conshdlr->initconss[c] != NULL);
+      assert(!conshdlr->initconss[c]->original);
+      assert(conshdlr->initconss[c]->active);
+      assert(conshdlr->initconss[c]->initial);
    }
 
    for( c = 0; c < conshdlr->nsepaconss; ++c )
@@ -580,6 +612,63 @@ void conshdlrDelCons(
    conshdlr->conss[cons->consspos]->consspos = cons->consspos;
    conshdlr->nconss--;
    cons->consspos = -1;
+}
+
+/** adds constraint to the initconss array of constraint handler */
+static
+SCIP_RETCODE conshdlrAddInitcons(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONS*            cons                /**< constraint to add */
+   )
+{
+   int insertpos;
+
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+   assert(cons->conshdlr == conshdlr);
+   assert(!cons->original);
+   assert(cons->active);
+   assert(cons->initial);
+   assert(cons->initconsspos == -1);
+
+   SCIP_CALL( conshdlrEnsureInitconssMem(conshdlr, set, conshdlr->ninitconss+1) );
+   insertpos = conshdlr->ninitconss;
+   conshdlr->initconss[insertpos] = cons;
+   cons->initconsspos = insertpos;
+   conshdlr->ninitconss++;
+
+   checkConssArrays(conshdlr);
+
+   return SCIP_OKAY;
+}
+
+/** deletes constraint from the initconss array of constraint handler */
+static
+void conshdlrDelInitcons(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS*            cons                /**< constraint to remove */
+   )
+{
+   int delpos;
+
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+   assert(cons->conshdlr == conshdlr);
+   assert(!cons->original);
+   assert(cons->initial);
+   assert(0 <= cons->initconsspos && cons->initconsspos < conshdlr->ninitconss);
+
+   delpos = cons->initconsspos;
+   if( delpos < conshdlr->ninitconss-1 )
+   {
+      conshdlr->initconss[delpos] = conshdlr->initconss[conshdlr->ninitconss-1];
+      conshdlr->initconss[delpos]->initconsspos = delpos;
+   }
+   conshdlr->ninitconss--;
+   cons->initconsspos = -1;
+
+   checkConssArrays(conshdlr);
 }
 
 /** adds constraint to the sepaconss array of constraint handler */
@@ -1190,7 +1279,8 @@ SCIP_RETCODE conshdlrActivateCons(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_CONS*            cons,               /**< constraint to add */
-   int                   depth               /**< depth in the tree where the activation takes place, or -1 for global problem */
+   int                   depth,              /**< depth in the tree where the activation takes place, or -1 for global problem */
+   SCIP_Bool             currentnode         /**< does the constraint activation take place at the current node? */
    )
 {
    assert(conshdlr != NULL);
@@ -1207,13 +1297,15 @@ SCIP_RETCODE conshdlrActivateCons(
    assert(!cons->enabled);
    assert(conshdlr->nactiveconss <= cons->consspos && cons->consspos < conshdlr->nconss);
    assert(conshdlr->conss[cons->consspos] == cons);
+   assert(cons->initconsspos == -1);
    assert(cons->sepaconsspos == -1);
    assert(cons->enfoconsspos == -1);
    assert(cons->checkconsspos == -1);
    assert(cons->propconsspos == -1);
    assert(depth >= -1);
 
-   SCIPdebugMessage("activate constraint <%s> in constraint handler <%s> (depth %d)\n", cons->name, conshdlr->name, depth);
+   SCIPdebugMessage("activate constraint <%s> in constraint handler <%s> (depth %d, current=%d)\n",
+      cons->name, conshdlr->name, depth, currentnode);
 
    /* activate constraint, switch positions with first inactive constraint */
    cons->active = TRUE;
@@ -1230,6 +1322,12 @@ SCIP_RETCODE conshdlrActivateCons(
    if( cons->check )
    {
       SCIP_CALL( conshdlrAddCheckcons(conshdlr, set, cons) );
+   }
+
+   /* add constraint to the initconss array if the constraint is initial and added to the current node */
+   if( currentnode && cons->initial )
+   {
+      SCIP_CALL( conshdlrAddInitcons(conshdlr, set, cons) );
    }
 
    /* call constraint handler's activation notification method */
@@ -1287,6 +1385,12 @@ SCIP_RETCODE conshdlrDeactivateCons(
       SCIP_CALL( conshdlr->consdeactive(set->scip, conshdlr, cons) );
    }
 
+   /* delete constraint from the initconss array */
+   if( cons->initconsspos >= 0 )
+   {
+      conshdlrDelInitcons(conshdlr, cons);
+   }
+
    /* delete constraint from the check array */
    if( cons->check )
    {
@@ -1304,6 +1408,7 @@ SCIP_RETCODE conshdlrDeactivateCons(
    stat->nactiveconss--;
 
    assert(conshdlr->nactiveconss <= cons->consspos && cons->consspos < conshdlr->nconss);
+   assert(cons->initconsspos == -1);
    assert(cons->sepaconsspos == -1);
    assert(cons->enfoconsspos == -1);
    assert(cons->checkconsspos == -1);
@@ -1387,7 +1492,7 @@ SCIP_RETCODE conshdlrProcessUpdates(
          assert(!cons->updatefree);
 
          /* the activation depth was already stored in SCIPconsActivate() */
-         SCIP_CALL( conshdlrActivateCons(conshdlr, set, stat, cons, cons->activedepth) );
+         SCIP_CALL( conshdlrActivateCons(conshdlr, set, stat, cons, cons->activedepth, cons->updateactcurrent) );
          assert(cons->active);
          cons->updateactivate = FALSE;
       }
@@ -1504,7 +1609,7 @@ SCIP_RETCODE conshdlrProcessUpdates(
    return SCIP_OKAY;
 }
 
-/** marks constraint handler to delay all constraint updates until the next SCIPconshdlrProcessUpdates() call */
+/** marks constraint handler to delay all constraint updates until the next conshdlrProcessUpdates() call */
 static
 void conshdlrDelayUpdates(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
@@ -1689,6 +1794,9 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->nactiveconss = 0;
    (*conshdlr)->maxnactiveconss = 0;
    (*conshdlr)->startnactiveconss = 0;
+   (*conshdlr)->initconss = NULL;
+   (*conshdlr)->initconsssize = 0;
+   (*conshdlr)->ninitconss = 0;
    (*conshdlr)->sepaconss = NULL;
    (*conshdlr)->sepaconsssize = 0;
    (*conshdlr)->nsepaconss = 0;
@@ -1826,6 +1934,7 @@ SCIP_RETCODE SCIPconshdlrFree(
    BMSfreeMemoryArray(&(*conshdlr)->name);
    BMSfreeMemoryArray(&(*conshdlr)->desc);
    BMSfreeMemoryArrayNull(&(*conshdlr)->conss);
+   BMSfreeMemoryArrayNull(&(*conshdlr)->initconss);
    BMSfreeMemoryArrayNull(&(*conshdlr)->sepaconss);
    BMSfreeMemoryArrayNull(&(*conshdlr)->enfoconss);
    BMSfreeMemoryArrayNull(&(*conshdlr)->checkconss);
@@ -2120,8 +2229,11 @@ SCIP_RETCODE SCIPconshdlrInitLP(
 
    if( conshdlr->consinitlp != NULL )
    {
-      SCIPdebugMessage("initializing LP with %d active constraints of handler <%s>\n", conshdlr->nactiveconss, conshdlr->name);
-         
+      int c;
+
+      SCIPdebugMessage("initializing LP with %d initial constraints of handler <%s>\n", 
+         conshdlr->ninitconss, conshdlr->name);
+
       /* because during constraint processing, constraints of this handler may be deleted, activated, deactivated,
        * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
        * external method; to avoid this, these changes will be buffered and processed after the method call
@@ -2129,10 +2241,20 @@ SCIP_RETCODE SCIPconshdlrInitLP(
       conshdlrDelayUpdates(conshdlr);
       
       /* call external method */
-      SCIP_CALL( conshdlr->consinitlp(set->scip, conshdlr, conshdlr->conss, conshdlr->nactiveconss) );
+      SCIP_CALL( conshdlr->consinitlp(set->scip, conshdlr, conshdlr->initconss, conshdlr->ninitconss) );
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
+
+      /* clear the initconss array */
+      for( c = 0; c < conshdlr->ninitconss; ++c )
+         conshdlr->initconss[c]->initconsspos = -1;
+      conshdlr->ninitconss = 0;
+      if( stat->nnodes <= 1 )
+      {
+         BMSfreeMemoryArrayNull(&conshdlr->initconss);
+         conshdlr->initconsssize = 0;
+      }
    }
 
    return SCIP_OKAY;
@@ -3684,6 +3806,7 @@ SCIP_RETCODE SCIPconssetchgAddAddedCons(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_CONS*            cons,               /**< added constraint */
    int                   depth,              /**< depth of constraint set change's node */
+   SCIP_Bool             currentnode,        /**< does the constraint set change belong to the current node? */
    SCIP_Bool             active              /**< is the constraint set change currently active? */
    )
 {
@@ -3710,7 +3833,7 @@ SCIP_RETCODE SCIPconssetchgAddAddedCons(
    /* activate constraint, if node is active */
    if( active && !SCIPconsIsActive(cons) )
    {
-      SCIP_CALL( SCIPconsActivate(cons, set, stat, depth) );
+      SCIP_CALL( SCIPconsActivate(cons, set, stat, depth, currentnode) );
       assert(SCIPconsIsActive(cons));
          
       /* remember, that this constraint set change data was resposible for the constraint's addition */
@@ -3831,7 +3954,8 @@ SCIP_RETCODE SCIPconssetchgApply(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   int                   depth               /**< depth of constraint set change's node */
+   int                   depth,              /**< depth of constraint set change's node */
+   SCIP_Bool             currentnode         /**< does the constraint set change belong to the current node? */
    )
 {
    SCIP_CONS* cons;
@@ -3862,7 +3986,7 @@ SCIP_RETCODE SCIPconssetchgApply(
          assert(cons->addarraypos == -1);
 
          /* activate constraint */
-         SCIP_CALL( SCIPconsActivate(cons, set, stat, depth) );
+         SCIP_CALL( SCIPconsActivate(cons, set, stat, depth, currentnode) );
          assert(cons->active);
          assert(!cons->update);
          
@@ -4114,6 +4238,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->addconssetchg = NULL;
    (*cons)->addarraypos = -1;
    (*cons)->consspos = -1;
+   (*cons)->initconsspos = -1;
    (*cons)->sepaconsspos = -1;
    (*cons)->enfoconsspos = -1;
    (*cons)->checkconsspos = -1;
@@ -4152,6 +4277,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->updatepropdisable = FALSE;
    (*cons)->updateobsolete = FALSE;
    (*cons)->updatefree = FALSE;
+   (*cons)->updateactcurrent = FALSE;
 
    /* capture constraint */
    SCIPconsCapture(*cons);
@@ -4594,7 +4720,8 @@ SCIP_RETCODE SCIPconsActivate(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   int                   depth               /**< depth in the tree where the constraint activation takes place, or -1 for global problem */
+   int                   depth,              /**< depth in the tree where the constraint activation takes place, or -1 for global problem */
+   SCIP_Bool             currentnode         /**< does the constraint activation take place at the current node? */
    )
 {
    assert(cons != NULL);
@@ -4615,12 +4742,13 @@ SCIP_RETCODE SCIPconsActivate(
          cons->name, cons->conshdlr->name, depth);
       cons->updateactivate = TRUE;
       cons->activedepth = depth;
+      cons->updateactcurrent = currentnode;
       SCIP_CALL( conshdlrAddUpdateCons(cons->conshdlr, set, cons) );
       assert(cons->update);
    }
    else
    {
-      SCIP_CALL( conshdlrActivateCons(cons->conshdlr, set, stat, cons, depth) );
+      SCIP_CALL( conshdlrActivateCons(cons->conshdlr, set, stat, cons, depth, currentnode) );
       assert(cons->active);
    }
 

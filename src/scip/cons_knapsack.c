@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.127 2006/03/17 12:39:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.128 2006/03/29 13:39:35 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -3258,10 +3258,8 @@ SCIP_DECL_CONSINITLP(consInitlpKnapsack)
 
    for( i = 0; i < nconss; i++ )
    {
-      if( SCIPconsIsInitial(conss[i]) )
-      {
-         SCIP_CALL( addRelaxation(scip, conss[i], NULL) );
-      }
+      assert(SCIPconsIsInitial(conss[i]));
+      SCIP_CALL( addRelaxation(scip, conss[i], NULL) );
    }
 
    return SCIP_OKAY;

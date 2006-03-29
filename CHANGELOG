@@ -23,6 +23,10 @@ interface:
 - methods SCIPisLbBetter() and SCIPisUbBetter() have an additional parameter and slightly different meaning
   (they now compare the bound improvement *relatively* to the width of the domain and the bound itself)
 - new solution status code SCIP_STATUS_STALLNODELIMIT
+- slightly modified semantics of the CONSINITLP callback in the constraint handlers
+- marking a constraint to be "initial" now means in addition, that if the constraint is added to a local node
+  it will enter the LP at the time the node is first processed, even if parameters forbid separation at this
+  node
 
 plugins:
 - new primal heuristic "shifting"
@@ -91,6 +95,9 @@ fixed bugs:
 - fixed bug in SCIPcliqueAddVar() [thanks to Anders Schack-Nielsen]
 - fixed bug in updatePseudocost() with wrong lpgain distribution on multiple branching variables
   [thanks to Anders Schack-Nielsen]
+- it is now possible to branch on constraints without the risk of going into an infinite loop, because constraints
+  marked as "initial" will be put to the LP relaxation (of the child nodes) even if separation is prohibited by
+  the parameter settings
 
 
 SCIP version 0.81

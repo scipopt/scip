@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.84 2006/02/23 12:40:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.85 2006/03/29 13:39:36 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -879,7 +879,7 @@ SCIP_RETCODE SCIPprobAddCons(
       /* activate constraint */
       if( !SCIPconsIsActive(cons) )
       {
-         SCIP_CALL( SCIPconsActivate(cons, set, stat, -1) );
+         SCIP_CALL( SCIPconsActivate(cons, set, stat, -1, (stat->nnodes <= 1)) );
       }
 
       /* if constraint is a check-constraint, lock roundings of constraint's variables */

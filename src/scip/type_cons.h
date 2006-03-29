@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.35 2006/03/09 12:52:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.36 2006/03/29 13:39:36 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -161,11 +161,10 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  */ 
 #define SCIP_DECL_CONSTRANS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* sourcecons, SCIP_CONS** targetcons)
 
-/** LP initialization method of constraint handler
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved)
  *
- *  Puts the LP relaxations of all "initial" constraints into the LP. The method should scan the constraints
- *  array for constraints that are marked initial via calls to SCIPconsIsInitial() and put the LP relaxation
- *  of all initial constraints to the LP with calls to SCIPaddCut().
+ *  Puts the LP relaxations of all "initial" constraints into the LP. The method should put a canonic LP relaxation
+ *  of all given constraints to the LP with calls to SCIPaddCut().
  *
  *  input:
  *  - scip            : SCIP main data structure
