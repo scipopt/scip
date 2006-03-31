@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipshell.c,v 1.2 2006/03/20 09:58:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipshell.c,v 1.3 2006/03/31 07:29:45 bzfpfend Exp $"
 
 /**@file   scipshell.c
  * @brief  SCIP command line interface
@@ -312,6 +312,14 @@ SCIP_RETCODE SCIPprocessShellArguments(
 
       if( !error )
       {
+         /***********************
+          * Version information *
+          ***********************/
+         
+         SCIPprintVersion(NULL);
+         SCIPinfoMessage(scip, NULL, "\n");
+
+
          /*****************
           * Load settings *
           *****************/
@@ -379,20 +387,12 @@ SCIP_RETCODE SCIPrunShell(
 {
    SCIP* scip = NULL;
 
-   /***********************
-    * Version information *
-    ***********************/
-
-   SCIPprintVersion(NULL);
-
-
    /*********
     * Setup *
     *********/
 
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
-   SCIPinfoMessage(scip, NULL, "\n");
 
    /* include default SCIP plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );

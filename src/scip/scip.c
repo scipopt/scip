@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.351 2006/03/17 12:39:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.352 2006/03/31 07:29:44 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -13190,6 +13190,7 @@ void printTreeStatistics(
    SCIPmessageFPrintInfo(file, "  number of runs   : %10d\n", scip->stat->nruns);
    SCIPmessageFPrintInfo(file, "  nodes            : %10"SCIP_LONGINT_FORMAT"\n", scip->stat->nnodes);
    SCIPmessageFPrintInfo(file, "  nodes (total)    : %10"SCIP_LONGINT_FORMAT"\n", scip->stat->ntotalnodes);
+   SCIPmessageFPrintInfo(file, "  nodes left       : %10"SCIP_LONGINT_FORMAT"\n", SCIPtreeGetNNodes(scip->tree));
    SCIPmessageFPrintInfo(file, "  max depth        : %10d\n", scip->stat->maxdepth);
    SCIPmessageFPrintInfo(file, "  max depth (total): %10d\n", scip->stat->maxtotaldepth);
    SCIPmessageFPrintInfo(file, "  backtracks       : %10"SCIP_LONGINT_FORMAT" (%.1f%%)\n", scip->stat->nbacktracks,
