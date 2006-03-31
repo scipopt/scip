@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipshell.c,v 1.3 2006/03/31 07:29:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipshell.c,v 1.4 2006/03/31 08:13:49 bzfpfend Exp $"
 
 /**@file   scipshell.c
  * @brief  SCIP command line interface
@@ -55,7 +55,7 @@ void logMessage(
    messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
    assert(messagehdlrdata != NULL);
 
-   if( !messagehdlrdata->quiet )
+   if( !messagehdlrdata->quiet || (file != stdout && file != stderr) )
    {
       fputs(msg, file);
       fflush(file);
