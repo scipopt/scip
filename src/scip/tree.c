@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.175 2006/03/29 13:39:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.176 2006/04/04 13:20:25 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4437,6 +4437,10 @@ SCIP_RETCODE SCIPtreeMarkProbingNodeHasLP(
 
    /* update LP information in probingnode data */
    SCIP_CALL( probingnodeUpdate(node->data.probingnode, blkmem, tree, lp) );
+
+   /* update LP size in path */
+   tree->pathnlpcols[tree->pathlen-1] = node->data.probingnode->ncols;
+   tree->pathnlprows[tree->pathlen-1] = node->data.probingnode->nrows;
 
    return SCIP_OKAY;
 }

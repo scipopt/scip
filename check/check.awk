@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.36 2006/03/27 07:46:48 bzfpfend Exp $
+# $Id: check.awk,v 1.37 2006/04/04 13:20:25 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -57,6 +57,7 @@ BEGIN {
     timegeomshift = 0.0;
     nodegeomshift = 0.0;
     sblpgeomshift = 0.0;
+    onlyinsolufile = 0;  # should only instances be reported that are included in the .solu file?
 
     nprobs = 0;
     sbab = 0;
@@ -80,8 +81,10 @@ BEGIN {
     overheadtottime = 0.0;
     timelimit = 0.0;
 }
-/=opt=/ { solfeasible[$2] = 1; sol[$2] = $3; }  # get optimum
-/=inf=/ { solfeasible[$2] = 0; sol[$2] = 0.0; } # problem infeasible
+/=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }  # get optimum
+/=inf=/  { solstatus[$2] = "inf"; sol[$2] = 0.0; } # problem infeasible
+/=best=/ { solstatus[$2] = "best"; sol[$2] = $3; } # get best known solution value
+/=unkn=/ { solstatus[$2] = "unkn"; }               # no feasible solution known
 /^@01/ { 
     n  = split ($2, a, "/");
     split(a[n], b, ".");
@@ -221,104 +224,93 @@ BEGIN {
 # Output
 #
 /^=ready=/ {
-   nprobs++;
-
-   optimal = 0;
-   markersym = "\\g";
-   if( abs(pb - db) < 1e-06 || !feasible )
+   if( !onlyinsolufile || solstatus[prob] != "" )
    {
-      gap = 0.0;
-      optimal = 1;
-      markersym = "  ";
-   }
-   else if( abs(db) < 1e-06 )
-      gap = -1.0;
-   else if( pb*db < 0.0 )
-      gap = -1.0;
-   else if( abs(db) >= 1e+20 )
-      gap = -1.0;
-   else if( abs(pb) >= 1e+20 )
-      gap = -1.0;
-   else
-      gap = 100.0*abs((pb-db)/db);
-   if( gap < 0.0 )
-      gapstr = "  --  ";
-   else if( gap < 1e+04 )
-      gapstr = sprintf("%6.1f", gap);
-   else
-      gapstr = " Large";
+      nprobs++;
 
-   if( vars == 0 )
-      probtype = "--";
-   else if( binvars == 0 && intvars == 0 )
-      probtype = "LP";
-   else if( contvars == 0 )
-   {
-      if( intvars == 0 && implvars == 0 )
-         probtype = "BP";
-      else
-         probtype = "IP";
-   }
-   else
-   {
-      if( intvars == 0 )
-         probtype = "01MIP";
-      else
-         probtype = "MIP";
-   }
-
-   if( aborted && tottime == 0.0 )
-      tottime = timelimit;
-
-   lps = primlps + duallps;
-   simplex = primiter + dualiter;
-   stottime += tottime;
-   sbab += bbnodes;
-   slp += lps;
-   ssim += simplex;
-   ssblp += sblps;
-   conftottime += conftime;
-   overheadtottime += overheadtime;
-   basictime = tottime - conftime - overheadtime;
-   nodegeom = nodegeom^((nprobs-1)/nprobs) * max(bbnodes+nodegeomshift, 1.0)^(1.0/nprobs);
-   sblpgeom = sblpgeom^((nprobs-1)/nprobs) * max(sblps+sblpgeomshift, 1.0)^(1.0/nprobs);
-   timegeom = timegeom^((nprobs-1)/nprobs) * max(tottime+timegeomshift, 1.0)^(1.0/nprobs);
-   conftimegeom = conftimegeom^((nprobs-1)/nprobs) * max(conftime+timegeomshift, 1.0)^(1.0/nprobs);
-   overheadtimegeom = overheadtimegeom^((nprobs-1)/nprobs) * max(overheadtime+timegeomshift, 1.0)^(1.0/nprobs);
-   basictimegeom = basictimegeom^((nprobs-1)/nprobs) * max(basictime+timegeomshift, 1.0)^(1.0/nprobs);
-
-   printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s & %8d & %7.1f &%s%8d &%s%7.1f & %7.1f & %7.1f & %7.1f \\\\\n",
-      pprob, cons, vars, db, pb, gapstr, confclauses, (confclauses > 0 ? confliterals / confclauses : 0.0), 
-      markersym, bbnodes, markersym, tottime, tottime - conftime - overheadtime, overheadtime, conftime) >TEXFILE;
-#   printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
-#      pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
-   
-   printf("%-19s %-6s %6d %6d %14.9g %14.9g %6s %7d %7.1f %7d %6.1f %6.1f %6.1f %6.1f ",
-      shortprob, probtype, cons, vars, db, pb, gapstr, confclauses, (confclauses > 0 ? confliterals / confclauses : 0.0), 
-      bbnodes, tottime, tottime - conftime - overheadtime, overheadtime, conftime);
-#   printf("%-19s %-6s %6d %6d %14.9g %14.9g %6s %7d %6.1f ",
-#      shortprob, probtype, cons, vars, db, pb, gapstr, bbnodes, tottime);
-   
-   if( aborted )
-   {
-      printf("abort\n");
-      failtime += tottime;
-      fail++;
-   }
-   else if (sol[prob] == "")
-   {
-      if (timeout)
+      optimal = 0;
+      markersym = "\\g";
+      if( abs(pb - db) < 1e-06 || !feasible )
       {
-         printf("timeout\n");
-         timeouttime += tottime;
-         timeouts++;
+         gap = 0.0;
+         optimal = 1;
+         markersym = "  ";
+      }
+      else if( abs(db) < 1e-06 )
+         gap = -1.0;
+      else if( pb*db < 0.0 )
+         gap = -1.0;
+      else if( abs(db) >= 1e+20 )
+         gap = -1.0;
+      else if( abs(pb) >= 1e+20 )
+         gap = -1.0;
+      else
+         gap = 100.0*abs((pb-db)/db);
+      if( gap < 0.0 )
+         gapstr = "  --  ";
+      else if( gap < 1e+04 )
+         gapstr = sprintf("%6.1f", gap);
+      else
+         gapstr = " Large";
+
+      if( vars == 0 )
+         probtype = "--";
+      else if( binvars == 0 && intvars == 0 )
+         probtype = "LP";
+      else if( contvars == 0 )
+      {
+         if( intvars == 0 && implvars == 0 )
+            probtype = "BP";
+         else
+            probtype = "IP";
       }
       else
-         printf("unknown\n");
-   }
-   else
-   {
-      if( solfeasible[prob] )
+      {
+         if( intvars == 0 )
+            probtype = "01MIP";
+         else
+            probtype = "MIP";
+      }
+
+      if( aborted && tottime == 0.0 )
+         tottime = timelimit;
+
+      lps = primlps + duallps;
+      simplex = primiter + dualiter;
+      stottime += tottime;
+      sbab += bbnodes;
+      slp += lps;
+      ssim += simplex;
+      ssblp += sblps;
+      conftottime += conftime;
+      overheadtottime += overheadtime;
+      basictime = tottime - conftime - overheadtime;
+      nodegeom = nodegeom^((nprobs-1)/nprobs) * max(bbnodes+nodegeomshift, 1.0)^(1.0/nprobs);
+      sblpgeom = sblpgeom^((nprobs-1)/nprobs) * max(sblps+sblpgeomshift, 1.0)^(1.0/nprobs);
+      timegeom = timegeom^((nprobs-1)/nprobs) * max(tottime+timegeomshift, 1.0)^(1.0/nprobs);
+      conftimegeom = conftimegeom^((nprobs-1)/nprobs) * max(conftime+timegeomshift, 1.0)^(1.0/nprobs);
+      overheadtimegeom = overheadtimegeom^((nprobs-1)/nprobs) * max(overheadtime+timegeomshift, 1.0)^(1.0/nprobs);
+      basictimegeom = basictimegeom^((nprobs-1)/nprobs) * max(basictime+timegeomshift, 1.0)^(1.0/nprobs);
+
+      printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s & %8d & %7.1f &%s%8d &%s%7.1f & %7.1f & %7.1f & %7.1f \\\\\n",
+         pprob, cons, vars, db, pb, gapstr, confclauses, (confclauses > 0 ? confliterals / confclauses : 0.0), 
+         markersym, bbnodes, markersym, tottime, tottime - conftime - overheadtime, overheadtime, conftime) >TEXFILE;
+      #   printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
+      #      pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
+   
+      printf("%-19s %-6s %6d %6d %14.9g %14.9g %6s %7d %7.1f %7d %6.1f %6.1f %6.1f %6.1f ",
+         shortprob, probtype, cons, vars, db, pb, gapstr, confclauses, (confclauses > 0 ? confliterals / confclauses : 0.0), 
+         bbnodes, tottime, tottime - conftime - overheadtime, overheadtime, conftime);
+      #   printf("%-19s %-6s %6d %6d %14.9g %14.9g %6s %7d %6.1f ",
+      #      shortprob, probtype, cons, vars, db, pb, gapstr, bbnodes, tottime);
+   
+      if( aborted )
+      {
+         printf("abort\n");
+         failtime += tottime;
+         fail++;
+      }
+      else if( solstatus[prob] == "opt" )
       {
          if ((abs(pb - db) > 1e-4) || (abs(pb - sol[prob]) > 1e-6*max(abs(pb),1.0)))
          {
@@ -341,7 +333,7 @@ BEGIN {
             pass++;
          }
       }
-      else
+      else if( solstatus[prob] == "inf" )
       {
          if (feasible)
          {
@@ -363,6 +355,17 @@ BEGIN {
             printf("ok\n");
             pass++;
          }
+      }
+      else
+      {
+         if (timeout)
+         {
+            printf("timeout\n");
+            timeouttime += tottime;
+            timeouts++;
+         }
+         else
+            printf("unknown\n");
       }
    }
 }

@@ -98,6 +98,7 @@ fixed bugs:
 - it is now possible to branch on constraints without the risk of going into an infinite loop, because constraints
   marked as "initial" will be put to the LP relaxation (of the child nodes) even if separation is prohibited by
   the parameter settings
+- fixed bug with missing LP size updates after pricing or cut separation in probing [thanks to Marc Nuenkesser]
 
 
 SCIP version 0.81
