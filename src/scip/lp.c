@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.219 2006/03/24 10:30:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.220 2006/04/04 15:24:29 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6538,8 +6538,24 @@ void SCIPlpMarkSize(
    assert(lp != NULL);
    assert(!lp->diving);
 
-   lp->firstnewcol = lp->ncols;
    lp->firstnewrow = lp->nrows;
+   lp->firstnewcol = lp->ncols;
+}
+
+/** sets the remembered number of columns and rows to the given values */
+void SCIPlpSetSizeMark(
+   SCIP_LP*              lp,                 /**< current LP data */
+   int                   nrows,              /**< number of rows to set the size marker to */
+   int                   ncols               /**< number of columns to set the size marker to */
+   )
+{
+   assert(lp != NULL);
+   assert(!lp->diving);
+   assert(lp->nrows >= nrows);
+   assert(lp->ncols >= ncols);
+
+   lp->firstnewrow = nrows;
+   lp->firstnewcol = ncols;
 }
 
 /** gets all indices of basic columns and rows: index i >= 0 corresponds to column i, index i < 0 to row -i-1 */
@@ -9643,7 +9659,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             primalfeasible = TRUE;
             dualfeasible = TRUE;
          }
-         if( primalfeasible && dualfeasible && aging && !lp->diving && !lp->probing && stat->nlps > oldnlps )
+         if( primalfeasible && dualfeasible && aging && !lp->diving && stat->nlps > oldnlps )
          {
             /* update ages and remove obsolete columns and rows from LP */
             SCIP_CALL( SCIPlpUpdateAges(lp, stat) );

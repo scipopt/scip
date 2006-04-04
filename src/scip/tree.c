@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.176 2006/04/04 13:20:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.177 2006/04/04 15:24:30 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4295,6 +4295,12 @@ SCIP_RETCODE treeCreateProbingNode(
    /* count the new LP sizes of the path */
    treeUpdatePathLPSize(tree, tree->pathlen-1);
 
+   /* mark the LP's size, such that we know which rows and columns were added in the new node */
+   assert(tree->pathlen >= 2);
+   assert(lp->firstnewrow == tree->pathnlprows[tree->pathlen-2]); /* marked LP size should be final size of parent node */
+   assert(lp->firstnewcol == tree->pathnlpcols[tree->pathlen-2]);
+   SCIPlpMarkSize(lp);
+
    /* the current probing node does not yet have a solved LP */
    tree->probingnodehaslp = FALSE;
 
@@ -4520,6 +4526,10 @@ SCIP_RETCODE treeBacktrackProbing(
    SCIP_CALL( SCIPlpShrinkCols(lp, ncols) );
    SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, nrows) );
    tree->probingloadlpistate = FALSE; /* LP state must be reloaded if the next LP is solved */
+
+   /* reset the LP's marked size: marked LP size of backtrack node equals the LP size of its parent */
+   SCIPlpSetSizeMark(lp, (tree->pathlen > 1 ? tree->pathnlprows[tree->pathlen-2] : 0),
+      (tree->pathlen > 1 ? tree->pathnlpcols[tree->pathlen-2] : 0));
 
    /* if the highest cutoff or repropagation depth is inside the deleted part of the probing path,
     * reset them to infinity

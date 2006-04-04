@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.115 2006/03/16 19:57:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.116 2006/04/04 15:24:30 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -660,6 +660,14 @@ SCIP_RETCODE SCIPlpClear(
 extern
 void SCIPlpMarkSize(
    SCIP_LP*              lp                  /**< current LP data */
+   );
+
+/** sets the remembered number of columns and rows to the given values */
+extern
+void SCIPlpSetSizeMark(
+   SCIP_LP*              lp,                 /**< current LP data */
+   int                   nrows,              /**< number of rows to set the size marker to */
+   int                   ncols               /**< number of columns to set the size marker to */
    );
 
 /** gets all indices of basic columns and rows: index i >= 0 corresponds to column i, index i < 0 to row -i-1 */

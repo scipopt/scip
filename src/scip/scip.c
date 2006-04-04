@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.352 2006/03/31 07:29:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.353 2006/04/04 15:24:30 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -10823,7 +10823,7 @@ SCIP_Real SCIPgetSolVal(
          /* the variable has no original counterpart: in the original solution, it has a value of zero */
          return 0.0;
       }
-      assert(!SCIPvarIsTransformed(var));
+      assert(!SCIPvarIsTransformed(origvar));
 
       return scalar * SCIPgetSolVal(scip, sol, origvar) + constant;
    }
