@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.c,v 1.33 2006/01/03 12:22:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.c,v 1.34 2006/04/05 16:17:15 bzfpfets Exp $"
 
 /**@file   pricestore.c
  * @brief  methods for storing priced variables
@@ -568,7 +568,6 @@ SCIP_RETCODE SCIPpricestoreResetBounds(
    assert(pricestore != NULL);
    assert(set != NULL);
    assert(lp != NULL);
-   assert(lp->solved);
    assert(pricestore->nvars == 0);
    assert(pricestore->naddedbdviolvars == pricestore->nbdviolvars);
 

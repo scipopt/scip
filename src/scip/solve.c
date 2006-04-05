@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.211 2006/03/29 13:39:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.212 2006/04/05 16:17:15 bzfpfets Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1151,7 +1151,7 @@ SCIP_RETCODE SCIPpriceLoop(
       SCIP_CALL( SCIPpricestoreResetBounds(pricestore, blkmem, set, stat, lp, branchcand, eventqueue) );
       assert(SCIPpricestoreGetNVars(pricestore) == 0);
       assert(SCIPpricestoreGetNBoundResets(pricestore) == 0);
-      assert(!lp->flushed || lp->solved);
+      assert(!lp->flushed || lp->solved || *lperror);
       mustprice = mustprice || !lp->flushed || (prob->ncolvars != *npricedcolvars);
       *mustsepa = *mustsepa || !lp->flushed;
 
@@ -1174,7 +1174,7 @@ SCIP_RETCODE SCIPpriceLoop(
       mustprice = mustprice && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
    }
    assert(lp->flushed);
-   assert(lp->solved);
+   assert(lp->solved || *lperror);
 
    return SCIP_OKAY;
 }

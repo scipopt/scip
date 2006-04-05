@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.104 2006/01/04 17:09:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.105 2006/04/05 16:17:15 bzfpfets Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -120,6 +120,7 @@ struct SCIP_LPi
    int                   rstatsize;          /**< size of rstat array */
    int                   iterations;         /**< number of iterations used in the last solving call */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
+   SCIP_Bool             instabilityignored; /**< was the instability of the last LP ignored? */
 };
 
 /** LPi state stores basis information */
@@ -576,6 +577,7 @@ void invalidateSolution(SCIP_LPI* lpi)
 {
    assert(lpi != NULL);
    lpi->solstat = -1;
+   lpi->instabilityignored = FALSE;
 }
 
 /** converts SCIP's objective sense into CPLEX's objective sense */
@@ -923,6 +925,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->iterations = 0;
    (*lpi)->solisbasic = TRUE;
    (*lpi)->cpxlp = CPXcreateprob(cpxenv, &restat, name);
+   (*lpi)->instabilityignored = FALSE;
    CHECK_ZERO( restat );
    invalidateSolution(*lpi);
    copyParameterValues(&((*lpi)->cpxparam), &defparam);
@@ -1826,6 +1829,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    lpi->iterations = CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp);
    lpi->solisbasic = TRUE;
    lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
+   lpi->instabilityignored = FALSE;
    CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
    SCIPdebugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
       lpi->solstat, primalfeasible, dualfeasible, lpi->iterations);
@@ -1856,6 +1860,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
          lpi->iterations += CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp);
          lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
+	 lpi->instabilityignored = FALSE;
          SCIPdebugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
          /* switch on preprocessing again */
@@ -1907,6 +1912,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    lpi->iterations = CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp);
    lpi->solisbasic = TRUE;
    lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
+   lpi->instabilityignored = FALSE;
    CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
    SCIPdebugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
       lpi->solstat, primalfeasible, dualfeasible, lpi->iterations);
@@ -1937,6 +1943,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
          lpi->iterations += CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp);
          lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
+	 lpi->instabilityignored = FALSE;
          CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
          SCIPdebugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
@@ -2022,6 +2029,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
          lpi->iterations += CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp);
          lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
+	 lpi->instabilityignored = FALSE;
          SCIPdebugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
       }
    }
@@ -2064,6 +2072,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    lpi->iterations = CPXgetbaritcnt(cpxenv, lpi->cpxlp);
    lpi->solisbasic = crossover;
    lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
+   lpi->instabilityignored = FALSE;
    SCIPdebugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
    if( lpi->solstat == CPX_STAT_INForUNBD )
@@ -2088,6 +2097,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 
       lpi->iterations += CPXgetbaritcnt(cpxenv, lpi->cpxlp);
       lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
+      lpi->instabilityignored = FALSE;
       SCIPdebugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
 
       if( lpi->solstat == CPX_STAT_INForUNBD )
@@ -2585,6 +2595,7 @@ SCIP_RETCODE SCIPlpiIgnoreInstability(
       lpi->solstat = CPX_STAT_OPTIMAL;
 
    *success = TRUE;
+   lpi->instabilityignored = TRUE;
 
    return SCIP_OKAY;
 }
@@ -2626,7 +2637,7 @@ SCIP_RETCODE SCIPlpiGetSol(
    SCIPdebugMessage("getting solution\n");
 
    CHECK_ZERO( CPXsolution(cpxenv, lpi->cpxlp, &dummy, objval, primsol, dualsol, NULL, redcost) );
-   assert(dummy == lpi->solstat);
+   assert(dummy == lpi->solstat || lpi->instabilityignored);
 
    if( activity != NULL )
    {
