@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.212 2006/04/05 16:17:15 bzfpfets Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.213 2006/04/05 16:19:28 bzfpfets Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1288,7 +1288,7 @@ SCIP_RETCODE priceAndCutLoop(
          mustprice = FALSE;
       }
       assert(lp->flushed);
-      assert(lp->solved);
+      assert(lp->solved || *lperror);
 
       /* update lower bound w.r.t. the the LP solution */
       if( !(*lperror) )
@@ -1440,7 +1440,7 @@ SCIP_RETCODE priceAndCutLoop(
                   SCIPdebugMessage("separation: solve LP\n");
                   SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, TRUE, FALSE, lperror) );
                   assert(lp->flushed);
-                  assert(lp->solved || lperror);
+                  assert(lp->solved || *lperror);
 
                   if( !(*lperror) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
                   {
