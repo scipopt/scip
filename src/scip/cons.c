@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.141 2006/03/29 13:39:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.142 2006/04/05 17:33:28 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -2167,6 +2167,7 @@ SCIP_RETCODE SCIPconshdlrInitsol(
 {
    assert(conshdlr != NULL);
    assert(set != NULL);
+   assert(stat != NULL);
 
    /* call solving process initialization method of constraint handler */
    if( conshdlr->consinitsol != NULL )
@@ -2183,6 +2184,36 @@ SCIP_RETCODE SCIPconshdlrInitsol(
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
    }
+
+   /* after a restart the LP is empty but the initial constraints are not included in the initialconss array anymore;
+    * we have to put them back into this array in order to obtain the correct initial root relaxation
+    */
+   if( stat->nruns >= 2 )
+   {
+      int c;
+
+      for( c = 0; c < conshdlr->nconss; ++c )
+      {
+         if( conshdlr->conss[c]->initial && conshdlr->conss[c]->initconsspos == -1 )
+         {
+            SCIP_CALL( conshdlrAddInitcons(conshdlr, set, conshdlr->conss[c]) );
+         }
+      }
+   }
+
+#ifndef NDEBUG
+   /* check if all initial constraints are included in the initconss array */
+   {
+      int c;
+
+      for( c = 0; c < conshdlr->nconss; ++c )
+      {
+         assert(conshdlr->conss[c]->initial == (conshdlr->conss[c]->initconsspos >= 0));
+         assert(!conshdlr->conss[c]->initial
+            || conshdlr->initconss[conshdlr->conss[c]->initconsspos] == conshdlr->conss[c]);
+      }
+   }
+#endif
 
    return SCIP_OKAY;
 }
