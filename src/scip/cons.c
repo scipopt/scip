@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.142 2006/04/05 17:33:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.143 2006/04/06 18:29:52 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -42,6 +42,7 @@
 
 
 #define AGERESETAVG_INIT         100.0  /**< initial value of the exponentially decaying weighted sum for ages */
+#define AGERESETAVG_MIN          10.0   /**< minimal value to use for weighted sum of ages */
 #define AGERESETAVG_DECAY        0.0005 /**< weight of a new addend in the exponentially decaing sum */
 #define AGERESETAVG_AGELIMIT     2.0    /**< in dynamic setting, a constraint is deleted if its age exceeds the
                                          *   average reset age by this factor */
@@ -309,7 +310,7 @@ SCIP_Real conshdlrGetAgeresetavg(
 {
    assert(conshdlr != NULL);
 
-   return MAX(conshdlr->ageresetavg, 10.0);
+   return MAX(conshdlr->ageresetavg, AGERESETAVG_MIN);
 }
 
 /** updates the exponentially decaying weighted age average for age resets after a constraint age was reset */
