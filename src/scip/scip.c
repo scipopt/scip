@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.353 2006/04/04 15:24:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.354 2006/04/06 16:06:07 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -10227,6 +10227,7 @@ SCIP_RETCODE solveProbingLP(
          SCIP_Bool mustsepa;
          int npricedcolvars;
 
+         mustsepa = FALSE;
          SCIP_CALL( SCIPpriceLoop(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
                scip->pricestore, scip->branchcand, scip->eventqueue, pretendroot, displayinfo,
                &npricedcolvars, &mustsepa, lperror) );
