@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.12 2006/01/03 12:22:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.13 2006/04/10 16:15:28 bzfpfend Exp $"
 
 /**@file   sepa_impliedbounds.c
  * @brief  implied bounds separator
@@ -126,6 +126,9 @@ SCIP_RETCODE separateCuts(
       int nimpl;
       int j;
 
+      assert(fracvars != NULL);
+      assert(fracvals != NULL);
+
       /* only process binary variables */
       if( SCIPvarGetType(fracvars[i]) != SCIP_VARTYPE_BINARY )
          continue;
@@ -146,6 +149,10 @@ SCIP_RETCODE separateCuts(
       for( j = 0; j < nimpl; j++ )
       {
          SCIP_Real solval;
+
+         assert(implvars != NULL);
+         assert(impltypes != NULL);
+         assert(implbounds != NULL);
 
          solval = solvals[SCIPvarGetProbindex(implvars[j])];
          if( impltypes[j] == SCIP_BOUNDTYPE_UPPER )
@@ -342,6 +349,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolImpliedbounds)
    }
 
    /* call the cut separation */
+   ncuts = 0;
    if( nfracs > 0 )
    {
       SCIP_CALL( separateCuts(scip, solvals, fracvars, fracvals, nfracs, &ncuts) );

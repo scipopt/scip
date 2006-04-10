@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objvardata.h,v 1.9 2006/01/03 12:22:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objvardata.h,v 1.10 2006/04/10 16:15:23 bzfpfend Exp $"
 
 /**@file   objvardata.h
  * @brief  C++ wrapper for user variable data
@@ -64,7 +64,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_VAR*          var                 /**< original variable, the data to free is belonging to */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
 
@@ -87,7 +87,7 @@ public:
       ObjVardata**  objvardata,         /**< pointer to store the transformed variable data object */
       SCIP_Bool*         deleteobject        /**< pointer to store whether SCIP should delete the object after solving */
       )
-   {
+   {  /*lint --e{715}*/
       assert(objvardata != NULL);
       assert(deleteobject != NULL);
 
@@ -112,7 +112,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_VAR*          var                 /**< transformed variable, the data to free is belonging to */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
 

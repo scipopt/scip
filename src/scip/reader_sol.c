@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sol.c,v 1.2 2006/01/03 12:22:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_sol.c,v 1.3 2006/04/10 16:15:27 bzfpfend Exp $"
 
 /**@file   reader_sol.c
  * @brief  file reader for partial solutions
@@ -25,6 +25,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <strings.h>
 
 #include "scip/reader_sol.h"
 

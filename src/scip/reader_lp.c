@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.12 2006/03/27 09:34:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.13 2006/04/10 16:15:27 bzfpfend Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <strings.h>
 #include <ctype.h>
 
 #include "scip/reader_lp.h"

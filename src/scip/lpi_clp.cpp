@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.30 2006/01/04 17:09:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.31 2006/04/10 16:15:26 bzfpfend Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -43,6 +43,10 @@ extern "C"
 #include "scip/message.h"
 }
 
+
+/* in C++ we have to use "0" instead of "(void*)0" */
+#undef NULL
+#define NULL 0
 
 
 

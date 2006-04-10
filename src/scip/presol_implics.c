@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_implics.c,v 1.4 2006/01/03 12:22:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_implics.c,v 1.5 2006/04/10 16:15:26 bzfpfend Exp $"
 
 /**@file   presol_implics.c
  * @brief  implics presolver
@@ -275,6 +275,10 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
       SCIP_Bool infeasible;
       SCIP_Bool tightened;
 
+      assert(bdchgtypes != NULL);
+      assert(bdchgvars != NULL);
+      assert(bdchgvals != NULL);
+
       if( bdchgtypes[v] == SCIP_BOUNDTYPE_LOWER )
       {
          SCIP_CALL( SCIPtightenVarLb(scip, bdchgvars[v], bdchgvals[v], &infeasible, &tightened) );
@@ -303,6 +307,11 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
       SCIP_Bool infeasible;
       SCIP_Bool redundant;
       SCIP_Bool aggregated;
+
+      assert(aggrvars != NULL);
+      assert(aggraggvars != NULL);
+      assert(aggrcoefs != NULL);
+      assert(aggrconsts != NULL);
 
       /* aggregation y = const + coef * x  =>  y - coef * x = const */
       SCIP_CALL( SCIPaggregateVars(scip, aggrvars[v], aggraggvars[v], 1.0, -aggrcoefs[v], aggrconsts[v],

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objnodesel.h,v 1.16 2006/01/03 12:22:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objnodesel.h,v 1.17 2006/04/10 16:15:22 bzfpfend Exp $"
 
 /**@file   objnodesel.h
  * @brief  C++ wrapper for node selectors
@@ -81,7 +81,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_NODESEL*      nodesel             /**< the node selector itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -90,7 +90,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_NODESEL*      nodesel             /**< the node selector itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -99,7 +99,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_NODESEL*      nodesel             /**< the node selector itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -113,7 +113,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_NODESEL*      nodesel             /**< the node selector itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -126,7 +126,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_NODESEL*      nodesel             /**< the node selector itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    

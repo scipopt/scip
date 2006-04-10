@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.178 2006/04/10 10:37:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.179 2006/04/10 16:15:28 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -338,7 +338,6 @@ static
 SCIP_RETCODE probingnodeFree(
    SCIP_PROBINGNODE**    probingnode,        /**< probingnode data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
@@ -550,6 +549,7 @@ SCIP_RETCODE forkFree(
    return SCIP_OKAY;
 }
 
+#if 0
 /** creates subroot data */
 static
 SCIP_RETCODE subrootCreate(
@@ -602,6 +602,7 @@ SCIP_RETCODE subrootCreate(
    
    return SCIP_OKAY;
 }
+#endif
 
 /** frees subroot */
 static
@@ -986,7 +987,7 @@ SCIP_RETCODE SCIPnodeFree(
       assert(SCIPtreeProbing(tree));
       assert(SCIPnodeGetDepth(tree->probingroot) <= SCIPnodeGetDepth(*node));
       assert(SCIPnodeGetDepth(*node) > 0);
-      SCIP_CALL( probingnodeFree(&((*node)->data.probingnode), blkmem, set, lp) );
+      SCIP_CALL( probingnodeFree(&((*node)->data.probingnode), blkmem, lp) );
       break;
    case SCIP_NODETYPE_SIBLING:
       assert((*node)->data.sibling.arraypos >= 0);
@@ -1328,7 +1329,7 @@ SCIP_RETCODE nodeActivate(
 
    /* apply domain and constraint set changes */
    SCIP_CALL( SCIPconssetchgApply(node->conssetchg, blkmem, set, stat, node->depth,
-         (node->nodetype == SCIP_NODETYPE_FOCUSNODE)) );
+         (SCIPnodeGetType(node) == SCIP_NODETYPE_FOCUSNODE)) );
    SCIP_CALL( SCIPdomchgApply(node->domchg, blkmem, set, stat, lp, branchcand, eventqueue, node->depth, cutoff) );
 
    /* mark node active */
@@ -1412,13 +1413,13 @@ SCIP_RETCODE SCIPnodeAddCons(
 {
    assert(node != NULL);
    assert(cons != NULL);
-   assert(cons->validdepth <= node->depth);
+   assert(cons->validdepth <= SCIPnodeGetDepth(node));
    assert(tree != NULL);
    assert(tree->effectiverootdepth >= 0);
    assert(tree->root != NULL);
 
    /* if node is the root, mark constraint to be globally valid */
-   if( node->depth <= tree->effectiverootdepth )
+   if( SCIPnodeGetDepth(node) <= tree->effectiverootdepth )
    {
       SCIPconsSetLocal(cons, FALSE);
       node = tree->root;
@@ -1426,7 +1427,7 @@ SCIP_RETCODE SCIPnodeAddCons(
 
    /* add constraint addition to the node's constraint set change data, and activate constraint if node is active */
    SCIP_CALL( SCIPconssetchgAddAddedCons(&node->conssetchg, blkmem, set, stat, cons, node->depth, node->active,
-         (node->nodetype == SCIP_NODETYPE_FOCUSNODE)) );
+         (SCIPnodeGetType(node) == SCIP_NODETYPE_FOCUSNODE)) );
    assert(node->conssetchg != NULL);
    assert(node->conssetchg->addedconss != NULL);
    assert(!node->active || SCIPconsIsActive(cons));
@@ -1630,10 +1631,10 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    stat->nboundchgs++;
 
    /* if the node is the root node: change local and global bound immediately */
-   if( node->depth <= tree->effectiverootdepth )
+   if( SCIPnodeGetDepth(node) <= tree->effectiverootdepth )
    {
       assert(node->active);
-      assert((SCIP_NODETYPE)node->nodetype != SCIP_NODETYPE_PROBINGNODE);
+      assert(SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE);
       assert(!probingchange);
 
       SCIPdebugMessage(" -> bound change in root node: perform global bound change\n");
@@ -2689,7 +2690,6 @@ SCIP_RETCODE SCIPtreeLoadLP(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool*            initroot            /**< pointer to store whether the root LP relaxation has to be initialized */
    )
@@ -3179,6 +3179,7 @@ SCIP_RETCODE focusnodeToFork(
    return SCIP_OKAY;
 }
 
+#if 0
 /** converts the focus node into a subroot node */
 static
 SCIP_RETCODE focusnodeToSubroot(
@@ -3286,6 +3287,7 @@ SCIP_RETCODE focusnodeToSubroot(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** puts all nodes in the array on the node queue and makes them LEAFs */
 static
@@ -3502,7 +3504,8 @@ SCIP_RETCODE SCIPnodeFocus(
          assert(tree->focuslpconstructed);
 
          /**@todo decide: old focus node becomes fork or subroot */
-         if( FALSE && tree->focusnode->depth > 0 && tree->focusnode->depth % 25 == 0 ) /* ????????????? */
+#if 0 /*?????????????????????????*/
+         if( tree->focusnode->depth > 0 && tree->focusnode->depth % 25 == 0 )
          {
             /* convert old focus node into a subroot node */
             SCIP_CALL( focusnodeToSubroot(blkmem, set, stat, prob, tree, lp) );
@@ -3511,6 +3514,7 @@ SCIP_RETCODE SCIPnodeFocus(
                subroot = tree->focusnode;
          }
          else
+#endif
          {
             /* convert old focus node into a fork node */
             SCIP_CALL( focusnodeToFork(blkmem, set, stat, prob, tree, lp) );
@@ -3703,7 +3707,8 @@ SCIP_RETCODE SCIPnodeFocus(
             SCIPdebugMessage(" -> applying constraint set changes of depth %d\n", d);
             SCIP_CALL( SCIPconssetchgMakeGlobal(&tree->path[d]->conssetchg, blkmem, set, stat, prob) );
             SCIPdebugMessage(" -> applying bound changes of depth %d\n", d);
-            SCIP_CALL( SCIPdomchgApplyGlobal(tree->path[d]->domchg, blkmem, set, stat, lp, branchcand, eventqueue, &nodecutoff) );
+            SCIP_CALL( SCIPdomchgApplyGlobal(tree->path[d]->domchg, blkmem, set, stat, lp, branchcand, eventqueue,
+                  &nodecutoff) );
             if( nodecutoff )
             {
                SCIPnodeCutoff(tree->path[d], set, stat, tree);

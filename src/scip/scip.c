@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.354 2006/04/06 16:06:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.355 2006/04/10 16:15:27 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2481,7 +2481,7 @@ SCIP_PROBDATA* SCIPgetProbData(
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       SCIPABORT();
-      return NULL;
+      return NULL; /*lint !e527*/
    }  /*lint !e788*/
 }
 
@@ -2652,7 +2652,7 @@ SCIP_Bool SCIPisObjIntegral(
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       SCIPABORT();
-      return FALSE;
+      return FALSE; /*lint !e527*/
    }  /*lint !e788*/
 }
 
@@ -2910,7 +2910,7 @@ SCIP_VAR** SCIPgetVars(
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       SCIPABORT();
-      return NULL;
+      return NULL; /*lint !e527*/
    }  /*lint !e788*/
 }
 
@@ -2936,7 +2936,7 @@ int SCIPgetNVars(
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       SCIPABORT();
-      return 0;
+      return 0; /*lint !e527*/
    }  /*lint !e788*/
 }
 
@@ -2962,7 +2962,7 @@ int SCIPgetNBinVars(
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       SCIPABORT();
-      return 0;
+      return 0; /*lint !e527*/
    }  /*lint !e788*/
 }
 
@@ -2988,7 +2988,7 @@ int SCIPgetNIntVars(
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       SCIPABORT();
-      return 0;
+      return 0; /*lint !e527*/
    }  /*lint !e788*/
 }
 
@@ -3014,7 +3014,7 @@ int SCIPgetNImplVars(
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       SCIPABORT();
-      return 0;
+      return 0; /*lint !e527*/
    }  /*lint !e788*/
 }
 
@@ -3040,7 +3040,7 @@ int SCIPgetNContVars(
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       SCIPABORT();
-      return 0;
+      return 0; /*lint !e527*/
    }  /*lint !e788*/
 }
 
@@ -3068,7 +3068,7 @@ SCIP_VAR** SCIPgetFixedVars(
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       SCIPABORT();
-      return NULL;
+      return NULL; /*lint !e527*/
    }  /*lint !e788*/
 }
 
@@ -3094,7 +3094,7 @@ int SCIPgetNFixedVars(
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       SCIPABORT();
-      return 0;
+      return 0; /*lint !e527*/
    }  /*lint !e788*/
 }
 
@@ -3276,7 +3276,7 @@ SCIP_VAR* SCIPfindVar(
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       SCIPABORT();
-      return NULL;
+      return NULL; /*lint !e527*/
    }  /*lint !e788*/
 }
 
@@ -3397,7 +3397,7 @@ SCIP_CONS* SCIPfindCons(
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       SCIPABORT();
-      return NULL;
+      return NULL; /*lint !e527*/
    }  /*lint !e788*/
 }
 
@@ -3422,7 +3422,7 @@ int SCIPgetNConss(
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       SCIPABORT();
-      return 0;
+      return 0; /*lint !e527*/
    }  /*lint !e788*/
 }
 
@@ -3447,7 +3447,7 @@ SCIP_CONS** SCIPgetConss(
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       SCIPABORT();
-      return NULL;
+      return NULL; /*lint !e527*/
    }  /*lint !e788*/
 }
 
@@ -3973,8 +3973,8 @@ SCIP_Bool isPresolveFinished(
    int                   lastnupgdconss,     /**< number of upgraded constraints in last presolving round */
    int                   lastnchgcoefs,      /**< number of changed coefficients in last presolving round */
    int                   lastnchgsides,      /**< number of changed sides in last presolving round */
-   int                   lastnimplications,  /**< number of implications in last presolving round */
-   int                   lastncliques,       /**< number of cliques in last presolving round */
+   /*int                   lastnimplications,*/  /**< number of implications in last presolving round */
+   /*int                   lastncliques,*/       /**< number of cliques in last presolving round */
    SCIP_Bool             unbounded,          /**< has presolving detected unboundness? */
    SCIP_Bool             infeasible          /**< has presolving detected infeasibility? */
    )
@@ -3994,7 +3994,7 @@ SCIP_Bool isPresolveFinished(
             + scip->stat->npresolaggrvars - lastnaggrvars
             + scip->stat->npresolchgvartypes - lastnchgvartypes
             + (scip->stat->npresolchgbds - lastnchgbds)/10
-            + (scip->stat->npresoladdholes - lastnaddholes)/10 <= abortfac * scip->transprob->nvars));
+            + (scip->stat->npresoladdholes - lastnaddholes)/10 <= abortfac * scip->transprob->nvars)); /*lint !e653*/
 
    /* don't abort, if enough changes were applied to the constraints */
    finished = finished
@@ -4275,8 +4275,8 @@ SCIP_RETCODE presolve(
       int lastnupgdconss;
       int lastnchgcoefs;
       int lastnchgsides;
-      int lastnimplications;
-      int lastncliques;
+      /*int lastnimplications;*/
+      /*int lastncliques;*/
 
       lastnfixedvars = scip->stat->npresolfixedvars;
       lastnaggrvars = scip->stat->npresolaggrvars;
@@ -4287,8 +4287,8 @@ SCIP_RETCODE presolve(
       lastnupgdconss = scip->stat->npresolupgdconss;
       lastnchgcoefs = scip->stat->npresolchgcoefs;
       lastnchgsides = scip->stat->npresolchgsides;
-      lastnimplications = scip->stat->nimplications;
-      lastncliques = SCIPcliquetableGetNCliques(scip->cliquetable);
+      /*lastnimplications = scip->stat->nimplications;*/
+      /*lastncliques = SCIPcliquetableGetNCliques(scip->cliquetable);*/
 
       /* sort presolvers by priority */
       SCIPsetSortPresols(scip->set);
@@ -4301,7 +4301,7 @@ SCIP_RETCODE presolve(
       /* check, if we should abort presolving due to not enough changes in the last round */
       finished = isPresolveFinished(scip, abortfac, maxnrounds, lastnfixedvars, lastnaggrvars, lastnchgvartypes,
          lastnchgbds, lastnaddholes, lastndelconss, lastnupgdconss, lastnchgcoefs, lastnchgsides,
-         lastnimplications, lastncliques, *unbounded, *infeasible);
+         /*lastnimplications, lastncliques,*/ *unbounded, *infeasible);
 
       /* if the presolving will be terminated, call the delayed presolvers */
       while( delayed && finished && !(*unbounded) && !(*infeasible) )
@@ -4312,7 +4312,7 @@ SCIP_RETCODE presolve(
          /* check again, if we should abort presolving due to not enough changes in the last round */
          finished = isPresolveFinished(scip, abortfac, maxnrounds, lastnfixedvars, lastnaggrvars, lastnchgvartypes,
             lastnchgbds, lastnaddholes, lastndelconss, lastnupgdconss, lastnchgcoefs, lastnchgsides,
-            lastnimplications, lastncliques, *unbounded, *infeasible);
+            /*lastnimplications, lastncliques,*/ *unbounded, *infeasible);
       }
 
       /* increase round number */
@@ -5844,8 +5844,6 @@ SCIP_RETCODE SCIPchgVarLbGlobal(
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
-
-   return SCIP_OKAY;
 }
 
 /** changes global upper bound of variable; if possible, adjust bound to integral value; also tightens the local bound,
@@ -5887,8 +5885,6 @@ SCIP_RETCODE SCIPchgVarUbGlobal(
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
-
-   return SCIP_OKAY;
 }
 
 /** changes lower bound of variable in preprocessing or in the current node, if the new bound is tighter
@@ -8915,7 +8911,7 @@ SCIP_Real SCIPgetColRedcost(
    if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
    {
       SCIPerrorMessage("cannot get reduced costs, because node LP is not processed\n");
-      return SCIP_INVALIDCALL;
+      SCIPABORT();
    }
 
    return SCIPcolGetRedcost(col, scip->stat, scip->lp);
@@ -9744,7 +9740,7 @@ SCIP_RETCODE SCIPendDive(
 
    /* reset the probably changed LP's cutoff bound */
    SCIP_CALL( SCIPlpSetCutoffbound(scip->lp, scip->set, scip->primal->cutoffbound) );
-   assert(scip->lp->cutoffbound == scip->primal->cutoffbound);
+   assert(scip->lp->cutoffbound == scip->primal->cutoffbound); /*lint !e777*/
 
    /* if a new best solution was created, the cutoff of the tree was delayed due to diving;
     * the cutoff has to be done now.
@@ -10818,7 +10814,7 @@ SCIP_Real SCIPgetSolVal(
       origvar = var;
       scalar = 1.0;
       constant = 0.0;
-      SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+      SCIP_CALL_ABORT( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
       if( origvar == NULL )
       {
          /* the variable has no original counterpart: in the original solution, it has a value of zero */
@@ -11065,7 +11061,7 @@ SCIP_RETCODE SCIPprintTransSol(
 }
 
 /** gets number of feasible primal solutions stored in the solution storage */
-SCIP_Longint SCIPgetNSols(
+int SCIPgetNSols(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -13546,7 +13542,10 @@ SCIP_RETCODE SCIPwriteImplicationConflictGraph(
 
    /* close file */
    if( filename != NULL )
+   {
+      assert(file != NULL);
       fclose(file);
+   }
 
    return SCIP_OKAY;
 }

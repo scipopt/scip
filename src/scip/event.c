@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.57 2006/01/03 12:22:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.58 2006/04/10 16:15:25 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -562,12 +562,12 @@ SCIP_VAR* SCIPeventGetVar(
    case SCIP_EVENTTYPE_HOLEADDED:
       SCIPerrorMessage("HOLEADDED event not implemented yet\n");
       SCIPABORT();
-      return NULL;
+      return NULL; /*lint !e527*/
 
    case SCIP_EVENTTYPE_HOLEREMOVED:
       SCIPerrorMessage("HOLEREMOVED event not implemented yet\n");
       SCIPABORT();
-      return NULL;
+      return NULL; /*lint !e527*/
 
    case SCIP_EVENTTYPE_IMPLADDED:
       assert(event->data.eventimpladd.var != NULL);
@@ -576,7 +576,7 @@ SCIP_VAR* SCIPeventGetVar(
    default:
       SCIPerrorMessage("event does not belong to a variable\n");
       SCIPABORT();
-      return NULL;
+      return NULL; /*lint !e527*/
    }  /*lint !e788*/
 }
 
@@ -698,7 +698,7 @@ SCIP_Real SCIPeventGetOldbound(
    default:
       SCIPerrorMessage("event is not a bound change event\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }  /*lint !e788*/
 }
 
@@ -722,7 +722,7 @@ SCIP_Real SCIPeventGetNewbound(
    default:
       SCIPerrorMessage("event is not a bound change event\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }  /*lint !e788*/
 }
 
@@ -927,11 +927,11 @@ SCIP_RETCODE SCIPeventProcess(
 
    case SCIP_EVENTTYPE_HOLEADDED:
       SCIPerrorMessage("HOLEADDED event not implemented yet\n");
-      SCIPABORT();
+      return SCIP_INVALIDDATA;
 
    case SCIP_EVENTTYPE_HOLEREMOVED:
       SCIPerrorMessage("HOLEREMOVED event not implemented yet\n");
-      SCIPABORT();
+      return SCIP_INVALIDDATA;
 
    case SCIP_EVENTTYPE_IMPLADDED:
       var = event->data.eventimpladd.var;
@@ -1589,11 +1589,11 @@ SCIP_RETCODE SCIPeventqueueAdd(
 
       case SCIP_EVENTTYPE_HOLEADDED:
          SCIPerrorMessage("HOLEADDED event not implemented yet\n");
-         SCIPABORT();
+         return SCIP_INVALIDDATA;
 
       case SCIP_EVENTTYPE_HOLEREMOVED:
          SCIPerrorMessage("HOLEREMOVED event not implemented yet\n");
-         SCIPABORT();
+         return SCIP_INVALIDDATA;
 
       case SCIP_EVENTTYPE_IMPLADDED:
          var = (*event)->data.eventimpladd.var;

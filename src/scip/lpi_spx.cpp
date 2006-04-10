@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.59 2006/02/08 13:22:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.60 2006/04/10 16:15:26 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.3.0
@@ -55,6 +55,10 @@
 /*----------------------------- C++ --------------------------------*/
 /********************************************************************/
 
+/* in C++ we have to use "0" instead of "(void*)0" */
+#undef NULL
+#define NULL 0
+
 using namespace soplex;
 
 
@@ -73,7 +77,7 @@ class SPxSCIP : public SPxSolver
    Status           m_stat;             /**< solving status */
 
 public:
-   SPxSCIP(const char* probname) 
+   SPxSCIP(const char* probname = NULL) 
       : SPxSolver(LEAVE, COLUMN),
         m_probname(0),
         m_fromscratch(false),
@@ -133,7 +137,7 @@ public:
       assert(probname != NULL);
       if( m_probname != NULL )
          spx_free(m_probname);
-      spx_alloc(m_probname, strlen(probname) + 1);
+      spx_alloc(m_probname, (int)strlen(probname) + 1);
       strcpy(m_probname, probname);
    }
 
@@ -213,7 +217,7 @@ public:
       if( matrixIsSetup )
          SPxBasis::loadMatrixVecs(); /* bug workaround */
    }
-};
+}; /*lint !e1748*/
 
 
 
@@ -322,7 +326,7 @@ int colpacketNum(
    int                   ncols               /**< number of columns to store */
    )
 {
-   return (ncols+COLS_PER_PACKET-1)/COLS_PER_PACKET;
+   return (ncols+(int)COLS_PER_PACKET-1)/(int)COLS_PER_PACKET;
 }
 
 /** returns the number of packets needed to store row packet information */
@@ -331,7 +335,7 @@ int rowpacketNum(
    int                   nrows               /**< number of rows to store */
    )
 {
-   return (nrows+ROWS_PER_PACKET-1)/ROWS_PER_PACKET;
+   return (nrows+(int)ROWS_PER_PACKET-1)/(int)ROWS_PER_PACKET;
 }
 
 /** store row and column basis status in a packed LPi state object */
@@ -490,7 +494,7 @@ SCIP_RETCODE SCIPlpiCreate(
 
    /* create SOPLEX object */
    SCIP_ALLOC( BMSallocMemory(lpi) );
-   SCIP_ALLOC( (*lpi)->spx = new SPxSCIP(name) );
+   SCIP_ALLOC( (*lpi)->spx = new SPxSCIP(name) ); /*lint !e774*/
    (*lpi)->cstat = NULL;
    (*lpi)->rstat = NULL;
    (*lpi)->cstatsize = 0;
@@ -1384,13 +1388,9 @@ SCIP_RETCODE spxSolve(
    case SPxSolver::UNBOUNDED:
    case SPxSolver::INFEASIBLE:
       return SCIP_OKAY;
-   case SPxSolver::ABORT_CYCLING:
-   case SPxSolver::NO_PROBLEM:
-   case SPxSolver::RUNNING:
-   case SPxSolver::ERROR:
    default:
       return SCIP_LPERROR;
-   }
+   }  /*lint !e788*/
 }
 
 /** calls primal simplex to solve the LP */
@@ -1418,7 +1418,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_Bool             crossover            /**< perform crossover */
    )
-{
+{  /*lint --e{715}*/
    SCIPdebugMessage("calling SCIPlpiSolveBarrier()\n");
 
    return spxSolve(lpi);
@@ -1467,7 +1467,7 @@ SCIP_RETCODE SCIPlpiStrongbranch(
    error = false;                                 
 
    /* get basis and current bounds of column */
-   spx->getBasis(rowstat, colstat);    
+   (void)spx->getBasis(rowstat, colstat);    
    oldlb = spx->lower(col);
    oldub = spx->upper(col);
 
@@ -1507,7 +1507,7 @@ SCIP_RETCODE SCIPlpiStrongbranch(
       default:
          error = true;
          break;
-      }
+      }  /*lint !e788*/
       if( iter != NULL )
          (*iter) += spx->iterations();
       spx->changeUpper(col, oldub);
@@ -1549,7 +1549,7 @@ SCIP_RETCODE SCIPlpiStrongbranch(
          default:
             error = true;
             break;
-         }
+         }  /*lint !e788*/
          if( iter != NULL )
             (*iter) += spx->iterations();
          spx->changeLower(col, oldlb);
@@ -1842,7 +1842,7 @@ int SCIPlpiGetInternalStatus(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return lpi->spx->getStatus();
+   return static_cast<int>(lpi->spx->getStatus());
 }
 
 /** tries to reset the internal status of the LP solver in order to ignore an instability of the last solving call */
@@ -1850,7 +1850,7 @@ SCIP_RETCODE SCIPlpiIgnoreInstability(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_Bool*            success             /**< pointer to store, whether the instability could be ignored */
    )
-{
+{  /*lint --e{715}*/
    SCIPdebugMessage("calling SCIPlpiIgnoreInstability()\n");
 
    assert(lpi != NULL);
@@ -1900,22 +1900,22 @@ SCIP_RETCODE SCIPlpiGetSol(
    if( primsol != NULL )
    {
       Vector tmp(lpi->spx->nCols(), primsol);
-      lpi->spx->getPrimal(tmp);
+      (void)lpi->spx->getPrimal(tmp);
    }
    if( dualsol != NULL )
    {
       Vector tmp(lpi->spx->nRows(), dualsol);
-      lpi->spx->getDual(tmp);
+      (void)lpi->spx->getDual(tmp);
    }
    if( activity != NULL )
    {
       Vector tmp(lpi->spx->nRows(), activity);
-      lpi->spx->getSlacks(tmp);  /* in SOPLEX, the activities are called "slacks" */
+      (void)lpi->spx->getSlacks(tmp);  /* in SOPLEX, the activities are called "slacks" */
    }
    if( redcost != NULL )
    {
       Vector tmp(lpi->spx->nCols(), redcost);
-      lpi->spx->getRedCost(tmp);
+      (void)lpi->spx->getRedCost(tmp);
    }
 
    return SCIP_OKAY;
@@ -1926,7 +1926,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_Real*            ray                 /**< primal ray */
    )
-{
+{  /*lint --e{715}*/
    SCIPdebugMessage("calling SCIPlpiGetPrimalRay()\n");
 
    assert(lpi != NULL);
@@ -1949,7 +1949,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    assert(lpi->spx != NULL);
 
    Vector tmp(lpi->spx->nRows(), dualfarkas);
-   lpi->spx->getDualfarkas(tmp);
+   (void)lpi->spx->getDualfarkas(tmp);
 
    return SCIP_OKAY;
 }
@@ -2003,14 +2003,14 @@ SCIP_RETCODE SCIPlpiGetBase(
          switch( lpi->spx->getBasisRowStatus(i) )
          {
          case SPxSolver::BASIC:
-            rstat[i] = SCIP_BASESTAT_BASIC;
+            rstat[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
             break;	  
          case SPxSolver::FIXED:
          case SPxSolver::ON_LOWER:
-            rstat[i] = SCIP_BASESTAT_LOWER;
+            rstat[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/
             break;
          case SPxSolver::ON_UPPER:
-            rstat[i] = SCIP_BASESTAT_UPPER;
+            rstat[i] = SCIP_BASESTAT_UPPER; /*lint !e641*/
             break;
          case SPxSolver::ZERO:
             SCIPerrorMessage("slack variable has basis status ZERO (should not occur)\n");
@@ -2029,23 +2029,23 @@ SCIP_RETCODE SCIPlpiGetBase(
          switch( lpi->spx->getBasisColStatus(i) )
          {
          case SPxSolver::BASIC:
-            cstat[i] = SCIP_BASESTAT_BASIC;
+            cstat[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
             break;	  
          case SPxSolver::FIXED:
             assert(lpi->spx->rep() == SPxSolver::COLUMN);
             if( lpi->spx->pVec()[i] - lpi->spx->maxObj()[i] < 0.0 )  /* reduced costs < 0 => UPPER  else => LOWER */
-               cstat[i] = SCIP_BASESTAT_UPPER;
+               cstat[i] = SCIP_BASESTAT_UPPER; /*lint !e641*/
             else
-               cstat[i] = SCIP_BASESTAT_LOWER;
+               cstat[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/
             break;
          case SPxSolver::ON_LOWER:
-            cstat[i] = SCIP_BASESTAT_LOWER;
+            cstat[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/
             break;
          case SPxSolver::ON_UPPER:
-            cstat[i] = SCIP_BASESTAT_UPPER;
+            cstat[i] = SCIP_BASESTAT_UPPER; /*lint !e641*/
             break;
          case SPxSolver::ZERO:
-            cstat[i] = SCIP_BASESTAT_ZERO;
+            cstat[i] = SCIP_BASESTAT_ZERO; /*lint !e641*/
             break;
          default:
             SCIPerrorMessage("invalid basis status\n");
@@ -2093,7 +2093,7 @@ SCIP_RETCODE SCIPlpiSetBase(
          break;
       case SCIP_BASESTAT_ZERO:
          SCIPerrorMessage("slack variable has basis status ZERO (should not occur)\n");
-         return SCIP_LPERROR;
+         return SCIP_LPERROR; /*lint !e429*/
       default:
          SCIPerrorMessage("invalid basis status\n");
          SCIPABORT();
@@ -2217,7 +2217,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    /* calculate the scalar product of the row in B^-1 and A */
    soplex::Vector binvvec(nrows, binv);
    for( c = 0; c < ncols; ++c )
-      val[c] = binvvec * lpi->spx->colVector(c);  /* scalar product */
+      val[c] = binvvec * lpi->spx->colVector(c);  /* scalar product */ /*lint !e1702*/
 
    /* free memory if it was temporarily allocated */
    BMSfreeMemoryArrayNull(&buf);
@@ -2310,9 +2310,9 @@ SCIP_RETCODE SCIPlpiSetState(
 
    /* extend the basis to the current LP */
    for( i = lpistate->ncols; i < lpncols; ++i )
-      lpi->cstat[i] = SCIP_BASESTAT_LOWER; /**@todo this has to be corrected for lb = -infinity */
+      lpi->cstat[i] = SCIP_BASESTAT_LOWER; /*lint !e641*/ /**@todo this has to be corrected for lb = -infinity */
    for( i = lpistate->nrows; i < lpnrows; ++i )
-      lpi->rstat[i] = SCIP_BASESTAT_BASIC;
+      lpi->rstat[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
 
    /* load basis information */
    SCIP_CALL( SCIPlpiSetBase(lpi, lpi->cstat, lpi->rstat) );
@@ -2326,7 +2326,7 @@ SCIP_RETCODE SCIPlpiFreeState(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    )
-{
+{  /*lint --e{715}*/
    SCIPdebugMessage("calling SCIPlpiFreeState()\n");
 
    assert(lpi != NULL);
@@ -2341,7 +2341,7 @@ SCIP_Bool SCIPlpiHasStateBasis(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
    )
-{
+{  /*lint --e{715}*/
    return TRUE;
 }
 
@@ -2412,7 +2412,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
-   }
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -2470,7 +2470,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
 
    default:
       return SCIP_PARAMETERUNKNOWN;
-   }
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -2504,7 +2504,7 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
-   }
+   }  /*lint !e788*/
    
    return SCIP_OKAY;
 }
@@ -2537,7 +2537,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
-   }
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }

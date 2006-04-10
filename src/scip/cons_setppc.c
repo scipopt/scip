@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.107 2006/03/29 13:39:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.108 2006/04/10 16:15:24 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -485,7 +485,7 @@ SCIP_Longint getVarSignature(
 {
    int sigidx;
 
-   sigidx = SCIPvarGetIndex(var) % (8*sizeof(SCIP_Longint));
+   sigidx = SCIPvarGetIndex(var) % (int)(8*sizeof(SCIP_Longint));
    return ((SCIP_Longint)1) << sigidx;
 }
 
@@ -546,7 +546,7 @@ SCIP_RETCODE setSetppcType(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->setppctype == setppctype )
+   if( (SCIP_SETPPCTYPE)consdata->setppctype == setppctype )
       return SCIP_OKAY;
 
    SCIPdebugMessage(" -> converting <%s> into setppc type %d\n", SCIPconsGetName(cons), setppctype);
@@ -563,7 +563,7 @@ SCIP_RETCODE setSetppcType(
    }
    
    /* change the constraint type */
-   consdata->setppctype = setppctype;
+   consdata->setppctype = setppctype; /*lint !e641*/
 
    /* reinstall rounding locks again */
    if( SCIPconsIsLocked(cons) )
@@ -1195,7 +1195,7 @@ SCIP_Bool checkCons(
    default:
       SCIPerrorMessage("unknown setppc type\n");
       SCIPABORT();
-      return FALSE;
+      return FALSE; /*lint !e527*/
    }
 }
 
@@ -1310,7 +1310,10 @@ SCIP_RETCODE separateCons(
       SCIP_CALL( processFixings(scip, cons, cutoff, reduceddom, &addcut, &mustcheck) );
    }
    else
+   {
       mustcheck = TRUE;
+      addcut = FALSE;
+   }
 
    if( mustcheck )
    {
@@ -1767,12 +1770,12 @@ SCIP_RETCODE removeRedundantConstraints(
             /* both constraints are equal: update flags in cons0 and delete cons1 */
             SCIP_CALL( removeRedundantCons(scip, cons0, cons1, ndelconss) );
          }
-         else if( consdata0->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
+         else if( consdata0->setppctype == SCIP_SETPPCTYPE_PARTITIONING ) /*lint !e641*/
          {
             /* the set partitioning constraint is stronger: remove the other one */
             SCIP_CALL( removeRedundantCons(scip, cons0, cons1, ndelconss) );
          }
-         else if( consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
+         else if( consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING ) /*lint !e641*/
          {
             /* the set partitioning constraint is stronger: remove the other one */
             SCIP_CALL( removeRedundantCons(scip, cons1, cons0, ndelconss) );
@@ -1781,7 +1784,7 @@ SCIP_RETCODE removeRedundantConstraints(
          {
             /* one is a covering, the other one a packing constraint: replace them by a single partitioning constraint */
             assert((consdata0->setppctype == SCIP_SETPPCTYPE_COVERING && consdata1->setppctype == SCIP_SETPPCTYPE_PACKING)
-               || (consdata1->setppctype == SCIP_SETPPCTYPE_COVERING && consdata0->setppctype == SCIP_SETPPCTYPE_PACKING));
+               || (consdata1->setppctype == SCIP_SETPPCTYPE_COVERING && consdata0->setppctype == SCIP_SETPPCTYPE_PACKING)); /*lint !e641*/
 
             /* change the type of cons0 */
             SCIP_CALL( setSetppcType(scip, cons0, SCIP_SETPPCTYPE_PARTITIONING) );
@@ -2874,7 +2877,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       if( !consdata->cliqueadded && consdata->nvars >= 2 )
       {
          /* add a set partitioning / packing constraint as clique */
-         if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
+         if( consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || consdata->setppctype == SCIP_SETPPCTYPE_PACKING ) /*lint !e641*/
          {
             SCIP_Bool infeasible;
             int ncliquebdchgs;
@@ -3360,6 +3363,8 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nbdchginfos) );
    for( i = 0; i < nbdchginfos; ++i )
    {
+      assert(bdchginfos != NULL);
+
       vars[i] = SCIPbdchginfoGetVar(bdchginfos[i]);
 
       /* we can only treat binary variables */

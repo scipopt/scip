@@ -27,6 +27,7 @@ interface:
 - marking a constraint to be "initial" now means in addition, that if the constraint is added to a local node
   it will enter the LP at the time the node is first processed, even if parameters forbid separation at this
   node
+- SCIPgetNSols() now returns an int instead of SCIP_Longint
 
 plugins:
 - new primal heuristic "shifting"
@@ -107,6 +108,7 @@ fixed bugs:
 - fixed bug that locally valid varbound constraints produce VLB/VUB entries [thanks to Anders Schack-Nielsen]
 - fixed bug in knapsack constraint handler where a modifiable constraint may be declared redundant
 - fixed bug in knapsack presolving with redundancy check after applyFixings() [thanks to Anders Schack-Nielsen]
+- fixed bug in objconshdlr.h where member variable scip_maxprerounds_ was declared as an SCIP_Bool instead of an int
 
 
 SCIP version 0.81

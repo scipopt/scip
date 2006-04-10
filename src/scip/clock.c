@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.c,v 1.24 2006/01/03 12:22:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: clock.c,v 1.25 2006/04/10 16:15:23 bzfpfend Exp $"
 
 /**@file   clock.c
  * @brief  methods for clocks and timing issues
@@ -436,7 +436,7 @@ SCIP_Real SCIPclockGetTime(
       default:
          SCIPerrorMessage("invalid clock type\n");
          SCIPABORT();
-         return 0.0;
+         return 0.0; /*lint !e527*/
       }
    }
    else
@@ -480,7 +480,7 @@ SCIP_Real SCIPclockGetTime(
       default:
          SCIPerrorMessage("invalid clock type\n");
          SCIPABORT();
-         return 0.0;
+         return 0.0; /*lint !e527*/
       }
    }
 }
@@ -581,6 +581,6 @@ SCIP_Real SCIPclockGetTimeOfDay(
    
    gettimeofday(&tp, NULL);
 
-   return (SCIP_Real)(tp.tv_sec % (24*3600)) + (SCIP_Real)tp.tv_usec / 1e+6;
+   return (SCIP_Real)(tp.tv_sec % (24*3600)) + (SCIP_Real)tp.tv_usec / 1e+6; /*lint !e40 !e115*/
 #endif
 }

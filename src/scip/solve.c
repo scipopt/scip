@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.213 2006/04/05 16:19:28 bzfpfets Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.214 2006/04/10 16:15:28 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -586,7 +586,7 @@ SCIP_RETCODE SCIPconstructCurrentLP(
    {
       /* load the LP into the solver and load the LP state */
       SCIPdebugMessage("loading LP\n");
-      SCIP_CALL( SCIPtreeLoadLP(tree, blkmem, set, stat, lp, &initroot) );
+      SCIP_CALL( SCIPtreeLoadLP(tree, blkmem, set, lp, &initroot) );
       assert(initroot || SCIPnodeGetDepth(SCIPtreeGetFocusNode(tree)) > 0);
       assert(SCIPtreeIsFocusNodeLPConstructed(tree));
       

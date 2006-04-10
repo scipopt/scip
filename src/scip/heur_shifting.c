@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shifting.c,v 1.1 2006/02/08 13:23:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_shifting.c,v 1.2 2006/04/10 16:15:25 bzfpfend Exp $"
 
 /**@file   heur_shifting.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities and shifts continuous variables
@@ -189,7 +189,6 @@ static
 SCIP_RETCODE selectShifting(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution */
-   SCIP_Real             minobj,             /**< minimal objective value possible after shifting remaining fractional vars */
    SCIP_ROW*             row,                /**< LP row */
    SCIP_Real             rowactivity,        /**< activity of LP row */
    int                   direction,          /**< should the activity be increased (+1) or decreased (-1)? */
@@ -237,7 +236,6 @@ SCIP_RETCODE selectShifting(
       SCIP_Real val;
       SCIP_Real solval;
       SCIP_Real shiftval;
-      SCIP_Real obj;
       SCIP_Real shiftscore;
       SCIP_Bool isinteger;
       SCIP_Bool isfrac;
@@ -248,7 +246,6 @@ SCIP_RETCODE selectShifting(
       var = SCIPcolGetVar(col);
       val = rowvals[c];
       assert(!SCIPisZero(scip, val));
-      obj = SCIPvarGetObj(var);
       solval = SCIPgetSolVal(scip, sol, var);
 
       isinteger = (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
@@ -702,7 +699,7 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
          direction = SCIPisFeasLT(scip, activities[rowpos], SCIProwGetLhs(row)) ? +1 : -1;
 
          /* search a variable that can shift the activity in the necessary direction */
-         SCIP_CALL( selectShifting(scip, sol, minobj, row, activities[rowpos], direction,
+         SCIP_CALL( selectShifting(scip, sol, row, activities[rowpos], direction,
                nincreases, ndecreases, increaseweight, &shiftvar, &oldsolval, &newsolval) );
       }
 

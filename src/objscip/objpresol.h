@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.h,v 1.18 2006/01/03 12:22:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpresol.h,v 1.19 2006/04/10 16:15:22 bzfpfend Exp $"
 
 /**@file   objpresol.h
  * @brief  C++ wrapper for presolvers
@@ -81,7 +81,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_PRESOL*       presol              /**< the presolver itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -90,7 +90,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_PRESOL*       presol              /**< the presolver itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -99,7 +99,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_PRESOL*       presol              /**< the presolver itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
 
@@ -115,7 +115,7 @@ public:
       SCIP_PRESOL*       presol,             /**< presolver */
       SCIP_RESULT*       result              /**< pointer to store the result of the callback method */
       )
-   {
+   {  /*lint --e{715}*/
       assert(result != NULL);
 
       *result = SCIP_FEASIBLE;
@@ -135,7 +135,7 @@ public:
       SCIP_PRESOL*       presol,             /**< presolver */
       SCIP_RESULT*       result              /**< pointer to store the result of the callback method */
       )
-   {
+   {  /*lint --e{715}*/
       assert(result != NULL);
 
       *result = SCIP_FEASIBLE;

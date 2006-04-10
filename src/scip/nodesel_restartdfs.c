@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.24 2006/01/03 12:22:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.25 2006/04/10 16:15:26 bzfpfend Exp $"
 
 /**@file   nodesel_restartdfs.c
  * @brief  node selector for depth first search with periodical selection of the best node
@@ -148,7 +148,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectRestartdfs)
 static
 SCIP_DECL_NODESELCOMP(nodeselCompRestartdfs)
 {  /*lint --e{715}*/
-   return SCIPnodeGetNumber(node2) - SCIPnodeGetNumber(node1);
+   return (int)(SCIPnodeGetNumber(node2) - SCIPnodeGetNumber(node1));
 }
 
 

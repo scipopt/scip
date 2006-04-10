@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.220 2006/04/04 15:24:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.221 2006/04/10 16:15:25 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -4654,7 +4654,7 @@ SCIP_Real SCIProwGetSolActivity(
       assert(col != NULL);
       assert((i < row->nlpcols) == (row->linkpos[i] >= 0 && col->lppos >= 0));
       solval = SCIPsolGetVal(sol, set, stat, col->var);
-      if( solval == SCIP_UNKNOWN )
+      if( solval == SCIP_UNKNOWN ) /*lint !e777*/
       {
          if( SCIPsetIsInfinity(set, -row->lhs) )
             solval = (row->vals[i] >= 0.0 ? col->lb : col->ub);
@@ -4885,7 +4885,7 @@ SCIP_Real SCIProwGetLPEfficacy(
    default:
       SCIPerrorMessage("invalid efficacy norm parameter '%c'\n", set->sepa_efficacynorm);
       SCIPABORT();
-      norm = 0.0;
+      norm = 0.0; /*lint !e527*/
    }
 
    eps = SCIPsetSumepsilon(set);
@@ -4942,7 +4942,7 @@ SCIP_Real SCIProwGetSolEfficacy(
    default:
       SCIPerrorMessage("invalid efficacy norm parameter '%c'\n", set->sepa_efficacynorm);
       SCIPABORT();
-      norm = 0.0;
+      norm = 0.0; /*lint !e527*/
    }
 
    eps = SCIPsetSumepsilon(set);
@@ -8664,7 +8664,7 @@ const char* lpalgoName(
    default:
       SCIPerrorMessage("invalid LP algorithm\n");
       SCIPABORT();
-      return "invalid";
+      return "invalid"; /*lint !e527*/
    }
 }
 

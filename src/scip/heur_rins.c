@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rins.c,v 1.11 2006/03/17 12:39:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rins.c,v 1.12 2006/04/10 16:15:25 bzfpfend Exp $"
 
 /**@file   heur_rins.c
  * @brief  RINS primal heuristic
@@ -321,6 +321,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    SCIP_Real timelimit;                      /* timelimit for the subproblem        */
    SCIP_Real memorylimit;
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem */
+   SCIP_Real upperbound;
    int nvars;                     
    int i;   
    SCIP_Longint maxnnodes;
@@ -354,10 +355,10 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    *result = SCIP_DIDNOTRUN;
    
    /* calculate the maximal number of branching nodes until heuristic is aborted */
-   maxnnodes = heurdata->nodesquot * SCIPgetNNodes(scip);
+   maxnnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
 
    /* reward RINS if it succeeded often */
-   maxnnodes *= 3.0 * (heurdata->nsuccesses+1.0)/(SCIPheurGetNCalls(heur) + 1.0);
+   maxnnodes = (SCIP_Longint)(maxnnodes * 3.0 * (heurdata->nsuccesses+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
    maxnnodes -= 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-MIP as 100 nodes */
    maxnnodes += heurdata->nodesofs;
 
@@ -426,7 +427,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    success = FALSE;
 
    /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
-   createSubproblem(scip, subscip, subvars, heurdata->minfixingrate, &success);
+   SCIP_CALL( createSubproblem(scip, subscip, subvars, heurdata->minfixingrate, &success) );
 
    if( !success )
    {
@@ -446,7 +447,8 @@ SCIP_DECL_HEUREXEC(heurExecRins)
 
    /* add an objective cutoff */
    cutoff = (1-heurdata->minimprove)*SCIPgetUpperbound(scip) - heurdata->minimprove*SCIPgetLowerbound(scip);
-   cutoff = MIN( SCIPgetUpperbound(scip) - SCIPsumepsilon(scip), cutoff );
+   upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
+   cutoff = MIN(upperbound, cutoff );
    SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
 
    /* solve the subproblem */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objeventhdlr.h,v 1.6 2006/01/03 12:22:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objeventhdlr.h,v 1.7 2006/04/10 16:15:21 bzfpfend Exp $"
 
 /**@file   objeventhdlr.h
  * @brief  C++ wrapper for event handlers
@@ -66,7 +66,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -75,7 +75,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -84,7 +84,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -98,7 +98,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -111,7 +111,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_EVENTHDLR*    eventhdlr           /**< the event handler itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -121,7 +121,7 @@ public:
       SCIP_EVENTHDLR*    eventhdlr,          /**< the event handler itself */
       SCIP_EVENTDATA**   eventdata           /**< pointer to the event data to free */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
 

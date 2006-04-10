@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.203 2006/03/17 12:39:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.204 2006/04/10 16:15:29 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -682,18 +682,37 @@ SCIP_RETCODE boundchgApplyGlobal(
    SCIP_Bool*            cutoff              /**< pointer to store whether an infeasible bound change was detected */
    )
 {
+   SCIP_VAR* var;
+   SCIP_Real newbound;
+   SCIP_BOUNDTYPE boundtype;
+
    assert(boundchg != NULL);
+   assert(cutoff != NULL);
+
+   *cutoff = FALSE;
 
    /* ignore redundant bound changes */
    if( boundchg->redundant )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("applying global bound change: <%s>[%g,%g] %s %g\n",
-      SCIPvarGetName(boundchg->var), SCIPvarGetLbGlobal(boundchg->var), SCIPvarGetUbGlobal(boundchg->var),
-      boundchg->boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", boundchg->newbound);
+   var = SCIPboundchgGetVar(boundchg);
+   newbound = SCIPboundchgGetNewbound(boundchg);
+   boundtype = SCIPboundchgGetBoundtype(boundchg);
 
-   SCIP_CALL( SCIPvarChgBdGlobal(boundchg->var, blkmem, set, stat, lp, branchcand, eventqueue, 
-         boundchg->newbound, boundchg->boundtype) );
+   SCIPdebugMessage("applying global bound change: <%s>[%g,%g] %s %g\n",
+      SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
+      boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", newbound);
+
+   /* check for cutoff */
+   if( (boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasGT(set, newbound, SCIPvarGetUbGlobal(var)))
+      || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasLT(set, newbound, SCIPvarGetLbGlobal(var))) )
+   {
+      *cutoff = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* apply bound change */
+   SCIP_CALL( SCIPvarChgBdGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound, boundtype) );
 
    return SCIP_OKAY;
 }
@@ -2320,7 +2339,7 @@ int SCIPvarGetNLocksDown(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0;
+      return 0; /*lint !e527*/
    }
 }
 
@@ -2374,7 +2393,7 @@ int SCIPvarGetNLocksUp(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0;
+      return 0; /*lint !e527*/
    }
 }
 
@@ -4058,7 +4077,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
          {
             /* this bound change is redundant due to the new global bound */
             var->lbchginfos[i].newbound = var->glbdom.lb;
-            var->lbchginfos[i].boundchgtype = SCIP_BOUNDCHGTYPE_BRANCHING;
+            var->lbchginfos[i].boundchgtype = SCIP_BOUNDCHGTYPE_BRANCHING; /*lint !e641*/
             var->lbchginfos[i].redundant = TRUE;
          }
          else
@@ -4196,7 +4215,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
          {
             /* this bound change is redundant due to the new global bound */
             var->ubchginfos[i].newbound = var->glbdom.ub;
-            var->ubchginfos[i].boundchgtype = SCIP_BOUNDCHGTYPE_BRANCHING;
+            var->ubchginfos[i].boundchgtype = SCIP_BOUNDCHGTYPE_BRANCHING; /*lint !e641*/
             var->ubchginfos[i].redundant = TRUE;
          }
          else
@@ -5460,7 +5479,6 @@ SCIP_RETCODE varAddImplic(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Bool             varfixing,          /**< FALSE if y should be added in implications for x == 0, TRUE for x == 1 */
@@ -5656,7 +5674,6 @@ SCIP_RETCODE varAddTransitiveImplic(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Bool             varfixing,          /**< FALSE if y should be added in implications for x == 0, TRUE for x == 1 */
@@ -5678,7 +5695,7 @@ SCIP_RETCODE varAddTransitiveImplic(
    assert(infeasible != NULL);
 
    /* add implication x == varfixing -> y <= b / y >= b to the implications list of x */
-   SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
+   SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, branchcand, eventqueue, 
          varfixing, implvar, impltype, implbound, infeasible, nbdchgs, &added) );
    if( *infeasible || var == implvar || !transitive || !added )
       return SCIP_OKAY;
@@ -5692,10 +5709,6 @@ SCIP_RETCODE varAddTransitiveImplic(
       SCIP_BOUNDTYPE* impltypes;
       SCIP_Real* implbounds;
       int nimpls;
-#if 0
-      SCIP_CLIQUE** cliques;
-      int ncliques;
-#endif
       SCIP_Bool implvarfixing;
       int i;
 
@@ -5721,55 +5734,13 @@ SCIP_RETCODE varAddTransitiveImplic(
           */
          if( SCIPvarIsActive(implvars[i]) )
          {
-            SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
+            SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, branchcand, eventqueue, 
                   varfixing, implvars[i], impltypes[i], implbounds[i], infeasible, nbdchgs, &added) );
             assert(SCIPimplicsGetNImpls(implvar->implics, implvarfixing) <= nimpls);
             nimpls = SCIPimplicsGetNImpls(implvar->implics, implvarfixing);
             i = MIN(i, nimpls); /* some elements from the array could have been removed */
          }
       }
-
-#if 0 /* this may produce way too many cliques in the clique table - and they are unnecessary */
-      /* binary variable: cliques of implvar */
-      ncliques = SCIPcliquelistGetNCliques(implvar->cliquelist, implvarfixing);
-      cliques = SCIPcliquelistGetCliques(implvar->cliquelist, implvarfixing);
-      for( i = 0; i < ncliques && !(*infeasible); ++i )
-      {
-         SCIP_VAR** cliquevars;
-         SCIP_Bool* cliquevalues;
-         SCIP_VAR** newcliquevars;
-         SCIP_Bool* newcliquevalues;
-         int ncliquevars;
-         int implvarpos;
-
-         /* we have x == varfixing -> y == implvarfixing -> z[j] == !cliquevalues[j] for all j in clique:
-          * add copy of clique with y == implvarfixing replaced by x == varfixing
-          */
-         ncliquevars = SCIPcliqueGetNVars(cliques[i]);
-         cliquevars = SCIPcliqueGetVars(cliques[i]);
-         cliquevalues = SCIPcliqueGetValues(cliques[i]);
-         implvarpos = SCIPcliqueSearchVar(cliques[i], implvar, implvarfixing);
-         assert(0 <= implvarpos && implvarpos < ncliquevars);
-         assert(cliquevars[implvarpos] == implvar);
-         assert(cliquevalues[implvarpos] == implvarfixing);
-
-         /* allocate temporary memory for copy of clique */
-         SCIP_CALL( SCIPsetDuplicateBufferArray(set, &newcliquevars, cliquevars, ncliquevars) );
-         SCIP_CALL( SCIPsetDuplicateBufferArray(set, &newcliquevalues, cliquevalues, ncliquevars) );
-
-         /* replace y == implvarfixing with x == varfixing */
-         newcliquevars[implvarpos] = var;
-         newcliquevalues[implvarpos] = varfixing;
-
-         /* add clique */
-         SCIP_CALL( SCIPcliquetableAdd(cliquetable, blkmem, set, stat, lp, branchcand, eventqueue,
-               newcliquevars, newcliquevalues, ncliquevars, infeasible, NULL) );
-
-         /* free temporary memory */
-         SCIPsetFreeBufferArray(set, &newcliquevalues);
-         SCIPsetFreeBufferArray(set, &newcliquevars);
-      }
-#endif
    }
    else
    {
@@ -5809,13 +5780,13 @@ SCIP_RETCODE varAddTransitiveImplic(
                if( vlbcoefs[i] >= 0.0 )
                {
                   vbimplbound = adjustedUb(set, SCIPvarGetType(vlbvars[i]), vbimplbound);
-                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
+                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, branchcand, eventqueue, 
                         varfixing, vlbvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, infeasible, nbdchgs, &added) );
                }
                else
                {
                   vbimplbound = adjustedLb(set, SCIPvarGetType(vlbvars[i]), vbimplbound);
-                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
+                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, branchcand, eventqueue, 
                         varfixing, vlbvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, infeasible, nbdchgs, &added) );
                }
                nvlbvars = SCIPvboundsGetNVbds(implvar->vlbs);
@@ -5860,13 +5831,13 @@ SCIP_RETCODE varAddTransitiveImplic(
                if( vubcoefs[i] >= 0.0 )
                {
                   vbimplbound = adjustedLb(set, SCIPvarGetType(vubvars[i]), vbimplbound);
-                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
+                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, branchcand, eventqueue, 
                         varfixing, vubvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, infeasible, nbdchgs, &added) );
                }
                else
                {
                   vbimplbound = adjustedUb(set, SCIPvarGetType(vubvars[i]), vbimplbound);
-                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue, 
+                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, branchcand, eventqueue, 
                         varfixing, vubvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, infeasible, nbdchgs, &added) );
                }
                nvubvars = SCIPvboundsGetNVbds(implvar->vubs);
@@ -6052,7 +6023,7 @@ SCIP_RETCODE SCIPvarAddVlb(
                 *   b > 0, x >= b*z + d  <->  z == 1 -> x >= b+d
                 *   b < 0, x >= b*z + d  <->  z == 0 -> x >= d
                 */
-               SCIP_CALL( varAddTransitiveImplic(vlbvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+               SCIP_CALL( varAddTransitiveImplic(vlbvar, blkmem, set, stat, lp, branchcand, eventqueue,
                      (vlbcoef >= 0.0), var, SCIP_BOUNDTYPE_LOWER, maxvlb, transitive, infeasible, nbdchgs) );
             }
             else
@@ -6278,7 +6249,7 @@ SCIP_RETCODE SCIPvarAddVub(
                 *   b > 0, x <= b*z + d  <->  z == 0 -> x <= d
                 *   b < 0, x <= b*z + d  <->  z == 1 -> x <= b+d
                 */
-               SCIP_CALL( varAddTransitiveImplic(vubvar, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+               SCIP_CALL( varAddTransitiveImplic(vubvar, blkmem, set, stat, lp, branchcand, eventqueue,
                      (vubcoef < 0.0), var, SCIP_BOUNDTYPE_UPPER, minvub, transitive, infeasible, nbdchgs) );
             }
             else
@@ -6397,7 +6368,7 @@ SCIP_RETCODE SCIPvarAddImplic(
          SCIPvarAdjustBd(implvar, set, impltype, &implbound);
          if( SCIPvarIsActive(implvar) || SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_FIXED )
          {
-            SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
+            SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, lp, branchcand, eventqueue,
                   varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
          }
       }
@@ -7130,7 +7101,7 @@ SCIP_VAR* SCIPvarGetProbvar(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return NULL;
+      return NULL; /*lint !e527*/
    }
 }
 
@@ -7437,7 +7408,7 @@ SCIP_Real SCIPvarGetObjLP(
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot get the objective value of a multiple aggregated variable\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
 
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
@@ -7448,7 +7419,7 @@ SCIP_Real SCIPvarGetObjLP(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -7492,14 +7463,14 @@ SCIP_Real SCIPvarGetLbLP(
       {
          SCIPerrorMessage("scalar is zero in aggregation\n");
          SCIPABORT();
-         return 0.0;
+         return 0.0; /*lint !e527*/
       }
       
    case SCIP_VARSTATUS_MULTAGGR:
       /**@todo get the sides of the corresponding linear constraint */
       SCIPerrorMessage("getting the bounds of a multiple aggregated variable is not implemented yet\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
       
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
@@ -7510,7 +7481,7 @@ SCIP_Real SCIPvarGetLbLP(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -7554,14 +7525,14 @@ SCIP_Real SCIPvarGetUbLP(
       {
          SCIPerrorMessage("scalar is zero in aggregation\n");
          SCIPABORT();
-         return 0.0;
+         return 0.0; /*lint !e527*/
       }
       
    case SCIP_VARSTATUS_MULTAGGR:
       /**@todo get the sides of the corresponding linear constraint */
       SCIPerrorMessage("getting the bounds of a multiple aggregated variable is not implemented yet\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
       
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
@@ -7572,7 +7543,7 @@ SCIP_Real SCIPvarGetUbLP(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -7678,7 +7649,7 @@ SCIP_Real SCIPvarGetLPSol(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -7729,7 +7700,7 @@ SCIP_Real SCIPvarGetPseudoSol(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -7809,7 +7780,7 @@ SCIP_Real SCIPvarGetRootSol(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -7842,7 +7813,7 @@ SCIP_Real SCIPvarGetRootRedcost(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return SCIP_INVALID;
+      return SCIP_INVALID; /*lint !e527*/
    }
 }
 
@@ -7897,7 +7868,7 @@ SCIP_Real SCIPvarGetAvgSol(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -8086,7 +8057,7 @@ SCIP_Real SCIPvarGetPseudocost(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -8135,7 +8106,7 @@ SCIP_Real SCIPvarGetPseudocostCurrentRun(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -8178,7 +8149,7 @@ SCIP_Real SCIPvarGetPseudocostCount(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -8223,7 +8194,7 @@ SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -8551,7 +8522,7 @@ SCIP_Longint SCIPvarGetNBranchings(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0;
+      return 0; /*lint !e527*/
    }
 }
 
@@ -8596,7 +8567,7 @@ SCIP_Longint SCIPvarGetNBranchingsCurrentRun(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0;
+      return 0; /*lint !e527*/
    }
 }
 
@@ -8639,7 +8610,7 @@ SCIP_Real SCIPvarGetAvgBranchdepth(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -8684,7 +8655,7 @@ SCIP_Real SCIPvarGetAvgBranchdepthCurrentRun(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -8729,7 +8700,7 @@ SCIP_Real SCIPvarGetConflictScore(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -8776,7 +8747,7 @@ SCIP_Real SCIPvarGetConflictScoreCurrentRun(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -8819,7 +8790,7 @@ SCIP_Longint SCIPvarGetNInferences(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0;
+      return 0; /*lint !e527*/
    }
 }
 
@@ -8864,7 +8835,7 @@ SCIP_Longint SCIPvarGetNInferencesCurrentRun(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0;
+      return 0; /*lint !e527*/
    }
 }
 
@@ -8913,7 +8884,7 @@ SCIP_Real SCIPvarGetAvgInferences(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -8964,7 +8935,7 @@ SCIP_Real SCIPvarGetAvgInferencesCurrentRun(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -9007,7 +8978,7 @@ SCIP_Longint SCIPvarGetNCutoffs(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0;
+      return 0; /*lint !e527*/
    }
 }
 
@@ -9050,7 +9021,7 @@ SCIP_Longint SCIPvarGetNCutoffsCurrentRun(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0;
+      return 0; /*lint !e527*/
    }
 }
 
@@ -9097,7 +9068,7 @@ SCIP_Real SCIPvarGetAvgCutoffs(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -9144,7 +9115,7 @@ SCIP_Real SCIPvarGetAvgCutoffsCurrentRun(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -9176,9 +9147,9 @@ SCIP_RETCODE SCIPbdchginfoCreate(
    (*bdchginfo)->inferencedata.info = 0;
    (*bdchginfo)->bdchgidx.depth = INT_MAX;
    (*bdchginfo)->bdchgidx.pos = -1;
-   (*bdchginfo)->boundchgtype = SCIP_BOUNDCHGTYPE_BRANCHING;
-   (*bdchginfo)->boundtype = boundtype;
-   (*bdchginfo)->inferboundtype = boundtype;
+   (*bdchginfo)->boundchgtype = SCIP_BOUNDCHGTYPE_BRANCHING; /*lint !e641*/
+   (*bdchginfo)->boundtype = boundtype; /*lint !e641*/
+   (*bdchginfo)->inferboundtype = boundtype; /*lint !e641*/
    (*bdchginfo)->redundant = FALSE;
 
    return SCIP_OKAY;
@@ -9377,14 +9348,14 @@ SCIP_Real SCIPvarGetLbAtIndex(
       {
          SCIPerrorMessage("scalar is zero in aggregation\n");
          SCIPABORT();
-         return 0.0;
+         return 0.0; /*lint !e527*/
       }
       
    case SCIP_VARSTATUS_MULTAGGR:
       /**@todo get the sides of the corresponding linear constraint */
       SCIPerrorMessage("getting the bounds of a multiple aggregated variable is not implemented yet\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
       
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
@@ -9395,7 +9366,7 @@ SCIP_Real SCIPvarGetLbAtIndex(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -9453,14 +9424,14 @@ SCIP_Real SCIPvarGetUbAtIndex(
       {
          SCIPerrorMessage("scalar is zero in aggregation\n");
          SCIPABORT();
-         return 0.0;
+         return 0.0; /*lint !e527*/
       }
       
    case SCIP_VARSTATUS_MULTAGGR:
       /**@todo get the sides of the corresponding linear constraint */
       SCIPerrorMessage("getting the bounds of a multiple aggregated variable is not implemented yet\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
       
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
@@ -9471,7 +9442,7 @@ SCIP_Real SCIPvarGetUbAtIndex(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -9595,7 +9566,7 @@ int SCIPvarGetConflictingBdchgDepth(
       for( i = var->nubchginfos-1; i > 0 && SCIPsetIsGT(set, bound, var->ubchginfos[i-1].newbound); --i )
       {
          assert(var->ubchginfos[i].var == var); /* perform sanity check on the search for the first conflicting bound */
-         assert(var->ubchginfos[i].boundtype == SCIP_BOUNDTYPE_UPPER);
+         assert((SCIP_BOUNDTYPE)var->ubchginfos[i].boundtype == SCIP_BOUNDTYPE_UPPER);
       }
       assert(SCIPsetIsGT(set, bound, var->ubchginfos[i].newbound));             /* bound change i is conflicting */
       assert(i == 0 || SCIPsetIsLE(set, bound, var->ubchginfos[i-1].newbound)); /* bound change i-1 is not conflicting */
@@ -9619,7 +9590,7 @@ int SCIPvarGetConflictingBdchgDepth(
       for( i = var->nlbchginfos-1; i > 0 && SCIPsetIsLT(set, bound, var->lbchginfos[i-1].newbound); --i )
       {
          assert(var->lbchginfos[i].var == var); /* perform sanity check on the search for the first conflicting bound */
-         assert(var->lbchginfos[i].boundtype == SCIP_BOUNDTYPE_LOWER);
+         assert((SCIP_BOUNDTYPE)var->lbchginfos[i].boundtype == SCIP_BOUNDTYPE_LOWER);
       }
       assert(SCIPsetIsLT(set, bound, var->lbchginfos[i].newbound));             /* bound change i is conflicting */
       assert(i == 0 || SCIPsetIsGE(set, bound, var->lbchginfos[i-1].newbound)); /* bound change i-1 is not conflicting */
@@ -9863,7 +9834,7 @@ SCIP_BOUNDCHG* SCIPdomchgGetBoundchg(
    )
 {
    assert(domchg != NULL);
-   assert(0 <= pos && pos < domchg->domchgbound.nboundchgs);
+   assert(0 <= pos && pos < (int)domchg->domchgbound.nboundchgs);
 
    return &domchg->domchgbound.boundchgs[pos];
 }
@@ -9906,7 +9877,7 @@ void SCIPvarSetDelorigData(
    )
 {
    assert(var != NULL);
-   assert(var->varstatus == SCIP_VARSTATUS_ORIGINAL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL);
 
    var->vardelorig = vardelorig;
 }
@@ -10752,7 +10723,7 @@ SCIP_Bool SCIPbdchginfoIsRedundant(
    )
 {
    assert(bdchginfo != NULL);
-   assert(bdchginfo->redundant == (bdchginfo->oldbound == bdchginfo->newbound));
+   assert(bdchginfo->redundant == (bdchginfo->oldbound == bdchginfo->newbound)); /*lint !e777*/
 
    return bdchginfo->redundant;
 }
@@ -10782,7 +10753,7 @@ SCIP_Bool SCIPbdchginfoIsTighter(
    assert(bdchginfo1->var == bdchginfo2->var);
    assert(bdchginfo1->boundtype == bdchginfo2->boundtype);
 
-   return (bdchginfo1->boundtype == SCIP_BOUNDTYPE_LOWER
+   return (SCIPbdchginfoGetBoundtype(bdchginfo1) == SCIP_BOUNDTYPE_LOWER
       ? bdchginfo1->newbound > bdchginfo2->newbound
       : bdchginfo1->newbound < bdchginfo2->newbound);
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.h,v 1.13 2006/01/03 12:22:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objrelax.h,v 1.14 2006/04/10 16:15:22 bzfpfend Exp $"
 
 /**@file   objrelax.h
  * @brief  C++ wrapper for relaxators
@@ -76,7 +76,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_RELAX*        relax               /**< the relaxator itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -85,7 +85,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_RELAX*        relax               /**< the relaxator itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -94,7 +94,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_RELAX*        relax               /**< the relaxator itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -108,7 +108,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_RELAX*        relax               /**< the relaxator itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -121,7 +121,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_RELAX*        relax               /**< the relaxator itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    

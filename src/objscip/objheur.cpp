@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.cpp,v 1.18 2006/01/03 12:22:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objheur.cpp,v 1.19 2006/04/10 16:15:21 bzfpfend Exp $"
 
 /**@file   objheur.cpp
  * @brief  C++ wrapper for primal heuristics
@@ -67,7 +67,7 @@ SCIP_DECL_HEURFREE(heurFreeObj)
 
    /* free heur data */
    delete heurdata;
-   SCIPheurSetData(heur, NULL);
+   SCIPheurSetData(heur, NULL); /*lint !e64*/
    
    return SCIP_OKAY;
 }
@@ -184,9 +184,9 @@ SCIP_RETCODE SCIPincludeObjHeur(
          objheur->scip_pseudonodes_, objheur->scip_duringplunging_, objheur->scip_duringlploop_, objheur->scip_afternode_,
          heurFreeObj, heurInitObj, heurExitObj, 
          heurInitsolObj, heurExitsolObj, heurExecObj,
-         heurdata) );
+         heurdata) ); /*lint !e429*/
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e429*/
 }
 
 /** returns the heur object of the given name, or NULL if not existing */
@@ -200,7 +200,7 @@ scip::ObjHeur* SCIPfindObjHeur(
 
    heur = SCIPfindHeur(scip, name);
    if( heur == NULL )
-      return NULL;
+      return NULL; /*lint !e64*/
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);

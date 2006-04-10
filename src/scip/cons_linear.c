@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.215 2006/03/29 13:39:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.216 2006/04/10 16:15:24 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -256,8 +256,8 @@ INFERINFO getInferInfo(
 {
    INFERINFO inferinfo;
 
-   inferinfo.val.asbits.proprule = proprule;
-   inferinfo.val.asbits.pos = pos;
+   inferinfo.val.asbits.proprule = proprule; /*lint !e641*/
+   inferinfo.val.asbits.pos = pos; /*lint !e732*/
 
    return inferinfo;
 }
@@ -946,7 +946,6 @@ static
 void consdataUpdateChgGlbLb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< linear constraint data */
-   SCIP_VAR*             var,                /**< variable that has been changed */
    SCIP_Real             oldlb,              /**< old lower bound of variable */
    SCIP_Real             newlb,              /**< new lower bound of variable */
    SCIP_Real             val                 /**< coefficient of constraint entry */
@@ -1015,7 +1014,6 @@ static
 void consdataUpdateChgGlbUb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< linear constraint data */
-   SCIP_VAR*             var,                /**< variable that has been changed */
    SCIP_Real             oldub,              /**< old upper bound of variable */
    SCIP_Real             newub,              /**< new upper bound of variable */
    SCIP_Real             val                 /**< coefficient of constraint entry */
@@ -1112,8 +1110,8 @@ void consdataUpdateAddCoef(
 
       consdataUpdateChgLb(scip, consdata, var, 0.0, SCIPvarGetLbLocal(var), val);
       consdataUpdateChgUb(scip, consdata, var, 0.0, SCIPvarGetUbLocal(var), val);
-      consdataUpdateChgGlbLb(scip, consdata, var, 0.0, SCIPvarGetLbGlobal(var), val);
-      consdataUpdateChgGlbUb(scip, consdata, var, 0.0, SCIPvarGetUbGlobal(var), val);
+      consdataUpdateChgGlbLb(scip, consdata, 0.0, SCIPvarGetLbGlobal(var), val);
+      consdataUpdateChgGlbUb(scip, consdata, 0.0, SCIPvarGetUbGlobal(var), val);
    }
 }
 
@@ -1149,8 +1147,8 @@ void consdataUpdateDelCoef(
 
       consdataUpdateChgLb(scip, consdata, var, SCIPvarGetLbLocal(var), 0.0, val);
       consdataUpdateChgUb(scip, consdata, var, SCIPvarGetUbLocal(var), 0.0, val);
-      consdataUpdateChgGlbLb(scip, consdata, var, SCIPvarGetLbGlobal(var), 0.0, val);
-      consdataUpdateChgGlbUb(scip, consdata, var, SCIPvarGetUbGlobal(var), 0.0, val);
+      consdataUpdateChgGlbLb(scip, consdata, SCIPvarGetLbGlobal(var), 0.0, val);
+      consdataUpdateChgGlbUb(scip, consdata, SCIPvarGetUbGlobal(var), 0.0, val);
    }
 }
 
@@ -1770,7 +1768,7 @@ SCIP_Longint getVarSignature(
 {
    int sigidx;
 
-   sigidx = SCIPvarGetIndex(var) % (8*sizeof(SCIP_Longint));
+   sigidx = SCIPvarGetIndex(var) % (int)(8*sizeof(SCIP_Longint));
    return ((SCIP_Longint)1) << sigidx;
 }
 
@@ -2500,7 +2498,7 @@ SCIP_RETCODE normalizeCons(
    feastol = SCIPfeastol(scip);
    maxmult = (SCIP_Longint)(feastol/epsilon + feastol);
    maxabsval = consdataGetMaxAbsval(consdata);
-   maxmult = MIN(maxmult, MAXSCALEDCOEF/MAX(maxabsval, 1.0));
+   maxmult = MIN(maxmult, (SCIP_Longint)(MAXSCALEDCOEF/MAX(maxabsval, 1.0)));
 
    /*
     * multiplication with +1 or -1
@@ -4639,7 +4637,7 @@ int getVarWeight(
    default:
       SCIPerrorMessage("invalid variable type\n");
       SCIPABORT();
-      return 0;
+      return 0; /*lint !e527*/
    }
 }
 
@@ -6370,6 +6368,9 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
             consdata->boundstightened = (val > 0.0 && SCIPisInfinity(scip, -consdata->lhs))
                || (val < 0.0 && SCIPisInfinity(scip, consdata->rhs));
             break;
+         default:
+            SCIPerrorMessage("invalid event type %d\n", eventtype);
+            return SCIP_INVALIDDATA;
          }
       }
    }
@@ -6406,11 +6407,11 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
 
       /* update the activity values */
       if( (eventtype & SCIP_EVENTTYPE_GLBCHANGED) != 0 )
-         consdataUpdateChgGlbLb(scip, consdata, var, oldbound, newbound, val);
+         consdataUpdateChgGlbLb(scip, consdata, oldbound, newbound, val);
       else
       {
          assert((eventtype & SCIP_EVENTTYPE_GUBCHANGED) != 0);
-         consdataUpdateChgGlbUb(scip, consdata, var, oldbound, newbound, val);
+         consdataUpdateChgGlbUb(scip, consdata, oldbound, newbound, val);
       }
    }
 
@@ -6452,6 +6453,8 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
    lhs = 1.0;
    for( i = 0; i < nbdchginfos; ++i )
    {
+      assert(bdchginfos != NULL);
+
       vars[i] = SCIPbdchginfoGetVar(bdchginfos[i]);
 
       /* we can only treat binary variables */

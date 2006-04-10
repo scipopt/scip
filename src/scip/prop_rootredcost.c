@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_rootredcost.c,v 1.2 2006/03/13 15:35:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: prop_rootredcost.c,v 1.3 2006/04/10 16:15:27 bzfpfend Exp $"
 
 /**@file   prop_rootredcost.c
  * @brief  reduced cost strengthening at the root node
@@ -132,7 +132,7 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
 
    /* get root LP objective value */
    lpobjval = SCIPgetLPRootObjval(scip);
-   if( lpobjval == SCIP_INVALID )
+   if( lpobjval == SCIP_INVALID ) /*lint !e777*/
       return SCIP_OKAY;
 
    /* get variables */
@@ -154,7 +154,7 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
 
       var = vars[v];
       redcost = SCIPvarGetRootRedcost(var);
-      if( redcost == SCIP_INVALID )
+      if( redcost == SCIP_INVALID ) /*lint !e777*/
          continue;
 
       if( SCIPisFeasPositive(scip, redcost) )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.265 2006/03/13 15:35:55 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.266 2006/04/10 16:15:27 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -4245,7 +4245,7 @@ SCIP_RETCODE SCIPprintTransSol(
 
 /** gets number of primal solutions stored in the solution storage */
 extern
-SCIP_Longint SCIPgetNSols(
+int SCIPgetNSols(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

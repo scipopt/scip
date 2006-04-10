@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.3 2006/04/10 09:15:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.4 2006/04/10 16:15:23 bzfpfend Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @brief  constraint handler for bound disjunction constraints
@@ -1494,6 +1494,8 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
    SCIP_CALL( SCIPallocBufferArray(scip, &bounds, nbdchginfos) );
    for( i = 0; i < nbdchginfos; ++i )
    {
+      assert(bdchginfos != NULL);
+
       vars[i] = SCIPbdchginfoGetVar(bdchginfos[i]);
       boundtypes[i] = SCIPboundtypeOpposite(SCIPbdchginfoGetBoundtype(bdchginfos[i]));
       bounds[i] = SCIPbdchginfoGetNewbound(bdchginfos[i]);

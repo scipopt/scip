@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.101 2006/04/10 09:15:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.102 2006/04/10 16:15:24 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -1752,6 +1752,8 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLogicor)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nbdchginfos) );
    for( i = 0; i < nbdchginfos; ++i )
    {
+      assert(bdchginfos != NULL);
+
       vars[i] = SCIPbdchginfoGetVar(bdchginfos[i]);
 
       /* we can only treat binary variables */

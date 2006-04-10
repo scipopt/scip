@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.7 2006/03/16 19:57:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.8 2006/04/10 16:15:25 bzfpfend Exp $"
 
 /**@file   heur_octane.c
  * @brief  octane primal heuristic based on Balas, Ceria, Dawande, Margot, and Pataki
@@ -25,7 +25,6 @@
 
 #include <assert.h>
 #include <string.h>
-#include <stdio.h>
 #include <math.h>
 #include "scip/heur_octane.h"
 
@@ -472,7 +471,7 @@ SCIP_Bool isZero(SCIP* scip, SCIP_Real* a, int nsubspacevars)
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_HEURFREE(heurFreeOctane)
-{   /*lint --e{715}*/
+{  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
@@ -538,7 +537,7 @@ SCIP_DECL_HEUREXIT(heurExitOctane)
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecOctane)
-{  
+{  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata; 
    SCIP_SOL* sol;
    SCIP_SOL** first_sols;     /* stores the first ffirst sols in order to check for common viloation of a row */

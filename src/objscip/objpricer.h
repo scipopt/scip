@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.h,v 1.18 2006/01/03 12:22:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpricer.h,v 1.19 2006/04/10 16:15:22 bzfpfend Exp $"
 
 /**@file   objpricer.h
  * @brief  C++ wrapper for variable pricers
@@ -71,7 +71,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_PRICER*       pricer              /**< the variable pricer itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -80,7 +80,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_PRICER*       pricer              /**< the variable pricer itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -89,7 +89,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_PRICER*       pricer              /**< the variable pricer itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -103,7 +103,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_PRICER*       pricer              /**< the variable pricer itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -116,7 +116,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_PRICER*       pricer              /**< the variable pricer itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -165,7 +165,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_PRICER*       pricer              /**< the variable pricer itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
 };

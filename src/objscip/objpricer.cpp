@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.cpp,v 1.15 2006/01/03 12:22:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpricer.cpp,v 1.16 2006/04/10 16:15:22 bzfpfend Exp $"
 
 /**@file   objpricer.cpp
  * @brief  C++ wrapper for variable pricers
@@ -67,7 +67,7 @@ SCIP_DECL_PRICERFREE(pricerFreeObj)
 
    /* free pricer data */
    delete pricerdata;
-   SCIPpricerSetData(pricer, NULL);
+   SCIPpricerSetData(pricer, NULL); /*lint !e64*/
    
    return SCIP_OKAY;
 }
@@ -199,9 +199,9 @@ SCIP_RETCODE SCIPincludeObjPricer(
    SCIP_CALL( SCIPincludePricer(scip, objpricer->scip_name_, objpricer->scip_desc_, objpricer->scip_priority_,
          pricerFreeObj, pricerInitObj, pricerExitObj, 
          pricerInitsolObj, pricerExitsolObj, pricerRedcostObj, pricerFarkasObj,
-         pricerdata) );
+         pricerdata) ); /*lint !e429*/
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e429*/
 }
 
 /** returns the variable pricer object of the given name, or NULL if not existing */
@@ -215,7 +215,7 @@ scip::ObjPricer* SCIPfindObjPricer(
 
    pricer = SCIPfindPricer(scip, name);
    if( pricer == NULL )
-      return NULL;
+      return NULL; /*lint !e64*/
 
    pricerdata = SCIPpricerGetData(pricer);
    assert(pricerdata != NULL);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.173 2006/04/10 11:31:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.174 2006/04/10 16:15:28 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -3326,10 +3326,14 @@ SCIP_Bool SCIPsetIsLbBetter(
    SCIP_Real             oldub               /**< old upper bound */
    )
 {
+   SCIP_Real eps;
+
    assert(set != NULL);
    assert(oldlb <= oldub);
 
-   return EPSGT(newlb, oldlb, set->num_boundstreps * MAX(MIN(oldub - oldlb, REALABS(oldlb)), 1.0));
+   eps = REALABS(oldlb);
+   eps = MIN(oldub - oldlb, eps);
+   return EPSGT(newlb, oldlb, set->num_boundstreps * MAX(eps, 1.0));
 }
 
 /** checks, if the given new upper bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
@@ -3340,10 +3344,14 @@ SCIP_Bool SCIPsetIsUbBetter(
    SCIP_Real             oldub               /**< old upper bound */
    )
 {
+   SCIP_Real eps;
+
    assert(set != NULL);
    assert(oldlb <= oldub);
 
-   return EPSLT(newub, oldub, set->num_boundstreps * MAX(MIN(oldub - oldlb, REALABS(oldub)), 1.0));
+   eps = REALABS(oldub);
+   eps = MIN(oldub - oldlb, eps);
+   return EPSLT(newub, oldub, set->num_boundstreps * MAX(eps, 1.0));
 }
 
 /** checks, if the given cut's efficacy is larger than the minimal cut efficacy */

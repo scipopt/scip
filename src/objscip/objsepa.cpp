@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.cpp,v 1.15 2006/01/03 12:22:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objsepa.cpp,v 1.16 2006/04/10 16:15:22 bzfpfend Exp $"
 
 /**@file   objsepa.cpp
  * @brief  C++ wrapper for cut separators
@@ -67,7 +67,7 @@ SCIP_DECL_SEPAFREE(sepaFreeObj)
 
    /* free sepa data */
    delete sepadata;
-   SCIPsepaSetData(sepa, NULL);
+   SCIPsepaSetData(sepa, NULL); /*lint !e64*/
    
    return SCIP_OKAY;
 }
@@ -200,9 +200,9 @@ SCIP_RETCODE SCIPincludeObjSepa(
          objsepa->scip_priority_, objsepa->scip_freq_, objsepa->scip_delay_,
          sepaFreeObj, sepaInitObj, sepaExitObj, sepaInitsolObj, sepaExitsolObj, 
          sepaExeclpObj, sepaExecsolObj,
-         sepadata) );
+         sepadata) ); /*lint !e429*/
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e429*/
 }
 
 /** returns the sepa object of the given name, or NULL if not existing */
@@ -216,7 +216,7 @@ scip::ObjSepa* SCIPfindObjSepa(
 
    sepa = SCIPfindSepa(scip, name);
    if( sepa == NULL )
-      return NULL;
+      return NULL; /*lint !e64*/
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);

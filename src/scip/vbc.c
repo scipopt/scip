@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.21 2006/03/09 12:52:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.22 2006/04/10 16:15:29 bzfpfend Exp $"
 
 /**@file   vbc.c
  * @brief  methods for VBC Tool output
@@ -69,7 +69,7 @@ SCIP_RETCODE SCIPvbcCreate(
    (*vbc)->nodenum = NULL;
    (*vbc)->timestep = 0;
    (*vbc)->lastnode = NULL;
-   (*vbc)->lastcolor = -1;
+   (*vbc)->lastcolor = SCIP_VBCCOLOR_NONE;
    (*vbc)->userealtime = FALSE;
 
    return SCIP_OKAY;
@@ -107,7 +107,7 @@ SCIP_RETCODE SCIPvbcInit(
    vbc->file = fopen(set->vbc_filename, "w");
    vbc->timestep = 0;
    vbc->lastnode = NULL;
-   vbc->lastcolor = -1;
+   vbc->lastcolor = SCIP_VBCCOLOR_NONE;
    vbc->userealtime = set->vbc_realtime;
 
    if( vbc->file == NULL )
@@ -238,13 +238,13 @@ void vbcSetColor(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node,               /**< node to change color for */
-   SCIP_VBCCOLOR         color               /**< new color of node, or -1 */
+   SCIP_VBCCOLOR         color               /**< new color of node, or SCIP_VBCCOLOR_NONE */
    )
 {
    assert(vbc != NULL);
    assert(node != NULL);
 
-   if( vbc->file != NULL && (int)color != -1 && (node != vbc->lastnode || color != vbc->lastcolor) )
+   if( vbc->file != NULL && color != SCIP_VBCCOLOR_NONE && (node != vbc->lastnode || color != vbc->lastcolor) )
    {
       int nodenum;
 

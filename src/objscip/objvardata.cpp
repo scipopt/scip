@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objvardata.cpp,v 1.8 2006/01/03 12:22:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objvardata.cpp,v 1.9 2006/04/10 16:15:23 bzfpfend Exp $"
 
 /**@file   objvardata.cpp
  * @brief  C++ wrapper for user variable data
@@ -65,7 +65,7 @@ SCIP_DECL_VARDELORIG(varDelorigObj)
 
    /* free vardata data */
    delete *vardata;
-   *vardata = NULL;
+   *vardata = NULL; /*lint !e64*/
    
    return SCIP_OKAY;
 }
@@ -77,7 +77,7 @@ SCIP_DECL_VARDELORIG(varDelorigObj)
 static
 SCIP_DECL_VARTRANS(varTransObj)
 {  /*lint --e{715}*/
-   scip::ObjVardata* objvardata;
+   scip::ObjVardata* objvardata; /*lint !e78 !e40 !e55 !e530 !e522*/
    SCIP_Bool deleteobject;
 
    assert(sourcedata != NULL);
@@ -86,11 +86,11 @@ SCIP_DECL_VARTRANS(varTransObj)
    assert(*targetdata == NULL);
 
    /* call virtual method of vardata object */
-   SCIP_CALL( sourcedata->objvardata->scip_trans(scip, targetvar, &objvardata, &deleteobject) );
+   SCIP_CALL( sourcedata->objvardata->scip_trans(scip, targetvar, &objvardata, &deleteobject) ); /*lint !e40*/
 
    /* create transformed user variable data */
    *targetdata = new SCIP_VARDATA;
-   (*targetdata)->objvardata = objvardata;
+   (*targetdata)->objvardata = objvardata; /*lint !e40*/
    (*targetdata)->deleteobject = deleteobject;
 
    return SCIP_OKAY;
@@ -114,7 +114,7 @@ SCIP_DECL_VARDELTRANS(varDeltransObj)
 
    /* free vardata data */
    delete *vardata;
-   *vardata = NULL;
+   *vardata = NULL; /*lint !e64*/
    
    return SCIP_OKAY;
 }
@@ -153,9 +153,9 @@ SCIP_RETCODE SCIPcreateObjVar(
 
    /* create variable */
    SCIP_CALL( SCIPcreateVar(scip, var, name, lb, ub, obj, vartype, initial, removeable, 
-         varDelorigObj, varTransObj, varDeltransObj, vardata) );
+         varDelorigObj, varTransObj, varDeltransObj, vardata) ); /*lint !e429*/
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e429*/
 }
 
 /** gets user variable data object for given problem variable

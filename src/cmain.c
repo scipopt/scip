@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cmain.c,v 1.86 2006/03/16 14:43:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cmain.c,v 1.87 2006/04/10 16:15:20 bzfpfend Exp $"
 
 /**@file   cmain.c
  * @brief  main file for C compilation
@@ -24,7 +24,6 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <stdio.h>
-#include <string.h>
 
 #include "scip/scip.h"
 #include "scip/scipshell.h"

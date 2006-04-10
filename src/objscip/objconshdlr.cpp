@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.28 2006/01/03 12:22:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.29 2006/04/10 16:15:21 bzfpfend Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -67,7 +67,7 @@ SCIP_DECL_CONSFREE(consFreeObj)
 
    /* free conshdlr data */
    delete conshdlrdata;
-   SCIPconshdlrSetData(conshdlr, NULL);
+   SCIPconshdlrSetData(conshdlr, NULL); /*lint !e64*/
    
    return SCIP_OKAY;
 }
@@ -504,9 +504,9 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
          consActiveObj, consDeactiveObj, 
          consEnableObj, consDisableObj,
          consPrintObj,
-         conshdlrdata) );
+         conshdlrdata) ); /*lint !e429*/
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e429*/
 }
 
 /** returns the conshdlr object of the given name, or NULL if not existing */
@@ -520,7 +520,7 @@ scip::ObjConshdlr* SCIPfindObjConshdlr(
 
    conshdlr = SCIPfindConshdlr(scip, name);
    if( conshdlr == NULL )
-      return NULL;
+      return NULL; /*lint !e64*/
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);

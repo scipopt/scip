@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.c,v 1.23 2006/03/10 14:29:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: message.c,v 1.24 2006/04/10 16:15:26 bzfpfend Exp $"
 
 /**@file   message.c
  * @brief  message output methods
@@ -35,7 +35,7 @@
 /** error message print method of default message handler */
 static
 SCIP_DECL_MESSAGEERROR(messageErrorDefault)
-{
+{  /*lint --e{715}*/
    fputs(msg, file);
    fflush(file);
 }
@@ -43,7 +43,7 @@ SCIP_DECL_MESSAGEERROR(messageErrorDefault)
 /** warning message print method of default message handler */
 static
 SCIP_DECL_MESSAGEWARNING(messageWarningDefault)
-{
+{  /*lint --e{715}*/
    fputs(msg, file);
    fflush(file);
 }
@@ -51,7 +51,7 @@ SCIP_DECL_MESSAGEWARNING(messageWarningDefault)
 /** dialog message print method of default message handler */
 static
 SCIP_DECL_MESSAGEDIALOG(messageDialogDefault)
-{
+{  /*lint --e{715}*/
    fputs(msg, file);
    fflush(file);
 }
@@ -59,15 +59,16 @@ SCIP_DECL_MESSAGEDIALOG(messageDialogDefault)
 /** info message print method of default message handler */
 static
 SCIP_DECL_MESSAGEINFO(messageInfoDefault)
-{
+{  /*lint --e{715}*/
    fputs(msg, file);
    fflush(file);
 }
 
 /** default message handler that prints messages to stdout or stderr */
 static
-SCIP_MESSAGEHDLR messagehdlrDefault = {messageErrorDefault, messageWarningDefault, messageDialogDefault, messageInfoDefault,
-                                  NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0};
+SCIP_MESSAGEHDLR messagehdlrDefault =
+   { messageErrorDefault, messageWarningDefault, messageDialogDefault, messageInfoDefault,
+     NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0 };
 
 /** static variable that contains the currently installed message handler;
  *  if the handler is set to NULL, messages are suppressed
@@ -127,7 +128,7 @@ void bufferMessage(
             buffer[*bufferlen] = '\0';
             strncpy(outmsg, buffer, SCIP_MAXSTRLEN);
             strncpy(buffer, msg, SCIP_MAXSTRLEN);
-            *bufferlen = strlen(msg);
+            *bufferlen = (int)strlen(msg);
             assert(*bufferlen < SCIP_MAXSTRLEN-1);
             assert(strlen(outmsg) < SCIP_MAXSTRLEN);
             break;
@@ -356,7 +357,7 @@ void SCIPmessagePrintError(
    va_list ap;
 
    va_start(ap, formatstr); /*lint !e826*/
-   vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
+   vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap); /*lint !e718 !e746*/
    messagePrintError(msg);
    va_end(ap);
 }

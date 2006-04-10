@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.48 2006/01/03 12:22:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.49 2006/04/10 16:15:27 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -64,8 +64,10 @@
 #define BOUNDSWITCH                 0.5
 #define USEVBDS                    TRUE
 #define ALLOWLOCAL                 TRUE
-#define MAKECONTINTEGRAL          FALSE
 #define MINFRAC                    0.05
+#if 0
+#define MAKECONTINTEGRAL          FALSE
+#endif
 
 
 
@@ -456,7 +458,7 @@ SCIP_RETCODE aggregation(
    SCIPdebugMessage("start c-MIR aggregation with row <%s> (%d/%d)\n", SCIProwGetName(rows[startrow]), startrow, nrows);
 
    /* calculate maximal number of non-zeros in aggregated row */
-   maxaggrnonzs = sepadata->maxaggdensity * ncols;
+   maxaggrnonzs = (int)(sepadata->maxaggdensity * ncols);
 
    /* get temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrcoefs, ncols) );

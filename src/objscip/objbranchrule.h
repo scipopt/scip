@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.h,v 1.22 2006/01/03 12:22:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objbranchrule.h,v 1.23 2006/04/10 16:15:21 bzfpfend Exp $"
 
 /**@file   objbranchrule.h
  * @brief  C++ wrapper for branching rules
@@ -88,7 +88,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_BRANCHRULE*   branchrule          /**< the branching rule itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -97,7 +97,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_BRANCHRULE*   branchrule          /**< the branching rule itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -106,7 +106,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_BRANCHRULE*   branchrule          /**< the branching rule itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -115,7 +115,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_BRANCHRULE*   branchrule          /**< the branching rule itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -124,7 +124,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_BRANCHRULE*   branchrule          /**< the branching rule itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -145,7 +145,7 @@ public:
       SCIP_Bool          allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
       SCIP_RESULT*       result              /**< pointer to store the result of the branching call */
       )
-   {
+   {  /*lint --e{715}*/
       assert(result != NULL);
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
@@ -167,7 +167,7 @@ public:
       SCIP_Bool          allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
       SCIP_RESULT*       result              /**< pointer to store the result of the branching call */
       )
-   {
+   {  /*lint --e{715}*/
       assert(result != NULL);
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intdiving.c,v 1.3 2006/01/03 12:22:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_intdiving.c,v 1.4 2006/04/10 16:15:25 bzfpfend Exp $"
 
 /**@file   heur_intdiving.c
  * @brief  LP diving heuristic that fixes variables with integral LP value
@@ -358,7 +358,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
       SCIP_Real bestsolval;
       SCIP_Real bestfixval;
       int bestcand;
-      int nnewlpiterations;
+      SCIP_Longint nnewlpiterations;
 
       SCIP_CALL( SCIPnewProbingNode(scip) );
       divedepth++;

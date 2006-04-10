@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.55 2006/02/08 13:22:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.56 2006/04/10 16:15:26 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -1289,7 +1289,7 @@ SCIP_RETCODE SCIPrealarrayIncVal(
    SCIP_Real oldval;
 
    oldval = SCIPrealarrayGetVal(realarray, idx);
-   if( oldval != SCIP_INVALID )
+   if( oldval != SCIP_INVALID ) /*lint !e777*/
       return SCIPrealarraySetVal(realarray, set, idx, oldval + incval);
    else
       return SCIP_OKAY;

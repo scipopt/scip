@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.h,v 1.14 2006/01/03 12:22:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objreader.h,v 1.15 2006/04/10 16:15:22 bzfpfend Exp $"
 
 /**@file   objreader.h
  * @brief  C++ wrapper for file readers
@@ -71,7 +71,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_READER*       reader              /**< the file reader itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    

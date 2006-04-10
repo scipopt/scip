@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.cpp,v 1.14 2006/01/03 12:22:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpresol.cpp,v 1.15 2006/04/10 16:15:22 bzfpfend Exp $"
 
 /**@file   objpresol.cpp
  * @brief  C++ wrapper for presolvers
@@ -67,7 +67,7 @@ SCIP_DECL_PRESOLFREE(presolFreeObj)
 
    /* free presol data */
    delete presoldata;
-   SCIPpresolSetData(presol, NULL);
+   SCIPpresolSetData(presol, NULL); /*lint !e64*/
    
    return SCIP_OKAY;
 }
@@ -187,9 +187,9 @@ SCIP_RETCODE SCIPincludeObjPresol(
          objpresol->scip_priority_, objpresol->scip_maxrounds_, objpresol->scip_delay_,
          presolFreeObj, presolInitObj, presolExitObj, 
          presolInitpreObj, presolExitpreObj, presolExecObj,
-         presoldata) );
+         presoldata) ); /*lint !e429*/
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e429*/
 }
 
 /** returns the presol object of the given name, or NULL if not existing */
@@ -203,7 +203,7 @@ scip::ObjPresol* SCIPfindObjPresol(
 
    presol = SCIPfindPresol(scip, name);
    if( presol == NULL )
-      return NULL;
+      return NULL; /*lint !e64*/
 
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);

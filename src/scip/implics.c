@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.17 2006/03/23 17:33:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.18 2006/04/10 16:15:25 bzfpfend Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -25,7 +25,6 @@
 
 #include <stdlib.h>
 #include <assert.h>
-#include <string.h>
 
 #include "scip/def.h"
 #include "scip/message.h"
@@ -1252,6 +1251,7 @@ int cliquesSearchClique(
       int middle;
       int id;
 
+      assert(cliques != NULL);
       middle = (left+right)/2;
       id = cliques[middle]->id;
       assert(id >= 0);
@@ -1369,7 +1369,7 @@ SCIP_RETCODE SCIPcliquelistAdd(
    SCIP_CLIQUE*          clique              /**< clique that should be added to the clique list */
    )
 {
-   int id;
+   unsigned int id;
    int i;
 
    assert(cliquelist != NULL);
@@ -1388,7 +1388,6 @@ SCIP_RETCODE SCIPcliquelistAdd(
    
    /* insert clique into list, sorted by clique id */
    id = clique->id;
-   assert(id >= 0);
    for( i = (*cliquelist)->ncliques[value]; i > 0 && (*cliquelist)->cliques[value][i-1]->id > id; --i )
       (*cliquelist)->cliques[value][i] = (*cliquelist)->cliques[value][i-1];
    (*cliquelist)->cliques[value][i] = clique;

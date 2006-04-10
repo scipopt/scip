@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objmessagehdlr.h,v 1.4 2006/01/03 12:22:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objmessagehdlr.h,v 1.5 2006/04/10 16:15:22 bzfpfend Exp $"
 
 /**@file   objmessagehdlr.h
  * @brief  C++ wrapper for message handlers
@@ -41,7 +41,7 @@ class ObjMessagehdlr
 {
 public:
    /** should the output be buffered up to the next newline? */
-   const int scip_bufferedoutput_;
+   const SCIP_Bool scip_bufferedoutput_;
 
    /** default constructor */
    ObjMessagehdlr(

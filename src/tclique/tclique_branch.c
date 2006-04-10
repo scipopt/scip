@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.c,v 1.8 2006/01/27 10:01:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_branch.c,v 1.9 2006/04/10 16:15:29 bzfpfend Exp $"
 
 /**@file   tclique_branch.c
  * @brief  branch and bound part of algorithm for maximum cliques
@@ -1017,13 +1017,13 @@ void tcliqueMaxClique(
 
    /* use default graph callbacks, if NULL pointers are given */
    if( getnnodes == NULL )
-      getnnodes = &tcliqueGetNNodes;
+      getnnodes = tcliqueGetNNodes;
    if( getweights == NULL )
-      getweights = &tcliqueGetWeights;
+      getweights = tcliqueGetWeights;
    if( isedge == NULL )
-      isedge = &tcliqueIsEdge;
+      isedge = tcliqueIsEdge;
    if( selectadjnodes == NULL )
-      selectadjnodes = &tcliqueSelectAdjnodes;
+      selectadjnodes = tcliqueSelectAdjnodes;
 
    /* get number of nodes */
    nnodes = getnnodes(tcliquegraph);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.17 2006/01/03 12:22:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.18 2006/04/10 16:15:21 bzfpfend Exp $"
 
 /**@file   objbranchrule.cpp
  * @brief  C++ wrapper for branching rules
@@ -67,7 +67,7 @@ SCIP_DECL_BRANCHFREE(branchFreeObj)
 
    /* free branchrule data */
    delete branchruledata;
-   SCIPbranchruleSetData(branchrule, NULL);
+   SCIPbranchruleSetData(branchrule, NULL); /*lint !e64*/
    
    return SCIP_OKAY;
 }
@@ -199,9 +199,9 @@ SCIP_RETCODE SCIPincludeObjBranchrule(
          objbranchrule->scip_priority_, objbranchrule->scip_maxdepth_, objbranchrule->scip_maxbounddist_,
          branchFreeObj, branchInitObj, branchExitObj, branchInitsolObj, branchExitsolObj,
          branchExeclpObj, branchExecpsObj,
-         branchruledata) );
+         branchruledata) ); /*lint !e429*/
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e429*/
 }
 
 /** returns the branchrule object of the given name, or NULL if not existing */
@@ -215,7 +215,7 @@ scip::ObjBranchrule* SCIPfindObjBranchrule(
 
    branchrule = SCIPfindBranchrule(scip, name);
    if( branchrule == NULL )
-      return NULL;
+      return NULL; /*lint !e64*/
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);

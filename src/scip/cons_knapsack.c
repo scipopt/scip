@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.129 2006/04/10 09:59:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.130 2006/04/10 16:15:23 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -2574,7 +2574,7 @@ SCIP_RETCODE tightenWeightsLift(
       assert(0 <= varprobindex && varprobindex < nbinvars);
 
       /* update the zeroweightsum */
-      zeroweightsums[!value][varprobindex] += weight;
+      zeroweightsums[!value][varprobindex] += weight; /*lint !e514*/
 
       /* initialize the arrays of inserted zero items */
       BMSclearMemoryArray(zeroiteminserted[0], nbinvars);

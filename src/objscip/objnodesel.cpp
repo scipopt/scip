@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objnodesel.cpp,v 1.13 2006/01/03 12:22:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objnodesel.cpp,v 1.14 2006/04/10 16:15:22 bzfpfend Exp $"
 
 /**@file   objnodesel.cpp
  * @brief  C++ wrapper for node selectors
@@ -67,7 +67,7 @@ SCIP_DECL_NODESELFREE(nodeselFreeObj)
 
    /* free nodesel data */
    delete nodeseldata;
-   SCIPnodeselSetData(nodesel, NULL);
+   SCIPnodeselSetData(nodesel, NULL); /*lint !e64*/
    
    return SCIP_OKAY;
 }
@@ -198,9 +198,9 @@ SCIP_RETCODE SCIPincludeObjNodesel(
          objnodesel->scip_stdpriority_, objnodesel->scip_memsavepriority_, objnodesel->scip_lowestboundfirst_,
          nodeselFreeObj, nodeselInitObj, nodeselExitObj, 
          nodeselInitsolObj, nodeselExitsolObj, nodeselSelectObj, nodeselCompObj,
-         nodeseldata) );
+         nodeseldata) ); /*lint !e429*/
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e429*/
 }
 
 /** returns the nodesel object of the given name, or NULL if not existing */
@@ -214,7 +214,7 @@ scip::ObjNodesel* SCIPfindObjNodesel(
 
    nodesel = SCIPfindNodesel(scip, name);
    if( nodesel == NULL )
-      return NULL;
+      return NULL; /*lint !e64*/
 
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);

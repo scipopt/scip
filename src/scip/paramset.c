@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.32 2006/01/03 12:22:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.33 2006/04/10 16:15:26 bzfpfend Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -655,7 +655,7 @@ SCIP_Bool SCIPparamIsDefault(
    default:
       SCIPerrorMessage("unknown parameter type\n");
       SCIPABORT();
-      return FALSE;
+      return FALSE; /*lint !e527*/
    }
 }
 
@@ -1920,8 +1920,7 @@ SCIP_RETCODE SCIPparamsetRead(
    }
 
    /* close input file */
-   if( filename != NULL )
-      fclose(file);
+   fclose(file);
 
    return SCIP_OKAY;
 }
@@ -1961,7 +1960,10 @@ SCIP_RETCODE SCIPparamsetWrite(
 
    /* close output file */
    if( filename != NULL )
+   {
+      assert(file != NULL);
       fclose(file);
+   }
 
    return SCIP_OKAY;
 }

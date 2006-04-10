@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objmessagehdlr.cpp,v 1.4 2006/01/03 12:22:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objmessagehdlr.cpp,v 1.5 2006/04/10 16:15:21 bzfpfend Exp $"
 
 /**@file   objmessagehdlr.cpp
  * @brief  C++ wrapper for message handlers
@@ -130,10 +130,10 @@ SCIP_RETCODE SCIPcreateObjMessagehdlr(
 
    /* create message handler */
    SCIP_CALL( SCIPcreateMessagehdlr(messagehdlr, objmessagehdlr->scip_bufferedoutput_,
-                  messagehdlrErrorObj, messagehdlrWarningObj, messagehdlrDialogObj, messagehdlrInfoObj,
-                  messagehdlrdata) );
+         messagehdlrErrorObj, messagehdlrWarningObj, messagehdlrDialogObj, messagehdlrInfoObj,
+         messagehdlrdata) ); /*lint !e429*/
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e429*/
 }
 
 /** destroys the message handler that was created by SCIPcreateObjMessagehdlr();
@@ -157,7 +157,7 @@ SCIP_RETCODE SCIPfreeObjMessagehdlr(
 
    /* free message handler data */
    delete messagehdlrdata;
-   SCIPmessagehdlrSetData(*messagehdlr, NULL);
+   SCIP_CALL( SCIPmessagehdlrSetData(*messagehdlr, NULL) ); /*lint !e64*/
 
    /* free message handler */
    SCIP_CALL( SCIPfreeMessagehdlr(messagehdlr) );

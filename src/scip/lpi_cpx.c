@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.105 2006/04/05 16:17:15 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.106 2006/04/10 16:15:26 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -513,7 +513,7 @@ int getIntParam(SCIP_LPI* lpi, const int param)
 
    SCIPerrorMessage("unknown CPLEX integer parameter\n");
    SCIPABORT();
-   return 0;
+   return 0; /*lint !e527*/
 }
 
 /** gets a single double parameter value */
@@ -530,7 +530,7 @@ double getDblParam(SCIP_LPI* lpi, const int param)
 
    SCIPerrorMessage("unknown CPLEX double parameter\n");
    SCIPABORT();
-   return 0.0;
+   return 0.0; /*lint !e527*/
 }
 
 /** sets a single integer parameter value */
@@ -593,7 +593,7 @@ int cpxObjsen(SCIP_OBJSEN objsen)
    default:
       SCIPerrorMessage("invalid objective sense\n");
       SCIPABORT();
-      return 0;
+      return 0; /*lint !e527*/
    }
 }
 

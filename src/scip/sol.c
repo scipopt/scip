@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.75 2006/03/09 17:31:21 bzfberth Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.76 2006/04/10 16:15:28 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -148,7 +148,7 @@ SCIP_Real solGetArrayVal(
       default:
          SCIPerrorMessage("unknown solution origin <%d>\n", sol->solorigin);
          SCIPABORT();
-         return 0.0;
+         return 0.0; /*lint !e527*/
       }
    }
 }
@@ -663,9 +663,9 @@ SCIP_RETCODE SCIPsolSetVal(
 
             /* update objective: an unknown solution value does not count towards the objective */
             obj = SCIPvarGetObj(var);
-            if( oldval != SCIP_UNKNOWN )
+            if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
                sol->obj -= obj * oldval;
-            if( val != SCIP_UNKNOWN )
+            if( val != SCIP_UNKNOWN ) /*lint !e777*/
                sol->obj += obj * val;
 
             solStamp(sol, stat, tree);
@@ -687,9 +687,9 @@ SCIP_RETCODE SCIPsolSetVal(
 
          /* update objective: an unknown solution value does not count towards the objective */
          obj = SCIPvarGetObj(var);
-         if( oldval != SCIP_UNKNOWN )
+         if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
             sol->obj -= obj * oldval;
-         if( val != SCIP_UNKNOWN )
+         if( val != SCIP_UNKNOWN ) /*lint !e777*/
             sol->obj += obj * val;
 
          solStamp(sol, stat, tree);
@@ -710,7 +710,7 @@ SCIP_RETCODE SCIPsolSetVal(
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
       assert(!SCIPsetIsZero(set, SCIPvarGetAggrScalar(var)));
       return SCIPsolSetVal(sol, set, stat, tree, SCIPvarGetAggrVar(var),
-         val == SCIP_UNKNOWN ? val : (val - SCIPvarGetAggrConstant(var))/SCIPvarGetAggrScalar(var));
+         val == SCIP_UNKNOWN ? val : (val - SCIPvarGetAggrConstant(var))/SCIPvarGetAggrScalar(var)); /*lint !e777*/
 
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot set solution value for multiple aggregated variable\n");
@@ -718,7 +718,7 @@ SCIP_RETCODE SCIPsolSetVal(
 
    case SCIP_VARSTATUS_NEGATED:
       return SCIPsolSetVal(sol, set, stat, tree, SCIPvarGetNegationVar(var), 
-         val == SCIP_UNKNOWN ? val : SCIPvarGetNegationConstant(var) - val);
+         val == SCIP_UNKNOWN ? val : SCIPvarGetNegationConstant(var) - val); /*lint !e777*/
       
    default:
       SCIPerrorMessage("unknown variable status\n");
@@ -835,7 +835,7 @@ SCIP_Real SCIPsolGetVal(
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
       solval = SCIPsolGetVal(sol, set, stat, SCIPvarGetAggrVar(var));
-      if( solval == SCIP_UNKNOWN )
+      if( solval == SCIP_UNKNOWN ) /*lint !e777*/
          return SCIP_UNKNOWN;
       if( SCIPsetIsInfinity(set, solval) || SCIPsetIsInfinity(set, -solval) )
       {
@@ -854,7 +854,7 @@ SCIP_Real SCIPsolGetVal(
       for( i = 0; i < nvars; ++i )
       {
          solval = SCIPsolGetVal(sol, set, stat, vars[i]);
-         if( solval == SCIP_UNKNOWN )
+         if( solval == SCIP_UNKNOWN ) /*lint !e777*/
             return SCIP_UNKNOWN;
          if( SCIPsetIsInfinity(set, solval) || SCIPsetIsInfinity(set, -solval) )
          {
@@ -869,7 +869,7 @@ SCIP_Real SCIPsolGetVal(
 
    case SCIP_VARSTATUS_NEGATED:
       solval = SCIPsolGetVal(sol, set, stat, SCIPvarGetNegationVar(var));
-      if( solval == SCIP_UNKNOWN )
+      if( solval == SCIP_UNKNOWN ) /*lint !e777*/
          return SCIP_UNKNOWN;
       if( SCIPsetIsInfinity(set, solval) )
          return -SCIPsetInfinity(set);
@@ -880,7 +880,7 @@ SCIP_Real SCIPsolGetVal(
    default:
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
-      return 0.0;
+      return 0.0; /*lint !e527*/
    }
 }
 
@@ -915,7 +915,7 @@ void SCIPsolUpdateVarObj(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
    solval = solGetArrayVal(sol, var);
-   if( solval != SCIP_UNKNOWN )
+   if( solval != SCIP_UNKNOWN ) /*lint !e777*/
       sol->obj += (newobj - oldobj) * solval;
 }
 
@@ -957,7 +957,7 @@ SCIP_RETCODE SCIPsolCheck(
 
          var = prob->vars[v];
          solval = SCIPsolGetVal(sol, set, stat, var);
-         if( solval != SCIP_UNKNOWN )
+         if( solval != SCIP_UNKNOWN ) /*lint !e777*/
          {
             SCIP_Real lb;
             SCIP_Real ub;
@@ -1023,7 +1023,7 @@ SCIP_RETCODE SCIPsolRound(
       solval = solGetArrayVal(sol, var);
       
       /* solutions with unknown entries cannot be rounded */
-      if( solval == SCIP_UNKNOWN )
+      if( solval == SCIP_UNKNOWN ) /*lint !e777*/
          break;
 
       /* if solution value is already integral, there is nothing to do */
@@ -1080,7 +1080,7 @@ void SCIPsolUpdateVarsum(
    {
       assert(prob->vars[v] != NULL);
       solval = SCIPsolGetVal(sol, set, stat, prob->vars[v]);
-      if( solval != SCIP_UNKNOWN )
+      if( solval != SCIP_UNKNOWN ) /*lint !e777*/
       {
          prob->vars[v]->primsolavg *= (1.0-weight);
          prob->vars[v]->primsolavg += weight*solval;
@@ -1127,7 +1127,7 @@ SCIP_RETCODE SCIPsolRetransform(
       if( !SCIPsetIsZero(set, solvals[v]) )
       {
          SCIP_CALL( solSetArrayVal(sol, set, vars[v], solvals[v]) );
-         if( solvals[v] != SCIP_UNKNOWN )
+         if( solvals[v] != SCIP_UNKNOWN ) /*lint !e777*/
             sol->obj += SCIPvarGetObj(vars[v]) * solvals[v];
       }
    }
@@ -1201,7 +1201,7 @@ SCIP_RETCODE SCIPsolPrint(
       if( printzeros || !SCIPsetIsZero(set, solval) )
       {
          SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
-         if( solval == SCIP_UNKNOWN )
+         if( solval == SCIP_UNKNOWN ) /*lint !e777*/
             SCIPmessageFPrintInfo(file, "              unknown");
          else if( SCIPsetIsInfinity(set, solval) )
             SCIPmessageFPrintInfo(file, "            +infinity");
@@ -1219,7 +1219,7 @@ SCIP_RETCODE SCIPsolPrint(
       if( printzeros || !SCIPsetIsZero(set, solval) )
       {
          SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(prob->vars[v]));
-         if( solval == SCIP_UNKNOWN )
+         if( solval == SCIP_UNKNOWN ) /*lint !e777*/
             SCIPmessageFPrintInfo(file, "              unknown");
          else if( SCIPsetIsInfinity(set, solval) )
             SCIPmessageFPrintInfo(file, "            +infinity");
@@ -1245,7 +1245,7 @@ SCIP_RETCODE SCIPsolPrint(
          if( printzeros || !SCIPsetIsZero(set, solval) )
          {
             SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(transprob->fixedvars[v]));
-            if( solval == SCIP_UNKNOWN )
+            if( solval == SCIP_UNKNOWN ) /*lint !e777*/
                SCIPmessageFPrintInfo(file, "              unknown");
             else if( SCIPsetIsInfinity(set, solval) )
                SCIPmessageFPrintInfo(file, "            +infinity");
@@ -1266,7 +1266,7 @@ SCIP_RETCODE SCIPsolPrint(
          if( printzeros || !SCIPsetIsZero(set, solval) )
          {
             SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(transprob->vars[v]));
-            if( solval == SCIP_UNKNOWN )
+            if( solval == SCIP_UNKNOWN ) /*lint !e777*/
                SCIPmessageFPrintInfo(file, "              unknown");
             else if( SCIPsetIsInfinity(set, solval) )
                SCIPmessageFPrintInfo(file, "            +infinity");

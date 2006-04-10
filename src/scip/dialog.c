@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.31 2006/03/09 12:52:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.32 2006/04/10 16:15:24 bzfpfend Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -242,7 +242,7 @@ SCIP_RETCODE readInputLine(
 
       /* copy the next input line into the input buffer */
       (void)strncpy(&dialoghdlr->buffer[dialoghdlr->bufferpos], dialoghdlr->inputlist->inputline,
-         dialoghdlr->buffersize - dialoghdlr->bufferpos);
+         (size_t)(dialoghdlr->buffersize - dialoghdlr->bufferpos));
       dialoghdlr->buffer[dialoghdlr->buffersize-1] = '\0';
 
       /* free the input line */

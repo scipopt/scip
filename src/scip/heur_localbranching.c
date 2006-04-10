@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.10 2006/03/16 16:31:17 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.11 2006/04/10 16:15:25 bzfpfend Exp $"
 
 /**@file   heur_localbranching.c
  * @brief  localbranching primal heuristic
@@ -284,7 +284,7 @@ SCIP_RETCODE createNewSol(
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_HEURFREE(heurFreeLocalbranching)
-{    
+{  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
    assert( heur != NULL );
@@ -305,7 +305,7 @@ SCIP_DECL_HEURFREE(heurFreeLocalbranching)
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
 SCIP_DECL_HEURINIT(heurInitLocalbranching)
-{  
+{  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
    assert( heur != NULL );
@@ -341,7 +341,7 @@ SCIP_DECL_HEURINIT(heurInitLocalbranching)
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecLocalbranching)
-{ 
+{  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP* subscip;                            /* the subproblem created by localbranching              */
    SCIP_VAR** subvars;                       /* subproblem's variables                                */
@@ -350,6 +350,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIP_Longint maxnnodes;                   /* maximum number of subnodes                            */
    SCIP_Longint nsubnodes;                   /* nodelimit for subscip                                 */
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem                   */
+   SCIP_Real upperbound;
    SCIP_Real memorylimit;
    int nvars;
    int i;
@@ -401,10 +402,10 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    *result = SCIP_DIDNOTRUN;
 
    /* calculate the maximal number of branching nodes until heuristic is aborted */
-   maxnnodes = heurdata->nodesquot * SCIPgetNNodes(scip);
+   maxnnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
 
    /* reward local branching if it succeeded often */
-   maxnnodes *= 1.0 + 2.0 * (SCIPheurGetNBestSolsFound(heur) + 1.0)/(SCIPheurGetNCalls(heur) + 1.0);
+   maxnnodes = (SCIP_Longint)(maxnnodes * (1.0 + 2.0*(SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur)+1.0)));
    maxnnodes -= 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-MIP as 100 nodes */
    maxnnodes += heurdata->nodesofs;
 
@@ -476,12 +477,13 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
  
    /* copy the original problem and add the local branching constraint */
-   createSubproblem(scip, subscip, subvars);
-   addLocalBranchingConstraint(scip, subscip, subvars, heurdata);
+   SCIP_CALL( createSubproblem(scip, subscip, subvars) );
+   SCIP_CALL( addLocalBranchingConstraint(scip, subscip, subvars, heurdata) );
 
    /* add an objective cutoff */
-   cutoff = (1-heurdata->minimprove)*SCIPgetUpperbound(scip) - heurdata->minimprove*SCIPgetLowerbound(scip);
-   cutoff = MIN( SCIPgetUpperbound(scip) - SCIPsumepsilon(scip), cutoff );
+   cutoff = (1.0-heurdata->minimprove)*SCIPgetUpperbound(scip) - heurdata->minimprove*SCIPgetLowerbound(scip);
+   upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
+   cutoff = MIN(upperbound, cutoff);
    SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
 
    /* solve the subproblem */  
@@ -528,12 +530,19 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    case SCIP_STATUS_INFEASIBLE:
    case SCIP_STATUS_INFORUNBD:
       heurdata->emptyneighborhoodsize = heurdata->curneighborhoodsize;
-      heurdata->curneighborhoodsize *= 1.5;
+      heurdata->curneighborhoodsize += heurdata->curneighborhoodsize/2;
       heurdata->curneighborhoodsize = MAX(heurdata->curneighborhoodsize, heurdata->emptyneighborhoodsize + 2);
       heurdata->callstatus = EXECUTE;
       SCIPdebugMessage(" -> neighborhood is empty: increased neighborhood to %d\n", heurdata->curneighborhoodsize);
       break;
 
+   case SCIP_STATUS_UNKNOWN:
+   case SCIP_STATUS_USERINTERRUPT:
+   case SCIP_STATUS_TIMELIMIT:
+   case SCIP_STATUS_MEMLIMIT:
+   case SCIP_STATUS_GAPLIMIT:
+   case SCIP_STATUS_SOLLIMIT:
+   case SCIP_STATUS_UNBOUNDED:
    default:
       heurdata->callstatus = WAITFORNEWSOL;
       SCIPdebugMessage(" -> unexpected sub-MIP status <%d>: waiting for new solution\n", SCIPgetStatus(subscip));

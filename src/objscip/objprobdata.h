@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.h,v 1.16 2006/01/18 14:53:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprobdata.h,v 1.17 2006/04/10 16:15:22 bzfpfend Exp $"
 
 /**@file   objprobdata.h
  * @brief  C++ wrapper for user problem data
@@ -63,7 +63,7 @@ public:
    virtual SCIP_RETCODE scip_delorig(
       SCIP*              scip                /**< SCIP data structure */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
 
@@ -85,7 +85,7 @@ public:
       ObjProbData**      objprobdata,        /**< pointer to store the transformed problem data object */
       SCIP_Bool*         deleteobject        /**< pointer to store whether SCIP should delete the object after solving */
       )
-   {
+   {  /*lint --e{715}*/
       assert(objprobdata != NULL);
       assert(deleteobject != NULL);
 
@@ -109,7 +109,7 @@ public:
    virtual SCIP_RETCODE scip_deltrans(
       SCIP*              scip                /**< SCIP data structure */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
 
@@ -121,7 +121,7 @@ public:
    virtual SCIP_RETCODE scip_initsol(
       SCIP*              scip                /**< SCIP data structure */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
 
@@ -134,7 +134,7 @@ public:
    virtual SCIP_RETCODE scip_exitsol(
       SCIP*              scip                /**< SCIP data structure */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
 

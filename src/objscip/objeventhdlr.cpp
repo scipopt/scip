@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objeventhdlr.cpp,v 1.5 2006/01/03 12:22:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objeventhdlr.cpp,v 1.6 2006/04/10 16:15:21 bzfpfend Exp $"
 
 /**@file   objeventhdlr.cpp
  * @brief  C++ wrapper for event handlers
@@ -67,7 +67,7 @@ SCIP_DECL_EVENTFREE(eventhdlrFreeObj)
 
    /* free eventhdlr data */
    delete eventhdlrdata;
-   SCIPeventhdlrSetData(eventhdlr, NULL);
+   SCIPeventhdlrSetData(eventhdlr, NULL); /*lint !e64*/
    
    return SCIP_OKAY;
 }
@@ -199,9 +199,9 @@ SCIP_RETCODE SCIPincludeObjEventhdlr(
    SCIP_CALL( SCIPincludeEventhdlr(scip, objeventhdlr->scip_name_, objeventhdlr->scip_desc_,
          eventhdlrFreeObj, eventhdlrInitObj, eventhdlrExitObj, 
          eventhdlrInitsolObj, eventhdlrExitsolObj, eventhdlrDeleteObj, eventhdlrExecObj,
-         eventhdlrdata) );
+         eventhdlrdata) ); /*lint !e429*/
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e429*/
 }
 
 /** returns the eventhdlr object of the given name, or NULL if not existing */
@@ -215,7 +215,7 @@ scip::ObjEventhdlr* SCIPfindObjEventhdlr(
 
    eventhdlr = SCIPfindEventhdlr(scip, name);
    if( eventhdlr == NULL )
-      return NULL;
+      return NULL; /*lint !e64*/
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.40 2006/03/29 13:39:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.41 2006/04/10 16:15:21 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -67,7 +67,7 @@ public:
    const int scip_eagerfreq_;
 
    /** maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-   const SCIP_Bool scip_maxprerounds_;
+   const int scip_maxprerounds_;
 
    /** should separation method be delayed, if other separators found cuts? */
    const SCIP_Bool scip_delaysepa_;
@@ -124,7 +124,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_CONSHDLR*     conshdlr            /**< the constraint handler itself */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -135,7 +135,7 @@ public:
       SCIP_CONS**        conss,              /**< array of constraints in transformed problem */
       int                nconss              /**< number of constraints in transformed problem */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -146,7 +146,7 @@ public:
       SCIP_CONS**        conss,              /**< array of constraints in transformed problem */
       int                nconss              /**< number of constraints in transformed problem */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
 
@@ -170,7 +170,7 @@ public:
       int                nconss,             /**< number of constraints in transformed problem */
       SCIP_RESULT*       result              /**< pointer to store the result of the callback method */
       )
-   {
+   {  /*lint --e{715}*/
       assert(result != NULL);
 
       *result = SCIP_FEASIBLE;
@@ -198,7 +198,7 @@ public:
       int                nconss,             /**< final number of constraints in transformed problem */
       SCIP_RESULT*       result              /**< pointer to store the result of the callback method */
       )
-   {
+   {  /*lint --e{715}*/
       assert(result != NULL);
 
       *result = SCIP_FEASIBLE;
@@ -217,7 +217,7 @@ public:
       SCIP_CONS**        conss,              /**< array of constraints of the constraint handler */
       int                nconss              /**< number of constraints of the constraint handler */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -233,7 +233,7 @@ public:
       SCIP_CONS**        conss,              /**< array of constraints of the constraint handler */
       int                nconss              /**< number of constraints of the constraint handler */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
    
@@ -247,7 +247,7 @@ public:
       SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
       SCIP_CONSDATA**    consdata            /**< pointer to the constraint data to free */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
 
@@ -270,7 +270,7 @@ public:
       SCIP_CONS**        conss,              /**< array of constraints to process */
       int                nconss              /**< number of constraints to process */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
 
@@ -300,7 +300,7 @@ public:
       int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
       SCIP_RESULT*       result              /**< pointer to store the result of the separation call */
       )
-   {
+   {  /*lint --e{715}*/
       assert(result != NULL);
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
@@ -334,7 +334,7 @@ public:
       SCIP_SOL*          sol,                /**< primal solution that should be separated */
       SCIP_RESULT*       result              /**< pointer to store the result of the separation call */
       )
-   {
+   {  /*lint --e{715}*/
       assert(result != NULL);
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
@@ -472,7 +472,7 @@ public:
       int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
       SCIP_RESULT*       result              /**< pointer to store the result of the propagation call */
       )
-   {
+   {  /*lint --e{715}*/
       assert(result != NULL);
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
@@ -517,7 +517,7 @@ public:
       int*               nchgsides,          /**< pointer to count total number of changed sides of all presolvers */
       SCIP_RESULT*       result              /**< pointer to store the result of the presolving call */
       )
-   {
+   {  /*lint --e{715}*/
       assert(result != NULL);
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
@@ -564,7 +564,7 @@ public:
       SCIP_RESULT*       result              /**< pointer to store the result of the propagation conflict resolving resolving
                                               *   call */
       )
-   {
+   {  /*lint --e{715}*/
       assert(result != NULL);
       *result = SCIP_DIDNOTFIND;
       return SCIP_OKAY;
@@ -641,7 +641,7 @@ public:
       SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
       SCIP_CONS*         cons                /**< the constraint that has been activated */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
 
@@ -658,7 +658,7 @@ public:
       SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
       SCIP_CONS*         cons                /**< the constraint that has been deactivated */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
 
@@ -675,7 +675,7 @@ public:
       SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
       SCIP_CONS*         cons                /**< the constraint that has been enabled */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
 
@@ -692,7 +692,7 @@ public:
       SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
       SCIP_CONS*         cons                /**< the constraint that has been disabled */
       )
-   {
+   {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
 
@@ -706,7 +706,7 @@ public:
       SCIP_CONS*         cons,               /**< the constraint that should be displayed */
       FILE*              file                /**< the text file to store the information into */
       )
-   {
+   {  /*lint --e{715}*/
       fprintf(file, "constraint handler <%s> doesn't support printing constraints\n", SCIPconshdlrGetName(conshdlr));
       return SCIP_OKAY;
    }

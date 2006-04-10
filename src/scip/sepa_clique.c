@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.25 2006/01/27 11:43:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.26 2006/04/10 16:15:27 bzfpfend Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -55,10 +55,10 @@ struct SCIP_SepaData
    SCIP_SOL*             sol;                /**< primal solution that is currently separated */
    SCIP_Real*            varsolvals;         /**< LP solution of binary variables (contained in a 3-clique in implgraph) */
    SCIP_Real             scaleval;           /**< factor for scaling weights */
+   SCIP_Longint          ncalls;             /**< number of calls to the clique separator */
    int                   maxtreenodes;       /**< maximal number of nodes in branch and bound tree (-1: no limit) */
    int                   maxsepacuts;        /**< maximal number of clique cuts separated per separation round (-1: no limit) */
    int                   maxzeroextensions;  /**< maximal number of zero-valued variables extending the clique (-1: no limit) */
-   int                   ncalls;             /**< number of calls to the clique separator */
    int                   ncuts;              /**< number of cuts found */
    SCIP_Bool             tcliquegraphloaded; /**< TRUE if tcliquegraph is allready loaded (tcliquegraph can be NULL),
                                               *   FALSE otherwise */
@@ -492,7 +492,7 @@ SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
    for( xi = 0; xi < nvars; ++xi )
    {
       SCIP_VAR* x;
-      int xvalue;
+      SCIP_Bool xvalue;
 
       x = vars[xi];
       for( xvalue = 0; xvalue < 2; xvalue++ )
@@ -515,7 +515,7 @@ SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
          for( yk = 0; yk < xnbinimpls-1; ++yk ) /* at least one variable must be left over for z */
          {
             SCIP_VAR* y;
-            int yvalue;
+            SCIP_Bool yvalue;
             int yi;
             int zk;
 
@@ -523,7 +523,7 @@ SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
             yi = SCIPvarGetProbindex(y);
 
             /* check, whether the implicant is y == 0 or y == 1 (y conflicts with x == xvalue) */
-            yvalue = (int)(ximpltypes[yk] == SCIP_BOUNDTYPE_UPPER);
+            yvalue = (ximpltypes[yk] == SCIP_BOUNDTYPE_UPPER);
             if( SCIPvarGetNCliques(y, yvalue) == 0 )
                continue;
 
@@ -531,14 +531,14 @@ SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
             for( zk = yk+1; zk < xnbinimpls; ++zk )
             {
                SCIP_VAR* z;
-               int zvalue;
+               SCIP_Bool zvalue;
                int zi;
 
                z = ximplvars[zk];
                zi = SCIPvarGetProbindex(z);
 
                /* check, whether the implicant is z == 0 or z == 1 (z conflicts with x == xvalue) */
-               zvalue = (int)(ximpltypes[zk] == SCIP_BOUNDTYPE_UPPER);
+               zvalue = (ximpltypes[zk] == SCIP_BOUNDTYPE_UPPER);
 
                /* check whether y and z have a common clique stored in the clique table
                 * (the ones in the implication graph have already been processed by tcliquegraphAddImplicsVars())
@@ -930,7 +930,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          assert(vars != NULL);
 
          /* create the cut */
-         sprintf(cutname, "clique%d_%d", sepadata->ncalls, sepadata->ncuts);
+         sprintf(cutname, "clique%"SCIP_LONGINT_FORMAT"_%d", sepadata->ncalls, sepadata->ncuts);
          SCIP_CALL_ABORT( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
 
          SCIP_CALL_ABORT( SCIPcacheRowExtensions(scip, cut) );
