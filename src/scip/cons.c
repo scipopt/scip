@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.143 2006/04/06 18:29:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.144 2006/04/10 10:37:55 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1281,7 +1281,7 @@ SCIP_RETCODE conshdlrActivateCons(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_CONS*            cons,               /**< constraint to add */
    int                   depth,              /**< depth in the tree where the activation takes place, or -1 for global problem */
-   SCIP_Bool             currentnode         /**< does the constraint activation take place at the current node? */
+   SCIP_Bool             focusnode           /**< does the constraint activation take place at the focus node? */
    )
 {
    assert(conshdlr != NULL);
@@ -1305,8 +1305,8 @@ SCIP_RETCODE conshdlrActivateCons(
    assert(cons->propconsspos == -1);
    assert(depth >= -1);
 
-   SCIPdebugMessage("activate constraint <%s> in constraint handler <%s> (depth %d, current=%d)\n",
-      cons->name, conshdlr->name, depth, currentnode);
+   SCIPdebugMessage("activate constraint <%s> in constraint handler <%s> (depth %d, focus=%d)\n",
+      cons->name, conshdlr->name, depth, focusnode);
 
    /* activate constraint, switch positions with first inactive constraint */
    cons->active = TRUE;
@@ -1325,8 +1325,8 @@ SCIP_RETCODE conshdlrActivateCons(
       SCIP_CALL( conshdlrAddCheckcons(conshdlr, set, cons) );
    }
 
-   /* add constraint to the initconss array if the constraint is initial and added to the current node */
-   if( currentnode && cons->initial )
+   /* add constraint to the initconss array if the constraint is initial and added to the focus node */
+   if( focusnode && cons->initial )
    {
       SCIP_CALL( conshdlrAddInitcons(conshdlr, set, cons) );
    }
@@ -1493,7 +1493,7 @@ SCIP_RETCODE conshdlrProcessUpdates(
          assert(!cons->updatefree);
 
          /* the activation depth was already stored in SCIPconsActivate() */
-         SCIP_CALL( conshdlrActivateCons(conshdlr, set, stat, cons, cons->activedepth, cons->updateactcurrent) );
+         SCIP_CALL( conshdlrActivateCons(conshdlr, set, stat, cons, cons->activedepth, cons->updateactfocus) );
          assert(cons->active);
          cons->updateactivate = FALSE;
       }
@@ -3838,7 +3838,7 @@ SCIP_RETCODE SCIPconssetchgAddAddedCons(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_CONS*            cons,               /**< added constraint */
    int                   depth,              /**< depth of constraint set change's node */
-   SCIP_Bool             currentnode,        /**< does the constraint set change belong to the current node? */
+   SCIP_Bool             focusnode,          /**< does the constraint set change belong to the focus node? */
    SCIP_Bool             active              /**< is the constraint set change currently active? */
    )
 {
@@ -3865,7 +3865,7 @@ SCIP_RETCODE SCIPconssetchgAddAddedCons(
    /* activate constraint, if node is active */
    if( active && !SCIPconsIsActive(cons) )
    {
-      SCIP_CALL( SCIPconsActivate(cons, set, stat, depth, currentnode) );
+      SCIP_CALL( SCIPconsActivate(cons, set, stat, depth, focusnode) );
       assert(SCIPconsIsActive(cons));
          
       /* remember, that this constraint set change data was resposible for the constraint's addition */
@@ -3987,7 +3987,7 @@ SCIP_RETCODE SCIPconssetchgApply(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    int                   depth,              /**< depth of constraint set change's node */
-   SCIP_Bool             currentnode         /**< does the constraint set change belong to the current node? */
+   SCIP_Bool             focusnode           /**< does the constraint set change belong to the focus node? */
    )
 {
    SCIP_CONS* cons;
@@ -4018,7 +4018,7 @@ SCIP_RETCODE SCIPconssetchgApply(
          assert(cons->addarraypos == -1);
 
          /* activate constraint */
-         SCIP_CALL( SCIPconsActivate(cons, set, stat, depth, currentnode) );
+         SCIP_CALL( SCIPconsActivate(cons, set, stat, depth, focusnode) );
          assert(cons->active);
          assert(!cons->update);
          
@@ -4309,7 +4309,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->updatepropdisable = FALSE;
    (*cons)->updateobsolete = FALSE;
    (*cons)->updatefree = FALSE;
-   (*cons)->updateactcurrent = FALSE;
+   (*cons)->updateactfocus = FALSE;
 
    /* capture constraint */
    SCIPconsCapture(*cons);
@@ -4753,7 +4753,7 @@ SCIP_RETCODE SCIPconsActivate(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    int                   depth,              /**< depth in the tree where the constraint activation takes place, or -1 for global problem */
-   SCIP_Bool             currentnode         /**< does the constraint activation take place at the current node? */
+   SCIP_Bool             focusnode           /**< does the constraint activation take place at the focus node? */
    )
 {
    assert(cons != NULL);
@@ -4774,13 +4774,13 @@ SCIP_RETCODE SCIPconsActivate(
          cons->name, cons->conshdlr->name, depth);
       cons->updateactivate = TRUE;
       cons->activedepth = depth;
-      cons->updateactcurrent = currentnode;
+      cons->updateactfocus = focusnode;
       SCIP_CALL( conshdlrAddUpdateCons(cons->conshdlr, set, cons) );
       assert(cons->update);
    }
    else
    {
-      SCIP_CALL( conshdlrActivateCons(cons->conshdlr, set, stat, cons, depth, currentnode) );
+      SCIP_CALL( conshdlrActivateCons(cons->conshdlr, set, stat, cons, depth, focusnode) );
       assert(cons->active);
    }
 

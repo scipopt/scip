@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.40 2006/03/29 13:39:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.41 2006/04/10 10:37:55 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -84,7 +84,7 @@ struct SCIP_Cons
    unsigned int          updatepropdisable:1;/**< TRUE iff constraint's propagation has to be disabled in update phase */
    unsigned int          updateobsolete:1;   /**< TRUE iff obsolete status of constraint has to be updated in update phase */
    unsigned int          updatefree:1;       /**< TRUE iff constraint has to be freed in update phase */
-   unsigned int          updateactcurrent:1; /**< TRUE iff delayed constraint activation happened at current node */
+   unsigned int          updateactfocus:1;   /**< TRUE iff delayed constraint activation happened at focus node */
 };
 
 /** tracks additions and removals of the set of active constraints */
