@@ -101,6 +101,8 @@ fixed bugs:
   the parameter settings
 - fixed bug with missing LP size updates after pricing or cut separation in probing [thanks to Marc Nuenkesser]
 - fixed bug that locally valid varbound constraints produce VLB/VUB entries [thanks to Anders Schack-Nielsen]
+- fixed bug in knapsack constraint handler where a modifiable constraint may be declared redundant
+- fixed bug in knapsack presolving with redundancy check after applyFixings() [thanks to Anders Schack-Nielsen]
 
 
 SCIP version 0.81

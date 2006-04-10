@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.128 2006/03/29 13:39:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.129 2006/04/10 09:59:30 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -1968,7 +1968,8 @@ SCIP_RETCODE propagateCons(
       /* check, if weights of fixed variables already exceeds knapsack capacity */
       if( consdata->capacity < onesweightsum )
       {
-         SCIPdebugMessage(" -> cutoff - fixed weight: %"SCIP_LONGINT_FORMAT", capacity: %"SCIP_LONGINT_FORMAT"\n", onesweightsum, consdata->capacity);
+         SCIPdebugMessage(" -> cutoff - fixed weight: %"SCIP_LONGINT_FORMAT", capacity: %"SCIP_LONGINT_FORMAT"\n", 
+            onesweightsum, consdata->capacity);
             
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
          *cutoff = TRUE;
@@ -2022,7 +2023,7 @@ SCIP_RETCODE propagateCons(
    while( consdata->onesweightsum > onesweightsum );
 
    /* if the remaining (potentially unfixed) variables would fit all into the knapsack, the knapsack is now redundant */
-   if( consdata->weightsum - zerosweightsum <= consdata->capacity )
+   if( !SCIPconsIsModifiable(cons) && consdata->weightsum - zerosweightsum <= consdata->capacity )
    {
       SCIPdebugMessage(" -> knapsack constraint <%s> is redundant: weightsum=%"SCIP_LONGINT_FORMAT", zerosweightsum=%"SCIP_LONGINT_FORMAT", capacity=%"SCIP_LONGINT_FORMAT"\n",
          SCIPconsGetName(cons), consdata->weightsum, zerosweightsum, consdata->capacity);
@@ -3575,6 +3576,15 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
 
       if( !SCIPconsIsModifiable(cons) )
       {
+         /* check again for redundancy (applyFixings() might have decreased weightsum due to fixed-to-zero vars) */
+         if( consdata->weightsum <= consdata->capacity )
+         {
+            SCIPdebugMessage(" -> knapsack constraint <%s> is redundant: weightsum=%"SCIP_LONGINT_FORMAT", capacity=%"SCIP_LONGINT_FORMAT"\n",
+               SCIPconsGetName(cons), consdata->weightsum, consdata->capacity);
+            SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+            continue;
+         }
+
          /* divide weights by their greatest common divisor */
          normalizeWeights(cons, nchgcoefs, nchgsides);
 
