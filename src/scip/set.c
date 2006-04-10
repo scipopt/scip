@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.172 2006/03/17 12:39:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.173 2006/04/10 11:31:41 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -103,7 +103,7 @@
 
 #define SCIP_DEFAULT_CONS_AGELIMIT            0 /**< maximum age an unnecessary constraint can reach before it is deleted
                                                  *   (0: dynamic adjustment, -1: constraints are never deleted) */
-#define SCIP_DEFAULT_CONS_OBSOLETEAGE         0 /**< age of a constraint after which it is marked obsolete
+#define SCIP_DEFAULT_CONS_OBSOLETEAGE        -1 /**< age of a constraint after which it is marked obsolete
                                                  *   (0: dynamic adjustment, -1: constraints are never marked obsolete) */
 
 

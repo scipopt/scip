@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.44 2006/04/10 09:15:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.45 2006/04/10 11:31:40 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -35,9 +35,9 @@
 #define BRANCHRULE_MAXDEPTH      -1
 #define BRANCHRULE_MAXBOUNDDIST  1.0
 
-#define DEFAULT_CONFLICTWEIGHT   0.0    /**< weight in score calculations for conflict score */
-#define DEFAULT_INFERENCEWEIGHT  0.0    /**< weight in score calculations for inference score */
-#define DEFAULT_CUTOFFWEIGHT     0.0    /**< weight in score calculations for cutoff score */
+#define DEFAULT_CONFLICTWEIGHT   0.01   /**< weight in score calculations for conflict score */
+#define DEFAULT_INFERENCEWEIGHT  0.0001 /**< weight in score calculations for inference score */
+#define DEFAULT_CUTOFFWEIGHT     0.0001 /**< weight in score calculations for cutoff score */
 #define DEFAULT_PSCOSTWEIGHT     1.0    /**< weight in score calculations for pseudo cost score */
 #define DEFAULT_MINRELIABLE      1.0    /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
 #define DEFAULT_MAXRELIABLE      8.0    /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */

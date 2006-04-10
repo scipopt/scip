@@ -62,6 +62,10 @@ parameters:
 - new parameter conflict/depthscorefac
 - parameter conflict/uselp replaced by conflict/useinflp and conflict/useboundlp
 - new parameter limits/stallnodes
+- changed default value of constraints/obsoleteage to -1
+- changed default value of branching/relpscost/conflictweight to 0.01
+- changed default value of branching/relpscost/inferenceweight to 0.0001
+- changed default value of branching/relpscost/cutoffweight to 0.0001
 
 features:
 - extensions to the LP are kept even if the LP is not solved at the current node; however, if the LP turned out to

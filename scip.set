@@ -103,8 +103,8 @@ conflict/scorefac = 0.98
 constraints/agelimit = 0
 
 # age of a constraint after which it is marked obsolete (0: dynamic, -1 do not mark constraints obsolete)
-# [type: int, range: [-1,2147483647], default: 0]
-constraints/obsoleteage = 0
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/obsoleteage = -1
 
 # verbosity level of output
 # [type: int, range: [0,5], default: 4]
@@ -1047,16 +1047,16 @@ branching/relpscost/maxdepth = -1
 branching/relpscost/maxbounddist = 1
 
 # weight in score calculations for conflict score
-# [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: 0]
-branching/relpscost/conflictweight = 0
+# [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: 0.01]
+branching/relpscost/conflictweight = 0.01
 
 # weight in score calculations for inference score
-# [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: 0]
-branching/relpscost/inferenceweight = 0
+# [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: 0.0001]
+branching/relpscost/inferenceweight = 0.0001
 
 # weight in score calculations for cutoff score
-# [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: 0]
-branching/relpscost/cutoffweight = 0
+# [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: 0.0001]
+branching/relpscost/cutoffweight = 0.0001
 
 # weight in score calculations for pseudo cost score
 # [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: 1]
