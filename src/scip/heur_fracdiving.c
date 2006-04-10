@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.44 2006/03/23 14:04:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.45 2006/04/10 09:15:26 bzfpfend Exp $"
 
 /**@file   heur_fracdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
@@ -313,18 +313,9 @@ SCIP_DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
    bestcandmayroundup = FALSE;
    startnlpcands = nlpcands;
    while( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
-      && (FALSE /*??????????????bestcandmayrounddown || bestcandmayroundup*/
-#if 1 /*?????????????????????*/
-         || divedepth < 10
+      && (divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
-         || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations && objval < searchbound)
-#else
-         || divedepth < maxdepth
-         || nlpcands <= startnlpcands - divedepth/2
-         || (nlpcands <= startnlpcands - divedepth/5 && divedepth < maxdivedepth
-            && heurdata->nlpiterations < maxnlpiterations && objval < searchbound)
-#endif
-          ) )
+         || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations && objval < searchbound)) )
    {
       SCIP_CALL( SCIPnewProbingNode(scip) );
       divedepth++;

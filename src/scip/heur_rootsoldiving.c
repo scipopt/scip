@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.31 2006/03/23 14:04:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.32 2006/04/10 09:15:26 bzfpfend Exp $"
 
 /**@file   heur_rootsoldiving.c
  * @brief  LP diving heuristic that changes variable's objective values using root LP solution as guide
@@ -278,18 +278,9 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    ncycles = 0;
    startnlpcands = nlpcands;
    while( !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0 && ncycles < 10
-      && (FALSE /*??????????????divedepth < 10*/
-#if 1 /*?????????????????????*/
-         || divedepth < 10
+      && (divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
-         || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations)
-#else
-         || divedepth < maxdepth
-         || nlpcands <= startnlpcands - divedepth/2
-         || (nlpcands <= startnlpcands - divedepth/5 && divedepth < maxdivedepth
-            && heurdata->nlpiterations < maxnlpiterations)
-#endif
-          ) )
+         || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations)) )
    {
       SCIP_Bool success;
       int hardroundingidx;

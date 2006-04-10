@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.43 2006/03/09 12:52:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.44 2006/04/10 09:15:25 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -358,8 +358,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
 
       /* calculate value used as reliability */
       prio = (maxnsblpiterations - nsblpiterations)/(nsblpiterations + 1.0);
-      prio = MIN(prio, 1.0); /*??????????????????????*/
-      prio = MAX(prio, (nlpiterationsquot - nsblpiterations)/(nsblpiterations + 1.0)); /*????????????????????*/
+      prio = MIN(prio, 1.0);
+      prio = MAX(prio, (nlpiterationsquot - nsblpiterations)/(nsblpiterations + 1.0));
       reliable = (1.0-prio) * branchruledata->minreliable + prio * branchruledata->maxreliable;
 
       /* search for the best pseudo cost candidate, while remembering unreliable candidates in a sorted buffer */
@@ -384,11 +384,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
          conflictscore = SCIPgetVarConflictScore(scip, lpcands[c]);
          inferencescore = SCIPgetVarAvgInferenceScore(scip, lpcands[c]);
          cutoffscore = SCIPgetVarAvgCutoffScore(scip, lpcands[c]);
-#if 0 /*????????????????????? PseudocostScore or PseudocostScoreCurrentRun? */
-         pscostscore = SCIPgetVarPseudocostScoreCurrentRun(scip, lpcands[c], lpcandssol[c]);
-#else
          pscostscore = SCIPgetVarPseudocostScore(scip, lpcands[c], lpcandssol[c]);
-#endif
          usesb = FALSE;
 
          /* don't use strong branching on variables that have already been initialized at the current node;
@@ -502,7 +498,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
          inititer = (int)(2*nlpiterations / nlps);
          inititer = (int)((SCIP_Real)inititer * (1.0 + 20.0/nodenum));
          inititer = MAX(inititer, 10);
-         inititer = MIN(inititer, 500 /*??????????????10000*/);
+         inititer = MIN(inititer, 500);
       }
       
       SCIPdebugMessage("strong branching (reliable=%g, %d/%d cands, %d uninit, maxcands=%d, maxlookahead=%g, inititer=%d, iters:%"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", basic:%d)\n",

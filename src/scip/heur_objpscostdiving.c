@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.31 2006/03/23 14:04:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.32 2006/04/10 09:15:26 bzfpfend Exp $"
 
 /**@file   heur_objpscostdiving.c
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
@@ -312,7 +312,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       maxdivedepth = (int)(heurdata->depthfacnosol * nvars);
    else
       maxdivedepth = (int)(heurdata->depthfac * nvars);
-   maxdivedepth = MIN(maxdivedepth, 10*maxdepth); /*????????????????????*/
+   maxdivedepth = MIN(maxdivedepth, 10*maxdepth);
 
 
    *result = SCIP_DIDNOTFIND;
@@ -342,18 +342,9 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    bestcandmayroundup = FALSE;
    startnlpcands = nlpcands;
    while( !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
-      && (FALSE /*??????????????bestcandmayrounddown || bestcandmayroundup*/
-#if 1 /*?????????????????????*/
-         || divedepth < 10
+      && (divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
-         || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations)
-#else
-         || divedepth < maxdepth
-         || nlpcands <= startnlpcands - divedepth/2
-         || (nlpcands <= startnlpcands - divedepth/5 && divedepth < maxdivedepth
-            && heurdata->nlpiterations < maxnlpiterations)
-#endif
-          ) )
+         || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations)) )
    {
       divedepth++;
 

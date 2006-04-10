@@ -45,6 +45,7 @@ plugins:
 - new methods SCIPgetNVarsXor() and SCIPgetVarsXor()
 - knapsack presolver now generates cliques in the clique table (this essentially solves neos1.mps)
 - LP and MPS file readers are now able to parse lazy constraints and user cuts sections
+- diving heuristics abort earlier (did not come back in reasonable time on fast0507)
 
 parameters:
 - new parameter constraints/linear/separateall
@@ -99,6 +100,7 @@ fixed bugs:
   marked as "initial" will be put to the LP relaxation (of the child nodes) even if separation is prohibited by
   the parameter settings
 - fixed bug with missing LP size updates after pricing or cut separation in probing [thanks to Marc Nuenkesser]
+- fixed bug that locally valid varbound constraints produce VLB/VUB entries [thanks to Anders Schack-Nielsen]
 
 
 SCIP version 0.81

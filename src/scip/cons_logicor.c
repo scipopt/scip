@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.100 2006/03/29 13:39:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.101 2006/04/10 09:15:25 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -34,15 +34,9 @@
 
 #define CONSHDLR_NAME          "logicor"
 #define CONSHDLR_DESC          "logic or constraints"
-#if 0 /*????????????????????*/
-#define CONSHDLR_SEPAPRIORITY   +800000 /**< priority of the constraint handler for separation */
-#define CONSHDLR_ENFOPRIORITY   +800000 /**< priority of the constraint handler for constraint enforcing */
-#define CONSHDLR_CHECKPRIORITY  -800000 /**< priority of the constraint handler for checking feasibility */
-#else
 #define CONSHDLR_SEPAPRIORITY    +10000 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY  -2000000 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY -2000000 /**< priority of the constraint handler for checking feasibility */
-#endif
 #define CONSHDLR_SEPAFREQ             0 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
@@ -715,37 +709,6 @@ SCIP_RETCODE checkCons(
    vars = consdata->vars;
    nvars = consdata->nvars;
    
-#if 0 /*????????????????????*/
-   /* if we should check the current LP or pseudo solution, look for a fixed-to-one variable in order to disable
-    * the constraint
-    */
-   if( sol == NULL )
-   {
-      for( v = 0; v < nvars; ++v )
-      {
-         if( SCIPvarGetLbLocal(vars[v]) > 0.5 )
-         {
-            SCIP_CONSHDLR* conshdlr;
-            SCIP_CONSHDLRDATA* conshdlrdata;
-
-            SCIPdebugMessage(" -> disabling constraint <%s> (variable <%s> fixed to 1.0)\n", 
-               SCIPconsGetName(cons), SCIPvarGetName(vars[v]));
-
-            /* the variable is fixed to one: disable the constraint; watch the feasible variable to reenable
-             * the constraint if it is no longer fixed to one
-             */
-            conshdlr = SCIPconsGetHdlr(cons);
-            conshdlrdata = SCIPconshdlrGetData(conshdlr);
-            assert(conshdlrdata != NULL);
-            /*???????????????SCIP_CALL( switchWatchedvars(scip, cons, conshdlrdata->eventhdlr, v, -1) );*/
-            SCIP_CALL( disableCons(scip, cons) );
-
-            return SCIP_OKAY;
-         }
-      }
-   }
-#endif
-
    /* calculate the constraint's activity */
    sum = 0.0;
    solval = 0.0;
