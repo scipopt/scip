@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_pricestore.h,v 1.12 2006/01/03 12:22:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_pricestore.h,v 1.13 2006/04/10 12:05:30 bzfpfend Exp $"
 
 /**@file   struct_pricestore.h
  * @brief  datastructures for storing priced variables
@@ -38,7 +38,7 @@ struct SCIP_Pricestore
 {
    SCIP_CLOCK*           probpricingtime;    /**< time needed to price existing problem variables */
    SCIP_VAR**            vars;               /**< array with priced variables with violated reduced costs sorted by score */
-   SCIP_Real*            scores;             /**< score for each priced variable (e.g. |redcost|/#nonzeros) */
+   SCIP_Real*            scores;             /**< score for each priced variable (e.g. |redcost|/no. of nonzeros) */
    SCIP_VAR**            bdviolvars;         /**< variables where zero violates the bounds */
    SCIP_Real*            bdviolvarslb;       /**< lower bounds of bdviolvars */
    SCIP_Real*            bdviolvarsub;       /**< upper bounds of bdbiolvars */
