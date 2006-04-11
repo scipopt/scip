@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.266 2006/04/10 16:15:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.267 2006/04/11 13:55:41 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -213,7 +213,7 @@ SCIP_Bool SCIPpressedCtrlC(
  * message output methods
  */
 
-/**@name Method Output Methods */
+/**@name Message Output Methods */
 /**@{ */
 
 /** creates a message handler; this method can already be called before SCIPcreate() */
