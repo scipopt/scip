@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.118 2006/04/10 16:15:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.119 2006/04/11 10:37:48 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -140,8 +140,8 @@
 
 
 
-#define CONFLICTSETSCORE(conflictset) (-(conflictset)->nbdchginfos - 100.0*(conflictset)->repropdepth \
-      - 1000.0*(conflictset)->validdepth)
+#define CONFLICTSETSCORE(conflictset) (-(conflictset)->nbdchginfos - 100*(conflictset)->repropdepth \
+      - 1000*(conflictset)->validdepth)
 
 
 
@@ -822,7 +822,7 @@ SCIP_Real conflictsetCalcScore(
 {
    assert(conflictset != NULL);
 
-   return CONFLICTSETSCORE(conflictset);
+   return (SCIP_Real)CONFLICTSETSCORE(conflictset);
 }
 
 /** adds a bound change to a conflict set */
