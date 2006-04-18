@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.4 2006/04/10 16:15:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.5 2006/04/18 17:03:01 bzfpfend Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @brief  constraint handler for bound disjunction constraints
@@ -440,7 +440,6 @@ SCIP_RETCODE applyGlobalBounds(
       SCIP_VAR* var;
 
       var = consdata->vars[v];
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
 
       if( consdata->boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
       {
@@ -450,6 +449,21 @@ SCIP_RETCODE applyGlobalBounds(
             return SCIP_OKAY;
          }
          else if( SCIPisFeasLT(scip, SCIPvarGetUbGlobal(var), consdata->bounds[v]) )
+         {
+            SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+         }
+         else
+            ++v;
+      }
+      else
+      {
+         assert(consdata->boundtypes[v] == SCIP_BOUNDTYPE_UPPER);
+         if( SCIPisFeasLE(scip, SCIPvarGetUbGlobal(var), consdata->bounds[v]) )
+         {
+            *redundant = TRUE;
+            return SCIP_OKAY;
+         }
+         else if( SCIPisFeasGT(scip, SCIPvarGetLbGlobal(var), consdata->bounds[v]) )
          {
             SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
          }
