@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.130 2006/04/10 16:15:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.131 2006/04/19 11:58:23 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -3072,7 +3072,7 @@ SCIP_RETCODE addCliques(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< knapsack constraint */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
-   int*                  nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
+   int*                  nbdchgs             /**< pointer to count the number of performed bound changes */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -3081,6 +3081,7 @@ SCIP_RETCODE addCliques(
    int i;
 
    assert(cutoff != NULL);
+   assert(nbdchgs != NULL);
 
    *cutoff = FALSE;
 
@@ -3107,16 +3108,19 @@ SCIP_RETCODE addCliques(
    if( ncliquevars >= 2 )
    {
       SCIP_Longint cliqueminweight;
+      int thisnbdchgs;
 
       /* add the clique to the clique table */
-      SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, cutoff, nbdchgs) );
+      SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, cutoff, &thisnbdchgs) );
+      *nbdchgs += thisnbdchgs;
 
       /* try to replace the last item in the clique by a different item to obtain a slightly different clique */
       cliqueminweight = consdata->weights[ncliquevars-2];
       for( i = ncliquevars; i < consdata->nvars && cliqueminweight + consdata->weights[i] > consdata->capacity; ++i )
       {
          cliquevars[ncliquevars-1] = consdata->vars[i];
-         SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, cutoff, nbdchgs) );
+         SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, cutoff, &thisnbdchgs) );
+         *nbdchgs += thisnbdchgs;
       }
    }
 
@@ -3546,7 +3550,8 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       consdata->presolved = TRUE;
 
       /* remove all fixed variables */
-      if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || *nfixedvars > oldnfixedvars )
+      if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || nnewchgbds > 0
+         || *nfixedvars > oldnfixedvars || *nchgbds > oldnchgbds )
       {
          SCIP_CALL( applyFixings(scip, cons) );
       }

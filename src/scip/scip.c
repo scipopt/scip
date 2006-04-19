@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.355 2006/04/10 16:15:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.356 2006/04/19 11:58:23 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4387,6 +4387,9 @@ SCIP_RETCODE initSolve(
    /* reset statistics for current branch and bound run */
    SCIPstatResetCurrentRun(scip->stat);
    SCIPstatEnforceLPUpdates(scip->stat);
+
+   /* LP is empty anyway; mark empty LP to be solved and update validsollp counter */
+   SCIP_CALL( SCIPlpReset(scip->lp, scip->mem->solvemem, scip->set, scip->stat) );
 
    /* update upper bound and cutoff bound due to objective limit in primal data */
    SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
