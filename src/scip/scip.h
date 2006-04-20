@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.267 2006/04/11 13:55:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.268 2006/04/20 09:55:28 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1710,13 +1710,19 @@ SCIP_RETCODE SCIPupdateNodeLowerbound(
 /**@name Solve Methods */
 /**@{ */
 
-/** presolves problem */
+/** initializes solving data structures and transforms problem */
+extern
+SCIP_RETCODE SCIPtransformProb(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** transforms and presolves problem */
 extern
 SCIP_RETCODE SCIPpresolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** presolves and solves problem */
+/** transforms, presolves, and solves problem */
 extern
 SCIP_RETCODE SCIPsolve(
    SCIP*                 scip                /**< SCIP data structure */

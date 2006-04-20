@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.356 2006/04/19 11:58:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.357 2006/04/20 09:55:27 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3756,16 +3756,14 @@ SCIP_RETCODE SCIPupdateNodeLowerbound(
  */
 
 /** initializes solving data structures and transforms problem */
-static
-SCIP_RETCODE transformProb(
+SCIP_RETCODE SCIPtransformProb(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    int h;
 
-   assert(scip != NULL);
-   assert(scip->mem != NULL);
-   assert(scip->stat != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPtransformProb", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
    assert(scip->stat->status == SCIP_STATUS_UNKNOWN);
    assert(scip->set->stage == SCIP_STAGE_PROBLEM);
 
@@ -4561,7 +4559,7 @@ SCIP_RETCODE freeTransform(
    return SCIP_OKAY;
 }
 
-/** presolves problem */
+/** transforms and presolves problem */
 SCIP_RETCODE SCIPpresolve(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -4582,7 +4580,7 @@ SCIP_RETCODE SCIPpresolve(
    {
    case SCIP_STAGE_PROBLEM:
       /* initialize solving data structures and transform problem */
-      SCIP_CALL( transformProb(scip) );
+      SCIP_CALL( SCIPtransformProb(scip) );
       assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
 
       /*lint -fallthrough*/
@@ -4698,7 +4696,7 @@ SCIP_RETCODE SCIPpresolve(
    return SCIP_OKAY;
 }
 
-/** presolves and solves problem */
+/** transforms, presolves, and solves problem */
 SCIP_RETCODE SCIPsolve(
    SCIP*                 scip                /**< SCIP data structure */
    )
