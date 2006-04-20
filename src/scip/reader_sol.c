@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sol.c,v 1.3 2006/04/10 16:15:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_sol.c,v 1.4 2006/04/20 16:24:25 bzfpfend Exp $"
 
 /**@file   reader_sol.c
- * @brief  file reader for partial solutions
+ * @brief  file reader for primal solutions
  * @author Tobias Achterberg
  */
 
@@ -31,7 +31,7 @@
 
 
 #define READER_NAME             "solreader"
-#define READER_DESC             "file reader for (partial) solutions"
+#define READER_DESC             "file reader for primal solutions"
 #define READER_EXTENSION        "sol"
 
 
@@ -47,11 +47,12 @@ SCIP_RETCODE readSol(
    const char*           filename            /**< name of the input file */
    )
 {
+   SCIP_SOL* sol;
    SCIP_FILE* file;
    SCIP_Bool error;
    SCIP_Bool unknownvariablemessage;
+   SCIP_Bool stored;
    int lineno;
-   int nfixed;
 
    assert(scip != NULL);
    assert(filename != NULL);
@@ -65,11 +66,13 @@ SCIP_RETCODE readSol(
       return SCIP_NOFILE;
    }   
 
+   /* create primal solution */
+   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+
    /* read the file */
    error = FALSE;
    unknownvariablemessage = FALSE;
    lineno = 0;
-   nfixed = 0;
    while( !SCIPfeof(file) && !error )
    {
       char buffer[SCIP_MAXSTRLEN];
@@ -78,8 +81,6 @@ SCIP_RETCODE readSol(
       char objstring[SCIP_MAXSTRLEN];
       SCIP_VAR* var;
       SCIP_Real value;
-      SCIP_Bool infeasible;
-      SCIP_Bool fixed;
       int nread;
 
       /* get next line */
@@ -88,7 +89,7 @@ SCIP_RETCODE readSol(
       lineno++;
 
       /* the lines "solution status: ..." and "objective value: ..." may preceed the solution information */
-      if( strncasecmp(buffer, "solution", 8) == 0 || strncasecmp(buffer, "objective", 9) == 0 )
+      if( strncasecmp(buffer, "solution status:", 16) == 0 || strncasecmp(buffer, "objective value:", 16) == 0 )
          continue;
 
       /* parse the line */
@@ -132,29 +133,31 @@ SCIP_RETCODE readSol(
          }
       }
 
-      /* fix the variable */
-      SCIP_CALL( SCIPfixVar(scip, var, value, &infeasible, &fixed) );
-      if( infeasible )
-      {
-         SCIPwarningMessage("infeasible solution value of <%s>[%g,%g] to %g in line %d of solution file <%s>\n",
-            varname, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), value, lineno, filename);
-         error = TRUE;
-         break;
-      }
-      if( fixed )
-         nfixed++;
+      /* set the solution value of the variable */
+      SCIP_CALL( SCIPsetSolVal(scip, sol, var, value) );
    }
 
    /* close input file */
    SCIPfclose(file);
 
-   /* display result */
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "fixed %d variables from solution file <%s>\n", nfixed, filename);
+   if( !error )
+   {
+      /* add and free the solution */
+      SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, &stored) );
+      
+      /* display result */
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal solution from solution file <%s> was %s\n",
+         filename, stored ? "accepted" : "rejected - solution is infeasible or objective too poor");
 
-   if( error )
-      return SCIP_READERROR;
-   else
       return SCIP_OKAY;
+   }
+   else
+   {
+      /* free solution */
+      SCIP_CALL( SCIPfreeSol(scip, &sol) );
+
+      return SCIP_READERROR;
+   }
 }
 
 
@@ -180,9 +183,22 @@ SCIP_DECL_READERREAD(readerReadSol)
    {
       SCIPwarningMessage("reading of solution file is only possible after a problem was created\n");
       *result = SCIP_DIDNOTRUN;
+      return SCIP_READERROR;
+   }
+
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
+         "primal solution from solution file <%s> was ignored - problem is already solved to optimality\n",
+         filename);
+      *result = SCIP_SUCCESS;
       return SCIP_OKAY;
    }
 
+   /* transform the problem such that adding primal solutions is possible */
+   SCIP_CALL( SCIPtransformProb(scip) );
+
+   /* read the solution and add it to the solution pool */
    SCIP_CALL( readSol(scip, filename) );
 
    *result = SCIP_SUCCESS;

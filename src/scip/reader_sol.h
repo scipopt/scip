@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sol.h,v 1.2 2006/01/03 12:22:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_sol.h,v 1.3 2006/04/20 16:24:25 bzfpfend Exp $"
 
 /**@file   reader_sol.h
- * @brief  file reader for partial solutions
+ * @brief  file reader for primal solutions
  * @author Tobias Achterberg
  */
 

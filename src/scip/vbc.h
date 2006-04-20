@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.h,v 1.13 2006/03/09 12:52:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: vbc.h,v 1.14 2006/04/20 16:24:25 bzfpfend Exp $"
 
 /**@file   vbc.h
  * @brief  methods for VBC Tool output
@@ -75,7 +75,7 @@ extern
 void SCIPvbcSolvedNode(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_NODE*            node                /**< new node, that was created */
+   SCIP_NODE*            node                /**< node, that was solved */
    );
 
 /** changes the color of the node to the color of cutoff nodes */
@@ -83,7 +83,7 @@ extern
 void SCIPvbcCutoffNode(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_NODE*            node                /**< new node, that was created */
+   SCIP_NODE*            node                /**< node, that was cut off */
    );
 
 /** changes the color of the node to the color of nodes where a conflict constraint was found */
@@ -91,7 +91,7 @@ extern
 void SCIPvbcFoundConflict(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_NODE*            node                /**< new node, that was created */
+   SCIP_NODE*            node                /**< node, where the conflict was found */
    );
 
 /** changes the color of the node to the color of nodes that were marked to be repropagated */
@@ -99,7 +99,7 @@ extern
 void SCIPvbcMarkedRepropagateNode(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_NODE*            node                /**< new node, that was created */
+   SCIP_NODE*            node                /**< node, that was marked to be repropagated */
    );
 
 /** changes the color of the node to the color of repropagated nodes */
@@ -107,7 +107,7 @@ extern
 void SCIPvbcRepropagatedNode(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_NODE*            node                /**< new node, that was created */
+   SCIP_NODE*            node                /**< node, that was repropagated */
    );
 
 /** changes the color of the node to the color of nodes with a primal solution */
@@ -115,7 +115,7 @@ extern
 void SCIPvbcFoundSolution(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_NODE*            node                /**< new node, that was created */
+   SCIP_NODE*            node                /**< node where the solution was found, or NULL */
    );
 
 /** outputs a new global lower bound to the VBC output file */

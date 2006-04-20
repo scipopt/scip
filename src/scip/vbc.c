@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.22 2006/04/10 16:15:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.23 2006/04/20 16:24:25 bzfpfend Exp $"
 
 /**@file   vbc.c
  * @brief  methods for VBC Tool output
@@ -42,7 +42,7 @@
 /** returns the branching variable of the node, or NULL */
 static
 SCIP_VAR* getBranchVar(
-   SCIP_NODE*            node                /**< new node, that was created */
+   SCIP_NODE*            node                /**< node */
    )
 {
    SCIP_DOMCHGBOUND* domchgbound;
@@ -261,7 +261,7 @@ void vbcSetColor(
 void SCIPvbcSolvedNode(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_NODE*            node                /**< new node, that was created */
+   SCIP_NODE*            node                /**< node, that was solved */
    )
 {
    SCIP_VAR* branchvar;
@@ -294,7 +294,7 @@ void SCIPvbcSolvedNode(
 void SCIPvbcCutoffNode(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_NODE*            node                /**< new node, that was created */
+   SCIP_NODE*            node                /**< node, that was cut off */
    )
 {
    vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_CUTOFF);
@@ -304,7 +304,7 @@ void SCIPvbcCutoffNode(
 void SCIPvbcFoundConflict(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_NODE*            node                /**< new node, that was created */
+   SCIP_NODE*            node                /**< node, where the conflict was found */
    )
 {
    vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_CONFLICT);
@@ -314,7 +314,7 @@ void SCIPvbcFoundConflict(
 void SCIPvbcMarkedRepropagateNode(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_NODE*            node                /**< new node, that was created */
+   SCIP_NODE*            node                /**< node, that was marked to be repropagated */
    )
 {
    vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_MARKREPROP);
@@ -324,7 +324,7 @@ void SCIPvbcMarkedRepropagateNode(
 void SCIPvbcRepropagatedNode(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_NODE*            node                /**< new node, that was created */
+   SCIP_NODE*            node                /**< node, that was repropagated */
    )
 {
    vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_REPROP);
@@ -334,10 +334,11 @@ void SCIPvbcRepropagatedNode(
 void SCIPvbcFoundSolution(
    SCIP_VBC*             vbc,                /**< VBC information */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_NODE*            node                /**< new node, that was created */
+   SCIP_NODE*            node                /**< node where the solution was found, or NULL */
    )
 {
-   vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_SOLUTION);
+   if( node != NULL )
+      vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_SOLUTION);
 }
 
 /** outputs a new global lower bound to the VBC output file */

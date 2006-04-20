@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.79 2006/03/16 14:43:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.80 2006/04/20 16:24:25 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -500,7 +500,7 @@ SCIP_RETCODE primalAddSol(
    SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
    /* display node information line */
-   if( insertpos == 0 )
+   if( insertpos == 0 && set->stage >= SCIP_STAGE_SOLVING )
    {
       SCIP_CALL( SCIPdispPrintLine(set, stat, NULL, TRUE) );
    }

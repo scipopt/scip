@@ -28,6 +28,10 @@ interface:
   it will enter the LP at the time the node is first processed, even if parameters forbid separation at this
   node
 - SCIPgetNSols() now returns an int instead of SCIP_Longint
+- new method SCIPtransformProb() to create the transformed problem; enables the user, e.g., to add primal solutions
+  before the presolving begins
+- method SCIPreadProb() does not call SCIPfreeTransform() anymore; file readers that want to extend the existing
+  problem must now call SCIPfreeTransform() themselves before modifying the original problem
 
 plugins:
 - new primal heuristic "shifting"
@@ -47,6 +51,8 @@ plugins:
 - knapsack presolver now generates cliques in the clique table (this essentially solves neos1.mps)
 - LP and MPS file readers are now able to parse lazy constraints and user cuts sections
 - diving heuristics abort earlier (did not come back in reasonable time on fast0507)
+- renamed "sol" file reader to "fix" file reader (reads partial solution files and fixes variables to the given values)
+- added "sol" file reader which reads complete solution files and adds the solutions to the solution pool
 
 parameters:
 - new parameter constraints/linear/separateall

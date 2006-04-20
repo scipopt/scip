@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.357 2006/04/20 09:55:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.358 2006/04/20 16:24:25 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2380,9 +2380,6 @@ SCIP_RETCODE SCIPreadProb(
 
    SCIP_CALL( checkStage(scip, "SCIPreadProb", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   /* free transformed problem, s.t. reader can modifiy the original problem */
-   SCIP_CALL( SCIPfreeTransform(scip) );
-
    /* try all readers until one could read the file */
    result = SCIP_DIDNOTRUN;
    for( i = 0; i < scip->set->nreaders && result == SCIP_DIDNOTRUN; ++i )
@@ -3261,6 +3258,7 @@ SCIP_VAR* SCIPfindVar(
       return SCIPprobFindVar(scip->origprob, name);
 
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
@@ -3762,10 +3760,13 @@ SCIP_RETCODE SCIPtransformProb(
 {
    int h;
 
-   SCIP_CALL( checkStage(scip, "SCIPtransformProb", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPtransformProb", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* check, if the problem was already transformed */
+   if( scip->set->stage >= SCIP_STAGE_TRANSFORMED )
+      return SCIP_OKAY;
 
    assert(scip->stat->status == SCIP_STATUS_UNKNOWN);
-   assert(scip->set->stage == SCIP_STAGE_PROBLEM);
 
    /* check, if a node selector exists */
    if( SCIPsetGetNodesel(scip->set, scip->stat) == NULL )
@@ -11176,7 +11177,7 @@ SCIP_RETCODE SCIPaddSol(
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPaddSol", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddSol", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree,
          scip->lp, scip->eventfilter, sol, stored) );
@@ -11191,7 +11192,7 @@ SCIP_RETCODE SCIPaddSolFree(
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPaddSolFree", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddSolFree", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPprimalAddSolFree(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree,
          scip->lp, scip->eventfilter, sol, stored) );
@@ -11226,7 +11227,7 @@ SCIP_RETCODE SCIPtrySol(
 {
    assert(stored != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPtrySol", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPtrySol", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
    {
@@ -11263,7 +11264,7 @@ SCIP_RETCODE SCIPtrySolFree(
 {
    assert(stored != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPtrySolFree", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPtrySolFree", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    if( SCIPsolGetOrigin(*sol) == SCIP_SOLORIGIN_ORIGINAL )
    {
