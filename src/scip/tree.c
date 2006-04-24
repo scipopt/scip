@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.179 2006/04/10 16:15:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.180 2006/04/24 15:12:26 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1426,8 +1426,8 @@ SCIP_RETCODE SCIPnodeAddCons(
    }
 
    /* add constraint addition to the node's constraint set change data, and activate constraint if node is active */
-   SCIP_CALL( SCIPconssetchgAddAddedCons(&node->conssetchg, blkmem, set, stat, cons, node->depth, node->active,
-         (SCIPnodeGetType(node) == SCIP_NODETYPE_FOCUSNODE)) );
+   SCIP_CALL( SCIPconssetchgAddAddedCons(&node->conssetchg, blkmem, set, stat, cons, node->depth,
+         (SCIPnodeGetType(node) == SCIP_NODETYPE_FOCUSNODE), node->active) );
    assert(node->conssetchg != NULL);
    assert(node->conssetchg->addedconss != NULL);
    assert(!node->active || SCIPconsIsActive(cons));

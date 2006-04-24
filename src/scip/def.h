@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.105 2006/04/10 16:15:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.106 2006/04/24 15:12:26 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -107,7 +107,7 @@
 #define EPSFLOOR(x,eps)   (floor((x)+(eps)))
 #define EPSCEIL(x,eps)    (ceil((x)-(eps)))
 #define EPSFRAC(x,eps)    ((x)-EPSFLOOR(x,eps))
-#define EPSISINT(x,eps)   (EPSCEIL(x,eps)-(x) <= (eps))
+#define EPSISINT(x,eps)   (EPSFRAC(x,eps) <= (eps))
 
 
 #ifndef SQR

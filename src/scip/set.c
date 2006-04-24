@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.174 2006/04/10 16:15:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.175 2006/04/24 15:12:26 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -3329,7 +3329,7 @@ SCIP_Bool SCIPsetIsLbBetter(
    SCIP_Real eps;
 
    assert(set != NULL);
-   assert(oldlb <= oldub);
+   assert(SCIPsetIsLE(set, oldlb, oldub));
 
    eps = REALABS(oldlb);
    eps = MIN(oldub - oldlb, eps);
@@ -3347,7 +3347,7 @@ SCIP_Bool SCIPsetIsUbBetter(
    SCIP_Real eps;
 
    assert(set != NULL);
-   assert(oldlb <= oldub);
+   assert(SCIPsetIsLE(set, oldlb, oldub));
 
    eps = REALABS(oldub);
    eps = MIN(oldub - oldlb, eps);

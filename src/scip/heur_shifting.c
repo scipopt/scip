@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shifting.c,v 1.2 2006/04/10 16:15:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_shifting.c,v 1.3 2006/04/24 15:12:26 bzfpfend Exp $"
 
 /**@file   heur_shifting.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities and shifts continuous variables
@@ -426,6 +426,7 @@ void addFracCounter(
       rowidx = SCIProwGetLPPos(rows[r]);
       assert(0 <= rowidx && rowidx < nlprows);
       nfracsinrow[rowidx] += incval;
+      assert(nfracsinrow[rowidx] >= 0);
    }
 }
 
