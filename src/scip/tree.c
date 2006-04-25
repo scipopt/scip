@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.180 2006/04/24 15:12:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.181 2006/04/25 10:36:17 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -549,7 +549,7 @@ SCIP_RETCODE forkFree(
    return SCIP_OKAY;
 }
 
-#if 0
+#if 0 /*???????? should subroots be created ?*/
 /** creates subroot data */
 static
 SCIP_RETCODE subrootCreate(
@@ -3179,7 +3179,7 @@ SCIP_RETCODE focusnodeToFork(
    return SCIP_OKAY;
 }
 
-#if 0
+#if 0 /*???????? should subroots be created ?*/
 /** converts the focus node into a subroot node */
 static
 SCIP_RETCODE focusnodeToSubroot(
@@ -3504,7 +3504,7 @@ SCIP_RETCODE SCIPnodeFocus(
          assert(tree->focuslpconstructed);
 
          /**@todo decide: old focus node becomes fork or subroot */
-#if 0 /*?????????????????????????*/
+#if 0 /*???????? should subroots be created ?*/
          if( tree->focusnode->depth > 0 && tree->focusnode->depth % 25 == 0 )
          {
             /* convert old focus node into a subroot node */

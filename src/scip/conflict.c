@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.119 2006/04/11 10:37:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.120 2006/04/25 10:36:16 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1767,7 +1767,6 @@ SCIP_RETCODE conflictAddConflictBound(
    return SCIP_OKAY;
 }
 
-#if 0 /*??????????????????????*/
 /** returns whether the negation of the given bound change would lead to a globally valid literal */
 static
 SCIP_RETCODE isBoundchgUseless(
@@ -1787,7 +1786,6 @@ SCIP_RETCODE isBoundchgUseless(
       && ((boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasGE(set, bound, SCIPvarGetUbGlobal(var)))
          || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasLE(set, bound, SCIPvarGetLbGlobal(var)))));
 }
-#endif
 
 /** adds given bound change information to the conflict candidate queue */
 static
@@ -1808,11 +1806,15 @@ SCIP_RETCODE conflictQueueBound(
    if( !conflictMarkBoundCheckPresence(conflict, bdchginfo) )
    {
       /* insert the bound change into the conflict queue */
-#if 1 /*??????????????????????? should useless bound changes be identified and resolved first? */
-      if( !set->conf_preferbinary || SCIPvarGetType(SCIPbdchginfoGetVar(bdchginfo)) == SCIP_VARTYPE_BINARY )
-#else
+#if 1 /*??????????????????????? should useless bound changes be identified and resolved first?
+       * -> if useless bound changes are not resolved, the resulting conflict set is added to the list of conflit sets
+       *    although no conflict handler can create a constraint out of the set; this means, a strong branching rule
+       *    would think that the conflict will be treated by a constraint although this does not happen
+       */
       if( (!set->conf_preferbinary || SCIPvarGetType(SCIPbdchginfoGetVar(bdchginfo)) == SCIP_VARTYPE_BINARY)
          && !isBoundchgUseless(set, bdchginfo) )
+#else
+      if( !set->conf_preferbinary || SCIPvarGetType(SCIPbdchginfoGetVar(bdchginfo)) == SCIP_VARTYPE_BINARY )
 #endif
       {
          SCIP_CALL( SCIPpqueueInsert(conflict->bdchgqueue, (void*)bdchginfo) );
