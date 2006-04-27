@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.216 2006/04/10 16:15:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.217 2006/04/27 14:21:59 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3457,7 +3457,8 @@ SCIP_RETCODE separateRelaxedKnapsack(
       {
          assert(0 <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < nbinvars);
          binvals[SCIPvarGetProbindex(var)] += valscale * knapvals[i];
-         SCIPdebugMessage(" -> binary variable %+g<%s>\n", valscale * knapvals[i], SCIPvarGetName(var));
+         SCIPdebugMessage(" -> binary variable %+g<%s>(%g)\n", 
+            valscale * knapvals[i], SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var));
       }
       else if( valscale * knapvals[i] > 0.0 )
       {
@@ -3502,16 +3503,17 @@ SCIP_RETCODE separateRelaxedKnapsack(
          if( bestlbtype == -1 )
          {
             rhs -= valscale * knapvals[i] * bestlbsol;
-            SCIPdebugMessage(" -> non-binary variable %+g<%s> replaced with lower bound %g (rhs=%g)\n",
-               valscale * knapvals[i], SCIPvarGetName(var), SCIPvarGetLbGlobal(var), rhs);
+            SCIPdebugMessage(" -> non-binary variable %+g<%s>(%g) replaced with lower bound %g (rhs=%g)\n",
+               valscale * knapvals[i], SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), SCIPvarGetLbGlobal(var), rhs);
          }
          else
          {
             assert(0 <= SCIPvarGetProbindex(zvlb[bestlbtype]) && SCIPvarGetProbindex(zvlb[bestlbtype]) < nbinvars);
             rhs -= valscale * knapvals[i] * dvlb[bestlbtype];
             binvals[SCIPvarGetProbindex(zvlb[bestlbtype])] += valscale * knapvals[i] * bvlb[bestlbtype];
-            SCIPdebugMessage(" -> non-binary variable %+g<%s> replaced with variable lower bound %+g<%s>(%g) %+g (rhs=%g)\n",
-               valscale * knapvals[i], SCIPvarGetName(var), bvlb[bestlbtype], SCIPvarGetName(zvlb[bestlbtype]),
+            SCIPdebugMessage(" -> non-binary variable %+g<%s>(%g) replaced with variable lower bound %+g<%s>(%g) %+g (rhs=%g)\n",
+               valscale * knapvals[i], SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var),
+               bvlb[bestlbtype], SCIPvarGetName(zvlb[bestlbtype]),
                SCIPgetSolVal(scip, sol, zvlb[bestlbtype]), dvlb[bestlbtype], rhs);
          }
       }
@@ -3560,16 +3562,17 @@ SCIP_RETCODE separateRelaxedKnapsack(
          if( bestubtype == -1 )
          {
             rhs -= valscale * knapvals[i] * bestubsol;
-            SCIPdebugMessage(" -> non-binary variable %+g<%s> replaced with upper bound %g (rhs=%g)\n",
-               valscale * knapvals[i], SCIPvarGetName(var), SCIPvarGetUbGlobal(var), rhs);
+            SCIPdebugMessage(" -> non-binary variable %+g<%s>(%g) replaced with upper bound %g (rhs=%g)\n",
+               valscale * knapvals[i], SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), SCIPvarGetUbGlobal(var), rhs);
          }
          else
          {
             assert(0 <= SCIPvarGetProbindex(zvub[bestubtype]) && SCIPvarGetProbindex(zvub[bestubtype]) < nbinvars);
             rhs -= valscale * knapvals[i] * dvub[bestubtype];
             binvals[SCIPvarGetProbindex(zvub[bestubtype])] += valscale * knapvals[i] * bvub[bestubtype];
-            SCIPdebugMessage(" -> non-binary variable %+g<%s> replaced with variable upper bound %+g<%s>(%g) %+g (rhs=%g)\n",
-               valscale * knapvals[i], SCIPvarGetName(var), bvub[bestubtype], SCIPvarGetName(zvub[bestubtype]),
+            SCIPdebugMessage(" -> non-binary variable %+g<%s>(%g) replaced with variable upper bound %+g<%s>(%g) %+g (rhs=%g)\n",
+               valscale * knapvals[i], SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var),
+               bvub[bestubtype], SCIPvarGetName(zvub[bestubtype]),
                SCIPgetSolVal(scip, sol, zvub[bestubtype]), dvub[bestubtype], rhs);
          }
       }

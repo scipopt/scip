@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.106 2006/04/10 16:15:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.107 2006/04/27 14:21:59 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -2773,13 +2773,29 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    int*                  bind                /**< basic column n gives value n, basic row m gives value -1-m */
    )
 {
+   int retval;
+
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
    SCIPdebugMessage("getting basis information\n");
 
-   CHECK_ZERO( CPXgetbhead(cpxenv, lpi->cpxlp, bind, NULL) );
+   retval = CPXgetbhead(cpxenv, lpi->cpxlp, bind, NULL);
+   if( retval == CPXERR_NO_SOLN )
+   {
+      /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
+       * return the basis -> we have to resolve the LP (should be done in 0 iterations);
+       * this may happen after manual strong branching on an integral variable, or after conflict analysis on
+       * a strong branching conflict created a constraint that is not able to modify the LP but trigger the additional
+       * call of the separators, in particular, the Gomory separator
+       */
+      CHECK_ZERO( CPXdualopt(cpxenv, lpi->cpxlp) );
+      assert(CPXgetphase1cnt(cpxenv, lpi->cpxlp) == 0);
+      assert(CPXgetitcnt(cpxenv, lpi->cpxlp) == 0);
+      retval = CPXgetbhead(cpxenv, lpi->cpxlp, bind, NULL);
+   }
+   CHECK_ZERO( retval );
 
    return SCIP_OKAY;
 }
@@ -2791,13 +2807,29 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_Real*            coef                /**< pointer to store the coefficients of the row */
    )
 {
+   int retval;
+
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
    SCIPdebugMessage("getting binv-row %d\n", r);
 
-   CHECK_ZERO( CPXbinvrow(cpxenv, lpi->cpxlp, r, coef) );
+   retval = CPXbinvrow(cpxenv, lpi->cpxlp, r, coef);
+   if( retval == CPXERR_NO_SOLN )
+   {
+      /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
+       * return the basis -> we have to resolve the LP (should be done in 0 iterations);
+       * this may happen after manual strong branching on an integral variable, or after conflict analysis on
+       * a strong branching conflict created a constraint that is not able to modify the LP but trigger the additional
+       * call of the separators, in particular, the Gomory separator
+       */
+      CHECK_ZERO( CPXdualopt(cpxenv, lpi->cpxlp) );
+      assert(CPXgetphase1cnt(cpxenv, lpi->cpxlp) == 0);
+      assert(CPXgetitcnt(cpxenv, lpi->cpxlp) == 0);
+      retval = CPXbinvrow(cpxenv, lpi->cpxlp, r, coef);
+   }
+   CHECK_ZERO( retval );
 
    return SCIP_OKAY;
 }
@@ -2810,13 +2842,29 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_Real*            val                 /**< vector to return coefficients */
    )
 {  /*lint --e{715}*/
+   int retval;
+
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
    SCIPdebugMessage("getting binva-row %d\n", r);
 
-   CHECK_ZERO( CPXbinvarow(cpxenv, lpi->cpxlp, r, val) );
+   retval = CPXbinvarow(cpxenv, lpi->cpxlp, r, val);
+   if( retval == CPXERR_NO_SOLN )
+   {
+      /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
+       * return the basis -> we have to resolve the LP (should be done in 0 iterations);
+       * this may happen after manual strong branching on an integral variable, or after conflict analysis on
+       * a strong branching conflict created a constraint that is not able to modify the LP but trigger the additional
+       * call of the separators, in particular, the Gomory separator
+       */
+      CHECK_ZERO( CPXdualopt(cpxenv, lpi->cpxlp) );
+      assert(CPXgetphase1cnt(cpxenv, lpi->cpxlp) == 0);
+      assert(CPXgetitcnt(cpxenv, lpi->cpxlp) == 0);
+      retval = CPXbinvarow(cpxenv, lpi->cpxlp, r, val);
+   }
+   CHECK_ZERO( retval );
 
    return SCIP_OKAY;
 }

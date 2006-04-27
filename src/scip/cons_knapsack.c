@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.131 2006/04/19 11:58:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.132 2006/04/27 14:21:59 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -808,99 +808,108 @@ SCIP_RETCODE getCover(
       else
       {
          SCIP_Longint setweight;
-         SCIP_Longint minimumweight;
-         int minimumweightidx;
-         int removevar;
-         SCIP_Bool minimal;
 
          /* use greedy heuristic on separation knapsack */
          nnonsetvars = 0;
          nsetvars = 0;
-         for( i = nitems-1; i >= 0 && dpcapacity - dpweights[i] >= 0; --i )
-         {
-            dpcapacity -= dpweights[i];
-            nonsetvars[nnonsetvars] = items[i];
-            (nnonsetvars)++;
-         }
-         for( ; i >= 0; --i )
-         {
-            setvars[nsetvars] = items[i];
-            (nsetvars)++;
-         }
-         
-         /* calculate weight of set */
          setweight = 0;
-         for( i = 0; i < nsetvars; i++)
-            setweight += weights[setvars[i]];
-
-         /* get minimum weigth of set variables */
-         minimal = FALSE;
-         minimumweight = SCIP_LONGINT_MAX;
-         minimumweightidx = -1;
-         for( i = 0; i < nsetvars; i++ )
+         for( i = nitems-1; i >= 0; --i )
          {
-            if( weights[setvars[i]] <= minimumweight )
+            assert(weights[items[i]] == dpweights[i]);
+            if( dpcapacity - dpweights[i] >= 0 )
             {
-               minimumweightidx = i; 
-               minimumweight = weights[setvars[i]];
-            }
-         }
-         assert(minimumweightidx >= 0 && minimumweightidx < nsetvars);
-         assert(minimumweight == weights[setvars[minimumweightidx]]);
-         assert(setweight > capacity - varsc2weight);
-
-         /* test if set is allready minimal */
-         if( setweight - minimumweight <= capacity - varsc2weight )
-            minimal = TRUE;
-
-         /* make set minimal by removing variables (in decreasing order of slack) */
-         for( i = 0; i < nsetvars && !minimal; i++ )
-         {
-            /* set variable x_i can not be removed with respect to the set property */
-            if( setweight - weights[setvars[i]] <= capacity - varsc2weight )
-               continue;
-
-            /* remove x_i from setvars */
-            removevar = setvars[i];
-            for( j = i; j < nsetvars - 1; j++ )
-               setvars[j] = setvars[j + 1];
-            nsetvars--;
-            setweight -= weights[removevar];
-            
-            /* add x_i to nonsetvars */
-            nonsetvars[nnonsetvars] = removevar;
-            nnonsetvars++;
-            
-            /* update minimumweight of setvars */     
-            if( minimumweightidx == i )
-            {
-               /* get minimum weigth of setvars */
-               minimumweight = SCIP_LONGINT_MAX;
-               minimumweightidx = -1;
-               for( j = 0; j < nsetvars; j++ )
-               {
-                  if( weights[setvars[j]] <= minimumweight )
-                  {
-                     minimumweightidx = j; 
-                     minimumweight = weights[setvars[j]];
-                  }
-               }
+               dpcapacity -= dpweights[i];
+               nonsetvars[nnonsetvars] = items[i];
+               nnonsetvars++;
             }
             else
-               minimumweightidx--;
+            {
+               setweight += dpweights[i];
+               setvars[nsetvars] = items[i];
+               nsetvars++;
+            }
+         }
+
+         /* the cover might be empty, which means the variables in C2 alone already suffice to exceed the capacity;
+          * this can happen even if C2 consists of the variables at 1.0 in the LP relaxation, because the linear
+          * constraint handler replaces continuous and integer variables by variable lower/upper bounds, and the LP
+          * relaxation may violate these variable bounds
+          */
+         if( nsetvars > 0 )
+         {
+            SCIP_Longint minimumweight;
+            int minimumweightidx;
+            int removevar;
+            SCIP_Bool minimal;
+            /* get minimum weigth of set variables */
+            minimal = FALSE;
+            minimumweight = SCIP_LONGINT_MAX;
+            minimumweightidx = -1;
+            for( i = 0; i < nsetvars; i++ )
+            {
+               if( weights[setvars[i]] <= minimumweight )
+               {
+                  minimumweightidx = i; 
+                  minimumweight = weights[setvars[i]];
+               }
+            }
             assert(minimumweightidx >= 0 && minimumweightidx < nsetvars);
             assert(minimumweight == weights[setvars[minimumweightidx]]);
-         
-            /* update index of current setvar */
-            i--;
-
-            /* test if set is now minimal */
             assert(setweight > capacity - varsc2weight);
-            assert(!minimal);
-            if( (setweight) - minimumweight <= capacity - varsc2weight )
+
+            /* test if set is allready minimal */
+            if( setweight - minimumweight <= capacity - varsc2weight )
                minimal = TRUE;
+
+            /* make set minimal by removing variables (in decreasing order of slack) */
+            for( i = 0; i < nsetvars && !minimal; i++ )
+            {
+               /* set variable x_i can not be removed with respect to the set property */
+               if( setweight - weights[setvars[i]] <= capacity - varsc2weight )
+                  continue;
+
+               /* remove x_i from setvars */
+               removevar = setvars[i];
+               for( j = i; j < nsetvars - 1; j++ )
+                  setvars[j] = setvars[j + 1];
+               nsetvars--;
+               setweight -= weights[removevar];
+            
+               /* add x_i to nonsetvars */
+               nonsetvars[nnonsetvars] = removevar;
+               nnonsetvars++;
+            
+               /* update minimumweight of setvars */     
+               if( minimumweightidx == i )
+               {
+                  /* get minimum weigth of setvars */
+                  minimumweight = SCIP_LONGINT_MAX;
+                  minimumweightidx = -1;
+                  for( j = 0; j < nsetvars; j++ )
+                  {
+                     if( weights[setvars[j]] <= minimumweight )
+                     {
+                        minimumweightidx = j; 
+                        minimumweight = weights[setvars[j]];
+                     }
+                  }
+               }
+               else
+                  minimumweightidx--;
+               assert(minimumweightidx >= 0 && minimumweightidx < nsetvars);
+               assert(minimumweight == weights[setvars[minimumweightidx]]);
+         
+               /* update index of current setvar */
+               i--;
+
+               /* test if set is now minimal */
+               assert(setweight > capacity - varsc2weight);
+               assert(!minimal);
+               if( setweight - minimumweight <= capacity - varsc2weight )
+                  minimal = TRUE;
+            }
+            assert(minimal);
          }
-         assert(minimal);
       }
       assert(*ncovervars == 0);
       assert(*nnoncovervars == 0);

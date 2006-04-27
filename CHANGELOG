@@ -115,6 +115,8 @@ fixed bugs:
 - fixed bug in knapsack constraint handler where a modifiable constraint may be declared redundant
 - fixed bug in knapsack presolving with redundancy check after applyFixings() [thanks to Anders Schack-Nielsen]
 - fixed bug in objconshdlr.h where member variable scip_maxprerounds_ was declared as an SCIP_Bool instead of an int
+- fixed bug in CPLEX interface with getting basis information after the LP was modified and restored
+- fixed bug in knapsack separator with empty initial covers
 
 
 SCIP version 0.81
