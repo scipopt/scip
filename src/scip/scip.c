@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.358 2006/04/20 16:24:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.359 2006/04/27 14:24:01 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -13253,7 +13253,8 @@ void printSolutionStatistics(
             SCIPmessageFPrintInfo(file, "   (user objective limit)\n");
             SCIPmessageFPrintInfo(file, "  Best Solution    : %+21.14e", bestsol);
          }
-         SCIPmessageFPrintInfo(file, "   (after %"SCIP_LONGINT_FORMAT" nodes, %.2f seconds, depth %d, found by <%s>)\n",
+         SCIPmessageFPrintInfo(file, "   (in run %d, after %"SCIP_LONGINT_FORMAT" nodes, %.2f seconds, depth %d, found by <%s>)\n",
+            SCIPsolGetRunnum(scip->primal->sols[0]),
             SCIPsolGetNodenum(scip->primal->sols[0]),
             SCIPsolGetTime(scip->primal->sols[0]),
             SCIPsolGetDepth(scip->primal->sols[0]),
