@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.221 2006/04/10 16:15:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.222 2006/04/27 14:38:53 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -4745,8 +4745,10 @@ void rowCalcActivityBounds(
       row->maxactivity = SCIPsetInfinity(set);
    row->validactivitybdsdomchg = stat->domchgcount;
 
-   assert(!row->integral || mininfinite || EPSISINT(row->minactivity - row->constant, SCIP_DEFAULT_SUMEPSILON));
-   assert(!row->integral || maxinfinite || EPSISINT(row->maxactivity - row->constant, SCIP_DEFAULT_SUMEPSILON));
+   assert(!row->integral || mininfinite || REALABS(row->minactivity - row->constant) > 1.0/SCIP_DEFAULT_SUMEPSILON
+      || EPSISINT(row->minactivity - row->constant, SCIP_DEFAULT_SUMEPSILON));
+   assert(!row->integral || maxinfinite || REALABS(row->maxactivity - row->constant) > 1.0/SCIP_DEFAULT_SUMEPSILON
+      || EPSISINT(row->maxactivity - row->constant, SCIP_DEFAULT_SUMEPSILON));
 }
 
 /** returns the minimal activity of a row w.r.t. the columns' bounds */
