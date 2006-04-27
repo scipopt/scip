@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.359 2006/04/27 14:24:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.360 2006/04/27 14:26:50 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -13259,7 +13259,8 @@ void printSolutionStatistics(
             SCIPsolGetTime(scip->primal->sols[0]),
             SCIPsolGetDepth(scip->primal->sols[0]),
             SCIPsolGetHeur(scip->primal->sols[0]) != NULL
-            ? SCIPheurGetName(SCIPsolGetHeur(scip->primal->sols[0])) : "relaxation");
+            ? SCIPheurGetName(SCIPsolGetHeur(scip->primal->sols[0]))
+            : (SCIPsolGetRunnum(scip->primal->sols[0]) == 0 ? "initial" : "relaxation"));
       }
    }
    if( SCIPsetIsInfinity(scip->set, REALABS(dualbound)) )
