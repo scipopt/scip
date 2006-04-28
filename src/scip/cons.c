@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.144 2006/04/10 10:37:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.145 2006/04/28 12:26:58 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -2195,7 +2195,7 @@ SCIP_RETCODE SCIPconshdlrInitsol(
 
       for( c = 0; c < conshdlr->nconss; ++c )
       {
-         if( conshdlr->conss[c]->initial && conshdlr->conss[c]->initconsspos == -1 )
+         if( !conshdlr->conss[c]->deleted && conshdlr->conss[c]->initial && conshdlr->conss[c]->initconsspos == -1 )
          {
             SCIP_CALL( conshdlrAddInitcons(conshdlr, set, conshdlr->conss[c]) );
          }
@@ -2209,8 +2209,8 @@ SCIP_RETCODE SCIPconshdlrInitsol(
 
       for( c = 0; c < conshdlr->nconss; ++c )
       {
-         assert(conshdlr->conss[c]->initial == (conshdlr->conss[c]->initconsspos >= 0));
-         assert(!conshdlr->conss[c]->initial
+         assert(conshdlr->conss[c]->deleted || conshdlr->conss[c]->initial == (conshdlr->conss[c]->initconsspos >= 0));
+         assert(conshdlr->conss[c]->deleted || !conshdlr->conss[c]->initial
             || conshdlr->initconss[conshdlr->conss[c]->initconsspos] == conshdlr->conss[c]);
       }
    }
