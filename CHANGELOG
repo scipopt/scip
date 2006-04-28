@@ -32,6 +32,7 @@ interface:
   before the presolving begins
 - method SCIPreadProb() does not call SCIPfreeTransform() anymore; file readers that want to extend the existing
   problem must now call SCIPfreeTransform() themselves before modifying the original problem
+- method SCIPgetBinvarRepresentative() can now also be called in problem creation stage
 
 plugins:
 - new primal heuristic "shifting"

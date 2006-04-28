@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.360 2006/04/27 14:26:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.361 2006/04/28 08:51:10 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5225,7 +5225,7 @@ SCIP_RETCODE SCIPgetBinvarRepresentative(
    assert(repvar != NULL);
    assert(negated != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPgetBinvarRepresentative", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetBinvarRepresentative", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    /* get the active representative of the given variable */
    *repvar = var;
@@ -5235,7 +5235,7 @@ SCIP_RETCODE SCIPgetBinvarRepresentative(
    /* negate the representative, if it corresponds to the negation of the given variable */
    if( *negated )
    {
-      SCIP_CALL( SCIPvarNegate(*repvar, scip->mem->solvemem, scip->set, scip->stat, repvar) );
+      SCIP_CALL( SCIPgetNegatedVar(scip, *repvar, repvar) );
    }
 
    return SCIP_OKAY;
