@@ -118,6 +118,8 @@ fixed bugs:
 - fixed bug in objconshdlr.h where member variable scip_maxprerounds_ was declared as an SCIP_Bool instead of an int
 - fixed bug in CPLEX interface with getting basis information after the LP was modified and restored
 - fixed bug in knapsack separator with empty initial covers
+- fixed bug that SCIPgetLPSolstat() returns a valid status code even if the LP was not yet constructed for the
+  current node
 
 
 SCIP version 0.81

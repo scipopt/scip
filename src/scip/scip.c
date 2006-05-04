@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.361 2006/04/28 08:51:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.362 2006/05/04 08:49:37 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8518,7 +8518,10 @@ SCIP_LPSOLSTAT SCIPgetLPSolstat(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetLPSolstat", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPlpGetSolstat(scip->lp);
+   if( SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
+      return SCIPlpGetSolstat(scip->lp);
+   else
+      return SCIP_LPSOLSTAT_NOTSOLVED;
 }
 
 /** gets objective value of current LP (which is the sum of column and loose objective value) */
