@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.120 2006/04/25 10:36:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.121 2006/05/04 08:55:43 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -822,7 +822,7 @@ SCIP_Real conflictsetCalcScore(
 {
    assert(conflictset != NULL);
 
-   return (SCIP_Real)CONFLICTSETSCORE(conflictset);
+   return (SCIP_Real)CONFLICTSETSCORE(conflictset); /*lint !e790*/
 }
 
 /** adds a bound change to a conflict set */
@@ -1769,7 +1769,7 @@ SCIP_RETCODE conflictAddConflictBound(
 
 /** returns whether the negation of the given bound change would lead to a globally valid literal */
 static
-SCIP_RETCODE isBoundchgUseless(
+SCIP_Bool isBoundchgUseless(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    )
