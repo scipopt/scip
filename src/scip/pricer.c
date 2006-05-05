@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.c,v 1.18 2006/01/03 12:22:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer.c,v 1.19 2006/05/05 13:55:24 bzfpfend Exp $"
 
 /**@file   pricer.c
  * @brief  methods for variable pricers
@@ -33,6 +33,7 @@
 #include "scip/paramset.h"
 #include "scip/lp.h"
 #include "scip/prob.h"
+#include "scip/pricestore.h"
 #include "scip/scip.h"
 #include "scip/pricer.h"
 
@@ -74,6 +75,8 @@ SCIP_RETCODE SCIPpricerCreate(
    const char*           name,               /**< name of variable pricer */
    const char*           desc,               /**< description of variable pricer */
    int                   priority,           /**< priority of the variable pricer */
+   SCIP_Bool             delay,              /**< should the pricer be delayed until no other pricers or already existing
+                                              *   problem variables with negative reduced costs are found */
    SCIP_DECL_PRICERFREE  ((*pricerfree)),    /**< destructor of variable pricer */
    SCIP_DECL_PRICERINIT  ((*pricerinit)),    /**< initialize variable pricer */
    SCIP_DECL_PRICEREXIT  ((*pricerexit)),    /**< deinitialize variable pricer */
@@ -107,6 +110,7 @@ SCIP_RETCODE SCIPpricerCreate(
    SCIP_CALL( SCIPclockCreate(&(*pricer)->pricerclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*pricer)->ncalls = 0;
    (*pricer)->nvarsfound = 0;
+   (*pricer)->delay = delay;
    (*pricer)->active = FALSE;
    (*pricer)->initialized = FALSE;
 
@@ -364,9 +368,16 @@ SCIP_RETCODE SCIPpricerExec(
    SCIP_PRICER*          pricer,             /**< variable pricer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< transformed problem */
-   SCIP_LP*              lp                  /**< LP data */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_PRICESTORE*      pricestore          /**< pricing storage */
    )
 {
+   assert(pricer != NULL);
+
+   /* check if pricer should be delayed */
+   if( pricer->delay && SCIPpricestoreGetNVars(pricestore) > 0 )
+      return SCIP_OKAY;
+
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
    {
       SCIP_CALL( SCIPpricerFarkas(pricer, set, prob) );

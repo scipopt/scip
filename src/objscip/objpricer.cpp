@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.cpp,v 1.16 2006/04/10 16:15:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpricer.cpp,v 1.17 2006/05/05 13:55:24 bzfpfend Exp $"
 
 /**@file   objpricer.cpp
  * @brief  C++ wrapper for variable pricers
@@ -197,6 +197,7 @@ SCIP_RETCODE SCIPincludeObjPricer(
 
    /* include variable pricer */
    SCIP_CALL( SCIPincludePricer(scip, objpricer->scip_name_, objpricer->scip_desc_, objpricer->scip_priority_,
+         objpricer->scip_delay_,
          pricerFreeObj, pricerInitObj, pricerExitObj, 
          pricerInitsolObj, pricerExitsolObj, pricerRedcostObj, pricerFarkasObj,
          pricerdata) ); /*lint !e429*/

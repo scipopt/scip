@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_xxx.c,v 1.14 2006/01/03 12:22:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer_xxx.c,v 1.15 2006/05/05 13:55:24 bzfpfend Exp $"
 
 /**@file   pricer_xxx.c
  * @brief  xxx variable pricer
@@ -31,6 +31,7 @@
 #define PRICER_NAME            "xxx"
 #define PRICER_DESC            "variable pricer template"
 #define PRICER_PRIORITY        0
+#define PRICER_DELAY           TRUE     /* only call pricer if all problem variables have non-negative reduced costs */
 
 
 
@@ -183,7 +184,7 @@ SCIP_RETCODE SCIPincludePricerXxx(
    /* TODO: (optional) create variable pricer specific data here */
 
    /* include variable pricer */
-   SCIP_CALL( SCIPincludePricer(scip, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY,
+   SCIP_CALL( SCIPincludePricer(scip, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY, PRICER_DELAY,
          pricerFreeXxx, pricerInitXxx, pricerExitXxx, 
          pricerInitsolXxx, pricerExitsolXxx, pricerRedcostXxx, pricerFarkasXxx,
          pricerdata) );

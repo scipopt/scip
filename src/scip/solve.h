@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.44 2006/01/18 14:53:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.45 2006/05/05 13:55:25 bzfpfend Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -114,6 +114,8 @@ SCIP_RETCODE SCIPpriceLoop(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Bool             pretendroot,        /**< should the pricers be called as if we are at the root node? */
    SCIP_Bool             displayinfo,        /**< should info lines be displayed after each pricing round? */
+   int                   maxpricerounds,     /**< maximal number of pricing rounds (-1: no limit);
+                                              *   a finite limit means that the LP might not be solved to optimality! */
    int*                  npricedcolvars,     /**< pointer to store number of column variables after problem vars were priced */
    SCIP_Bool*            mustsepa,           /**< pointer to store TRUE if a separation round should follow */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved error in LP solving occured */

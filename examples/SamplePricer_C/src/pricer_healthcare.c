@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_healthcare.c,v 1.2 2006/01/03 12:22:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer_healthcare.c,v 1.3 2006/05/05 13:55:24 bzfpfend Exp $"
 
 /**@file   pricer_healthcare.c
  * @brief  healthcare variable pricer
@@ -33,6 +33,7 @@
 #define PRICER_NAME            "healthcare"
 #define PRICER_DESC            "pricer for healthcare tours"
 #define PRICER_PRIORITY        0
+#define PRICER_DELAY           TRUE     /* only call pricer if all problem variables have non-negative reduced costs */
 
 
 
@@ -228,7 +229,7 @@ SCIP_RETCODE HCPincludePricerHealthcare(
    /* TODO: (optional) create variable pricer specific data here */
 
    /* include variable pricer */
-   SCIP_CALL( SCIPincludePricer(scip, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY,
+   SCIP_CALL( SCIPincludePricer(scip, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY, PRICER_DELAY,
          pricerFreeHealthcare, pricerInitHealthcare, pricerExitHealthcare, 
          pricerInitsolHealthcare, pricerExitsolHealthcare, pricerRedcostHealthcare, pricerFarkasHealthcare,
          pricerdata) );

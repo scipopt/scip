@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.h,v 1.21 2006/01/03 12:22:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer.h,v 1.22 2006/05/05 13:55:24 bzfpfend Exp $"
 
 /**@file   pricer.h
  * @brief  internal methods for variable pricers
@@ -33,6 +33,7 @@
 #include "scip/type_set.h"
 #include "scip/type_lp.h"
 #include "scip/type_prob.h"
+#include "scip/type_pricestore.h"
 #include "scip/type_pricer.h"
 #include "scip/pub_pricer.h"
 
@@ -47,6 +48,8 @@ SCIP_RETCODE SCIPpricerCreate(
    const char*           name,               /**< name of variable pricer */
    const char*           desc,               /**< description of variable pricer */
    int                   priority,           /**< priority of the variable pricer */
+   SCIP_Bool             delay,              /**< should the pricer be delayed until no other pricers or already existing
+                                              *   problem variables with negative reduced costs are found */
    SCIP_DECL_PRICERFREE  ((*pricerfree)),    /**< destructor of variable pricer */
    SCIP_DECL_PRICERINIT  ((*pricerinit)),    /**< initialize variable pricer */
    SCIP_DECL_PRICEREXIT  ((*pricerexit)),    /**< deinitialize variable pricer */
@@ -128,7 +131,8 @@ SCIP_RETCODE SCIPpricerExec(
    SCIP_PRICER*          pricer,             /**< variable pricer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< transformed problem */
-   SCIP_LP*              lp                  /**< LP data */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_PRICESTORE*      pricestore          /**< pricing storage */
    );
 
 /** sets priority of variable pricer */

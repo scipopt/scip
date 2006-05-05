@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.268 2006/04/20 09:55:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.269 2006/05/05 13:55:25 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -554,6 +554,12 @@ SCIP_RETCODE SCIPincludePricer(
    const char*           name,               /**< name of variable pricer */
    const char*           desc,               /**< description of variable pricer */
    int                   priority,           /**< priority of the variable pricer */
+   SCIP_Bool             delay,              /**< should the pricer be delayed until no other pricers or already existing
+                                              *   problem variables with negative reduced costs are found?
+                                              *   if this is set to FALSE it may happen that the pricer produces columns
+                                              *   that already exist in the problem (which are also priced in by the
+                                              *   default problem variable pricing in the same round)
+                                              */
    SCIP_DECL_PRICERFREE  ((*pricerfree)),    /**< destructor of variable pricer */
    SCIP_DECL_PRICERINIT  ((*pricerinit)),    /**< initialize variable pricer */
    SCIP_DECL_PRICEREXIT  ((*pricerexit)),    /**< deinitialize variable pricer */
@@ -3889,6 +3895,8 @@ SCIP_RETCODE SCIPsolveProbingLPWithPricing(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             pretendroot,        /**< should the pricers be called as if we are at the root node? */
    SCIP_Bool             displayinfo,        /**< should info lines be displayed after each pricing round? */
+   int                   maxpricerounds,     /**< maximal number of pricing rounds (-1: no limit);
+                                              *   a finite limit means that the LP might not be solved to optimality! */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    );
 

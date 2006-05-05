@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_distance.h,v 1.2 2006/01/03 12:22:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer_distance.h,v 1.3 2006/05/05 13:55:24 bzfpfend Exp $"
 
 /**@file   pricer_distance.h
  * @brief  p-median pricer plugin
@@ -53,8 +53,9 @@ class ObjPricerDistance : public ObjPricer {
 public:
   inline ObjPricerDistance() : 
     ObjPricer("Distance_Pricer", 
-	      "Finds center-customer combinations with negative reduced cost.",
-	      0) {}
+       "Finds center-customer combinations with negative reduced cost.",
+       0,
+       TRUE) {}
 
   inline ~ObjPricerDistance() {}
 

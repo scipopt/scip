@@ -33,6 +33,7 @@ interface:
 - method SCIPreadProb() does not call SCIPfreeTransform() anymore; file readers that want to extend the existing
   problem must now call SCIPfreeTransform() themselves before modifying the original problem
 - method SCIPgetBinvarRepresentative() can now also be called in problem creation stage
+- additional parameter "maxpricerounds" in method SCIPsolveProbingLPWithPricing()
 
 plugins:
 - new primal heuristic "shifting"
@@ -54,6 +55,7 @@ plugins:
 - diving heuristics abort earlier (did not come back in reasonable time on fast0507)
 - renamed "sol" file reader to "fix" file reader (reads partial solution files and fixes variables to the given values)
 - added "sol" file reader which reads complete solution files and adds the solutions to the solution pool
+- additional flag "delay" for pricers
 
 parameters:
 - new parameter constraints/linear/separateall

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.h,v 1.19 2006/04/10 16:15:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpricer.h,v 1.20 2006/05/05 13:55:24 bzfpfend Exp $"
 
 /**@file   objpricer.h
  * @brief  C++ wrapper for variable pricers
@@ -49,15 +49,27 @@ public:
    /** default priority of the variable pricer */
    const int scip_priority_;
 
+   /** should the pricer be delayed until no other pricers or already existing problem variables with negative reduced
+    *  costs are found?
+    */
+   const SCIP_Bool scip_delay_;
+
    /** default constructor */
    ObjPricer(
       const char*        name,               /**< name of variable pricer */
       const char*        desc,               /**< description of variable pricer */
-      int                priority            /**< priority of the variable pricer */
+      int                priority,           /**< priority of the variable pricer */
+      SCIP_Bool          delay               /**< should the pricer be delayed until no other pricers or already existing
+                                              *   problem variables with negative reduced costs are found?
+                                              *   if this is set to FALSE it may happen that the pricer produces columns
+                                              *   that already exist in the problem (which are also priced in by the
+                                              *   default problem variable pricing in the same round)
+                                              */
       )
       : scip_name_(name),
         scip_desc_(desc),
-        scip_priority_(priority)
+        scip_priority_(priority),
+        scip_delay_(delay)
    {
    }
 

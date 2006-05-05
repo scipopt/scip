@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.214 2006/04/10 16:15:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.215 2006/05/05 13:55:25 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1073,11 +1073,14 @@ SCIP_RETCODE SCIPpriceLoop(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Bool             pretendroot,        /**< should the pricers be called as if we are at the root node? */
    SCIP_Bool             displayinfo,        /**< should info lines be displayed after each pricing round? */
+   int                   maxpricerounds,     /**< maximal number of pricing rounds (-1: no limit);
+                                              *   a finite limit means that the LP might not be solved to optimality! */
    int*                  npricedcolvars,     /**< pointer to store number of column variables after problem vars were priced */
    SCIP_Bool*            mustsepa,           /**< pointer to store TRUE if a separation round should follow */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved error in LP solving occured */
    )
 {
+   int npricerounds;
    SCIP_Bool mustprice;
 
    assert(prob != NULL);
@@ -1097,9 +1100,17 @@ SCIP_RETCODE SCIPpriceLoop(
    /* if all the variables are already in the LP, we don't need to price */
    mustprice = mustprice && !SCIPprobAllColsInLP(prob, set, lp);
 
+   /* check if infinite number of pricing rounds should be used */
+   if( maxpricerounds == -1 )
+      maxpricerounds = INT_MAX;
+
    /* pricing (has to be done completely to get a valid lower bound) */
-   while( !(*lperror) && mustprice )
+   npricerounds = 0;
+   while( !(*lperror) && mustprice && npricerounds < maxpricerounds )
    {
+      SCIP_Bool enoughvars;
+      int p;
+
       assert(lp->flushed);
       assert(lp->solved);
       assert(SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
@@ -1111,26 +1122,20 @@ SCIP_RETCODE SCIPpriceLoop(
       SCIP_CALL( SCIPpricestoreAddProbVars(pricestore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue) );
       *npricedcolvars = prob->ncolvars;
 
-      /* if no additional problem variables were found, call external pricers to create additional problem variables */
-      if( SCIPpricestoreGetNVars(pricestore) == 0 )
+      /* call external pricers to create additional problem variables */
+      SCIPdebugMessage("external variable pricing\n");
+      
+      /* sort pricer algorithms by priority */
+      SCIPsetSortPricers(set);
+      
+      /* call external pricer algorithms, that are active for the current problem */
+      enoughvars = (SCIPpricestoreGetNVars(pricestore) >= SCIPsetGetPriceMaxvars(set, pretendroot)/2);
+      for( p = 0; p < set->nactivepricers && !enoughvars; ++p )
       {
-         SCIP_Bool enoughvars;
-         int p;
-
-         SCIPdebugMessage("external variable pricing\n");
-
-         /* sort pricer algorithms by priority */
-         SCIPsetSortPricers(set);
-
-         /* call external pricer algorithms, that are active for the current problem */
-         enoughvars = FALSE;
-         for( p = 0; p < set->nactivepricers && !enoughvars; ++p )
-         {
-            SCIP_CALL( SCIPpricerExec(set->pricers[p], set, prob, lp) );
-            enoughvars = enoughvars || (SCIPpricestoreGetNVars(pricestore) >= SCIPsetGetPriceMaxvars(set, pretendroot)/2);
-         }
+         SCIP_CALL( SCIPpricerExec(set->pricers[p], set, prob, lp, pricestore) );
+         enoughvars = enoughvars || (SCIPpricestoreGetNVars(pricestore) >= SCIPsetGetPriceMaxvars(set, pretendroot)/2);
       }
-
+   
       /* apply the priced variables to the LP */
       SCIP_CALL( SCIPpricestoreApplyVars(pricestore, blkmem, set, stat, prob, tree, lp) );
       assert(SCIPpricestoreGetNVars(pricestore) == 0);
@@ -1163,6 +1168,7 @@ SCIP_RETCODE SCIPpriceLoop(
 
       /* increase pricing round counter */
       stat->npricerounds++;
+      npricerounds++;
 
       /* display node information line */
       if( displayinfo && mustprice && (SCIP_VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_FULL )
@@ -1284,7 +1290,7 @@ SCIP_RETCODE priceAndCutLoop(
       if( mustprice )
       {
          SCIP_CALL( SCIPpriceLoop(blkmem, set, stat, prob, tree, lp, pricestore, branchcand, eventqueue,
-               root, root, &npricedcolvars, &mustsepa, lperror) );
+               root, root, -1, &npricedcolvars, &mustsepa, lperror) );
          mustprice = FALSE;
       }
       assert(lp->flushed);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_pricer.h,v 1.14 2006/01/03 12:22:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_pricer.h,v 1.15 2006/05/05 13:55:25 bzfpfend Exp $"
 
 /**@file   struct_pricer.h
  * @brief  datastructures for variable pricers
@@ -49,6 +49,8 @@ struct SCIP_Pricer
    int                   priority;           /**< priority of the variable pricer */
    int                   ncalls;             /**< number of times, this pricer was called */
    int                   nvarsfound;         /**< number of variables priced in found so far by this pricer */
+   SCIP_Bool             delay;              /**< should the pricer be delayed until no other pricers or already existing
+                                              *   problem variables with negative reduced costs are found */
    SCIP_Bool             active;             /**< is variable pricer in use for the current problem? */
    SCIP_Bool             initialized;        /**< is variable pricer initialized? */
 };

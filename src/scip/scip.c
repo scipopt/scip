@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.362 2006/05/04 08:49:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.363 2006/05/05 13:55:24 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1189,6 +1189,12 @@ SCIP_RETCODE SCIPincludePricer(
    const char*           name,               /**< name of variable pricer */
    const char*           desc,               /**< description of variable pricer */
    int                   priority,           /**< priority of the variable pricer */
+   SCIP_Bool             delay,              /**< should the pricer be delayed until no other pricers or already existing
+                                              *   problem variables with negative reduced costs are found?
+                                              *   if this is set to FALSE it may happen that the pricer produces columns
+                                              *   that already exist in the problem (which are also priced in by the
+                                              *   default problem variable pricing in the same round)
+                                              */
    SCIP_DECL_PRICERFREE  ((*pricerfree)),    /**< destructor of variable pricer */
    SCIP_DECL_PRICERINIT  ((*pricerinit)),    /**< initialize variable pricer */
    SCIP_DECL_PRICEREXIT  ((*pricerexit)),    /**< deinitialize variable pricer */
@@ -1204,7 +1210,7 @@ SCIP_RETCODE SCIPincludePricer(
    SCIP_CALL( checkStage(scip, "SCIPincludePricer", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPpricerCreate(&pricer, scip->set, scip->mem->setmem,
-         name, desc, priority,
+         name, desc, priority, delay,
          pricerfree, pricerinit, pricerexit, pricerinitsol, pricerexitsol, pricerredcost, pricerfarkas, pricerdata) );
    SCIP_CALL( SCIPsetIncludePricer(scip->set, pricer) );
 
@@ -10199,6 +10205,7 @@ SCIP_RETCODE solveProbingLP(
    SCIP_Bool             pricing,            /**< should pricing be applied? */
    SCIP_Bool             pretendroot,        /**< should the pricers be called as if we are at the root node? */
    SCIP_Bool             displayinfo,        /**< should info lines be displayed after each pricing round? */
+   int                   maxpricerounds,     /**< maximal number of pricing rounds (-1: no limit) */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
@@ -10230,7 +10237,7 @@ SCIP_RETCODE solveProbingLP(
 
          mustsepa = FALSE;
          SCIP_CALL( SCIPpriceLoop(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
-               scip->pricestore, scip->branchcand, scip->eventqueue, pretendroot, displayinfo,
+               scip->pricestore, scip->branchcand, scip->eventqueue, pretendroot, displayinfo, maxpricerounds,
                &npricedcolvars, &mustsepa, lperror) );
       }
    }
@@ -10261,7 +10268,7 @@ SCIP_RETCODE SCIPsolveProbingLP(
 {
    SCIP_CALL( checkStage(scip, "SCIPsolveProbingLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( solveProbingLP(scip, itlim, FALSE, FALSE, FALSE, lperror) );
+   SCIP_CALL( solveProbingLP(scip, itlim, FALSE, FALSE, FALSE, -1, lperror) );
 
    return SCIP_OKAY;
 }
@@ -10273,12 +10280,14 @@ SCIP_RETCODE SCIPsolveProbingLPWithPricing(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             pretendroot,        /**< should the pricers be called as if we are at the root node? */
    SCIP_Bool             displayinfo,        /**< should info lines be displayed after each pricing round? */
+   int                   maxpricerounds,     /**< maximal number of pricing rounds (-1: no limit);
+                                              *   a finite limit means that the LP might not be solved to optimality! */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsolveProbingLPWithPricing", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( solveProbingLP(scip, -1, TRUE, pretendroot, displayinfo, lperror) );
+   SCIP_CALL( solveProbingLP(scip, -1, TRUE, pretendroot, displayinfo, maxpricerounds, lperror) );
 
    return SCIP_OKAY;
 }
