@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.205 2006/04/24 15:12:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.206 2006/05/08 10:12:09 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -5632,8 +5632,9 @@ SCIP_RETCODE varAddImplic(
       assert(SCIPsetIsEQ(set, implbound, 0.0) || SCIPsetIsEQ(set, implbound, 1.0));
       assert(SCIPsetIsEQ(set, implbound, 0.0) == (impltype == SCIP_BOUNDTYPE_UPPER));
       assert(SCIPsetIsEQ(set, implbound, 1.0) == (impltype == SCIP_BOUNDTYPE_LOWER));
-      *infeasible = ((varfixing == TRUE) == (impltype == SCIP_BOUNDTYPE_UPPER));
-      return SCIP_OKAY;
+      conflict = conflict || ((varfixing == TRUE) == (impltype == SCIP_BOUNDTYPE_UPPER));
+      if( !conflict )
+         return SCIP_OKAY;
    }
 
    /* check, if the variable is already fixed */

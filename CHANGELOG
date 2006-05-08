@@ -122,6 +122,8 @@ fixed bugs:
 - fixed bug in knapsack separator with empty initial covers
 - fixed bug that SCIPgetLPSolstat() returns a valid status code even if the LP was not yet constructed for the
   current node
+- fixed bug with adding implications that fix the implication variable to the opposite value (due to the bug, it was
+  returned that the whole problem is infeasible)
 
 
 SCIP version 0.81
