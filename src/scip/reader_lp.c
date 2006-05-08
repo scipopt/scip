@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.13 2006/04/10 16:15:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.14 2006/05/08 16:19:24 bzfpfend Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -44,7 +44,7 @@
  * Data structures
  */
 
-#define LP_MAX_LINELEN       4096
+#define LP_MAX_LINELEN       65536
 #define LP_MAX_PUSHEDTOKENS  2
 
 /** Section in LP File */
@@ -214,8 +214,9 @@ SCIP_Bool getNextLine(
    /* read next line */
    lpinput->linepos = 0;
    lpinput->linebuf[LP_MAX_LINELEN-2] = '\0';
-   if( SCIPfgets(lpinput->linebuf, sizeof(lpinput->linebuf)-1, lpinput->file) == NULL )
+   if( SCIPfgets(lpinput->linebuf, sizeof(lpinput->linebuf), lpinput->file) == NULL )
       return FALSE;
+   lpinput->linenumber++;
    if( lpinput->linebuf[LP_MAX_LINELEN-2] != '\0' )
    {
       SCIPerrorMessage("Error: line %d exceeds %d characters\n", lpinput->linenumber, LP_MAX_LINELEN-2);
@@ -224,7 +225,6 @@ SCIP_Bool getNextLine(
    }
    lpinput->linebuf[LP_MAX_LINELEN-1] = '\0';
    lpinput->linebuf[LP_MAX_LINELEN-2] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
-   lpinput->linenumber++;
 
    /* skip characters after comment symbol */
    for( i = 0; commentchars[i] != '\0'; ++i )
