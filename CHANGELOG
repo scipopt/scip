@@ -1,5 +1,5 @@
-current version
-===============
+SCIP version 0.82
+=================
 
 compiling:
 - removed ncurses and pthread libraries from the Makefile; pthread is now only linked if CPLEX is used
