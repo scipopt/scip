@@ -1,6 +1,8 @@
 current version
 ===============
 
+plugins:
+- new presolver "inttobinary"
 
 
 SCIP version 0.82
