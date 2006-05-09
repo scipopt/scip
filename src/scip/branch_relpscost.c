@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.45 2006/04/10 11:31:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.46 2006/05/09 13:07:53 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -75,6 +75,7 @@ struct SCIP_BranchruleData
 /** calculates an overall score value for the given individual score values */
 static
 SCIP_Real calcScore(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULEDATA*  branchruledata,     /**< branching rule data */
    SCIP_Real             conflictscore,      /**< conflict score of current variable */
    SCIP_Real             avgconflictscore,   /**< average conflict score */
@@ -83,15 +84,25 @@ SCIP_Real calcScore(
    SCIP_Real             cutoffscore,        /**< cutoff score of current variable */
    SCIP_Real             avgcutoffscore,     /**< average cutoff score */
    SCIP_Real             pscostscore,        /**< pscost score of current variable */
-   SCIP_Real             avgpscostscore      /**< average pscost score */
+   SCIP_Real             avgpscostscore,     /**< average pscost score */
+   SCIP_Real             frac                /**< fractional value of variable in current solution */
    )
 {
-   assert(branchruledata != NULL);
+   SCIP_Real score;
 
-   return branchruledata->conflictweight * (1.0 - 1.0/(1.0+conflictscore/avgconflictscore))
+   assert(branchruledata != NULL);
+   assert(0.0 < frac && frac < 1.0);
+
+   score = branchruledata->conflictweight * (1.0 - 1.0/(1.0+conflictscore/avgconflictscore))
       + branchruledata->inferenceweight * (1.0 - 1.0/(1.0+inferencescore/avginferencescore))
       + branchruledata->cutoffweight * (1.0 - 1.0/(1.0+cutoffscore/avgcutoffscore))
       + branchruledata->pscostweight * (1.0 - 1.0/(1.0+pscostscore/avgpscostscore));
+
+   /* avoid close to integral variables */
+   if( MIN(frac, 1.0 - frac) < 10.0*SCIPfeastol(scip) )
+      score *= 1e-6;
+
+   return score;
 }
 
 /** adds given index and direction to bound change arrays */
@@ -427,8 +438,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
          }
 
          /* combine the four score values */
-         score = calcScore(branchruledata, conflictscore, avgconflictscore, inferencescore, avginferencescore,
-            cutoffscore, avgcutoffscore, pscostscore, avgpscostscore);
+         score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, inferencescore, avginferencescore,
+            cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, lpcandsfrac[c]);
 
          if( usesb )
          {
@@ -619,8 +630,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
             inferencescore = SCIPgetVarAvgInferenceScore(scip, lpcands[c]);
             cutoffscore = SCIPgetVarAvgCutoffScore(scip, lpcands[c]);
             pscostscore = SCIPgetBranchScore(scip, lpcands[c], downgain, upgain);
-            score = calcScore(branchruledata, conflictscore, avgconflictscore, inferencescore, avginferencescore,
-               cutoffscore, avgcutoffscore, pscostscore, avgpscostscore);
+            score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, inferencescore, avginferencescore,
+               cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, lpcandsfrac[c]);
             if( SCIPisSumGE(scip, score, bestsbscore) )
             {
                SCIP_Real fracscore;

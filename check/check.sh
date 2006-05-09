@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.24 2006/03/23 17:42:07 bzfpfend Exp $
+# $Id: check.sh,v 1.25 2006/05/09 13:07:53 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -66,10 +66,12 @@ do
 	echo quit                              >> $TMPFILE
 	echo -----------------------------
 	date
+	date >>$ERRFILE
 	echo -----------------------------
 	../$2 < $TMPFILE 2>>$ERRFILE
 	echo -----------------------------
 	date
+	date >>$ERRFILE
 	echo -----------------------------
 	echo
 	echo =ready=

@@ -124,6 +124,7 @@ fixed bugs:
   current node
 - fixed bug with adding implications that fix the implication variable to the opposite value (due to the bug, it was
   returned that the whole problem is infeasible)
+- branching on nearly-integral variables is now avoided in relpscost branching, which lead to a numerical assertion
 
 
 SCIP version 0.81
