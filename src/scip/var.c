@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.206 2006/05/08 10:12:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.207 2006/05/10 09:14:22 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1469,8 +1469,6 @@ SCIP_RETCODE varRemoveImplicsVbs(
       int newnvbds;
       int i;
 
-      assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
-
       nvbds = SCIPvboundsGetNVbds(var->vlbs);
       vars = SCIPvboundsGetVars(var->vlbs);
       coefs = SCIPvboundsGetCoefs(var->vlbs);
@@ -1537,8 +1535,6 @@ SCIP_RETCODE varRemoveImplicsVbs(
       int nvbds;
       int newnvbds;
       int i;
-
-      assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
 
       nvbds = SCIPvboundsGetNVbds(var->vubs);
       vars = SCIPvboundsGetVars(var->vubs);
@@ -6127,9 +6123,10 @@ SCIP_RETCODE SCIPvarAddVlb(
          if( SCIPsetIsFeasGT(set, maxvlb, xlb) )
          {
             assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED);
+            assert(!SCIPsetIsZero(set, vlbcoef));
 
-            /* if the vlb variable is binary, add the corresponding implication to the vlb variable's implication
-             * list, thereby also adding the variable bound itself
+            /* if one of the variables is binary, add the corresponding implication to the variable's implication
+             * list, thereby also adding the variable bound (or implication) to the other variable
              */
             if( SCIPvarGetType(vlbvar) == SCIP_VARTYPE_BINARY )
             {
@@ -6140,10 +6137,19 @@ SCIP_RETCODE SCIPvarAddVlb(
                SCIP_CALL( varAddTransitiveImplic(vlbvar, blkmem, set, stat, lp, branchcand, eventqueue,
                      (vlbcoef >= 0.0), var, SCIP_BOUNDTYPE_LOWER, maxvlb, transitive, infeasible, nbdchgs) );
             }
+            else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+            {
+               /* add corresponding implication:
+                *   b > 0, x >= b*z + d  <->  x == 0 -> z <= -d/b
+                *   b < 0, x >= b*z + d  <->  x == 0 -> z >= -d/b
+                */
+               SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, lp, branchcand, eventqueue,
+                     FALSE, vlbvar, (vlbcoef >= 0.0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER), -vlbconstant/vlbcoef,
+                     transitive, infeasible, nbdchgs) );
+            }
             else
             {
-               SCIP_CALL( varAddVbound(var, blkmem, set, eventqueue, 
-                     SCIP_BOUNDTYPE_LOWER, vlbvar, vlbcoef, vlbconstant) );
+               SCIP_CALL( varAddVbound(var, blkmem, set, eventqueue, SCIP_BOUNDTYPE_LOWER, vlbvar, vlbcoef, vlbconstant) );
             }
          }
       }
@@ -6353,9 +6359,10 @@ SCIP_RETCODE SCIPvarAddVub(
          if( SCIPsetIsFeasLT(set, minvub, xub) )
          {
             assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED);
+            assert(!SCIPsetIsZero(set, vubcoef));
 
-            /* if the vub variable is binary, add the corresponding implication to the vub variable's implication
-             * list, thereby also adding the variable bound itself
+            /* if one of the variables is binary, add the corresponding implication to the variable's implication
+             * list, thereby also adding the variable bound (or implication) to the other variable
              */
             if( SCIPvarGetType(vubvar) == SCIP_VARTYPE_BINARY )
             {
@@ -6366,10 +6373,19 @@ SCIP_RETCODE SCIPvarAddVub(
                SCIP_CALL( varAddTransitiveImplic(vubvar, blkmem, set, stat, lp, branchcand, eventqueue,
                      (vubcoef < 0.0), var, SCIP_BOUNDTYPE_UPPER, minvub, transitive, infeasible, nbdchgs) );
             }
+            else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+            {
+               /* add corresponding implication:
+                *   b > 0, x <= b*z + d  <->  x == 1 -> z >= (1-d)/b
+                *   b < 0, x <= b*z + d  <->  x == 1 -> z <= (1-d)/b
+                */
+               SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, lp, branchcand, eventqueue,
+                     TRUE, vubvar, (vubcoef >= 0.0 ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER),
+                     (1.0-vubconstant)/vubcoef, transitive, infeasible, nbdchgs) );
+            }
             else
             {
-               SCIP_CALL( varAddVbound(var, blkmem, set, eventqueue, 
-                     SCIP_BOUNDTYPE_UPPER, vubvar, vubcoef, vubconstant) );
+               SCIP_CALL( varAddVbound(var, blkmem, set, eventqueue, SCIP_BOUNDTYPE_UPPER, vubvar, vubcoef, vubconstant) );
             }
          }
       }

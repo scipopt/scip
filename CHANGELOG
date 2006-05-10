@@ -1,10 +1,3 @@
-current version
-===============
-
-plugins:
-- new presolver "inttobinary"
-
-
 SCIP version 0.82
 =================
 
@@ -63,6 +56,7 @@ plugins:
 - renamed "sol" file reader to "fix" file reader (reads partial solution files and fixes variables to the given values)
 - added "sol" file reader which reads complete solution files and adds the solutions to the solution pool
 - additional flag "delay" for pricers
+- new presolver "inttobinary"
 
 parameters:
 - new parameter constraints/linear/separateall
@@ -132,6 +126,7 @@ fixed bugs:
 - fixed bug with adding implications that fix the implication variable to the opposite value (due to the bug, it was
   returned that the whole problem is infeasible)
 - branching on nearly-integral variables is now avoided in relpscost branching, which lead to a numerical assertion
+- removed wrong assert in varRemoveImplicsVbs()
 
 
 SCIP version 0.81
