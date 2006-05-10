@@ -858,6 +858,18 @@ presolving/implics/maxrounds = -1
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 presolving/implics/delay = FALSE
 
+# priority of presolver <inttobinary>
+# [type: int, range: [-2147483648,2147483647], default: 8000000]
+presolving/inttobinary/priority = 8000000
+
+# maximal number of presolving rounds the presolver participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/inttobinary/maxrounds = -1
+
+# should presolver be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+presolving/inttobinary/delay = FALSE
+
 # priority of presolver <probing>
 # [type: int, range: [-2147483648,2147483647], default: -100000]
 presolving/probing/priority = -100000
@@ -1159,15 +1171,15 @@ heuristics/crossover/freqofs = 10
 heuristics/crossover/maxdepth = -1
 
 # number of nodes added to the contingent of the total nodes
-# [type: int, range: [0,2147483647], default: 500]
+# [type: longint, range: [0,9223372036854775807], default: 500]
 heuristics/crossover/nodesofs = 500
 
 # maximum number of nodes to regard in the subproblem
-# [type: int, range: [0,2147483647], default: 5000]
+# [type: longint, range: [0,9223372036854775807], default: 5000]
 heuristics/crossover/maxnodes = 5000
 
 # minimum number of nodes required to start the subproblem
-# [type: int, range: [0,2147483647], default: 500]
+# [type: longint, range: [0,9223372036854775807], default: 500]
 heuristics/crossover/minnodes = 500
 
 # number of solutions to be taken into account
@@ -1175,7 +1187,7 @@ heuristics/crossover/minnodes = 500
 heuristics/crossover/nusedsols = 3
 
 # number of nodes without incumbent change that heuristic should wait
-# [type: int, range: [0,2147483647], default: 200]
+# [type: longint, range: [0,9223372036854775807], default: 200]
 heuristics/crossover/nwaitingnodes = 200
 
 # contingent of sub problem nodes in relation to the number of nodes of the original problem
