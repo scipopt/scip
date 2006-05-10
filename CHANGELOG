@@ -59,6 +59,7 @@ plugins:
 - added "sol" file reader which reads complete solution files and adds the solutions to the solution pool
 - additional flag "delay" for pricers
 - new presolver "inttobinary"
+- new display column "lpobj"
 
 parameters:
 - new parameter constraints/linear/separateall

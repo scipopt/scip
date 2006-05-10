@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.61 2006/03/09 12:52:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.62 2006/05/10 13:24:35 bzfhille Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -188,6 +188,14 @@
 #define DISP_PRIO_STRONGBRANCHS 1000
 #define DISP_POSI_STRONGBRANCHS 5000
 #define DISP_STRI_STRONGBRANCHS TRUE
+
+#define DISP_NAME_LPOBJ         "lpobj"
+#define DISP_DESC_LPOBJ         "current LP objective value"
+#define DISP_HEAD_LPOBJ         "lpobj"
+#define DISP_WIDT_LPOBJ         14
+#define DISP_PRIO_LPOBJ         300
+#define DISP_POSI_LPOBJ         6500
+#define DISP_STRI_LPOBJ         TRUE
 
 #define DISP_NAME_CURDUALBOUND  "curdualbound"
 #define DISP_DESC_CURDUALBOUND  "dual bound of current node"
@@ -515,6 +523,25 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputStrongbranchs)
 
 /** output method of display column to output file stream 'file' */
 static
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputLpobj)
+{  /*lint --e{715}*/
+   SCIP_Real lpobj;
+
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_LPOBJ) == 0);
+   assert(scip != NULL);
+
+   lpobj = SCIPgetLPObjval(scip);
+   if( SCIPisInfinity(scip, REALABS(lpobj)) )
+      SCIPinfoMessage(scip, file, "      --      ");
+   else
+      SCIPinfoMessage(scip, file, "%13.6e ", lpobj);
+
+   return SCIP_OKAY;
+}
+
+/** output method of display column to output file stream 'file' */
+static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputCurdualbound)
 {  /*lint --e{715}*/
    SCIP_Real curdualbound;
@@ -683,6 +710,9 @@ SCIP_RETCODE SCIPincludeDispDefault(
    SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_STRONGBRANCHS, DISP_DESC_STRONGBRANCHS, DISP_HEAD_STRONGBRANCHS,
          SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, NULL, NULL, SCIPdispOutputStrongbranchs, NULL, 
          DISP_WIDT_STRONGBRANCHS, DISP_PRIO_STRONGBRANCHS, DISP_POSI_STRONGBRANCHS, DISP_STRI_STRONGBRANCHS) );
+   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_LPOBJ, DISP_DESC_LPOBJ, DISP_HEAD_LPOBJ,
+         SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, NULL, NULL, SCIPdispOutputLpobj, NULL, 
+         DISP_WIDT_LPOBJ, DISP_PRIO_LPOBJ, DISP_POSI_LPOBJ, DISP_STRI_LPOBJ) );
    SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_CURDUALBOUND, DISP_DESC_CURDUALBOUND, DISP_HEAD_CURDUALBOUND,
          SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, NULL, NULL, SCIPdispOutputCurdualbound, NULL, 
          DISP_WIDT_CURDUALBOUND, DISP_PRIO_CURDUALBOUND, DISP_POSI_CURDUALBOUND, DISP_STRI_CURDUALBOUND) );
