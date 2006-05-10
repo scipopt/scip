@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.35 2006/01/03 12:22:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.36 2006/05/10 11:16:56 bzfpfend Exp $"
 
 /**@file   presol.c
  * @brief  methods for presolvers
@@ -554,7 +554,7 @@ int SCIPpresolGetNAggrVars(
 }
 
 /** gets number of variable types changed in presolver */
-int SCIPpresolGetNVarTypes(
+int SCIPpresolGetNChgVarTypes(
    SCIP_PRESOL*          presol              /**< presolver */
    )
 {

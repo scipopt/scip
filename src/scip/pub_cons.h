@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.29 2006/01/03 12:22:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.30 2006/05/10 11:16:56 bzfpfend Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -212,7 +212,7 @@ int SCIPconshdlrGetNAggrVars(
 
 /** gets number of variable types changed in presolving method of constraint handler */
 extern
-int SCIPconshdlrGetNVarTypes(
+int SCIPconshdlrGetNChgVarTypes(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 

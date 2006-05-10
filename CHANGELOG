@@ -34,6 +34,8 @@ interface:
   problem must now call SCIPfreeTransform() themselves before modifying the original problem
 - method SCIPgetBinvarRepresentative() can now also be called in problem creation stage
 - additional parameter "maxpricerounds" in method SCIPsolveProbingLPWithPricing()
+- changed name of method SCIPpresolGetNVarTypes() to SCIPpresolGetNChgVarTypes()
+- changed name of method SCIPconshdlrGetNVarTypes() to SCIPconshdlrGetNChgVarTypes()
 
 plugins:
 - new primal heuristic "shifting"

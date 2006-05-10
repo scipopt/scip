@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.363 2006/05/05 13:55:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.364 2006/05/10 11:16:57 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -12683,31 +12683,12 @@ void printPresolverStatistics(
    FILE*                 file                /**< output file */
    )
 {
-#if 0
-   int nfixedvars;
-   int naggrvars;
-   int nchgbds;
-   int nholes;
-   int ndelconss;
-   int nchgsides;
-   int nchgcoefs;
-#endif
    int i;
 
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIPmessageFPrintInfo(file, "Presolvers         :       Time  FixedVars   AggrVars  ChgBounds   AddHoles    DelCons   ChgSides   ChgCoefs\n");
-
-#if 0
-   nfixedvars = 0;
-   naggrvars = 0;
-   nchgbds = 0;
-   nholes = 0;
-   ndelconss = 0;
-   nchgsides = 0;
-   nchgcoefs = 0;
-#endif
+   SCIPmessageFPrintInfo(file, "Presolvers         :       Time  FixedVars   AggrVars   ChgTypes  ChgBounds   AddHoles    DelCons   ChgSides   ChgCoefs\n");
 
    /* presolver statistics */
    for( i = 0; i < scip->set->npresols; ++i )
@@ -12716,24 +12697,16 @@ void printPresolverStatistics(
 
       presol = scip->set->presols[i];
       SCIPmessageFPrintInfo(file, "  %-17.17s:", SCIPpresolGetName(presol));
-      SCIPmessageFPrintInfo(file, " %10.2f %10d %10d %10d %10d %10d %10d %10d\n",
+      SCIPmessageFPrintInfo(file, " %10.2f %10d %10d %10d %10d %10d %10d %10d %10d\n",
          SCIPpresolGetTime(presol),
          SCIPpresolGetNFixedVars(presol),
          SCIPpresolGetNAggrVars(presol),
+         SCIPpresolGetNChgVarTypes(presol),
          SCIPpresolGetNChgBds(presol),
          SCIPpresolGetNAddHoles(presol),
          SCIPpresolGetNDelConss(presol),
          SCIPpresolGetNChgSides(presol),
          SCIPpresolGetNChgCoefs(presol));
-#if 0
-      nfixedvars += SCIPpresolGetNFixedVars(presol);
-      naggrvars += SCIPpresolGetNAggrVars(presol);
-      nchgbds += SCIPpresolGetNChgBds(presol);
-      nholes += SCIPpresolGetNAddHoles(presol);
-      ndelconss += SCIPpresolGetNDelConss(presol);
-      nchgsides += SCIPpresolGetNChgSides(presol);
-      nchgcoefs += SCIPpresolGetNChgCoefs(presol);
-#endif
    }
 
    /* constraint handler presolving methods statistics */
@@ -12748,6 +12721,7 @@ void printPresolverStatistics(
          && (maxnactiveconss > 0 || !SCIPconshdlrNeedsCons(conshdlr)
             || SCIPconshdlrGetNFixedVars(conshdlr) > 0
             || SCIPconshdlrGetNAggrVars(conshdlr) > 0
+            || SCIPconshdlrGetNChgVarTypes(conshdlr) > 0
             || SCIPconshdlrGetNChgBds(conshdlr) > 0
             || SCIPconshdlrGetNAddHoles(conshdlr) > 0
             || SCIPconshdlrGetNDelConss(conshdlr) > 0
@@ -12755,44 +12729,22 @@ void printPresolverStatistics(
             || SCIPconshdlrGetNChgCoefs(conshdlr) > 0) )
       {
          SCIPmessageFPrintInfo(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         SCIPmessageFPrintInfo(file, " %10.2f %10d %10d %10d %10d %10d %10d %10d\n",
+         SCIPmessageFPrintInfo(file, " %10.2f %10d %10d %10d %10d %10d %10d %10d %10d\n",
             SCIPconshdlrGetPresolTime(conshdlr),
             SCIPconshdlrGetNFixedVars(conshdlr),
             SCIPconshdlrGetNAggrVars(conshdlr),
+            SCIPconshdlrGetNChgVarTypes(conshdlr),
             SCIPconshdlrGetNChgBds(conshdlr),
             SCIPconshdlrGetNAddHoles(conshdlr),
             SCIPconshdlrGetNDelConss(conshdlr),
             SCIPconshdlrGetNChgSides(conshdlr),
             SCIPconshdlrGetNChgCoefs(conshdlr));
-#if 0
-         nfixedvars += SCIPconshdlrGetNFixedVars(conshdlr);
-         naggrvars += SCIPconshdlrGetNAggrVars(conshdlr);
-         nchgbds += SCIPconshdlrGetNChgBds(conshdlr);
-         nholes += SCIPconshdlrGetNAddHoles(conshdlr);
-         ndelconss += SCIPconshdlrGetNDelConss(conshdlr);
-         nchgsides += SCIPconshdlrGetNChgSides(conshdlr);
-         nchgcoefs += SCIPconshdlrGetNChgCoefs(conshdlr);
-#endif
       }
    }
 
    /* root node bound changes */
-   SCIPmessageFPrintInfo(file, "  root node        :          - %10d          - %10d          -          -          -          -\n",
+   SCIPmessageFPrintInfo(file, "  root node        :          - %10d          -          - %10d          -          -          -          -\n",
       scip->stat->nrootintfixings, scip->stat->nrootboundchgs);
-
-#if 0
-   /* print total */
-   SCIPmessageFPrintInfo(file, "  total            :");
-   SCIPmessageFPrintInfo(file, " %10.2f %10d %10d %10d %10d %10d %10d %10d\n",
-      SCIPclockGetTime(scip->stat->presolvingtime),
-      nfixedvars,
-      naggrvars,
-      nchgbds,
-      nholes,
-      ndelconss,
-      nchgsides,
-      nchgcoefs);
-#endif
 }
 
 static
