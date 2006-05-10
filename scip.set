@@ -2118,6 +2118,10 @@ display/conflicts/active = 1
 # [type: int, range: [0,2], default: 1]
 display/strongbranchs/active = 1
 
+# display activation status of display column <lpobj> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/lpobj/active = 1
+
 # display activation status of display column <curdualbound> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]
 display/curdualbound/active = 1
