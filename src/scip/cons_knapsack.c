@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.132 2006/04/27 14:21:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.133 2006/05/10 12:43:36 bzfhille Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -162,10 +162,10 @@ void sortItems(
    )
 {
    assert(consdata != NULL);
-   assert(consdata->vars != NULL);
-   assert(consdata->weights != NULL);
-   assert(consdata->eventdatas != NULL);
-   assert(consdata->cliquepartition != NULL);
+   assert(consdata->nvars == 0 || consdata->vars != NULL);
+   assert(consdata->nvars == 0 || consdata->weights != NULL);
+   assert(consdata->nvars == 0 || consdata->eventdatas != NULL);
+   assert(consdata->nvars == 0 || consdata->cliquepartition != NULL);
 
    if( !consdata->sorted )
    {
@@ -215,7 +215,7 @@ SCIP_RETCODE calcCliquepartition(
    )
 {
    assert(consdata != NULL);
-   assert(consdata->cliquepartition != NULL);
+   assert(consdata->nvars == 0 || consdata->cliquepartition != NULL);
 
    if( !consdata->cliquepartitioned )
    {
@@ -265,9 +265,9 @@ SCIP_RETCODE catchEvents(
    int i;
    
    assert(consdata != NULL);
-   assert(consdata->vars != NULL);
-   assert(consdata->weights != NULL);
-   assert(consdata->eventdatas != NULL);
+   assert(consdata->nvars == 0 || consdata->vars != NULL);
+   assert(consdata->nvars == 0 || consdata->weights != NULL);
+   assert(consdata->nvars == 0 || consdata->eventdatas != NULL);
 
    for( i = 0; i < consdata->nvars; i++)
    {
@@ -291,9 +291,9 @@ SCIP_RETCODE dropEvents(
    int i;
    
    assert(consdata != NULL);
-   assert(consdata->vars != NULL);
-   assert(consdata->weights != NULL);
-   assert(consdata->eventdatas != NULL);
+   assert(consdata->nvars == 0 || consdata->vars != NULL);
+   assert(consdata->nvars == 0 || consdata->weights != NULL);
+   assert(consdata->nvars == 0 || consdata->eventdatas != NULL);
 
    for( i = 0; i < consdata->nvars; i++)
    {
