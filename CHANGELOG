@@ -132,6 +132,7 @@ fixed bugs:
   returned that the whole problem is infeasible)
 - branching on nearly-integral variables is now avoided in relpscost branching, which lead to a numerical assertion
 - removed wrong assert in varRemoveImplicsVbs()
+- fixed bug with updating LP size in probing
 
 
 SCIP version 0.81

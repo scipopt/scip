@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.181 2006/04/25 10:36:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.182 2006/05/11 19:21:58 bzfpfets Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4471,8 +4471,6 @@ SCIP_RETCODE treeBacktrackProbing(
    )
 {
    int newpathlen;
-   int ncols;
-   int nrows;
 
    assert(tree != NULL);
    assert(SCIPtreeProbing(tree));
@@ -4492,57 +4490,50 @@ SCIP_RETCODE treeBacktrackProbing(
    newpathlen = SCIPnodeGetDepth(tree->probingroot) + probingdepth + 1;
    assert(newpathlen >= 1); /* at least root node of the tree remains active */
 
-   /* if the probing mode is exited we have to look into the probing root for the correct LP size;
-    * otherwise, the correct LP size is stored in the probing node to which we are backtracking
-    */
-   if( probingdepth == -1 )
+   /* check if we have to do any backtracking */
+   if( newpathlen < tree->pathlen )
    {
-      assert(newpathlen < tree->pathlen);
-      assert(tree->path[newpathlen] == tree->probingroot);
+      int ncols;
+      int nrows;
+
+      /* the correct LP size of the node to which we backtracked is stored as initial LP size for its child */
+      assert(SCIPnodeGetType(tree->path[newpathlen]) == SCIP_NODETYPE_PROBINGNODE);
       ncols = tree->pathnlpcols[newpathlen];
       nrows = tree->pathnlprows[newpathlen];
+
+      while( tree->pathlen > newpathlen )
+      {
+	 assert(SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE);
+	 assert(tree->pathlen-1 == SCIPnodeGetDepth(tree->path[tree->pathlen-1]));
+	 assert(tree->pathlen-1 >= SCIPnodeGetDepth(tree->probingroot));
+
+	 /* undo bound changes by deactivating the probing node */
+	 SCIP_CALL( nodeDeactivate(tree->path[tree->pathlen-1], blkmem, set, stat, tree, lp, branchcand, eventqueue) );
+
+	 /* free the probing node */
+	 SCIP_CALL( SCIPnodeFree(&tree->path[tree->pathlen-1], blkmem, set, tree, lp) );
+	 tree->pathlen--;
+      }
+      assert(tree->pathlen == newpathlen);
+
+      treeCheckPath(tree);
+
+      /* undo LP extensions */
+      SCIP_CALL( SCIPlpShrinkCols(lp, ncols) );
+      SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, nrows) );
+      tree->probingloadlpistate = FALSE; /* LP state must be reloaded if the next LP is solved */
+
+      /* reset the LP's marked size */
+      SCIPlpSetSizeMark(lp, tree->pathnlprows[tree->pathlen-1], tree->pathnlpcols[tree->pathlen-1]);
+
+      /* if the highest cutoff or repropagation depth is inside the deleted part of the probing path,
+       * reset them to infinity
+       */
+      if( tree->cutoffdepth >= tree->pathlen )
+	 tree->cutoffdepth = INT_MAX;
+      if( tree->repropdepth >= tree->pathlen )
+	 tree->repropdepth = INT_MAX;
    }
-   else
-   {
-      assert(newpathlen <= tree->pathlen);
-      assert(SCIPnodeGetType(tree->path[newpathlen-1]) == SCIP_NODETYPE_PROBINGNODE);
-      ncols = tree->pathnlpcols[newpathlen-1];
-      nrows = tree->pathnlprows[newpathlen-1];
-   }
-
-   while( tree->pathlen > newpathlen )
-   {
-      assert(SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE);
-      assert(tree->pathlen-1 == SCIPnodeGetDepth(tree->path[tree->pathlen-1]));
-      assert(tree->pathlen-1 >= SCIPnodeGetDepth(tree->probingroot));
-
-      /* undo bound changes by deactivating the probing node */
-      SCIP_CALL( nodeDeactivate(tree->path[tree->pathlen-1], blkmem, set, stat, tree, lp, branchcand, eventqueue) );
-
-      /* free the probing node */
-      SCIP_CALL( SCIPnodeFree(&tree->path[tree->pathlen-1], blkmem, set, tree, lp) );
-      tree->pathlen--;
-   }
-   assert(tree->pathlen == newpathlen);
-
-   treeCheckPath(tree);
-
-   /* undo LP extensions */
-   SCIP_CALL( SCIPlpShrinkCols(lp, ncols) );
-   SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, nrows) );
-   tree->probingloadlpistate = FALSE; /* LP state must be reloaded if the next LP is solved */
-
-   /* reset the LP's marked size: marked LP size of backtrack node equals the LP size of its parent */
-   SCIPlpSetSizeMark(lp, (tree->pathlen > 1 ? tree->pathnlprows[tree->pathlen-2] : 0),
-      (tree->pathlen > 1 ? tree->pathnlpcols[tree->pathlen-2] : 0));
-
-   /* if the highest cutoff or repropagation depth is inside the deleted part of the probing path,
-    * reset them to infinity
-    */
-   if( tree->cutoffdepth >= tree->pathlen )
-      tree->cutoffdepth = INT_MAX;
-   if( tree->repropdepth >= tree->pathlen )
-      tree->repropdepth = INT_MAX;
 
    SCIPdebugMessage("probing backtracked to depth %d (%d cols, %d rows)\n", 
       tree->pathlen-1, SCIPlpGetNCols(lp), SCIPlpGetNRows(lp));
