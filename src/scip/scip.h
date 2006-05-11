@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.270 2006/05/11 13:48:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.271 2006/05/11 13:56:27 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -4247,6 +4247,14 @@ extern
 SCIP_HEUR* SCIPgetSolHeur(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal solution */
+   );
+
+/** returns whether two given solutions are exactly equal */
+extern
+SCIP_Bool SCIPareSolsEqual(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol1,               /**< first primal CIP solution */
+   SCIP_SOL*             sol2                /**< second primal CIP solution */
    );
 
 /** outputs non-zero variables of solution in original problem space to file stream */

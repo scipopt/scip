@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.365 2006/05/11 13:48:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.366 2006/05/11 13:56:26 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -10800,7 +10800,6 @@ SCIP_RETCODE SCIPsetSolVals(
    return SCIP_OKAY;
 }
 
-
 /** increases value of variable in primal CIP solution */
 SCIP_RETCODE SCIPincSolVal(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -11011,6 +11010,18 @@ SCIP_HEUR* SCIPgetSolHeur(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSolHeur", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return SCIPsolGetHeur(sol);
+}
+
+/** returns whether two given solutions are exactly equal */
+SCIP_Bool SCIPareSolsEqual(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol1,               /**< first primal CIP solution */
+   SCIP_SOL*             sol2                /**< second primal CIP solution */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPareSolsEqual", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPsolsAreEqual(sol1, sol2, scip->set, scip->stat, scip->transprob);
 }
 
 /** outputs non-zero variables of solution in original problem space to file stream */

@@ -37,6 +37,7 @@ interface:
 - changed name of method SCIPpresolGetNVarTypes() to SCIPpresolGetNChgVarTypes()
 - changed name of method SCIPconshdlrGetNVarTypes() to SCIPconshdlrGetNChgVarTypes()
 - new method SCIPcreateSolCopy()
+- new method SCIPareSolsEqual()
 
 plugins:
 - new primal heuristic "shifting"
