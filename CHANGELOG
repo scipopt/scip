@@ -36,6 +36,7 @@ interface:
 - additional parameter "maxpricerounds" in method SCIPsolveProbingLPWithPricing()
 - changed name of method SCIPpresolGetNVarTypes() to SCIPpresolGetNChgVarTypes()
 - changed name of method SCIPconshdlrGetNVarTypes() to SCIPconshdlrGetNChgVarTypes()
+- new method SCIPcreateSolCopy()
 
 plugins:
 - new primal heuristic "shifting"

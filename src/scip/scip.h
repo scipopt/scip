@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.269 2006/05/05 13:55:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.270 2006/05/11 13:48:25 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -4093,6 +4093,16 @@ SCIP_RETCODE SCIPcreateOrigSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
+/** creates a copy of a primal solution; note that a copy of a linked solution is also linked and needs to be unlinked
+ *  if it should stay unaffected from changes in the LP or pseudo solution
+ */
+extern
+SCIP_RETCODE SCIPcreateSolCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_SOL*             sourcesol           /**< primal CIP solution to copy */
    );
 
 /** frees primal CIP solution */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.364 2006/05/10 11:16:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.365 2006/05/11 13:48:25 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -10637,6 +10637,22 @@ SCIP_RETCODE SCIPcreateOrigSol(
    SCIP_CALL( checkStage(scip, "SCIPcreateOrigSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPsolCreateOriginal(sol, scip->mem->solvemem, scip->set, scip->stat, scip->primal, scip->tree, heur) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a copy of a primal solution; note that a copy of a linked solution is also linked and needs to be unlinked
+ *  if it should stay unaffected from changes in the LP or pseudo solution
+ */
+SCIP_RETCODE SCIPcreateSolCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_SOL*             sourcesol           /**< primal CIP solution to copy */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPcreateSolCopy", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPsolCopy(sol, scip->mem->solvemem, scip->set, scip->stat, scip->primal, sourcesol) );
 
    return SCIP_OKAY;
 }
