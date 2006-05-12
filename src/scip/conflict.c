@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.121 2006/05/04 08:55:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.122 2006/05/12 06:51:27 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1806,16 +1806,8 @@ SCIP_RETCODE conflictQueueBound(
    if( !conflictMarkBoundCheckPresence(conflict, bdchginfo) )
    {
       /* insert the bound change into the conflict queue */
-#if 1 /*??????????????????????? should useless bound changes be identified and resolved first?
-       * -> if useless bound changes are not resolved, the resulting conflict set is added to the list of conflit sets
-       *    although no conflict handler can create a constraint out of the set; this means, a strong branching rule
-       *    would think that the conflict will be treated by a constraint although this does not happen
-       */
       if( (!set->conf_preferbinary || SCIPvarGetType(SCIPbdchginfoGetVar(bdchginfo)) == SCIP_VARTYPE_BINARY)
          && !isBoundchgUseless(set, bdchginfo) )
-#else
-      if( !set->conf_preferbinary || SCIPvarGetType(SCIPbdchginfoGetVar(bdchginfo)) == SCIP_VARTYPE_BINARY )
-#endif
       {
          SCIP_CALL( SCIPpqueueInsert(conflict->bdchgqueue, (void*)bdchginfo) );
       }
