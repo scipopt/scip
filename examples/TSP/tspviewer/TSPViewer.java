@@ -54,8 +54,8 @@ public class TSPViewer extends Thread {
 		
       int nnodes = 0;
       int i;
-	  String name = "";
-	  double obj = -1.0;
+      String name = "";
+      double obj = -1.0;
 	  
       double[][] coords = new double[2][];
 
@@ -83,21 +83,22 @@ public class TSPViewer extends Thread {
          lock.createNewFile();
          BufferedReader in = new BufferedReader(new FileReader(file));
          
+         System.out.println("Reading new solution from file <" + file.getPath() + ">");
          if( (line = in.readLine()) != null )
-         	{
-         		if( line.equals("RESET") )
-         		{
-         			lock.delete();
-         			in.close();
-         	        return null;
-         		}
-         		else	
-         			nnodes = Integer.parseInt(line); 
-         	}
+         {
+            if( line.equals("RESET") )
+            {
+               lock.delete();
+               in.close();
+               return null;
+            }
+            else	
+               nnodes = Integer.parseInt(line); 
+         }
          if( ((line = in.readLine()) != null ))
-         	name = new String(line);
+            name = new String(line);
          if( ((line = in.readLine()) != null ))
-         	obj = Double.parseDouble(line);
+            obj = Double.parseDouble(line);
          
          
          coords[0] = new double[nnodes];
@@ -144,17 +145,17 @@ public class TSPViewer extends Thread {
       JPanel panel = new JPanel();
       JButton prev = new JButton("<<");
       prev.addActionListener( new ActionListener() {
-        public void actionPerformed(ActionEvent e) {
-          actionsteps--;
-        }
-      } );
+            public void actionPerformed(ActionEvent e) {
+               actionsteps--;
+            }
+         } );
       prev.setEnabled(false);
       JButton next = new JButton(">>");
       next.addActionListener( new ActionListener() {
-        public void actionPerformed(ActionEvent e) {
-          actionsteps++;
-        }
-      } );
+            public void actionPerformed(ActionEvent e) {
+               actionsteps++;
+            }
+         } );
       next.setEnabled(false);
       JLabel label = new JLabel("No solution found yet");
       
@@ -199,48 +200,48 @@ public class TSPViewer extends Thread {
             }
             else
             {
-            	solutions.addLast( sol );
-            	tsppanel.setTour(sol.getTourcoords());
-            	label.setText(sol.getNumber()+". solution, found by "+sol.getHeur()+" , objective: "+sol.getObjval());
-            	currsol = nsols;
-            	nsols++;
-            	if(nsols > 1)
-            		 prev.setEnabled(true);
-            	next.setEnabled(false);
-            	actionsteps = 0;
+               solutions.addLast( sol );
+               tsppanel.setTour(sol.getTourcoords());
+               label.setText(sol.getNumber()+". solution, found by "+sol.getHeur()+" , objective: "+sol.getObjval());
+               currsol = nsols;
+               nsols++;
+               if(nsols > 1)
+                  prev.setEnabled(true);
+               next.setEnabled(false);
+               actionsteps = 0;
             }             
             frame.repaint();
          } 
          // check if action was performed on the buttons. If so, repaint
          else if( actionsteps != 0 )
          {
-         	currsol = Math.max(0, Math.min(currsol+actionsteps, nsols-1));
-         	ListIterator it = solutions.listIterator(currsol);
-         	TSPSolution sol = (TSPSolution) it.next();
-         	tsppanel.setTour(sol.getTourcoords());
-         	/*double[][] t = sol.getTourcoords();
-         	System.out.print("Painting tour number " + sol.getNumber()+": ");
-        	for(int j = 0; j < t.length; j++)
-        		System.out.print("("+t[j][0]+"|"+t[j][1]+") - ");
-        	System.out.print("\n");*/
-         	label.setText(sol.getNumber()+". solution, found by "+sol.getHeur()+" , objective: "+sol.getObjval());
-         	if( currsol != 0 )
-         		prev.setEnabled(true);
-         	else
-         		prev.setEnabled(false);
-         	if( currsol != nsols -1 )
-         		next.setEnabled(true);
-         	else
-         		next.setEnabled(false);
-         	actionsteps = 0;
-         	frame.repaint();
+            currsol = Math.max(0, Math.min(currsol+actionsteps, nsols-1));
+            ListIterator it = solutions.listIterator(currsol);
+            TSPSolution sol = (TSPSolution) it.next();
+            tsppanel.setTour(sol.getTourcoords());
+            /*double[][] t = sol.getTourcoords();
+              System.out.print("Painting tour number " + sol.getNumber()+": ");
+              for(int j = 0; j < t.length; j++)
+              System.out.print("("+t[j][0]+"|"+t[j][1]+") - ");
+              System.out.print("\n");*/
+            label.setText(sol.getNumber()+". solution, found by "+sol.getHeur()+" , objective: "+sol.getObjval());
+            if( currsol != 0 )
+               prev.setEnabled(true);
+            else
+               prev.setEnabled(false);
+            if( currsol != nsols -1 )
+               next.setEnabled(true);
+            else
+               next.setEnabled(false);
+            actionsteps = 0;
+            frame.repaint();
          }
          // if nothing has happened, sleep a bit
          else
          {
             try 
             {
-               sleep(100);
+               sleep(500);
             } 
             catch( InterruptedException e )
             {

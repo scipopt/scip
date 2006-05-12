@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: EventhdlrNewSol.cpp,v 1.6 2006/01/03 12:22:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: EventhdlrNewSol.cpp,v 1.7 2006/05/12 09:34:20 bzfpfend Exp $"
 
 /**@file   EventhdlrNewSol.cpp
  * @brief  event handler for new solutions in TSP
@@ -78,7 +78,8 @@ SCIP_RETCODE EventhdlrNewSol::scip_init(
 
    /* delete lock file */
    unlink("temp.tour.lock");
-   sleep(1);
+   sleep(1); /* wait for the Java TSPViewer */
+
    return SCIP_OKAY;
 }
  
@@ -212,6 +213,7 @@ SCIP_RETCODE EventhdlrNewSol::scip_exec(
 
    /* delete lock file */
    unlink("temp.tour.lock");
+   sleep(1); /* wait for the Java TSPViewer */
 
    return SCIP_OKAY;
 }
