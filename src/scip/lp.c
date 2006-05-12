@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.222 2006/04/27 14:38:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.223 2006/05/12 13:22:22 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1952,8 +1952,7 @@ SCIP_RETCODE lpCheckRealpar(
       return SCIP_OKAY;
 
    /* check value */
-   if( lpivalue != value ) /*lint !e777*/
-      return SCIP_LPERROR;
+   assert(lpivalue == value);
 
    return retcode;
 }

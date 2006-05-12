@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.33 2006/04/10 16:15:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.34 2006/05/12 13:22:22 bzfpfend Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -1451,6 +1451,24 @@ SCIP_RETCODE SCIPparamsetAddString(
    return SCIP_OKAY;
 }
 
+/** returns the name of the given paramter type */
+static
+const char* paramtypeGetName(
+   SCIP_PARAMTYPE        paramtype           /**< type of parameter */
+   )
+{
+   static const char* paramtypename[] = {
+      "Bool",    /* SCIP_PARAMTYPE_BOOL    = 0 */
+      "int",     /* SCIP_PARAMTYPE_INT     = 1 */
+      "Longint", /* SCIP_PARAMTYPE_LONGINT = 2 */
+      "Real",    /* SCIP_PARAMTYPE_REAL    = 3 */
+      "char",    /* SCIP_PARAMTYPE_CHAR    = 4 */
+      "string"   /* SCIP_PARAMTYPE_STRING  = 5 */
+   };
+
+   return paramtypename[(int)paramtype];
+}
+
 /** gets the value of an existing SCIP_Bool parameter */
 SCIP_RETCODE SCIPparamsetGetBool(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -1466,9 +1484,16 @@ SCIP_RETCODE SCIPparamsetGetBool(
    /* retrieve parameter from hash table */
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
       return SCIP_PARAMETERUNKNOWN;
+   }
    if( param->paramtype != SCIP_PARAMTYPE_BOOL )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_BOOL));
       return SCIP_PARAMETERWRONGTYPE;
+   }
 
    /* get the parameter's current value */
    *value = SCIPparamGetBool(param);
@@ -1491,9 +1516,16 @@ SCIP_RETCODE SCIPparamsetGetInt(
    /* retrieve parameter from hash table */
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
       return SCIP_PARAMETERUNKNOWN;
+   }
    if( param->paramtype != SCIP_PARAMTYPE_INT )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_INT));
       return SCIP_PARAMETERWRONGTYPE;
+   }
 
    /* get the parameter's current value */
    *value = SCIPparamGetInt(param);
@@ -1516,9 +1548,16 @@ SCIP_RETCODE SCIPparamsetGetLongint(
    /* retrieve parameter from hash table */
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
       return SCIP_PARAMETERUNKNOWN;
+   }
    if( param->paramtype != SCIP_PARAMTYPE_LONGINT )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_LONGINT));
       return SCIP_PARAMETERWRONGTYPE;
+   }
 
    /* get the parameter's current value */
    *value = SCIPparamGetLongint(param);
@@ -1541,9 +1580,16 @@ SCIP_RETCODE SCIPparamsetGetReal(
    /* retrieve parameter from hash table */
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
       return SCIP_PARAMETERUNKNOWN;
+   }
    if( param->paramtype != SCIP_PARAMTYPE_REAL )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_REAL));
       return SCIP_PARAMETERWRONGTYPE;
+   }
 
    /* get the parameter's current value */
    *value = SCIPparamGetReal(param);
@@ -1566,9 +1612,16 @@ SCIP_RETCODE SCIPparamsetGetChar(
    /* retrieve parameter from hash table */
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
       return SCIP_PARAMETERUNKNOWN;
+   }
    if( param->paramtype != SCIP_PARAMTYPE_CHAR )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_CHAR));
       return SCIP_PARAMETERWRONGTYPE;
+   }
 
    /* get the parameter's current value */
    *value = SCIPparamGetChar(param);
@@ -1591,9 +1644,16 @@ SCIP_RETCODE SCIPparamsetGetString(
    /* retrieve parameter from hash table */
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
       return SCIP_PARAMETERUNKNOWN;
+   }
    if( param->paramtype != SCIP_PARAMTYPE_STRING )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_STRING));
       return SCIP_PARAMETERWRONGTYPE;
+   }
 
    /* get the parameter's current value */
    *value = SCIPparamGetString(param);
@@ -1617,9 +1677,16 @@ SCIP_RETCODE SCIPparamsetSetBool(
    /* retrieve parameter from hash table */
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
       return SCIP_PARAMETERUNKNOWN;
+   }
    if( param->paramtype != SCIP_PARAMTYPE_BOOL )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_BOOL));
       return SCIP_PARAMETERWRONGTYPE;
+   }
 
    /* set the parameter's current value */
    SCIP_CALL( SCIPparamSetBool(param, set->scip, value) );
@@ -1643,9 +1710,16 @@ SCIP_RETCODE SCIPparamsetSetInt(
    /* retrieve parameter from hash table */
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
       return SCIP_PARAMETERUNKNOWN;
+   }
    if( param->paramtype != SCIP_PARAMTYPE_INT )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_INT));
       return SCIP_PARAMETERWRONGTYPE;
+   }
 
    /* set the parameter's current value */
    SCIP_CALL( SCIPparamSetInt(param, set->scip, value) );
@@ -1669,9 +1743,16 @@ SCIP_RETCODE SCIPparamsetSetLongint(
    /* retrieve parameter from hash table */
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
       return SCIP_PARAMETERUNKNOWN;
+   }
    if( param->paramtype != SCIP_PARAMTYPE_LONGINT )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_LONGINT));
       return SCIP_PARAMETERWRONGTYPE;
+   }
 
    /* set the parameter's current value */
    SCIP_CALL( SCIPparamSetLongint(param, set->scip, value) );
@@ -1695,9 +1776,16 @@ SCIP_RETCODE SCIPparamsetSetReal(
    /* retrieve parameter from hash table */
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
       return SCIP_PARAMETERUNKNOWN;
+   }
    if( param->paramtype != SCIP_PARAMTYPE_REAL )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_REAL));
       return SCIP_PARAMETERWRONGTYPE;
+   }
 
    /* set the parameter's current value */
    SCIP_CALL( SCIPparamSetReal(param, set->scip, value) );
@@ -1721,9 +1809,16 @@ SCIP_RETCODE SCIPparamsetSetChar(
    /* retrieve parameter from hash table */
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
       return SCIP_PARAMETERUNKNOWN;
+   }
    if( param->paramtype != SCIP_PARAMTYPE_CHAR )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_CHAR));
       return SCIP_PARAMETERWRONGTYPE;
+   }
 
    /* set the parameter's current value */
    SCIP_CALL( SCIPparamSetChar(param, set->scip, value) );
@@ -1747,9 +1842,16 @@ SCIP_RETCODE SCIPparamsetSetString(
    /* retrieve parameter from hash table */
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
    if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
       return SCIP_PARAMETERUNKNOWN;
+   }
    if( param->paramtype != SCIP_PARAMTYPE_STRING )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_STRING));
       return SCIP_PARAMETERWRONGTYPE;
+   }
 
    /* set the parameter's current value */
    SCIP_CALL( SCIPparamSetString(param, set->scip, value) );

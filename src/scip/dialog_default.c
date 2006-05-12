@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.58 2006/03/09 12:52:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.59 2006/05/12 13:22:22 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -1680,7 +1680,10 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
    if( SCIPdialogFindEntry(root, "display", &submenu) != 1 )
+   {
+      SCIPerrorMessage("display sub menu not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
    
    /* display branching */
    if( !SCIPdialogHasEntry(submenu, "branching") )
@@ -1919,7 +1922,10 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
    if( SCIPdialogFindEntry(root, "write", &submenu) != 1 )
+   {
+      SCIPerrorMessage("write sub menu not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
    
    /* write problem */
    if( !SCIPdialogHasEntry(submenu, "problem") )
@@ -2060,7 +2066,10 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &setmenu) );
    }
    if( SCIPdialogFindEntry(root, "set", &setmenu) != 1 )
+   {
+      SCIPerrorMessage("set sub menu not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
 
    /* set load */
    if( !SCIPdialogHasEntry(setmenu, "load") )
@@ -2098,7 +2107,10 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
    if( SCIPdialogFindEntry(setmenu, "branching", &submenu) != 1 )
+   {
+      SCIPerrorMessage("branching sub menu not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
 
    for( i = 0; i < SCIPgetNBranchrules(scip); ++i )
    {
@@ -2141,7 +2153,10 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
    if( SCIPdialogFindEntry(setmenu, "conflict", &submenu) != 1 )
+   {
+      SCIPerrorMessage("conflict sub menu not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
 
    for( i = 0; i < SCIPgetNConflicthdlrs(scip); ++i )
    {
@@ -2165,7 +2180,10 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
    if( SCIPdialogFindEntry(setmenu, "constraints", &submenu) != 1 )
+   {
+      SCIPerrorMessage("constraints sub menu not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
 
    for( i = 0; i < SCIPgetNConshdlrs(scip); ++i )
    {
@@ -2189,7 +2207,10 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
    if( SCIPdialogFindEntry(setmenu, "display", &submenu) != 1 )
+   {
+      SCIPerrorMessage("display sub menu not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
 
    for( i = 0; i < SCIPgetNDisps(scip); ++i )
    {
@@ -2213,7 +2234,10 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
    if( SCIPdialogFindEntry(setmenu, "heuristics", &submenu) != 1 )
+   {
+      SCIPerrorMessage("heuristics sub menu not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
 
    for( i = 0; i < SCIPgetNHeurs(scip); ++i )
    {
@@ -2279,7 +2303,10 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
    if( SCIPdialogFindEntry(setmenu, "nodeselection", &submenu) != 1 )
+   {
+      SCIPerrorMessage("nodeselection sub menu not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
 
    for( i = 0; i < SCIPgetNNodesels(scip); ++i )
    {
@@ -2312,7 +2339,10 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
    if( SCIPdialogFindEntry(setmenu, "presolving", &submenu) != 1 )
+   {
+      SCIPerrorMessage("presolving sub menu not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
 
    for( i = 0; i < SCIPgetNPresols(scip); ++i )
    {
@@ -2336,7 +2366,10 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
    if( SCIPdialogFindEntry(setmenu, "pricing", &submenu) != 1 )
+   {
+      SCIPerrorMessage("pricing sub menu not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
 
    for( i = 0; i < SCIPgetNPricers(scip); ++i )
    {
@@ -2369,7 +2402,10 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
    if( SCIPdialogFindEntry(setmenu, "reading", &submenu) != 1 )
+   {
+      SCIPerrorMessage("reading sub menu not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
 
    for( i = 0; i < SCIPgetNReaders(scip); ++i )
    {
@@ -2393,7 +2429,10 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
    if( SCIPdialogFindEntry(setmenu, "separating", &submenu) != 1 )
+   {
+      SCIPerrorMessage("separating sub menu not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
 
    for( i = 0; i < SCIPgetNSepas(scip); ++i )
    {

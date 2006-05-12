@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.c,v 1.24 2006/04/10 16:15:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: message.c,v 1.25 2006/05/12 13:22:22 bzfpfend Exp $"
 
 /**@file   message.c
  * @brief  message output methods
@@ -293,7 +293,10 @@ SCIP_RETCODE SCIPmessagehdlrSetData(
    )
 {
    if( messagehdlr == NULL )
+   {
+      SCIPerrorMessage("cannot set message handler data - no message handler present\n");
       return SCIP_INVALIDDATA;
+   }
 
    messagehdlr->messagehdlrdata = messagehdlrdata;
 
