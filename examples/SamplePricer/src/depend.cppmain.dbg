@@ -1,4 +1,4 @@
-$(LIBOBJDIR)/cppmain.o: src/cppmain.cpp lib/scip/src/scip/cons_setppc.h \
+$(OBJDIR)/cppmain.o: src/cppmain.cpp lib/scip/src/scip/cons_setppc.h \
   lib/scip/src/scip/scip.h lib/scip/src/scip/def.h \
   lib/scip/src/scip/type_retcode.h lib/scip/src/scip/message.h \
   lib/scip/src/scip/type_message.h lib/scip/src/scip/struct_message.h \

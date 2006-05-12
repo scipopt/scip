@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.h,v 1.5 2006/01/03 12:22:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.h,v 1.6 2006/05/12 09:21:16 bzfpfend Exp $"
 
 /**@file   ConshdlrSubtour.h
  * @brief  C++ constraint handler for TSP subtour elimination constraints
@@ -42,7 +42,7 @@ public:
    ConshdlrSubtour(
       )
       : ObjConshdlr("subtour", "TSP subtour elimination constraints",
-         1000000, -2000000, -2000000, 1, -1, 100, 0,
+         1000000, -2000000, -2000000, 1, -1, 1, 0,
          FALSE, FALSE, FALSE, TRUE)
    {
    }

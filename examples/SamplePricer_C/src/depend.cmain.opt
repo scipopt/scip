@@ -1,4 +1,4 @@
-$(LIBOBJDIR)/cmain.o: src/cmain.c lib/scip/src/scip/scip.h lib/scip/src/scip/def.h \
+$(OBJDIR)/cmain.o: src/cmain.c lib/scip/src/scip/scip.h lib/scip/src/scip/def.h \
   lib/scip/src/scip/type_retcode.h lib/scip/src/scip/message.h \
   lib/scip/src/scip/type_message.h lib/scip/src/scip/struct_message.h \
   lib/scip/src/scip/pub_message.h lib/scip/src/blockmemshell/memory.h \
@@ -43,7 +43,7 @@ $(LIBOBJDIR)/cmain.o: src/cmain.c lib/scip/src/scip/scip.h lib/scip/src/scip/def
   lib/scip/src/scip/scip.h lib/scip/src/scip/cons_linear.h \
   lib/scip/src/scip/scipdefplugins.h src/pricer_healthcare.h \
   src/probdata_healthcare.h
-$(LIBOBJDIR)/pricer_healthcare.o: src/pricer_healthcare.c src/pricer_healthcare.h \
+$(OBJDIR)/pricer_healthcare.o: src/pricer_healthcare.c src/pricer_healthcare.h \
   lib/scip/src/scip/scip.h lib/scip/src/scip/def.h \
   lib/scip/src/scip/type_retcode.h lib/scip/src/scip/message.h \
   lib/scip/src/scip/type_message.h lib/scip/src/scip/struct_message.h \
@@ -87,7 +87,7 @@ $(LIBOBJDIR)/pricer_healthcare.o: src/pricer_healthcare.c src/pricer_healthcare.
   lib/scip/src/scip/struct_set.h lib/scip/src/scip/misc.h \
   lib/scip/src/scip/tree.h src/probdata_healthcare.h \
   lib/scip/src/scip/cons_setppc.h lib/scip/src/scip/scip.h
-$(LIBOBJDIR)/probdata_healthcare.o: src/probdata_healthcare.c \
+$(OBJDIR)/probdata_healthcare.o: src/probdata_healthcare.c \
   src/probdata_healthcare.h lib/scip/src/scip/scip.h \
   lib/scip/src/scip/def.h lib/scip/src/scip/type_retcode.h \
   lib/scip/src/scip/message.h lib/scip/src/scip/type_message.h \

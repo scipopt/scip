@@ -235,12 +235,12 @@ public class TSPViewer extends Thread {
          	actionsteps = 0;
          	frame.repaint();
          }
-         // if nothing has happened, sleep for half a second
+         // if nothing has happened, sleep a bit
          else
          {
             try 
             {
-               sleep(500);
+               sleep(100);
             } 
             catch( InterruptedException e )
             {

@@ -10,6 +10,10 @@ nodeselection/bfs/minplungedepth = 20
 # [type: int, range: [-1,2147483647], default: 10]
 heuristics/octane/freq = -1
 
+# frequency for calling primal heuristic <simplerounding> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 1]
+heuristics/simplerounding/freq = -1
+
 # frequency for calling separator <clique> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
 separating/clique/freq = 10
