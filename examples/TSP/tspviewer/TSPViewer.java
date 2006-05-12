@@ -83,7 +83,6 @@ public class TSPViewer extends Thread {
          lock.createNewFile();
          BufferedReader in = new BufferedReader(new FileReader(file));
          
-         System.out.println("Reading new solution from file <" + file.getPath() + ">");
          if( (line = in.readLine()) != null )
          {
             if( line.equals("RESET") )
