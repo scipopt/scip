@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.45 2006/01/03 12:22:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.46 2006/05/12 08:56:38 bzfpfend Exp $"
 
 /**@file   nodesel_bfs.c
  * @brief  node selector for best first search
@@ -131,9 +131,12 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
       minplungedepth = SCIPgetMaxDepth(scip)/10;
       if( SCIPgetNStrongbranchLPIterations(scip) > 2*SCIPgetNNodeLPIterations(scip) )
         minplungedepth += 10;
+      if( maxplungedepth >= 0 )
+         minplungedepth = MIN(minplungedepth, maxplungedepth);
    }
    if( maxplungedepth == -1 )
       maxplungedepth = SCIPgetMaxDepth(scip)/2;
+   maxplungedepth = MAX(maxplungedepth, minplungedepth);
 
    /* check, if we exceeded the maximal plunging depth */
    plungedepth = SCIPgetPlungeDepth(scip);

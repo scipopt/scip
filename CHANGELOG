@@ -82,6 +82,7 @@ parameters:
 - changed default value of branching/relpscost/conflictweight to 0.01
 - changed default value of branching/relpscost/inferenceweight to 0.0001
 - changed default value of branching/relpscost/cutoffweight to 0.0001
+- in bfs node selector, parameter "minplungedepth" is now stronger than "maxplungedepth" if they conflict
 
 features:
 - extensions to the LP are kept even if the LP is not solved at the current node; however, if the LP turned out to
