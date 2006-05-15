@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.122 2006/05/12 06:51:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.123 2006/05/15 13:18:57 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -2074,11 +2074,9 @@ SCIP_RETCODE conflictAddConflictset(
       *nliterals = conflictset->nbdchginfos;
       SCIPdebugMessage(" -> final conflict set has %d literals\n", *nliterals);
 
-#if 0 /*?????????????????????? update this method to the general conflict constraints */
       /* check conflict set on debugging solution */
       SCIP_CALL( SCIPdebugCheckConflict(blkmem, set, tree->path[validdepth],
-            conflict->conflictvars, *nliterals) ); /*lint !e506 !e774*/
-#endif
+            conflictset->bdchginfos, conflictset->nbdchginfos) ); /*lint !e506 !e774*/
 
       /* move conflictset to the conflictset storage */
       SCIP_CALL( conflictInsertConflictset(conflict, blkmem, set, &conflictset) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.20 2006/03/09 12:52:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.21 2006/05/15 13:18:57 bzfpfend Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -580,21 +580,20 @@ SCIP_RETCODE SCIPdebugCheckImplic(
    return SCIP_OKAY;
 }
 
-#if 0 /*?????????????????????? update this method to the general conflict constraints */
 /** checks whether given conflict is valid for the debugging solution */
 SCIP_RETCODE SCIPdebugCheckConflict(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NODE*            node,               /**< node where the conflict clause is added */
-   SCIP_VAR**            conflictset,        /**< variables in the conflict set */
-   int                   nliterals           /**< number of literals in the conflict set */
+   SCIP_BDCHGINFO**      bdchginfos,         /**< bound change informations of the conflict set */
+   int                   nbdchginfos         /**< number of bound changes in the conflict set */
    )
 {
    SCIP_Real solval;
    SCIP_Bool solcontained;
    int i;
 
-   assert(conflictset != NULL);
+   assert(nbdchginfos == 0 || bdchginfos != NULL);
    
    /* check whether the debugging solution is contained in the local subproblem */
    SCIP_CALL( isSolutionInNode(blkmem, set, node, &solcontained) );
@@ -602,33 +601,36 @@ SCIP_RETCODE SCIPdebugCheckConflict(
       return SCIP_OKAY;
 
    /* check, whether at least one literals is TRUE in the debugging solution */
-   for( i = 0; i < nliterals; ++i )
+   for( i = 0; i < nbdchginfos; ++i )
    {
-      if( SCIPvarGetType(conflictset[i]) != SCIP_VARTYPE_BINARY )
-      {
-         SCIPerrorMessage("non-binary variable <%s> in conflict set\n", SCIPvarGetName(conflictset[i]));
-         SCIPABORT();
-      }
-
-      SCIP_CALL( getSolutionValue(conflictset[i], &solval) );
+      SCIP_CALL( getSolutionValue(SCIPbdchginfoGetVar(bdchginfos[i]), &solval) );
       if( solval == SCIP_UNKNOWN )
          return SCIP_OKAY;
-      if( solval > 0.5 )
-         return SCIP_OKAY;
+      if( SCIPbdchginfoGetBoundtype(bdchginfos[i]) == SCIP_BOUNDTYPE_LOWER )
+      {
+         if( SCIPsetIsLT(set, solval, SCIPbdchginfoGetNewbound(bdchginfos[i])) )
+            return SCIP_OKAY;
+      }
+      else
+      {
+         if( SCIPsetIsGT(set, solval, SCIPbdchginfoGetNewbound(bdchginfos[i])) )
+            return SCIP_OKAY;
+      }
    }
 
-   SCIPerrorMessage("invalid conflict clause:");
-   for( i = 0; i < nliterals; ++i )
+   SCIPerrorMessage("invalid conflict set:");
+   for( i = 0; i < nbdchginfos; ++i )
    {
-      SCIP_CALL( getSolutionValue(conflictset[i], &solval) );
-      printf(" <%s>[%g]", SCIPvarGetName(conflictset[i]), solval);
+      SCIP_CALL( getSolutionValue(SCIPbdchginfoGetVar(bdchginfos[i]), &solval) );
+      printf(" <%s>[%g] %s %g", SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfos[i])), solval,
+         SCIPbdchginfoGetBoundtype(bdchginfos[i]) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", 
+         SCIPbdchginfoGetNewbound(bdchginfos[i]));
    }
    printf("\n");
    SCIPABORT();
 
    return SCIP_OKAY;
 }
-#endif
 
 
 /** propagator to force finding the debugging solution */

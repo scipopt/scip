@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.h,v 1.19 2006/05/08 10:12:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.h,v 1.20 2006/05/15 13:18:57 bzfpfend Exp $"
 
 /**@file   debug.h
  * @brief  methods for debugging
@@ -27,7 +27,7 @@
 #define __SCIP_DEBUG_H__
 
 /** uncomment this define to activate debugging on given solution */
-/*#define SCIP_DEBUG_SOLUTION "modell.sol"*/
+#define SCIP_DEBUG_SOLUTION "flugpl.sol"
 
 
 #include "scip/def.h"
@@ -102,17 +102,15 @@ SCIP_RETCODE SCIPdebugCheckImplic(
    SCIP_Real             implbound           /**< bound b    in implication y <= b or y >= b */
    );
 
-#if 0 /*?????????????????????? update this method to the general conflict constraints */
 /** checks whether given conflict is valid for the debugging solution */
 extern
 SCIP_RETCODE SCIPdebugCheckConflict(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NODE*            node,               /**< node where the conflict clause is added */
-   SCIP_VAR**            conflictset,        /**< variables in the conflict set */
-   int                   nliterals           /**< number of literals in the conflict set */
+   SCIP_BDCHGINFO**      bdchginfos,         /**< bound change informations of the conflict set */
+   int                   nbdchginfos         /**< number of bound changes in the conflict set */
    );
-#endif
 
 /** creates the debugging propagator and includes it in SCIP */
 extern
