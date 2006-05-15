@@ -14,7 +14,7 @@
 //*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 //*                                                                           */
 //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-// $Id: scip.lnt,v 1.15 2006/04/10 16:15:20 bzfpfend Exp $
+// $Id: scip.lnt,v 1.16 2006/05/15 13:30:33 bzfpfend Exp $
 
 -passes(1)
 // esoteric size settings to find erros.
@@ -46,7 +46,7 @@
 //  Warning 534 for these functions.
 //  Feel free to add to or subtract from this list.
 
--esym(534,close,creat,fclose,fflush,fprintf,vfprintf,fputc)
+-esym(534,close,creat,fclose,fflush,fprintf,vfprintf,fputc,fgets)
 -esym(534,fputs,fscanf,fseek,fwrite,lseek,memcpy,memmove,memset)
 -esym(534,printf,vprintf,puts,scanf,sprintf,snprintf,sscanf,strcat,strcpy)
 -esym(534,strncat,strncpy,unlink,write)
