@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.21 2006/05/15 13:18:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.22 2006/05/15 13:28:38 bzfpfend Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -269,7 +269,7 @@ SCIP_RETCODE isSolutionInNode(
 
          domchgbound = &node->domchg->domchgbound;
          boundchgs = domchgbound->boundchgs;
-         for( i = 0; i < domchgbound->nboundchgs && *solcontained; ++i )
+         for( i = 0; i < (int)domchgbound->nboundchgs && *solcontained; ++i )
          {
             SCIP_Real varsol;
 
@@ -279,22 +279,22 @@ SCIP_RETCODE isSolutionInNode(
             /* get solution value of variable */
             SCIP_CALL( getSolutionValue(boundchgs[i].var, &varsol) );
 
-            if( varsol != SCIP_UNKNOWN )
+            if( varsol != SCIP_UNKNOWN ) /*lint !e777*/
             {
                /* compare the bound change with the solution value */
-               if( boundchgs[i].boundtype == SCIP_BOUNDTYPE_LOWER )
+               if( SCIPboundchgGetBoundtype(&boundchgs[i]) == SCIP_BOUNDTYPE_LOWER )
                   *solcontained = SCIPsetIsFeasGE(set, varsol, boundchgs[i].newbound);
                else
                   *solcontained = SCIPsetIsFeasLE(set, varsol, boundchgs[i].newbound);
-               if( !(*solcontained) && boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING )
+               if( !(*solcontained) && SCIPboundchgGetBoundchgtype(&boundchgs[i]) != SCIP_BOUNDCHGTYPE_BRANCHING )
                {
                   SCIPerrorMessage("debugging solution was cut off in local node %p at depth %d by inference <%s>[%.8g] %s %.8g\n",
                      node, SCIPnodeGetDepth(node), SCIPvarGetName(boundchgs[i].var), varsol,
-                     boundchgs[i].boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", boundchgs[i].newbound);
+                     SCIPboundchgGetBoundtype(&boundchgs[i]) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", boundchgs[i].newbound);
                   SCIPABORT();
                }
             }
-            else if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+            else if( SCIPboundchgGetBoundchgtype(&boundchgs[i]) == SCIP_BOUNDCHGTYPE_BRANCHING )
             {
                /* we branched on a variable were we don't know the solution: no debugging can be applied in this subtree */
                *solcontained = FALSE;
@@ -351,7 +351,7 @@ SCIP_RETCODE SCIPdebugCheckRow(
       /* get solution value of variable in debugging solution */
       var = SCIPcolGetVar(cols[i]);
       SCIP_CALL( getSolutionValue(var, &solval) );
-      if( solval != SCIP_UNKNOWN )
+      if( solval != SCIP_UNKNOWN ) /*lint !e777*/
       {
          minactivity += vals[i] * solval;
          maxactivity += vals[i] * solval;
@@ -409,7 +409,7 @@ SCIP_RETCODE SCIPdebugCheckLbGlobal(
    SCIPdebugMessage("debugging solution on lower bound of <%s>[%g] >= %g\n", SCIPvarGetName(var), varsol, lb);
 
    /* check validity of debugging solution */
-   if( varsol != SCIP_UNKNOWN && SCIPsetIsFeasLT(set, varsol, lb) )
+   if( varsol != SCIP_UNKNOWN && SCIPsetIsFeasLT(set, varsol, lb) ) /*lint !e777*/
    {
       SCIPerrorMessage("invalid global lower bound: <%s>[%.8g] >= %.8g\n", SCIPvarGetName(var), varsol, lb);
       SCIPABORT();
@@ -432,7 +432,7 @@ SCIP_RETCODE SCIPdebugCheckUbGlobal(
    SCIPdebugMessage("debugging solution on upper bound of <%s>[%g] <= %g\n", SCIPvarGetName(var), varsol, ub);
 
    /* check validity of debugging solution */
-   if( varsol != SCIP_UNKNOWN && SCIPsetIsFeasGT(set, varsol, ub) )
+   if( varsol != SCIP_UNKNOWN && SCIPsetIsFeasGT(set, varsol, ub) ) /*lint !e777*/
    {
       SCIPerrorMessage("invalid global upper bound: <%s>[%.20g] <= %.20g\n", SCIPvarGetName(var), varsol, ub);
       SCIPABORT();
@@ -463,7 +463,7 @@ SCIP_RETCODE SCIPdebugCheckInference(
    SCIP_CALL( getSolutionValue(var, &varsol) );
 
    /* check validity of debugging solution */
-   if( varsol != SCIP_UNKNOWN )
+   if( varsol != SCIP_UNKNOWN ) /*lint !e777*/
    {
       if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasLT(set, varsol, newbound) )
       {
@@ -513,7 +513,7 @@ SCIP_RETCODE SCIPdebugCheckVbound(
    SCIP_CALL( getSolutionValue(vbvar, &vbvarsol) );
 
    /* check validity of debugging solution */
-   if( varsol != SCIP_UNKNOWN && vbvarsol != SCIP_UNKNOWN )
+   if( varsol != SCIP_UNKNOWN && vbvarsol != SCIP_UNKNOWN ) /*lint !e777*/
    {
       vb = vbcoef * vbvarsol + vbconstant;
       if( (vbtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasLT(set, varsol, vb))
@@ -545,7 +545,7 @@ SCIP_RETCODE SCIPdebugCheckImplic(
 
    /* get solution value of variable */
    SCIP_CALL( getSolutionValue(var, &solval) );
-   if( solval == SCIP_UNKNOWN )
+   if( solval == SCIP_UNKNOWN ) /*lint !e777*/
       return SCIP_OKAY;
    assert(SCIPsetIsFeasEQ(set, solval, 0.0) || SCIPsetIsFeasEQ(set, solval, 1.0));
 
@@ -555,7 +555,7 @@ SCIP_RETCODE SCIPdebugCheckImplic(
 
    /* get solution value of implied variable */
    SCIP_CALL( getSolutionValue(implvar, &solval) );
-   if( solval == SCIP_UNKNOWN )
+   if( solval == SCIP_UNKNOWN ) /*lint !e777*/
       return SCIP_OKAY;
 
    if( impltype == SCIP_BOUNDTYPE_LOWER )
@@ -604,7 +604,7 @@ SCIP_RETCODE SCIPdebugCheckConflict(
    for( i = 0; i < nbdchginfos; ++i )
    {
       SCIP_CALL( getSolutionValue(SCIPbdchginfoGetVar(bdchginfos[i]), &solval) );
-      if( solval == SCIP_UNKNOWN )
+      if( solval == SCIP_UNKNOWN ) /*lint !e777*/
          return SCIP_OKAY;
       if( SCIPbdchginfoGetBoundtype(bdchginfos[i]) == SCIP_BOUNDTYPE_LOWER )
       {
@@ -629,7 +629,7 @@ SCIP_RETCODE SCIPdebugCheckConflict(
    printf("\n");
    SCIPABORT();
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e527*/
 }
 
 
@@ -660,7 +660,7 @@ SCIP_DECL_PROPEXEC(propExecDebug)
       SCIP_Bool fixed;
 
       SCIP_CALL( getSolutionValue(vars[i], &solval) );
-      if( solval == SCIP_UNKNOWN )
+      if( solval == SCIP_UNKNOWN ) /*lint !e777*/
       {
          SCIPerrorMessage("original variable without debugging solution value\n");
          SCIPABORT();
