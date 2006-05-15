@@ -1,11 +1,11 @@
-#--- $Id: make.mingw32_nt-5.1.x86.gnu.dbg.static,v 1.1 2006/05/15 16:14:42 bzfpfend Exp $
+#--- $Id: make.mingw32_nt-5.1.x86.gnu.dbg.static,v 1.2 2006/05/15 18:35:54 bzfpfend Exp $
 FLAGS		+=	-DNO_SIGACTION -DNO_RAND_R -DNO_STRTOK_R -DSCIP_FILESLASH_FORWARD
 OFLAGS		+=	-O0 -g
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
 ARFLAGS		=	crs
-LDFLAGS		+=	-static
+LDFLAGS		+=
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 READLINE_FLAGS	=
-READLINE_LDFLAGS=	-lreadline -shared
+READLINE_LDFLAGS=	-lreadline
