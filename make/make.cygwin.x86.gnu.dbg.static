@@ -1,5 +1,5 @@
-#--- $Id: make.cygwin.x86.gnu.dbg.static,v 1.5 2006/05/15 18:35:53 bzfpfend Exp $
-FLAGS		+=	-DSCIP_FILESLASH_FORWARD
+#--- $Id: make.cygwin.x86.gnu.dbg.static,v 1.6 2006/05/15 19:23:53 bzfpfend Exp $
+FLAGS		+=
 OFLAGS		+=	-O0 -g
 CFLAGS		+=	$(GCCWARN)
 CXXFLAGS	+=	$(GXXWARN)

@@ -1,5 +1,5 @@
-#--- $Id: make.cygwin.x86.gnu.opt.static,v 1.5 2006/05/15 18:35:53 bzfpfend Exp $
-FLAGS		+=	-DNDEBUG -DSCIP_FILESLASH_FORWARD
+#--- $Id: make.cygwin.x86.gnu.opt.static,v 1.6 2006/05/15 19:23:53 bzfpfend Exp $
+FLAGS		+=	-DNDEBUG
 OFLAGS		+=	-O3 -march=pentiumpro -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)

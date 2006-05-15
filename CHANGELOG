@@ -38,6 +38,9 @@ interface:
 - changed name of method SCIPconshdlrGetNVarTypes() to SCIPconshdlrGetNChgVarTypes()
 - new method SCIPcreateSolCopy()
 - new method SCIPareSolsEqual()
+- method SCIPsplitFilenames() now treats both versions of slashes, '/' and '\', as directory delimiters (under
+  MinGW and CygWin, both are valid; so, we cannot treat file names anymore where the other slash is used as a
+  regular character)
 
 plugins:
 - new primal heuristic "shifting"
