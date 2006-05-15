@@ -14,11 +14,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.271 2006/05/11 13:56:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.272 2006/05/15 21:11:15 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
  * @author Tobias Achterberg
+ * @author Timo Berthold
  * @author Thorsten Koch
  * @author Alexander Martin
  * @author Kati Wolter
