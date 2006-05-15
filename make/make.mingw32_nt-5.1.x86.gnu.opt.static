@@ -1,6 +1,6 @@
-#--- $Id: make.linux.x86_64.gnu.opt.static,v 1.5 2006/05/15 16:14:42 bzfpfend Exp $
-FLAGS		+=	-DNDEBUG # -DROUNDING_FE
-OFLAGS		+=	-O3 -m64 -march=nocona -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
+#--- $Id: make.mingw32_nt-5.1.x86.gnu.opt.static,v 1.1 2006/05/15 16:14:42 bzfpfend Exp $
+FLAGS		+=	-DNDEBUG -DNO_SIGACTION -DNO_RAND_R -DNO_STRTOK_R -DSCIP_FILESLASH_FORWARD
+OFLAGS		+=	-O3 -march=pentiumpro -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
 ARFLAGS		=	crs

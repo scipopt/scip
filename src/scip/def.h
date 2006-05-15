@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.109 2006/05/10 09:14:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.110 2006/05/15 16:14:42 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -144,15 +144,26 @@
  * Strings
  */
 
+#ifdef SCIP_FILESLASH_FORWARD
+#define SCIP_FILESLASH              '/' /**< character to separate directories in path name */
+#else
+#ifdef SCIP_FILESLASH_BACKWARD
+#define SCIP_FILESLASH             '\\' /**< character to separate directories in path name */
+#endif
+#endif
 #define SCIP_MAXSTRLEN             1024 /**< maximum string length in SCIP */
 #if defined(_WIN32) || defined(_WIN64)
+#ifndef SCIP_FILESLASH
 #define SCIP_FILESLASH             '\\' /**< character to separate directories in path name */
+#endif
 #define snprintf _snprintf
 #define vsnprintf _vsnprintf
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
 #else
+#ifndef SCIP_FILESLASH
 #define SCIP_FILESLASH              '/' /**< character to separate directories in path name */
+#endif
 #endif
 
 
