@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.182 2006/05/11 19:21:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.183 2006/05/15 08:23:52 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -290,8 +290,10 @@ SCIP_RETCODE probingnodeCreate(
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, probingnode) );
 
    (*probingnode)->lpistate = NULL;
-   (*probingnode)->ncols = SCIPlpGetNCols(lp);
-   (*probingnode)->nrows = SCIPlpGetNRows(lp);
+   (*probingnode)->ninitialcols = SCIPlpGetNCols(lp);
+   (*probingnode)->ninitialrows = SCIPlpGetNRows(lp);
+   (*probingnode)->ncols = (*probingnode)->ninitialcols;
+   (*probingnode)->nrows = (*probingnode)->ninitialrows;
 
    SCIPdebugMessage("created probingnode information (%d cols, %d rows)\n", (*probingnode)->ncols, (*probingnode)->nrows);
 
@@ -2039,6 +2041,9 @@ void treeUpdatePathLPSize(
          break;
       case SCIP_NODETYPE_PROBINGNODE:
          assert(SCIPtreeProbing(tree));
+         assert(i >= 1);
+         assert(SCIPnodeGetType(tree->path[i-1]) == SCIP_NODETYPE_FOCUSNODE
+            || (ncols == node->data.probingnode->ninitialcols && nrows == node->data.probingnode->ninitialrows));
          assert(ncols <= node->data.probingnode->ncols);
          assert(nrows <= node->data.probingnode->nrows);
          ncols = node->data.probingnode->ncols;
@@ -2649,6 +2654,9 @@ void treeCheckPath(
       {  
       case SCIP_NODETYPE_PROBINGNODE:
          assert(SCIPtreeProbing(tree));
+         assert(d >= 1);
+         assert(SCIPnodeGetType(tree->path[d-1]) == SCIP_NODETYPE_FOCUSNODE
+            || (ncols == node->data.probingnode->ninitialcols && nrows == node->data.probingnode->ninitialrows));
          assert(ncols <= node->data.probingnode->ncols);
          assert(nrows <= node->data.probingnode->nrows);
          ncols = node->data.probingnode->ncols;
@@ -4498,8 +4506,10 @@ SCIP_RETCODE treeBacktrackProbing(
 
       /* the correct LP size of the node to which we backtracked is stored as initial LP size for its child */
       assert(SCIPnodeGetType(tree->path[newpathlen]) == SCIP_NODETYPE_PROBINGNODE);
-      ncols = tree->pathnlpcols[newpathlen];
-      nrows = tree->pathnlprows[newpathlen];
+      ncols = tree->path[newpathlen]->data.probingnode->ninitialcols;
+      nrows = tree->path[newpathlen]->data.probingnode->ninitialrows;
+      assert(ncols >= tree->pathnlpcols[newpathlen-1]);
+      assert(nrows >= tree->pathnlprows[newpathlen-1]);
 
       while( tree->pathlen > newpathlen )
       {

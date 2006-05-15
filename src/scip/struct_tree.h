@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.34 2006/03/17 12:39:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.35 2006/05/15 08:23:52 bzfpfend Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -43,6 +43,8 @@
 struct SCIP_Probingnode
 {
    SCIP_LPISTATE*        lpistate;           /**< LP state information */
+   int                   ninitialcols;       /**< number of LP columns before the node was processed */
+   int                   ninitialrows;       /**< number of LP rows before the node was processed */
    int                   ncols;              /**< total number of columns of this node's LP */
    int                   nrows;              /**< total number of rows of this node's LP */
 };
