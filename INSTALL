@@ -45,7 +45,7 @@ compilation settings:
              "static", "shared"
 
 - $(LPS):    the LP solver to use
-             "spx", "spx121", "clp", "cpx"
+             "spx", "spx121", "clp", "cpx", "xprs", "msk"
 
 For example, if you want to install SCIP on a Linux system with a x86 processor
 using the gnu compiler in debug mode with static linking, and using Soplex version >= 1.3.0
@@ -70,21 +70,35 @@ Here is what you have to do to get SCIP running:
          for each operation system and architecture to use
          (e.g. "cd scip; ln -s /cplex90/lib/i86_linux2_glibc2.3_gcc3.2/static_pic/libcplex.a lib/libcplex.linux.x86.gnu.a")
 
-   (b) to use SOPLEX (Version >= 1.3.0)
+   (b) to use XPRESS
+       - ln -s <path to directory of xprs.h> <path to SCIP>/lib/xprsinc
+         (e.g. "cd scip; ln -s /xpressmp/include lib/xprsinc")
+       - ln -s <file libxprs.a> <path to SCIP>/lib/libxprs.$(OSTYPE).$(ARCH).$(COMP).a
+         for each operation system and architecture to use
+         (e.g. "cd scip; ln -s /xpressmp/lib/libxprs.a lib/libxprs.linux.x86.gnu.a")
+
+   (c) to use MOSEK
+       - ln -s <path to directory of mosek.h> <path to SCIP>/lib/mskinc
+         (e.g. "cd scip; ln -s /mosek/include lib/mskinc")
+       - ln -s <file libmosek.a> <path to SCIP>/lib/libmosek.$(OSTYPE).$(ARCH).$(COMP).a
+         for each operation system and architecture to use
+         (e.g. "cd scip; ln -s /mosek/lib/libmosek.a lib/libmosek.linux.x86.gnu.a")
+
+   (d) to use SOPLEX (Version >= 1.3.0)
        - ln -s <path to SOPLEX' *.h files> <path to SCIP>/lib/spxinc
        - ln -s <file libsoplex.[...].a> <path to SCIP>/lib/libsoplex.$(OSTYPE).$(ARCH).$(COMP).a
          for each operating system and architecture to use
          (e.g. "cd scip; ln -s /soplex/lib/libsoplex.linux.x86.gnu.opt.a lib/libsoplex.linux.x86.gnu.a")
          Warning! The ".opt.static" in the name of the SOPLEX library does not appear in the name of the soft-link.
 
-   (c) to use SOPLEX (Version <= 1.2.1)
+   (e) to use SOPLEX (Version <= 1.2.1)
        - ln -s <path to SOPLEX' *.h files> <path to SCIP>/lib/spx121inc
        - ln -s <file libsoplex.[...].a> <path to SCIP>/lib/libsoplex121.$(OSTYPE).$(ARCH).$(COMP).a
          for each operating system and architecture to use
          (e.g. "cd scip; ln -s /soplex121/lib/libsoplex.linux.x86.gnu.opt.a lib/libsoplex121.linux.x86.gnu.a")
          Warning! The ".opt" in the name of the SOPLEX library does not appear in the name of the soft-link.
 
-   (d) to use CLP
+   (f) to use CLP
        - ln -s <path to CLP's and COIN's *.h files> <path to SCIP>/lib/clpinc
          (e.g. "cd scip; ln -s /COIN/include lib/clpinc")
        - ln -s <file libClp.a> <path to SCIP>/lib/libclp.$(OSTYPE).$(ARCH).$(COMP).a
@@ -94,7 +108,7 @@ Here is what you have to do to get SCIP running:
          for each operating system and architecture to use
          (e.g. "cd scip; ln -s /COIN/lib/libCoin.a lib/libcoin.linux.x86.gnu.a")
 
-   (e) to use ZIMPL as additional file reader for reading *.zpl files
+   (g) to use ZIMPL as additional file reader for reading *.zpl files
        - mkdir <path to SCIP>/lib/zimplinc
        - ln -s <path to ZIMPL's *.h files> <path to SCIP>/lib/zimplinc/zimpl
        - ln -s <file libzimpl-<version>.<options>.a> <path to SCIP>/lib/libzimpl.$(OSTYPE).$(ARCH).$(COMP).a
@@ -106,6 +120,8 @@ Here is what you have to do to get SCIP running:
    - "OPT=prf"         to use performance analysis compilation mode
 
    - "LPS=cpx"         to use CPLEX as LP solver (default)
+   - "LPS=xprs"        to use XPRESS as LP solver
+   - "LPS=msk"         to use MOSEK as LP solver
    - "LPS=spx"         to use SOPLEX Version >= 1.3.0 as LP solver
    - "LPS=spx121"      to use SOPLEX Version <= 1.2.1 as LP solver
    - "LPS=clp"         to use CLP as LP solver

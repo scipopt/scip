@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.160 2006/05/16 14:55:14 bzfpfend Exp $
+# $Id: Makefile,v 1.161 2006/05/16 15:28:25 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -160,6 +160,13 @@ ifeq ($(LPS),xprs)
 FLAGS		+=	-I$(LIBDIR)/xprsinc
 LPSLDFLAGS	=	$(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)
 LPILIBOBJ	=	scip/lpi_xprs.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
+endif
+
+ifeq ($(LPS),msk)
+FLAGS		+=	-I$(LIBDIR)/mskinc
+LPSLDFLAGS	=	$(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)
+LPILIBOBJ	=	scip/lpi_msk.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 endif
 
