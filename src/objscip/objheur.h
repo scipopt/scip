@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.h,v 1.22 2006/04/10 16:15:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objheur.h,v 1.23 2006/05/16 16:25:30 bzfpfend Exp $"
 
 /**@file   objheur.h
  * @brief  C++ wrapper for primal heuristics
@@ -209,7 +209,7 @@ SCIP_RETCODE SCIPincludeObjHeur(
    SCIP_Bool             deleteobject        /**< should the primal heuristic object be deleted when heuristic is freed? */
    );
 
-/** returns the heur object of the given name, or NULL if not existing */
+/** returns the heur object of the given name, or 0 if not existing */
 extern
 scip::ObjHeur* SCIPfindObjHeur(
    SCIP*                 scip,               /**< SCIP data structure */

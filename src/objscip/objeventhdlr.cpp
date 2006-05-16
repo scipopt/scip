@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objeventhdlr.cpp,v 1.6 2006/04/10 16:15:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objeventhdlr.cpp,v 1.7 2006/05/16 16:25:30 bzfpfend Exp $"
 
 /**@file   objeventhdlr.cpp
  * @brief  C++ wrapper for event handlers
@@ -204,7 +204,7 @@ SCIP_RETCODE SCIPincludeObjEventhdlr(
    return SCIP_OKAY; /*lint !e429*/
 }
 
-/** returns the eventhdlr object of the given name, or NULL if not existing */
+/** returns the eventhdlr object of the given name, or 0 if not existing */
 scip::ObjEventhdlr* SCIPfindObjEventhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of event handler */
@@ -215,7 +215,7 @@ scip::ObjEventhdlr* SCIPfindObjEventhdlr(
 
    eventhdlr = SCIPfindEventhdlr(scip, name);
    if( eventhdlr == NULL )
-      return NULL; /*lint !e64*/
+      return 0;
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);

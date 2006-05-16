@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.18 2006/04/10 16:15:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.19 2006/05/16 16:25:30 bzfpfend Exp $"
 
 /**@file   objbranchrule.cpp
  * @brief  C++ wrapper for branching rules
@@ -204,7 +204,7 @@ SCIP_RETCODE SCIPincludeObjBranchrule(
    return SCIP_OKAY; /*lint !e429*/
 }
 
-/** returns the branchrule object of the given name, or NULL if not existing */
+/** returns the branchrule object of the given name, or 0 if not existing */
 scip::ObjBranchrule* SCIPfindObjBranchrule(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of branching rule */
@@ -215,7 +215,7 @@ scip::ObjBranchrule* SCIPfindObjBranchrule(
 
    branchrule = SCIPfindBranchrule(scip, name);
    if( branchrule == NULL )
-      return NULL; /*lint !e64*/
+      return 0;
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);

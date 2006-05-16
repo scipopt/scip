@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprop.cpp,v 1.11 2006/03/09 12:52:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprop.cpp,v 1.12 2006/05/16 16:25:31 bzfpfend Exp $"
 
 /**@file   objprop.cpp
  * @brief  C++ wrapper for propagators
@@ -67,7 +67,7 @@ SCIP_DECL_PROPFREE(propFreeObj)
 
    /* free prop data */
    delete propdata;
-   SCIPpropSetData(prop, NULL);
+   SCIPpropSetData(prop, NULL); /*lint !e64*/
    
    return SCIP_OKAY;
 }
@@ -200,12 +200,12 @@ SCIP_RETCODE SCIPincludeObjProp(
          objprop->scip_priority_, objprop->scip_freq_, objprop->scip_delay_,
          propFreeObj, propInitObj, propExitObj, propInitsolObj, propExitsolObj,
          propExecObj, propRespropObj,
-         propdata) );
+         propdata) ); /*lint !e429*/
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e429*/
 }
 
-/** returns the prop object of the given name, or NULL if not existing */
+/** returns the prop object of the given name, or 0 if not existing */
 scip::ObjProp* SCIPfindObjProp(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of propagator */
@@ -216,7 +216,7 @@ scip::ObjProp* SCIPfindObjProp(
 
    prop = SCIPfindProp(scip, name);
    if( prop == NULL )
-      return NULL;
+      return 0;
 
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);

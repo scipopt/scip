@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.cpp,v 1.10 2006/04/10 16:15:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objrelax.cpp,v 1.11 2006/05/16 16:25:31 bzfpfend Exp $"
 
 /**@file   objrelax.cpp
  * @brief  C++ wrapper for relaxators
@@ -188,7 +188,7 @@ SCIP_RETCODE SCIPincludeObjRelax(
    return SCIP_OKAY; /*lint !e429*/
 }
 
-/** returns the relax object of the given name, or NULL if not existing */
+/** returns the relax object of the given name, or 0 if not existing */
 scip::ObjRelax* SCIPfindObjRelax(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of relaxator */
@@ -199,7 +199,7 @@ scip::ObjRelax* SCIPfindObjRelax(
 
    relax = SCIPfindRelax(scip, name);
    if( relax == NULL )
-      return NULL; /*lint !e64*/
+      return 0;
 
    relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata != NULL);

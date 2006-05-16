@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.cpp,v 1.16 2006/04/10 16:15:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objsepa.cpp,v 1.17 2006/05/16 16:25:31 bzfpfend Exp $"
 
 /**@file   objsepa.cpp
  * @brief  C++ wrapper for cut separators
@@ -205,7 +205,7 @@ SCIP_RETCODE SCIPincludeObjSepa(
    return SCIP_OKAY; /*lint !e429*/
 }
 
-/** returns the sepa object of the given name, or NULL if not existing */
+/** returns the sepa object of the given name, or 0 if not existing */
 scip::ObjSepa* SCIPfindObjSepa(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of cut separator */
@@ -216,7 +216,7 @@ scip::ObjSepa* SCIPfindObjSepa(
 
    sepa = SCIPfindSepa(scip, name);
    if( sepa == NULL )
-      return NULL; /*lint !e64*/
+      return 0;
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);

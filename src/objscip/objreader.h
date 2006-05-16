@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.h,v 1.15 2006/04/10 16:15:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objreader.h,v 1.16 2006/05/16 16:25:31 bzfpfend Exp $"
 
 /**@file   objreader.h
  * @brief  C++ wrapper for file readers
@@ -122,7 +122,7 @@ SCIP_RETCODE SCIPincludeObjReader(
    SCIP_Bool             deleteobject        /**< should the reader object be deleted when reader is freed? */
    );
 
-/** returns the reader object of the given name, or NULL if not existing */
+/** returns the reader object of the given name, or 0 if not existing */
 extern
 scip::ObjReader* SCIPfindObjReader(
    SCIP*                 scip,               /**< SCIP data structure */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objnodesel.cpp,v 1.14 2006/04/10 16:15:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objnodesel.cpp,v 1.15 2006/05/16 16:25:30 bzfpfend Exp $"
 
 /**@file   objnodesel.cpp
  * @brief  C++ wrapper for node selectors
@@ -203,7 +203,7 @@ SCIP_RETCODE SCIPincludeObjNodesel(
    return SCIP_OKAY; /*lint !e429*/
 }
 
-/** returns the nodesel object of the given name, or NULL if not existing */
+/** returns the nodesel object of the given name, or 0 if not existing */
 scip::ObjNodesel* SCIPfindObjNodesel(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of node selector */
@@ -214,7 +214,7 @@ scip::ObjNodesel* SCIPfindObjNodesel(
 
    nodesel = SCIPfindNodesel(scip, name);
    if( nodesel == NULL )
-      return NULL; /*lint !e64*/
+      return 0;
 
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);

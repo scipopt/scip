@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.cpp,v 1.17 2006/05/05 13:55:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpricer.cpp,v 1.18 2006/05/16 16:25:31 bzfpfend Exp $"
 
 /**@file   objpricer.cpp
  * @brief  C++ wrapper for variable pricers
@@ -205,7 +205,7 @@ SCIP_RETCODE SCIPincludeObjPricer(
    return SCIP_OKAY; /*lint !e429*/
 }
 
-/** returns the variable pricer object of the given name, or NULL if not existing */
+/** returns the variable pricer object of the given name, or 0 if not existing */
 scip::ObjPricer* SCIPfindObjPricer(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of variable pricer */
@@ -216,7 +216,7 @@ scip::ObjPricer* SCIPfindObjPricer(
 
    pricer = SCIPfindPricer(scip, name);
    if( pricer == NULL )
-      return NULL; /*lint !e64*/
+      return 0;
 
    pricerdata = SCIPpricerGetData(pricer);
    assert(pricerdata != NULL);

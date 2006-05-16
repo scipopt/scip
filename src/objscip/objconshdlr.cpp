@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.29 2006/04/10 16:15:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.30 2006/05/16 16:25:30 bzfpfend Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -509,7 +509,7 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
    return SCIP_OKAY; /*lint !e429*/
 }
 
-/** returns the conshdlr object of the given name, or NULL if not existing */
+/** returns the conshdlr object of the given name, or 0 if not existing */
 scip::ObjConshdlr* SCIPfindObjConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of constraint handler */
@@ -520,7 +520,7 @@ scip::ObjConshdlr* SCIPfindObjConshdlr(
 
    conshdlr = SCIPfindConshdlr(scip, name);
    if( conshdlr == NULL )
-      return NULL; /*lint !e64*/
+      return 0;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);

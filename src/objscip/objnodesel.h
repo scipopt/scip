@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objnodesel.h,v 1.17 2006/04/10 16:15:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objnodesel.h,v 1.18 2006/05/16 16:25:30 bzfpfend Exp $"
 
 /**@file   objnodesel.h
  * @brief  C++ wrapper for node selectors
@@ -192,7 +192,7 @@ SCIP_RETCODE SCIPincludeObjNodesel(
    SCIP_Bool             deleteobject        /**< should the node selector object be deleted when node selector is freed? */
    );
 
-/** returns the nodesel object of the given name, or NULL if not existing */
+/** returns the nodesel object of the given name, or 0 if not existing */
 extern
 scip::ObjNodesel* SCIPfindObjNodesel(
    SCIP*                 scip,               /**< SCIP data structure */

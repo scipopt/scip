@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.h,v 1.21 2006/04/10 16:15:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objsepa.h,v 1.22 2006/05/16 16:25:31 bzfpfend Exp $"
 
 /**@file   objsepa.h
  * @brief  C++ wrapper for cut separators
@@ -212,7 +212,7 @@ SCIP_RETCODE SCIPincludeObjSepa(
    SCIP_Bool             deleteobject        /**< should the cut separator object be deleted when cut separator is freed? */
    );
 
-/** returns the sepa object of the given name, or NULL if not existing */
+/** returns the sepa object of the given name, or 0 if not existing */
 extern
 scip::ObjSepa* SCIPfindObjSepa(
    SCIP*                 scip,               /**< SCIP data structure */

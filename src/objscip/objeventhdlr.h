@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objeventhdlr.h,v 1.7 2006/04/10 16:15:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objeventhdlr.h,v 1.8 2006/05/16 16:25:30 bzfpfend Exp $"
 
 /**@file   objeventhdlr.h
  * @brief  C++ wrapper for event handlers
@@ -171,7 +171,7 @@ SCIP_RETCODE SCIPincludeObjEventhdlr(
    SCIP_Bool             deleteobject        /**< should the event handler object be deleted when eventhdlristic is freed? */
    );
 
-/** returns the eventhdlr object of the given name, or NULL if not existing */
+/** returns the eventhdlr object of the given name, or 0 if not existing */
 extern
 scip::ObjEventhdlr* SCIPfindObjEventhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
