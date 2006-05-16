@@ -62,24 +62,28 @@ as LP solver, you would have the following names:
 Here is what you have to do to get SCIP running:
 
 1. Create necessary soft-links in the <scip>/lib/ directory:
+
    (a) to use CPLEX (Version >= 8.0)
        - ln -s <path to directory of cplex.h> <path to SCIP>/lib/cpxinc
          (e.g. "cd scip; ln -s /cplex90/include/ilcplex lib/cpxinc")
        - ln -s <file libcplex.a> <path to SCIP>/lib/libcplex.$(OSTYPE).$(ARCH).$(COMP).a
          for each operation system and architecture to use
          (e.g. "cd scip; ln -s /cplex90/lib/i86_linux2_glibc2.3_gcc3.2/static_pic/libcplex.a lib/libcplex.linux.x86.gnu.a")
+
    (b) to use SOPLEX (Version >= 1.3.0)
        - ln -s <path to SOPLEX' *.h files> <path to SCIP>/lib/spxinc
        - ln -s <file libsoplex.[...].a> <path to SCIP>/lib/libsoplex.$(OSTYPE).$(ARCH).$(COMP).a
          for each operating system and architecture to use
          (e.g. "cd scip; ln -s /soplex/lib/libsoplex.linux.x86.gnu.opt.a lib/libsoplex.linux.x86.gnu.a")
          Warning! The ".opt.static" in the name of the SOPLEX library does not appear in the name of the soft-link.
+
    (c) to use SOPLEX (Version <= 1.2.1)
        - ln -s <path to SOPLEX' *.h files> <path to SCIP>/lib/spx121inc
        - ln -s <file libsoplex.[...].a> <path to SCIP>/lib/libsoplex121.$(OSTYPE).$(ARCH).$(COMP).a
          for each operating system and architecture to use
          (e.g. "cd scip; ln -s /soplex121/lib/libsoplex.linux.x86.gnu.opt.a lib/libsoplex121.linux.x86.gnu.a")
          Warning! The ".opt" in the name of the SOPLEX library does not appear in the name of the soft-link.
+
    (d) to use CLP
        - ln -s <path to CLP's and COIN's *.h files> <path to SCIP>/lib/clpinc
          (e.g. "cd scip; ln -s /COIN/include lib/clpinc")
@@ -89,6 +93,7 @@ Here is what you have to do to get SCIP running:
        - ln -s <file libCoin.a> <path to SCIP>/lib/libcoin.$(OSTYPE).$(ARCH).$(COMP).a
          for each operating system and architecture to use
          (e.g. "cd scip; ln -s /COIN/lib/libCoin.a lib/libcoin.linux.x86.gnu.a")
+
    (e) to use ZIMPL as additional file reader for reading *.zpl files
        - mkdir <path to SCIP>/lib/zimplinc
        - ln -s <path to ZIMPL's *.h files> <path to SCIP>/lib/zimplinc/zimpl
