@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.215 2006/05/05 13:55:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.216 2006/05/17 11:17:12 bzfpfets Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -163,7 +163,7 @@ SCIP_RETCODE propagationRound(
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       if( *cutoff )
       {
-         SCIPdebugMessage(" -> constraint handler <%s> detected cutoff in propagation\n", 
+         SCIPdebugMessage(" -> constraint handler <%s> detected cutoff in propagation\n",
             SCIPconshdlrGetName(set->conshdlrs[i]));
       }
 
@@ -404,7 +404,7 @@ SCIP_RETCODE updatePseudocost(
             {
                /* we even collect redundant bound changes, since they were not redundant in the LP branching decision
                 * and therefore should be regarded in the pseudocost updates
-                */ 
+                */
                if( (SCIP_BOUNDCHGTYPE)boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
                {
                   var = boundchgs[i].var;
@@ -589,7 +589,7 @@ SCIP_RETCODE SCIPconstructCurrentLP(
       SCIP_CALL( SCIPtreeLoadLP(tree, blkmem, set, lp, &initroot) );
       assert(initroot || SCIPnodeGetDepth(SCIPtreeGetFocusNode(tree)) > 0);
       assert(SCIPtreeIsFocusNodeLPConstructed(tree));
-      
+
       /* setup initial LP relaxation of node */
       SCIP_CALL( initLP(blkmem, set, stat, prob, tree, lp, pricestore, sepastore, branchcand, eventqueue, initroot,
             cutoff) );
@@ -749,7 +749,7 @@ SCIP_RETCODE separationRoundLP(
    *enoughcuts = FALSE;
    consadded = FALSE;
    root = (actdepth == 0);
-   
+
    /* sort separators by priority */
    SCIPsetSortSepas(set);
 
@@ -762,7 +762,7 @@ SCIP_RETCODE separationRoundLP(
       if( onlydelayed && !SCIPsepaWasLPDelayed(set->sepas[i]) )
          continue;
 
-      SCIPdebugMessage(" -> executing separator <%s> with priority %d\n", 
+      SCIPdebugMessage(" -> executing separator <%s> with priority %d\n",
          SCIPsepaGetName(set->sepas[i]), SCIPsepaGetPriority(set->sepas[i]));
       SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, onlydelayed, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
@@ -788,7 +788,7 @@ SCIP_RETCODE separationRoundLP(
       if( onlydelayed && !SCIPconshdlrWasLPSeparationDelayed(set->conshdlrs_sepa[i]) )
          continue;
 
-      SCIPdebugMessage(" -> executing separation of constraint handler <%s> with priority %d\n", 
+      SCIPdebugMessage(" -> executing separation of constraint handler <%s> with priority %d\n",
 		       SCIPconshdlrGetName(set->conshdlrs_sepa[i]), SCIPconshdlrGetSepaPriority(set->conshdlrs_sepa[i]));
       SCIP_CALL( SCIPconshdlrSeparateLP(set->conshdlrs_sepa[i], blkmem, set, stat, sepastore, actdepth, onlydelayed,
             &result) );
@@ -819,7 +819,7 @@ SCIP_RETCODE separationRoundLP(
       if( onlydelayed && !SCIPsepaWasLPDelayed(set->sepas[i]) )
          continue;
 
-      SCIPdebugMessage(" -> executing separator <%s> with priority %d\n", 
+      SCIPdebugMessage(" -> executing separator <%s> with priority %d\n",
 		       SCIPsepaGetName(set->sepas[i]), SCIPsepaGetPriority(set->sepas[i]));
       SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, onlydelayed, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
@@ -849,7 +849,7 @@ SCIP_RETCODE separationRoundLP(
 	 if( onlydelayed && !SCIPconshdlrWasLPSeparationDelayed(set->conshdlrs_sepa[i]) )
 	    continue;
 
-	 SCIPdebugMessage(" -> executing separation of constraint handler <%s> with priority %d\n", 
+	 SCIPdebugMessage(" -> executing separation of constraint handler <%s> with priority %d\n",
 			  SCIPconshdlrGetName(set->conshdlrs_sepa[i]), SCIPconshdlrGetSepaPriority(set->conshdlrs_sepa[i]));
 	 SCIP_CALL( SCIPconshdlrSeparateLP(set->conshdlrs_sepa[i], blkmem, set, stat, sepastore, actdepth, onlydelayed,
 					   &result) );
@@ -1124,10 +1124,10 @@ SCIP_RETCODE SCIPpriceLoop(
 
       /* call external pricers to create additional problem variables */
       SCIPdebugMessage("external variable pricing\n");
-      
+
       /* sort pricer algorithms by priority */
       SCIPsetSortPricers(set);
-      
+
       /* call external pricer algorithms, that are active for the current problem */
       enoughvars = (SCIPpricestoreGetNVars(pricestore) >= SCIPsetGetPriceMaxvars(set, pretendroot)/2);
       for( p = 0; p < set->nactivepricers && !enoughvars; ++p )
@@ -1135,7 +1135,7 @@ SCIP_RETCODE SCIPpriceLoop(
          SCIP_CALL( SCIPpricerExec(set->pricers[p], set, prob, lp, pricestore) );
          enoughvars = enoughvars || (SCIPpricestoreGetNVars(pricestore) >= SCIPsetGetPriceMaxvars(set, pretendroot)/2);
       }
-   
+
       /* apply the priced variables to the LP */
       SCIP_CALL( SCIPpricestoreApplyVars(pricestore, blkmem, set, stat, prob, tree, lp) );
       assert(SCIPpricestoreGetNVars(pricestore) == 0);
@@ -1483,7 +1483,7 @@ SCIP_RETCODE priceAndCutLoop(
    /* update lower bound w.r.t. the the LP solution */
    if( *cutoff )
    {
-      SCIPnodeUpdateLowerbound(focusnode, stat, primal->cutoffbound);
+      SCIPnodeUpdateLowerbound(focusnode, stat, SCIPsetInfinity(set));
    }
    else if( !(*lperror) )
    {
@@ -1745,7 +1745,7 @@ SCIP_RETCODE enforceConstraints(
          *cutoff = TRUE;
          *infeasible = TRUE;
          resolved = TRUE;
-         SCIPdebugMessage(" -> constraint handler <%s> detected cutoff in enforcement\n", 
+         SCIPdebugMessage(" -> constraint handler <%s> detected cutoff in enforcement\n",
             SCIPconshdlrGetName(set->conshdlrs_enfo[h]));
          break;
 
@@ -2169,7 +2169,7 @@ SCIP_RETCODE solveNode(
       {
          SCIPdebugMessage("node is cut off by bounding (lower=%g, upper=%g)\n",
             SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
-         SCIPnodeUpdateLowerbound(focusnode, stat, primal->cutoffbound);
+         SCIPnodeUpdateLowerbound(focusnode, stat, SCIPsetInfinity(set));
          *cutoff = TRUE;
 
          /* call pseudo conflict analysis, if the node is cut off due to the pseudo objective value */
@@ -2378,7 +2378,7 @@ SCIP_RETCODE solveNode(
    if( *cutoff )
    {
       SCIPdebugMessage("node is cut off\n");
-      SCIPnodeUpdateLowerbound(focusnode, stat, primal->cutoffbound);
+      SCIPnodeUpdateLowerbound(focusnode, stat, SCIPsetInfinity(set));
       *infeasible = TRUE;
       *restart = FALSE;
       *unbounded = FALSE;
