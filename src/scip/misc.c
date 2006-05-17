@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.57 2006/05/15 19:23:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.58 2006/05/17 11:31:08 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -3666,7 +3666,7 @@ void SCIPsplitFilename(
    /* treat both slashes '/' and '\' as directory delimiters */
    lastslash = strrchr(filename, '/');
    lastbackslash = strrchr(filename, '\\');
-   lastslash = MAX(lastslash, lastbackslash);
+   lastslash = MAX(lastslash, lastbackslash); /*lint !e613*/
    lastdot = strrchr(filename, '.');
    if( lastslash != NULL && lastdot != NULL && lastdot < lastslash ) /* is the last dot belonging to the path? */
       lastdot = NULL;
