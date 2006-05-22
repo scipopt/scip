@@ -1,3 +1,11 @@
+current version
+===============
+
+interface:
+- new parameter "solinfeasible" for constraint handler callback methods ENFOLP and ENFOPS
+
+
+
 SCIP version 0.82
 =================
 

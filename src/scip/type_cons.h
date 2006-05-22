@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.36 2006/03/29 13:39:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.37 2006/05/22 15:51:53 bzfheinz Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -261,6 +261,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - conss           : array of constraints to process
  *  - nconss          : number of constraints to process
  *  - nusefulconss    : number of useful (non-obsolete) constraints to process
+ *  - solinfeasible   : was the solution already declared infeasible by a constraint handler?
  *  - result          : pointer to store the result of the enforcing call
  *
  *  possible return values for *result (if more than one applies, the first in the list should be used):
@@ -273,7 +274,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
 #define SCIP_DECL_CONSENFOLP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, \
-      SCIP_RESULT* result)
+      SCIP_Bool solinfeasible, SCIP_RESULT* result)
 
 /** constraint enforcing method of constraint handler for pseudo solutions
  *
@@ -301,6 +302,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - conss           : array of constraints to process
  *  - nconss          : number of constraints to process
  *  - nusefulconss    : number of useful (non-obsolete) constraints to process
+ *  - solinfeasible   : was the solution already declared infeasible by a constraint handler?
  *  - objinfeasible   : is the solution infeasible anyway due to violating lower objective bound?
  *  - result          : pointer to store the result of the enforcing call
  *
@@ -315,7 +317,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - SCIP_DIDNOTRUN  : the enforcement was skipped (only possible, if objinfeasible is true)
  */
 #define SCIP_DECL_CONSENFOPS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, \
-      SCIP_Bool objinfeasible, SCIP_RESULT* result)
+      SCIP_Bool solinfeasible, SCIP_Bool objinfeasible, SCIP_RESULT* result)
 
 /** feasibility check method of constraint handler for integral solutions
  *

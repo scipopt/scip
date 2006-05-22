@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.146 2006/05/10 11:16:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.147 2006/05/22 15:51:53 bzfheinz Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -2568,6 +2568,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_Bool             solinfeasible,      /**< was the solution already found out to be infeasible? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -2654,7 +2655,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
          SCIPclockStart(conshdlr->enfolptime, set);
 
          /* call external method */
-         SCIP_CALL( conshdlr->consenfolp(set->scip, conshdlr, conss, nconss, nusefulconss, result) );
+         SCIP_CALL( conshdlr->consenfolp(set->scip, conshdlr, conss, nconss, nusefulconss, solinfeasible, result) );
          SCIPdebugMessage(" -> enforcing returned result <%d>\n", *result);
 
          /* stop timing */
@@ -2706,6 +2707,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_Bool             solinfeasible,      /**< was the solution already found out to be infeasible? */
    SCIP_Bool             objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -2788,7 +2790,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
          SCIPclockStart(conshdlr->enfopstime, set);
 
          /* call external method */
-         SCIP_CALL( conshdlr->consenfops(set->scip, conshdlr, conss, nconss, nusefulconss, objinfeasible, result) );
+         SCIP_CALL( conshdlr->consenfops(set->scip, conshdlr, conss, nconss, nusefulconss, solinfeasible, objinfeasible, result) );
          SCIPdebugMessage(" -> enforcing returned result <%d>\n", *result);
 
          /* stop timing */

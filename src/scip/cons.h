@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.104 2006/04/10 10:37:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.105 2006/05/22 15:51:53 bzfheinz Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -211,6 +211,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_Bool             solinfeasible,      /**< was the solution already found out to be infeasible? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -224,6 +225,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_Bool             solinfeasible,      /**< was the solution already found out to be infeasible? */
    SCIP_Bool             objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );

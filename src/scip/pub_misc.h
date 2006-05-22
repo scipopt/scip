@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.23 2006/01/03 12:22:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.24 2006/05/22 15:51:53 bzfheinz Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -119,7 +119,7 @@ void SCIPhashtableFree(
 extern
 SCIP_RETCODE SCIPhashtableInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
-   void*                 element             /**< element to append to the list */
+   void*                 element             /**< element to insert into the table */
    );
 
 /** inserts element in hash table (multiple insertion of same element is checked and results in an error) */
