@@ -14,11 +14,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_msk.c,v 1.1 2006/05/16 15:17:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_msk.c,v 1.2 2006/05/22 11:01:28 bzfpfend Exp $"
 
 /**@file   lpi_msk.c
  * @brief  LP interface for MOSEK
- * @author Anders Schack-Nielsen
+ * @author Anders Schack-Nielsen, Mosek Aps
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

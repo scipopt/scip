@@ -1,23 +1,11 @@
-#--- $Id: make.sunos.sparc.gnu.opt.static,v 1.3 2006/05/15 18:35:54 bzfpfend Exp $
-CXX		=	g++
-FLAGS           +=      -DNDEBUG 
-OFLAGS          +=      -O3 -fomit-frame-pointer 
-CFLAGS          +=      $(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
-CXXFLAGS        +=      $(GXXWARN) -Wno-strict-aliasing
-LDFLAGS		=	-lm
+#--- $Id: make.sunos.sparc.gnu.opt.static,v 1.4 2006/05/22 11:01:28 bzfpfend Exp $
+FLAGS		+=	-DNDEBUG # -DROUNDING_FE
+OFLAGS		+=	-O3 -mcpu=ultrasparc -mtune=ultrasparc -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
+CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
+CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
 ARFLAGS		=	crs
+LDFLAGS		+=      -static -L/sw/sun4_57/gmp-4.1.2/lib
 ZLIB_FLAGS	=
-ZLIB_LDFLAGS 	=	-lz
+ZLIB_LDFLAGS 	=	-L/client/lib -lz
 READLINE_FLAGS	=
 READLINE_LDFLAGS=	-lreadline
-
-
-
-
-
-
-
-
-
-
-

@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.20 2006/03/23 14:04:47 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.21 2006/05/22 11:01:28 bzfpfend Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -50,6 +50,7 @@ BEGIN {
 
     timegeomshift = 0.0;
     nodegeomshift = 0.0;
+    onlyinsolufile = 0;  # should only instances be reported that are included in the .solu file?
 
     nprobs   = 0;
     sbab     = 0;
@@ -64,8 +65,10 @@ BEGIN {
     pass     = 0;
     timeouts = 0;
 }
-/=opt=/ { solfeasible[$2] = 1; sol[$2] = $3; }  # get optimum
-/=inf=/ { solfeasible[$2] = 0; sol[$2] = 0.0; } # problem infeasible
+/=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }  # get optimum
+/=inf=/  { solstatus[$2] = "inf"; sol[$2] = 0.0; } # problem infeasible
+/=best=/ { solstatus[$2] = "best"; sol[$2] = $3; } # get best known solution value
+/=unkn=/ { solstatus[$2] = "unkn"; }               # no feasible solution known
 #
 # problem name
 #
@@ -189,55 +192,44 @@ BEGIN {
    bbnodes   = $11;
 }
 /^=ready=/ {
-   bbnodes = max(bbnodes, 1); # CPLEX reports 0 nodes if the primal heuristics find the optimal solution in the root node
+   if( !onlyinsolufile || solstatus[prob] != "" )
+   {
+      bbnodes = max(bbnodes, 1); # CPLEX reports 0 nodes if the primal heuristics find the optimal solution in the root node
 
-   nprobs++;
+      nprobs++;
     
-   optimal = 0;
-   markersym = "\\g";
-   if( abs(pb - db) < 1e-06 )
-   {
-      gap = 0.0;
-      optimal = 1;
-      markersym = "  ";
-   }
-   else if( abs(db) < 1e-06 )
-      gap = -1.0;
-   else if( pb*db < 0.0 )
-      gap = -1.0;
-   else if( abs(db) >= 1e+20 )
-      gap = -1.0;
-   else if( abs(pb) >= 1e+20 )
-      gap = -1.0;
-   else
-      gap = 100.0*abs((pb-db)/db);
-   if( gap < 0.0 )
-      gapstr = "  --  ";
-   else if( gap < 1e+04 )
-      gapstr = sprintf("%6.1f", gap);
-   else
-      gapstr = " Large";
-
-   printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
-      pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
-   
-   printf("%-26s %6d %6d %14.9g %14.9g %6s                 %7d %6.1f                      ",
-      prob, cons, vars, db, pb, gapstr, bbnodes, tottime);
-   
-   if (sol[prob] == "")
-   {
-      if (timeout)
+      optimal = 0;
+      markersym = "\\g";
+      if( abs(pb - db) < 1e-06 )
       {
-         printf("timeout\n");
-         timeouttime += tottime;
-         timeouts++;
+         gap = 0.0;
+         optimal = 1;
+         markersym = "  ";
       }
+      else if( abs(db) < 1e-06 )
+         gap = -1.0;
+      else if( pb*db < 0.0 )
+         gap = -1.0;
+      else if( abs(db) >= 1e+20 )
+         gap = -1.0;
+      else if( abs(pb) >= 1e+20 )
+         gap = -1.0;
       else
-         printf("unknown\n");
-   }
-   else
-   {
-      if (solfeasible[prob])
+         gap = 100.0*abs((pb-db)/db);
+      if( gap < 0.0 )
+         gapstr = "  --  ";
+      else if( gap < 1e+04 )
+         gapstr = sprintf("%6.1f", gap);
+      else
+         gapstr = " Large";
+
+      printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
+         pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
+   
+      printf("%-26s %6d %6d %14.9g %14.9g %6s                 %7d %6.1f                      ",
+         prob, cons, vars, db, pb, gapstr, bbnodes, tottime);
+   
+      if( solstatus[prob] == "opt" )
       {
          if ((abs(pb - db) > 1e-4) || (abs(pb - sol[prob]) > 1e-6*max(abs(pb),1.0)))
          {
@@ -260,7 +252,7 @@ BEGIN {
             pass++;
          }
       }
-      else
+      else if( solstatus[prob] == "inf" )
       {
          if (feasible)
          {
@@ -283,13 +275,24 @@ BEGIN {
             pass++;
          }
       }
-   }
+      else
+      {
+         if (timeout)
+         {
+            printf("timeout\n");
+            timeouttime += tottime;
+            timeouts++;
+         }
+         else
+            printf("unknown\n");
+      }
    
-   sbab     += bbnodes;
-   scut     += cuts;
-   stottime += tottime;
-   timegeom = timegeom^((nprobs-1)/nprobs) * max(tottime+timegeomshift, 1.0)^(1.0/nprobs);
-   nodegeom = nodegeom^((nprobs-1)/nprobs) * max(bbnodes+nodegeomshift, 1.0)^(1.0/nprobs);
+      sbab     += bbnodes;
+      scut     += cuts;
+      stottime += tottime;
+      timegeom = timegeom^((nprobs-1)/nprobs) * max(tottime+timegeomshift, 1.0)^(1.0/nprobs);
+      nodegeom = nodegeom^((nprobs-1)/nprobs) * max(bbnodes+nodegeomshift, 1.0)^(1.0/nprobs);
+   }
 }
 END {
    nodegeom -= nodegeomshift;
