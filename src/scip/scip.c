@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.367 2006/05/15 21:11:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.368 2006/05/22 12:28:06 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -10653,7 +10653,15 @@ SCIP_RETCODE SCIPcreateSolCopy(
 {
    SCIP_CALL( checkStage(scip, "SCIPcreateSolCopy", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPsolCopy(sol, scip->mem->solvemem, scip->set, scip->stat, scip->primal, sourcesol) );
+   /* check if we want to copy the current solution, which is the same as creating a current solution */
+   if( sourcesol == NULL )
+   {
+      SCIP_CALL( SCIPcreateCurrentSol(scip, sol, NULL) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPsolCopy(sol, scip->mem->solvemem, scip->set, scip->stat, scip->primal, sourcesol) );
+   }
 
    return SCIP_OKAY;
 }
