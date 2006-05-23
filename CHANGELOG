@@ -1,6 +1,9 @@
 current version
 ===============
 
+compiling:
+- added ncurses to the readline entries in the make/make.* files
+
 interface:
 - new parameter "solinfeasible" for constraint handler callback methods ENFOLP and ENFOPS
 

@@ -1,14 +1,11 @@
-#--- $Id: make.sunos.sparc.gnu.dbg.static,v 1.3 2006/05/15 18:35:54 bzfpfend Exp $
-CXX             =       g++
-FLAGS           +=      -DNDEBUG
-OFLAGS          +=      -Isrc -O0 -g
-CFLAGS          +=      $(GCCWARN)
-CXXFLAGS        +=      $(GXXWARN)
-LDFLAGS         =       -lm
-ARFLAGS         =       crs
-ZLIB_FLAGS      =
-ZLIB_LDFLAGS    =       -lz
-READLINE_FLAGS  =
-READLINE_LDFLAGS=       -lreadline
-
-
+#--- $Id: make.sunos.sparc.gnu.dbg.static,v 1.4 2006/05/23 10:54:45 bzfpfend Exp $
+FLAGS		+=
+OFLAGS		+=	-O0 -g
+CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
+CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
+ARFLAGS		=	crs
+LDFLAGS		+=      -static
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline -lncurses

@@ -83,6 +83,7 @@ Here is what you have to do to get SCIP running:
        - ln -s <file libmosek.so> <path to SCIP>/lib/libmosek.$(OSTYPE).$(ARCH).$(COMP).so
          for each operation system and architecture to use
          (e.g. "cd scip; ln -s /mosek/4/tools/platform/linux32x86/bin/libmosek.so lib/libmosek.linux.x86.gnu.so")
+       - since MOSEK is a shared library, make sure your LD_LIBRARY_PATH contains <path to SCIP>/lib
 
    (d) to use SOPLEX (Version >= 1.3.0)
        - ln -s <path to SOPLEX' *.h files> <path to SCIP>/lib/spxinc

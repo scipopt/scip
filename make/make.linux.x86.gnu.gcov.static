@@ -1,4 +1,4 @@
-#--- $Id: make.linux.x86.gnu.gcov.static,v 1.6 2006/05/15 18:35:54 bzfpfend Exp $
+#--- $Id: make.linux.x86.gnu.gcov.static,v 1.7 2006/05/23 10:54:44 bzfpfend Exp $
 FLAGS		+=	# -DROUNDING_FE
 OFLAGS		+=	-O0 -fprofile-arcs -ftest-coverage
 CFLAGS		+=	$(GCCWARN)
@@ -8,5 +8,5 @@ LDFLAGS		+=
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 READLINE_FLAGS	=
-READLINE_LDFLAGS=	-lreadline
+READLINE_LDFLAGS=	-lreadline -lncurses
 # gcov [-b] -o obj/O.seq.linux.x86.gnu.gcov/ src/<file>.c

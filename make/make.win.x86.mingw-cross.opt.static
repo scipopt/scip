@@ -1,4 +1,4 @@
-#--- $Id: make.win.x86.mingw-cross.opt.static,v 1.3 2006/02/23 12:40:31 bzfpfend Exp $
+#--- $Id: make.win.x86.mingw-cross.opt.static,v 1.4 2006/05/23 10:54:45 bzfpfend Exp $
 FLAGS		+=	-DNDEBUG -DNO_SIGACTION -DNO_RAND_R -DNO_STRTOK_R # -DROUNDING_FE
 CFLAGS		=	-O6 -march=pentiumpro
 CFLAGS		+=	$(GCCWARN)
@@ -9,4 +9,4 @@ EXEEXTENSION	=	.exe
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 READLINE_FLAGS	=
-READLINE_LDFLAGS=
+READLINE_LDFLAGS=	-lreadline -lncurses
