@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.218 2006/05/24 10:35:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.219 2006/05/24 13:36:55 bzfhille Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1956,6 +1956,7 @@ SCIP_RETCODE solveNode(
    int lastlpcount;
    int actdepth;
    int nlperrors;
+   SCIP_Bool foundsol;
    SCIP_Bool focusnodehaslp;
    SCIP_Bool initiallpsolved;
    SCIP_Bool solverelaxagain;
@@ -2004,6 +2005,10 @@ SCIP_RETCODE solveNode(
    focusnodehaslp = focusnodehaslp || (actdepth == 0 && prob->ncontvars > 0);
    focusnodehaslp = focusnodehaslp && SCIPsetIsLT(set, SCIPlpGetPseudoObjval(lp, set), primal->cutoffbound);
    SCIPtreeSetFocusNodeLP(tree, focusnodehaslp);
+
+   /* call primal heuristics that should be applied before the node was solved */
+   SCIP_CALL( primalHeuristics(set, primal, tree, NULL, FALSE, FALSE, &foundsol) );
+   assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
    /* external node solving loop:
     *  - propagate domains
@@ -2590,10 +2595,6 @@ SCIP_RETCODE SCIPsolveCIP(
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFOCUSED) );
       SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
       SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
-
-      /* call primal heuristics that should be applied before the node was solved */
-      SCIP_CALL( primalHeuristics(set, primal, tree, nextnode, FALSE, FALSE, &foundsol) );
-      assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
       /* solve focus node */
       SCIP_CALL( solveNode(blkmem, set, stat, prob, primal, tree, lp, pricestore, sepastore, branchcand, cutpool,

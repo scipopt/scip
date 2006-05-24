@@ -12,6 +12,10 @@ parameters:
 - new parameter "reading/zplreader/changedir" to control behavior of path switching of ZIMPL file reader
 - new parameter "propagating/abortoncutoff"
 
+features:
+- primal heuristics that run before the node is solved now know already whether the LP will be solved at the current node or not;
+  this means, it is possible to have primal heuristics with afternode=FALSE and pseudonodes=FALSE
+
 
 SCIP version 0.82
 =================
