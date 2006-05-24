@@ -10,6 +10,7 @@ interface:
 
 parameters:
 - new parameter "reading/zplreader/changedir" to control behavior of path switching of ZIMPL file reader
+- new parameter "propagating/abortoncutoff"
 
 
 SCIP version 0.82

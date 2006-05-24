@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.65 2006/03/16 14:43:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.66 2006/05/24 10:35:25 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -238,6 +238,8 @@ struct SCIP_Set
    /* propagation settings */
    int                   prop_maxrounds;     /**< maximal number of propagation rounds per node (-1: unlimited) */
    int                   prop_maxroundsroot; /**< maximal number of propagation rounds in the root node (-1: unlimited) */
+   SCIP_Bool             prop_abortoncutoff; /**< should propagation be aborted immediately? setting this to FALSE could
+                                              *   help conflict analysis to produce more conflict constraints */
 
    /* separation settings */
    SCIP_Real             sepa_maxbounddist;  /**< maximal relative distance from current node's dual bound to primal bound

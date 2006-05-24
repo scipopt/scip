@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.217 2006/05/22 15:51:53 bzfheinz Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.218 2006/05/24 10:35:25 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -111,6 +111,7 @@ SCIP_RETCODE propagationRound(
    )
 {
    SCIP_RESULT result;
+   SCIP_Bool abortoncutoff;
    int i;
 
    assert(set != NULL);
@@ -124,8 +125,13 @@ SCIP_RETCODE propagationRound(
    /* sort propagators */
    SCIPsetSortProps(set);
 
+   /* check if we want to abort on a cutoff; if we are not in the solving stage (e.g., in presolving), we want to abort
+    * anyway
+    */
+   abortoncutoff = set->prop_abortoncutoff || (set->stage != SCIP_STAGE_SOLVING);
+
    /* call additional propagators with nonnegative priority */
-   for( i = 0; i < set->nprops && !(*cutoff); ++i )
+   for( i = 0; i < set->nprops && (!(*cutoff) || !abortoncutoff); ++i )
    {
       if( SCIPpropGetPriority(set->props[i]) < 0 )
          continue;
@@ -137,7 +143,7 @@ SCIP_RETCODE propagationRound(
       *delayed = *delayed || (result == SCIP_DELAYED);
       *propagain = *propagain || (result == SCIP_REDUCEDDOM);
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
-      if( *cutoff )
+      if( result == SCIP_CUTOFF )
       {
          SCIPdebugMessage(" -> propagator <%s> detected cutoff\n", SCIPpropGetName(set->props[i]));
       }
@@ -151,7 +157,7 @@ SCIP_RETCODE propagationRound(
    }
 
    /* propagate constraints */
-   for( i = 0; i < set->nconshdlrs && !(*cutoff); ++i )
+   for( i = 0; i < set->nconshdlrs && (!(*cutoff) || !abortoncutoff); ++i )
    {
       if( onlydelayed && !SCIPconshdlrWasPropagationDelayed(set->conshdlrs[i]) )
          continue;
@@ -161,7 +167,7 @@ SCIP_RETCODE propagationRound(
       *delayed = *delayed || (result == SCIP_DELAYED);
       *propagain = *propagain || (result == SCIP_REDUCEDDOM);
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
-      if( *cutoff )
+      if( result == SCIP_CUTOFF )
       {
          SCIPdebugMessage(" -> constraint handler <%s> detected cutoff in propagation\n",
             SCIPconshdlrGetName(set->conshdlrs[i]));
@@ -176,7 +182,7 @@ SCIP_RETCODE propagationRound(
    }
 
    /* call additional propagators with negative priority */
-   for( i = 0; i < set->nprops && !(*cutoff); ++i )
+   for( i = 0; i < set->nprops && (!(*cutoff) || !abortoncutoff); ++i )
    {
       if( SCIPpropGetPriority(set->props[i]) >= 0 )
          continue;
@@ -188,7 +194,7 @@ SCIP_RETCODE propagationRound(
       *delayed = *delayed || (result == SCIP_DELAYED);
       *propagain = *propagain || (result == SCIP_REDUCEDDOM);
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
-      if( *cutoff )
+      if( result == SCIP_CUTOFF )
       {
          SCIPdebugMessage(" -> propagator <%s> detected cutoff\n", SCIPpropGetName(set->props[i]));
       }

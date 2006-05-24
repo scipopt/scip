@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.175 2006/04/24 15:12:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.176 2006/05/24 10:35:25 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -198,6 +198,8 @@
 
 #define SCIP_DEFAULT_PROP_MAXROUNDS         100 /**< maximal number of propagation rounds per node (-1: unlimited) */
 #define SCIP_DEFAULT_PROP_MAXROUNDSROOT    1000 /**< maximal number of propagation rounds in root node (-1: unlimited) */
+#define SCIP_DEFAULT_PROP_ABORTONCUTOFF    TRUE /**< should propagation be aborted immediately? setting this to FALSE could
+                                                 *   help conflict analysis to produce more conflict constraints */
 
 
 /* Separation */
@@ -841,6 +843,11 @@ SCIP_RETCODE SCIPsetCreate(
          "propagating/maxroundsroot",
          "maximal number of propagation rounds in the root node (-1: unlimited)",
          &(*set)->prop_maxroundsroot, SCIP_DEFAULT_PROP_MAXROUNDSROOT, -1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "propagating/abortoncutoff",
+         "should propagation be aborted immediately? setting this to FALSE could help conflict analysis to produce more conflict constraints",
+         &(*set)->prop_abortoncutoff, SCIP_DEFAULT_PROP_ABORTONCUTOFF,
          NULL, NULL) );
 
    /* separation parameters */
