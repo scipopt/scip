@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.12 2006/01/03 12:22:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.13 2006/05/24 08:52:35 bzfpfend Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -469,36 +469,45 @@ SCIP_DECL_READERREAD(readerReadZpl)
 {  /*lint --e{715}*/
    char oldpath[SCIP_MAXSTRLEN];
    char buffer[SCIP_MAXSTRLEN];
-   char namewithoutpath[SCIP_MAXSTRLEN];
    char compextension[SCIP_MAXSTRLEN];
+   char namewithoutpath[SCIP_MAXSTRLEN];
    char* path;
    char* name;
    char* extension;
    char* compression;
+   SCIP_Bool changedir;
 
-   /* change to the directory of the ZIMPL file, s.t. paths of data files read by the ZIMPL model are relative to
-    * the location of the ZIMPL file
-    */
-   strncpy(buffer, filename, SCIP_MAXSTRLEN-1);
-   buffer[SCIP_MAXSTRLEN-1] = '\0';
-   SCIPsplitFilename(buffer, &path, &name, &extension, &compression);
-   if( compression != NULL )
-      sprintf(compextension, ".%s", compression);
-   else
-      *compextension = '\0';
-   sprintf(namewithoutpath, "%s.%s%s", name, extension, compextension);
-   if( getcwd(oldpath, SCIP_MAXSTRLEN) == NULL )
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/zplreader/changedir", &changedir) );
+
+   path = NULL;
+   oldpath[0] = '\0';
+   if( changedir )
    {
-      SCIPerrorMessage("error getting the current path\n");
-      return SCIP_READERROR;
-   }
-   if( path != NULL )
-   {
-      if( chdir(path) != 0 )
+      /* change to the directory of the ZIMPL file, s.t. paths of data files read by the ZIMPL model are relative to
+       * the location of the ZIMPL file
+       */
+      strncpy(buffer, filename, SCIP_MAXSTRLEN-1);
+      buffer[SCIP_MAXSTRLEN-1] = '\0';
+      SCIPsplitFilename(buffer, &path, &name, &extension, &compression);
+      if( compression != NULL )
+         sprintf(compextension, ".%s", compression);
+      else
+         *compextension = '\0';
+      sprintf(namewithoutpath, "%s.%s%s", name, extension, compextension);
+      if( getcwd(oldpath, SCIP_MAXSTRLEN) == NULL )
       {
-         SCIPerrorMessage("error changing to directory <%s>\n", path);
-         return SCIP_NOFILE;
+         SCIPerrorMessage("error getting the current path\n");
+         return SCIP_READERROR;
       }
+      if( path != NULL )
+      {
+         if( chdir(path) != 0 )
+         {
+            SCIPerrorMessage("error changing to directory <%s>\n", path);
+            return SCIP_NOFILE;
+         }
+      }
+      filename = namewithoutpath;
    }
 
    /* set static variables (ZIMPL callbacks do not support user data) */
@@ -507,15 +516,18 @@ SCIP_DECL_READERREAD(readerReadZpl)
    readerror_ = FALSE;
 
    /* call ZIMPL parser */
-   if( !zpl_read(namewithoutpath) )
+   if( !zpl_read(filename) )
       readerror_ = TRUE;
 
-   /* change directory back to old path */
-   if( path != NULL )
+   if( changedir )
    {
-      if( chdir(oldpath) != 0 )
+      /* change directory back to old path */
+      if( path != NULL )
       {
-         SCIPwarningMessage("error changing back to directory <%s>\n", oldpath);
+         if( chdir(oldpath) != 0 )
+         {
+            SCIPwarningMessage("error changing back to directory <%s>\n", oldpath);
+         }
       }
    }
 
@@ -555,6 +567,9 @@ SCIP_RETCODE SCIPincludeReaderZpl(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/zplreader/dynamiccols", "should columns be added and removed dynamically to the LP?",
          NULL, FALSE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/zplreader/changedir", "should the current directory be changed to that of the ZIMPL file before parsing?",
+         NULL, TRUE, NULL, NULL) );
 #endif
 
    return SCIP_OKAY;

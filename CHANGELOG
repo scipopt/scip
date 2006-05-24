@@ -7,6 +7,8 @@ compiling:
 interface:
 - new parameter "solinfeasible" for constraint handler callback methods ENFOLP and ENFOPS
 
+parameters:
+- new parameter "reading/zplreader/changedir" to control behavior of path switching of ZIMPL file reader
 
 
 SCIP version 0.82
