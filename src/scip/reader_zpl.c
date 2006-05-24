@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.13 2006/05/24 08:52:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.14 2006/05/24 09:05:23 bzfpfend Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -508,6 +508,18 @@ SCIP_DECL_READERREAD(readerReadZpl)
          }
       }
       filename = namewithoutpath;
+   }
+
+   /* get current path for output */
+   if( SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_NORMAL )
+   {
+      char currentpath[SCIP_MAXSTRLEN];
+      if( getcwd(currentpath, SCIP_MAXSTRLEN) == NULL )
+      {
+         SCIPerrorMessage("error getting the current path\n");
+         return SCIP_READERROR;
+      }
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\nbase directory for ZIMPL parsing: <%s>\n\n", currentpath);
    }
 
    /* set static variables (ZIMPL callbacks do not support user data) */

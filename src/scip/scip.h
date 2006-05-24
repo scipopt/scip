@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.272 2006/05/15 21:11:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.273 2006/05/24 09:05:23 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -285,6 +285,12 @@ void SCIPverbMessage(
    FILE*                 file,               /**< file stream to print into, or NULL for stdout */
    const char*           formatstr,          /**< format string like in printf() function */
    ...                                       /**< format arguments line in printf() function */
+   );
+
+/** returns the current message verbosity level */
+extern
+SCIP_VERBLEVEL SCIPgetVerbLevel(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /**@} */

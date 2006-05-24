@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.368 2006/05/22 12:28:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.369 2006/05/24 09:05:23 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -675,7 +675,7 @@ SCIP_RETCODE SCIPcreateMessagehdlr(
    )
 {
    SCIP_CALL( SCIPmessagehdlrCreate(messagehdlr, bufferedoutput,
-                  messageerror, messagewarning, messagedialog, messageinfo, messagehdlrdata) );
+         messageerror, messagewarning, messagedialog, messageinfo, messagehdlrdata) );
 
    return SCIP_OKAY;
 }
@@ -774,6 +774,16 @@ void SCIPverbMessage(
    va_start(ap, formatstr); /*lint !e826*/
    SCIPmessageVFPrintVerbInfo(scip->set->disp_verblevel, msgverblevel, file, formatstr, ap);
    va_end(ap);
+}
+
+/** returns the current message verbosity level */
+SCIP_VERBLEVEL SCIPgetVerbLevel(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVerbLevel", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->disp_verblevel;
 }
 
 
