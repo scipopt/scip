@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.162 2006/05/16 15:59:16 bzfpfend Exp $
+# $Id: Makefile,v 1.163 2006/05/26 11:22:55 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -247,7 +247,7 @@ ZIMPLSRC	:=	$(shell cat $(ZIMPLDEP))
 ZIMPLOBJ	:=	$(addprefix $(LIBOBJDIR)/,$(ZIMPLSRC:.c=.o))
 ifeq ($(ZIMPL),true)
 FLAGS		+=	-DWITH_ZIMPL -Ilib/zimplinc
-LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP) $(LINKCC_l)gmp $(LINKCC_l)z
+LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP) $(LINKCC_l)gmp $(LINKCC_l)z $(LINKCC_l)m
 endif
 
 
