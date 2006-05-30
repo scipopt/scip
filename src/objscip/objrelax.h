@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.h,v 1.15 2006/05/16 16:25:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objrelax.h,v 1.16 2006/05/30 11:51:32 bzfpfend Exp $"
 
 /**@file   objrelax.h
  * @brief  C++ wrapper for relaxators
@@ -132,9 +132,12 @@ public:
     *
     *  possible return values for *result (if more than one applies, the first in the list should be used):
     *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
-    *  - SCIP_CONSADDED  : an additional constraint was generated
-    *  - SCIP_REDUCEDDOM : a variable's domain was reduced
-    *  - SCIP_SEPARATED  : a cutting plane was generated
+    *  - SCIP_CONSADDED  : an additional constraint was generated, and the relaxator should not be called again on the
+    *                      same relaxation
+    *  - SCIP_REDUCEDDOM : a variable's domain was reduced, and the relaxator should not be called again on the same
+    *                      relaxation
+    *  - SCIP_SEPARATED  : a cutting plane was generated, and the relaxator should not be called again on the same
+    *                      relaxation
     *  - SCIP_SUCCESS    : the relaxator solved the relaxation and should not be called again on the same relaxation
     *  - SCIP_SUSPENDED  : the relaxator interrupted its solving process to wait for additional input (e.g. cutting
     *                      planes); however, it is able to continue the solving in order to improve the dual bound

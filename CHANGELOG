@@ -7,6 +7,9 @@ compiling:
 interface:
 - new parameter "solinfeasible" for constraint handler callback methods ENFOLP and ENFOPS
 - new method SCIPgetVerbLevel()
+- slightly changed the meaning of the result codes returned by external relaxators: if they modify the LP or tighten
+  bounds of variables, they are not automatically be called again (it is assumed that they already made use of these
+  changes). They are only called again, if they returned SCIP_SUSPENDED or if some other plugin modified the LP.
 
 parameters:
 - new parameter "reading/zplreader/changedir" to control behavior of path switching of ZIMPL file reader
