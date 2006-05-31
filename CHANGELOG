@@ -11,6 +11,11 @@ interface:
   bounds of variables, they are not automatically be called again (it is assumed that they already made use of these
   changes). They are only called again, if they returned SCIP_SUSPENDED or if some other plugin modified the LP.
 
+plugins:
+- new primal heuristic "rens"
+- new primal heuristic "mutation"
+- slightly modified crossover and rins heuristics
+
 parameters:
 - new parameter "reading/zplreader/changedir" to control behavior of path switching of ZIMPL file reader
 - new parameter "propagating/abortoncutoff"

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.10 2006/04/10 16:15:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.11 2006/05/31 11:53:55 bzfberth Exp $"
 
 /**@file   heur_crossover.c
  * @brief  crossover primal heuristic
@@ -43,6 +43,7 @@
 #define HEUR_AFTERNODE        TRUE          /* call heuristic after or before the current node was solved?         */
 
 #define DEFAULT_MAXNODES      5000LL        /* maximum number of nodes to regard in the subproblem                 */
+#define DEFAULT_MINIMPROVE    0.01          /* factor by which Crossover should at least improve the incumbent     */
 #define DEFAULT_MINNODES      500LL         /* minimum number of nodes to regard in the subproblem                 */
 #define DEFAULT_MINFIXINGRATE 0.666         /* minimum percentage of integer variables that have to be fixed       */
 #define DEFAULT_NODESOFS      500LL         /* number of nodes added to the contingent of the total nodes          */
@@ -78,7 +79,7 @@ struct SCIP_HeurData
    int                   nfailures;         /**< number of failures since last successful call                     */
    SCIP_Longint          nextnodenumber;    /**< number of BnB nodes at which crossover should be called next      */  
    SCIP_Real             minfixingrate;     /**< minimum percentage of integer variables that have to be fixed     */
-
+   SCIP_Real             minimprove;        /**< factor by which Crossover should at least improve the incumbent   */
    SCIP_Bool             randomization;     /**< should the choice which sols to take be randomized?               */ 
    unsigned int          randseed;          /**< seed value for random number generator                            */
    SCIP_HASHTABLE* 	 hashtable;         /**< hashtable used to store the solution tuples already used          */
@@ -681,9 +682,10 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    
    SCIP_Real memorylimit;                    /* memory limit for the subproblem                     */
    SCIP_Real timelimit;                      /* time limit for the subproblem                       */
+   SCIP_Real cutoff;                         /* objective cutoff for the subproblem                 */
    SCIP_Bool success; 
-   SCIP_Longint maxnnodes;                  
-   SCIP_Longint nsubnodes;                   /* node limit for the subproblem                       */
+                  
+   SCIP_Longint nstallnodes;                 /* node limit for the subproblem                       */
    
    int* selection;                           /* pool of solutions crossover uses                    */ 
    int nvars;                                /* number of original problem's variables              */
@@ -728,21 +730,21 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    *result = SCIP_DIDNOTRUN;
    
    /* calculate the maximal number of branching nodes until heuristic is aborted */
-   maxnnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
-
-   /* reward crossover if it succeeded often */
-   maxnnodes = (SCIP_Longint)(maxnnodes * (1.0 + 2.0*(SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur)+1.0)));
-
+   nstallnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
+   
+   /* reward Crossover if it succeeded often */
+   nstallnodes = (SCIP_Longint)(nstallnodes * (1.0 + 2.0*(SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur)+1.0)));
+   
    /* count the setup costs for the sub-MIP as 100 nodes */
-   maxnnodes -= 100 * SCIPheurGetNCalls(heur);  
-   maxnnodes += heurdata->nodesofs;
-
+   nstallnodes -= 100 * SCIPheurGetNCalls(heur);  
+   nstallnodes += heurdata->nodesofs;
+   
    /* determine the node limit for the current process */
-   nsubnodes = maxnnodes - heurdata->usednodes;
-   nsubnodes = MIN(nsubnodes, heurdata->maxnodes);
+   nstallnodes -= heurdata->usednodes;
+   nstallnodes = MIN(nstallnodes, heurdata->maxnodes);
 
    /* check whether we have enough nodes left to call subproblem solving */
-   if( nsubnodes < heurdata->minnodes )
+   if( nstallnodes < heurdata->minnodes )
       return SCIP_OKAY;
 
    /* check whether there is enough time and memory left */
@@ -809,13 +811,12 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 
    /* set limits for the subproblem */
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) ); 
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nstallnodes) ); 
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
    /* forbid recursive call of heuristics solving subMIPs */
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) );
-   /*SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/mutation/freq", -1) );*/
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
 
@@ -841,7 +842,20 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
 
    /* add an objective cutoff */
-   SCIP_CALL( SCIPsetObjlimit(subscip, SCIPgetSolTransObj(scip, sols[0]) - SCIPsumepsilon(scip)) );
+   cutoff = SCIPinfinity(scip);
+   assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );   
+      
+   if( !SCIPgetLowerbound(scip) )
+   {
+      SCIP_Real upperbound;
+      cutoff = (1-heurdata->minimprove)*SCIPgetUpperbound(scip) - heurdata->minimprove*SCIPgetLowerbound(scip);
+      upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
+      cutoff = MIN(upperbound, cutoff );
+   }
+   else
+      cutoff = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
+
+   SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
 
    /* solve the subproblem */
    SCIP_CALL( SCIPsolve(subscip) );
@@ -958,6 +972,10 @@ SCIP_RETCODE SCIPincludeHeurCrossover(
          "minimum percentage of integer variables that have to be fixed ",
          &heurdata->minfixingrate, DEFAULT_MINFIXINGRATE, 0.0, 1.0, NULL, NULL) );
    
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/crossover/minimprove",
+         "factor by which Crossover should at least improve the incumbent",
+         &heurdata->minimprove, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
+
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/crossover/randomization",
          "should the choice which sols to take be randomized?",
          &heurdata->randomization, DEFAULT_RANDOMIZATION, NULL, NULL) );

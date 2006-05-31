@@ -330,6 +330,10 @@ propagating/maxrounds = 100
 # [type: int, range: [-1,2147483647], default: 1000]
 propagating/maxroundsroot = 1000
 
+# should propagation be aborted immediately? setting this to FALSE could help conflict analysis to produce more conflict constraints
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+propagating/abortoncutoff = TRUE
+
 # maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separation (0.0: only on current best node, 1.0: on all nodes)
 # [type: real, range: [0,1], default: 0.2]
 separating/maxbounddist = 0.2
@@ -1198,6 +1202,10 @@ heuristics/crossover/nodesquot = 0.1
 # [type: real, range: [0,1], default: 0.666]
 heuristics/crossover/minfixingrate = 0.666
 
+# factor by which Crossover should at least improve the incumbent
+# [type: real, range: [0,1], default: 0.01]
+heuristics/crossover/minimprove = 0.01
+
 # should the choice which sols to take be randomized?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/crossover/randomization = TRUE
@@ -1502,6 +1510,46 @@ heuristics/localbranching/nwaitingnodes = 200
 # [type: real, range: [0,1], default: 0.01]
 heuristics/localbranching/minimprove = 0.01
 
+# priority of heuristic <mutation>
+# [type: int, range: [-2147483648,2147483647], default: -1020000]
+heuristics/mutation/priority = -1020000
+
+# frequency for calling primal heuristic <mutation> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/mutation/freq = -1
+
+# frequency offset for calling primal heuristic <mutation>
+# [type: int, range: [0,2147483647], default: 8]
+heuristics/mutation/freqofs = 8
+
+# maximal depth level to call primal heuristic <mutation> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/mutation/maxdepth = -1
+
+# number of nodes added to the contingent of the total nodes
+# [type: int, range: [0,2147483647], default: 500]
+heuristics/mutation/nodesofs = 500
+
+# maximum number of nodes to regard in the subproblem
+# [type: int, range: [0,2147483647], default: 5000]
+heuristics/mutation/maxnodes = 5000
+
+# minimum number of nodes required to start the subproblem
+# [type: int, range: [0,2147483647], default: 500]
+heuristics/mutation/minnodes = 500
+
+# number of nodes without incumbent change that heuristic should wait
+# [type: int, range: [0,2147483647], default: 200]
+heuristics/mutation/nwaitingnodes = 200
+
+# contingent of sub problem nodes in relation to the number of nodes of the original problem
+# [type: real, range: [0,1], default: 0.1]
+heuristics/mutation/nodesquot = 0.1
+
+# percentage of integer variables that have to be fixed 
+# [type: real, range: [1e-06,0.999999], default: 0.8]
+heuristics/mutation/fixingrate = 0.8
+
 # priority of heuristic <objpscostdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1004000]
 heuristics/objpscostdiving/priority = -1004000
@@ -1638,6 +1686,50 @@ heuristics/pscostdiving/maxdiveubquotnosol = 0.1
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/pscostdiving/maxdiveavgquotnosol = 0
 
+# priority of heuristic <rens>
+# [type: int, range: [-2147483648,2147483647], default: -1100000]
+heuristics/rens/priority = -1100000
+
+# frequency for calling primal heuristic <rens> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 0]
+heuristics/rens/freq = 0
+
+# frequency offset for calling primal heuristic <rens>
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/rens/freqofs = 0
+
+# maximal depth level to call primal heuristic <rens> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/rens/maxdepth = -1
+
+# minimum percentage of integer variables that have to be fixed 
+# [type: real, range: [0,1], default: 0.5]
+heuristics/rens/minfixingrate = 0.5
+
+# maximum number of nodes to regard in the subproblem
+# [type: longint, range: [0,9223372036854775807], default: 5000]
+heuristics/rens/maxnodes = 5000
+
+# should general integers get binary bounds [floor(.),ceil(.)] ?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/rens/binarybounds = FALSE
+
+# number of nodes added to the contingent of the total nodes
+# [type: longint, range: [0,9223372036854775807], default: 500]
+heuristics/rens/nodesofs = 500
+
+# minimum number of nodes required to start the subproblem
+# [type: longint, range: [0,9223372036854775807], default: 500]
+heuristics/rens/minnodes = 500
+
+# contingent of sub problem nodes in relation to the number of nodes of the original problem
+# [type: real, range: [0,1], default: 0.1]
+heuristics/rens/nodesquot = 0.1
+
+# factor by which RENS should at least improve the incumbent  
+# [type: real, range: [0,1], default: 0.01]
+heuristics/rens/minimprove = 0.01
+
 # priority of heuristic <rins>
 # [type: int, range: [-2147483648,2147483647], default: -1009000]
 heuristics/rins/priority = -1009000
@@ -1674,7 +1766,7 @@ heuristics/rins/nodesquot = 0.1
 # [type: int, range: [0,2147483647], default: 200]
 heuristics/rins/nwaitingnodes = 200
 
-# factor by which RINS should at least improve the incumbent  
+# factor by which RINS should at least improve the incumbent
 # [type: real, range: [0,1], default: 0.01]
 heuristics/rins/minimprove = 0.01
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.220 2006/05/30 11:51:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.221 2006/05/31 11:53:55 bzfberth Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1663,6 +1663,20 @@ SCIP_RETCODE solveNodeRelax(
    return SCIP_OKAY;
 }
 
+/** marks all relaxators to be unsolved */
+static
+void markRelaxsUnsolved(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   int r;
+
+   assert(set != NULL);
+
+   for( r = 0; r < set->nrelaxs; ++r )
+      SCIPrelaxMarkUnsolved(set->relaxs[r]);
+}
+   
 /** enforces constraints by branching, separation, or domain reduction */
 static
 SCIP_RETCODE enforceConstraints(
@@ -1780,6 +1794,7 @@ SCIP_RETCODE enforceConstraints(
          *propagateagain = TRUE;
          *solvelpagain = TRUE;
          *solverelaxagain = TRUE;
+         markRelaxsUnsolved(set);
          resolved = TRUE;
          break;
 
@@ -1789,6 +1804,7 @@ SCIP_RETCODE enforceConstraints(
          *infeasible = TRUE;
          *solvelpagain = TRUE;
          *solverelaxagain = TRUE;
+         markRelaxsUnsolved(set);
          resolved = TRUE;
          break;
 
@@ -1940,20 +1956,6 @@ void updateLoopStatus(
       *solverelaxagain = !SCIPrelaxIsSolved(set->relaxs[r], stat);
 }
 
-/** marks all relaxators to be unsolved */
-static
-void markRelaxsUnsolved(
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   int r;
-
-   assert(set != NULL);
-
-   for( r = 0; r < set->nrelaxs; ++r )
-      SCIPrelaxMarkUnsolved(set->relaxs[r]);
-}
-   
 /** solves the focus node */
 static
 SCIP_RETCODE solveNode(
@@ -2064,7 +2066,6 @@ SCIP_RETCODE solveNode(
       SCIP_Bool solverelax;
       SCIP_Bool solvelp;
       SCIP_Bool propagate;
-      int r;
 
       assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
@@ -2093,18 +2094,6 @@ SCIP_RETCODE solveNode(
          solvelp = solvelp || (lpwasflushed && !lp->flushed);
       }
       assert(SCIPsepastoreGetNCuts(sepastore) == 0);
-
-#if 0 /*???????????????????????*/
-      /* if the LP should be resolved, all relaxations should also be resolved */
-      /**@todo if the LP modification methods of the relax interface is implemented, we can remove this and give
-       *       total control to the relaxators
-       */
-      if( solvelp )
-      {
-         solverelax = TRUE;
-         markRelaxsUnsolved(set);
-      }
-#endif
 
       /* solve external relaxations with non-negative priority */
       if( solverelax && !(*cutoff) )
@@ -2316,12 +2305,14 @@ SCIP_RETCODE solveNode(
             propagateagain = TRUE;
             solvelpagain = TRUE;
             solverelaxagain = TRUE;
+            markRelaxsUnsolved(set);
             break;
          case SCIP_SEPARATED:
             assert(tree->nchildren == 0);
             assert(SCIPsepastoreGetNCuts(sepastore) > 0);
             solvelpagain = TRUE;
             solverelaxagain = TRUE;
+            markRelaxsUnsolved(set);
             break;
          case SCIP_BRANCHED:
             assert(tree->nchildren >= 1);
