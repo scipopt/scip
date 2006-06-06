@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.217 2006/04/27 14:21:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.218 2006/06/06 16:59:07 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3386,10 +3386,14 @@ SCIP_RETCODE addRelaxation(
       SCIP_CALL( createRow(scip, cons) );
    }
    assert(consdata->row != NULL);
-   assert(!SCIProwIsInLP(consdata->row));
 
    /* insert LP row as cut */
-   SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
+   if( !SCIProwIsInLP(consdata->row) )
+   {
+      SCIPdebugMessage("adding relaxation of linear constraint <%s>: ", SCIPconsGetName(cons));
+      SCIPdebug( SCIProwPrint(consdata->row, NULL) );
+      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
+   }
 
    return SCIP_OKAY;
 }

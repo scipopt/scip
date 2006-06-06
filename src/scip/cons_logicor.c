@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.102 2006/04/10 16:15:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.103 2006/06/06 16:59:07 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -765,12 +765,13 @@ SCIP_RETCODE addCut(
       SCIP_CALL( createRow(scip, cons) );
    }
    assert(consdata->row != NULL);
-   assert(!SCIProwIsInLP(consdata->row));
-
-   SCIPdebugMessage("adding constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
 
    /* insert LP row as cut */
-   SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
+   if( !SCIProwIsInLP(consdata->row) )
+   {
+      SCIPdebugMessage("adding constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
+      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
+   }
 
    return SCIP_OKAY;
 }

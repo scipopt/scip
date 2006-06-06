@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.47 2006/04/10 09:15:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.48 2006/06/06 16:59:08 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for variable bound constraints
@@ -256,9 +256,12 @@ SCIP_RETCODE addRelaxation(
    }
    assert(consdata->row != NULL);
 
-   SCIPdebugMessage("adding relaxation of variable bound constraint <%s>: ", SCIPconsGetName(cons));
-   SCIPdebug( SCIProwPrint(consdata->row, NULL) );
-   SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE) );
+   if( !SCIProwIsInLP(consdata->row) )
+   {
+      SCIPdebugMessage("adding relaxation of variable bound constraint <%s>: ", SCIPconsGetName(cons));
+      SCIPdebug( SCIProwPrint(consdata->row, NULL) );
+      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE) );
+   }
 
    return SCIP_OKAY;
 }

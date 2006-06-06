@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.45 2006/04/10 16:15:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.46 2006/06/06 16:59:08 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -562,7 +562,7 @@ SCIP_RETCODE addRelaxation(
    assert(consdata->rows[0] != NULL);
    for( r = 0; r < NROWS; ++r )
    {
-      if( consdata->rows[r] != NULL )
+      if( consdata->rows[r] != NULL && !SCIProwIsInLP(consdata->rows[r]) )
       {
          SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], FALSE) );
       }

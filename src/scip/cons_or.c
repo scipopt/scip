@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.55 2006/03/29 13:39:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.56 2006/06/06 16:59:07 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -617,7 +617,10 @@ SCIP_RETCODE addRelaxation(
 
    for( r = 0; r < consdataGetNRows(consdata); ++r )
    {
-      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], FALSE) );
+      if( !SCIProwIsInLP(consdata->rows[r]) )
+      {
+         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], FALSE) );
+      }
    }
 
    return SCIP_OKAY;

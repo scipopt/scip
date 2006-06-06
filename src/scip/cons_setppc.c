@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.108 2006/04/10 16:15:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.109 2006/06/06 16:59:08 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -1260,12 +1260,13 @@ SCIP_RETCODE addCut(
       SCIP_CALL( createRow(scip, cons) );
    }
    assert(consdata->row != NULL);
-   assert(!SCIProwIsInLP(consdata->row));
-
-   SCIPdebugMessage("adding constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
 
    /* insert LP row as cut */
-   SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
+   if( !SCIProwIsInLP(consdata->row) )
+   {
+      SCIPdebugMessage("adding constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
+      SCIP_CALL( SCIPaddCut(scip, sol, consdata->row, FALSE) );
+   }
 
    return SCIP_OKAY;
 }
