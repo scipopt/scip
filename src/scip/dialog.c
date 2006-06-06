@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.32 2006/04/10 16:15:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.33 2006/06/06 13:32:40 bzfpfend Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -37,6 +37,7 @@
 #include "scip/message.h"
 #include "blockmemshell/memory.h"
 #include "scip/set.h"
+#include "scip/misc.h"
 #include "scip/dialog.h"
 
 #include "scip/struct_dialog.h"
@@ -396,6 +397,7 @@ SCIP_RETCODE SCIPdialoghdlrGetWord(
    char path[SCIP_MAXSTRLEN];
    char p[SCIP_MAXSTRLEN];
    char* firstword;
+   int pos;
 
    assert(dialoghdlr != NULL);
    assert(dialoghdlr->buffer != NULL);
@@ -436,7 +438,7 @@ SCIP_RETCODE SCIPdialoghdlrGetWord(
       /* insert command in command history */
       if( dialoghdlr->buffer[dialoghdlr->bufferpos] != '\0' )
       {
-         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, NULL, &dialoghdlr->buffer[dialoghdlr->bufferpos]) );
+         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, NULL, &dialoghdlr->buffer[dialoghdlr->bufferpos], FALSE) );
       }
    }
 
@@ -448,22 +450,68 @@ SCIP_RETCODE SCIPdialoghdlrGetWord(
       dialoghdlr->bufferpos++;
    firstword = &dialoghdlr->buffer[dialoghdlr->bufferpos];
 
-   /* find the next space in the buffer */
+   pos = dialoghdlr->bufferpos;
    while( dialoghdlr->buffer[dialoghdlr->bufferpos] != '\0' && !isspace(dialoghdlr->buffer[dialoghdlr->bufferpos]) )
+   {
+      assert(pos <= dialoghdlr->bufferpos);
+
+      switch( dialoghdlr->buffer[dialoghdlr->bufferpos] )
+      {
+      case '"':
+         dialoghdlr->bufferpos++;
+         /* read characters as they are until the next " */
+         while( dialoghdlr->buffer[dialoghdlr->bufferpos] != '\0' && dialoghdlr->buffer[dialoghdlr->bufferpos] != '"' )
+         {
+            dialoghdlr->buffer[pos] = dialoghdlr->buffer[dialoghdlr->bufferpos];
+            pos++;
+            dialoghdlr->bufferpos++;
+         }
+         if( dialoghdlr->buffer[dialoghdlr->bufferpos] == '"' )
+            dialoghdlr->bufferpos++; /* skip final " */
+         break;
+      case '\'':
+         dialoghdlr->bufferpos++;
+         /* read characters as they are until the next ' */
+         while( dialoghdlr->buffer[dialoghdlr->bufferpos] != '\0' && dialoghdlr->buffer[dialoghdlr->bufferpos] != '\'' )
+         {
+            dialoghdlr->buffer[pos] = dialoghdlr->buffer[dialoghdlr->bufferpos];
+            pos++;
+            dialoghdlr->bufferpos++;
+         }
+         if( dialoghdlr->buffer[dialoghdlr->bufferpos] == '\'' )
+            dialoghdlr->bufferpos++; /* skip final ' */
+         break;
+      case '\\':
+         /* read next character as it is */
+         dialoghdlr->bufferpos++;
+         dialoghdlr->buffer[pos] = dialoghdlr->buffer[dialoghdlr->bufferpos];
+         pos++;
+         dialoghdlr->bufferpos++;
+         break;
+      default:
+         dialoghdlr->buffer[pos] = dialoghdlr->buffer[dialoghdlr->bufferpos];
+         pos++;
+         dialoghdlr->bufferpos++;
+         break;
+      }
+   }
+   assert(pos <= dialoghdlr->bufferpos);
+
+   /* move buffer to the next position */
+   if( dialoghdlr->buffer[dialoghdlr->bufferpos] != '\0' )
       dialoghdlr->bufferpos++;
 
    /* truncate the command word in the buffer */
-   if( dialoghdlr->buffer[dialoghdlr->bufferpos] != '\0' )
-   {
-      dialoghdlr->buffer[dialoghdlr->bufferpos] = '\0';
-      dialoghdlr->bufferpos++;
-   }
+   if( dialoghdlr->buffer[pos] != '\0' )
+      dialoghdlr->buffer[pos] = '\0';
 
    /* remove additional spaces */
    while( isspace(dialoghdlr->buffer[dialoghdlr->bufferpos]) )
       dialoghdlr->bufferpos++;
 
    *inputword = firstword;
+
+   SCIPdebugMessage("next word: <%s>\n", *inputword);
 
    return SCIP_OKAY;
 }
@@ -496,7 +544,8 @@ SCIP_RETCODE SCIPdialoghdlrAddInputLine(
 SCIP_RETCODE SCIPdialoghdlrAddHistory(
    SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
    SCIP_DIALOG*          dialog,             /**< current dialog, or NULL */
-   const char*           command             /**< command string to add to the command history, or NULL */
+   const char*           command,            /**< command string to add to the command history, or NULL */
+   SCIP_Bool             escapecommand       /**< should special characters in command be prefixed by an escape char? */
    )
 {
    char s[SCIP_MAXSTRLEN];
@@ -513,7 +562,12 @@ SCIP_RETCODE SCIPdialoghdlrAddHistory(
    h[SCIP_MAXSTRLEN-1] = '\0';
 
    if( command != NULL )
-      strncpy(h, command, SCIP_MAXSTRLEN-1);
+   {
+      if( escapecommand )
+         SCIPescapeString(h, SCIP_MAXSTRLEN, command);
+      else
+         strncpy(h, command, SCIP_MAXSTRLEN-1);
+   }
    else
       h[0] = '\0';
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.369 2006/05/24 09:05:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.370 2006/06/06 13:32:41 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2329,7 +2329,7 @@ SCIP_RETCODE SCIPaddDialogHistoryLine(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddDialogHistoryLine", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   SCIP_CALL( SCIPdialoghdlrAddHistory(scip->dialoghdlr, NULL, inputline) );
+   SCIP_CALL( SCIPdialoghdlrAddHistory(scip->dialoghdlr, NULL, inputline, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -13992,7 +13992,7 @@ SCIP_RETCODE SCIPallocBufferSize(
 SCIP_RETCODE SCIPduplicateBufferSize(
    SCIP*                 scip,               /**< SCIP data structure */
    void**                ptr,                /**< pointer to store the buffer */
-   void*                 source,             /**< memory block to copy into the buffer */
+   const void*           source,             /**< memory block to copy into the buffer */
    int                   size                /**< required size in bytes of buffer */
    )
 {

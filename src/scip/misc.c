@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.58 2006/05/17 11:31:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.59 2006/06/06 13:32:40 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -3614,6 +3614,34 @@ char* SCIPstrtok(
 #else
    return strtok_r(s, delim, ptrptr);
 #endif
+}
+
+/** translates the given string into a string where escape symbols ", ', and \, and spaces are escaped with a \ prefix */
+void SCIPescapeString(
+   char*                 t,                  /**< target buffer to store escaped string */
+   int                   bufsize,            /**< size of buffer t */
+   const char*           s                   /**< string to transform into escaped string */
+   )
+{
+   int len;
+   int i;
+   int p;
+
+   assert(t != NULL);
+   assert(bufsize > 0);
+
+   len = (int)strlen(s);
+   for( p = 0, i = 0; i <= len && p < bufsize; ++i, ++p )
+   {
+      if( s[i] == ' ' || s[i] == '"' || s[i] == '\'' || s[i] == '\\' )
+      {
+         t[p] = '\\';
+         p++;
+      }
+      if( p < bufsize )
+         t[p] = s[i];
+   }
+   t[bufsize-1] = '\0';
 }
 
 

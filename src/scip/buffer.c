@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: buffer.c,v 1.26 2006/01/03 12:22:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: buffer.c,v 1.27 2006/06/06 13:32:40 bzfpfend Exp $"
 
 /**@file   buffer.c
  * @brief  methods for memory buffers for temporary objects
@@ -141,7 +141,7 @@ SCIP_RETCODE SCIPbufferDuplicateMem(
    SCIP_BUFFER*          buffer,             /**< memory buffer storage */
    SCIP_SET*             set,                /**< global SCIP settings */
    void**                ptr,                /**< pointer to store the allocated memory buffer */
-   void*                 source,             /**< memory block to copy into the buffer */
+   const void*           source,             /**< memory block to copy into the buffer */
    int                   size                /**< minimal required size of the buffer */
    )
 {

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_dialog.h,v 1.12 2006/03/09 12:52:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_dialog.h,v 1.13 2006/06/06 13:32:40 bzfpfend Exp $"
 
 /**@file   pub_dialog.h
  * @brief  public methods for user interface dialog
@@ -82,7 +82,8 @@ extern
 SCIP_RETCODE SCIPdialoghdlrAddHistory(
    SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
    SCIP_DIALOG*          dialog,             /**< current dialog, or NULL */
-   const char*           command             /**< command string to add to the command history, or NULL */
+   const char*           command,            /**< command string to add to the command history, or NULL */
+   SCIP_Bool             escapecommand       /**< should special characters in command be prefixed by an escape char? */
    );
 
 

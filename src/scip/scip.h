@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.273 2006/05/24 09:05:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.274 2006/06/06 13:32:41 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -5874,7 +5874,7 @@ extern
 SCIP_RETCODE SCIPduplicateBufferSize(
    SCIP*                 scip,               /**< SCIP data structure */
    void**                ptr,                /**< pointer to store the buffer */
-   void*                 source,             /**< memory block to copy into the buffer */
+   const void*           source,             /**< memory block to copy into the buffer */
    int                   size                /**< required size in bytes of buffer */
    );
 

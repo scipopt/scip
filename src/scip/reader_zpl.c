@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.14 2006/05/24 09:05:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.15 2006/06/06 13:32:41 bzfpfend Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -43,6 +43,8 @@
 
 extern
 Bool zpl_read(const char* filename);
+extern
+Bool zpl_read_with_args(int argc, char** argv);
 
 
 
@@ -475,6 +477,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
    char* name;
    char* extension;
    char* compression;
+   char* paramstr;
    SCIP_Bool changedir;
 
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/zplreader/changedir", &changedir) );
@@ -527,9 +530,106 @@ SCIP_DECL_READERREAD(readerReadZpl)
    issuedbranchpriowarning_ = FALSE;
    readerror_ = FALSE;
 
-   /* call ZIMPL parser */
-   if( !zpl_read(filename) )
-      readerror_ = TRUE;
+   /* get the parameter string */
+   SCIP_CALL( SCIPgetStringParam(scip, "reading/zplreader/parameters", &paramstr) );
+   if( strcmp(paramstr, "-") == 0 )
+   {
+      /* call ZIMPL parser without arguments */
+      if( !zpl_read(filename) )
+         readerror_ = TRUE;
+   }
+   else
+   {
+      char dummy[2] = "x";
+      char** argv;
+      int argc;
+      int p;
+      int len;
+      int i;
+
+      len = strlen(paramstr);
+      SCIP_CALL( SCIPallocBufferArray(scip, &argv, len+1) );
+      argv[0] = dummy; /* argument 0 is irrelevant */
+      argc = 1;
+      p = 0;
+      while( p < len )
+      {
+         int arglen;
+
+         /* process next argument */
+         SCIP_CALL( SCIPallocBufferArray(scip, &argv[argc], len+1) );
+         arglen = 0;
+
+         /* skip spaces */
+         while( p < len && paramstr[p] == ' ' )
+            p++;
+
+         /* process characters */
+         while( p < len && paramstr[p] != ' ' )
+         {
+            switch( paramstr[p] )
+            {
+            case '"':
+               p++;
+               /* read characters as they are until the next " */
+               while( p < len && paramstr[p] != '"' )
+               {
+                  argv[argc][arglen] = paramstr[p];
+                  arglen++;
+                  p++;
+               }
+               p++; /* skip final " */
+               break;
+            case '\\':
+               /* read next character as it is */
+               p++;
+               argv[argc][arglen] = paramstr[p];
+               arglen++;
+               p++;
+               break;
+            default:
+               argv[argc][arglen] = paramstr[p];
+               arglen++;
+               p++;
+               break;
+            }
+         }
+         argv[argc][arglen] = '\0';
+
+         /* check for empty argument */
+         if( arglen == 0 )
+         {
+            SCIPfreeBufferArray(scip, &argv[argc]);
+         }
+         else
+            argc++;
+      }
+      
+      /* append file name as last argument */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &argv[argc], filename, strlen(filename)+1) );
+      argc++;
+
+      /* display parsed arguments */
+      if( SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_FULL )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "ZIMPL arguments:\n");
+         for( i = 1; i < argc; ++i )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "%d: <%s>\n", i, argv[i]);
+         }
+      }
+
+      /* call ZIMPL parser with arguments */
+      if( !zpl_read_with_args(argc, argv) )
+         readerror_ = TRUE;
+
+      /* free argument memory */
+      for( i = argc-1; i >= 1; --i )
+      {
+         SCIPfreeBufferArray(scip, &argv[i]);
+      }
+      SCIPfreeBufferArray(scip, &argv);
+   }
 
    if( changedir )
    {
@@ -582,6 +682,9 @@ SCIP_RETCODE SCIPincludeReaderZpl(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/zplreader/changedir", "should the current directory be changed to that of the ZIMPL file before parsing?",
          NULL, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddStringParam(scip,
+         "reading/zplreader/parameters", "additional parameter string passed to the ZIMPL parser (or - for no additional parameters)",
+         NULL, "-", NULL, NULL) );
 #endif
 
    return SCIP_OKAY;
