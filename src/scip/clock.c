@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.c,v 1.25 2006/04/10 16:15:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: clock.c,v 1.26 2006/06/06 14:41:25 bzfpfend Exp $"
 
 /**@file   clock.c
  * @brief  methods for clocks and timing issues
@@ -29,6 +29,7 @@
 #else
 #include <sys/times.h>
 #include <sys/time.h>
+#include <unistd.h>
 #endif
 #include <time.h>
 
