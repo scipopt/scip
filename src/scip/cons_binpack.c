@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_binpack.c,v 1.35 2006/06/07 08:21:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_binpack.c,v 1.36 2006/06/07 11:47:26 bzfpfend Exp $"
 
 /**@file   cons_binpack.c
  * @brief  constraint handler for binpack constraints
@@ -469,7 +469,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdBinpack)
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
-            SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
+            SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
    }
 
    return SCIP_OKAY;
@@ -537,7 +537,9 @@ SCIP_RETCODE SCIPcreateConsBinpack(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             stickingatnode      /**< should the node always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node? */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -560,7 +562,7 @@ SCIP_RETCODE SCIPcreateConsBinpack(
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, dynamic, removable) );
+         local, modifiable, dynamic, removable, stickingatnode) );
 
    return SCIP_OKAY;
 }

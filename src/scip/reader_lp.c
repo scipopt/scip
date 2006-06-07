@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.15 2006/06/07 08:21:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.16 2006/06/07 11:47:28 bzfpfend Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -981,7 +981,7 @@ SCIP_RETCODE readConstraints(
    dynamic = dynamicconss;
    removable = dynamicrows || lpinput->inusercuts;
    SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, ncoefs, vars, coefs, lhs, rhs,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber, 
       lpinput->inlazyconstraints ? " (lazy)" : (lpinput->inusercuts ? " (user cut)" : ""));

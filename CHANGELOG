@@ -14,6 +14,13 @@ interface:
 - new method SCIPescapeString()
 - renamed all occurences of "removeable" by the correct English word "removable":
   SCIPconsIsRemovable(), SCIPsetConsRemovable(), SCIPvarIsRemovable(), SCIPcolIsRemovable(), SCIProwIsRemovable()
+- new parameter "sticktonode" in SCIPcreateCons(), SCIPcreateConsAnd(), SCIPcreateConsBounddisjunction(),
+  SCIPcreateConsKnapsack(), SCIPcreateConsLinear(), SCIPcreateConsLogicor(), SCIPcreateConsOr(), SCIPcreateConsVarbound(),
+  SCIPcreateConsXor(), SCIPcreateConsSetpart(), SCIPcreateConsSetpack(), SCIPcreateConsSetcover():
+  usually, you should set this to FALSE; if you want to add constraints
+  as node markers with node data and, e.g., use the "activate" and "deactivate" callbacks to get informed about the
+  activation and deactivation of the node, you should set this flag to TRUE in order to make sure, that the constraint
+  will always be associated to the node and not moved to a more global node if this would be possible
 
 plugins:
 - new primal heuristic "rens"

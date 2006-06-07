@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.h,v 1.2 2006/06/07 08:21:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.h,v 1.3 2006/06/07 11:47:26 bzfpfend Exp $"
 
 /**@file   cons_bounddisjunction.h
  * @brief  constraint handler for bound disjunction constraints
@@ -54,7 +54,9 @@ SCIP_RETCODE SCIPcreateConsBounddisjunction(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             stickingatnode      /**< should the node always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node? */
    );
 
 /** gets number of variables in bound disjunction constraint */

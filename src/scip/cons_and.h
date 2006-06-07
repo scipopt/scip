@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.h,v 1.22 2006/06/07 08:21:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.h,v 1.23 2006/06/07 11:47:26 bzfpfend Exp $"
 
 /**@file   cons_and.h
  * @brief  constraint handler for and constraints
@@ -53,7 +53,9 @@ SCIP_RETCODE SCIPcreateConsAnd(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             stickingatnode      /**< should the node always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node? */
    );
 
 /** gets number of variables in and constraint */

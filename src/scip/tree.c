@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.183 2006/05/15 08:23:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.184 2006/06/07 11:47:29 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1419,13 +1419,7 @@ SCIP_RETCODE SCIPnodeAddCons(
    assert(tree != NULL);
    assert(tree->effectiverootdepth >= 0);
    assert(tree->root != NULL);
-
-   /* if node is the root, mark constraint to be globally valid */
-   if( SCIPnodeGetDepth(node) <= tree->effectiverootdepth )
-   {
-      SCIPconsSetLocal(cons, FALSE);
-      node = tree->root;
-   }
+   assert(SCIPconsIsGlobal(cons) || SCIPnodeGetDepth(node) > tree->effectiverootdepth);
 
    /* add constraint addition to the node's constraint set change data, and activate constraint if node is active */
    SCIP_CALL( SCIPconssetchgAddAddedCons(&node->conssetchg, blkmem, set, stat, cons, node->depth,

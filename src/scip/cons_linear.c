@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.219 2006/06/07 08:21:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.220 2006/06/07 11:47:26 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4859,7 +4859,7 @@ SCIP_RETCODE aggregateConstraints(
             SCIPconsIsInitial(cons0), SCIPconsIsSeparated(cons0), SCIPconsIsEnforced(cons0),
             SCIPconsIsChecked(cons0), SCIPconsIsPropagated(cons0),
             SCIPconsIsLocal(cons0), SCIPconsIsModifiable(cons0),
-            SCIPconsIsDynamic(cons0), SCIPconsIsRemovable(cons0)) );
+            SCIPconsIsDynamic(cons0), SCIPconsIsRemovable(cons0), SCIPconsIsStickingAtNode(cons0)) );
 
       newconsdata = SCIPconsGetData(newcons);
       assert(newconsdata != NULL);
@@ -5374,6 +5374,10 @@ SCIP_RETCODE preprocessConstraintPairs(
          {
             SCIP_CALL( SCIPsetConsRemovable(scip, cons0, FALSE) );
          }
+         if( SCIPconsIsStickingAtNode(cons1) )
+         {
+            SCIP_CALL( SCIPsetConsStickingAtNode(scip, cons0, TRUE) );
+         }
 
          /* delete cons1 */
          SCIP_CALL( SCIPdelCons(scip, cons1) );
@@ -5629,7 +5633,7 @@ SCIP_DECL_CONSTRANS(consTransLinear)
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
-         SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons)) );
+         SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
 
    return SCIP_OKAY;
 }
@@ -6488,7 +6492,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
       /* create a constraint out of the conflict set */
       sprintf(consname, "cf%"SCIP_LONGINT_FORMAT, SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname, nbdchginfos, vars, vals, lhs, SCIPinfinity(scip),
-            FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable) );
+            FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
 
       /** try to automatically convert a linear constraint into a more specific and more specialized constraint */
       SCIP_CALL( SCIPupgradeConsLinear(scip, cons, &upgdcons) );
@@ -6642,7 +6646,9 @@ SCIP_RETCODE SCIPcreateConsLinear(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             stickingatnode      /**< should the node always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node? */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -6668,7 +6674,7 @@ SCIP_RETCODE SCIPcreateConsLinear(
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, dynamic, removable) );
+         local, modifiable, dynamic, removable, stickingatnode) );
 
    return SCIP_OKAY;
 }

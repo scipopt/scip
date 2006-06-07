@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.16 2006/06/07 08:21:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.17 2006/06/07 11:47:28 bzfpfend Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -173,7 +173,7 @@ Con* xlp_addcon(const char* name, ConType type, const Numb* lhs, const Numb* rhs
    removable = dynamic;
 
    SCIP_CALL_ABORT( SCIPcreateConsLinear(scip_, &cons, name, 0, NULL, NULL, sciplhs, sciprhs,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
    zplcon = (Con*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the CONS will not be
                            destroyed by SCIPreleaseCons() */
    SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
@@ -313,7 +313,7 @@ Sos* xlp_addsos(const char* name, SosType type, const Numb* priority)
    removable = dynamic;
 
    SCIP_CALL_ABORT( SCIPcreateConsSetpack(scip_, &cons, name, 0, NULL,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
    zplsos = (Sos*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the CONS will not be
                            destroyed by SCIPreleaseCons() */
    SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );

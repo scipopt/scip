@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cnf.c,v 1.33 2006/01/03 12:22:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_cnf.c,v 1.34 2006/06/07 11:47:28 bzfpfend Exp $"
 
 /**@file   reader_cnf.c
  * @brief  CNF file reader
@@ -237,7 +237,7 @@ SCIP_RETCODE readCnf(
                clausenum++;
                sprintf(s, "c%d", clausenum);
                SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, s, clauselen, clausevars, 
-                     !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
+                     !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
                SCIP_CALL( SCIPaddCons(scip, cons) );
                SCIP_CALL( SCIPreleaseCons(scip, &cons) );
                clauselen = 0;

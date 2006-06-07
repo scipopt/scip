@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.67 2006/06/07 08:21:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.68 2006/06/07 11:47:28 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  MPS file reader
@@ -779,15 +779,15 @@ SCIP_RETCODE readRows(
          {
          case 'G' :
             SCIP_CALL( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 0.0, SCIPinfinity(scip), 
-                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
             break;
          case 'E' :
             SCIP_CALL( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 0.0, 0.0,
-                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
             break;
          case 'L' :
             SCIP_CALL( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, -SCIPinfinity(scip), 0.0,
-                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
             break;
          default :
             mpsinputSyntaxerror(mpsi);

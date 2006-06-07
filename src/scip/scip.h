@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.275 2006/06/07 08:21:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.276 2006/06/07 11:47:29 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1591,7 +1591,7 @@ SCIP_CONS** SCIPgetOrigConss(
  *  Note that the same constraint cannot be added twice to the branching tree with different "validnode" parameters.
  *  If the constraint is valid at the same as it is inserted (the usual case), one should pass NULL as "validnode".
  *  If a local constraint is added to the root node, or if the "validnode" is the root node, it is automatically
- *  upgraded into a global constraint.
+ *  upgraded into a global constraint, but still only added to the given node.
  */
 extern
 SCIP_RETCODE SCIPaddConsNode(
@@ -2760,7 +2760,9 @@ SCIP_RETCODE SCIPcreateCons(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             stickingatnode      /**< should the node always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node? */
    );
 
 /** increases usage counter of constraint */
@@ -2839,6 +2841,14 @@ SCIP_RETCODE SCIPsetConsRemovable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Bool             removable           /**< new value */
+   );
+
+/** sets the stickingatnode flag of the given constraint */
+extern
+SCIP_RETCODE SCIPsetConsStickingAtNode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             stickingatnode      /**< new value */
    );
 
 /** gets and captures transformed constraint of a given constraint; if the constraint is not yet transformed,

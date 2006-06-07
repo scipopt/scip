@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.2 2006/06/07 08:21:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_mutation.c,v 1.3 2006/06/07 11:47:28 bzfpfend Exp $"
 
 /**@file   heur_mutation.c
  * @brief  mutation primal heuristic
@@ -207,7 +207,7 @@ SCIP_RETCODE createSubproblem(
 
       /* create a new linear constraint and add it to the subproblem */
       SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE) );
+            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
       SCIP_CALL( SCIPaddCons(subscip, cons) );
       SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
       

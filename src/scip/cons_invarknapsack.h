@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_invarknapsack.h,v 1.19 2006/06/07 08:21:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_invarknapsack.h,v 1.20 2006/06/07 11:47:26 bzfpfend Exp $"
 
 /**@file   cons_invarknapsack.h
  * @brief  constraint handler for invarknapsack constraints
@@ -54,7 +54,9 @@ SCIP_RETCODE SCIPcreateConsInvarknapsack(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             stickingatnode      /**< should the node always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node? */
    );
 
 #endif

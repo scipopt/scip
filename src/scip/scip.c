@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.371 2006/06/07 08:21:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.372 2006/06/07 11:47:28 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3329,7 +3329,7 @@ SCIP_RETCODE SCIPaddCons(
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_SOLVING:
       assert(SCIPtreeGetCurrentDepth(scip->tree) >= 0);
-      if( SCIPtreeGetCurrentDepth(scip->tree) == 0 )
+      if( SCIPtreeGetCurrentDepth(scip->tree) <= SCIPtreeGetEffectiveRootDepth(scip->tree) )
          SCIPconsSetLocal(cons, FALSE);
       if( SCIPconsIsGlobal(cons) )
       {
@@ -3337,7 +3337,7 @@ SCIP_RETCODE SCIPaddCons(
       }
       else
       {
-         assert(SCIPtreeGetCurrentDepth(scip->tree) >= 1);
+         assert(SCIPtreeGetCurrentDepth(scip->tree) > SCIPtreeGetEffectiveRootDepth(scip->tree));
          SCIP_CALL( SCIPnodeAddCons(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
                scip->tree, cons) );
       }
@@ -3501,7 +3501,7 @@ SCIP_CONS** SCIPgetOrigConss(
  *  Note that the same constraint cannot be added twice to the branching tree with different "validnode" parameters.
  *  If the constraint is valid at the same as it is inserted (the usual case), one should pass NULL as "validnode".
  *  If a local constraint is added to the root node, or if the "validnode" is the root node, it is automatically
- *  upgraded into a global constraint.
+ *  upgraded into a global constraint, but still only added to the given node.
  */
 SCIP_RETCODE SCIPaddConsNode(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3539,14 +3539,9 @@ SCIP_RETCODE SCIPaddConsNode(
    }
 
    if( SCIPnodeGetDepth(node) <= SCIPtreeGetEffectiveRootDepth(scip->tree) )
-   {
       SCIPconsSetLocal(cons, FALSE);
-      SCIP_CALL( SCIPprobAddCons(scip->transprob, scip->set, scip->stat, cons) );
-   }
-   else
-   {
-      SCIP_CALL( SCIPnodeAddCons(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, cons) );
-   }
+
+   SCIP_CALL( SCIPnodeAddCons(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, cons) );
 
    return SCIP_OKAY;
 }
@@ -7985,7 +7980,9 @@ SCIP_RETCODE SCIPcreateCons(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             stickingatnode      /**< should the node always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node? */
    )
 {
    assert(cons != NULL);
@@ -7998,7 +7995,7 @@ SCIP_RETCODE SCIPcreateCons(
    {
    case SCIP_STAGE_PROBLEM:
       SCIP_CALL( SCIPconsCreate(cons, scip->mem->probmem, scip->set, name, conshdlr, consdata,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, TRUE) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, TRUE) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -8006,7 +8003,7 @@ SCIP_RETCODE SCIPcreateCons(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPconsCreate(cons, scip->mem->solvemem, scip->set, name, conshdlr, consdata,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, FALSE) );
       return SCIP_OKAY;
 
    default:
@@ -8176,6 +8173,20 @@ SCIP_RETCODE SCIPsetConsRemovable(
    SCIP_CALL( checkStage(scip, "SCIPsetConsRemovable", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPconsSetRemovable(cons, removable);
+
+   return SCIP_OKAY;
+}
+
+/** sets the stickingatnode flag of the given constraint */
+SCIP_RETCODE SCIPsetConsStickingAtNode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             stickingatnode      /**< new value */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetConsStickingAtNode", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPconsSetStickingAtNode(cons, stickingatnode);
 
    return SCIP_OKAY;
 }

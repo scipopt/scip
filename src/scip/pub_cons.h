@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.31 2006/06/07 08:21:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.32 2006/06/07 11:47:28 bzfpfend Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -501,6 +501,12 @@ SCIP_Bool SCIPconsIsRemovable(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** returns TRUE iff constraint's relaxation should be removed from the LP due to aging or cleanup */
+extern
+SCIP_Bool SCIPconsIsStickingAtNode(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 /** returns TRUE iff constraint belongs to the global problem */
 extern
 SCIP_Bool SCIPconsIsInProb(
@@ -570,7 +576,8 @@ SCIP_Bool SCIPconsIsLocked(
 #define SCIPconsIsLocal(cons)           (cons)->local
 #define SCIPconsIsModifiable(cons)      (cons)->modifiable
 #define SCIPconsIsDynamic(cons)         (cons)->dynamic
-#define SCIPconsIsRemovable(cons)      (cons)->removable
+#define SCIPconsIsRemovable(cons)       (cons)->removable
+#define SCIPconsIsStickingAtNode(cons)  (cons)->stickingatnode
 #define SCIPconsIsInProb(cons)          ((cons)->addconssetchg == NULL && (cons)->addarraypos >= 0)
 #define SCIPconsIsOriginal(cons)        (cons)->original
 #define SCIPconsIsTransformed(cons)     !(cons)->original

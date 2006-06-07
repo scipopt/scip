@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.148 2006/06/07 08:21:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.149 2006/06/07 11:47:25 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4248,6 +4248,8 @@ SCIP_RETCODE SCIPconsCreate(
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             stickingatnode,     /**< should the node always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node? */
    SCIP_Bool             original            /**< is constraint belonging to the original problem? */
    )
 {
@@ -4294,6 +4296,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->modifiable = modifiable;
    (*cons)->dynamic = dynamic;
    (*cons)->removable = removable;
+   (*cons)->stickingatnode = stickingatnode;
    (*cons)->original = original;
    (*cons)->active = FALSE;
    (*cons)->enabled = FALSE;
@@ -4552,7 +4555,8 @@ SCIP_RETCODE SCIPconsTransform(
          /* create new constraint with empty constraint data */
          SCIP_CALL( SCIPconsCreate(transcons, blkmem, set, origcons->name, origcons->conshdlr, NULL, origcons->initial,
                origcons->separate, origcons->enforce, origcons->check, origcons->propagate, 
-               origcons->local, origcons->modifiable, origcons->dynamic, origcons->removable, FALSE) );
+               origcons->local, origcons->modifiable, origcons->dynamic, origcons->removable, origcons->stickingatnode,
+               FALSE) );
       }
 
       /* link original and transformed constraint */
@@ -4735,6 +4739,17 @@ void SCIPconsSetRemovable(
    assert(cons != NULL);
 
    cons->removable = removable;
+}
+
+/** sets the stickingatnode flag of the given constraint */
+void SCIPconsSetStickingAtNode(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             stickingatnode      /**< new value */
+   )
+{
+   assert(cons != NULL);
+
+   cons->stickingatnode = stickingatnode;
 }
 
 /** gets associated transformed constraint of an original constraint, or NULL if no associated transformed constraint
@@ -5292,6 +5307,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyCons)
 #undef SCIPconsIsModifiable
 #undef SCIPconsIsDynamic
 #undef SCIPconsIsRemovable
+#undef SCIPconsIsStickingAtNode
 #undef SCIPconsIsInProb
 #undef SCIPconsIsOriginal
 #undef SCIPconsIsTransformed
@@ -5536,6 +5552,16 @@ SCIP_Bool SCIPconsIsRemovable(
    assert(cons != NULL);
 
    return cons->removable;
+}
+
+/** returns TRUE iff constraint's relaxation should be removed from the LP due to aging or cleanup */
+SCIP_Bool SCIPconsIsStickingAtNode(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->stickingatnode;
 }
 
 /** returns TRUE iff constraint belongs to the global problem */

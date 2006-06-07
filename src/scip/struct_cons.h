@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.42 2006/06/07 08:21:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.43 2006/06/07 11:47:29 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -66,7 +66,8 @@ struct SCIP_Cons
    unsigned int          local:1;            /**< TRUE iff constraint is only valid locally */
    unsigned int          modifiable:1;       /**< TRUE iff constraint is modifiable (subject to column generation) */
    unsigned int          dynamic:1;          /**< TRUE iff constraint is subject to aging */
-   unsigned int          removable:1;       /**< TRUE iff relaxation should be removed from the LP due to aging or cleanup */
+   unsigned int          removable:1;        /**< TRUE iff relaxation should be removed from the LP due to aging or cleanup */
+   unsigned int          stickingatnode:1;   /**< TRUE iff the node should always be kept at the node where it was added */
    unsigned int          original:1;         /**< TRUE iff constraint belongs to original problem */
    unsigned int          active:1;           /**< TRUE iff constraint is active in the current node */
    unsigned int          enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in current node */

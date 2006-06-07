@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.h,v 1.16 2006/06/07 08:21:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.h,v 1.17 2006/06/07 11:47:27 bzfpfend Exp $"
 
 /**@file   cons_varbound.h
  * @brief  constraint handler for variable bound constraints
@@ -55,7 +55,9 @@ SCIP_RETCODE SCIPcreateConsVarbound(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             stickingatnode      /**< should the node always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node? */
    );
 
 /** gets left hand side of variable bound constraint lhs <= x + c*y <= rhs */
