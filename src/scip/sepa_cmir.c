@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.49 2006/04/10 16:15:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.50 2006/06/07 13:10:38 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -700,7 +700,7 @@ SCIP_RETCODE aggregation(
          assert(!SCIPisFeasZero(scip, bestdelta));
 
          /* Try to improve efficacy by multiplying delta with 2, 4 and 8 */
-         for( i = 0, delta = bestdelta; i < 3; i++, delta *= 2.0 )
+         for( i = 0, delta = 2.0*bestdelta; i < 3; i++, delta *= 2.0 )
          {
             /* check, if delta was already tested */
             tested = FALSE;

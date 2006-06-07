@@ -41,6 +41,7 @@ features:
 fixed bugs:
 - fixed bug with adding constraints with INITIAL=true and separating them afterwards, which lead to a second addition
   of the constraint's relaxation in the child node
+- fixed bug in cmir cut separator, that 8*delta was not tried
 
 
 SCIP version 0.82
