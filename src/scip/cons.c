@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.149 2006/06/07 11:47:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.150 2006/06/07 11:52:27 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4176,22 +4176,25 @@ SCIP_RETCODE SCIPconssetchgMakeGlobal(
       assert(cons != NULL);
       assert(!cons->update);
 
-      /* because we first have to delete the constraint, we have to capture it in order to not loose it */
-      SCIPconsCapture(cons);
-
-      /* delete constraint addition from constraint set change data */
-      SCIP_CALL( conssetchgDelAddedCons(*conssetchg, blkmem, set, i) );
-
-      /* don't move deleted constraints to the global problem */
-      if( !cons->deleted )
+      /* only move constraints that are not sticking at the current node */
+      if( !SCIPconsIsStickingAtNode(cons) )
       {
-         SCIP_CALL( SCIPprobAddCons(prob, set, stat, cons) );
-      }
+         /* because we first have to delete the constraint, we have to capture it in order to not loose it */
+         SCIPconsCapture(cons);
 
-      /* release constraint */
-      SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
+         /* delete constraint addition from constraint set change data */
+         SCIP_CALL( conssetchgDelAddedCons(*conssetchg, blkmem, set, i) );
+
+         /* don't move deleted constraints to the global problem */
+         if( !cons->deleted )
+         {
+            SCIP_CALL( SCIPprobAddCons(prob, set, stat, cons) );
+         }
+
+         /* release constraint */
+         SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
+      }
    }
-   assert((*conssetchg)->naddedconss == 0); /* should be empty now */
 
    /* apply constraint disablings to the global problem (loop backwards, because then conssetchgDelDisabledCons() is
     * more efficient)
@@ -4202,19 +4205,25 @@ SCIP_RETCODE SCIPconssetchgMakeGlobal(
       assert(cons != NULL);
       assert(!cons->update);
 
-      /* globally delete constraint */
-      if( !cons->deleted )
+      /* only delete constraints that are not sticking at the current node */
+      if( !SCIPconsIsStickingAtNode(cons) )
       {
-         SCIP_CALL( SCIPconsDelete(cons, blkmem, set, stat, prob) );
+         /* globally delete constraint */
+         if( !cons->deleted )
+         {
+            SCIP_CALL( SCIPconsDelete(cons, blkmem, set, stat, prob) );
+         }
+
+         /* release and remove constraint from the disabledconss array */
+         SCIP_CALL( conssetchgDelDisabledCons(*conssetchg, blkmem, set, i) );
       }
-
-      /* release and remove constraint from the disabledconss array */
-      SCIP_CALL( conssetchgDelDisabledCons(*conssetchg, blkmem, set, i) );
    }
-   assert((*conssetchg)->ndisabledconss == 0); /* should be empty now */
 
-   /* free empty constraint set change data */
-   SCIP_CALL( SCIPconssetchgFree(conssetchg, blkmem, set) );
+   if( (*conssetchg)->naddedconss == 0 && (*conssetchg)->ndisabledconss == 0 )
+   {
+      /* free empty constraint set change data */
+      SCIP_CALL( SCIPconssetchgFree(conssetchg, blkmem, set) );
+   }
 
    return SCIP_OKAY;
 }
