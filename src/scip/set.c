@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.176 2006/05/24 10:35:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.177 2006/06/07 08:21:04 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -508,9 +508,9 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->conf_dynamic, SCIP_DEFAULT_CONF_DYNAMIC,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
-         "conflict/removeable",
+         "conflict/removable",
          "should the conflict's relaxations be subject to LP aging and cleanup?",
-         &(*set)->conf_removeable, SCIP_DEFAULT_CONF_REMOVEABLE,
+         &(*set)->conf_removable, SCIP_DEFAULT_CONF_REMOVEABLE,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "conflict/depthscorefac",

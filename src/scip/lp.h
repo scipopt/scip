@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.116 2006/04/04 15:24:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.117 2006/06/07 08:21:03 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -60,7 +60,7 @@ SCIP_RETCODE SCIPcolCreate(
    int                   len,                /**< number of nonzeros in the column */
    SCIP_ROW**            rows,               /**< array with rows of column entries */
    SCIP_Real*            vals,               /**< array with coefficients of column entries */
-   SCIP_Bool             removeable          /**< should the column be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the column be removed from the LP due to aging or cleanup? */
    );
 
 /** frees an LP column */
@@ -263,7 +263,7 @@ SCIP_RETCODE SCIProwCreate(
    SCIP_Real             rhs,                /**< right hand side of row */
    SCIP_Bool             local,              /**< is row only valid locally? */
    SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   SCIP_Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
    );
 
 /** frees an LP row */

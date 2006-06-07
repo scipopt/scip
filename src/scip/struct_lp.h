@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.44 2006/02/23 12:40:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.45 2006/06/07 08:21:04 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -112,7 +112,7 @@ struct SCIP_Col
    unsigned int          ubchanged:1;        /**< has upper bound changed, and has data of LP solver to be updated? */
    unsigned int          coefchanged:1;      /**< has the coefficient vector changed, and has LP solver to be updated? */
    unsigned int          integral:1;         /**< is associated variable of integral type? */
-   unsigned int          removeable:1;       /**< is column removeable from the LP (due to aging or cleanup)? */
+   unsigned int          removable:1;       /**< is column removable from the LP (due to aging or cleanup)? */
    unsigned int          sbdownvalid:1;      /**< stores whether the stored strong branching down value is a valid dual bound;
                                               *   otherwise, it can only be used as an estimate value */
    unsigned int          sbupvalid:1;        /**< stores whether the stored strong branching up value is a valid dual bound;
@@ -178,7 +178,7 @@ struct SCIP_Row
    unsigned int          integral:1;         /**< is activity (without constant) of row always integral in feasible solution? */
    unsigned int          local:1;            /**< is row only valid locally? */
    unsigned int          modifiable:1;       /**< is row modifiable during node processing (subject to column generation)? */
-   unsigned int          removeable:1;       /**< is row removeable from the LP (due to aging or cleanup)? */
+   unsigned int          removable:1;       /**< is row removable from the LP (due to aging or cleanup)? */
    unsigned int          nlocks:19;          /**< number of sealed locks of an unmodifiable row */
 };
 
@@ -219,11 +219,11 @@ struct SCIP_Lp
    int                   nchgrows;           /**< current number of chgrows (number of used slots in chgrows vector) */
    int                   colssize;           /**< available slots in cols vector */
    int                   ncols;              /**< current number of LP columns (number of used slots in cols vector) */
-   int                   nremoveablecols;    /**< number of removeable columns in the LP */
+   int                   nremovablecols;    /**< number of removable columns in the LP */
    int                   firstnewcol;        /**< first column added at the current node */
    int                   rowssize;           /**< available slots in rows vector */
    int                   nrows;              /**< current number of LP rows (number of used slots in rows vector) */
-   int                   nremoveablerows;    /**< number of removeable rows in the LP */
+   int                   nremovablerows;    /**< number of removable rows in the LP */
    int                   firstnewrow;        /**< first row added at the current node */
    int                   looseobjvalinf;     /**< number of loose variables with infinite best bound in current solution */
    int                   nloosevars;         /**< number of loose variables in LP */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.274 2006/06/06 13:32:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.275 2006/06/07 08:21:04 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1786,7 +1786,7 @@ SCIP_RETCODE SCIPcreateVar(
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
-   SCIP_Bool             removeable,         /**< is var's column removeable from the LP (due to aging or cleanup)? */
+   SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
@@ -2760,7 +2760,7 @@ SCIP_RETCODE SCIPcreateCons(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup? */
    );
 
 /** increases usage counter of constraint */
@@ -2833,12 +2833,12 @@ SCIP_RETCODE SCIPsetConsDynamic(
    SCIP_Bool             dynamic             /**< new value */
    );
 
-/** sets the removeable flag of the given constraint */
+/** sets the removable flag of the given constraint */
 extern
-SCIP_RETCODE SCIPsetConsRemoveable(
+SCIP_RETCODE SCIPsetConsRemovable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_Bool             removeable          /**< new value */
+   SCIP_Bool             removable           /**< new value */
    );
 
 /** gets and captures transformed constraint of a given constraint; if the constraint is not yet transformed,
@@ -3292,7 +3292,7 @@ SCIP_RETCODE SCIPcreateRow(
    SCIP_Real             rhs,                /**< right hand side of row */
    SCIP_Bool             local,              /**< is row only valid locally? */
    SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   SCIP_Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
    );
 
 /** creates and captures an LP row without any coefficients */
@@ -3305,7 +3305,7 @@ SCIP_RETCODE SCIPcreateEmptyRow(
    SCIP_Real             rhs,                /**< right hand side of row */
    SCIP_Bool             local,              /**< is row only valid locally? */
    SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   SCIP_Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
    );
 
 /** increases usage counter of LP row */

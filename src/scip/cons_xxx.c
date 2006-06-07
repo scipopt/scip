@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.37 2006/01/03 12:22:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.38 2006/06/07 08:21:02 bzfpfend Exp $"
 
 /**@file   cons_xxx.c
  * @brief  constraint handler for xxx constraints
@@ -461,7 +461,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXxx)
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
-            SCIPconsIsDynamic(cons), SCIPconsIsRemoveable(cons)) );
+            SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
    }
 
    return SCIP_OKAY;
@@ -530,7 +530,7 @@ SCIP_RETCODE SCIPcreateConsXxx(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    /* TODO: (optional) modify the definition of the SCIPcreateConsXxx() call, if you don't need all the information */
@@ -555,7 +555,7 @@ SCIP_RETCODE SCIPcreateConsXxx(
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, dynamic, removeable) );
+         local, modifiable, dynamic, removable) );
 
    return SCIP_OKAY;
 }

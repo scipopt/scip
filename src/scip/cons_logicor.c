@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.103 2006/06/06 16:59:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.104 2006/06/07 08:21:01 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -739,7 +739,7 @@ SCIP_RETCODE createRow(
    assert(consdata->row == NULL);
 
    SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons), 1.0, SCIPinfinity(scip),
-         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
    
    SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->row, consdata->nvars, consdata->vars, 1.0) );
 
@@ -1026,7 +1026,7 @@ SCIP_DECL_CONSTRANS(consTransLogicor)
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
-         SCIPconsIsDynamic(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+         SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons)) );
 
    return SCIP_OKAY;
 }
@@ -1619,7 +1619,7 @@ SCIP_RETCODE createNormalizedLogicor(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    SCIP_VAR** transvars;
@@ -1646,7 +1646,7 @@ SCIP_RETCODE createNormalizedLogicor(
 
    /* create the constraint */
    SCIP_CALL( SCIPcreateConsLogicor(scip, cons, name, nvars, transvars,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &transvars);
@@ -1687,7 +1687,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdLogicor)
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
-            SCIPconsIsDynamic(cons), SCIPconsIsRemoveable(cons)) );
+            SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
    }
 
    return SCIP_OKAY;
@@ -1776,7 +1776,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLogicor)
       /* create a constraint out of the conflict set */
       sprintf(consname, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, consname, nbdchginfos, vars, 
-            FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removeable) );
+            FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable) );
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       
@@ -1854,7 +1854,7 @@ SCIP_RETCODE SCIPcreateConsLogicor(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -1875,7 +1875,7 @@ SCIP_RETCODE SCIPcreateConsLogicor(
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, dynamic, removeable) );
+         local, modifiable, dynamic, removable) );
 
    return SCIP_OKAY;
 }

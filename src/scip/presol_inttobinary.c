@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_inttobinary.c,v 1.1 2006/05/09 16:10:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_inttobinary.c,v 1.2 2006/06/07 08:21:03 bzfpfend Exp $"
 
 /**@file   presol_inttobinary.c
  * @brief  presolver that converts integer variables with domain [a,a+1] to binaries
@@ -118,7 +118,7 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
          /* create binary variable */
          sprintf(binvarname, "%s_bin", SCIPvarGetName(vars[v]));
          SCIP_CALL( SCIPcreateVar(scip, &binvar, binvarname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
-               SCIPvarIsInitial(vars[v]), SCIPvarIsRemoveable(vars[v]), NULL, NULL, NULL, NULL) );
+               SCIPvarIsInitial(vars[v]), SCIPvarIsRemovable(vars[v]), NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, binvar) );
 
          /* aggregate integer and binary variable */

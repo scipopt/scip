@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.207 2006/05/10 09:14:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.208 2006/06/07 08:21:05 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1615,7 +1615,7 @@ SCIP_RETCODE varCreate(
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
-   SCIP_Bool             removeable,         /**< is var's column removeable from the LP (due to aging or cleanup)? */
+   SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
@@ -1697,7 +1697,7 @@ SCIP_RETCODE varCreate(
    (*var)->conflictlbcount = 0;
    (*var)->conflictubcount = 0;
    (*var)->initial = initial;
-   (*var)->removeable = removeable;
+   (*var)->removable = removable;
    (*var)->deleted = FALSE;
    (*var)->vartype = vartype; /*lint !e641*/
    (*var)->pseudocostflag = FALSE;
@@ -1724,7 +1724,7 @@ SCIP_RETCODE SCIPvarCreateOriginal(
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
-   SCIP_Bool             removeable,         /**< is var's column removeable from the LP (due to aging or cleanup)? */
+   SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
@@ -1736,7 +1736,7 @@ SCIP_RETCODE SCIPvarCreateOriginal(
    assert(stat != NULL);
 
    /* create variable */
-   SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removeable,
+   SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removable,
          vardelorig, vartrans, vardeltrans, vardata) );
 
    /* set variable status and data */
@@ -1766,7 +1766,7 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
-   SCIP_Bool             removeable,         /**< is var's column removeable from the LP (due to aging or cleanup)? */
+   SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
@@ -1777,7 +1777,7 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    assert(blkmem != NULL);
 
    /* create variable */
-   SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removeable,
+   SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removable,
          vardelorig, vartrans, vardeltrans, vardata) );
 
    /* create event filter for transformed variable */
@@ -2443,7 +2443,7 @@ SCIP_RETCODE SCIPvarTransform(
       sprintf(name, "t_%s", origvar->name);
       SCIP_CALL( SCIPvarCreateTransformed(transvar, blkmem, set, stat, name,
             origvar->glbdom.lb, origvar->glbdom.ub, (SCIP_Real)objsense * origvar->obj,
-            SCIPvarGetType(origvar), origvar->initial, origvar->removeable,
+            SCIPvarGetType(origvar), origvar->initial, origvar->removable,
             NULL, NULL, origvar->vardeltrans, NULL) );
       
       /* copy the branch factor and priority */
@@ -2528,7 +2528,7 @@ SCIP_RETCODE SCIPvarColumn(
    var->varstatus = SCIP_VARSTATUS_COLUMN; /*lint !e641*/
 
    /* create column of variable */
-   SCIP_CALL( SCIPcolCreate(&var->data.col, blkmem, set, stat, var, 0, NULL, NULL, var->removeable) );
+   SCIP_CALL( SCIPcolCreate(&var->data.col, blkmem, set, stat, var, 0, NULL, NULL, var->removable) );
 
    if( var->probindex != -1 )
    {
@@ -3175,7 +3175,7 @@ SCIP_RETCODE SCIPvarAggregate(
    SCIPhistoryReset(var->historycrun);
 
    /* update flags of aggregation variable */
-   aggvar->removeable &= var->removeable;
+   aggvar->removable &= var->removable;
 
    /* update branching factors and priorities of both variables to be the maximum of both variables */
    branchfactor = MAX(aggvar->branchfactor, var->branchfactor);
@@ -3337,7 +3337,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       for( v = 0; v < naggvars; ++v )
       {
          assert(aggvars[v] != NULL);
-         aggvars[v]->removeable &= var->removeable;
+         aggvars[v]->removable &= var->removable;
          branchfactor = MAX(aggvars[v]->branchfactor, branchfactor);
          branchpriority = MAX(aggvars[v]->branchpriority, branchpriority);
       }
@@ -3456,7 +3456,7 @@ SCIP_RETCODE SCIPvarNegate(
 
       /* create negated variable */
       SCIP_CALL( varCreate(negvar, blkmem, set, stat, negvarname, var->glbdom.lb, var->glbdom.ub, 0.0,
-            SCIPvarGetType(var), var->initial, var->removeable, NULL, NULL, NULL, NULL) );
+            SCIPvarGetType(var), var->initial, var->removable, NULL, NULL, NULL, NULL) );
       (*negvar)->varstatus = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
       if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
          (*negvar)->data.negate.constant = 1.0;
@@ -9841,7 +9841,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetType
 #undef SCIPvarIsIntegral
 #undef SCIPvarIsInitial
-#undef SCIPvarIsRemoveable
+#undef SCIPvarIsRemovable
 #undef SCIPvarIsDeleted
 #undef SCIPvarIsActive
 #undef SCIPvarGetIndex
@@ -10117,14 +10117,14 @@ SCIP_Bool SCIPvarIsInitial(
    return var->initial;
 }
 
-/** returns whether variable's column is removeable from the LP (due to aging or cleanup) */
-SCIP_Bool SCIPvarIsRemoveable(
+/** returns whether variable's column is removable from the LP (due to aging or cleanup) */
+SCIP_Bool SCIPvarIsRemovable(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
    assert(var != NULL);
 
-   return var->removeable;
+   return var->removable;
 }
 
 /** returns whether the variable was deleted from the problem */

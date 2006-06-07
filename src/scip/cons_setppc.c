@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.109 2006/06/06 16:59:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.110 2006/06/07 08:21:01 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -1234,7 +1234,7 @@ SCIP_RETCODE createRow(
    }
 
    SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons), lhs, rhs,
-         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
    SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->row, consdata->nvars, consdata->vars, 1.0) );
 
@@ -1449,9 +1449,9 @@ SCIP_RETCODE removeRedundantCons(
    {
       SCIP_CALL( SCIPsetConsDynamic(scip, cons0, FALSE) );
    }
-   if( !SCIPconsIsRemoveable(cons1) )
+   if( !SCIPconsIsRemovable(cons1) )
    {
-      SCIP_CALL( SCIPsetConsRemoveable(scip, cons0, FALSE) );
+      SCIP_CALL( SCIPsetConsRemovable(scip, cons0, FALSE) );
    }
 
    /* delete cons1 */
@@ -1949,7 +1949,7 @@ SCIP_DECL_CONSTRANS(consTransSetppc)
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
-         SCIPconsIsDynamic(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+         SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons)) );
 
    /* catch bound change events of variables */
    SCIP_CALL( catchAllEvents(scip, *targetcons, conshdlrdata->eventhdlr) );
@@ -3101,7 +3101,7 @@ SCIP_RETCODE createConsSetppc(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -3131,7 +3131,7 @@ SCIP_RETCODE createConsSetppc(
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, dynamic, removeable) );
+         local, modifiable, dynamic, removable) );
 
    if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
    {
@@ -3168,7 +3168,7 @@ SCIP_RETCODE createNormalizedSetppc(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    SCIP_VAR** transvars;
@@ -3195,7 +3195,7 @@ SCIP_RETCODE createNormalizedSetppc(
 
    /* create the constraint */
    SCIP_CALL( createConsSetppc(scip, cons, name, nvars, transvars, setppctype,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
 
    /* release temporary memory */
    SCIPfreeBufferArray(scip, &transvars);
@@ -3241,7 +3241,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdSetppc)
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
                SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
                SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
-               SCIPconsIsDynamic(cons), SCIPconsIsRemoveable(cons)) );
+               SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
       }
       else if( (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, 1.0 - ncoeffsnone))
          || (SCIPisEQ(scip, lhs, ncoeffspone - 1.0) && SCIPisInfinity(scip, rhs)) )
@@ -3258,7 +3258,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdSetppc)
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
                SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
                SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
-               SCIPconsIsDynamic(cons), SCIPconsIsRemoveable(cons)) );
+               SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
       }
       else if( (SCIPisEQ(scip, lhs, 1.0 - ncoeffsnone) && SCIPisInfinity(scip, rhs))
          || (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, ncoeffspone - 1.0)) )
@@ -3275,7 +3275,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdSetppc)
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
                SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
                SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
-               SCIPconsIsDynamic(cons), SCIPconsIsRemoveable(cons)) );
+               SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
       }
    }
 
@@ -3387,7 +3387,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
       /* create a constraint out of the conflict set */
       sprintf(consname, "cf%"SCIP_LONGINT_FORMAT, SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, consname, nbdchginfos, vars, 
-            FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removeable) );
+            FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable) );
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       
@@ -3470,11 +3470,11 @@ SCIP_RETCODE SCIPcreateConsSetpart(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    return createConsSetppc(scip, cons, name, nvars, vars, SCIP_SETPPCTYPE_PARTITIONING,
-      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable);
+      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable);
 }
 
 /** creates and captures a set packing constraint */
@@ -3492,11 +3492,11 @@ SCIP_RETCODE SCIPcreateConsSetpack(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    return createConsSetppc(scip, cons, name, nvars, vars, SCIP_SETPPCTYPE_PACKING,
-      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable);
+      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable);
 }
 
 /** creates and captures a set covering constraint */
@@ -3514,11 +3514,11 @@ SCIP_RETCODE SCIPcreateConsSetcover(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    return createConsSetppc(scip, cons, name, nvars, vars, SCIP_SETPPCTYPE_COVERING,
-      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable);
+      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable);
 }
 
 /** adds coefficient in set partitioning / packing / covering constraint */

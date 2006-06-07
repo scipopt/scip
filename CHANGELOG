@@ -12,6 +12,8 @@ interface:
   changes). They are only called again, if they returned SCIP_SUSPENDED or if some other plugin modified the LP.
 - new parameter "escapecommand" for SCIPdialoghdlrAddHistory()
 - new method SCIPescapeString()
+- renamed all occurences of "removeable" by the correct English word "removable":
+  SCIPconsIsRemovable(), SCIPsetConsRemovable(), SCIPvarIsRemovable(), SCIPcolIsRemovable(), SCIProwIsRemovable()
 
 plugins:
 - new primal heuristic "rens"

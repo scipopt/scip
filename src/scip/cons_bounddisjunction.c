@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.5 2006/04/18 17:03:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.6 2006/06/07 08:21:00 bzfpfend Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @brief  constraint handler for bound disjunction constraints
@@ -981,7 +981,7 @@ SCIP_DECL_CONSTRANS(consTransBounddisjunction)
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
-         SCIPconsIsDynamic(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+         SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons)) );
 
    return SCIP_OKAY;
 }
@@ -1534,7 +1534,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
    {
       sprintf(consname, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, consname, nbdchginfos, vars, boundtypes, bounds,
-            FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removeable) );
+            FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable) );
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       *result = SCIP_CONSADDED;
@@ -1614,7 +1614,7 @@ SCIP_RETCODE SCIPcreateConsBounddisjunction(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -1635,7 +1635,7 @@ SCIP_RETCODE SCIPcreateConsBounddisjunction(
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, dynamic, removeable) );
+         local, modifiable, dynamic, removable) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.370 2006/06/06 13:32:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.371 2006/06/07 08:21:03 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5003,7 +5003,7 @@ SCIP_RETCODE SCIPcreateVar(
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
-   SCIP_Bool             removeable,         /**< is var's column removeable from the LP (due to aging or cleanup)? */
+   SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
@@ -5019,7 +5019,7 @@ SCIP_RETCODE SCIPcreateVar(
    {
    case SCIP_STAGE_PROBLEM:
       SCIP_CALL( SCIPvarCreateOriginal(var, scip->mem->probmem, scip->set, scip->stat,
-            name, lb, ub, obj, vartype, initial, removeable, vardelorig, vartrans, vardeltrans, vardata) );
+            name, lb, ub, obj, vartype, initial, removable, vardelorig, vartrans, vardeltrans, vardata) );
       break;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -5027,7 +5027,7 @@ SCIP_RETCODE SCIPcreateVar(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPvarCreateTransformed(var, scip->mem->solvemem, scip->set, scip->stat,
-            name, lb, ub, obj, vartype, initial, removeable, NULL, NULL, vardeltrans, vardata) );
+            name, lb, ub, obj, vartype, initial, removable, NULL, NULL, vardeltrans, vardata) );
       break;
 
    default:
@@ -7120,7 +7120,7 @@ SCIP_RETCODE aggregateActiveIntVars(
    sprintf(aggvarname, "agg%d", scip->stat->nvaridx);
    SCIP_CALL( SCIPvarCreateTransformed(&aggvar, scip->mem->solvemem, scip->set, scip->stat,
          aggvarname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_INTEGER,
-         SCIPvarIsInitial(varx) || SCIPvarIsInitial(vary), SCIPvarIsRemoveable(varx) && SCIPvarIsRemoveable(vary),
+         SCIPvarIsInitial(varx) || SCIPvarIsInitial(vary), SCIPvarIsRemovable(varx) && SCIPvarIsRemovable(vary),
          NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPprobAddVar(scip->transprob, scip->mem->solvemem, scip->set, scip->lp,
          scip->branchcand, scip->eventfilter, scip->eventqueue, aggvar) );
@@ -7985,7 +7985,7 @@ SCIP_RETCODE SCIPcreateCons(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    assert(cons != NULL);
@@ -7998,7 +7998,7 @@ SCIP_RETCODE SCIPcreateCons(
    {
    case SCIP_STAGE_PROBLEM:
       SCIP_CALL( SCIPconsCreate(cons, scip->mem->probmem, scip->set, name, conshdlr, consdata,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable, TRUE) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, TRUE) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -8006,7 +8006,7 @@ SCIP_RETCODE SCIPcreateCons(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPconsCreate(cons, scip->mem->solvemem, scip->set, name, conshdlr, consdata,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable, FALSE) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
       return SCIP_OKAY;
 
    default:
@@ -8166,16 +8166,16 @@ SCIP_RETCODE SCIPsetConsDynamic(
    return SCIP_OKAY;
 }
 
-/** sets the removeable flag of the given constraint */
-SCIP_RETCODE SCIPsetConsRemoveable(
+/** sets the removable flag of the given constraint */
+SCIP_RETCODE SCIPsetConsRemovable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_Bool             removeable          /**< new value */
+   SCIP_Bool             removable           /**< new value */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPsetConsRemoveable", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetConsRemovable", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPconsSetRemoveable(cons, removeable);
+   SCIPconsSetRemovable(cons, removable);
 
    return SCIP_OKAY;
 }
@@ -8958,13 +8958,13 @@ SCIP_RETCODE SCIPcreateRow(
    SCIP_Real             rhs,                /**< right hand side of row */
    SCIP_Bool             local,              /**< is row only valid locally? */
    SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   SCIP_Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPcreateRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIProwCreate(row, scip->mem->solvemem, scip->set, scip->stat,
-         name, len, cols, vals, lhs, rhs, local, modifiable, removeable) );
+         name, len, cols, vals, lhs, rhs, local, modifiable, removable) );
 
    return SCIP_OKAY;
 }
@@ -8978,13 +8978,13 @@ SCIP_RETCODE SCIPcreateEmptyRow(
    SCIP_Real             rhs,                /**< right hand side of row */
    SCIP_Bool             local,              /**< is row only valid locally? */
    SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   SCIP_Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPcreateEmptyRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIProwCreate(row, scip->mem->solvemem, scip->set, scip->stat,
-         name, 0, NULL, NULL, lhs, rhs, local, modifiable, removeable) );
+         name, 0, NULL, NULL, lhs, rhs, local, modifiable, removable) );
 
    return SCIP_OKAY;
 }

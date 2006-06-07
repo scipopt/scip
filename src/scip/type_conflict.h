@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_conflict.h,v 1.18 2006/03/09 12:52:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_conflict.h,v 1.19 2006/06/07 08:21:05 bzfpfend Exp $"
 
 /**@file   type_conflict.h
  * @brief  type definitions for conflict analysis
@@ -106,7 +106,7 @@ typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data st
  *  - nbdchginfos     : number of bound changes in the conflict set
  *  - local           : is the conflict set only valid locally, i.e. should the constraint created as local constraint?
  *  - dynamic         : should the conflict constraint be made subject to aging?
- *  - removeable      : should the conflict's relaxation be made subject to LP aging and cleanup?
+ *  - removable       : should the conflict's relaxation be made subject to LP aging and cleanup?
  *  - resolved        : is the conflict set already used to create a constraint?
  *  - result          : pointer to store the result of the conflict processing call
  *
@@ -117,7 +117,7 @@ typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data st
  */
 #define SCIP_DECL_CONFLICTEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONFLICTHDLR* conflicthdlr, SCIP_NODE* node, \
       SCIP_NODE* validnode, SCIP_BDCHGINFO** bdchginfos, int nbdchginfos, \
-      SCIP_Bool local, SCIP_Bool dynamic, SCIP_Bool removeable, SCIP_Bool resolved, SCIP_RESULT* result)
+      SCIP_Bool local, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool resolved, SCIP_RESULT* result)
 
 
 

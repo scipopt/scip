@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.42 2006/03/09 12:52:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.43 2006/06/07 08:21:05 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -246,7 +246,7 @@ struct SCIP_Var
    int                   conflictlbcount;    /**< number of last conflict, the lower bound was member of */
    int                   conflictubcount;    /**< number of last conflict, the upper bound was member of */
    unsigned int          initial:1;          /**< TRUE iff var's column should be present in the initial root LP */
-   unsigned int          removeable:1;       /**< TRUE iff var's column is removeable from the LP (due to aging or cleanup) */
+   unsigned int          removable:1;       /**< TRUE iff var's column is removable from the LP (due to aging or cleanup) */
    unsigned int          deleted:1;          /**< TRUE iff variable was deleted from the problem */
    unsigned int          vartype:2;          /**< type of variable: binary, integer, implicit integer, continuous */
    unsigned int          varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */

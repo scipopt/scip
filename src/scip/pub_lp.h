@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.33 2006/02/23 12:40:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.34 2006/06/07 08:21:03 bzfpfend Exp $"
 
 /**@file   pub_lp.h
  * @brief  public methods for LP management
@@ -123,9 +123,9 @@ SCIP_Bool SCIPcolIsIntegral(
    SCIP_COL*             col                 /**< LP column */
    );
 
-/** returns TRUE iff column is removeable from the LP (due to aging or cleanup) */
+/** returns TRUE iff column is removable from the LP (due to aging or cleanup) */
 extern
-SCIP_Bool SCIPcolIsRemoveable(
+SCIP_Bool SCIPcolIsRemovable(
    SCIP_COL*             col                 /**< LP column */
    );
 
@@ -210,7 +210,7 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
 #define SCIPcolGetBasisStatus(col)      ((col)->basisstatus)
 #define SCIPcolGetVar(col)              (col)->var
 #define SCIPcolIsIntegral(col)          (col)->integral
-#define SCIPcolIsRemoveable(col)        (col)->removeable
+#define SCIPcolIsRemovable(col)        (col)->removable
 #define SCIPcolGetLPPos(col)            (col)->lppos
 #define SCIPcolGetLPDepth(col)          (col)->lpdepth
 #define SCIPcolIsInLP(col)              ((col)->lppos >= 0)
@@ -391,9 +391,9 @@ SCIP_Bool SCIProwIsModifiable(
    SCIP_ROW*             row                 /**< LP row */
    );
 
-/** returns TRUE iff row is removeable from the LP (due to aging or cleanup) */
+/** returns TRUE iff row is removable from the LP (due to aging or cleanup) */
 extern
-SCIP_Bool SCIProwIsRemoveable(
+SCIP_Bool SCIProwIsRemovable(
    SCIP_ROW*             row                 /**< LP row */
    );
 
@@ -438,7 +438,7 @@ SCIP_Bool SCIProwIsInLP(
 #define SCIProwIsIntegral(row)          (row)->integral
 #define SCIProwIsLocal(row)             (row)->local
 #define SCIProwIsModifiable(row)        (row)->modifiable
-#define SCIProwIsRemoveable(row)        (row)->removeable
+#define SCIProwIsRemovable(row)        (row)->removable
 #define SCIProwGetLPPos(row)            (row)->lppos
 #define SCIProwGetLPDepth(row)          (row)->lpdepth
 #define SCIProwIsInLP(row)              ((row)->lppos >= 0)

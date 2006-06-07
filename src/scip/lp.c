@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.224 2006/05/15 13:30:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.225 2006/06/07 08:21:02 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -2345,7 +2345,7 @@ SCIP_RETCODE SCIPcolCreate(
    int                   len,                /**< number of nonzeros in the column */
    SCIP_ROW**            rows,               /**< array with rows of column entries */
    SCIP_Real*            vals,               /**< array with coefficients of column entries */
-   SCIP_Bool             removeable          /**< should the column be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the column be removed from the LP due to aging or cleanup? */
    )
 {
    int i;
@@ -2421,7 +2421,7 @@ SCIP_RETCODE SCIPcolCreate(
    (*col)->ubchanged = FALSE;
    (*col)->coefchanged = FALSE;
    (*col)->integral = SCIPvarIsIntegral(var);
-   (*col)->removeable = removeable;
+   (*col)->removable = removable;
    (*col)->sbdownvalid = FALSE;
    (*col)->sbupvalid = FALSE;
 
@@ -3595,7 +3595,7 @@ SCIP_RETCODE SCIProwCreate(
    SCIP_Real             rhs,                /**< right hand side of row */
    SCIP_Bool             local,              /**< is row only valid locally? */
    SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   SCIP_Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
    assert(row != NULL);
@@ -3683,7 +3683,7 @@ SCIP_RETCODE SCIProwCreate(
    (*row)->local = local;
    (*row)->modifiable = modifiable;
    (*row)->nlocks = 0;
-   (*row)->removeable = removeable;
+   (*row)->removable = removable;
 
    /* calculate row norms and min/maxidx, and check if row is sorted */
    rowCalcNorms(*row, set);
@@ -6131,8 +6131,8 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->nchgrows = 0;
    (*lp)->firstnewcol = 0;
    (*lp)->firstnewrow = 0;
-   (*lp)->nremoveablecols = 0;
-   (*lp)->nremoveablerows = 0;
+   (*lp)->nremovablecols = 0;
+   (*lp)->nremovablerows = 0;
    (*lp)->validsollp = stat->lpcount; /* the initial (empty) SCIP_LP is solved with primal and dual solution of zero */
    (*lp)->validfarkaslp = -1;
    (*lp)->flushdeletedcols = FALSE;
@@ -6343,8 +6343,8 @@ SCIP_RETCODE SCIPlpAddCol(
    col->lpdepth = depth;
    col->age = 0;
    lp->ncols++;
-   if( col->removeable )
-      lp->nremoveablecols++;
+   if( col->removable )
+      lp->nremovablecols++;
 
    /* mark the current LP unflushed */
    lp->flushed = FALSE;
@@ -6393,8 +6393,8 @@ SCIP_RETCODE SCIPlpAddRow(
    row->lpdepth = depth;
    row->age = 0;
    lp->nrows++;
-   if( row->removeable )
-      lp->nremoveablerows++;
+   if( row->removable )
+      lp->nremovablerows++;
 
    /* mark the current LP unflushed */
    lp->flushed = FALSE;
@@ -6440,9 +6440,9 @@ SCIP_RETCODE SCIPlpShrinkCols(
          col->lpdepth = -1;
          lp->ncols--;
 
-         /* count removeable columns */
-         if( col->removeable )
-            lp->nremoveablecols--;
+         /* count removable columns */
+         if( col->removable )
+            lp->nremovablecols--;
 
          /* update column arrays of all linked rows */
          colUpdateDelLP(col);
@@ -6455,7 +6455,7 @@ SCIP_RETCODE SCIPlpShrinkCols(
 
       checkLinks(lp);
    }
-   assert(lp->nremoveablecols <= lp->ncols);
+   assert(lp->nremovablecols <= lp->ncols);
 
    return SCIP_OKAY;
 }
@@ -6491,9 +6491,9 @@ SCIP_RETCODE SCIPlpShrinkRows(
          row->lpdepth = -1;
          lp->nrows--;
 
-         /* count removeable rows */
-         if( row->removeable )
-            lp->nremoveablerows--;
+         /* count removable rows */
+         if( row->removable )
+            lp->nremovablerows--;
 
          /* update row arrays of all linked columns */
          rowUpdateDelLP(row);
@@ -6509,7 +6509,7 @@ SCIP_RETCODE SCIPlpShrinkRows(
 
       checkLinks(lp);
    }
-   assert(lp->nremoveablerows <= lp->nrows);
+   assert(lp->nremovablerows <= lp->nrows);
 
    return SCIP_OKAY;
 }
@@ -10935,7 +10935,7 @@ SCIP_RETCODE lpDelColset(
       if( coldstat[c] == -1 )
       {
          assert(col != NULL);
-         assert(col->removeable);
+         assert(col->removable);
 
          /* mark column to be deleted from the LPI and update column arrays of all linked rows */
          markColDeleted(col);
@@ -10945,7 +10945,7 @@ SCIP_RETCODE lpDelColset(
          lp->cols[c] = NULL;
          lp->lpicols[c] = NULL;
          lp->ncols--;
-         lp->nremoveablecols--;
+         lp->nremovablecols--;
          lp->nlpicols--;
       }
       else if( coldstat[c] < c )
@@ -11028,8 +11028,8 @@ SCIP_RETCODE lpDelRowset(
          assert(lp->lpirows[r] == NULL);
          assert(lp->rows[r] == NULL);
          lp->nrows--;
-         if( row->removeable )
-            lp->nremoveablerows--;
+         if( row->removable )
+            lp->nremovablerows--;
          lp->nlpirows--;
       }
       else if( rowdstat[r] < r )
@@ -11085,12 +11085,12 @@ SCIP_RETCODE lpRemoveObsoleteCols(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->ncols == lp->nlpicols);
-   assert(lp->nremoveablecols <= lp->ncols);
+   assert(lp->nremovablecols <= lp->ncols);
    assert(!lp->diving);
    assert(set != NULL);
    assert(stat != NULL);
 
-   if( lp->nremoveablecols == 0 || set->lp_colagelimit == -1 || !lp->solisbasic )
+   if( lp->nremovablecols == 0 || set->lp_colagelimit == -1 || !lp->solisbasic )
       return SCIP_OKAY;
 
    ncols = lp->ncols;
@@ -11108,7 +11108,7 @@ SCIP_RETCODE lpRemoveObsoleteCols(
       assert(cols[c] == lpicols[c]);
       assert(cols[c]->lppos == c);
       assert(cols[c]->lpipos == c);
-      if( cols[c]->removeable
+      if( cols[c]->removable
          && cols[c]->obsoletenode != stat->nnodes /* don't remove column a second time from same node (avoid cycling) */
          && cols[c]->age > set->lp_colagelimit
          && (SCIP_BASESTAT)cols[c]->basisstatus != SCIP_BASESTAT_BASIC
@@ -11158,12 +11158,12 @@ SCIP_RETCODE lpRemoveObsoleteRows(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->nrows == lp->nlpirows);
-   assert(lp->nremoveablerows <= lp->nrows);
+   assert(lp->nremovablerows <= lp->nrows);
    assert(!lp->diving);
    assert(set != NULL);
    assert(stat != NULL);
 
-   if( lp->nremoveablerows == 0 || set->lp_rowagelimit == -1 || !lp->solisbasic )
+   if( lp->nremovablerows == 0 || set->lp_rowagelimit == -1 || !lp->solisbasic )
       return SCIP_OKAY;
 
    nrows = lp->nrows;
@@ -11181,7 +11181,7 @@ SCIP_RETCODE lpRemoveObsoleteRows(
       assert(rows[r] == lpirows[r]);
       assert(rows[r]->lppos == r);
       assert(rows[r]->lpipos == r);
-      if( rows[r]->removeable
+      if( rows[r]->removable
          && rows[r]->obsoletenode != stat->nnodes  /* don't remove row a second time from same node (avoid cycling) */
          && rows[r]->age > set->lp_rowagelimit
          && (SCIP_BASESTAT)rows[r]->basisstatus == SCIP_BASESTAT_BASIC )
@@ -11290,7 +11290,7 @@ SCIP_RETCODE lpCleanupCols(
    assert(lp->validsollp == stat->lpcount);
    assert(0 <= firstcol && firstcol < lp->ncols);
 
-   if( lp->nremoveablecols == 0 || !lp->solisbasic )
+   if( lp->nremovablecols == 0 || !lp->solisbasic )
       return SCIP_OKAY;
 
    ncols = lp->ncols;
@@ -11308,7 +11308,7 @@ SCIP_RETCODE lpCleanupCols(
       assert(cols[c] == lpicols[c]);
       assert(cols[c]->lppos == c);
       assert(cols[c]->lpipos == c);
-      if( lpicols[c]->removeable
+      if( lpicols[c]->removable
          && (SCIP_BASESTAT)lpicols[c]->basisstatus != SCIP_BASESTAT_BASIC
          && lpicols[c]->primsol == 0.0 /* non-basic columns to remove are exactly at 0.0 */
          && SCIPsetIsZero(set, SCIPcolGetBestBound(cols[c])) ) /* bestbd != 0 -> column would be priced in next time */
@@ -11359,7 +11359,7 @@ SCIP_RETCODE lpCleanupRows(
    assert(lp->validsollp == stat->lpcount);
    assert(0 <= firstrow && firstrow < lp->nrows);
 
-   if( lp->nremoveablerows == 0 || !lp->solisbasic  )
+   if( lp->nremovablerows == 0 || !lp->solisbasic  )
       return SCIP_OKAY;
 
    nrows = lp->nrows;
@@ -11377,7 +11377,7 @@ SCIP_RETCODE lpCleanupRows(
       assert(rows[r] == lpirows[r]);
       assert(rows[r]->lppos == r);
       assert(rows[r]->lpipos == r);
-      if( lpirows[r]->removeable && (SCIP_BASESTAT)lpirows[r]->basisstatus == SCIP_BASESTAT_BASIC )
+      if( lpirows[r]->removable && (SCIP_BASESTAT)lpirows[r]->basisstatus == SCIP_BASESTAT_BASIC )
       {
          rowdstat[r] = 1;
          ndelrows++;
@@ -11898,7 +11898,7 @@ SCIP_RETCODE SCIPlpWrite(
 #undef SCIPcolGetBasisStatus
 #undef SCIPcolGetVar
 #undef SCIPcolIsIntegral
-#undef SCIPcolIsRemoveable
+#undef SCIPcolIsRemovable
 #undef SCIPcolGetLPPos
 #undef SCIPcolGetLPDepth
 #undef SCIPcolIsInLP
@@ -11926,7 +11926,7 @@ SCIP_RETCODE SCIPlpWrite(
 #undef SCIProwIsIntegral
 #undef SCIProwIsLocal
 #undef SCIProwIsModifiable
-#undef SCIProwIsRemoveable
+#undef SCIProwIsRemovable
 #undef SCIProwGetLPPos
 #undef SCIProwGetLPDepth
 #undef SCIProwIsInLP
@@ -12059,14 +12059,14 @@ SCIP_Bool SCIPcolIsIntegral(
    return col->integral;
 }
 
-/** returns TRUE iff column is removeable from the LP (due to aging or cleanup) */
-SCIP_Bool SCIPcolIsRemoveable(
+/** returns TRUE iff column is removable from the LP (due to aging or cleanup) */
+SCIP_Bool SCIPcolIsRemovable(
    SCIP_COL*             col                 /**< LP column */
    )
 {
    assert(col != NULL);
 
-   return col->removeable;
+   return col->removable;
 }
 
 /** gets position of column in current LP, or -1 if it is not in LP */
@@ -12361,14 +12361,14 @@ SCIP_Bool SCIProwIsModifiable(
    return row->modifiable;
 }
 
-/** returns TRUE iff row is removeable from the LP (due to aging or cleanup) */
-SCIP_Bool SCIProwIsRemoveable(
+/** returns TRUE iff row is removable from the LP (due to aging or cleanup) */
+SCIP_Bool SCIProwIsRemovable(
    SCIP_ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
 
-   return row->removeable;
+   return row->removable;
 }
 
 /** gets position of row in current LP, or -1 if it is not in LP */

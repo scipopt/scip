@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.11 2006/05/31 11:53:55 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.12 2006/06/07 08:21:02 bzfpfend Exp $"
 
 /**@file   heur_crossover.c
  * @brief  crossover primal heuristic
@@ -337,13 +337,13 @@ static SCIP_RETCODE createVariables(
       {
          SCIP_CALL( SCIPcreateVar(subscip, &subvars[i], SCIPvarGetName(vars[i]), solval,
                solval, SCIPvarGetObj(vars[i]), SCIPvarGetType(vars[i]),
-               SCIPvarIsInitial(vars[i]), SCIPvarIsRemoveable(vars[i]), NULL, NULL, NULL, NULL) );
+               SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL, NULL) );
          fixingcounter++;
       }
       else 
       {
          SCIP_CALL( SCIPcreateVar(subscip, &subvars[i], SCIPvarGetName(vars[i]), lb, ub, SCIPvarGetObj(vars[i]), 
-               SCIPvarGetType(vars[i]), SCIPvarIsInitial(vars[i]), SCIPvarIsRemoveable(vars[i]), 
+               SCIPvarGetType(vars[i]), SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), 
                NULL, NULL, NULL, NULL) );
       }
       SCIP_CALL( SCIPaddVar(subscip, subvars[i]) );
@@ -362,7 +362,7 @@ static SCIP_RETCODE createVariables(
       {
          SCIP_CALL( SCIPcreateVar(subscip, &subvars[i], SCIPvarGetName(vars[i]), SCIPvarGetLbGlobal(vars[i]),
                SCIPvarGetUbGlobal(vars[i]), SCIPvarGetObj(vars[i]), SCIPvarGetType(vars[i]),
-               SCIPvarIsInitial(vars[i]), SCIPvarIsRemoveable(vars[i]), NULL, NULL, NULL, NULL) );
+               SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(subscip, subvars[i]) );
       }
       *success = TRUE;

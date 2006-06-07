@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.134 2006/06/06 16:59:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.135 2006/06/07 08:21:01 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -489,7 +489,7 @@ SCIP_RETCODE createRelaxation(
 
    SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons),
          -SCIPinfinity(scip), (SCIP_Real)consdata->capacity,
-         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
    SCIP_CALL( SCIPcacheRowExtensions(scip, consdata->row) );
    for( i = 0; i < consdata->nvars; ++i )
@@ -1845,7 +1845,7 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
             /* create LP row */
             sprintf(name, "%s_card%"SCIP_LONGINT_FORMAT"_%d", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)), j);
             SCIP_CALL( SCIPcreateEmptyRow (scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, 
-                  SCIPconsIsLocal(cons), FALSE, SCIPconsIsRemoveable(cons)) );
+                  SCIPconsIsLocal(cons), FALSE, SCIPconsIsRemovable(cons)) );
             
             /* add all variables in the knapsack constraint with calculated lifting coefficient to the cut */
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -2999,7 +2999,7 @@ SCIP_RETCODE tightenWeights(
                   SCIP_CALL( SCIPcreateConsSetpack(scip, &cliquecons, name, ncliquevars, cliquevars,
                         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
                         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-                        SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemoveable(cons)) );
+                        SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
                   SCIPdebugMessage(" -> adding clique constraint: ");
                   SCIPdebug(SCIPprintCons(scip, cliquecons, NULL));
                   SCIP_CALL( SCIPaddCons(scip, cliquecons) );
@@ -3262,7 +3262,7 @@ SCIP_DECL_CONSTRANS(consTransKnapsack)
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
-         SCIPconsIsDynamic(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+         SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons)) );
 
    return SCIP_OKAY;
 }
@@ -3754,7 +3754,7 @@ SCIP_RETCODE createNormalizedKnapsack(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    SCIP_VAR** transvars;
@@ -3807,7 +3807,7 @@ SCIP_RETCODE createNormalizedKnapsack(
 
    /* create the constraint */
    SCIP_CALL( SCIPcreateConsKnapsack(scip, cons, name, nvars, transvars, weights, capacity,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &weights);
@@ -3843,7 +3843,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdKnapsack)
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
-            SCIPconsIsDynamic(cons), SCIPconsIsRemoveable(cons)) );
+            SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
    }
 
    return SCIP_OKAY;
@@ -3989,7 +3989,7 @@ SCIP_RETCODE SCIPcreateConsKnapsack(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup? */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -4014,7 +4014,7 @@ SCIP_RETCODE SCIPcreateConsKnapsack(
         
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, dynamic, removeable) );
+         local, modifiable, dynamic, removable) );
 
    return SCIP_OKAY;
 }

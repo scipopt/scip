@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objvardata.cpp,v 1.9 2006/04/10 16:15:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objvardata.cpp,v 1.10 2006/06/07 08:20:59 bzfpfend Exp $"
 
 /**@file   objvardata.cpp
  * @brief  C++ wrapper for user variable data
@@ -139,7 +139,7 @@ SCIP_RETCODE SCIPcreateObjVar(
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
-   SCIP_Bool             removeable,         /**< is var's column removeable from the LP (due to aging or cleanup)? */
+   SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    scip::ObjVardata*     objvardata,         /**< user variable data object */
    SCIP_Bool             deleteobject        /**< should the user variable data object be deleted when variable is freed? */
    )
@@ -152,7 +152,7 @@ SCIP_RETCODE SCIPcreateObjVar(
    vardata->deleteobject = deleteobject;
 
    /* create variable */
-   SCIP_CALL( SCIPcreateVar(scip, var, name, lb, ub, obj, vartype, initial, removeable, 
+   SCIP_CALL( SCIPcreateVar(scip, var, name, lb, ub, obj, vartype, initial, removable, 
          varDelorigObj, varTransObj, varDeltransObj, vardata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/

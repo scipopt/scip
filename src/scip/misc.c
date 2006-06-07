@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.60 2006/06/06 13:51:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.61 2006/06/07 08:21:03 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -50,7 +50,7 @@
 static
 SCIP_RETCODE pqueueResize(
    SCIP_PQUEUE*          pqueue,             /**< pointer to a priority queue */
-   int                   minsize             /**< minimal number of storeable elements */
+   int                   minsize             /**< minimal number of storable elements */
    )
 {
    assert(pqueue != NULL);

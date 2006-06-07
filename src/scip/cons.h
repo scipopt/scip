@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.105 2006/05/22 15:51:53 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.106 2006/06/07 08:21:00 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -388,7 +388,7 @@ SCIP_RETCODE SCIPconsCreate(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable,         /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    SCIP_Bool             original            /**< is constraint belonging to the original problem? */
    );
 
@@ -498,11 +498,11 @@ void SCIPconsSetDynamic(
    SCIP_Bool             dynamic             /**< new value */
    );
 
-/** sets the removeable flag of the given constraint */
+/** sets the removable flag of the given constraint */
 extern
-void SCIPconsSetRemoveable(
+void SCIPconsSetRemovable(
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_Bool             removeable          /**< new value */
+   SCIP_Bool             removable           /**< new value */
    );
 
 /** gets associated transformed constraint of an original constraint, or NULL if no associated transformed constraint

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.15 2006/06/06 13:32:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.16 2006/06/07 08:21:03 bzfpfend Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -128,7 +128,7 @@ Con* xlp_addcon(const char* name, ConType type, const Numb* lhs, const Numb* rhs
    SCIP_Bool local;
    SCIP_Bool modifiable;
    SCIP_Bool dynamic;
-   SCIP_Bool removeable;
+   SCIP_Bool removable;
    Con* zplcon;
 
    switch( type )
@@ -170,10 +170,10 @@ Con* xlp_addcon(const char* name, ConType type, const Numb* lhs, const Numb* rhs
    local = FALSE;
    modifiable = FALSE;
    dynamic = ((flags & LP_FLAG_CON_SEPAR) != 0);
-   removeable = dynamic;
+   removable = dynamic;
 
    SCIP_CALL_ABORT( SCIPcreateConsLinear(scip_, &cons, name, 0, NULL, NULL, sciplhs, sciprhs,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
    zplcon = (Con*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the CONS will not be
                            destroyed by SCIPreleaseCons() */
    SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
@@ -189,7 +189,7 @@ Var* xlp_addvar(const char* name, VarClass usevarclass, const Bound* lower, cons
    SCIP_Real ub;
    SCIP_VARTYPE vartype;
    SCIP_Bool initial;
-   SCIP_Bool removeable;
+   SCIP_Bool removable;
    SCIP_Bool dynamiccols;
    Var* zplvar;
    int branchpriority;
@@ -248,7 +248,7 @@ Var* xlp_addvar(const char* name, VarClass usevarclass, const Bound* lower, cons
       break;
    }
    initial = !dynamiccols;
-   removeable = dynamiccols;
+   removable = dynamiccols;
 
    if( numb_is_int(priority) )
       branchpriority = numb_toint(priority);
@@ -263,7 +263,7 @@ Var* xlp_addvar(const char* name, VarClass usevarclass, const Bound* lower, cons
       branchpriority = (int)numb_todbl(priority);
    }
 
-   SCIP_CALL_ABORT( SCIPcreateVar(scip_, &var, name, lb, ub, 0.0, vartype, initial, removeable, NULL, NULL, NULL, NULL) );
+   SCIP_CALL_ABORT( SCIPcreateVar(scip_, &var, name, lb, ub, 0.0, vartype, initial, removable, NULL, NULL, NULL, NULL) );
    zplvar = (Var*)var; /* this is ugly, because our VAR-pointer will be released; but in this case we know that the VAR will not be
                           destroyed by SCIPreleaseVar() */
    SCIP_CALL_ABORT( SCIPaddVar(scip_, var) );
@@ -284,7 +284,7 @@ Sos* xlp_addsos(const char* name, SosType type, const Numb* priority)
    SCIP_Bool local;
    SCIP_Bool modifiable;
    SCIP_Bool dynamic;
-   SCIP_Bool removeable;
+   SCIP_Bool removable;
    Sos* zplsos;
 
    switch( type )
@@ -310,10 +310,10 @@ Sos* xlp_addsos(const char* name, SosType type, const Numb* priority)
    local = FALSE;
    modifiable = FALSE;
    dynamic = FALSE;
-   removeable = dynamic;
+   removable = dynamic;
 
    SCIP_CALL_ABORT( SCIPcreateConsSetpack(scip_, &cons, name, 0, NULL,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
    zplsos = (Sos*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the CONS will not be
                            destroyed by SCIPreleaseCons() */
    SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.1 2006/05/31 11:53:55 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_mutation.c,v 1.2 2006/06/07 08:21:02 bzfpfend Exp $"
 
 /**@file   heur_mutation.c
  * @brief  mutation primal heuristic
@@ -151,13 +151,13 @@ SCIP_RETCODE createSubproblem(
          solval = SCIPgetSolVal(scip, sol, vars[i]);
          SCIP_CALL( SCIPcreateVar(subscip, &subvars[i], SCIPvarGetName(vars[i]), solval,
                solval, SCIPvarGetObj(vars[i]), SCIPvarGetType(vars[i]),
-               SCIPvarIsInitial(vars[i]), SCIPvarIsRemoveable(vars[i]), NULL, NULL, NULL, NULL) );
+               SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL, NULL) );
       }
       else
       {
          SCIP_CALL( SCIPcreateVar(subscip, &subvars[i], SCIPvarGetName(vars[i]), SCIPvarGetLbGlobal(vars[i]),
                SCIPvarGetUbGlobal(vars[i]), SCIPvarGetObj(vars[i]), SCIPvarGetType(vars[i]),
-               SCIPvarIsInitial(vars[i]), SCIPvarIsRemoveable(vars[i]), NULL, NULL, NULL, NULL) );
+               SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL, NULL) );
       }
       SCIP_CALL( SCIPaddVar(subscip, subvars[i]) );
    }
@@ -167,7 +167,7 @@ SCIP_RETCODE createSubproblem(
    {
       SCIP_CALL( SCIPcreateVar(subscip, &subvars[i], SCIPvarGetName(vars[i]), SCIPvarGetLbGlobal(vars[i]),
             SCIPvarGetUbGlobal(vars[i]), SCIPvarGetObj(vars[i]), SCIPvarGetType(vars[i]),
-            SCIPvarIsInitial(vars[i]), SCIPvarIsRemoveable(vars[i]), NULL, NULL, NULL, NULL) );
+            SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(subscip, subvars[i]) ); 
    }
       

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.66 2006/03/27 09:34:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.67 2006/06/07 08:21:03 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  MPS file reader
@@ -757,7 +757,7 @@ SCIP_RETCODE readRows(
          SCIP_Bool local;
          SCIP_Bool modifiable;
          SCIP_Bool dynamic;
-         SCIP_Bool removeable;
+         SCIP_Bool removable;
 
          cons = SCIPfindCons(scip, mpsinputField2(mpsi));
          if( cons != NULL )
@@ -773,21 +773,21 @@ SCIP_RETCODE readRows(
          local = FALSE;
          modifiable = FALSE;
          dynamic = dynamicconss;
-         removeable = dynamicrows || (mpsinputSection(mpsi) == MPS_USERCUTS);
+         removable = dynamicrows || (mpsinputSection(mpsi) == MPS_USERCUTS);
 
          switch(*mpsinputField1(mpsi))
          {
          case 'G' :
             SCIP_CALL( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 0.0, SCIPinfinity(scip), 
-                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable) );
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
             break;
          case 'E' :
             SCIP_CALL( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 0.0, 0.0,
-                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable) );
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
             break;
          case 'L' :
             SCIP_CALL( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, -SCIPinfinity(scip), 0.0,
-                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable) );
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
             break;
          default :
             mpsinputSyntaxerror(mpsi);

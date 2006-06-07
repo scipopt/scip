@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_binpack.h,v 1.18 2006/01/03 12:22:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_binpack.h,v 1.19 2006/06/07 08:21:00 bzfpfend Exp $"
 
 /**@file   cons_binpack.h
  * @brief  constraint handler for binpack constraints
@@ -54,7 +54,7 @@ SCIP_RETCODE SCIPcreateConsBinpack(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removeable          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup? */
    );
 
 #endif

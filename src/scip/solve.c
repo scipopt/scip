@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.222 2006/06/01 08:39:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.223 2006/06/07 08:21:04 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -524,8 +524,8 @@ SCIP_RETCODE initLP(
    {
       assert(SCIPlpGetNCols(lp) == 0);
       assert(SCIPlpGetNRows(lp) == 0);
-      assert(lp->nremoveablecols == 0);
-      assert(lp->nremoveablerows == 0);
+      assert(lp->nremovablecols == 0);
+      assert(lp->nremovablerows == 0);
 
       /* inform pricing storage, that LP is now filled with initial data */
       SCIPpricestoreStartInitialLP(pricestore);
@@ -542,7 +542,7 @@ SCIP_RETCODE initLP(
             SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, lp, var, 0.0, TRUE) );
          }
       }
-      assert(lp->nremoveablecols == 0);
+      assert(lp->nremovablecols == 0);
       SCIP_CALL( SCIPpricestoreApplyVars(pricestore, blkmem, set, stat, prob, tree, lp) );
 
       /* inform pricing storage, that initial LP setup is now finished */

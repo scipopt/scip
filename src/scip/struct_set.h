@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.66 2006/05/24 10:35:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.67 2006/06/07 08:21:04 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -143,7 +143,7 @@ struct SCIP_Set
                                               *   decisions by deductions? */
    SCIP_Bool             conf_keepreprop;    /**< should constraints be kept for repropagation even if they are too long? */
    SCIP_Bool             conf_dynamic;       /**< should the conflict constraints be subject to aging? */
-   SCIP_Bool             conf_removeable;    /**< should the conflict's relaxations be subject to LP aging and cleanup? */
+   SCIP_Bool             conf_removable;    /**< should the conflict's relaxations be subject to LP aging and cleanup? */
    SCIP_Real             conf_depthscorefac; /**< score factor for depth level in bound relaxation heuristic of LP analysis */
    SCIP_Real             conf_scorefac;      /**< factor to decrease importance of variables' earlier conflict scores */
 

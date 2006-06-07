@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.14 2006/05/08 16:19:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.15 2006/06/07 08:21:03 bzfpfend Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -637,16 +637,16 @@ SCIP_RETCODE getVariable(
       SCIP_VAR* newvar;
       SCIP_Bool dynamiccols;
       SCIP_Bool initial;
-      SCIP_Bool removeable;
+      SCIP_Bool removable;
 
       SCIP_CALL( SCIPgetBoolParam(scip, "reading/lpreader/dynamiccols", &dynamiccols) );
       initial = !dynamiccols;
-      removeable = dynamiccols;
+      removable = dynamiccols;
 
       /* create new variable of the given name */
       SCIPdebugMessage("creating new variable: <%s>\n", name);
       SCIP_CALL( SCIPcreateVar(scip, &newvar, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, 
-            initial, removeable, NULL, NULL, NULL, NULL) );
+            initial, removable, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, newvar) );
       *var = newvar;
       
@@ -901,7 +901,7 @@ SCIP_RETCODE readConstraints(
    SCIP_Bool local;
    SCIP_Bool modifiable;
    SCIP_Bool dynamic;
-   SCIP_Bool removeable;
+   SCIP_Bool removable;
    int ncoefs;
    int sidesign;
 
@@ -979,9 +979,9 @@ SCIP_RETCODE readConstraints(
    local = FALSE;
    modifiable = FALSE;
    dynamic = dynamicconss;
-   removeable = dynamicrows || lpinput->inusercuts;
+   removable = dynamicrows || lpinput->inusercuts;
    SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, ncoefs, vars, coefs, lhs, rhs,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removeable) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber, 
       lpinput->inlazyconstraints ? " (lazy)" : (lpinput->inusercuts ? " (user cut)" : ""));

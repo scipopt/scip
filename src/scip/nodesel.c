@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.49 2006/01/03 12:22:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.50 2006/06/07 08:21:03 bzfpfend Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -53,7 +53,7 @@ static
 SCIP_RETCODE nodepqResize(
    SCIP_NODEPQ*          nodepq,             /**< node priority queue */
    SCIP_SET*             set,                /**< global SCIP settings */
-   int                   minsize             /**< minimal number of storeable nodes */
+   int                   minsize             /**< minimal number of storable nodes */
    )
 {
    assert(nodepq != NULL);

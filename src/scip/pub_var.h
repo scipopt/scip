@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.61 2006/03/09 12:52:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.62 2006/06/07 08:21:03 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -327,9 +327,9 @@ SCIP_Bool SCIPvarIsInitial(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns whether variable's column is removeable from the LP (due to aging or cleanup) */
+/** returns whether variable's column is removable from the LP (due to aging or cleanup) */
 extern
-SCIP_Bool SCIPvarIsRemoveable(
+SCIP_Bool SCIPvarIsRemovable(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -644,7 +644,7 @@ SCIP_CLIQUE** SCIPvarGetCliques(
 #define SCIPvarGetType(var)             ((SCIP_VARTYPE)((var)->vartype))
 #define SCIPvarIsIntegral(var)          ((var)->vartype != SCIP_VARTYPE_CONTINUOUS)
 #define SCIPvarIsInitial(var)           (var)->initial
-#define SCIPvarIsRemoveable(var)        (var)->removeable
+#define SCIPvarIsRemovable(var)        (var)->removable
 #define SCIPvarIsDeleted(var)           (var)->deleted
 #define SCIPvarIsActive(var)            ((var)->probindex >= 0)
 #define SCIPvarGetIndex(var)            (var)->index
