@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.50 2006/06/07 13:10:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.51 2006/06/08 16:10:20 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -1126,7 +1126,7 @@ SCIP_RETCODE separateCuts(
             && rowdensity <= sepadata->maxrowdensity
             && rowdensity <= sepadata->maxaggdensity )  /*lint !e774*/
          {
-            rowrhsscores[r] = dualscore + (1.0-rowdensity) - sepadata->slackscore * MAX(1.0 - slack, 0.0);
+            rowrhsscores[r] = dualscore + (1.0-rowdensity) + sepadata->slackscore * MAX(1.0 - slack, 0.0);
             assert(rowrhsscores[r] > 0.0);
          }
          else

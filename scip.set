@@ -88,7 +88,7 @@ conflict/dynamic = TRUE
 
 # should the conflict's relaxations be subject to LP aging and cleanup?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
-conflict/removeable = TRUE
+conflict/removable = TRUE
 
 # score factor for depth level in bound relaxation heuristic of LP analysis
 # [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: 1]

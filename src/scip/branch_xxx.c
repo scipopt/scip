@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_xxx.c,v 1.16 2006/01/03 12:22:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_xxx.c,v 1.17 2006/06/08 16:10:20 bzfpfend Exp $"
 
 /**@file   branch_xxx.c
  * @brief  xxx branching rule
@@ -43,7 +43,7 @@
 /* TODO: fill in the necessary branching rule data */
 
 /** branching rule data */
-struct BranchData
+struct BranchruleData
 {
 };
 
