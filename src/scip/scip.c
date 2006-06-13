@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.372 2006/06/07 11:47:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.373 2006/06/13 13:34:30 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4380,6 +4380,9 @@ SCIP_RETCODE presolve(
    SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
       " %d implications, %d cliques\n", scip->stat->nimplications, SCIPcliquetableGetNCliques(scip->cliquetable));
 
+   /* remember number of constraints */
+   SCIPprobMarkNConss(scip->transprob);
+
    return SCIP_OKAY;
 }
 
@@ -7762,17 +7765,6 @@ SCIP_Real SCIPgetVarAvgInferenceCutoffScoreCurrentRun(
 
    return SCIPbranchGetScore(scip->set, var,
       inferdown + cutoffweight * avginfer * cutoffdown, inferup + cutoffweight * avginfer * cutoffup);
-}
-
-/** gets user data for given variable */
-SCIP_VARDATA* SCIPgetVarData(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarData", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   return SCIPvarGetData(var);
 }
 
 /** outputs variable information to file stream */

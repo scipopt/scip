@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.177 2006/06/07 08:21:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.178 2006/06/13 13:34:31 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -2776,6 +2776,8 @@ int SCIPsetGetSepaMaxcuts(
 #undef SCIPsetIsSumZero
 #undef SCIPsetIsSumPositive
 #undef SCIPsetIsSumNegative
+#undef SCIPsetSumFloor
+#undef SCIPsetSumCeil
 #undef SCIPsetIsFeasEQ
 #undef SCIPsetIsFeasLT
 #undef SCIPsetIsFeasLE
@@ -3153,6 +3155,28 @@ SCIP_Bool SCIPsetIsSumNegative(
    assert(set != NULL);
 
    return EPSN(val, set->num_sumepsilon);
+}
+
+/** rounds value + sumepsilon tolerance down to the next integer */
+SCIP_Real SCIPsetSumFloor(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   assert(set != NULL);
+
+   return EPSFLOOR(val, set->num_sumepsilon);
+}
+
+/** rounds value - sumepsilon tolerance up to the next integer */
+SCIP_Real SCIPsetSumCeil(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   assert(set != NULL);
+
+   return EPSCEIL(val, set->num_sumepsilon);
 }
 
 /** checks, if relative difference of values is in range of feastol */

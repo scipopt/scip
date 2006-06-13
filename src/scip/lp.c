@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.225 2006/06/07 08:21:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.226 2006/06/13 13:34:30 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -7670,7 +7670,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
     *   a起{zl_j} := a起{zl_j} - a~_j * bl_j == a起{zl_j} - a起j * bl_j, or
     *   a起{zu_j} := a起{zu_j} + a~_j * bu_j == a起{zu_j} - a起j * bu_j
     */
-   downrhs = SCIPsetFloor(set, rhs);
+   downrhs = SCIPsetSumFloor(set, rhs);
    f0 = rhs - downrhs;
    if( f0 < minfrac )
       goto TERMINATE;

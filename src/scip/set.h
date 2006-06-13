@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.93 2006/03/13 15:35:55 bzfberth Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.94 2006/06/13 13:34:31 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -861,6 +861,20 @@ SCIP_Bool SCIPsetIsSumNegative(
    SCIP_Real             val                 /**< value to be compared against zero */
    );
 
+/** rounds value + sumepsilon tolerance down to the next integer */
+extern
+SCIP_Real SCIPsetSumFloor(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
+   );
+
+/** rounds value - sumepsilon tolerance up to the next integer */
+extern
+SCIP_Real SCIPsetSumCeil(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
+   );
+
 /** checks, if values are in range of feasibility tolerance */
 extern
 SCIP_Bool SCIPsetIsFeasEQ(
@@ -1102,6 +1116,8 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetIsSumZero(set, val)         ( EPSZ(val, (set)->num_sumepsilon) )
 #define SCIPsetIsSumPositive(set, val)     ( EPSP(val, (set)->num_sumepsilon) )
 #define SCIPsetIsSumNegative(set, val)     ( EPSN(val, (set)->num_sumepsilon) )
+#define SCIPsetSumFloor(set, val)          ( EPSFLOOR(val, (set)->num_sumepsilon) )
+#define SCIPsetSumCeil(set, val)           ( EPSCEIL(val, (set)->num_sumepsilon) )
 
 #define SCIPsetIsFeasEQ(set, val1, val2)   ( EPSZ(SCIPrelDiff(val1, val2), (set)->num_feastol) )
 #define SCIPsetIsFeasLT(set, val1, val2)   ( EPSN(SCIPrelDiff(val1, val2), (set)->num_feastol) )

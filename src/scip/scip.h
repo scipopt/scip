@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.276 2006/06/07 11:47:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.277 2006/06/13 13:34:30 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2601,13 +2601,6 @@ SCIP_Real SCIPgetVarAvgInferenceCutoffScoreCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             cutoffweight        /**< factor to weigh average number of cutoffs in branching score */
-   );
-
-/** gets user data for given variable */
-extern
-SCIP_VARDATA* SCIPgetVarData(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** outputs variable information to file stream */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objvardata.cpp,v 1.10 2006/06/07 08:20:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objvardata.cpp,v 1.11 2006/06/13 13:34:29 bzfpfend Exp $"
 
 /**@file   objvardata.cpp
  * @brief  C++ wrapper for user variable data
@@ -169,7 +169,7 @@ scip::ObjVardata* SCIPgetObjVardata(
 {
    SCIP_VARDATA* vardata;
 
-   vardata = SCIPgetVarData(scip, var);
+   vardata = SCIPvarGetData(var);
    assert(vardata != NULL);
 
    return vardata->objvardata;
