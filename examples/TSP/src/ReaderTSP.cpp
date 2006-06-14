@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ReaderTSP.cpp,v 1.5 2006/01/03 12:22:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: ReaderTSP.cpp,v 1.6 2006/06/14 17:54:07 bzfpfend Exp $"
 
 /**@file   ReaderTSP.cpp
  * @brief  C++ file reader for TSP data files
@@ -328,7 +328,7 @@ SCIP_RETCODE ReaderTSP::scip_read(
          
          // a new degree constraint is created, named after a node
          SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname.str().c_str(), 0, NULL, NULL, 2.0, 2.0, 
-               TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );  
+               TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );  
 
          edge = node->first_edge;
          // sum up the values of all adjacent edges 
@@ -346,7 +346,8 @@ SCIP_RETCODE ReaderTSP::scip_read(
 
    // last, we need a constraint forbidding subtours
    SCIP_CONS* cons;
-   SCIP_CALL( SCIPcreateConsSubtour(scip, &cons, "subtour", graph, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE ) ); /* aus cons_subtour.h; eigener Constraint Handler */
+   SCIP_CALL( SCIPcreateConsSubtour(scip, &cons, "subtour", graph, 
+         FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE ) ); /* aus cons_subtour.h; eigener Constraint Handler */
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
  

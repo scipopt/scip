@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objeventhdlr.h,v 1.8 2006/05/16 16:25:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objeventhdlr.h,v 1.9 2006/06/14 17:54:07 bzfpfend Exp $"
 
 /**@file   objeventhdlr.h
  * @brief  C++ wrapper for event handlers
@@ -26,6 +26,7 @@
 #ifndef __SCIP_OBJEVENTHDLR_H__
 #define __SCIP_OBJEVENTHDLR_H__
 
+#include <string>
 
 extern "C" 
 {
@@ -41,24 +42,28 @@ class ObjEventhdlr
 {
 public:
    /** name of the event handler */
-   const char* const scip_name_;
+   char* scip_name_;
    
    /** description of the event handler */
-   const char* const scip_desc_;
+   char* scip_desc_;
    
    /** default constructor */
    ObjEventhdlr(
       const char*        name,               /**< name of event handler */
       const char*        desc                /**< description of event handler */
       )
-      : scip_name_(name),
-        scip_desc_(desc)
+      : scip_name_(0),
+        scip_desc_(0)
    {
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, strlen(desc)+1) );
    }
 
    /** destructor */
    virtual ~ObjEventhdlr()
    {
+      SCIPfreeMemoryArray(scip, &scip_name_);
+      SCIPfreeMemoryArray(scip, &scip_desc_);
    }
 
    /** destructor of event handler to free user data (called when SCIP is exiting) */

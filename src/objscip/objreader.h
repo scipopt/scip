@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.h,v 1.16 2006/05/16 16:25:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objreader.h,v 1.17 2006/06/14 17:54:07 bzfpfend Exp $"
 
 /**@file   objreader.h
  * @brief  C++ wrapper for file readers
@@ -26,6 +26,7 @@
 #ifndef __SCIP_OBJREADER_H__
 #define __SCIP_OBJREADER_H__
 
+#include <string>
 
 extern "C" 
 {
@@ -41,13 +42,13 @@ class ObjReader
 {
 public:
    /** name of the file reader */
-   const char* const scip_name_;
+   char* scip_name_;
    
    /** description of the file reader */
-   const char* const scip_desc_;
+   char* scip_desc_;
    
    /** file extension that reader processes */
-   const char* const scip_extension_;
+   char* scip_extension_;
 
    /** default constructor */
    ObjReader(
@@ -55,15 +56,21 @@ public:
       const char*        desc,               /**< description of file reader */
       const char*        extension           /**< file extension that reader processes */
       )
-      : scip_name_(name),
-        scip_desc_(desc),
-        scip_extension_(extension)
+      : scip_name_(0),
+        scip_desc_(0),
+        scip_extension_(0)
    {
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, strlen(desc)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_extension_, extension, strlen(extension)+1) );
    }
 
    /** destructor */
    virtual ~ObjReader()
    {
+      SCIPfreeMemoryArray(scip, &scip_name_);
+      SCIPfreeMemoryArray(scip, &scip_desc_);
+      SCIPfreeMemoryArray(scip, &scip_extension_);
    }
 
    /** destructor of file reader to free user data (called when SCIP is exiting) */

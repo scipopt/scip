@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.42 2006/05/16 16:25:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.43 2006/06/14 17:54:07 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -28,6 +28,7 @@
 
 
 #include <cassert>
+#include <string>
 
 extern "C" 
 {
@@ -43,10 +44,10 @@ class ObjConshdlr
 {
 public:
    /** name of the constraint handler */
-   const char* const scip_name_;
+   char* scip_name_;
    
    /** description of the constraint handler */
-   const char* const scip_desc_;
+   char* scip_desc_;
    
    /** default separation priority of the constraint handler */
    const int scip_sepapriority_;
@@ -98,8 +99,8 @@ public:
       SCIP_Bool          delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
       SCIP_Bool          needscons           /**< should the constraint handler be skipped, if no constraints are available? */
       )
-      : scip_name_(name),
-        scip_desc_(desc),
+      : scip_name_(0),
+        scip_desc_(0),
         scip_sepapriority_(sepapriority),
         scip_enfopriority_(enfopriority),
         scip_checkpriority_(checkpriority),
@@ -112,11 +113,15 @@ public:
         scip_delaypresol_(delaypresol),
         scip_needscons_(needscons)
    {
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, strlen(desc)+1) );
    }
 
    /** destructor */
    virtual ~ObjConshdlr()
    {
+      SCIPfreeMemoryArray(scip, &scip_name_);
+      SCIPfreeMemoryArray(scip, &scip_desc_);
    }
 
    /** destructor of constraint handler to free user data (called when SCIP is exiting) */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.h,v 1.23 2006/05/16 16:25:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objheur.h,v 1.24 2006/06/14 17:54:07 bzfpfend Exp $"
 
 /**@file   objheur.h
  * @brief  C++ wrapper for primal heuristics
@@ -26,6 +26,7 @@
 #ifndef __SCIP_OBJHEUR_H__
 #define __SCIP_OBJHEUR_H__
 
+#include <string>
 
 extern "C" 
 {
@@ -41,10 +42,10 @@ class ObjHeur
 {
 public:
    /** name of the primal heuristic */
-   const char* const scip_name_;
+   char* scip_name_;
    
    /** description of the primal heuristic */
-   const char* const scip_desc_;
+   char* scip_desc_;
    
    /** display character of primal heuristic */
    const char scip_dispchar_;
@@ -87,8 +88,8 @@ public:
       SCIP_Bool          duringlploop,       /**< call heuristic during the LP price-and-cut loop? */
       SCIP_Bool          afternode           /**< call heuristic after or before the current node was solved? */
       )
-      : scip_name_(name),
-        scip_desc_(desc),
+      : scip_name_(0),
+        scip_desc_(0),
         scip_dispchar_(dispchar),
         scip_priority_(priority),
         scip_freq_(freq),
@@ -99,11 +100,15 @@ public:
         scip_duringlploop_(duringlploop),
         scip_afternode_(afternode)
    {
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, strlen(desc)+1) );
    }
 
    /** destructor */
    virtual ~ObjHeur()
    {
+      SCIPfreeMemoryArray(scip, &scip_name_);
+      SCIPfreeMemoryArray(scip, &scip_desc_);
    }
 
    /** destructor of primal heuristic to free user data (called when SCIP is exiting) */

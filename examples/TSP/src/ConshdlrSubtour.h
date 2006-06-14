@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.h,v 1.6 2006/05/12 09:21:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.h,v 1.7 2006/06/14 17:54:07 bzfpfend Exp $"
 
 /**@file   ConshdlrSubtour.h
  * @brief  C++ constraint handler for TSP subtour elimination constraints
@@ -347,7 +347,7 @@ SCIP_RETCODE SCIPcreateConsSubtour(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint dynamic? */
-   SCIP_Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the constraint be removed from the LP due to aging or cleanup? */
    );
 
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprop.h,v 1.14 2006/05/16 16:25:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprop.h,v 1.15 2006/06/14 17:54:07 bzfpfend Exp $"
 
 /**@file   objprop.h
  * @brief  C++ wrapper for propagators
@@ -26,6 +26,7 @@
 #ifndef __SCIP_OBJPROP_H__
 #define __SCIP_OBJPROP_H__
 
+#include <string>
 
 extern "C" 
 {
@@ -41,10 +42,10 @@ class ObjProp
 {
 public:
    /** name of the propagator */
-   const char* const scip_name_;
+   char* scip_name_;
    
    /** description of the propagator */
-   const char* const scip_desc_;
+   char* scip_desc_;
    
    /** default priority of the propagator */
    const int scip_priority_;
@@ -63,17 +64,21 @@ public:
       int                freq,               /**< frequency for calling propagator */
       SCIP_Bool          delay               /**< should propagator be delayed, if other propagators found reductions? */
       )
-      : scip_name_(name),
-        scip_desc_(desc),
+      : scip_name_(0),
+        scip_desc_(0),
         scip_priority_(priority),
         scip_freq_(freq),
         scip_delay_(delay)
    {
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, strlen(desc)+1) );
    }
 
    /** destructor */
    virtual ~ObjProp()
    {
+      SCIPfreeMemoryArray(scip, &scip_name_);
+      SCIPfreeMemoryArray(scip, &scip_desc_);
    }
 
    /** destructor of propagator to free user data (called when SCIP is exiting) */

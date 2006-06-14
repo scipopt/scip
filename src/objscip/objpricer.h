@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.h,v 1.21 2006/05/16 16:25:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpricer.h,v 1.22 2006/06/14 17:54:07 bzfpfend Exp $"
 
 /**@file   objpricer.h
  * @brief  C++ wrapper for variable pricers
@@ -26,6 +26,7 @@
 #ifndef __SCIP_OBJPRICER_H__
 #define __SCIP_OBJPRICER_H__
 
+#include <string>
 
 extern "C" 
 {
@@ -41,10 +42,10 @@ class ObjPricer
 {
 public:
    /** name of the variable pricer */
-   const char* const scip_name_;
+   char* scip_name_;
    
    /** description of the variable pricer */
-   const char* const scip_desc_;
+   char* scip_desc_;
    
    /** default priority of the variable pricer */
    const int scip_priority_;
@@ -66,16 +67,20 @@ public:
                                               *   default problem variable pricing in the same round)
                                               */
       )
-      : scip_name_(name),
-        scip_desc_(desc),
+      : scip_name_(0),
+        scip_desc_(0),
         scip_priority_(priority),
         scip_delay_(delay)
    {
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, strlen(desc)+1) );
    }
 
    /** destructor */
    virtual ~ObjPricer()
    {
+      SCIPfreeMemoryArray(scip, &scip_name_);
+      SCIPfreeMemoryArray(scip, &scip_desc_);
    }
 
    /** destructor of variable pricer to free user data (called when SCIP is exiting) */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.136 2006/06/07 11:47:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.137 2006/06/14 17:54:08 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -1844,7 +1844,7 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
             
             /* create LP row */
             sprintf(name, "%s_card%"SCIP_LONGINT_FORMAT"_%d", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)), j);
-            SCIP_CALL( SCIPcreateEmptyRow (scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, 
+            SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, 
                   SCIPconsIsLocal(cons), FALSE, SCIPconsIsRemovable(cons)) );
             
             /* add all variables in the knapsack constraint with calculated lifting coefficient to the cut */

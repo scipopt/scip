@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objvardata.h,v 1.11 2006/06/07 08:20:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objvardata.h,v 1.12 2006/06/14 17:54:08 bzfpfend Exp $"
 
 /**@file   objvardata.h
  * @brief  C++ wrapper for user variable data
@@ -84,7 +84,7 @@ public:
    virtual SCIP_RETCODE scip_trans(
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_VAR*          var,                /**< transformed variable, the data to create is belonging to */
-      ObjVardata**  objvardata,         /**< pointer to store the transformed variable data object */
+      ObjVardata**       objvardata,         /**< pointer to store the transformed variable data object */
       SCIP_Bool*         deleteobject        /**< pointer to store whether SCIP should delete the object after solving */
       )
    {  /*lint --e{715}*/

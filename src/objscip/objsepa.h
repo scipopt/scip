@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.h,v 1.22 2006/05/16 16:25:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objsepa.h,v 1.23 2006/06/14 17:54:07 bzfpfend Exp $"
 
 /**@file   objsepa.h
  * @brief  C++ wrapper for cut separators
@@ -26,6 +26,7 @@
 #ifndef __SCIP_OBJSEPA_H__
 #define __SCIP_OBJSEPA_H__
 
+#include <string>
 
 extern "C" 
 {
@@ -41,10 +42,10 @@ class ObjSepa
 {
 public:
    /** name of the cut separator */
-   const char* const scip_name_;
+   char* scip_name_;
    
    /** description of the cut separator */
-   const char* const scip_desc_;
+   char* scip_desc_;
    
    /** default priority of the cut separator */
    const int scip_priority_;
@@ -63,17 +64,21 @@ public:
       int                freq,               /**< frequency for calling separator */
       SCIP_Bool          delay               /**< should separator be delayed, if other separators found cuts? */
       )
-      : scip_name_(name),
-        scip_desc_(desc),
+      : scip_name_(0),
+        scip_desc_(0),
         scip_priority_(priority),
         scip_freq_(freq),
         scip_delay_(delay)
    {
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, strlen(desc)+1) );
    }
 
    /** destructor */
    virtual ~ObjSepa()
    {
+      SCIPfreeMemoryArray(scip, &scip_name_);
+      SCIPfreeMemoryArray(scip, &scip_desc_);
    }
 
    /** destructor of cut separator to free user data (called when SCIP is exiting) */

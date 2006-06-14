@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objnodesel.h,v 1.18 2006/05/16 16:25:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objnodesel.h,v 1.19 2006/06/14 17:54:07 bzfpfend Exp $"
 
 /**@file   objnodesel.h
  * @brief  C++ wrapper for node selectors
@@ -26,6 +26,7 @@
 #ifndef __SCIP_OBJNODESEL_H__
 #define __SCIP_OBJNODESEL_H__
 
+#include <string>
 
 extern "C" 
 {
@@ -41,10 +42,10 @@ class ObjNodesel
 {
 public:
    /** name of the node selector */
-   const char* const scip_name_;
+   char* scip_name_;
    
    /** description of the node selector */
-   const char* const scip_desc_;
+   char* scip_desc_;
    
    /** priority of the node selector in standard mode */
    const int scip_stdpriority_;
@@ -63,17 +64,21 @@ public:
       int                memsavepriority,    /**< priority of the node selector in memory saving mode */
       SCIP_Bool          lowestboundfirst    /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
       )
-      : scip_name_(name),
-        scip_desc_(desc),
+      : scip_name_(0),
+        scip_desc_(0),
         scip_stdpriority_(stdpriority),
         scip_memsavepriority_(memsavepriority),
         scip_lowestboundfirst_(lowestboundfirst)
    {
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, strlen(desc)+1) );
    }
 
    /** destructor */
    virtual ~ObjNodesel()
    {
+      SCIPfreeMemoryArray(scip, &scip_name_);
+      SCIPfreeMemoryArray(scip, &scip_desc_);
    }
 
    /** destructor of node selector to free user data (called when SCIP is exiting) */

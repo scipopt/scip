@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.h,v 1.16 2006/05/30 11:51:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objrelax.h,v 1.17 2006/06/14 17:54:07 bzfpfend Exp $"
 
 /**@file   objrelax.h
  * @brief  C++ wrapper for relaxators
@@ -26,6 +26,7 @@
 #ifndef __SCIP_OBJRELAX_H__
 #define __SCIP_OBJRELAX_H__
 
+#include <string>
 
 extern "C" 
 {
@@ -41,10 +42,10 @@ class ObjRelax
 {
 public:
    /** name of the relaxator */
-   const char* const scip_name_;
+   char* scip_name_;
    
    /** description of the relaxator */
-   const char* const scip_desc_;
+   char* scip_desc_;
    
    /** default priority of the relaxator (negative: call after LP, non-negative: call before LP) */
    const int scip_priority_;
@@ -59,16 +60,20 @@ public:
       int                priority,           /**< priority of the relaxator (negative: after LP, non-negative: before LP) */
       int                freq                /**< frequency for calling relaxator */
       )
-      : scip_name_(name),
-        scip_desc_(desc),
+      : scip_name_(0),
+        scip_desc_(0),
         scip_priority_(priority),
         scip_freq_(freq)
    {
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, strlen(desc)+1) );
    }
 
    /** destructor */
    virtual ~ObjRelax()
    {
+      SCIPfreeMemoryArray(scip, &scip_name_);
+      SCIPfreeMemoryArray(scip, &scip_desc_);
    }
 
    /** destructor of relaxator to free user data (called when SCIP is exiting) */

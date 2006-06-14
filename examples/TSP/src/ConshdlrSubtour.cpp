@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.7 2006/01/03 12:22:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.8 2006/06/14 17:54:07 bzfpfend Exp $"
 
 /**@file   ConshdlrSubtour.cpp
  * @brief  C++ file reader for TSP data files
@@ -270,7 +270,8 @@ SCIP_RETCODE ConshdlrSubtour::scip_trans(
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),  SCIPconsIsLocal(sourcecons),
-         SCIPconsIsModifiable(sourcecons), SCIPconsIsDynamic(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+         SCIPconsIsModifiable(sourcecons), SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons),
+         SCIPconsIsStickingAtNode(sourcecons)) );
 
    return SCIP_OKAY;
 }
@@ -707,7 +708,7 @@ SCIP_RETCODE tsp::SCIPcreateConsSubtour(
    SCIP_Bool             local,              /**< is constraint only valid locally? */
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    SCIP_Bool             dynamic,            /**< is constraint dynamic? */
-   SCIP_Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             removable           /**< should the constraint be removed from the LP due to aging or cleanup? */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -728,7 +729,7 @@ SCIP_RETCODE tsp::SCIPcreateConsSubtour(
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, dynamic, removeable) );
+         local, modifiable, dynamic, removable, FALSE) );
 
    return SCIP_OKAY;
 }

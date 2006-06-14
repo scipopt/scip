@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.373 2006/06/13 13:34:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.374 2006/06/14 17:54:08 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -10609,7 +10609,9 @@ SCIP_RETCODE SCIPcreatePseudoSol(
    return SCIP_OKAY;
 }
 
-/** creates a primal solution, initialized to the current solution */
+/** creates a primal solution, initialized to the current LP or pseudo solution, depending on whether the LP was solved
+ *  at the current node
+ */
 SCIP_RETCODE SCIPcreateCurrentSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to store the solution */

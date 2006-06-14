@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.h,v 1.20 2006/05/16 16:25:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpresol.h,v 1.21 2006/06/14 17:54:07 bzfpfend Exp $"
 
 /**@file   objpresol.h
  * @brief  C++ wrapper for presolvers
@@ -26,6 +26,7 @@
 #ifndef __SCIP_OBJPRESOL_H__
 #define __SCIP_OBJPRESOL_H__
 
+#include <string>
 
 extern "C" 
 {
@@ -41,10 +42,10 @@ class ObjPresol
 {
 public:
    /** name of the presolver */
-   const char* const scip_name_;
+   char* scip_name_;
    
    /** description of the presolver */
-   const char* const scip_desc_;
+   char* scip_desc_;
    
    /** default priority of the presolver */
    const int scip_priority_;
@@ -63,17 +64,21 @@ public:
       int                maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
       SCIP_Bool          delay               /**< should presolver be delayed, if other presolvers found reductions? */
       )
-      : scip_name_(name),
-        scip_desc_(desc),
+      : scip_name_(0),
+        scip_desc_(0),
         scip_priority_(priority),
         scip_maxrounds_(maxrounds),
         scip_delay_(delay)
    {
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, strlen(desc)+1) );
    }
 
    /** destructor */
    virtual ~ObjPresol()
    {
+      SCIPfreeMemoryArray(scip, &scip_name_);
+      SCIPfreeMemoryArray(scip, &scip_desc_);
    }
 
    /** destructor of presolver to free user data (called when SCIP is exiting) */
