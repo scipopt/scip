@@ -45,6 +45,7 @@ fixed bugs:
 - fixed bug in cmir cut separator, that 8*delta was not tried
 - fixed bug in cmir cut separator with wrong sign of slack in row score function
 - fixed bug with string pointer copy instead of string content duplication in constructors of C++ wrapper classes
+- fixed bug in CPLEX interface with basis access methods that dualopt has to be called for more error status codes
 
 
 SCIP version 0.82

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.107 2006/04/27 14:21:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.108 2006/06/19 12:53:05 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -2782,7 +2782,8 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    SCIPdebugMessage("getting basis information\n");
 
    retval = CPXgetbhead(cpxenv, lpi->cpxlp, bind, NULL);
-   if( retval == CPXERR_NO_SOLN )
+   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
+      || retval == CPXERR_NO_BASIS )
    {
       /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
        * return the basis -> we have to resolve the LP (should be done in 0 iterations);
@@ -2816,7 +2817,8 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIPdebugMessage("getting binv-row %d\n", r);
 
    retval = CPXbinvrow(cpxenv, lpi->cpxlp, r, coef);
-   if( retval == CPXERR_NO_SOLN )
+   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
+      || retval == CPXERR_NO_BASIS )
    {
       /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
        * return the basis -> we have to resolve the LP (should be done in 0 iterations);
@@ -2851,7 +2853,8 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIPdebugMessage("getting binva-row %d\n", r);
 
    retval = CPXbinvarow(cpxenv, lpi->cpxlp, r, val);
-   if( retval == CPXERR_NO_SOLN )
+   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
+      || retval == CPXERR_NO_BASIS )
    {
       /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
        * return the basis -> we have to resolve the LP (should be done in 0 iterations);

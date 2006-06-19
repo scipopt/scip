@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.31 2006/03/13 15:35:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.32 2006/06/19 12:53:05 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -500,12 +500,45 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
    /* for each binary variable, probe fixing the variable to zero and one */
    delay = FALSE;
    cutoff = FALSE;
-   for( i = presoldata->startidx; i < nbinvars && !cutoff && !SCIPpressedCtrlC(scip)
-           && presoldata->nuseless < maxuseless && presoldata->ntotaluseless < maxtotaluseless
-           && presoldata->nsumuseless < maxsumuseless; ++i )
+   for( i = presoldata->startidx; i < nbinvars && !cutoff; ++i )
    {
       SCIP_Bool localcutoff;
       int j;
+
+      /* check whether probing should be aborted */
+      if( SCIPpressedCtrlC(scip) || presoldata->nuseless >= maxuseless || presoldata->ntotaluseless >= maxtotaluseless
+         || presoldata->nsumuseless >= maxsumuseless )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+            "   (%.1fs) probing: %d/%d (%.1f%%) - %d fixings, %d aggregations, %d implications, %d bound changes\n", 
+            SCIPgetSolvingTime(scip), i+1, nbinvars, 100.0*(SCIP_Real)(i+1)/(SCIP_Real)nbinvars,
+            presoldata->nfixings, presoldata->naggregations, presoldata->nimplications, presoldata->nbdchgs);
+
+         if( SCIPpressedCtrlC(scip) )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+               "   (%.1fs) probing aborted: user interrupe\n", SCIPgetSolvingTime(scip));
+         }
+         else if( presoldata->nuseless >= maxuseless )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+               "   (%.1fs) probing aborted: %d/%d successive useless probings\n", SCIPgetSolvingTime(scip), 
+               presoldata->nuseless, maxuseless);
+         }
+         else if( presoldata->ntotaluseless >= maxtotaluseless )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+               "   (%.1fs) probing aborted: %d/%d successive totally useless probings\n", SCIPgetSolvingTime(scip), 
+               presoldata->ntotaluseless, maxtotaluseless);
+         }
+         else if( presoldata->nsumuseless >= maxsumuseless )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+               "   (%.1fs) probing aborted: %d/%d useless probings in total\n", SCIPgetSolvingTime(scip), 
+               presoldata->nsumuseless, maxsumuseless);
+         }
+         break;
+      }
 
       /* check if we already fixed enough variables for this round */
       if( *nfixedvars - oldnfixedvars + *naggrvars - oldnaggrvars >= maxfixings )

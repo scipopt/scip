@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.278 2006/06/14 17:54:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.279 2006/06/19 12:53:05 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2015,7 +2015,7 @@ SCIP_Real SCIPadjustedVarLb(
    SCIP_Real             lb                  /**< lower bound value to adjust */
    );
 
-/** returns the adjusted (i.e. rounded, if the given variable is of integral type) lower bound value;
+/** returns the adjusted (i.e. rounded, if the given variable is of integral type) upper bound value;
  *  does not change the bounds of the variable
  */
 extern

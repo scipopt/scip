@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.58 2006/06/07 11:47:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.59 2006/06/19 12:53:05 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -27,18 +27,19 @@
 #include <string.h>
 
 #include "scip/cons_or.h"
+#include "scip/cons_and.h"
 
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "or"
 #define CONSHDLR_DESC          "constraint handler for or constraints: r = or(x1, ..., xn)"
-#define CONSHDLR_SEPAPRIORITY   +850100 /**< priority of the constraint handler for separation */
-#define CONSHDLR_ENFOPRIORITY   -850100 /**< priority of the constraint handler for constraint enforcing */
-#define CONSHDLR_CHECKPRIORITY  -850100 /**< priority of the constraint handler for checking feasibility */
+#define CONSHDLR_SEPAPRIORITY   +850000 /**< priority of the constraint handler for separation */
+#define CONSHDLR_ENFOPRIORITY   -850000 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_CHECKPRIORITY  -850000 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_SEPAFREQ             0 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
-                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -71,6 +72,7 @@ struct SCIP_ConsData
    unsigned int          propagated:1;       /**< is constraint already preprocessed/propagated? */
    unsigned int          nofixedone:1;       /**< is none of the opereator variables fixed to TRUE? */
    unsigned int          impladded:1;        /**< were the implications of the constraint already added? */
+   unsigned int          opimpladded:1;      /**< was the implication for 2 operands with fixed resultant added? */
 };
 
 /** constraint handler data */
@@ -103,7 +105,6 @@ typedef enum Proprule PROPRULE;
  * Local methods
  */
 
-#if 0
 /** installs rounding locks for the given variable in the given or constraint */
 static
 SCIP_RETCODE lockRounding(
@@ -117,7 +118,6 @@ SCIP_RETCODE lockRounding(
 
    return SCIP_OKAY;
 }
-#endif
 
 /** removes rounding locks for the given variable in the given or constraint */
 static
@@ -340,6 +340,30 @@ SCIP_RETCODE consdataSwitchWatchedvars(
    return SCIP_OKAY;
 }
 
+/** ensures, that the vars array can store at least num entries */
+static
+SCIP_RETCODE consdataEnsureVarsSize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   assert(consdata != NULL);
+   assert(consdata->nvars <= consdata->varssize);
+   
+   if( num > consdata->varssize )
+   {
+      int newsize;
+
+      newsize = SCIPcalcMemGrowSize(scip, num);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->vars, consdata->varssize, newsize) );
+      consdata->varssize = newsize;
+   }
+   assert(num <= consdata->varssize);
+
+   return SCIP_OKAY;
+}
+
 /** creates constraint data for or constraint */
 static
 SCIP_RETCODE consdataCreate(
@@ -369,6 +393,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->propagated = FALSE;
    (*consdata)->nofixedone = FALSE;
    (*consdata)->impladded = FALSE;
+   (*consdata)->opimpladded = FALSE;
 
    /* get transformed variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
@@ -463,6 +488,60 @@ void consdataPrint(
    SCIPinfoMessage(scip, file, ")\n");
 }
 
+/** adds coefficient in or constraint */
+static
+SCIP_RETCODE addCoef(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< linear constraint */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   SCIP_VAR*             var                 /**< variable to add to the constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool transformed;
+
+   assert(var != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->rows == NULL);
+
+   /* are we in the transformed problem? */
+   transformed = SCIPconsIsTransformed(cons);
+
+   /* always use transformed variables in transformed constraints */
+   if( transformed )
+   {
+      SCIP_CALL( SCIPgetTransformedVar(scip, var, &var) );
+   }
+   assert(var != NULL);
+   assert(transformed == SCIPvarIsTransformed(var));
+
+   SCIP_CALL( consdataEnsureVarsSize(scip, consdata, consdata->nvars+1) );
+   consdata->vars[consdata->nvars] = var;
+   consdata->nvars++;
+
+   /* if we are in transformed problem, catch the variable's events */
+   if( transformed )
+   {
+      /* catch bound change events of variable */
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_LBTIGHTENED | SCIP_EVENTTYPE_UBRELAXED,
+            eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
+   }
+
+   /* install the rounding locks for the new variable */
+   SCIP_CALL( lockRounding(scip, cons, var) );
+
+   /**@todo update LP rows */
+   if( consdata->rows != NULL )
+   {
+      SCIPerrorMessage("cannot add coefficients to or constraint after LP relaxation was created\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** deletes coefficient at given position from or constraint data */
 static
 SCIP_RETCODE delCoefPos(
@@ -483,6 +562,13 @@ SCIP_RETCODE delCoefPos(
 
    /* remove the rounding locks of the variable */
    SCIP_CALL( unlockRounding(scip, cons, consdata->vars[pos]) );
+
+   if( SCIPconsIsTransformed(cons) )
+   {
+      /* drop bound change events of variable */
+      SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_LBTIGHTENED | SCIP_EVENTTYPE_UBRELAXED,
+            eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
+   }
 
    if( SCIPconsIsTransformed(cons) )
    {
@@ -542,7 +628,25 @@ SCIP_RETCODE applyFixings(
          SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
       }
       else
-         ++v;
+      {
+         SCIP_VAR* repvar;
+         SCIP_Bool negated;
+         
+         /* get binary representative of variable */
+         SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &repvar, &negated) );
+
+         /* check, if the variable should be replaced with the representative */
+         if( repvar != var )
+         {
+            /* delete old (aggregated) variable */
+            SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+
+            /* add representative instead */
+            SCIP_CALL( addCoef(scip, cons, eventhdlr, repvar) );
+         }
+         else
+            ++v;
+      }
    }
 
    SCIPdebugMessage("after fixings: ");
@@ -1053,7 +1157,7 @@ SCIP_RETCODE resolvePropagation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
    SCIP_VAR*             infervar,           /**< variable that was deduced */
-   PROPRULE         proprule,           /**< propagation rule that deduced the value */
+   PROPRULE              proprule,           /**< propagation rule that deduced the value */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
@@ -1133,6 +1237,59 @@ SCIP_RETCODE resolvePropagation(
    return SCIP_OKAY;
 }
 
+/** upgrades unmodifiable or constraint into an and constraint on negated variables */
+static
+SCIP_RETCODE upgradeCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
+   int*                  nupgdconss          /**< pointer to count the number of constraint upgrades */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** negvars;
+   SCIP_VAR* negresvar;
+   SCIP_CONS* andcons;
+   int i;
+
+   assert(nupgdconss != NULL);
+   return SCIP_OKAY; /*???????????????????*/
+
+   /* we cannot upgrade a modifiable constraint, since we don't know what additional variables to expect */
+   if( SCIPconsIsModifiable(cons) )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("upgrading or constraint <%s> into equivalent and constraint on negated variables\n",
+      SCIPconsGetName(cons));
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* get the negated versions of the variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &negvars, consdata->nvars) );
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      SCIP_CALL( SCIPgetNegatedVar(scip, consdata->vars[i], &negvars[i]) );
+   }
+   SCIP_CALL( SCIPgetNegatedVar(scip, consdata->resvar, &negresvar) );
+
+   /* create and add the and constraint */
+   SCIP_CALL( SCIPcreateConsAnd(scip, &andcons, SCIPconsGetName(cons), negresvar, consdata->nvars, negvars,
+         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+         SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+         SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+   SCIP_CALL( SCIPaddCons(scip, andcons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &andcons) );
+
+   /* delete the or constraint */
+   SCIP_CALL( SCIPdelCons(scip, cons) );
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &negvars);
+
+   (*nupgdconss)++;
+
+   return SCIP_OKAY;
+}
 
 
 
@@ -1423,6 +1580,7 @@ SCIP_DECL_CONSPRESOL(consPresolOr)
    SCIP_Bool aggregated;
    int oldnfixedvars;
    int oldnaggrvars;
+   int oldnupgdconss;
    int c;
 
    assert(result != NULL);
@@ -1430,6 +1588,7 @@ SCIP_DECL_CONSPRESOL(consPresolOr)
    *result = SCIP_DIDNOTFIND;
    oldnfixedvars = *nfixedvars;
    oldnaggrvars = *naggrvars;
+   oldnupgdconss = *nupgdconss;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -1452,6 +1611,11 @@ SCIP_DECL_CONSPRESOL(consPresolOr)
 
       /* remove all variables that are fixed to one */
       SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr) );
+
+      /* transform or constraints into and constraints on the negated variables in order to improve
+       * the pairwise constraint presolving possibilities
+       */
+      SCIP_CALL( upgradeCons(scip, cons, nupgdconss) );
 
       if( !cutoff && !SCIPconsIsDeleted(cons) && !SCIPconsIsModifiable(cons) )
       {
@@ -1492,15 +1656,25 @@ SCIP_DECL_CONSPRESOL(consPresolOr)
             }
             consdata->impladded = TRUE;
          }
+
+         /* if in r = x or y, the resultant is fixed to one, add implication x = 0 -> y = 1 */
+         if( !cutoff && SCIPconsIsActive(cons) && consdata->nvars == 2 && !consdata->opimpladded
+            && SCIPvarGetLbGlobal(consdata->resvar) > 0.5 )
+         {
+            int nimplbdchgs;
+            
+            SCIP_CALL( SCIPaddVarImplication(scip, consdata->vars[0], FALSE, consdata->vars[1],
+                  SCIP_BOUNDTYPE_LOWER, 1.0, &cutoff, &nimplbdchgs) );
+            (*nchgbds) += nimplbdchgs;
+            consdata->opimpladded = TRUE;
+         }
       }
    }
-
-   /**@todo preprocess pairs of or constraints */
 
    /* return the correct result code */
    if( cutoff )
       *result = SCIP_CUTOFF;
-   else if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars )
+   else if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars || *nupgdconss > oldnupgdconss )
       *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
