@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.124 2006/06/07 08:20:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.125 2006/06/19 13:31:39 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -3450,7 +3450,7 @@ SCIP_RETCODE undoBdchgsProof(
                   bdchginds, bdchgoldlbs, bdchgoldubs, bdchgnewlbs, bdchgnewubs, bdchgssize, nbdchgs) );
          }
          proofact += proofactdeltas[i];
-         if( resolve != NULL )
+         if( resolve != NULL && SCIPvarIsInLP(cands[i]) )
             *resolve = TRUE;
 
          /* after changing the global bound of a variable, the bdchginfos that are now redundant are replaced with
