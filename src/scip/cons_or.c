@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.59 2006/06/19 12:53:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.60 2006/06/20 16:04:22 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -1252,7 +1252,6 @@ SCIP_RETCODE upgradeCons(
    int i;
 
    assert(nupgdconss != NULL);
-   return SCIP_OKAY; /*???????????????????*/
 
    /* we cannot upgrade a modifiable constraint, since we don't know what additional variables to expect */
    if( SCIPconsIsModifiable(cons) )

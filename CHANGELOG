@@ -38,6 +38,7 @@ features:
   this means, it is possible to have primal heuristics with afternode=FALSE and pseudonodes=FALSE
 - command shell now understands escape characters ",', and \ which makes it possible to read in files with spaces in
   the name
+- improved presolving of and, or, and xor constraints
 
 fixed bugs:
 - fixed bug with adding constraints with INITIAL=true and separating them afterwards, which lead to a second addition

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.208 2006/06/07 08:21:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.209 2006/06/20 16:04:23 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -3135,6 +3135,7 @@ SCIP_RETCODE SCIPvarAggregate(
          {
             SCIP_CALL( SCIPvarAddImplic(var, blkmem, set, stat, lp, cliquetable, branchcand, eventqueue,
                   (SCIP_Bool)i, implvars[j], impltypes[j], implbounds[j], TRUE, infeasible, NULL) );
+            assert(nimpls == SCIPimplicsGetNImpls(var->implics, (SCIP_Bool)i));
          }
       }
    }
@@ -3161,6 +3162,7 @@ SCIP_RETCODE SCIPvarAggregate(
             {
                SCIP_CALL( SCIPvarAddClique(var, blkmem, set, stat, lp, branchcand, eventqueue,
                      (SCIP_Bool)i, cliques[j], infeasible, NULL) );
+               assert(ncliques == SCIPcliquelistGetNCliques(var->cliquelist, (SCIP_Bool)i));
             }
          }
       }

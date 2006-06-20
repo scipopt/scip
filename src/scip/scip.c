@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.375 2006/06/19 12:53:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.376 2006/06/20 16:04:23 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -106,8 +106,8 @@ SCIP_RETCODE checkStage(
    assert(scip != NULL);
    assert(method != NULL);
 
-   SCIPdebugMessage("called method <%s> at stage %d ------------------------------------------------\n",
-      method, scip->set->stage);
+   /*SCIPdebugMessage("called method <%s> at stage %d ------------------------------------------------\n",
+     method, scip->set->stage);*/
 
    assert(scip->mem != NULL);
    assert(scip->set != NULL);

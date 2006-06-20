@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.48 2006/06/07 11:47:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.49 2006/06/20 16:04:22 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -38,7 +38,7 @@
 #define CONSHDLR_SEPAFREQ             0 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
-                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -48,6 +48,8 @@
 #define EVENTHDLR_NAME         "xor"
 #define EVENTHDLR_DESC         "event handler for xor constraints"
 
+#define DEFAULT_MAXPRESOLPAIRROUNDS  -1 /**< maximal number of presolving rounds with pairwise constraint comparison
+                                         *   (-1: no limit) */
 #define NROWS 4
 
 
@@ -68,13 +70,18 @@ struct SCIP_ConsData
    int                   watchedvar2;        /**< position of second watched operator variable */
    int                   filterpos1;         /**< event filter position of first watched operator variable */
    int                   filterpos2;         /**< event filter position of second watched operator variable */
+   SCIP_Bool             rhs;                /**< right hand side of the constraint */
    unsigned int          propagated:1;       /**< is constraint already preprocessed/propagated? */
+   unsigned int          sorted:1;           /**< are the constraint's variables sorted? */
+   unsigned int          changed:1;          /**< was constraint changed since last pair preprocessing round? */
 };
 
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for events on watched variables */
+   int                   maxpresolpairrounds;/**< maximal number of presolving rounds with pairwise constraint comparison
+                                              *   (-1: no limit) */
 };
 
 
@@ -190,7 +197,7 @@ SCIP_RETCODE consdataSwitchWatchedvars(
       tmp = consdata->filterpos1;
       consdata->filterpos1 = consdata->filterpos2;
       consdata->filterpos2 = tmp;
-      }
+   }
    assert(watchedvar1 == -1 || watchedvar1 != consdata->watchedvar2);
    assert(watchedvar2 == -1 || watchedvar2 != consdata->watchedvar1);
 
@@ -227,39 +234,63 @@ SCIP_RETCODE consdataSwitchWatchedvars(
    return SCIP_OKAY;
 }
 
+/** ensures, that the vars array can store at least num entries */
+static
+SCIP_RETCODE consdataEnsureVarsSize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   assert(consdata != NULL);
+   assert(consdata->nvars <= consdata->varssize);
+   
+   if( num > consdata->varssize )
+   {
+      int newsize;
+
+      newsize = SCIPcalcMemGrowSize(scip, num);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->vars, consdata->varssize, newsize) );
+      consdata->varssize = newsize;
+   }
+   assert(num <= consdata->varssize);
+
+   return SCIP_OKAY;
+}
+
 /** creates constraint data for xor constraint */
 static
 SCIP_RETCODE consdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA**       consdata,           /**< pointer to store the constraint data */
+   SCIP_Bool             rhs,                /**< right hand side of the constraint */
    int                   nvars,              /**< number of variables in the xor operation */
-   SCIP_VAR**            vars,               /**< variables in xor operation */
-   SCIP_VAR*             resvar              /**< resultant variable */
+   SCIP_VAR**            vars                /**< variables in xor operation */
    )
 {
    int r;
 
    assert(consdata != NULL);
    assert(nvars == 0 || vars != NULL);
-   assert(resvar != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
 
    /* store the resultant variable as first variable in the array */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vars, nvars+1) );
-   (*consdata)->vars[0] = resvar;
-   BMScopyMemoryArray(&(*consdata)->vars[1], vars, nvars);
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
 
+   (*consdata)->rhs = rhs;
    (*consdata)->intvar = NULL;
    for( r = 0; r < NROWS; ++r )
       (*consdata)->rows[r] = NULL;
-   (*consdata)->nvars = nvars+1;
-   (*consdata)->varssize = nvars+1;
+   (*consdata)->nvars = nvars;
+   (*consdata)->varssize = nvars;
    (*consdata)->watchedvar1 = -1;
    (*consdata)->watchedvar2 = -1;
    (*consdata)->filterpos1 = -1;
    (*consdata)->filterpos2 = -1;
    (*consdata)->propagated = FALSE;
+   (*consdata)->sorted = FALSE;
+   (*consdata)->changed = TRUE;
 
    /* get transformed variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
@@ -350,14 +381,62 @@ void consdataPrint(
    assert(consdata->nvars >= 1);
 
    /* print coefficients */
-   SCIPinfoMessage(scip, file, "<%s> == xor(", SCIPvarGetName(consdata->vars[0]));
-   for( v = 1; v < consdata->nvars; ++v )
+   SCIPinfoMessage(scip, file, "xor(");
+   for( v = 0; v < consdata->nvars; ++v )
    {
-      if( v > 1 )
+      if( v > 0 )
          SCIPinfoMessage(scip, file, ", ");
       SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName(consdata->vars[v]));
    }
-   SCIPinfoMessage(scip, file, ")\n");
+   SCIPinfoMessage(scip, file, ") = %d\n", consdata->rhs);
+}
+
+/** adds coefficient to xor constraint */
+static
+SCIP_RETCODE addCoef(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< linear constraint */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   SCIP_VAR*             var                 /**< variable to add to the constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool transformed;
+
+   assert(var != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->rows[0] == NULL);
+
+   /* are we in the transformed problem? */
+   transformed = SCIPconsIsTransformed(cons);
+
+   /* always use transformed variables in transformed constraints */
+   if( transformed )
+   {
+      SCIP_CALL( SCIPgetTransformedVar(scip, var, &var) );
+   }
+   assert(var != NULL);
+   assert(transformed == SCIPvarIsTransformed(var));
+
+   SCIP_CALL( consdataEnsureVarsSize(scip, consdata, consdata->nvars+1) );
+   consdata->vars[consdata->nvars] = var;
+   consdata->nvars++;
+   consdata->sorted = (consdata->nvars == 1);
+   consdata->changed = TRUE;
+
+   /* install the rounding locks for the new variable */
+   SCIP_CALL( lockRounding(scip, cons, var) );
+
+   /**@todo update LP rows */
+   if( consdata->rows[0] != NULL )
+   {
+      SCIPerrorMessage("cannot add coefficients to xor constraint after LP relaxation was created\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   return SCIP_OKAY;
 }
 
 /** deletes coefficient at given position from xor constraint data */
@@ -407,31 +486,163 @@ SCIP_RETCODE delCoefPos(
       consdata->watchedvar2 = pos;
 
    consdata->propagated = FALSE;
+   consdata->sorted = FALSE;
+   consdata->changed = TRUE;
 
    return SCIP_OKAY;
 }
 
-/** deletes all zero-fixed variables and all pairs of one-fixed variables */
+/** comparison method for entries of an xor constraint: returns -1 if var1 is smaller, +1 if var2 is smaller, and
+ *  0 if both are equal
+ */
+static
+int compareVars(
+   SCIP_VAR*             var1,               /**< first variable to compare */
+   SCIP_VAR*             var2                /**< second variable to compare */
+   )
+{
+   SCIP_VAR* probvar1;
+   SCIP_VAR* probvar2;
+
+   if( var1 == var2 )
+      return 0;
+
+   /* compare problem variables */
+   probvar1 = SCIPvarGetProbvar(var1);
+   probvar2 = SCIPvarGetProbvar(var2);
+   if( probvar1 == probvar2 )
+   {
+      assert(var1 == SCIPvarGetNegatedVar(var2));
+      if( SCIPvarGetProbindex(var2) == -1 )
+      {
+         assert(SCIPvarGetProbindex(var1) >= 0);
+         return -1;
+      }
+      else
+      {
+         assert(SCIPvarGetProbindex(var2) >= 0);
+         return +1;
+      }
+   }
+   return SCIPvarCompare(probvar1, probvar2);
+}
+
+/** index comparison method of and constraints: compares two indices of the variable set in the xor constraint */
+static
+SCIP_DECL_SORTINDCOMP(consdataCompVar)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata = (SCIP_CONSDATA*)dataptr;
+
+   assert(consdata != NULL);
+   assert(0 <= ind1 && ind1 < consdata->nvars);
+   assert(0 <= ind2 && ind2 < consdata->nvars);
+
+   return compareVars(consdata->vars[ind1], consdata->vars[ind2]);
+}
+
+/** sorts and constraint's variables by non-decreasing variable index */
+static
+SCIP_RETCODE consdataSort(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata            /**< constraint data */
+   )
+{
+   assert(consdata != NULL);
+
+   if( consdata->nvars == 0 )
+      consdata->sorted = TRUE;
+   else if( !consdata->sorted )
+   {
+      SCIP_VAR* varv;
+      int* perm;
+      int v;
+      int i;
+      int nexti;
+
+      /* get temporary memory to store the sorted permutation */
+      SCIP_CALL( SCIPallocBufferArray(scip, &perm, consdata->nvars) );
+
+      /* call bubble sort */
+      SCIPbsort((void*)consdata, consdata->nvars, consdataCompVar, perm);
+
+      /* permute the variables in the constraint according to the resulting permutation */
+      for( v = 0; v < consdata->nvars; ++v )
+      {
+         if( perm[v] != v )
+         {
+            SCIP_Bool iswatchedvar1;
+            SCIP_Bool iswatchedvar2;
+
+            varv = consdata->vars[v];
+            iswatchedvar1 = (consdata->watchedvar1 == v);
+            iswatchedvar2 = (consdata->watchedvar2 == v);
+            i = v;
+            do
+            {
+               assert(0 <= perm[i] && perm[i] < consdata->nvars);
+               assert(perm[i] != i);
+               consdata->vars[i] = consdata->vars[perm[i]];
+               if( consdata->watchedvar1 == perm[i] )
+                  consdata->watchedvar1 = i;
+               if( consdata->watchedvar2 == perm[i] )
+                  consdata->watchedvar2 = i;
+               nexti = perm[i];
+               perm[i] = i;
+               i = nexti;
+            }
+            while( perm[i] != v );
+            consdata->vars[i] = varv;
+            if( iswatchedvar1 )
+               consdata->watchedvar1 = i;
+            if( iswatchedvar2 )
+               consdata->watchedvar2 = i;
+            perm[i] = i;
+         }
+      }
+      consdata->sorted = TRUE;
+
+#ifdef SCIP_DEBUG
+      /* check sorting */
+      for( v = 0; v < consdata->nvars; ++v )
+      {
+         assert(v == consdata->nvars-1 || compareVars(consdata->vars[v], consdata->vars[v+1]) <= 0);
+         assert(perm[v] == v);
+      }
+#endif
+
+      /* free temporary memory */
+      SCIPfreeBufferArray(scip, &perm);
+   }
+   assert(consdata->sorted);
+
+   return SCIP_OKAY;
+}
+
+/** deletes all fixed variables and all pairs equal variables variables */
 static
 SCIP_RETCODE applyFixings(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< xor constraint */
-   SCIP_EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   int*                  nchgcoefs           /**< pointer to add up the number of changed coefficients */
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_VAR* var;
    int v;
-   int lastfixedone;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->nvars == 0 || consdata->vars != NULL);
+   assert(nchgcoefs != NULL);
+
+   SCIPdebugMessage("before fixings: ");
+   SCIPdebug(consdataPrint(scip, consdata, NULL));
 
    v = 0;
-   lastfixedone = -1;
    while( v < consdata->nvars )
    {
+      SCIP_VAR* var;
+
       var = consdata->vars[v];
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
 
@@ -439,42 +650,92 @@ SCIP_RETCODE applyFixings(
       {
          assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
          SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+         (*nchgcoefs)++;
       }
       else if( SCIPvarGetLbGlobal(var) > 0.5 )
       {
          assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
-         if( lastfixedone >= 0 )
-         {
-            /* delete variable at position v > lastfixedone first, because this doesn't affect previous array positions */
-            assert(v > lastfixedone);
-            SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
-            SCIP_CALL( delCoefPos(scip, cons, eventhdlr, lastfixedone) );
-            lastfixedone = -1;
-         }
-         else
-         {
-            lastfixedone = v;
-            ++v;
-         }
+         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+         consdata->rhs = !consdata->rhs;
+         (*nchgcoefs)++;
       }
       else
-         ++v;
+      {
+         SCIP_VAR* repvar;
+         SCIP_Bool negated;
+         
+         /* get binary representative of variable */
+         SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &repvar, &negated) );
+
+         /* check, if the variable should be replaced with the representative */
+         if( repvar != var )
+         {
+            /* delete old (aggregated) variable */
+            SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+
+            /* add representative instead */
+            SCIP_CALL( addCoef(scip, cons, eventhdlr, repvar) );
+         }
+         else
+            ++v;
+      }
    }
 
-   SCIPdebugMessage("after fixings: ");
+   /* sort the variables in the constraint */
+   SCIP_CALL( consdataSort(scip, consdata) );
+
+   SCIPdebugMessage("after sort    : ");
+   SCIPdebug(consdataPrint(scip, consdata, NULL));
+
+   /* delete pairs of equal or negated variables; scan from back to front because deletion doesn't affect the
+    * order of the front variables
+    */
+   for( v = consdata->nvars-2; v >= 0; --v )
+   {
+      if( consdata->vars[v] == consdata->vars[v+1] )
+      {
+         /* delete both variables */
+         SCIPdebugMessage("xor constraint <%s>: deleting pair of equal variables <%s>\n",
+            SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[v]));
+         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v+1) );
+         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+         (*nchgcoefs) += 2;
+         v = MIN(v, consdata->nvars-1);
+      }
+      else if( consdata->vars[v] == SCIPvarGetNegatedVar(consdata->vars[v+1]) )
+      {
+         /* delete both variables and negate the rhs */
+         SCIPdebugMessage("xor constraint <%s>: deleting pair of negated variables <%s> and <%s>\n",
+            SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[v]), SCIPvarGetName(consdata->vars[v+1]));
+         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v+1) );
+         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+         (*nchgcoefs) += 2;
+         consdata->rhs = !consdata->rhs;
+         v = MIN(v, consdata->nvars-1);
+      }
+      else
+         assert(SCIPvarGetProbvar(consdata->vars[v]) != SCIPvarGetProbvar(consdata->vars[v+1]));
+   }
+
+   SCIPdebugMessage("after fixings : ");
    SCIPdebug(consdataPrint(scip, consdata, NULL));
 
    return SCIP_OKAY;
 }
 
 /** creates LP row corresponding to xor constraint: 
- *    resvar + v1 + ... + vn - 2q == 0
+ *    x1 + ... + xn - 2q == rhs
  *  with internal integer variable q;
- *  in the special case of 2 operand variables r == x xor y, the following linear system is created:
- *    + x - y - r <= 0
- *    - x + y - r <= 0
- *    - x - y + r <= 0
- *    + x + y + r <= 2
+ *  in the special case of 3 variables and c = 0, the following linear system is created:
+ *    + x - y - z <= 0
+ *    - x + y - z <= 0
+ *    - x - y + z <= 0
+ *    + x + y + z <= 2
+ *  in the special case of 3 variables and c = 1, the following linear system is created:
+ *    - x + y + z <= 1
+ *    + x - y + z <= 1
+ *    + x + y - z <= 1
+ *    - x - y - z <= -1
  */
 static 
 SCIP_RETCODE createRelaxation(
@@ -491,6 +752,8 @@ SCIP_RETCODE createRelaxation(
 
    if( SCIPconsIsModifiable(cons) || consdata->nvars != 3 )  /* resultant is member of vars array */
    {
+      SCIP_Real rhsval;
+
       /* create internal variable, if not yet existing */
       if( consdata->intvar == NULL )
       {
@@ -508,12 +771,13 @@ SCIP_RETCODE createRelaxation(
       }
 
       /* create LP row (resultant variable is also stored in vars array) */
-      SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[0], SCIPconsGetName(cons), 0.0, 0.0,
+      rhsval = (consdata->rhs ? 1.0 : 0.0);
+      SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[0], SCIPconsGetName(cons), rhsval, rhsval,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[0], consdata->intvar, -2.0) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[0], consdata->nvars, consdata->vars, 1.0) );
    }
-   else
+   else if( !consdata->rhs )
    {
       char rowname[SCIP_MAXSTRLEN];
       int r;
@@ -537,6 +801,31 @@ SCIP_RETCODE createRelaxation(
       SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[3], rowname, -SCIPinfinity(scip), 2.0,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[3], consdata->nvars, consdata->vars, 1.0) );
+   }
+   else
+   {
+      char rowname[SCIP_MAXSTRLEN];
+      int r;
+
+      /* create the <= 1 rows with one negative sign */
+      for( r = 0; r < 3; ++r )
+      {
+         int v;
+
+         sprintf(rowname, "%s_%d", SCIPconsGetName(cons), r);
+         SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[r], rowname, -SCIPinfinity(scip), 1.0,
+               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
+         for( v = 0; v < 3; ++v )
+         {
+            SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[r], consdata->vars[v], v == r ? -1.0 : +1.0) );
+         }
+      }
+
+      /* create the <= -1 row with all negative signs */
+      sprintf(rowname, "%s_3", SCIPconsGetName(cons));
+      SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[3], rowname, -SCIPinfinity(scip), -1.0,
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
+      SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[3], consdata->nvars, consdata->vars, -1.0) );
    }
 
    return SCIP_OKAY;
@@ -622,8 +911,8 @@ SCIP_RETCODE checkCons(
       /* increase age of constraint; age is reset to zero, if a violation was found */
       SCIP_CALL( SCIPincConsAge(scip, cons) );
       
-      /* check, if all variables (including resultant) sum up to an even value */
-      odd = FALSE;
+      /* check, if all variables (including resultant) and the rhs sum up to an even value */
+      odd = consdata->rhs;
       for( i = 0; i < consdata->nvars; ++i )
       {
          solval = SCIPgetSolVal(scip, sol, consdata->vars[i]);
@@ -787,7 +1076,7 @@ SCIP_RETCODE propagateCons(
    assert(watchedvar1 != -1 || watchedvar2 == -1);
 
    /* if the watched variables are invalid (fixed), find new ones if existing; count the parity */
-   odd = FALSE;
+   odd = consdata->rhs;
    if( watchedvar2 == -1 )
    {
       for( i = 0; i < nvars; ++i )
@@ -866,7 +1155,7 @@ SCIP_RETCODE resolvePropagation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint that inferred the bound change */
    SCIP_VAR*             infervar,           /**< variable that was deduced */
-   PROPRULE         proprule,           /**< propagation rule that deduced the value */
+   PROPRULE              proprule,           /**< propagation rule that deduced the value */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
@@ -906,6 +1195,323 @@ SCIP_RETCODE resolvePropagation(
    default:
       SCIPerrorMessage("invalid inference information %d in xor constraint <%s>\n", proprule, SCIPconsGetName(cons));
       return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** compares constraint with all prior constraints for possible redundancy or aggregation,
+ *  and removes or changes constraint accordingly
+ */
+static
+SCIP_RETCODE preprocessConstraintPairs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraint set */
+   int                   firstchange,        /**< first constraint that changed since last pair preprocessing round */
+   int                   chkind,             /**< index of constraint to check against all prior indices upto startind */
+   SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
+   int*                  nfixedvars,         /**< pointer to add up the number of found domain reductions */
+   int*                  naggrvars,          /**< pointer to count number of aggregated variables */
+   int*                  ndelconss,          /**< pointer to count number of deleted constraints */
+   int*                  nchgcoefs           /**< pointer to add up the number of changed coefficients */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONS* cons0;
+   SCIP_CONSDATA* consdata0;
+   SCIP_Bool cons0changed;
+   int c;
+
+   assert(conss != NULL);
+   assert(firstchange <= chkind);
+   assert(cutoff != NULL);
+   assert(nfixedvars != NULL);
+   assert(naggrvars != NULL);
+   assert(ndelconss != NULL);
+   assert(nchgcoefs != NULL);
+
+   /* get the constraint to be checked against all prior constraints */
+   cons0 = conss[chkind];
+   assert(SCIPconsIsActive(cons0));
+   assert(!SCIPconsIsModifiable(cons0));
+
+   consdata0 = SCIPconsGetData(cons0);
+   assert(consdata0 != NULL);
+   assert(consdata0->nvars >= 1);
+
+   /* get constraint handler data */
+   conshdlr = SCIPconsGetHdlr(cons0);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* sort cons0 */
+   SCIP_CALL( consdataSort(scip, consdata0) );
+
+   /* check constraint against all prior constraints */
+   cons0changed = consdata0->changed;
+   consdata0->changed = FALSE;
+   for( c = (cons0changed ? 0 : firstchange); c < chkind && !(*cutoff) && SCIPconsIsActive(cons0); ++c )
+   {
+      SCIP_CONS* cons1;
+      SCIP_CONSDATA* consdata1;
+      SCIP_VAR* singlevar0;
+      SCIP_VAR* singlevar1;
+      SCIP_Bool parity;
+      SCIP_Bool cons0hastwoothervars;
+      SCIP_Bool cons1hastwoothervars;
+      SCIP_Bool aborted;
+      int v0;
+      int v1;
+
+      cons1 = conss[c];
+
+      /* ignore inactive and modifiable constraints */
+      if( !SCIPconsIsActive(cons1) || SCIPconsIsModifiable(cons1) )
+         continue;
+
+      consdata1 = SCIPconsGetData(cons1);
+      assert(consdata1 != NULL);
+
+#if 1
+      SCIPdebugMessage("preprocess xor constraint pair <%s>[chg:%d] and <%s>[chg:%d]\n",
+         SCIPconsGetName(cons0), cons0changed, SCIPconsGetName(cons1), consdata1->changed);
+#endif
+
+      /* if both constraints were not changed since last round, we can ignore the pair */
+      if( !cons0changed && !consdata1->changed )
+         continue;
+
+      assert(consdata1->nvars >= 1);
+
+      /* sort cons1 */
+      SCIP_CALL( consdataSort(scip, consdata1) );
+
+      /* check whether
+       *  (a) one problem variable set is a subset of the other, or
+       *  (b) the problem variable sets are almost equal with only one variable in each constraint that is not
+       *      member of the other
+       */
+      assert(consdata0->sorted);
+      assert(consdata1->sorted);
+      aborted = FALSE;
+      parity = (consdata0->rhs ^ consdata1->rhs);
+      cons0hastwoothervars = FALSE;
+      cons1hastwoothervars = FALSE;
+      singlevar0 = NULL;
+      singlevar1 = NULL;
+      v0 = 0;
+      v1 = 0;
+      while( (v0 < consdata0->nvars || v1 < consdata1->nvars) && !aborted )
+      {
+         int cmp;
+
+         assert(v0 <= consdata0->nvars);
+         assert(v1 <= consdata1->nvars);
+
+         if( v0 == consdata0->nvars )
+            cmp = +1;
+         else if( v1 == consdata1->nvars )
+            cmp = -1;
+         else
+            cmp = compareVars(consdata0->vars[v0], consdata1->vars[v1]);
+
+         switch( cmp )
+         {
+         case -1:
+            /* variable doesn't appear in cons1 */
+            assert(v0 < consdata0->nvars);
+            if( singlevar0 == NULL )
+            {
+               singlevar0 = consdata0->vars[v0];
+               if( cons1hastwoothervars )
+                  aborted = TRUE;
+            }
+            else
+            {
+               cons0hastwoothervars = TRUE;
+               if( singlevar1 != NULL )
+                  aborted = TRUE;
+            }
+            v0++;
+            break;
+
+         case +1:
+            /* variable doesn't appear in cons0 */
+            assert(v1 < consdata1->nvars);
+            if( singlevar1 == NULL )
+            {
+               singlevar1 = consdata1->vars[v1];
+               if( cons0hastwoothervars )
+                  aborted = TRUE;
+            }
+            else
+            {
+               cons1hastwoothervars = TRUE;
+               if( singlevar0 != NULL )
+                  aborted = TRUE;
+            }
+            v1++;
+            break;
+
+         case 0:
+            /* variable appears in both constraints */
+            assert(v0 < consdata0->nvars);
+            assert(v1 < consdata1->nvars);
+            assert(SCIPvarGetProbvar(consdata0->vars[v0]) == SCIPvarGetProbvar(consdata1->vars[v1]));
+            if( consdata0->vars[v0] != consdata1->vars[v1] )
+            {
+               assert(SCIPvarGetNegatedVar(consdata0->vars[v0]) == consdata1->vars[v1]);
+               parity = !parity;
+            }
+            v0++;
+            v1++;
+            break;
+
+         default:
+            SCIPerrorMessage("invalid comparison result\n");
+            SCIPABORT();
+         }
+      }
+
+      /* check if a useful presolving is possible */
+      if( (cons0hastwoothervars && singlevar1 != NULL) || (cons1hastwoothervars && singlevar0 != NULL) )
+         continue;
+
+      /* check if one problem variable set is a subset of the other */
+      if( singlevar0 == NULL && singlevar1 == NULL )
+      {
+         /* both constraints are equal */
+         if( !parity )
+         {
+            /* even parity: constraints are redundant */
+            SCIPdebugMessage("xor constraints <%s> and <%s> are redundant: delete <%s>\n",
+               SCIPconsGetName(cons0), SCIPconsGetName(cons1), SCIPconsGetName(cons1));
+            SCIPdebug(SCIPprintCons(scip, cons0, NULL));
+            SCIPdebug(SCIPprintCons(scip, cons1, NULL));
+            SCIP_CALL( SCIPdelCons(scip, cons1) );
+            (*ndelconss)++;
+         }
+         else
+         {
+            /* odd parity: constraints are contradicting */
+            SCIPdebugMessage("xor constraints <%s> and <%s> are contradicting\n",
+               SCIPconsGetName(cons0), SCIPconsGetName(cons1));
+            SCIPdebug(SCIPprintCons(scip, cons0, NULL));
+            SCIPdebug(SCIPprintCons(scip, cons1, NULL));
+            *cutoff = TRUE;
+         }
+      }
+      else if( singlevar1 == NULL )
+      {
+         /* cons1 is a subset of cons0 */
+         if( !cons0hastwoothervars )
+         {
+            SCIP_Bool infeasible;
+            SCIP_Bool fixed;
+
+            /* only one additional variable in cons0: fix this variable according to the parity */
+            SCIPdebugMessage("xor constraints <%s> and <%s> yield sum %d == <%s>\n",
+               SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity, SCIPvarGetName(singlevar0));
+            SCIPdebug(SCIPprintCons(scip, cons0, NULL));
+            SCIPdebug(SCIPprintCons(scip, cons1, NULL));
+            SCIP_CALL( SCIPfixVar(scip, singlevar0, parity ? 1.0 : 0.0, &infeasible, &fixed) );
+            assert(infeasible || fixed);
+            *cutoff = *cutoff || infeasible;
+            (*nfixedvars)++;
+            SCIP_CALL( SCIPdelCons(scip, cons1) );
+            (*ndelconss)++;
+         }
+         else
+         {
+            int v;
+
+            /* more than one additional variable in cons0: add cons1 to cons0, thus eliminating the equal variables */
+            SCIPdebugMessage("xor constraint <%s> is superset of <%s> with parity %d\n",
+               SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity);
+            SCIPdebug(SCIPprintCons(scip, cons0, NULL));
+            SCIPdebug(SCIPprintCons(scip, cons1, NULL));
+            for( v = 0; v < consdata1->nvars; ++v )
+            {
+               SCIP_CALL( addCoef(scip, cons0, conshdlrdata->eventhdlr, consdata1->vars[v]) );
+            }
+            SCIP_CALL( applyFixings(scip, cons0, conshdlrdata->eventhdlr, nchgcoefs) );
+            assert(SCIPconsGetData(cons0) == consdata0);
+            assert(consdata0->nvars >= 2); /* at least the two "other" variables should remain in the constraint */
+            SCIP_CALL( consdataSort(scip, consdata0) );
+         }
+      }
+      else if( singlevar0 == NULL )
+      {
+         /* cons0 is a subset of cons1 */
+         if( !cons1hastwoothervars )
+         {
+            SCIP_Bool infeasible;
+            SCIP_Bool fixed;
+
+            /* only one additional variable in cons1: fix this variable according to the parity */
+            SCIPdebugMessage("xor constraints <%s> and <%s> yield sum %d == <%s>\n",
+               SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity, SCIPvarGetName(singlevar1));
+            SCIPdebug(SCIPprintCons(scip, cons0, NULL));
+            SCIPdebug(SCIPprintCons(scip, cons1, NULL));
+            SCIP_CALL( SCIPfixVar(scip, singlevar1, parity ? 1.0 : 0.0, &infeasible, &fixed) );
+            assert(infeasible || fixed);
+            *cutoff = *cutoff || infeasible;
+            (*nfixedvars)++;
+            SCIP_CALL( SCIPdelCons(scip, cons1) );
+            (*ndelconss)++;
+         }
+         else
+         {
+            int v;
+
+            /* more than one additional variable in cons1: add cons0 to cons1, thus eliminating the equal variables */
+            SCIPdebugMessage("xor constraint <%s> is subset of <%s> with parity %d\n",
+               SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity);
+            SCIPdebug(SCIPprintCons(scip, cons0, NULL));
+            SCIPdebug(SCIPprintCons(scip, cons1, NULL));
+            for( v = 0; v < consdata0->nvars; ++v )
+            {
+               SCIP_CALL( addCoef(scip, cons1, conshdlrdata->eventhdlr, consdata0->vars[v]) );
+            }
+            SCIP_CALL( applyFixings(scip, cons1, conshdlrdata->eventhdlr, nchgcoefs) );
+            assert(SCIPconsGetData(cons1) == consdata1);
+            assert(consdata1->nvars >= 2); /* at least the two "other" variables should remain in the constraint */
+            SCIP_CALL( consdataSort(scip, consdata1) );
+         }
+      }
+      else
+      {
+         SCIP_Bool infeasible;
+         SCIP_Bool redundant;
+         SCIP_Bool aggregated;
+
+         assert(!cons0hastwoothervars);
+         assert(!cons1hastwoothervars);
+
+         /* sum of constraints is parity == singlevar0 xor singlevar1: aggregate variables and delete cons1 */
+         SCIPdebugMessage("xor constraints <%s> and <%s> yield sum %d == xor(<%s>,<%s>)\n",
+            SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity, SCIPvarGetName(singlevar0),
+            SCIPvarGetName(singlevar1));
+         if( !parity )
+         {
+            /* aggregate singlevar0 == singlevar1 */
+            SCIP_CALL( SCIPaggregateVars(scip, singlevar0, singlevar1, 1.0, -1.0, 0.0,
+                  &infeasible, &redundant, &aggregated) );
+         }
+         else
+         {
+            /* aggregate singlevar0 == 1-singlevar1 */
+            SCIP_CALL( SCIPaggregateVars(scip, singlevar0, singlevar1, 1.0, 1.0, 1.0,
+                  &infeasible, &redundant, &aggregated) );
+         }
+         assert(infeasible || redundant);
+         *cutoff = *cutoff || infeasible;
+         if( aggregated )
+            (*naggrvars)++;
+         SCIP_CALL( SCIPdelCons(scip, cons1) );
+         (*ndelconss)++;
+      }
    }
 
    return SCIP_OKAY;
@@ -1007,7 +1613,7 @@ SCIP_DECL_CONSTRANS(consTransXor)
    assert(sourcedata->vars != NULL);
 
    /* create target constraint data */
-   SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars-1, &sourcedata->vars[1], sourcedata->vars[0]) );
+   SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->rhs, sourcedata->nvars, sourcedata->vars) );
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -1198,23 +1804,30 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
    SCIP_CONS* cons;
    SCIP_CONSDATA* consdata;
    SCIP_Bool cutoff;
+   SCIP_Bool delay;
    SCIP_Bool redundant;
    SCIP_Bool aggregated;
    int oldnfixedvars;
    int oldnaggrvars;
+   int oldndelconss;
+   int oldnchgcoefs;
+   int firstchange;
    int c;
 
    assert(result != NULL);
 
-   *result = SCIP_DIDNOTFIND;
    oldnfixedvars = *nfixedvars;
    oldnaggrvars = *naggrvars;
+   oldndelconss = *ndelconss;
+   oldnchgcoefs = *nchgcoefs;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
    /* process constraints */
    cutoff = FALSE;
+   delay = FALSE;
+   firstchange = INT_MAX;
    for( c = 0; c < nconss && !cutoff; ++c )
    {
       cons = conss[c];
@@ -1226,8 +1839,14 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
       if( nrounds == 0 )
          consdata->propagated = FALSE;
 
-      /* remove all variables that are fixed to zero and all pairs of variables fixed to one */
-      SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr) );
+      /* remember the first changed constraint to begin the next aggregation round with */
+      if( firstchange == INT_MAX && consdata->changed )
+         firstchange = c;
+
+      /* remove all variables that are fixed to zero and all pairs of variables fixed to one;
+       * merge multiple entries of the same or negated variables
+       */
+      SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr, nchgcoefs) );
 
       /* propagate constraint */
       SCIP_CALL( propagateCons(scip, cons, conshdlrdata->eventhdlr, &cutoff, nfixedvars) );
@@ -1236,11 +1855,11 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
       {
          assert(consdata->nvars >= 2); /* otherwise, propagateCons() has deleted the constraint */
 
-         /* if only two variables are left, both have to be equal */
+         /* if only two variables are left, both have to be equal or opposite, depending on the rhs */
          if( consdata->nvars == 2 )
          {
-            SCIPdebugMessage("xor constraint <%s> has only two unfixed variables, remaining vars are even\n",
-               SCIPconsGetName(cons));
+            SCIPdebugMessage("xor constraint <%s> has only two unfixed variables, rhs=%d\n",
+               SCIPconsGetName(cons), consdata->rhs);
             
             assert(consdata->vars != NULL);
             assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->vars[0]), 0.0));
@@ -1248,9 +1867,22 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
             assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->vars[1]), 0.0));
             assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(consdata->vars[1]), 1.0));
             
-            /* aggregate variables: vars[0] - vars[1] == 0 */
-            SCIP_CALL( SCIPaggregateVars(scip, consdata->vars[0], consdata->vars[1], 1.0, -1.0, 0.0,
-                  &cutoff, &redundant, &aggregated) );
+            if( !consdata->rhs )
+            {
+               /* aggregate variables: vars[0] - vars[1] == 0 */
+               SCIPdebugMessage(" -> aggregate <%s> == <%s>\n", SCIPvarGetName(consdata->vars[0]),
+                  SCIPvarGetName(consdata->vars[1]));
+               SCIP_CALL( SCIPaggregateVars(scip, consdata->vars[0], consdata->vars[1], 1.0, -1.0, 0.0,
+                     &cutoff, &redundant, &aggregated) );
+            }
+            else
+            {
+               /* aggregate variables: vars[0] + vars[1] == 1 */
+               SCIPdebugMessage(" -> aggregate <%s> == 1 - <%s>\n", SCIPvarGetName(consdata->vars[0]),
+                  SCIPvarGetName(consdata->vars[1]));
+               SCIP_CALL( SCIPaggregateVars(scip, consdata->vars[0], consdata->vars[1], 1.0, 1.0, 1.0,
+                     &cutoff, &redundant, &aggregated) );
+            }
             assert(redundant);
             if( aggregated )
                (*naggrvars)++;
@@ -1259,86 +1891,40 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
             SCIP_CALL( SCIPdelCons(scip, cons) );
             (*ndelconss)++;
          }
+      }
+   }
 
-         /* if only three variables are left, but one of them is fixed to one, the others have to be opposite */
-         if( consdata->nvars == 3 )
+   /* process pairs of constraints: check them for equal operands in order to aggregate resultants;
+    * only apply this expensive procedure, if the single constraint preprocessing did not find any reductions
+    * (otherwise, we delay the presolving to be called again next time)
+    */
+   if( !cutoff && *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
+   {
+      if( conshdlrdata->maxpresolpairrounds == -1 || nrounds < conshdlrdata->maxpresolpairrounds )
+      {
+         for( c = firstchange; c < nconss && !cutoff && !SCIPpressedCtrlC(scip); ++c )
          {
-            assert(consdata->vars != NULL);
-
-            if( SCIPvarGetLbGlobal(consdata->vars[0]) > 0.5 )
+            if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
             {
-               SCIPdebugMessage("xor constraint <%s> has only two unfixed variables, remaining vars are odd\n",
-                  SCIPconsGetName(cons));
-            
-               assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->vars[1]), 0.0));
-               assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(consdata->vars[1]), 1.0));
-               assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->vars[2]), 0.0));
-               assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(consdata->vars[2]), 1.0));
-               
-               /* aggregate variables: vars[1] + vars[2] == 1 */
-               SCIP_CALL( SCIPaggregateVars(scip, consdata->vars[1], consdata->vars[2], 1.0, 1.0, 1.0,
-                     &cutoff, &redundant, &aggregated) );
-               assert(redundant);
-               if( aggregated )
-                  (*naggrvars)++;
-
-               /* delete constraint */
-               SCIP_CALL( SCIPdelCons(scip, cons) );
-               (*ndelconss)++;
-            }
-            else if( SCIPvarGetLbGlobal(consdata->vars[1]) > 0.5 )
-            {
-               SCIPdebugMessage("xor constraint <%s> has only two unfixed variables, remaining vars are odd\n",
-                  SCIPconsGetName(cons));
-            
-               assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->vars[0]), 0.0));
-               assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(consdata->vars[0]), 1.0));
-               assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->vars[2]), 0.0));
-               assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(consdata->vars[2]), 1.0));
-               
-               /* aggregate variables: vars[0] + vars[2] == 1 */
-               SCIP_CALL( SCIPaggregateVars(scip, consdata->vars[0], consdata->vars[2], 1.0, 1.0, 1.0,
-                     &cutoff, &redundant, &aggregated) );
-               assert(redundant);
-               if( aggregated )
-                  (*naggrvars)++;
-
-               /* delete constraint */
-               SCIP_CALL( SCIPdelCons(scip, cons) );
-               (*ndelconss)++;
-            }
-            else if( SCIPvarGetLbGlobal(consdata->vars[2]) > 0.5 )
-            {
-               SCIPdebugMessage("xor constraint <%s> has only two unfixed variables, remaining vars are odd\n",
-                  SCIPconsGetName(cons));
-            
-               assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->vars[0]), 0.0));
-               assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(consdata->vars[0]), 1.0));
-               assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->vars[1]), 0.0));
-               assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(consdata->vars[1]), 1.0));
-               
-               /* aggregate variables: vars[0] + vars[1] == 1 */
-               SCIP_CALL( SCIPaggregateVars(scip, consdata->vars[0], consdata->vars[1], 1.0, 1.0, 1.0,
-                     &cutoff, &redundant, &aggregated) );
-               assert(redundant);
-               if( aggregated )
-                  (*naggrvars)++;
-
-               /* delete constraint */
-               SCIP_CALL( SCIPdelCons(scip, cons) );
-               (*ndelconss)++;
+               SCIP_CALL( preprocessConstraintPairs(scip, conss, firstchange, c,
+                     &cutoff, nfixedvars, naggrvars, ndelconss, nchgcoefs) );
             }
          }
       }
    }
-
-   /**@todo preprocess pairs of xor constraints */
+   else
+      delay = TRUE;
 
    /* return the correct result code */
    if( cutoff )
       *result = SCIP_CUTOFF;
-   else if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars )
+   else if( delay )
+      *result = SCIP_DELAYED;
+   else if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars || *ndelconss > oldndelconss
+      || *nchgcoefs > oldnchgcoefs )
       *result = SCIP_SUCCESS;
+   else
+      *result = SCIP_DIDNOTFIND;
 
    return SCIP_OKAY;
 }
@@ -1466,15 +2052,21 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
          consPrintXor,
          conshdlrdata) );
 
+   /* add xor constraint handler parameters */
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/xor/maxpresolpairrounds",
+         "maximal number of presolving rounds with pairwise constraint comparison (-1: no limit)",
+         &conshdlrdata->maxpresolpairrounds, DEFAULT_MAXPRESOLPAIRROUNDS, -1, INT_MAX, NULL, NULL) );
+
    return SCIP_OKAY;
 }
 
-/** creates and captures a xor constraint */
+/** creates and captures a xor constraint x_0 xor ... xor x_{k-1} = rhs */
 SCIP_RETCODE SCIPcreateConsXor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   SCIP_VAR*             resvar,             /**< resultant variable of the operation */
+   SCIP_Bool             rhs,                /**< right hand side of the constraint */
    int                   nvars,              /**< number of operator variables in the constraint */
    SCIP_VAR**            vars,               /**< array with operator variables of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
@@ -1506,7 +2098,7 @@ SCIP_RETCODE SCIPcreateConsXor(
    assert(conshdlrdata != NULL);
 
    /* create constraint data */
-   SCIP_CALL( consdataCreate(scip, &consdata, nvars, vars, resvar) );
+   SCIP_CALL( consdataCreate(scip, &consdata, rhs, nvars, vars) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
@@ -1555,3 +2147,22 @@ SCIP_VAR** SCIPgetVarsXor(
    return consdata->vars;
 }
 
+/** gets the right hand side of the xor constraint */
+SCIP_Bool SCIPgetRhsXor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not an xor constraint\n");
+      SCIPABORT();
+   }
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->rhs;
+}

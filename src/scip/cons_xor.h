@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.h,v 1.13 2006/06/07 11:47:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.h,v 1.14 2006/06/20 16:04:23 bzfpfend Exp $"
 
 /**@file   cons_xor.h
  * @brief  constraint handler for xor constraints
@@ -42,7 +42,7 @@ SCIP_RETCODE SCIPcreateConsXor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   SCIP_VAR*             resvar,             /**< resultant variable of the operation */
+   SCIP_Bool             rhs,                /**< right hand side of the constraint */
    int                   nvars,              /**< number of operator variables in the constraint */
    SCIP_VAR**            vars,               /**< array with operator variables of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
@@ -68,6 +68,13 @@ int SCIPgetNVarsXor(
 /** gets array of variables in xor constraint */
 extern
 SCIP_VAR** SCIPgetVarsXor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets the right hand side of the xor constraint */
+extern
+SCIP_Bool SCIPgetRhsXor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
