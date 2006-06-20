@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.13 2006/06/07 11:47:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.14 2006/06/20 20:24:00 bzfpfend Exp $"
 
 /**@file   heur_localbranching.c
  * @brief  localbranching primal heuristic
@@ -36,10 +36,7 @@
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_PSEUDONODES      TRUE      /* call heuristic at nodes where only a pseudo solution exist?              */
-#define HEUR_DURINGPLUNGING   TRUE      /* call heuristic during plunging?                                          */
-#define HEUR_DURINGLPLOOP     FALSE     /* call heuristic during the LP price-and-cut loop?                         */
-#define HEUR_AFTERNODE        TRUE      /* call heuristic after or before the current node was solved?              */
+#define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
 
 #define DEFAULT_NEIGHBORHOODSIZE  18    /* radius of the incumbents neighborhood to be searched                     */
 #define DEFAULT_NODESOFS      1000      /* number of nodes added to the contingent of the total nodes               */
@@ -580,7 +577,7 @@ SCIP_RETCODE SCIPincludeHeurLocalbranching(
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING, HEUR_DURINGLPLOOP, HEUR_AFTERNODE,
+         HEUR_MAXDEPTH, HEUR_TIMING,
          heurFreeLocalbranching, heurInitLocalbranching, heurExitLocalbranching, 
          heurInitsolLocalbranching, heurExitsolLocalbranching, heurExecLocalbranching,
          heurdata) );

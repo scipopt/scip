@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.h,v 1.24 2006/06/14 17:54:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objheur.h,v 1.25 2006/06/20 20:23:59 bzfpfend Exp $"
 
 /**@file   objheur.h
  * @brief  C++ wrapper for primal heuristics
@@ -62,17 +62,8 @@ public:
    /** maximal depth level to call heuristic at (-1: no limit) */
    const int scip_maxdepth_;
 
-   /** call heuristic at nodes where only a pseudo solution exist? */
-   const SCIP_Bool scip_pseudonodes_;
-
-   /** call heuristic during plunging? */
-   const SCIP_Bool scip_duringplunging_;
-
-   /** call heuristic during the LP price-and-cut loop? */
-   const SCIP_Bool scip_duringlploop_;
-
-   /** call heuristic after or before the current node was solved? */
-   const SCIP_Bool scip_afternode_;
+   /** positions in the node solving loop where heuristic should be executed */
+   const unsigned int scip_timingmask_;
 
    /** default constructor */
    ObjHeur(
@@ -83,10 +74,7 @@ public:
       int                freq,               /**< frequency for calling primal heuristic */
       int                freqofs,            /**< frequency offset for calling primal heuristic */
       int                maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
-      SCIP_Bool          pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
-      SCIP_Bool          duringplunging,     /**< call heuristic during plunging? */
-      SCIP_Bool          duringlploop,       /**< call heuristic during the LP price-and-cut loop? */
-      SCIP_Bool          afternode           /**< call heuristic after or before the current node was solved? */
+      unsigned int       timingmask          /**< positions in the node solving loop where heuristic should be executed */
       )
       : scip_name_(0),
         scip_desc_(0),
@@ -95,10 +83,7 @@ public:
         scip_freq_(freq),
         scip_freqofs_(freqofs),
         scip_maxdepth_(maxdepth),
-        scip_pseudonodes_(pseudonodes),
-        scip_duringplunging_(duringplunging),
-        scip_duringlploop_(duringlploop),
-        scip_afternode_(afternode)
+        scip_timingmask_(timingmask)
    {
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, strlen(name)+1) );
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, strlen(desc)+1) );

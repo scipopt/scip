@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.223 2006/06/07 08:21:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.224 2006/06/20 20:24:02 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -671,13 +671,11 @@ SCIP_RETCODE primalHeuristics(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_NODE*            nextnode,           /**< next node that will be processed, or NULL if no more nodes left */
-   SCIP_Bool             nodesolved,         /**< is the current node already solved? */
-   SCIP_Bool             inlploop,           /**< are we currently in the LP solving loop? */
+   SCIP_HEURTIMING       heurtiming,         /**< current point in the node solving process */
    SCIP_Bool*            foundsol            /**< pointer to store whether a solution has been found */
    )
 {
    SCIP_RESULT result;
-   SCIP_Bool plunging;
    SCIP_Longint oldnbestsolsfound;
    int ndelayedheurs;
    int depth;
@@ -687,35 +685,57 @@ SCIP_RETCODE primalHeuristics(
    assert(set != NULL);
    assert(primal != NULL);
    assert(tree != NULL);
-   assert(!nodesolved || (nextnode == NULL) == (SCIPtreeGetNNodes(tree) == 0));
-   assert(!nodesolved || !inlploop);
+   assert(heurtiming == SCIP_HEURTIMING_BEFORENODE || heurtiming == SCIP_HEURTIMING_DURINGLPLOOP
+      || heurtiming == SCIP_HEURTIMING_AFTERLPLOOP || heurtiming == SCIP_HEURTIMING_AFTERNODE);
+   assert(heurtiming != SCIP_HEURTIMING_AFTERNODE || (nextnode == NULL) == (SCIPtreeGetNNodes(tree) == 0));
    assert(foundsol != NULL);
 
    *foundsol = FALSE;
 
    /* nothing to do, if no heuristics are available, or if the branch-and-bound process is finished */
-   if( set->nheurs == 0 || (nodesolved && nextnode == NULL) )
+   if( set->nheurs == 0 || (heurtiming == SCIP_HEURTIMING_AFTERNODE && nextnode == NULL) )
       return SCIP_OKAY;
 
    /* sort heuristics by priority, but move the delayed heuristics to the front */
    SCIPsetSortHeurs(set);
 
-   /* we are in plunging mode iff the next node is a sibling or a child, and no leaf */
-   assert(!nodesolved
-      || SCIPnodeGetType(nextnode) == SCIP_NODETYPE_SIBLING
-      || SCIPnodeGetType(nextnode) == SCIP_NODETYPE_CHILD
-      || SCIPnodeGetType(nextnode) == SCIP_NODETYPE_LEAF);
-   plunging = (!nodesolved || SCIPnodeGetType(nextnode) != SCIP_NODETYPE_LEAF);
+   /* specialize the AFTERNODE timing flag */
+   if( heurtiming == SCIP_HEURTIMING_AFTERNODE )
+   {
+      SCIP_Bool plunging;
+      SCIP_Bool pseudonode;
+
+      /* we are in plunging mode iff the next node is a sibling or a child, and no leaf */
+      assert(SCIPnodeGetType(nextnode) == SCIP_NODETYPE_SIBLING
+         || SCIPnodeGetType(nextnode) == SCIP_NODETYPE_CHILD
+         || SCIPnodeGetType(nextnode) == SCIP_NODETYPE_LEAF);
+      plunging = (SCIPnodeGetType(nextnode) != SCIP_NODETYPE_LEAF);
+      pseudonode = !SCIPtreeHasFocusNodeLP(tree);
+      if( plunging )
+      {
+         if( !pseudonode )
+            heurtiming = SCIP_HEURTIMING_AFTERLPNODE;
+         else
+            heurtiming = SCIP_HEURTIMING_AFTERPSEUDONODE;
+      }
+      else
+      {
+         if( !pseudonode )
+            heurtiming = SCIP_HEURTIMING_AFTERLPPLUNGE;
+         else
+            heurtiming = SCIP_HEURTIMING_AFTERPSEUDOPLUNGE;
+      }
+   }
+
    depth = SCIPtreeGetFocusDepth(tree);
-   lpstateforkdepth = tree->focuslpstatefork != NULL ? SCIPnodeGetDepth(tree->focuslpstatefork) : -1;
+   lpstateforkdepth = (tree->focuslpstatefork != NULL ? SCIPnodeGetDepth(tree->focuslpstatefork) : -1);
 
    /* call heuristics */
    ndelayedheurs = 0;
    oldnbestsolsfound = primal->nbestsolsfound;
    for( h = 0; h < set->nheurs; ++h )
    {
-      SCIP_CALL( SCIPheurExec(set->heurs[h], set, primal, depth, lpstateforkdepth, SCIPtreeHasFocusNodeLP(tree),
-            plunging, nodesolved, inlploop, &ndelayedheurs, &result) );
+      SCIP_CALL( SCIPheurExec(set->heurs[h], set, primal, depth, lpstateforkdepth, heurtiming, &ndelayedheurs, &result) );
    }
    assert(0 <= ndelayedheurs && ndelayedheurs <= set->nheurs);
 
@@ -1314,10 +1334,10 @@ SCIP_RETCODE priceAndCutLoop(
          SCIPdebugMessage(" -> error solving LP. keeping old bound: %g\n", SCIPnodeGetLowerbound(focusnode));
       }
 
-      /* call primal heuristics that are applicable during node processing loop */
+      /* call primal heuristics that are applicable during node LP solving loop */
       if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
       {
-         SCIP_CALL( primalHeuristics(set, primal, tree, NULL, FALSE, TRUE, &foundsol) );
+         SCIP_CALL( primalHeuristics(set, primal, tree, NULL, SCIP_HEURTIMING_DURINGLPLOOP, &foundsol) );
       }
       else
          foundsol = FALSE;
@@ -1405,6 +1425,7 @@ SCIP_RETCODE priceAndCutLoop(
                assert(lp->flushed);
                assert(lp->solved || *lperror);
                delayedsepa = FALSE;
+               mustprice = TRUE;
             }
          }
          assert(*cutoff || *lperror || (lp->flushed && lp->solved));
@@ -2091,7 +2112,7 @@ SCIP_RETCODE solveNode(
    SCIPtreeSetFocusNodeLP(tree, focusnodehaslp);
 
    /* call primal heuristics that should be applied before the node was solved */
-   SCIP_CALL( primalHeuristics(set, primal, tree, NULL, FALSE, FALSE, &foundsol) );
+   SCIP_CALL( primalHeuristics(set, primal, tree, NULL, SCIP_HEURTIMING_BEFORENODE, &foundsol) );
    assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
    /* external node solving loop:
@@ -2251,6 +2272,9 @@ SCIP_RETCODE solveNode(
 
       /* update the cutoff, propagateagain, and solverelaxagain status of current solving loop */
       updateLoopStatus(set, stat, tree, actdepth, cutoff, &propagateagain, &solverelaxagain);
+
+      /* call primal heuristics that should be applied after the LP relaxation of the node was solved */
+      SCIP_CALL( primalHeuristics(set, primal, tree, NULL, SCIP_HEURTIMING_AFTERLPLOOP, &foundsol) );
 
       /* enforce constraints */
       branched = FALSE;
@@ -2757,9 +2781,9 @@ SCIP_RETCODE SCIPsolveCIP(
          SCIP_CALL( SCIPnodeselSelect(nodesel, set, &nextnode) );
          assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
-         /* call primal heuristics that should be applied after the relaxation was solved */
+         /* call primal heuristics that should be applied after the node was solved */
          nnodes = SCIPtreeGetNNodes(tree);
-         SCIP_CALL( primalHeuristics(set, primal, tree, nextnode, TRUE, FALSE, &foundsol) );
+         SCIP_CALL( primalHeuristics(set, primal, tree, nextnode, SCIP_HEURTIMING_AFTERNODE, &foundsol) );
          assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
          /* if the heuristics found a new best solution that cut off some of the nodes, the node selector must be called

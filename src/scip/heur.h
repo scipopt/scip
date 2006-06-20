@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.h,v 1.46 2006/01/04 16:26:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.h,v 1.47 2006/06/20 20:24:00 bzfpfend Exp $"
 
 /**@file   heur.h
  * @brief  internal methods for primal heuristics
@@ -51,10 +51,7 @@ SCIP_RETCODE SCIPheurCreate(
    int                   freq,               /**< frequency for calling primal heuristic */
    int                   freqofs,            /**< frequency offset for calling primal heuristic */
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
-   SCIP_Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
-   SCIP_Bool             duringplunging,     /**< call heuristic during plunging? */
-   SCIP_Bool             duringlploop,       /**< call heuristic during the LP price-and-cut loop? */
-   SCIP_Bool             afternode,          /**< call heuristic after or before the current node was solved? */
+   unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed */
    SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    SCIP_DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
    SCIP_DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
@@ -107,10 +104,7 @@ SCIP_RETCODE SCIPheurExec(
    SCIP_PRIMAL*          primal,             /**< primal data */
    int                   depth,              /**< depth of current node */
    int                   lpstateforkdepth,   /**< depth of the last node with solved LP */
-   SCIP_Bool             currentnodehaslp,   /**< is LP being processed in the current node? */
-   SCIP_Bool             plunging,           /**< is the next node to be processed a child or sibling? */
-   SCIP_Bool             nodesolved,         /**< is the current node already solved? */
-   SCIP_Bool             inlploop,           /**< are we currently in the LP solving loop? */
+   SCIP_HEURTIMING       heurtiming,         /**< current point in the node solving process */
    int*                  ndelayedheurs,      /**< pointer to count the number of delayed heuristics */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );

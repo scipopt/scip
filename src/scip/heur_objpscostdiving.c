@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.32 2006/04/10 09:15:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.33 2006/06/20 20:24:00 bzfpfend Exp $"
 
 /**@file   heur_objpscostdiving.c
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
@@ -36,10 +36,7 @@
 #define HEUR_FREQ             20
 #define HEUR_FREQOFS          4
 #define HEUR_MAXDEPTH         -1
-#define HEUR_PSEUDONODES      FALSE     /* call heuristic at nodes where only a pseudo solution exist? */
-#define HEUR_DURINGPLUNGING   FALSE     /* call heuristic during plunging? (should be FALSE for diving heuristics!) */
-#define HEUR_DURINGLPLOOP     FALSE     /* call heuristic during the LP price-and-cut loop? */
-#define HEUR_AFTERNODE        TRUE      /* call heuristic after or before the current node was solved? */
+#define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 
 
 
@@ -579,7 +576,7 @@ SCIP_RETCODE SCIPincludeHeurObjpscostdiving(
 
    /* include heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING, HEUR_DURINGLPLOOP, HEUR_AFTERNODE,
+         HEUR_MAXDEPTH, HEUR_TIMING,
          heurFreeObjpscostdiving, heurInitObjpscostdiving, heurExitObjpscostdiving, 
          heurInitsolObjpscostdiving, heurExitsolObjpscostdiving, heurExecObjpscostdiving,
          heurdata) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.376 2006/06/20 16:04:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.377 2006/06/20 20:24:01 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1795,10 +1795,7 @@ SCIP_RETCODE SCIPincludeHeur(
    int                   freq,               /**< frequency for calling primal heuristic */
    int                   freqofs,            /**< frequency offset for calling primal heuristic */
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
-   SCIP_Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
-   SCIP_Bool             duringplunging,     /**< call heuristic during plunging? */
-   SCIP_Bool             duringlploop,       /**< call heuristic during the LP price-and-cut loop? */
-   SCIP_Bool             afternode,          /**< call heuristic after or before the current node was solved? */
+   unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed */
    SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    SCIP_DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
    SCIP_DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
@@ -1813,7 +1810,7 @@ SCIP_RETCODE SCIPincludeHeur(
    SCIP_CALL( checkStage(scip, "SCIPincludeHeur", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPheurCreate(&heur, scip->set, scip->mem->setmem,
-         name, desc, dispchar, priority, freq, freqofs, maxdepth, pseudonodes, duringplunging, duringlploop, afternode,
+         name, desc, dispchar, priority, freq, freqofs, maxdepth, timingmask,
          heurfree, heurinit, heurexit, heurinitsol, heurexitsol, heurexec, heurdata) );
    SCIP_CALL( SCIPsetIncludeHeur(scip->set, heur) );
 

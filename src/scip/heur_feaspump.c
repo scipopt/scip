@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.40 2006/03/23 14:04:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.41 2006/06/20 20:24:00 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -36,10 +36,7 @@
 #define HEUR_FREQ             20
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_PSEUDONODES      FALSE     /* call heuristic at nodes where only a pseudo solution exist? */
-#define HEUR_DURINGPLUNGING   FALSE     /* call heuristic during plunging? (should be FALSE for diving heuristics!) */
-#define HEUR_DURINGLPLOOP     FALSE     /* call heuristic during the LP price-and-cut loop? */
-#define HEUR_AFTERNODE        TRUE      /* call heuristic after or before the current node was solved? */
+#define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 
 #define DEFAULT_MAXLPITERQUOT    0.01   /**< maximal fraction of diving LP iterations compared to node LP iterations */
 #define DEFAULT_MAXLPITEROFS     1000   /**< additional number of allowed LP iterations */
@@ -616,7 +613,7 @@ SCIP_RETCODE SCIPincludeHeurFeaspump(
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING, HEUR_DURINGLPLOOP, HEUR_AFTERNODE,
+         HEUR_MAXDEPTH, HEUR_TIMING,
          heurFreeFeaspump, heurInitFeaspump, heurExitFeaspump, 
          heurInitsolFeaspump, heurExitsolFeaspump, heurExecFeaspump,
          heurdata) );

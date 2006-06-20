@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intdiving.c,v 1.4 2006/04/10 16:15:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_intdiving.c,v 1.5 2006/06/20 20:24:00 bzfpfend Exp $"
 
 /**@file   heur_intdiving.c
  * @brief  LP diving heuristic that fixes variables with integral LP value
@@ -36,10 +36,7 @@
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_PSEUDONODES      FALSE     /* call heuristic at nodes where only a pseudo solution exist? */
-#define HEUR_DURINGPLUNGING   FALSE     /* call heuristic during plunging? (should be FALSE for diving heuristics!) */
-#define HEUR_DURINGLPLOOP     FALSE     /* call heuristic during the LP price-and-cut loop? */
-#define HEUR_AFTERNODE        TRUE      /* call heuristic after or before the current node was solved? */
+#define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 
 
 
@@ -558,7 +555,7 @@ SCIP_RETCODE SCIPincludeHeurIntdiving(
 
    /* include heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING, HEUR_DURINGLPLOOP, HEUR_AFTERNODE,
+         HEUR_MAXDEPTH, HEUR_TIMING,
          heurFreeIntdiving, heurInitIntdiving, heurExitIntdiving, 
          heurInitsolIntdiving, heurExitsolIntdiving, heurExecIntdiving,
          heurdata) );

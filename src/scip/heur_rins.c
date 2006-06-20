@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rins.c,v 1.15 2006/06/07 11:47:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rins.c,v 1.16 2006/06/20 20:24:01 bzfpfend Exp $"
 
 /**@file   heur_rins.c
  * @brief  RINS primal heuristic
@@ -36,10 +36,7 @@
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          5
 #define HEUR_MAXDEPTH         -1
-#define HEUR_PSEUDONODES      FALSE     /* call heuristic at nodes where only a pseudo solution exist?         */
-#define HEUR_DURINGPLUNGING   TRUE      /* call heuristic during plunging?                                     */
-#define HEUR_DURINGLPLOOP     FALSE     /* call heuristic during the LP price-and-cut loop?                    */
-#define HEUR_AFTERNODE        TRUE      /* call heuristic after or before the current node was solved?         */
+#define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
 
 #define DEFAULT_NODESOFS      500       /* number of nodes added to the contingent of the total nodes          */
 #define DEFAULT_MAXNODES      5000      /* maximum number of nodes to regard in the subproblem                 */
@@ -504,7 +501,7 @@ SCIP_RETCODE SCIPincludeHeurRins(
 
    /* include primal heuristic */ 
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING, HEUR_DURINGLPLOOP, HEUR_AFTERNODE,
+         HEUR_MAXDEPTH, HEUR_TIMING,
          heurFreeRins, heurInitRins, heurExitRins,
          heurInitsolRins, heurExitsolRins, heurExecRins,
          heurdata) );

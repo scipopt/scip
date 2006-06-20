@@ -22,6 +22,28 @@ interface:
   activation and deactivation of the node, you should set this flag to TRUE in order to make sure, that the constraint
   will always be associated to the node and not moved to a more global node if this would be possible
 - removed method SCIPgetVarData(); use SCIPvarGetData() from pub_var.h instead
+- replaced callback parameter "inlploop" and "inplunging" by "heurtiming" in SCIP_DECL_HEUREXEC
+- replaced parameters "pseudonodes", "duringplunging", "duringlploop", and "afternode" by "timingmask" in 
+  SCIPincludeHeur() and constructor of ObjHeur() class
+  use the following table to translate old settings into the new timingmask:
+
+    PSEUDONODES  DURINGPLUNGING  DURINGLPLOOP  AFTERNODE  timingmask
+          FALSE           FALSE         FALSE      FALSE  SCIP_HEURTIMING_BEFORENODE
+           TRUE           FALSE         FALSE      FALSE  SCIP_HEURTIMING_BEFORENODE
+          FALSE            TRUE         FALSE      FALSE  SCIP_HEURTIMING_BEFORENODE
+           TRUE            TRUE         FALSE      FALSE  SCIP_HEURTIMING_BEFORENODE
+          FALSE           FALSE          TRUE      FALSE  SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_DURINGLPLOOP
+           TRUE           FALSE          TRUE      FALSE  SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_DURINGLPLOOP
+          FALSE            TRUE          TRUE      FALSE  SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_DURINGLPLOOP
+           TRUE            TRUE          TRUE      FALSE  SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_DURINGLPLOOP
+          FALSE           FALSE         FALSE       TRUE  SCIP_HEURTIMING_AFTERLPPLUNGE
+           TRUE           FALSE         FALSE       TRUE  SCIP_HEURTIMING_AFTERPLUNGE
+          FALSE            TRUE         FALSE       TRUE  SCIP_HEURTIMING_AFTERLPNODE
+           TRUE            TRUE         FALSE       TRUE  SCIP_HEURTIMING_AFTERNODE
+          FALSE           FALSE          TRUE       TRUE  SCIP_HEURTIMING_AFTERLPPLUNGE | SCIP_HEURTIMING_DURINGLPLOOP
+           TRUE           FALSE          TRUE       TRUE  SCIP_HEURTIMING_AFTERPLUNGE | SCIP_HEURTIMING_DURINGLPLOOP
+          FALSE            TRUE          TRUE       TRUE  SCIP_HEURTIMING_AFTERLPNODE | SCIP_HEURTIMING_DURINGLPLOOP
+           TRUE            TRUE          TRUE       TRUE  SCIP_HEURTIMING_AFTERNODE | SCIP_HEURTIMING_DURINGLPLOOP
 
 plugins:
 - new primal heuristic "rens"
@@ -34,8 +56,8 @@ parameters:
 - new parameter "propagating/abortoncutoff"
 
 features:
-- primal heuristics that run before the node is solved now know already whether the LP will be solved at the current node or not;
-  this means, it is possible to have primal heuristics with afternode=FALSE and pseudonodes=FALSE
+- primal heuristics that run before the node is solved now know already whether the LP will be solved at the current node
+  or not
 - command shell now understands escape characters ",', and \ which makes it possible to read in files with spaces in
   the name
 - improved presolving of and, or, and xor constraints

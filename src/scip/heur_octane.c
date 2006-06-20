@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.8 2006/04/10 16:15:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.9 2006/06/20 20:24:01 bzfpfend Exp $"
 
 /**@file   heur_octane.c
  * @brief  octane primal heuristic based on Balas, Ceria, Dawande, Margot, and Pataki
@@ -35,10 +35,8 @@
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_PSEUDONODES      FALSE     /**< call heuristic at nodes where only a pseudo solution exist? */
-#define HEUR_DURINGPLUNGING   TRUE      /**< call heuristic during plunging? (should be FALSE for diving heuristics!) */
-#define HEUR_DURINGLPLOOP     FALSE     /**< call heuristic during the LP price-and-cut loop? */
-#define HEUR_AFTERNODE        TRUE      /**< call heuristic after or before the current node was solved? */
+#define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
+
 #define DEFAULT_FMAX          100       /**< {0,1}-points to be checked */
 #define DEFAULT_FFIRST        10        /**< {0,1}-points to be generated at first */     
 #define DEFAULT_USEFRACSPACE  TRUE      /**< use heuristic for the space of fractional variables or for whole space? */
@@ -919,7 +917,7 @@ SCIP_RETCODE SCIPincludeHeurOctane(
    
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING, HEUR_DURINGLPLOOP, HEUR_AFTERNODE,
+         HEUR_MAXDEPTH, HEUR_TIMING,
          heurFreeOctane, heurInitOctane, heurExitOctane, 
          heurInitsolOctane, heurExitsolOctane, heurExecOctane,
          heurdata) );
