@@ -69,6 +69,10 @@ fixed bugs:
 - fixed bug in cmir cut separator with wrong sign of slack in row score function
 - fixed bug with string pointer copy instead of string content duplication in constructors of C++ wrapper classes
 - fixed bug in CPLEX interface with basis access methods that dualopt has to be called for more error status codes
+- fixed bug with inserting two variable bounds of the same type on the same variable with the same bounding variable
+  but with different sign of coefficient (e.g., x <= 10*z + 5 and x <= -5*z + 10); in previous version, one of the
+  two was removed, although both have a useful meaning; now, we keep both, and detect a stronger global bound in
+  the implication graph presolving
 
 
 SCIP version 0.82

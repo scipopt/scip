@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.18 2006/04/10 16:15:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.19 2006/06/21 07:44:23 bzfpfend Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -121,6 +121,7 @@ static
 SCIP_RETCODE vboundsSearchPos(
    SCIP_VBOUNDS*         vbounds,            /**< variable bounds data structure, or NULL */
    SCIP_VAR*             var,                /**< variable to search in vbounds data structure */
+   SCIP_Bool             negativecoef,       /**< is coefficient b negative? */
    int*                  insertpos,          /**< pointer to store position where to insert new entry */
    SCIP_Bool*            found               /**< pointer to store whether the same variable was found at the returned pos */
    )
@@ -160,9 +161,25 @@ SCIP_RETCODE vboundsSearchPos(
          left = middle;
       else
       {
+         /* we found the variable: check if the sign of the coefficient matches */
          assert(var == vbounds->vars[middle]);
-         *insertpos = middle;
-         *found = TRUE;
+         if( (vbounds->coefs[middle] < 0.0) == negativecoef )
+         {
+            *insertpos = middle;
+            *found = TRUE;
+         }
+         else if( negativecoef )
+         {
+            /* the negative coefficient should be inserted to the right of the positive one */
+            *insertpos = middle+1;
+            *found = FALSE;
+         }
+         else
+         {
+            /* the positive coefficient should be inserted to the left of the negative one */
+            *insertpos = middle;
+            *found = FALSE;
+         }
          return SCIP_OKAY;
       }
    }
@@ -197,13 +214,14 @@ SCIP_RETCODE SCIPvboundsAdd(
    *added = FALSE;
 
    /* identify insertion position of variable */
-   SCIP_CALL( vboundsSearchPos(*vbounds, var, &insertpos, &found) );
+   SCIP_CALL( vboundsSearchPos(*vbounds, var, (coef < 0.0), &insertpos, &found) );
    if( found )
    {
       /* the same variable already exists in the vbounds data structure: use the better vbound */
       assert(*vbounds != NULL);
       assert(0 <= insertpos && insertpos < (*vbounds)->len);
       assert((*vbounds)->vars[insertpos] == var);
+      assert(((*vbounds)->coefs[insertpos] < 0.0) == (coef < 0.0));
 
       if( vboundtype == SCIP_BOUNDTYPE_UPPER )
       {
@@ -255,7 +273,8 @@ SCIP_RETCODE SCIPvboundsAdd(
 SCIP_RETCODE SCIPvboundsDel(
    SCIP_VBOUNDS**        vbounds,            /**< pointer to variable bounds data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_VAR*             vbdvar              /**< variable z    in x >=/<= b*z + d */
+   SCIP_VAR*             vbdvar,             /**< variable z    in x >=/<= b*z + d */
+   SCIP_Bool             negativecoef        /**< is coefficient b negative? */
    )
 {
    SCIP_Bool found;
@@ -266,12 +285,13 @@ SCIP_RETCODE SCIPvboundsDel(
    assert(*vbounds != NULL);
 
    /* searches for variable z in variable bounds of x */
-   SCIP_CALL( vboundsSearchPos(*vbounds, vbdvar, &pos, &found) );
+   SCIP_CALL( vboundsSearchPos(*vbounds, vbdvar, negativecoef, &pos, &found) );
    if( !found )
       return SCIP_OKAY;
 
    assert(0 <= pos && pos < (*vbounds)->len);
    assert((*vbounds)->vars[pos] == vbdvar);
+   assert(((*vbounds)->coefs[pos] < 0.0) == negativecoef);
 
    /* removes z from variable bounds of x */
    for( i = pos; i < (*vbounds)->len - 1; i++ )
@@ -283,7 +303,7 @@ SCIP_RETCODE SCIPvboundsDel(
    (*vbounds)->len--;
 
 #ifndef NDEBUG
-   SCIP_CALL( vboundsSearchPos(*vbounds, vbdvar, &pos, &found) );
+   SCIP_CALL( vboundsSearchPos(*vbounds, vbdvar, negativecoef, &pos, &found) );
    assert(!found);
 #endif
 

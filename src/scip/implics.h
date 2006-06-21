@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.h,v 1.12 2006/01/03 12:22:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.h,v 1.13 2006/06/21 07:44:23 bzfpfend Exp $"
 
 /**@file   implics.h
  * @brief  methods for implications, variable bounds, and cliques
@@ -73,7 +73,8 @@ extern
 SCIP_RETCODE SCIPvboundsDel(
    SCIP_VBOUNDS**        vbounds,            /**< pointer to variable bounds data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_VAR*             vbdvar              /**< variable z    in x >=/<= b*z + d */
+   SCIP_VAR*             vbdvar,             /**< variable z    in x >=/<= b*z + d */
+   SCIP_Bool             negativecoef        /**< is coefficient b negative? */
    );
 
 /** reduces the number of variable bounds stored in the given variable bounds data structure */

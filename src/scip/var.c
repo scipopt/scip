@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.209 2006/06/20 16:04:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.210 2006/06/21 07:44:23 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1434,7 +1434,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
                   SCIPdebugMessage("deleting variable bound: <%s> == %d  ==>  <%s> <= %g\n", 
                      SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), 
                      SCIPimplicsGetBounds(var->implics, varfixing)[i]);
-                  SCIP_CALL( SCIPvboundsDel(&implvar->vubs, blkmem, var) );
+                  SCIP_CALL( SCIPvboundsDel(&implvar->vubs, blkmem, var, varfixing) );
                }
             }
             else
@@ -1444,7 +1444,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
                   SCIPdebugMessage("deleting variable bound: <%s> == %d  ==>  <%s> >= %g\n", 
                      SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), 
                      SCIPimplicsGetBounds(var->implics, varfixing)[i]);
-                  SCIP_CALL( SCIPvboundsDel(&implvar->vlbs, blkmem, var) );
+                  SCIP_CALL( SCIPvboundsDel(&implvar->vlbs, blkmem, var, !varfixing) );
                }
             }
          }
