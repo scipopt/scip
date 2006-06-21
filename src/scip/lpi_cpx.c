@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.108 2006/06/19 12:53:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.109 2006/06/21 11:53:17 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -2836,23 +2836,26 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    return SCIP_OKAY;
 }
 
-/** get dense row of inverse basis matrix times constraint matrix B^-1 * A */
-SCIP_RETCODE SCIPlpiGetBInvARow(
+/** get dense column of inverse basis matrix B^-1 */
+SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int                   r,                  /**< row number */
-   const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
-   SCIP_Real*            val                 /**< vector to return coefficients */
+   int                   c,                  /**< column number of B^-1; this is NOT the number of the column in the LP;
+                                              *   you have to call SCIPlpiGetBasisInd() to get the array which links the
+                                              *   B^-1 column numbers to the row and column numbers of the LP!
+                                              *   c must be between 0 and nrows-1, since the basis has the size
+                                              *   nrows * nrows */
+   SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
    )
-{  /*lint --e{715}*/
+{
    int retval;
 
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
-   SCIPdebugMessage("getting binva-row %d\n", r);
+   SCIPdebugMessage("getting binv-col %d\n", c);
 
-   retval = CPXbinvarow(cpxenv, lpi->cpxlp, r, val);
+   retval = CPXbinvcol(cpxenv, lpi->cpxlp, c, coef);
    if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
       || retval == CPXERR_NO_BASIS )
    {
@@ -2865,7 +2868,78 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
       CHECK_ZERO( CPXdualopt(cpxenv, lpi->cpxlp) );
       assert(CPXgetphase1cnt(cpxenv, lpi->cpxlp) == 0);
       assert(CPXgetitcnt(cpxenv, lpi->cpxlp) == 0);
-      retval = CPXbinvarow(cpxenv, lpi->cpxlp, r, val);
+      retval = CPXbinvcol(cpxenv, lpi->cpxlp, c, coef);
+   }
+   CHECK_ZERO( retval );
+
+   return SCIP_OKAY;
+}
+
+/** get dense row of inverse basis matrix times constraint matrix B^-1 * A */
+SCIP_RETCODE SCIPlpiGetBInvARow(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   r,                  /**< row number */
+   const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
+   SCIP_Real*            coef                /**< vector to return coefficients */
+   )
+{  /*lint --e{715}*/
+   int retval;
+
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   SCIPdebugMessage("getting binva-row %d\n", r);
+
+   retval = CPXbinvarow(cpxenv, lpi->cpxlp, r, coef);
+   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
+      || retval == CPXERR_NO_BASIS )
+   {
+      /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
+       * return the basis -> we have to resolve the LP (should be done in 0 iterations);
+       * this may happen after manual strong branching on an integral variable, or after conflict analysis on
+       * a strong branching conflict created a constraint that is not able to modify the LP but trigger the additional
+       * call of the separators, in particular, the Gomory separator
+       */
+      CHECK_ZERO( CPXdualopt(cpxenv, lpi->cpxlp) );
+      assert(CPXgetphase1cnt(cpxenv, lpi->cpxlp) == 0);
+      assert(CPXgetitcnt(cpxenv, lpi->cpxlp) == 0);
+      retval = CPXbinvarow(cpxenv, lpi->cpxlp, r, coef);
+   }
+   CHECK_ZERO( retval );
+
+   return SCIP_OKAY;
+}
+
+/** get dense column of inverse basis matrix times constraint matrix B^-1 * A */
+SCIP_RETCODE SCIPlpiGetBInvACol(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   c,                  /**< column number */
+   SCIP_Real*            coef                /**< vector to return coefficients */
+   )
+{  /*lint --e{715}*/
+   int retval;
+
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   SCIPdebugMessage("getting binva-col %d\n", c);
+
+   retval = CPXbinvacol(cpxenv, lpi->cpxlp, c, coef);
+   if( retval == CPXERR_NO_SOLN || retval == CPXERR_NO_LU_FACTOR || retval == CPXERR_NO_BASIC_SOLN
+      || retval == CPXERR_NO_BASIS )
+   {
+      /* modifying the LP, restoring the old LP, and loading the old basis is not enough for CPLEX to be able to
+       * return the basis -> we have to resolve the LP (should be done in 0 iterations);
+       * this may happen after manual strong branching on an integral variable, or after conflict analysis on
+       * a strong branching conflict created a constraint that is not able to modify the LP but trigger the additional
+       * call of the separators, in particular, the Gomory separator
+       */
+      CHECK_ZERO( CPXdualopt(cpxenv, lpi->cpxlp) );
+      assert(CPXgetphase1cnt(cpxenv, lpi->cpxlp) == 0);
+      assert(CPXgetitcnt(cpxenv, lpi->cpxlp) == 0);
+      retval = CPXbinvacol(cpxenv, lpi->cpxlp, c, coef);
    }
    CHECK_ZERO( retval );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.31 2006/04/10 16:15:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.32 2006/06/21 11:53:16 bzfpfend Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -2284,22 +2284,23 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 }
 
 
-/** get dense row of inverse basis matrix times constraint matrix B^-1 * A */
-SCIP_RETCODE SCIPlpiGetBInvARow(
+/** get dense column of inverse basis matrix B^-1 */
+SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int                   r,                  /**< row number */
-   const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or 0 */
-   SCIP_Real*            val                 /**< vector to return coefficients */
+   int                   c,                  /**< column number of B^-1; this is NOT the number of the column in the LP;
+                                              *   you have to call SCIPlpiGetBasisInd() to get the array which links the
+                                              *   B^-1 column numbers to the row and column numbers of the LP!
+                                              *   c must be between 0 and nrows-1, since the basis has the size
+                                              *   nrows * nrows */
+   SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiGetBInvARow()\n");
+   SCIPdebugMessage("calling SCIPlpiGetBInvCol()\n");
 
    assert( lpi != 0 );
    assert( lpi->clp != 0 );
-   assert( val != 0 );
-   assert( 0 <= r && r <= lpi->clp->numberRows() );
-
-   // WARNING:  binvrow is not used at the moment!  ?????????????
+   assert( coef != 0 );
+   assert( 0 <= c && c <= lpi->clp->numberRows() ); /* basis matrix is nrows * nrows */
 
    ClpSimplex* clp = lpi->clp;
    if( clp->usingAuxiliaryModel() )
@@ -2311,10 +2312,72 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
       if( status != 0 )
          return SCIP_LPERROR;
    }
-   clp->getBInvARow(r, val, 0);
+   clp->getBInvCol(c, coef);
+
+   return SCIP_OKAY;
+}
+
+
+/** get dense row of inverse basis matrix times constraint matrix B^-1 * A */
+SCIP_RETCODE SCIPlpiGetBInvARow(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   r,                  /**< row number */
+   const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or 0 */
+   SCIP_Real*            coef                /**< vector to return coefficients */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiGetBInvARow()\n");
+
+   assert( lpi != 0 );
+   assert( lpi->clp != 0 );
+   assert( coef != 0 );
+   assert( 0 <= r && r <= lpi->clp->numberRows() );
+
+   ClpSimplex* clp = lpi->clp;
+   if( clp->usingAuxiliaryModel() )
+   {
+      int status;
+
+      clp->deleteAuxiliaryModel();
+      status = clp->dual(0,3);
+      if( status != 0 )
+         return SCIP_LPERROR;
+   }
+   clp->getBInvARow(r, coef, 0);
   
    return SCIP_OKAY;
 }
+
+
+/** get dense column of inverse basis matrix times constraint matrix B^-1 * A */
+SCIP_RETCODE SCIPlpiGetBInvACol(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   c,                  /**< column number */
+   SCIP_Real*            coef                /**< vector to return coefficients */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiGetBInvACol()\n");
+
+   assert( lpi != 0 );
+   assert( lpi->clp != 0 );
+   assert( coef != 0 );
+   assert( 0 <= c && c <= lpi->clp->numberColumns() );
+
+   ClpSimplex* clp = lpi->clp;
+   if( clp->usingAuxiliaryModel() )
+   {
+      int status;
+
+      clp->deleteAuxiliaryModel();
+      status = clp->dual(0,3);
+      if( status != 0 )
+         return SCIP_LPERROR;
+   }
+   clp->getBInvACol(c, coef);
+  
+   return SCIP_OKAY;
+}
+
 
 /**@} */
 

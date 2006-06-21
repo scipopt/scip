@@ -45,6 +45,8 @@ interface:
           FALSE            TRUE          TRUE       TRUE  SCIP_HEURTIMING_AFTERLPNODE | SCIP_HEURTIMING_DURINGLPLOOP
            TRUE            TRUE          TRUE       TRUE  SCIP_HEURTIMING_AFTERNODE | SCIP_HEURTIMING_DURINGLPLOOP
 
+- new calls SCIPgetLPBInvCol() and SCIPgetLPBInvACol() to access the basis inverse and simplex tableau columnwise
+
 plugins:
 - new primal heuristic "rens"
 - new primal heuristic "mutation"

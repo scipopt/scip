@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.280 2006/06/20 20:24:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.281 2006/06/21 11:53:17 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3162,6 +3162,18 @@ SCIP_RETCODE SCIPgetLPBInvRow(
    SCIP_Real*            coef                /**< pointer to store the coefficients of the row */
    );
 
+/** gets a column from the inverse basis matrix B^-1 */
+extern
+SCIP_RETCODE SCIPgetLPBInvCol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   c,                  /**< column number of B^-1; this is NOT the number of the column in the LP
+                                              *   returned by SCIPcolGetLPPos(); you have to call SCIPgetBasisInd()
+                                              *   to get the array which links the B^-1 column numbers to the row and
+                                              *   column numbers of the LP! c must be between 0 and nrows-1, since the
+                                              *   basis has the size nrows * nrows */
+   SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
+   );
+
 /** gets a row from the product of inverse basis matrix B^-1 and coefficient matrix A (i.e. from B^-1 * A) */
 extern
 SCIP_RETCODE SCIPgetLPBInvARow(
@@ -3169,6 +3181,16 @@ SCIP_RETCODE SCIPgetLPBInvARow(
    int                   r,                  /**< row number */
    SCIP_Real*            binvrow,            /**< row in B^-1 from prior call to SCIPgetLPBInvRow(), or NULL */
    SCIP_Real*            coef                /**< pointer to store the coefficients of the row */
+   );
+
+/** gets a column from the product of inverse basis matrix B^-1 and coefficient matrix A (i.e. from B^-1 * A),
+ *  i.e., it computes B^-1 * A_c with A_c being the c'th column of A
+ */
+extern
+SCIP_RETCODE SCIPgetLPBInvACol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   c,                  /**< column number which can be accessed by SCIPcolGetLPPos() */
+   SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
    );
 
 /** calculates a weighted sum of all LP rows; for negative weights, the left and right hand side of the corresponding

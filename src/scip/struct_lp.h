@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.45 2006/06/07 08:21:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.46 2006/06/21 11:53:18 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -112,7 +112,7 @@ struct SCIP_Col
    unsigned int          ubchanged:1;        /**< has upper bound changed, and has data of LP solver to be updated? */
    unsigned int          coefchanged:1;      /**< has the coefficient vector changed, and has LP solver to be updated? */
    unsigned int          integral:1;         /**< is associated variable of integral type? */
-   unsigned int          removable:1;       /**< is column removable from the LP (due to aging or cleanup)? */
+   unsigned int          removable:1;        /**< is column removable from the LP (due to aging or cleanup)? */
    unsigned int          sbdownvalid:1;      /**< stores whether the stored strong branching down value is a valid dual bound;
                                               *   otherwise, it can only be used as an estimate value */
    unsigned int          sbupvalid:1;        /**< stores whether the stored strong branching up value is a valid dual bound;
@@ -178,7 +178,7 @@ struct SCIP_Row
    unsigned int          integral:1;         /**< is activity (without constant) of row always integral in feasible solution? */
    unsigned int          local:1;            /**< is row only valid locally? */
    unsigned int          modifiable:1;       /**< is row modifiable during node processing (subject to column generation)? */
-   unsigned int          removable:1;       /**< is row removable from the LP (due to aging or cleanup)? */
+   unsigned int          removable:1;        /**< is row removable from the LP (due to aging or cleanup)? */
    unsigned int          nlocks:19;          /**< number of sealed locks of an unmodifiable row */
 };
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_msk.c,v 1.2 2006/05/22 11:01:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_msk.c,v 1.3 2006/06/21 11:53:17 bzfpfend Exp $"
 
 /**@file   lpi_msk.c
  * @brief  LP interface for MOSEK
@@ -2553,6 +2553,32 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    return r;
 }
 
+/** get dense column of inverse basis matrix B^-1 */
+SCIP_RETCODE SCIPlpiGetBInvCol(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   c,                  /**< column number of B^-1; this is NOT the number of the column in the LP;
+                                              *   you have to call SCIPlpiGetBasisInd() to get the array which links the
+                                              *   B^-1 column numbers to the row and column numbers of the LP!
+                                              *   c must be between 0 and nrows-1, since the basis has the size
+                                              *   nrows * nrows */
+   SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
+   )
+{
+   int r = SCIP_OKAY;
+#if DEBUG_PRINT_CALLS
+   printf("Calling SCIPlpiGetBInvCol (%d)\n",lpi->lpid);
+#endif
+
+   STD_ASSERT;
+
+   /* TODO */
+   fprintf(stderr,"SCIPlpiGetBInvCol is not implemented yet.\n");
+   RAISE_SCIP_ERROR( SCIP_LPERROR );
+
+ CLEANUP:
+   return r;
+}
+
 /** get dense row of inverse basis matrix times constraint matrix B^-1 * A */
 SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -2570,6 +2596,28 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 
    /* TODO */
    fprintf(stderr,"SCIPlpiGetBInvARow is not implemented yet.\n");
+   RAISE_SCIP_ERROR( SCIP_LPERROR );
+
+ CLEANUP:
+   return r;
+}
+
+/** get dense column of inverse basis matrix times constraint matrix B^-1 * A */
+SCIP_RETCODE SCIPlpiGetBInvACol(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   c,                  /**< column number */
+   SCIP_Real*            coef                /**< vector to return coefficients */
+   )
+{
+   int r = SCIP_OKAY;
+#if DEBUG_PRINT_CALLS
+   printf("Calling SCIPlpiGetBInvACol (%d)\n",lpi->lpid);
+#endif
+
+   STD_ASSERT;
+
+   /* TODO */
+   fprintf(stderr,"SCIPlpiGetBInvACol is not implemented yet.\n");
    RAISE_SCIP_ERROR( SCIP_LPERROR );
 
  CLEANUP:

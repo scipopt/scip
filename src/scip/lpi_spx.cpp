@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.60 2006/04/10 16:15:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.61 2006/06/21 11:53:17 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.3.0
@@ -2166,7 +2166,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   Vector x(lpi->spx->nRows(), coef);
+   Vector x(lpi->spx->nRows(), coef); /* row of B^-1 has nrows entries */
    DVector e(lpi->spx->nRows());
 
    /**@todo make this faster by pregenerating all dense unit vectors */
@@ -2178,12 +2178,40 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    return SCIP_OKAY;
 }
 
+/** get dense column of inverse basis matrix B^-1 */
+SCIP_RETCODE SCIPlpiGetBInvCol(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   c,                  /**< column number of B^-1; this is NOT the number of the column in the LP;
+                                              *   you have to call SCIPlpiGetBasisInd() to get the array which links the
+                                              *   B^-1 column numbers to the row and column numbers of the LP!
+                                              *   c must be between 0 and nrows-1, since the basis has the size
+                                              *   nrows * nrows */
+   SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiGetBInvCol()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   Vector x(lpi->spx->nRows(), coef); /* column of B^-1 has nrows entries */
+   DVector e(lpi->spx->nRows());
+
+   /**@todo make this faster by pregenerating all dense unit vectors */
+   e = lpi->spx->unitVector(c);
+
+   /* solve system "x = B^-1 * e_c" to get c'th column of B^-1 */
+   lpi->spx->basis().solve(x, e);
+
+   return SCIP_OKAY;
+}
+
 /** get dense row of inverse basis matrix times constraint matrix B^-1 * A */
 SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
    const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
-   SCIP_Real*            val                 /**< vector to return coefficients */
+   SCIP_Real*            coef                /**< vector to return coefficients */
    )
 {
    SCIP_Real* buf;
@@ -2217,10 +2245,34 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    /* calculate the scalar product of the row in B^-1 and A */
    soplex::Vector binvvec(nrows, binv);
    for( c = 0; c < ncols; ++c )
-      val[c] = binvvec * lpi->spx->colVector(c);  /* scalar product */ /*lint !e1702*/
+      coef[c] = binvvec * lpi->spx->colVector(c);  /* scalar product */ /*lint !e1702*/
 
    /* free memory if it was temporarily allocated */
    BMSfreeMemoryArrayNull(&buf);
+
+   return SCIP_OKAY;
+}
+
+/** get dense column of inverse basis matrix times constraint matrix B^-1 * A */
+SCIP_RETCODE SCIPlpiGetBInvACol(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   c,                  /**< column number */
+   SCIP_Real*            coef                /**< vector to return coefficients */
+   )
+{
+   SCIPdebugMessage("calling SCIPlpiGetBInvACol()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   Vector x(lpi->spx->nRows(), coef); /* column of B^-1 has nrows entries */
+   DVector col(lpi->spx->nRows());
+
+   /* extract column c of A */
+   col = lpi->spx->colVector(c);
+
+   /* solve system "x = B^-1 * A_c" to get c'th column of B^-1 * A */
+   lpi->spx->basis().solve(x, col);
 
    return SCIP_OKAY;
 }

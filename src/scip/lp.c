@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.226 2006/06/13 13:34:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.227 2006/06/21 11:53:16 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6612,6 +6612,29 @@ SCIP_RETCODE SCIPlpGetBInvRow(
    return SCIP_OKAY;
 }
 
+/** gets a column from the inverse basis matrix B^-1 */
+SCIP_RETCODE SCIPlpGetBInvCol(
+   SCIP_LP*              lp,                 /**< LP data */
+   int                   c,                  /**< column number of B^-1; this is NOT the number of the column in the LP
+                                              *   returned by SCIPcolGetLPPos(); you have to call SCIPgetBasisInd()
+                                              *   to get the array which links the B^-1 column numbers to the row and
+                                              *   column numbers of the LP! c must be between 0 and nrows-1, since the
+                                              *   basis has the size nrows * nrows */
+   SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->solved);
+   assert(lp->solisbasic);
+   assert(0 <= c && c < lp->nrows);  /* the basis matrix is nrows x nrows */
+   assert(coef != NULL);
+
+   SCIP_CALL( SCIPlpiGetBInvCol(lp->lpi, c, coef) );
+
+   return SCIP_OKAY;
+}
+
 /** gets a row from the product of inverse basis matrix B^-1 and coefficient matrix A (i.e. from B^-1 * A) */
 SCIP_RETCODE SCIPlpGetBInvARow(
    SCIP_LP*              lp,                 /**< LP data */
@@ -6628,6 +6651,27 @@ SCIP_RETCODE SCIPlpGetBInvARow(
    assert(coef != NULL);
 
    SCIP_CALL( SCIPlpiGetBInvARow(lp->lpi, r, binvrow, coef) );
+
+   return SCIP_OKAY;
+}
+
+/** gets a column from the product of inverse basis matrix B^-1 and coefficient matrix A (i.e. from B^-1 * A),
+ *  i.e., it computes B^-1 * A_c with A_c being the c'th column of A
+ */
+SCIP_RETCODE SCIPlpGetBInvACol(
+   SCIP_LP*              lp,                 /**< LP data */
+   int                   c,                  /**< column number which can be accessed by SCIPcolGetLPPos() */
+   SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->solved);
+   assert(lp->solisbasic);
+   assert(0 <= c && c < lp->ncols);
+   assert(coef != NULL);
+
+   SCIP_CALL( SCIPlpiGetBInvACol(lp->lpi, c, coef) );
 
    return SCIP_OKAY;
 }
