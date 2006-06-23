@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.125 2006/06/19 13:31:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.126 2006/06/23 07:21:07 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -3499,6 +3499,7 @@ SCIP_RETCODE undoBdchgsDualfarkas(
    SCIP_Bool*            resolve             /**< pointer to store whether the changed LP should be resolved again */
    )
 {
+   SCIP_RETCODE retcode;
    SCIP_LPI* lpi;
    SCIP_ROW** rows;
    SCIP_VAR** vars;
@@ -3546,7 +3547,10 @@ SCIP_RETCODE undoBdchgsDualfarkas(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &farkascoefs, nvars) );
 
    /* get dual farkas values of rows */
-   SCIP_CALL( SCIPlpiGetDualfarkas(lpi, dualfarkas) );
+   retcode = SCIPlpiGetDualfarkas(lpi, dualfarkas);
+   if( retcode == SCIP_LPERROR ) /* on an error in the LP solver, just abort the conflict analysis */
+      goto TERMINATE;
+   SCIP_CALL( retcode );
 
    /* calculate the farkas row */
    BMSclearMemoryArray(farkascoefs, nvars);
@@ -3695,6 +3699,7 @@ SCIP_RETCODE undoBdchgsDualsol(
    SCIP_Bool*            resolve             /**< pointer to store whether the changed LP should be resolved again */
    )
 {
+   SCIP_RETCODE retcode;
    SCIP_LPI* lpi;
    SCIP_ROW** rows;
    SCIP_VAR** vars;
@@ -3751,7 +3756,10 @@ SCIP_RETCODE undoBdchgsDualsol(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &varredcosts, nvars) );
 
    /* get solution from LPI */
-   SCIP_CALL( SCIPlpiGetSol(lpi, NULL, primsols, dualsols, NULL, redcosts) );
+   retcode = SCIPlpiGetSol(lpi, NULL, primsols, dualsols, NULL, redcosts);
+   if( retcode == SCIP_LPERROR ) /* on an error in the LP solver, just abort the conflict analysis */
+      goto TERMINATE;
+   SCIP_CALL( retcode );
 #ifdef SCIP_DEBUG
    {
       SCIP_Real objval;
