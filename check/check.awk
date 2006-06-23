@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.37 2006/04/04 13:20:25 bzfpfend Exp $
+# $Id: check.awk,v 1.38 2006/06/23 09:09:47 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -129,7 +129,12 @@ BEGIN {
     conftime = 0.0;
     overheadtime = 0.0;
     aborted = 1;
+    timelimit = 0.0;
+    starttime = 0.0;
+    endtime = 0.0;
 }
+/@03/ { starttime = $2; }
+/@04/ { endtime = $2; }
 /^SCIP> loaded parameter file/ { settings = $5; sub(/<settings\//, "", settings); sub(/.set>/, "", settings); }
 /^SCIP> parameter <limits\/time> set to/ { timelimit = $6; }
 #
@@ -272,6 +277,12 @@ BEGIN {
             probtype = "MIP";
       }
 
+      if( endtime - starttime > timelimit && timelimit > 0.0 )
+      {
+         timeout = 1;
+         aborted = 0;
+         tottime = endtime - starttime;
+      }
       if( aborted && tottime == 0.0 )
          tottime = timelimit;
 
