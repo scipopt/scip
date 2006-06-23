@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.224 2006/06/20 20:24:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.225 2006/06/23 10:51:39 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -711,7 +711,7 @@ SCIP_RETCODE primalHeuristics(
          || SCIPnodeGetType(nextnode) == SCIP_NODETYPE_LEAF);
       plunging = (SCIPnodeGetType(nextnode) != SCIP_NODETYPE_LEAF);
       pseudonode = !SCIPtreeHasFocusNodeLP(tree);
-      if( plunging )
+      if( plunging && SCIPtreeGetCurrentDepth(tree) > 0 ) /* call plunging heuristics also at root node */
       {
          if( !pseudonode )
             heurtiming = SCIP_HEURTIMING_AFTERLPNODE;
