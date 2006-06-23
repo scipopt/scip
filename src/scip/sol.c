@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.76 2006/04/10 16:15:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.77 2006/06/23 09:03:56 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -1232,7 +1232,7 @@ SCIP_RETCODE SCIPsolPrint(
    }
 
    /* display additional priced variables (if given problem data is original problem) */
-   if( !prob->transformed )
+   if( !prob->transformed && sol->solorigin != SCIP_SOLORIGIN_ORIGINAL )
    {
       assert(transprob != NULL);
       for( v = 0; v < transprob->nfixedvars; ++v )
