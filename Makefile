@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.164 2006/05/31 11:53:55 bzfberth Exp $
+# $Id: Makefile,v 1.165 2006/06/26 16:04:25 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -38,7 +38,7 @@ HOSTNAME	:=	$(shell uname -n | tr '[:upper:]' '[:lower:]')
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		:=	0.82a
+VERSION		:=	0.82b
 
 TIME     	=  	3600
 NODES           =       2100000000
