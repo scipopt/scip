@@ -30,7 +30,9 @@
 
 /* The XPRSpostsolve command is required if the LP was ever */
 /* unfinished. */
+#if (XPVERSION < 17)
 int XPRS_CC XPRSpostsolve( XPRSprob prob );
+#endif
 
 /* For SCIP we need an extra LP status which is optimal with */
 /* scaled infeasibilities. */
@@ -695,6 +697,10 @@ SCIP_RETCODE SCIPlpiCreate(
 
    CHECK_ZERO( XPRScreateprob(&(*lpi)->xprslp) );
    invalidateSolution(*lpi);
+
+   /* Turn logging off until the user explicitly turns it on. This should */
+   /* prevent any unwanted Xpress output from appearing in the SCIP log. */
+   CHECK_ZERO( XPRSsetintcontrol((*lpi)->xprslp, XPRS_OUTPUTLOG, 0) );
 
    /* Reserve some extra space for names. */
    CHECK_ZERO( XPRSsetintcontrol((*lpi)->xprslp, XPRS_MPSNAMELENGTH, 16) );
@@ -1854,15 +1860,7 @@ SCIP_RETCODE SCIPlpiStrongbranch(
    int*                  iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
-   const char lbound = 'L';
-   const char ubound = 'U';
-   SCIP_Real oldlb;
-   SCIP_Real oldub;
-   SCIP_Real newlb;
-   SCIP_Real newub;
    int objsen;
-   int olditlim;
-   int it;
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
@@ -1873,7 +1871,7 @@ SCIP_RETCODE SCIPlpiStrongbranch(
 
    SCIPdebugMessage("calling Xpress strongbranching on variable %d (%d iterations)\n", col, itlim);
 
-   /* results of CPLEX are valid in any case */
+   /* results of XPRESS are valid in any case */
    *downvalid = TRUE;
    *upvalid = TRUE;
 
@@ -1884,73 +1882,140 @@ SCIP_RETCODE SCIPlpiStrongbranch(
 
    objsen = lpi->objsense;
 
-   /* save current LP basis and bounds*/
-   SCIP_CALL( getBase(lpi) );
-   CHECK_ZERO( XPRSgetlb(lpi->xprslp, &oldlb, col, col) );
-   CHECK_ZERO( XPRSgetub(lpi->xprslp, &oldub, col, col) );
-
-   /* save old iteration limit and set iteration limit to strong branching limit */
-   if( itlim > XPRS_MAXINT )
-       itlim = XPRS_MAXINT;
-   CHECK_ZERO( XPRSgetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, &olditlim) );
-   CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, itlim) );
-    
-   /* down branch */
-   newub = EPSCEIL(psol-1.0, 1e-06);
-   if( newub >= oldlb - 0.5 )
+#if (XPVERSION >= 18)
+   /* From version 17.01.01 we have the dedicated strong branching function */
+   /* XPRSstrongbranch(). Note: It does not work with version 17.01.00. */
    {
-      CHECK_ZERO( XPRSchgbounds(lpi->xprslp, 1, &col, &ubound, &newub) );
-      SCIP_CALL( SCIPlpiSolveDual(lpi) );
-      if( SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) )
-        *down = objsen == +1 ? 1e+40 : -1e+40;
-      else if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
-      {
-        SCIP_CALL( SCIPlpiGetObjval(lpi, down) );
-      }
-      else
-        *down = objsen == +1 ? 1e+40 : -1e+40;
-      if( iter != NULL )
-      {
-        SCIP_CALL( SCIPlpiGetIterations(lpi, &it) );
-        *iter += it;
-      }
-      SCIPdebugMessage(" -> down (x%d <= %g): %g\n", col, newub, *down);
+      int    mbndind[2];
+      double dbndval[2];
+      char   cbndtype[2];
+      double dobjval[2];
+      int    mstatus[2];
 
-      CHECK_ZERO( XPRSchgbounds(lpi->xprslp, 1, &col, &ubound, &oldub) );
-      SCIP_CALL( setBase(lpi) );
+      int XPRS_CC XPRSstrongbranch
+        ( XPRSprob prob, const int _nbnd, const int *_mbndind, 
+	  const char *_cbndtype, const double *_dbndval,
+          const int _itrlimit, double *_dsbobjval, int *_msbstatus );
+
+      /* Set the branching bounds (down first, up second). */
+      mbndind[0]  = col;
+      dbndval[0]  = EPSCEIL(psol-1.0, 1e-06);
+      cbndtype[0] = 'U';
+      mbndind[1]  = col;
+      dbndval[1]  = EPSFLOOR(psol+1.0, 1e-06);
+      cbndtype[1] = 'L';
+
+      /* Apply strong branching to the two branches. */
+      CHECK_ZERO( XPRSstrongbranch(lpi->xprslp, 2, mbndind, cbndtype, dbndval, itlim, dobjval, mstatus) );
+
+      /* Get the objective of the down branch. */
+      if ((mstatus[0] == XPRS_LP_INFEAS) || (mstatus[0] == XPRS_LP_CUTOFF_IN_DUAL)) {
+        *down = objsen == +1 ? 1e+40 : -1e+40;
+      } else if ((mstatus[0] == XPRS_LP_OPTIMAL) || (mstatus[0] == XPRS_LP_UNFINISHED)) {
+        *down = dobjval[0];
+      } else {
+        /* Something weird happened. */
+        *downvalid = FALSE;
+      }
+
+      /* Get the objective of the up branch. */
+      if ((mstatus[1] == XPRS_LP_INFEAS) || (mstatus[1] == XPRS_LP_CUTOFF_IN_DUAL)) {
+        *up = objsen == +1 ? 1e+40 : -1e+40;
+      } else if ((mstatus[1] == XPRS_LP_OPTIMAL) || (mstatus[1] == XPRS_LP_UNFINISHED)) {
+        *up = dobjval[1];
+      } else {
+        /* Something weird happened. */
+        *upvalid = FALSE;
+      }
+
+      /* When using the XPRSstrongbranch function we are unable to provide */
+      /* an iteration count. */
+      if (iter) *iter = -1;
    }
-   else
-      *down = objsen == +1 ? 1e+40 : -1e+40;
 
-   /* up branch */
-   newlb = EPSFLOOR(psol+1.0, 1e-06);
-   if( newlb <= oldub + 0.5 )
+#else
+
    {
-      CHECK_ZERO( XPRSchgbounds(lpi->xprslp, 1, &col, &lbound, &newlb) );
-      SCIP_CALL( SCIPlpiSolveDual(lpi) );
-      if( SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) )
-         *up = objsen == +1 ? 1e+40 : -1e+40;
-      else if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
-      {
-         SCIP_CALL( SCIPlpiGetObjval(lpi, up) );
-      }
-      else
-         *up = objsen == +1 ? 1e+40 : -1e+40;
-      if( iter != NULL )
-      {
-         SCIP_CALL( SCIPlpiGetIterations(lpi, &it) );
-         *iter += it;
-      }
-      SCIPdebugMessage(" -> up  (x%d >= %g): %g\n", col, newlb, *up);
+     const char lbound = 'L';
+     const char ubound = 'U';
+     SCIP_Real oldlb;
+     SCIP_Real oldub;
+     SCIP_Real newlb;
+     SCIP_Real newub;
+     int olditlim;
+     int it;
 
-      CHECK_ZERO( XPRSchgbounds(lpi->xprslp, 1, &col, &lbound, &oldlb) );
-      SCIP_CALL( setBase(lpi) );
+     /* save current LP basis and bounds*/
+     SCIP_CALL( getBase(lpi) );
+     CHECK_ZERO( XPRSgetlb(lpi->xprslp, &oldlb, col, col) );
+     CHECK_ZERO( XPRSgetub(lpi->xprslp, &oldub, col, col) );
+     
+     /* save old iteration limit and set iteration limit to strong */
+     /* branching limit */
+     if( itlim > XPRS_MAXINT ) itlim = XPRS_MAXINT;
+     CHECK_ZERO( XPRSgetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, &olditlim) );
+     CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, itlim) );
+     
+     /* down branch */
+     newub = EPSCEIL(psol-1.0, 1e-06);
+     if( newub >= oldlb - 0.5 )
+     {
+        CHECK_ZERO( XPRSchgbounds(lpi->xprslp, 1, &col, &ubound, &newub) );
+	SCIP_CALL( SCIPlpiSolveDual(lpi) );
+	if( SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) )
+	   *down = objsen == +1 ? 1e+40 : -1e+40;
+	else if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
+	{
+	   SCIP_CALL( SCIPlpiGetObjval(lpi, down) );
+	}
+	else
+	   *down = objsen == +1 ? 1e+40 : -1e+40;
+	if( iter != NULL )
+	{
+	   SCIP_CALL( SCIPlpiGetIterations(lpi, &it) );
+	   *iter += it;
+	}
+	SCIPdebugMessage(" -> down (x%d <= %g): %g\n", col, newub, *down);
+
+	CHECK_ZERO( XPRSchgbounds(lpi->xprslp, 1, &col, &ubound, &oldub) );
+	SCIP_CALL( setBase(lpi) );
+     }
+     else
+        *down = objsen == +1 ? 1e+40 : -1e+40;
+     
+     /* up branch */
+     newlb = EPSFLOOR(psol+1.0, 1e-06);
+     if( newlb <= oldub + 0.5 )
+     {
+        CHECK_ZERO( XPRSchgbounds(lpi->xprslp, 1, &col, &lbound, &newlb) );
+	SCIP_CALL( SCIPlpiSolveDual(lpi) );
+	if( SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) )
+	   *up = objsen == +1 ? 1e+40 : -1e+40;
+	else if( SCIPlpiIsOptimal(lpi) || SCIPlpiIsIterlimExc(lpi) )
+	{
+	   SCIP_CALL( SCIPlpiGetObjval(lpi, up) );
+	}
+	else
+	   *up = objsen == +1 ? 1e+40 : -1e+40;
+	if( iter != NULL )
+	{
+	   SCIP_CALL( SCIPlpiGetIterations(lpi, &it) );
+	   *iter += it;
+	}
+	SCIPdebugMessage(" -> up  (x%d >= %g): %g\n", col, newlb, *up);
+      
+	CHECK_ZERO( XPRSchgbounds(lpi->xprslp, 1, &col, &lbound, &oldlb) );
+	SCIP_CALL( setBase(lpi) );
+     }
+     else
+        *up = objsen == +1 ? 1e+40 : -1e+40;
+
+     /* reset iteration limit */
+     CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, olditlim) );
+
    }
-   else
-      *up = objsen == +1 ? 1e+40 : -1e+40;
 
-   /* reset iteration limit */
-   CHECK_ZERO( XPRSsetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, olditlim) );
+#endif
 
    return SCIP_OKAY;
 }
@@ -2431,7 +2496,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
       BMSfreeMemoryArray(&mcolind);
    } else {
       /* We have a non-basic row. */
-      int irow = lpi->unbvec;
+      irow = lpi->unbvec;
       assert(lpi->rstat[irow] != 1);
       dmult = lpi->rstat[irow] ? -1.0 : +1.0;
       bvec[irow] = dmult;
@@ -2532,6 +2597,15 @@ SCIP_RETCODE SCIPlpiGetBase(
      int ncols;
      CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols) );
      for (c = 0; c < ncols; c++) {
+#if (XPVERSION >= 17)
+       /* From version 17.00.00 of Xpress, a new basis status of 3 was */
+       /* introduced for super-basic variables. */
+       assert(cstat[c] >=0 && cstat[c] <= 3);
+       if (cstat[c] == 0) {
+	 cstat[c] = SCIP_BASESTAT_LOWER;
+       } else if (cstat[c] == 3) {
+	 cstat[c] = SCIP_BASESTAT_ZERO;
+#else
        assert(cstat[c] >=0 && cstat[c] <= 2);
        if (cstat[c] == 0) {
          /* Check if it might be super-basic. */
@@ -2541,6 +2615,7 @@ SCIP_RETCODE SCIPlpiGetBase(
            cstat[c] = SCIP_BASESTAT_ZERO;
          else
            cstat[c] = SCIP_BASESTAT_LOWER;
+#endif
        } else if (cstat[c] == 1) {
          cstat[c] = SCIP_BASESTAT_BASIC;
        } else {
@@ -2554,10 +2629,17 @@ SCIP_RETCODE SCIPlpiGetBase(
      int nrows;
      CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
      for (r = 0; r < nrows; r++) {
+#if (XPVERSION >= 17)
+       assert(rstat[r] >=0 && rstat[r] <= 3);
+       if (rstat[r] == 0) {
+	 rstat[r] = SCIP_BASESTAT_LOWER;
+       } else if (rstat[r] == 3) {
+	 rstat[r] = SCIP_BASESTAT_ZERO;
+#else
        assert(rstat[r] >=0 && rstat[r] <= 2);
        if (rstat[r] == 0) {
-         /* Check if it might be super-basic. */
          rstat[r] = SCIP_BASESTAT_LOWER;
+#endif
        } else if (rstat[r] == 1) {
          rstat[r] = SCIP_BASESTAT_BASIC;
        } else {
@@ -2576,7 +2658,6 @@ SCIP_RETCODE SCIPlpiSetBase(
    int*                  rstat               /**< array with row basis status */
    )
 {
-   int c;
    int ncols;
    int *cstat_xprs = NULL;
 
@@ -2592,10 +2673,17 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert((int)SCIP_BASESTAT_LOWER == 0);
    assert((int)SCIP_BASESTAT_BASIC == 1);
    assert((int)SCIP_BASESTAT_UPPER == 2);
+   
    /* Set any super-basic variables to be at lower bound. */
    CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols) );
    SCIP_ALLOC( BMSallocMemoryArray(&cstat_xprs, ncols) );
-   for (c = 0; c < ncols; c++) cstat_xprs[c] = (cstat[c] == 3) ? 0 : cstat[c];
+#if (XPVERSION <= 16)
+   {
+     /* We can't set a super-basic status so set it at lower bound instead. */
+     int c;
+     for (c = 0; c < ncols; c++) cstat_xprs[c] = (cstat[c] == 3) ? 0 : cstat[c];
+   }
+#endif
    CHECK_ZERO( XPRSloadbasis(lpi->xprslp, rstat, cstat_xprs) );
    BMSfreeMemoryArray(&cstat_xprs);
 
@@ -2659,6 +2747,33 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    return SCIP_OKAY;
 }
 
+/** get dense column of inverse basis matrix B^-1 */
+SCIP_RETCODE SCIPlpiGetBInvCol(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   c,                  /**< column number of B^-1; this is NOT the number of the column in the LP;
+                                              *   you have to call SCIPlpiGetBasisInd() to get the array which links the
+                                              *   B^-1 column numbers to the row and column numbers of the LP!
+                                              *   c must be between 0 and nrows-1, since the basis has the size
+                                              *   nrows * nrows */
+   SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
+   )
+{
+   int r;
+   int nrows;
+
+   assert(lpi != NULL);
+   assert(lpi->xprslp != NULL);
+
+   SCIPdebugMessage("getting binv-col %d\n", r);
+
+   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
+   for (r = 0; r < nrows; r++) coef[r] = 0.0;
+   coef[c] = 1.0;
+   CHECK_ZERO( XPRSftran(lpi->xprslp, coef) );
+
+   return SCIP_OKAY;
+}
+
 /** get dense row of inverse basis matrix times constraint matrix B^-1 * A */
 SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -2672,9 +2787,6 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    int nnonz;
 
    SCIP_Real *binvrow = NULL;
-   int        mstart[2];
-   int       *mind = NULL;
-   SCIP_Real *dcol = NULL;
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
@@ -2691,24 +2803,53 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    else
      SCIP_ALLOC( BMSallocMemoryArray(&binvrow, nrows) );
      
-   /* Allocate memory to hold a single column. */
-   SCIP_ALLOC( BMSallocMemoryArray(&mind, nrows) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dcol, nrows) );
+   /* We need space to extract a single column. */
+   SCIP_CALL( ensureValMem(lpi, nrows) );
 
    for (c = 0; c < ncols; c++) {
      int i;
      double dsum = 0.0;
      /* Extract the column. */
-     CHECK_ZERO( XPRSgetcols(lpi->xprslp, mstart, mind, dcol, nrows, &nnonz, c, c) );
+     CHECK_ZERO( XPRSgetcols(lpi->xprslp, NULL, lpi->indarray, lpi->valarray, nrows, &nnonz, c, c) );
      /* Price out the column. */
-     for (i = 0; i < nnonz; i++) dsum += binvrow[mind[i]]*dcol[i];
+     for (i = 0; i < nnonz; i++) dsum += binvrow[lpi->indarray[i]]*lpi->valarray[i];
      val[c] = dsum;
    }
 
    /* Free allocated memory. */
-   BMSfreeMemoryArray(&dcol);
-   BMSfreeMemoryArray(&mind);
    if (binvrow_in == NULL) BMSfreeMemoryArray(&binvrow);
+
+   return SCIP_OKAY;
+}
+
+/** get dense column of inverse basis matrix times constraint matrix B^-1 * A */
+SCIP_RETCODE SCIPlpiGetBInvACol(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   int                   c,                  /**< column number */
+   SCIP_Real*            coef                /**< vector to return coefficients */
+   )
+{
+   int i, r;
+   int nrows;
+   int nnonz;
+
+   assert(lpi != NULL);
+   assert(lpi->xprslp != NULL);
+
+   SCIPdebugMessage("getting binv-col %d\n", c);
+
+   CHECK_ZERO( XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
+
+   /* We need space to extract the column. */
+   SCIP_CALL( ensureValMem(lpi, nrows) );
+
+   /* Get the column to transform. */
+   CHECK_ZERO( XPRSgetcols(lpi->xprslp, NULL, lpi->indarray, lpi->valarray, nrows, &nnonz, c, c) );
+
+   /* Transform the column. */
+   for (r = 0; r < nrows; r++) coef[r] = 0.0;
+   for (i = 0; i < nnonz; i++) coef[lpi->indarray[i]] = lpi->valarray[i];
+   CHECK_ZERO( XPRSbtran(lpi->xprslp, coef) );
 
    return SCIP_OKAY;
 }

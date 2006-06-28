@@ -1,19 +1,21 @@
-#--- $Id: make.windows.x86.intel.dbg.static,v 1.1 2005/12/07 20:47:40 bzfpfend Exp $
-CC		=	icl
+#--- $Id: make.windows.x86.intel.dbg.static,v 1.2 2006/06/28 08:22:59 bzfpfend Exp $
+CC		=	icl /nologo
 CC_o		=	/Fo
-CXX		=	icl
+CXX		=	icl /nologo
 CXX_o		=	/Fo
 LINKCC		=	link
 LINKCC_L	=	/LIBPATH:
+LINKCC_l	=	lib
 LINKCC_o	=	/out:
 LINKCXX		=       link
 LINKCXX_L	=	/LIBPATH:
+LINKCXX_l	=	lib
 LINKCXX_o	=	/out:
 FLAGS		+=	/DNO_SIGACTION /DNO_RAND_R /DNO_STRTOK_R # -DROUNDING_FE
 OFLAGS		+=
 CFLAGS		+=	/Zi
 CXXFLAGS	+=	/Zi
-LDFLAGS		=	 /debug /subsystem:console /incremental:no /fixed:no
+LDFLAGS		=	/debug /subsystem:console /incremental:no /fixed:no
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	
 READLINE_FLAGS	=
@@ -26,3 +28,4 @@ AR_o		=	/OUT:
 ARFLAGS		=	
 RANLIB		=
 LIBEXT		=	lib
+LINKLIBSUFFIX	=	.lib

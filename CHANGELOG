@@ -3,6 +3,8 @@ current version
 
 compiling:
 - added ncurses to the readline entries in the make/make.* files
+- added quotes to sed expressions in Makefile (needed under Windows)
+- modified makefiles for Windows/Intel
 
 interface:
 - new parameter "solinfeasible" for constraint handler callback methods ENFOLP and ENFOPS
@@ -63,6 +65,7 @@ features:
 - command shell now understands escape characters ",', and \ which makes it possible to read in files with spaces in
   the name
 - improved presolving of and, or, and xor constraints
+- updated XPress interface to XPress-MP 17 (contributed by Michael Perregard)
 
 fixed bugs:
 - fixed bug with adding constraints with INITIAL=true and separating them afterwards, which lead to a second addition

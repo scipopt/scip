@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fix.c,v 1.1 2006/04/20 16:24:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_fix.c,v 1.2 2006/06/28 08:22:59 bzfpfend Exp $"
 
 /**@file   reader_fix.c
  * @brief  file reader for variable fixings
@@ -25,7 +25,10 @@
 
 #include <assert.h>
 #include <string.h>
+#if defined(_WIN32) || defined(_WIN64)
+#else
 #include <strings.h>
+#endif
 
 #include "scip/reader_fix.h"
 
