@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intdiving.c,v 1.5 2006/06/20 20:24:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_intdiving.c,v 1.6 2006/06/29 18:57:35 bzfpfend Exp $"
 
 /**@file   heur_intdiving.c
  * @brief  LP diving heuristic that fixes variables with integral LP value
@@ -33,8 +33,8 @@
 #define HEUR_DESC             "LP diving heuristic that fixes binary variables with large LP value to one"
 #define HEUR_DISPCHAR         'i'
 #define HEUR_PRIORITY         -1003500
-#define HEUR_FREQ             -1
-#define HEUR_FREQOFS          0
+#define HEUR_FREQ             -1  /*??????????? try to enable this! freq = 1 helps to solve fast0507! */
+#define HEUR_FREQOFS          9
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 

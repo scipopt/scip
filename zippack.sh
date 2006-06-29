@@ -4,20 +4,28 @@ NAME="scip-$VERSION"
 ln -s . $NAME
 zip release/$NAME.zip $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile $NAME/doc/* $NAME/lib \
 $NAME/lint/* $NAME/lint/cpp/* $NAME/lint/posix/* $NAME/lint/posix/sys/* $NAME/make/* $NAME/scip.set \
-$NAME/src/* $NAME/src/scip/* $NAME/src/blockmemshell/* $NAME/src/tclique/* $NAME/src/objscip/* \
-$NAME/examples/* \
+$NAME/src/*.c $NAME/src/*.cpp $NAME/src/*.h \
+$NAME/src/scip/*.c $NAME/src/scip/*.cpp $NAME/src/scip/*.h \
+$NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.cpp $NAME/src/blockmemshell/*.h \
+$NAME/src/tclique/*.c $NAME/src/tclique/*.cpp $NAME/src/tclique/*.h \
+$NAME/src/objscip/*.c $NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
 $NAME/examples/MIPSolver/* $NAME/examples/MIPSolver/doc/* $NAME/examples/MIPSolver/lib \
 $NAME/examples/MIPSolver/lint/* $NAME/examples/MIPSolver/lint/cpp/* $NAME/examples/MIPSolver/lint/posix/* \
-$NAME/examples/MIPSolver/lint/posix/sys/* $NAME/examples/MIPSolver/make/* $NAME/examples/MIPSolver/src/* \
+$NAME/examples/MIPSolver/lint/posix/sys/* $NAME/examples/MIPSolver/make/* \
+$NAME/examples/MIPSolver/src/*.c $NAME/examples/MIPSolver/src/*.cpp $NAME/examples/MIPSolver/src/*.h \
 $NAME/examples/TSP/* $NAME/examples/TSP/doc/* $NAME/examples/TSP/lib \
 $NAME/examples/TSP/lint/* $NAME/examples/TSP/lint/cpp/* $NAME/examples/TSP/lint/posix/* \
-$NAME/examples/TSP/lint/posix/sys/* $NAME/examples/TSP/make/* $NAME/examples/TSP/src/* $NAME/examples/TSP/tspviewer/* \
+$NAME/examples/TSP/lint/posix/sys/* $NAME/examples/TSP/make/* \
+$NAME/examples/TSP/src/*.c $NAME/examples/TSP/src/*.cpp $NAME/examples/TSP/src/*.h \
+$NAME/examples/TSP/tspviewer/*.java \
 $NAME/examples/SamplePricer/* $NAME/examples/SamplePricer/doc/* $NAME/examples/SamplePricer/lib \
 $NAME/examples/SamplePricer/lint/* $NAME/examples/SamplePricer/lint/cpp/* $NAME/examples/SamplePricer/lint/posix/* \
-$NAME/examples/SamplePricer/lint/posix/sys/* $NAME/examples/SamplePricer/make/* $NAME/examples/SamplePricer/src/* \
+$NAME/examples/SamplePricer/lint/posix/sys/* $NAME/examples/SamplePricer/make/* \
+$NAME/examples/SamplePricer/src/*.c $NAME/examples/SamplePricer/src/*.cpp $NAME/examples/SamplePricer/src/*.h \
 $NAME/examples/SamplePricer_C/* $NAME/examples/SamplePricer_C/doc/* $NAME/examples/SamplePricer_C/lib \
 $NAME/examples/SamplePricer_C/lint/* $NAME/examples/SamplePricer_C/lint/cpp/* $NAME/examples/SamplePricer_C/lint/posix/* \
-$NAME/examples/SamplePricer_C/lint/posix/sys/* $NAME/examples/SamplePricer_C/make/* $NAME/examples/SamplePricer_C/src/* \
+$NAME/examples/SamplePricer_C/lint/posix/sys/* $NAME/examples/SamplePricer_C/make/* \
+$NAME/examples/SamplePricer_C/src/*.c $NAME/examples/SamplePricer_C/src/*.cpp $NAME/examples/SamplePricer_C/src/*.h \
 -x ".*" -x "*~" -x "*/CVS/*"
 rm $NAME
 echo "check version numbers in src/scip/def.h, doc/xternal.c, Makefile and zippack.sh ($VERSION):"

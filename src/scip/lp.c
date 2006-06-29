@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.227 2006/06/21 11:53:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.228 2006/06/29 18:57:35 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6754,8 +6754,6 @@ SCIP_RETCODE SCIPlpSumRows(
                (*sumrhs) += weights[r] * (row->lhs - row->constant);
          }
       }
-      else
-         weights[r] = 0.0;
    }
 
    *sumlhs = -SCIPsetInfinity(set);
@@ -6770,7 +6768,7 @@ void sumMIRRow(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
+   SCIP_Real*            weights,            /**< row weights in row summation */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Bool             allowlocal,         /**< should local rows be included, resulting in a locally valid summation? */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
@@ -6867,10 +6865,7 @@ void sumMIRRow(
          SCIPdebug(SCIProwPrint(row, NULL));
       }
       else
-      {
          slacksign[r] = 0;
-         weights[r] = 0.0;
-      }
    }
 }
 
@@ -7606,7 +7601,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
-   SCIP_Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
+   SCIP_Real*            weights,            /**< row weights in row summation */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
@@ -7769,7 +7764,7 @@ void sumStrongCGRow(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
+   SCIP_Real*            weights,            /**< row weights in row summation */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Bool             allowlocal,         /**< should local rows be included, resulting in a locally valid summation? */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
@@ -7870,7 +7865,6 @@ void sumStrongCGRow(
             else
             {
                slacksign[r] = 0;
-               weights[r] = 0.0;
                continue;
             }
          }
@@ -7894,10 +7888,7 @@ void sumStrongCGRow(
          SCIPdebug(SCIProwPrint(row, NULL));
       }
       else
-      {
          slacksign[r] = 0;
-         weights[r] = 0.0;
-      }
    }
 }
 
@@ -8427,7 +8418,7 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
-   SCIP_Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
+   SCIP_Real*            weights,            /**< row weights in row summation */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            strongcgcoef,       /**< array to store strong CG coefficients: must be of size nvars */
    SCIP_Real*            strongcgrhs,        /**< pointer to store the right hand side of the strong CG row */

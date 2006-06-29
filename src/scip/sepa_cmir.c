@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.51 2006/06/08 16:10:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.52 2006/06/29 18:57:36 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -405,6 +405,7 @@ SCIP_RETCODE aggregation(
    SCIP_Real* rowweights;      /* weight of rows in all aggregations */ 
    SCIP_Real* testeddeltas;
    SCIP_Real maxweight;
+   SCIP_Real minweight;
    int* aggrnonzidxs;
    int* aggrintnonzposs;
    int naggrintnonzs;
@@ -477,7 +478,8 @@ SCIP_RETCODE aggregation(
    else 
       rowweights[startrow] = 1.0;
    maxweight = 1.0;
-   
+   minweight = 1.0;
+
    /* decrease score of startrow in order to not aggregate it again too soon */
    decreaseRowScore(scip, rowlhsscores, rowrhsscores, startrow);
    
@@ -828,8 +830,8 @@ SCIP_RETCODE aggregation(
                /* don't aggregate rows that would lead to a too extreme aggregation factor */
                factor = - aggrcoefs[c] / nonzcoefs[r]; 
                absfactor = REALABS(factor);
-               if( !SCIPisPositive(scip, absfactor) || absfactor > sepadata->maxrowfac
-                  || maxweight/absfactor > sepadata->maxrowfac )
+               if( !SCIPisPositive(scip, absfactor) || absfactor > sepadata->maxrowfac * minweight
+                  || maxweight > absfactor * sepadata->maxrowfac )
                   continue;
                
                /* check, if the row's slack multiplied with the aggregation factor is too large */
@@ -874,6 +876,7 @@ SCIP_RETCODE aggregation(
       rowweights[SCIProwGetLPPos(bestrow)] = aggrfac;
       absaggrfac = REALABS(aggrfac);
       maxweight = MAX(maxweight, absaggrfac);
+      minweight = MIN(minweight, absaggrfac);
 
       /* decrease score of aggregation row in order to not aggregate it again too soon */
       decreaseRowScore(scip, rowlhsscores, rowrhsscores, SCIProwGetLPPos(bestrow));

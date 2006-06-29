@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.58 2006/06/20 20:23:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.59 2006/06/29 18:57:35 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -328,17 +328,18 @@ SCIP_RETCODE SCIPheurExec(
 
    /* compare current depth against heuristic's maximal depth level */
    execute = execute && (heur->maxdepth == -1 || depth <= heur->maxdepth);
-   
+
    /* if the heuristic was delayed, execute it anyway */
    execute = execute || (heur->delaypos >= 0);
 
    /* if the heuristic should be called after plunging but not during plunging, delay it if we are in plunging */
-   if( (heurtiming == SCIP_HEURTIMING_AFTERLPNODE
-         && (heur->timingmask & SCIP_HEURTIMING_AFTERLPNODE) == 0
-         && (heur->timingmask & SCIP_HEURTIMING_AFTERLPPLUNGE) > 0)
-      || (heurtiming == SCIP_HEURTIMING_AFTERPSEUDONODE
-         && (heur->timingmask & SCIP_HEURTIMING_AFTERPSEUDONODE) == 0
-         && (heur->timingmask & SCIP_HEURTIMING_AFTERPSEUDOPLUNGE) > 0) )
+   if( execute
+      && ((heurtiming == SCIP_HEURTIMING_AFTERLPNODE
+            && (heur->timingmask & SCIP_HEURTIMING_AFTERLPNODE) == 0
+            && (heur->timingmask & SCIP_HEURTIMING_AFTERLPPLUNGE) > 0)
+         || (heurtiming == SCIP_HEURTIMING_AFTERPSEUDONODE
+            && (heur->timingmask & SCIP_HEURTIMING_AFTERPSEUDONODE) == 0
+            && (heur->timingmask & SCIP_HEURTIMING_AFTERPSEUDOPLUNGE) > 0)) )
    {
       /* the heuristic should be delayed until plunging is finished */
       execute = FALSE;

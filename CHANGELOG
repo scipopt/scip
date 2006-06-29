@@ -78,6 +78,7 @@ fixed bugs:
   but with different sign of coefficient (e.g., x <= 10*z + 5 and x <= -5*z + 10); in previous version, one of the
   two was removed, although both have a useful meaning; now, we keep both, and detect a stronger global bound in
   the implication graph presolving
+- fixed bug in cmir cut separator with weights fixed to zero, thus making the current aggregation invalid
 
 
 SCIP version 0.82

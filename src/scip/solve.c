@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.225 2006/06/23 10:51:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.226 2006/06/29 18:57:36 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -721,9 +721,9 @@ SCIP_RETCODE primalHeuristics(
       else
       {
          if( !pseudonode )
-            heurtiming = SCIP_HEURTIMING_AFTERLPPLUNGE;
+            heurtiming = SCIP_HEURTIMING_AFTERLPPLUNGE | SCIP_HEURTIMING_AFTERLPNODE;
          else
-            heurtiming = SCIP_HEURTIMING_AFTERPSEUDOPLUNGE;
+            heurtiming = SCIP_HEURTIMING_AFTERPSEUDOPLUNGE | SCIP_HEURTIMING_AFTERPSEUDONODE;
       }
    }
 
