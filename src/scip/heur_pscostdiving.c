@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.39 2006/06/20 20:24:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.40 2006/06/29 20:59:04 bzfpfend Exp $"
 
 /**@file   heur_pscostdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the pseudo cost values
@@ -495,7 +495,7 @@ SCIP_DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
       }
 
       /* apply domain propagation */
-      SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff) );
+      SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, NULL) );
       if( cutoff )
          break;
 

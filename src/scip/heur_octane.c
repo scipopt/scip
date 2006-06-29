@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.9 2006/06/20 20:24:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.10 2006/06/29 20:59:04 bzfpfend Exp $"
 
 /**@file   heur_octane.c
  * @brief  octane primal heuristic based on Balas, Ceria, Dawande, Margot, and Pataki
@@ -543,7 +543,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    SCIP_VAR** vars;           /* the variables of the problem */
    SCIP_VAR** fracvars;       /* variables, that are fractional in current LP solution */
    SCIP_VAR** subspacevars;   /* the variables on which the search is performed. Either coinciding with vars or with the
-                          * space of all fractional variables of the current LP solution */
+                               * space of all fractional variables of the current LP solution */
 
    SCIP_Real p;               /* n/2 - <delta,x> ( for some facet delta ) */
    SCIP_Real q;               /* <delta,a> */

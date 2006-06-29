@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.46 2006/06/20 20:24:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.47 2006/06/29 20:59:04 bzfpfend Exp $"
 
 /**@file   heur_fracdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
@@ -470,7 +470,7 @@ SCIP_DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
       }
 
       /* apply domain propagation */
-      SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff) );
+      SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, NULL) );
       if( cutoff )
          break;
 

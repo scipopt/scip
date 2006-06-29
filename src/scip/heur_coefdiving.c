@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.44 2006/06/20 20:24:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.45 2006/06/29 20:59:04 bzfpfend Exp $"
 
 /**@file   heur_coefdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the matrix coefficients
@@ -477,7 +477,7 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
       }
 
       /* apply domain propagation */
-      SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff) );
+      SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, NULL) );
       if( cutoff )
          break;
 

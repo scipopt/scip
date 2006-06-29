@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.28 2006/06/20 20:24:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.29 2006/06/29 20:59:04 bzfpfend Exp $"
 
 /**@file   heur_guideddiving.c
  * @brief  LP diving heuristic that chooses fixings in direction of average of feasible solutions
@@ -463,7 +463,7 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
       }
 
       /* apply domain propagation */
-      SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff) );
+      SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, NULL) );
       if( cutoff )
          break;
 

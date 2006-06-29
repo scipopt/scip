@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.32 2006/06/19 12:53:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.33 2006/06/29 20:59:04 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -258,7 +258,7 @@ SCIP_RETCODE applyProbing(
    /* apply propagation */
    if( !(*cutoff) )
    {
-      SCIP_CALL( SCIPpropagateProbing(scip, presoldata->proprounds, cutoff) );
+      SCIP_CALL( SCIPpropagateProbing(scip, presoldata->proprounds, cutoff, NULL) );
    }
 
    /* evaluate propagation */

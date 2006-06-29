@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intdiving.c,v 1.6 2006/06/29 18:57:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_intdiving.c,v 1.7 2006/06/29 20:59:04 bzfpfend Exp $"
 
 /**@file   heur_intdiving.c
  * @brief  LP diving heuristic that fixes variables with integral LP value
@@ -171,7 +171,6 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
    SCIP_VAR** pseudocands;
    SCIP_VAR** fixcands;
    SCIP_Real* fixcandscores;
-   SCIP_Real* fixcandsolvals;
    SCIP_Real searchubbound;
    SCIP_Real searchavgbound;
    SCIP_Real searchbound;
@@ -188,6 +187,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
    int maxdepth;
    int maxdivedepth;
    int divedepth;
+   int nextcand;
    int c;
 
    assert(heur != NULL);
@@ -332,11 +332,9 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
    }
    SCIPfreeBufferArray(scip, &fixcandscores);
 
-   /* get LP objective value, and get LP solution values for variables */
+   /* get LP objective value */
    lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    objval = SCIPgetLPObjval(scip);
-   SCIP_CALL( SCIPallocBufferArray(scip, &fixcandsolvals, nfixcands) );
-   SCIP_CALL( SCIPgetVarSols(scip, nfixcands, fixcands, fixcandsolvals) );
 
    SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing intdiving heuristic: depth=%d, %d non-fixed, dualbound=%g, searchbound=%g\n", 
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nfixcands, SCIPgetDualbound(scip), SCIPretransformObj(scip, searchbound));
@@ -347,6 +345,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
    lperror = FALSE;
    cutoff = FALSE;
    divedepth = 0;
+   nextcand = 0;
    while( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL
       && (divedepth < 10
          || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations && objval < searchbound)) )
@@ -356,6 +355,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
       SCIP_Real bestfixval;
       int bestcand;
       SCIP_Longint nnewlpiterations;
+      SCIP_Longint nnewdomreds;
 
       SCIP_CALL( SCIPnewProbingNode(scip) );
       divedepth++;
@@ -368,7 +368,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
       bestfixval = 1.0;
 
       /* look in the binary variables for fixing candidates */
-      for( c = 0; c < nbinfixcands; ++c )
+      for( c = nextcand; c < nbinfixcands; ++c )
       {
          SCIP_Real solval;
 
@@ -387,7 +387,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
          solval = SCIPvarGetLPSol(var);
 
 #if 0 /*??????????????????*/
-         /* ignore variables that are currently integral */
+         /* ignore binary variables that are currently integral */
          if( SCIPisFeasIntegral(scip, solval) )
             continue;
 #endif
@@ -416,7 +416,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
          SCIP_Real bestfrac;
 
          bestfrac = SCIP_INVALID;
-         for( c = nbinfixcands; c < nfixcands; ++c )
+         for( c = MAX(nextcand, nbinfixcands); c < nfixcands; ++c )
          {
             SCIP_Real solval;
             SCIP_Real frac;
@@ -436,8 +436,8 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
             solval = SCIPvarGetLPSol(var);
             frac = SCIPfrac(scip, solval);
 
-#if 0 /*??????????????????*/
-            /* ignore variables that are currently integral */
+#if 1 /*??????????????????*/
+            /* ignore integer variables that are currently integral */
             if( SCIPisFeasFracIntegral(scip, frac) )
                continue;
 #endif
@@ -476,9 +476,15 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
       SCIP_CALL( SCIPfixVarProbing(scip, var, bestfixval) );
 
       /* apply domain propagation */
-      SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff) );
+      SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, &nnewdomreds) );
       if( cutoff )
          break;
+
+      /* if the best candidate was just fixed to its LP value and no domain reduction was found, the LP solution
+       * stays valid, and the LP does not need to be resolved
+       */
+      if( nnewdomreds == 0 && SCIPisEQ(scip, bestsolval, bestfixval) )
+         continue;
 
       /* resolve the diving LP */
       nlpiterations = SCIPgetNLPIterations(scip);
@@ -501,6 +507,9 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
 
          if( nnewlpiterations > 0 || !SCIPisEQ(scip, bestsolval, bestfixval) )
          {
+            /* we must start again with the first candidate, since the LP solution changed */
+            nextcand = 0;
+
             /* create solution from diving LP and try to round it */
             SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
             SCIP_CALL( SCIProundSol(scip, heurdata->sol, &success) );
@@ -520,12 +529,13 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
                }
             }
          }
+         else
+            nextcand = bestcand+1; /* continue with the next candidate in the following loop */
       }
       SCIPdebugMessage("   -> lpsolstat=%d, objval=%g/%g\n", lpsolstat, objval, searchbound);
    }
 
    /* free temporary memory */
-   SCIPfreeBufferArray(scip, &fixcandsolvals);
    SCIPfreeBufferArray(scip, &fixcands);
 
    /* end diving */

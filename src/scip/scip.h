@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.281 2006/06/21 11:53:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.282 2006/06/29 20:59:05 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3890,7 +3890,8 @@ extern
 SCIP_RETCODE SCIPpropagateProbing(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   maxproprounds,      /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
-   SCIP_Bool*            cutoff              /**< pointer to store whether the probing node can be cut off */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether the probing node can be cut off */
+   SCIP_Longint*         ndomredsfound       /**< pointer to store the number of domain reductions found, or NULL */
    );
 
 /** applies domain propagation on the probing sub problem, that was changed after SCIPstartProbing() was called;

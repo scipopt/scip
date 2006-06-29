@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_linesearchdiving.c,v 1.30 2006/06/20 20:24:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_linesearchdiving.c,v 1.31 2006/06/29 20:59:04 bzfpfend Exp $"
 
 /**@file   heur_linesearchdiving.c
  * @brief  linesearchdiving primal heuristic
@@ -414,7 +414,7 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
       }
 
       /* apply domain propagation */
-      SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff) );
+      SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, NULL) );
       if( cutoff )
          break;
 

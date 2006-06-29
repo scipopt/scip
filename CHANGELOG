@@ -48,6 +48,7 @@ interface:
            TRUE            TRUE          TRUE       TRUE  SCIP_HEURTIMING_AFTERNODE | SCIP_HEURTIMING_DURINGLPLOOP
 
 - new calls SCIPgetLPBInvCol() and SCIPgetLPBInvACol() to access the basis inverse and simplex tableau columnwise
+- new parameter "ndomredsfound" of SCIPpropagateProbing()
 
 plugins:
 - new primal heuristic "rens"
@@ -66,6 +67,7 @@ features:
   the name
 - improved presolving of and, or, and xor constraints
 - updated XPress interface to XPress-MP 17 (contributed by Michael Perregard)
+- improved performance of intdiving heuristic
 
 fixed bugs:
 - fixed bug with adding constraints with INITIAL=true and separating them afterwards, which lead to a second addition
