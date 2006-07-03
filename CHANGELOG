@@ -54,6 +54,9 @@ plugins:
 - new primal heuristic "rens"
 - new primal heuristic "mutation"
 - slightly modified crossover and rins heuristics
+- improved presolving of and, or, and xor constraints
+- improved performance of intdiving heuristic
+- new primal heuristic "veclendiving"
 
 parameters:
 - new parameter "reading/zplreader/changedir" to control behavior of path switching of ZIMPL file reader
@@ -65,9 +68,7 @@ features:
   or not
 - command shell now understands escape characters ",', and \ which makes it possible to read in files with spaces in
   the name
-- improved presolving of and, or, and xor constraints
 - updated XPress interface to XPress-MP 17 (contributed by Michael Perregard)
-- improved performance of intdiving heuristic
 
 fixed bugs:
 - fixed bug with adding constraints with INITIAL=true and separating them afterwards, which lead to a second addition
