@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intdiving.c,v 1.7 2006/06/29 20:59:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_intdiving.c,v 1.8 2006/07/03 07:00:54 bzfpfend Exp $"
 
 /**@file   heur_intdiving.c
  * @brief  LP diving heuristic that fixes variables with integral LP value
@@ -207,7 +207,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
       return SCIP_OKAY;
 
    /* don't dive two times at the same node */
-   if( SCIPgetLastDivenode(scip) == SCIPgetNNodes(scip) )
+   if( SCIPgetLastDivenode(scip) == SCIPgetNNodes(scip) && SCIPgetDepth(scip) > 0 )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTRUN;
@@ -280,6 +280,9 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
    /* get unfixed integer variables */
    SCIP_CALL( SCIPgetPseudoBranchCands(scip, &pseudocands, &nfixcands, NULL) );
 
+   SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing intdiving heuristic: depth=%d, %d non-fixed, dualbound=%g, searchbound=%g\n", 
+      SCIPgetNNodes(scip), SCIPgetDepth(scip), nfixcands, SCIPgetDualbound(scip), SCIPretransformObj(scip, searchbound));
+
    /* copy the pseudo cands into own array, because we want to reorder them */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &fixcands, pseudocands, nfixcands) );
 
@@ -290,6 +293,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
    {
       SCIP_VAR* var;
       SCIP_Real score;
+      int colveclen;
       int left;
       int right;
       int i;
@@ -297,10 +301,11 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
       assert(c >= nbinfixcands);
       var = fixcands[c];
       assert(SCIPvarIsIntegral(var));
+      colveclen = (SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN ? SCIPcolGetNNonz(SCIPvarGetCol(var)) : 0);
       if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
       {
          score = 500.0 * SCIPvarGetNCliques(var, TRUE) + 100.0 * SCIPvarGetNImpls(var, TRUE)
-            + SCIPgetVarAvgInferenceScore(scip, var);
+            + SCIPgetVarAvgInferenceScore(scip, var) + (SCIP_Real)colveclen/100.0;
 
          /* shift the non-binary variables one slot to the right */
          for( i = c; i > nbinfixcands; --i )
@@ -316,7 +321,8 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
       else
       {
          score = 5.0 * (SCIPvarGetNCliques(var, FALSE) + SCIPvarGetNCliques(var, TRUE))
-            + SCIPvarGetNImpls(var, FALSE) + SCIPvarGetNImpls(var, TRUE) + SCIPgetVarAvgInferenceScore(scip, var);
+            + SCIPvarGetNImpls(var, FALSE) + SCIPvarGetNImpls(var, TRUE) + SCIPgetVarAvgInferenceScore(scip, var)
+            + (SCIP_Real)colveclen/10000.0;
 
          /* put the new candidate in the slots after the binary candidates */
          left = nbinfixcands;
@@ -329,15 +335,16 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
       }
       fixcands[i] = var;
       fixcandscores[i] = score;
+      SCIPdebugMessage("  <%s>: ncliques=%d/%d, nimpls=%d/%d, inferencescore=%g, colveclen=%d  ->  score=%g\n",
+         SCIPvarGetName(var), SCIPvarGetNCliques(var, FALSE), SCIPvarGetNCliques(var, TRUE),
+         SCIPvarGetNImpls(var, FALSE), SCIPvarGetNImpls(var, TRUE), SCIPgetVarAvgInferenceScore(scip, var),
+         colveclen, score);
    }
    SCIPfreeBufferArray(scip, &fixcandscores);
 
    /* get LP objective value */
    lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    objval = SCIPgetLPObjval(scip);
-
-   SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing intdiving heuristic: depth=%d, %d non-fixed, dualbound=%g, searchbound=%g\n", 
-      SCIPgetNNodes(scip), SCIPgetDepth(scip), nfixcands, SCIPgetDualbound(scip), SCIPretransformObj(scip, searchbound));
 
    /* dive as long we are in the given objective, depth and iteration limits, but if possible, we dive at least with
     * the depth 10

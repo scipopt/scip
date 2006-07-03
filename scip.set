@@ -506,6 +506,10 @@ constraints/and/delayprop = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/and/delaypresol = FALSE
 
+# maximal number of presolving rounds with pairwise constraint comparison (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/and/maxpresolpairrounds = -1
+
 # priority of conflict handler <bounddisjunction>
 # [type: int, range: [-2147483648,2147483647], default: -3000000]
 conflict/bounddisjunction/priority = -3000000
@@ -801,6 +805,10 @@ constraints/xor/delayprop = FALSE
 # should presolving method be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/xor/delaypresol = FALSE
+
+# maximal number of presolving rounds with pairwise constraint comparison (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/xor/maxpresolpairrounds = -1
 
 # should model constraints be subject to aging?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -1379,8 +1387,8 @@ heuristics/intdiving/priority = -1003500
 heuristics/intdiving/freq = -1
 
 # frequency offset for calling primal heuristic <intdiving>
-# [type: int, range: [0,2147483647], default: 0]
-heuristics/intdiving/freqofs = 0
+# [type: int, range: [0,2147483647], default: 9]
+heuristics/intdiving/freqofs = 9
 
 # maximal depth level to call primal heuristic <intdiving> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -1865,6 +1873,54 @@ heuristics/simplerounding/freqofs = 0
 # maximal depth level to call primal heuristic <simplerounding> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 heuristics/simplerounding/maxdepth = -1
+
+# priority of heuristic <veclendiving>
+# [type: int, range: [-2147483648,2147483647], default: -1003100]
+heuristics/veclendiving/priority = -1003100
+
+# frequency for calling primal heuristic <veclendiving> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/veclendiving/freq = 10
+
+# frequency offset for calling primal heuristic <veclendiving>
+# [type: int, range: [0,2147483647], default: 4]
+heuristics/veclendiving/freqofs = 4
+
+# maximal depth level to call primal heuristic <veclendiving> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/veclendiving/maxdepth = -1
+
+# minimal relative depth to start diving
+# [type: real, range: [0,1], default: 0]
+heuristics/veclendiving/minreldepth = 0
+
+# maximal relative depth to start diving
+# [type: real, range: [0,1], default: 1]
+heuristics/veclendiving/maxreldepth = 1
+
+# maximal fraction of diving LP iterations compared to node LP iterations
+# [type: real, range: [0,1.79769313486232e+308], default: 0.05]
+heuristics/veclendiving/maxlpiterquot = 0.05
+
+# additional number of allowed LP iterations
+# [type: int, range: [0,2147483647], default: 1000]
+heuristics/veclendiving/maxlpiterofs = 1000
+
+# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed (0.0: no limit)
+# [type: real, range: [0,1], default: 0.8]
+heuristics/veclendiving/maxdiveubquot = 0.8
+
+# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+heuristics/veclendiving/maxdiveavgquot = 0
+
+# maximal UBQUOT when no solution was found yet (0.0: no limit)
+# [type: real, range: [0,1], default: 0.1]
+heuristics/veclendiving/maxdiveubquotnosol = 0.1
+
+# maximal AVGQUOT when no solution was found yet (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+heuristics/veclendiving/maxdiveavgquotnosol = 0
 
 # priority of propagator <pseudoobj>
 # [type: int, range: [-2147483648,2147483647], default: 0]
