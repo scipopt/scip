@@ -1607,8 +1607,8 @@ heuristics/objpscostdiving/depthfacnosol = 2
 heuristics/octane/priority = -1008000
 
 # frequency for calling primal heuristic <octane> (-1: never, 0: only at depth freqofs)
-# [type: int, range: [-1,2147483647], default: 10]
-heuristics/octane/freq = 10
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/octane/freq = -1
 
 # frequency offset for calling primal heuristic <octane>
 # [type: int, range: [0,2147483647], default: 0]
@@ -1634,17 +1634,21 @@ heuristics/octane/usefracspace = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/octane/useobjray = TRUE
 
-# should the average of the non-basics be used as one ray direction?
+# should the average of the basic cone be used as one ray direction?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/octane/useavgray = TRUE
 
 # should the difference between the root solution and the current LP solution be used as one ray direction?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-heuristics/octane/usediffray = TRUE
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/octane/usediffray = FALSE
 
-# should the difference between the current LP solution and the root solution be used as one ray direction?
+# should the weighted average of the basic cone be used as one ray direction?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
-heuristics/octane/usediffbwray = TRUE
+heuristics/octane/useavgwgtray = TRUE
+
+# should the weighted average of the nonbasic cone be used as one ray direction?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/octane/useavgnbray = TRUE
 
 # priority of heuristic <pscostdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1002000]
@@ -1719,8 +1723,8 @@ heuristics/rens/minfixingrate = 0.5
 heuristics/rens/maxnodes = 5000
 
 # should general integers get binary bounds [floor(.),ceil(.)] ?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-heuristics/rens/binarybounds = FALSE
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/rens/binarybounds = TRUE
 
 # number of nodes added to the contingent of the total nodes
 # [type: longint, range: [0,9223372036854775807], default: 500]

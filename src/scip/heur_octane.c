@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.11 2006/07/06 19:46:20 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.12 2006/07/06 20:00:51 bzfpfend Exp $"
 
 /**@file   heur_octane.c
  * @brief  octane primal heuristic based on Balas, Ceria, Dawande, Margot, and Pataki
@@ -274,7 +274,7 @@ SCIP_RETCODE generateAverageRay(
    SCIP*                 scip,               /**< SCIP data structure                   */
    SCIP_Real*            a,                  /**< shooting ray                          */
    SCIP_VAR**            subspacevars,       /**< pointer to fractional space variables */
-   int                   nsubspacevars       /**< dimension of fractional space         */
+   int                   nsubspacevars,      /**< dimension of fractional space         */
    SCIP_Bool             weighted            /**< should the rays be weighted?          */
    )
 {
@@ -366,7 +366,6 @@ SCIP_RETCODE generateAverageNBRay(
    int*                  fracspace,          /**< index set of fractional variables     */ 
    SCIP_VAR**            subspacevars,       /**< pointer to fractional space variables */
    int                   nsubspacevars       /**< dimension of fractional space         */
-   SCIP_Bool             weighted            /**< should the rays be weighted?          */
    )
 {
    SCIP_ROW** rows;
@@ -866,14 +865,14 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       case 4: 
          if( heurdata->useavgwgtray )
          {
-            SCIP_CALL( generateAverageRay(scip,a,fracspace,subspacevars,nsubspacevars,TRUE) );
+            SCIP_CALL( generateAverageRay(scip,a,subspacevars,nsubspacevars,TRUE) );
             raycreated = TRUE;
          }
          break;
       case 0:
          if( heurdata->useavgray )
          {
-            SCIP_CALL( generateAverageRay(scip,a,fracspace,subspacevars,nsubspacevars,FALSE) );
+            SCIP_CALL( generateAverageRay(scip,a,subspacevars,nsubspacevars,FALSE) );
             raycreated = TRUE;
          }         
          break;

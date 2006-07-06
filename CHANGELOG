@@ -57,11 +57,21 @@ plugins:
 - improved presolving of and, or, and xor constraints
 - improved performance of intdiving heuristic
 - new primal heuristic "veclendiving"
+- improved heuristic "octane"
+- improved heuristic "shifting"
+- slightly modified rens and localbranching heuristics
 
 parameters:
 - new parameter "reading/zplreader/changedir" to control behavior of path switching of ZIMPL file reader
 - new parameter "reading/zplreader/parameters" to pass additional parameters to ZIMPL
 - new parameter "propagating/abortoncutoff"
+- disabled octane heuristic in default settings
+- changed default value of "heuristics/octane/usediffray" to FALSE
+- new parameter "heuristics/octane/useavgwgtray"
+- removed parameter "heuristics/octane/usediffbwray"
+- renamed parameter "heuristics/octane/useavgray" to "heuristics/octane/useavgnbray"
+- new parameter "heuristics/octane/useavgray"
+- changed default value of "heuristics/rens/binarybounds" to TRUE
 
 features:
 - primal heuristics that run before the node is solved now know already whether the LP will be solved at the current node
