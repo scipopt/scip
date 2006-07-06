@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shifting.c,v 1.4 2006/06/20 20:24:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_shifting.c,v 1.5 2006/07/06 19:46:20 bzfberth Exp $"
 
 /**@file   heur_shifting.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities and shifts continuous variables
@@ -252,13 +252,14 @@ SCIP_RETCODE selectShifting(
 
       /* calculate the score of the shifting (prefer smaller values) */
       if( isfrac )
-         shiftscore = 0.0;
+         shiftscore = increase ? -1.0 / (SCIPvarGetNLocksUp(var) + 1.0) : 
+            -1.0 / (SCIPvarGetNLocksDown(var) + 1.0);
       else
       {
          if( increase )
-            shiftscore = 1.0 + ndecreases[probindex]/increaseweight;
+            shiftscore = ndecreases[probindex]/increaseweight;
          else
-            shiftscore = 1.0 + nincreases[probindex]/increaseweight;
+            shiftscore = nincreases[probindex]/increaseweight;
          if( isinteger )
             shiftscore += 1.0;
       }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.4 2006/06/20 20:24:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_mutation.c,v 1.5 2006/07/06 19:46:20 bzfberth Exp $"
 
 /**@file   heur_mutation.c
  * @brief  mutation primal heuristic
@@ -60,10 +60,10 @@ struct SCIP_HeurData
    int                   minnodes;          /**< minimum number of nodes to regard in the subproblem                 */
    SCIP_Real             fixingrate;        /**< minimum percentage of integer variables that have to be fixed       */
    int                   nwaitingnodes;     /**< number of nodes without incumbent change that heuristic should wait */
-   SCIP_Real             minimprove;        /**< factor by which RINS should at least improve the incumbent          */
-   SCIP_Longint          usednodes;         /**< nodes already used by RINS in earlier calls                         */
+   SCIP_Real             minimprove;        /**< factor by which Mutation should at least improve the incumbent          */
+   SCIP_Longint          usednodes;         /**< nodes already used by Mutation in earlier calls                         */
    SCIP_Real             nodesquot;         /**< subproblem nodes in relation to nodes of the original problem       */
-   SCIP_Real             nsuccesses;        /**< number of RINS-calls, where a real improvement was achieved         */
+   SCIP_Real             nsuccesses;        /**< number of Mutation-calls, where a real improvement was achieved         */
    unsigned int          randseed;           /**< seed value for random number generator */
 };
 
@@ -409,6 +409,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
 
    /* forbid recursive call of heuristics solving subMIPs */
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) ); 
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1) ); 
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/mutation/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );

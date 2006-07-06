@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.4 2006/06/20 20:24:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.5 2006/07/06 19:46:20 bzfberth Exp $"
 
 /**@file   heur_rens.c
  * @brief  RENS primal heuristic
@@ -39,7 +39,7 @@
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
 
-#define DEFAULT_BINARYBOUNDS  FALSE     /* should general integers get binary bounds [floor(.),ceil(.)] ?      */ 
+#define DEFAULT_BINARYBOUNDS  TRUE      /* should general integers get binary bounds [floor(.),ceil(.)] ?      */ 
 #define DEFAULT_MAXNODES      5000LL    /* maximum number of nodes to regard in the subproblem                 */
 #define DEFAULT_MINFIXINGRATE 0.5       /* minimum percentage of integer variables that have to be fixed       */
 #define DEFAULT_MINIMPROVE    0.01      /* factor by which RENS should at least improve the incumbent          */
@@ -485,8 +485,9 @@ SCIP_DECL_HEUREXEC(heurExecRens)
          if( success )
             *result = SCIP_FOUNDSOL;
       }
+
    }
-   
+
    /* free subproblem */
    SCIP_CALL( SCIPfreeTransform(subscip) );
    for( i = 0; i < nvars; i++ )

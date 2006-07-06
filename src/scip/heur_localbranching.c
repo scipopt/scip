@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.14 2006/06/20 20:24:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.15 2006/07/06 19:46:20 bzfberth Exp $"
 
 /**@file   heur_localbranching.c
  * @brief  localbranching primal heuristic
@@ -445,6 +445,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1) );
 
    /* disable heuristics which aim to feasibility instead of optimality */
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/feaspump/freq", -1) );

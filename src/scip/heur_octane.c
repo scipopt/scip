@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.10 2006/06/29 20:59:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.11 2006/07/06 19:46:20 bzfberth Exp $"
 
 /**@file   heur_octane.c
  * @brief  octane primal heuristic based on Balas, Ceria, Dawande, Margot, and Pataki
@@ -32,7 +32,7 @@
 #define HEUR_DESC             "octane primal heuristic for pure {0;1}-problems based on Balas et al."
 #define HEUR_DISPCHAR         'O'
 #define HEUR_PRIORITY         -1008000
-#define HEUR_FREQ             10
+#define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
@@ -47,11 +47,13 @@ struct SCIP_HeurData
    SCIP_SOL* sol;                 /**< working solution */
    int f_max;                     /**< {0,1}-points to be checked */
    int f_first;                   /**< {0,1}-points to be generated at first in order to check whether restart is neccessary */
+   int lastrule;                  /**< last ray selection rule that was performed */
    SCIP_Bool usefracspace;        /**< use heuristic for the space of fractional variables or for the whole space? */
    SCIP_Bool useobjray;           /**< should the inner normal of the objective be used as one ray direction? */
-   SCIP_Bool useavgray;           /**< should the inner normal of the objective be used as one ray direction? */
+   SCIP_Bool useavgray;           /**< should the average ray of the basic cone be used as one ray direction? */
    SCIP_Bool usediffray;          /**< should difference between root sol and current LP sol be used as one ray direction? */
-   SCIP_Bool usediffbwray;        /**< should difference between current sol and root sol be used as one ray direction?  */
+   SCIP_Bool useavgwgtray;        /**< should the weighted average ray of the basic cone be used as one ray direction? */
+   SCIP_Bool useavgnbray;         /**< should the average ray of the nonbasic cone be used as one ray direction? */
 };
 
 /*
@@ -60,7 +62,11 @@ struct SCIP_HeurData
 
 /** boring method, only swapping two elements of a SCIP_Real array */
 static 
-void swapreal(SCIP_Real* arr, int i, int j)
+void swapreal(
+   SCIP_Real*            arr,                /* array in which the two elements should be swapped */
+   int                   i,                  /* position of the first element                     */
+   int                   j                   /* position of the second element                    */
+   )
 {
    SCIP_Real tmp;
    tmp = arr[i]; 
@@ -70,7 +76,11 @@ void swapreal(SCIP_Real* arr, int i, int j)
 
 /** boring method, only swapping two elements of a SCIP_VAR* array */
 static 
-void swapvar(SCIP_VAR** arr, int i, int j)
+void swapvar(
+   SCIP_VAR**            arr,                /* array in which the two elements should be swapped */
+   int                   i,                  /* position of the first element                     */
+   int                   j                   /* position of the second element                    */
+   ) 
 {
    SCIP_VAR* tmp;
    tmp = arr[i]; 
@@ -80,7 +90,12 @@ void swapvar(SCIP_VAR** arr, int i, int j)
 
 /** boring method, only swapping two elements of a SCIP_Bool array */
 static 
-void swapbool(SCIP_Bool* arr, int i, int j)
+void swapbool(
+   SCIP_Bool*            arr,                /**< array in which the two elements should be swapped */
+   int                   i,                  /**< position of the first element                     */
+   int                   j                   /**< position of the second element                    */
+   )  
+   
 {
    SCIP_Bool tmp;
    tmp = arr[i]; 
@@ -88,11 +103,17 @@ void swapbool(SCIP_Bool* arr, int i, int j)
    arr[j] = tmp;
 }
 
-/** quicksort for array v in range l..r using v[r] as pivot and sorting a, x and perm the same way as v,
- *  where perm should be used to store the sorting permutation
- */
+/** quicksort for array v in range l..r using v[r] as pivot and sorting a, x, sign and subspacevars the same way as v */
 static 
-void resortCoords(SCIP_Real* v, SCIP_Real* a, SCIP_Real* x, SCIP_Bool* sign, SCIP_VAR** subspacevars, int l, int r)
+void resortCoords(
+   SCIP_Real*            v,                  /**< the array which should be sorted */
+   SCIP_Real*            a,                  /**< array which is permuted          */
+   SCIP_Real*            x,                  /**< array which is permuted          */ 
+   SCIP_Bool*            sign,               /**< array which is permuted          */ 
+   SCIP_VAR**            subspacevars,       /**< array which is permuted          */
+   int                   l,                  /**< left end                         */
+   int                   r                   /**< right end                        */
+   )
 {
    int i;
    int j;
@@ -138,8 +159,17 @@ void resortCoords(SCIP_Real* v, SCIP_Real* a, SCIP_Real* x, SCIP_Bool* sign, SCI
 
 /** tries to insert the facet obtained from facet i flipped in component j into the list of the fmax nearest facets */
 static 
-void tryToInsert(SCIP* scip, SCIP_Bool** facets, SCIP_Real* lambda, int i, int j, int f_max, int nsubspacevars,
-   SCIP_Real lam, int* nfacets)
+void tryToInsert(
+   SCIP*                 scip,               /**< SCIP data structure                        */
+   SCIP_Bool**           facets,             /**< facets got so far                          */                           
+   SCIP_Real*            lambda,             /**< distances of the facets                    */
+   int                   i,                  /**< current facet                              */
+   int                   j,                  /**< component to flip                          */ 
+   int                   f_max,              /**< maximal number of facets to create         */
+   int                   nsubspacevars,      /**< dimension of the fractional space          */
+   SCIP_Real             lam,                /**< distance of the current facet              */
+   int*                  nfacets             /**< number of facets                           */
+   )
 {
    SCIP_Bool* lastfacet;
    int k;
@@ -166,8 +196,14 @@ void tryToInsert(SCIP* scip, SCIP_Bool** facets, SCIP_Real* lambda, int i, int j
 
 /** constructs a solution from a given facet paying attention to the transformations made at the beginning of OCTANE */
 static 
-SCIP_RETCODE getSolFromFacet(SCIP* scip, SCIP_Bool* facet, SCIP_SOL* sol, SCIP_Bool* sign, SCIP_VAR** subspacevars, 
-   int nsubspacevars)
+SCIP_RETCODE getSolFromFacet(
+   SCIP*                 scip,               /**< SCIP data structure                   */
+   SCIP_Bool*            facet,              /**< current facet                         */
+   SCIP_SOL*             sol,                /**< solution to create                    */
+   SCIP_Bool*            sign,               /**< marker for retransfomation            */
+   SCIP_VAR**            subspacevars,       /**< pointer to fractional space variables */   
+   int                   nsubspacevars       /**< dimension of fractional space         */   
+   )
 {
    int i;
 
@@ -193,54 +229,145 @@ SCIP_RETCODE getSolFromFacet(SCIP* scip, SCIP_Bool* facet, SCIP_SOL* sol, SCIP_B
    return SCIP_OKAY;
 }
 
-/** generates the direction of the shooting ray as th inner normal of the objective function */
+/** generates the direction of the shooting ray as the inner normal of the objective function */
 static
-SCIP_RETCODE generateObjectiveRay(SCIP* scip, SCIP_Real* a, SCIP_VAR** subspacevars, int nsubspacevars)
+SCIP_RETCODE generateObjectiveRay(
+   SCIP*                 scip,               /**< SCIP data structure                   */
+   SCIP_Real*            a,                  /**< shooting ray                          */
+   SCIP_VAR**            subspacevars,       /**< pointer to fractional space variables */
+   int                   nsubspacevars       /**< dimension of fractional space         */
+   )
 {
    int i;
      
    assert(a != NULL);
    assert(subspacevars != NULL);
-
    for( i = 0; i < nsubspacevars; i++ )
       a[i] = SCIPvarGetObj(subspacevars[i]);
-   
    return SCIP_OKAY;
 }
 
 /** generates the direction of the shooting ray as the difference between the root and the current LP solution */
 static
-SCIP_RETCODE generateDifferenceRay(SCIP* scip, SCIP_Real* a, SCIP_VAR** subspacevars, int nsubspacevars)
+SCIP_RETCODE generateDifferenceRay(
+   SCIP*                 scip,               /**< SCIP data structure                   */
+   SCIP_Real*            a,                  /**< shooting ray                          */
+   SCIP_VAR**            subspacevars,       /**< pointer to fractional space variables */
+   int                   nsubspacevars       /**< dimension of fractional space         */
+   )
 {
    int i;
      
    assert(a != NULL);
    assert(subspacevars != NULL);
-
+   
    for( i = 0; i < nsubspacevars; i++ )
-      a[i] = SCIPvarGetRootSol(subspacevars[i]) - SCIPvarGetLPSol(subspacevars[i]);
+      a[i] = SCIPvarGetLPSol(subspacevars[i]) - SCIPvarGetRootSol(subspacevars[i]);
+
+   return SCIP_OKAY;
+}
+
+
+/** generates the direction of the shooting ray as the average of the extreme rays of the basic cone */
+static
+SCIP_RETCODE generateAverageRay(
+   SCIP*                 scip,               /**< SCIP data structure                   */
+   SCIP_Real*            a,                  /**< shooting ray                          */
+   SCIP_VAR**            subspacevars,       /**< pointer to fractional space variables */
+   int                   nsubspacevars       /**< dimension of fractional space         */
+   SCIP_Bool             weighted            /**< should the rays be weighted?          */
+   )
+{
+   SCIP_COL** cols;
+   SCIP_ROW** rows;  
+   SCIP_Real* tableaucol;
+   SCIP_Real** tableaurows;
+   SCIP_Real* rownorm;
+   SCIP_Real rowweight;
+   
+   int nrows;   
+   int ncols;     
+   int i;
+   int j;
+
+   assert(a != NULL);
+    
+   /* get data */  
+   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
+   SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
+
+   /* allocate memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &tableaucol, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tableaurows, nsubspacevars) );
+   for( j = 0; j < nsubspacevars; ++j )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &tableaurows[j], nrows) );
+   }
+   SCIP_CALL( SCIPallocBufferArray(scip, &rownorm, nrows) );
+   for( i = 0; i < nrows; ++i )
+   {
+      rownorm[i] = 0;
+   }
+
+   /* get the relevant columns of the simplex tableau */
+   for( j = 0; j < nsubspacevars; ++j )
+   {
+      SCIP_CALL( SCIPgetLPBInvACol(scip,SCIPvarGetProbindex(subspacevars[j]),tableaucol) );
+      for( i = 0; i < nrows; ++i )
+      { 
+         tableaurows[j][i] = tableaucol[i];
+         rownorm[i] += tableaucol[i]*tableaucol[i];
+      }
+   }
+      
+   /* take average over all rows of the tableau */
+   for( i = 0; i < nrows; ++i )
+   {
+      if( SCIPisFeasZero(scip,rownorm[i]) )
+         continue;
+      else
+         rownorm[i] = SQRT( rownorm[i] );
+      
+      rowweight = 0.0;
+      if(weighted)
+      {
+         rowweight = SCIProwGetDualsol(rows[i]);
+         if( SCIPisFeasZero(scip, rowweight) )
+            continue;
+      }
+      else
+         rowweight = 1.0;
+      
+      for( j = 0; j < nsubspacevars; ++j )
+      { 
+         a[j] += tableaurows[j][i] / (rownorm[i]*rowweight); 
+         assert(SCIP_REAL_MIN <= a[j] && a[j]  <= SCIP_REAL_MAX);
+      }
+   }
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &rownorm);
+   for( j = 0; j < nsubspacevars; ++j )
+   {
+      SCIPfreeBufferArray(scip, &tableaurows[j]);
+   }
+   SCIPfreeBufferArray(scip, &tableaurows);
+   SCIPfreeBufferArray(scip, &tableaucol);
    
    return SCIP_OKAY;
 }
 
-/** generates the direction of the shooting ray as the difference between the current and the root LP solution */
-static
-SCIP_RETCODE generateDifferenceBackwRay(SCIP* scip, SCIP_Real* a, SCIP_VAR** subspacevars, int nsubspacevars)
-{
-   int i;
-     
-   assert(a != NULL);
-   assert(subspacevars != NULL);
-
-   for( i = 0; i < nsubspacevars; i++ )
-      a[i] = SCIPvarGetLPSol(subspacevars[i]) - SCIPvarGetRootSol(subspacevars[i]);
-       
-   return SCIP_OKAY;
-}
 
 /** generates the direction of the shooting ray as the average of the normalized non-basic vars and rows */
 static
-SCIP_RETCODE generateAverageRay(SCIP* scip, SCIP_Real* a, int* fracspace, SCIP_VAR** subspacevars, int nsubspacevars)
+SCIP_RETCODE generateAverageNBRay(
+   SCIP*                 scip,               /**< SCIP data structure                   */
+   SCIP_Real*            a,                  /**< shooting ray                          */
+   int*                  fracspace,          /**< index set of fractional variables     */ 
+   SCIP_VAR**            subspacevars,       /**< pointer to fractional space variables */
+   int                   nsubspacevars       /**< dimension of fractional space         */
+   SCIP_Bool             weighted            /**< should the rays be weighted?          */
+   )
 {
    SCIP_ROW** rows;
    SCIP_COL** cols;
@@ -272,13 +399,14 @@ SCIP_RETCODE generateAverageRay(SCIP* scip, SCIP_Real* a, int* fracspace, SCIP_V
    /* add up non-basic rows */
    for( i = 0; i < nrows; i++ )
    {
-      SCIP_Real dualsol = SCIProwGetDualsol(rows[i]);
+      SCIP_Real dualsol;
       SCIP_Real factor; 
       SCIP_Real* coeffs;
       SCIP_Real rownorm;
       int j;
       int nnonz;
 
+      dualsol = SCIProwGetDualsol(rows[i]);
       if( SCIPisFeasPositive(scip, dualsol) )
          factor = 1.0;
       else if( SCIPisFeasNegative(scip, dualsol) )
@@ -319,14 +447,18 @@ SCIP_RETCODE generateAverageRay(SCIP* scip, SCIP_Real* a, int* fracspace, SCIP_V
             assert(SCIP_REAL_MIN <= a[f] && a[f]  <= SCIP_REAL_MAX);
          }
       }
-
    }
    return SCIP_OKAY;
 }
 
 /** generates the starting point for the shooting ray in original coordinates */
 static
-SCIP_RETCODE generateStartingPoint(SCIP* scip, SCIP_Real* x, SCIP_VAR** subspacevars, int nsubspacevars)
+SCIP_RETCODE generateStartingPoint(
+   SCIP*                 scip,               /**< SCIP data structure                   */
+   SCIP_Real*            x,                  /**< origin of the shooting ray            */
+   SCIP_VAR**            subspacevars,       /**< pointer to fractional space variables */
+   int                   nsubspacevars       /**< dimension of fractional space         */
+   )
 {
    int i;
 
@@ -343,7 +475,12 @@ SCIP_RETCODE generateStartingPoint(SCIP* scip, SCIP_Real* x, SCIP_VAR** subspace
  *  transforms a and x by reflections stored in sign 
  */
 static
-void flipCoords(SCIP_Real* x, SCIP_Real* a, SCIP_Bool* sign, int nsubspacevars)
+void flipCoords(
+   SCIP_Real*            x,                  /**< origin of the shooting ray            */
+   SCIP_Real*            a,                  /**< direction of the shooting ray         */
+   SCIP_Bool*            sign,               /**< marker for flipped coordinates        */
+   int                   nsubspacevars       /**< dimension of fractional space         */
+   )
 {  
    int i;
    assert(x != NULL);
@@ -367,7 +504,18 @@ void flipCoords(SCIP_Real* x, SCIP_Real* a, SCIP_Bool* sign, int nsubspacevars)
  *  or a nonincreasing - to + flip and tests whether they are among the fmax nearest ones
  */
 static
-void generateNeighborFacets(SCIP* scip, SCIP_Bool** facets, SCIP_Real* lambda, SCIP_Real* x, SCIP_Real* a, SCIP_Real* v, int nsubspacevars, int f_max, int i, int* nfacets)
+void generateNeighborFacets(
+   SCIP*                 scip,               /**< SCIP data structure                   */
+   SCIP_Bool**           facets,             /**< facets got so far                     */
+   SCIP_Real*            lambda,             /**< distances of the facets               */
+   SCIP_Real*            x,                  /**< origin of the shooting ray            */
+   SCIP_Real*            a,                  /**< direction of the shooting ray         */
+   SCIP_Real*            v,                  /**< array by which coordinates are sorted */
+   int                   nsubspacevars,      /**< dimension of fractional space         */
+   int                   f_max,              /**< maximal number of facets to create    */
+   int                   i,                  /**< current facet                         */
+   int*                  nfacets             /**< number of facets                      */
+   )
 {
    SCIP_Real p;
    SCIP_Real q;
@@ -448,7 +596,11 @@ void generateNeighborFacets(SCIP* scip, SCIP_Bool** facets, SCIP_Real* lambda, S
 
 /** tests, whether an array is completly zero */
 static
-SCIP_Bool isZero(SCIP* scip, SCIP_Real* a, int nsubspacevars)
+SCIP_Bool isZero(
+   SCIP*                 scip,               /**< SCIP data structure                   */
+   SCIP_Real*            a,                  /**< array to be checked                   */
+   int                   nsubspacevars       /**< size of array                         */
+   )
 {
    int i;
    for( i = 0; i < nsubspacevars; i++)
@@ -456,9 +608,6 @@ SCIP_Bool isZero(SCIP* scip, SCIP_Real* a, int nsubspacevars)
          return FALSE;
    return TRUE;
 }
-
-
-
 
 
 /*
@@ -503,6 +652,7 @@ SCIP_DECL_HEURINIT(heurInitOctane)
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
    /* initialize data */
+   heurdata->lastrule=0;
 
    return SCIP_OKAY;
 }
@@ -530,7 +680,6 @@ SCIP_DECL_HEUREXIT(heurExitOctane)
 
 #define heurInitsolOctane NULL
 #define heurExitsolOctane NULL
-
 
 /** execution method of primal heuristic */
 static
@@ -568,10 +717,16 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    int j;                /* counter */
    int f_max;             /* {0,1}-points to be checked */
    int f_first;           /* {0,1}-points to be generated at first in order to check whether a restart is neccessary */     
-   int nrun;             /* counter */
-
+   int r;             /* counter */
+   int firstrule;
+ 
    int* perm;            /* stores the way in which the coordinates were permuted */
    int* fracspace;       /* maps the variables of the subspace to the original variables */
+
+   SCIP_Longint ncalls;
+   SCIP_Longint nsolsfound;
+   SCIP_Longint nbestsolsfound;
+   SCIP_Longint nnodes;
 
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -591,6 +746,14 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
 
    /* OCTANE is for use in 0-1 programs only */
    if( nvars != nbinvars )
+      return SCIP_OKAY;
+
+   /* don't call heuristic, if it was not successful enough in the past */
+   ncalls = SCIPheurGetNCalls(heur);
+   nsolsfound = SCIPheurGetNSolsFound(heur);
+   nbestsolsfound = SCIPheurGetNBestSolsFound(heur);
+   nnodes = SCIPgetNNodes(scip);
+   if( nnodes % ((ncalls/10)/(nsolsfound+9*nbestsolsfound+1)+1) != 0 )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPgetLPBranchCands(scip, &fracvars, NULL, NULL, &nfracvars, NULL) );
@@ -665,8 +828,10 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    SCIP_CALL( generateStartingPoint(scip,x,subspacevars,nsubspacevars) );
    for( i = 0; i < nsubspacevars; i++ )
       x[i] -= 0.5;
-
-   for( nrun = 1; nrun <= 4; nrun++ )
+   
+   firstrule = heurdata->lastrule;
+   firstrule++;
+   for( r = firstrule; r <= firstrule+10; r++ )
    {
       SCIP_ROW** rows;
      
@@ -675,35 +840,42 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       raycreated = FALSE;
       
       /* generate shooting ray in original coordinates by certain rules */
-      switch(nrun)
+      switch(r % 5)
       {
       case 1:
+         if( heurdata->useavgnbray )
+         {
+            SCIP_CALL( generateAverageNBRay(scip,a,fracspace,subspacevars,nsubspacevars) );
+            raycreated = TRUE;
+         } 
+         break;        
+      case 2:
          if( heurdata->useobjray )
          {
             SCIP_CALL( generateObjectiveRay(scip,a,subspacevars,nsubspacevars) );
             raycreated = TRUE;
          }
          break;
-      case 2:
+      case 3:
          if( heurdata->usediffray )
          {
             SCIP_CALL( generateDifferenceRay(scip,a,subspacevars,nsubspacevars) );
             raycreated = TRUE;
          }
-         break;
-      case 3:
-         if( heurdata->useavgray )
-         {
-            SCIP_CALL( generateAverageRay(scip,a,fracspace,subspacevars,nsubspacevars) );
-            raycreated = TRUE;
-         }         
-         break;
+         break;    
       case 4: 
-         if( heurdata->usediffbwray )
+         if( heurdata->useavgwgtray )
          {
-            SCIP_CALL( generateDifferenceBackwRay(scip,a,subspacevars,nsubspacevars) );
+            SCIP_CALL( generateAverageRay(scip,a,fracspace,subspacevars,nsubspacevars,TRUE) );
             raycreated = TRUE;
          }
+         break;
+      case 0:
+         if( heurdata->useavgray )
+         {
+            SCIP_CALL( generateAverageRay(scip,a,fracspace,subspacevars,nsubspacevars,FALSE) );
+            raycreated = TRUE;
+         }         
          break;
       default:
          break;
@@ -883,6 +1055,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       }
       
    }
+   heurdata->lastrule = r;
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &first_sols);
@@ -945,18 +1118,23 @@ SCIP_RETCODE SCIPincludeHeurOctane(
 
    SCIP_CALL( SCIPaddBoolParam(scip, 
          "heuristics/octane/useavgray",
-         "should the average of the non-basics be used as one ray direction?",
+         "should the average of the basic cone be used as one ray direction?",
          &heurdata->useavgray, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, 
          "heuristics/octane/usediffray",
          "should the difference between the root solution and the current LP solution be used as one ray direction?",
-         &heurdata->usediffray, TRUE, NULL, NULL) );
+         &heurdata->usediffray, FALSE, NULL, NULL) );
+ 
+   SCIP_CALL( SCIPaddBoolParam(scip, 
+         "heuristics/octane/useavgwgtray",
+         "should the weighted average of the basic cone be used as one ray direction?",
+         &heurdata->useavgwgtray, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, 
-         "heuristics/octane/usediffbwray",
-         "should the difference between the current LP solution and the root solution be used as one ray direction?",
-         &heurdata->usediffbwray, TRUE, NULL, NULL) );
-
+         "heuristics/octane/useavgnbray",
+         "should the weighted average of the nonbasic cone be used as one ray direction?",
+         &heurdata->useavgnbray, TRUE, NULL, NULL) );
+   
    return SCIP_OKAY;
 }

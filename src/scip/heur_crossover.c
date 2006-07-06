@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.14 2006/06/20 20:24:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.15 2006/07/06 19:46:20 bzfberth Exp $"
 
 /**@file   heur_crossover.c
  * @brief  crossover primal heuristic
@@ -814,6 +814,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 
    /* forbid recursive call of heuristics solving subMIPs */
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
 
