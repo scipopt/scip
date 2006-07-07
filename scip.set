@@ -1607,8 +1607,8 @@ heuristics/objpscostdiving/depthfacnosol = 2
 heuristics/octane/priority = -1008000
 
 # frequency for calling primal heuristic <octane> (-1: never, 0: only at depth freqofs)
-# [type: int, range: [-1,2147483647], default: -1]
-heuristics/octane/freq = -1
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/octane/freq = 10
 
 # frequency offset for calling primal heuristic <octane>
 # [type: int, range: [0,2147483647], default: 0]

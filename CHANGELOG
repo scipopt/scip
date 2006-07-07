@@ -65,7 +65,6 @@ parameters:
 - new parameter "reading/zplreader/changedir" to control behavior of path switching of ZIMPL file reader
 - new parameter "reading/zplreader/parameters" to pass additional parameters to ZIMPL
 - new parameter "propagating/abortoncutoff"
-- disabled octane heuristic in default settings
 - changed default value of "heuristics/octane/usediffray" to FALSE
 - new parameter "heuristics/octane/useavgwgtray"
 - removed parameter "heuristics/octane/usediffbwray"
