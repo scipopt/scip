@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.38 2006/06/23 09:09:47 bzfpfend Exp $
+# $Id: check.awk,v 1.39 2006/07/12 13:08:45 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -87,7 +87,7 @@ BEGIN {
 /=unkn=/ { solstatus[$2] = "unkn"; }               # no feasible solution known
 /^@01/ { 
     n  = split ($2, a, "/");
-    split(a[n], b, ".");
+    m = split(a[n], b, ".");
     prob = b[1];
     if( b[m] == "gz" || b[m] == "z" || b[m] == "GZ" || b[m] == "Z" )
        m--;
