@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.13 2006/07/07 11:01:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.14 2006/07/17 13:57:30 bzfpfend Exp $"
 
 /**@file   heur_octane.c
  * @brief  octane primal heuristic based on Balas, Ceria, Dawande, Margot, and Pataki
@@ -32,7 +32,7 @@
 #define HEUR_DESC             "octane primal heuristic for pure {0;1}-problems based on Balas et al."
 #define HEUR_DISPCHAR         'O'
 #define HEUR_PRIORITY         -1008000
-#define HEUR_FREQ             10
+#define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE

@@ -71,6 +71,7 @@ parameters:
 - renamed parameter "heuristics/octane/useavgray" to "heuristics/octane/useavgnbray"
 - new parameter "heuristics/octane/useavgray"
 - changed default value of "heuristics/rens/binarybounds" to TRUE
+- changed default value of "heuristics/octane/freq" to -1 in order to deactivate Octane
 
 features:
 - primal heuristics that run before the node is solved now know already whether the LP will be solved at the current node

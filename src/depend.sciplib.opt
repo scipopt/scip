@@ -689,11 +689,11 @@ $(LIBOBJDIR)/scip/scipdefplugins.o: src/scip/scipdefplugins.c \
   src/scip/presol_dualfix.h src/scip/presol_implics.h \
   src/scip/presol_inttobinary.h src/scip/presol_probing.h \
   src/scip/presol_trivial.h src/scip/prop_pseudoobj.h \
-  src/scip/prop_rootredcost.h src/scip/reader_cnf.h src/scip/reader_lp.h \
-  src/scip/reader_mps.h src/scip/reader_sol.h src/scip/reader_zpl.h \
-  src/scip/sepa_clique.h src/scip/sepa_cmir.h src/scip/sepa_gomory.h \
-  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h \
-  src/scip/sepa_redcost.h src/scip/sepa_strongcg.h \
+  src/scip/prop_rootredcost.h src/scip/reader_cnf.h src/scip/reader_fix.h \
+  src/scip/reader_lp.h src/scip/reader_mps.h src/scip/reader_sol.h \
+  src/scip/reader_zpl.h src/scip/sepa_clique.h src/scip/sepa_cmir.h \
+  src/scip/sepa_gomory.h src/scip/sepa_impliedbounds.h \
+  src/scip/sepa_intobj.h src/scip/sepa_redcost.h src/scip/sepa_strongcg.h \
   src/scip/scipdefplugins.h src/scip/debug.h
 $(LIBOBJDIR)/scip/scipshell.o: src/scip/scipshell.c src/scip/scip.h src/scip/def.h \
   src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \

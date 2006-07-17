@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.34 2006/06/06 13:51:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.35 2006/07/17 13:57:30 bzfpfend Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -485,15 +485,11 @@ SCIP_RETCODE SCIPdialoghdlrGetWord(
          /* if the next character is a space, a ", or a ', read next character as it is;
           * otherwise, treat the \ as normal character
           */
-         if( dialoghdlr->buffer[dialoghdlr->bufferpos] == ' '
-            || dialoghdlr->buffer[dialoghdlr->bufferpos] == '"'
-            || dialoghdlr->buffer[dialoghdlr->bufferpos] == '\'' )
+         if( dialoghdlr->buffer[dialoghdlr->bufferpos+1] == ' '
+            || dialoghdlr->buffer[dialoghdlr->bufferpos+1] == '"'
+            || dialoghdlr->buffer[dialoghdlr->bufferpos+1] == '\'' )
          {
             dialoghdlr->bufferpos++;
-            dialoghdlr->buffer[pos] = dialoghdlr->buffer[dialoghdlr->bufferpos];
-            pos++;
-            dialoghdlr->bufferpos++;
-            break;
          }
          /*lint -fallthrough*/
       default:

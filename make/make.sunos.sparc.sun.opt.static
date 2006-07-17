@@ -1,6 +1,8 @@
-#--- $Id: make.sunos.sparc.sun.opt.static,v 1.5 2006/05/23 10:54:45 bzfpfend Exp $
+#--- $Id: make.sunos.sparc.sun.opt.static,v 1.6 2006/07/17 13:57:29 bzfpfend Exp $
 CC		=	cc
 CXX		=	CC
+LINKCC		=	cc
+LINKCXX		=	CC
 FLAGS		+=	-DNDEBUG -I/client/include # -DROUNDING_FE
 OFLAGS		+=	-xO5 -xprefetch=auto -xipo=2
 CFLAGS		+=	-Xa
