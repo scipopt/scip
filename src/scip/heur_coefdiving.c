@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.46 2006/07/03 07:00:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.47 2006/07/18 09:42:04 bzfpfend Exp $"
 
 /**@file   heur_coefdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the matrix coefficients
@@ -301,7 +301,6 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
       SCIPretransformObj(scip, SCIPgetCutoffbound(scip)), SCIPretransformObj(scip, searchbound));
 
    /* dive as long we are in the given objective, depth and iteration limits and fractional variables exist, but
-    * - if the last rounding was in a direction, that never destroys feasibility, we continue in any case
     * - if possible, we dive at least with the depth 10
     * - if the number of fractional variables decreased at least with 1 variable per 2 dive depths, we continue diving
     */
@@ -389,11 +388,19 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
             roundup = (nlocksdown > nlocksup || (nlocksdown == nlocksup && frac > 0.5));
             if( roundup )
             {
+#if 0 /*?????????????????????? try this! */
+               nviolrows = nlocksup - nlocksdown + SCIPgetNLPRows(scip); /* improve this! */
+#else
                nviolrows = nlocksup;
+#endif
                frac = 1.0 - frac;
             }
             else
+#if 0 /*?????????????????????? try this! */
+               nviolrows = nlocksdown - nlocksup + SCIPgetNLPRows(scip); /* improve this! */
+#else
                nviolrows = nlocksdown;
+#endif
 
             /* penalize too small fractions */
             if( frac < 0.01 )

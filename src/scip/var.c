@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.210 2006/06/21 07:44:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.211 2006/07/18 09:42:05 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -7974,8 +7974,8 @@ SCIP_Real SCIPvarGetAvgSol(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       avgsol = var->primsolavg;
-      avgsol = MIN(avgsol, var->glbdom.lb);
-      avgsol = MAX(avgsol, var->glbdom.ub);
+      avgsol = MAX(avgsol, var->glbdom.lb);
+      avgsol = MIN(avgsol, var->glbdom.ub);
       return avgsol;
 
    case SCIP_VARSTATUS_FIXED:

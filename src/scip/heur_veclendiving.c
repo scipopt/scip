@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_veclendiving.c,v 1.1 2006/07/03 07:00:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_veclendiving.c,v 1.2 2006/07/18 09:42:04 bzfpfend Exp $"
 
 /**@file   heur_veclendiving.c
  * @brief  LP diving heuristic that rounds variables with long column vectors
@@ -284,7 +284,6 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), SCIPretransformObj(scip, searchbound));
 
    /* dive as long we are in the given objective, depth and iteration limits and fractional variables exist, but
-    * - if the last rounding was in a direction, that never destroys feasibility, we continue in any case
     * - if possible, we dive at least with the depth 10
     * - if the number of fractional variables decreased at least with 1 variable per 2 dive depths, we continue diving
     */
