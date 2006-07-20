@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.31 2006/07/18 09:42:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.32 2006/07/20 09:51:56 bzfpfend Exp $"
 
 /**@file   heur_guideddiving.c
- * @brief  LP diving heuristic that chooses fixings in direction of average of feasible solutions
+ * @brief  LP diving heuristic that chooses fixings in direction of incumbent solutions
  * @author Tobias Achterberg
  */
 
@@ -30,7 +30,7 @@
 
 
 #define HEUR_NAME             "guideddiving"
-#define HEUR_DESC             "LP diving heuristic that chooses fixings in direction of average of feasible solutions"
+#define HEUR_DESC             "LP diving heuristic that chooses fixings in direction of incumbent solutions"
 #define HEUR_DISPCHAR         'g'
 #define HEUR_PRIORITY         -1007000
 #define HEUR_FREQ             10
@@ -49,9 +49,9 @@
 #define DEFAULT_MAXLPITERQUOT      0.05 /**< maximal fraction of diving LP iterations compared to node LP iterations */
 #define DEFAULT_MAXLPITEROFS       1000 /**< additional number of allowed LP iterations */
 #define DEFAULT_MAXDIVEUBQUOT       0.8 /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
-                                              *   where diving is performed (0.0: no limit) */
+                                         *   where diving is performed (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOT      0.0 /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
-                                              *   where diving is performed (0.0: no limit) */
+                                         *   where diving is performed (0.0: no limit) */
 
 #define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
 
@@ -164,6 +164,7 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_LPSOLSTAT lpsolstat;
+   SCIP_SOL* bestsol;
    SCIP_VAR* var;
    SCIP_VAR** lpcands;
    SCIP_Real* lpcandssol;
@@ -179,7 +180,7 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
    SCIP_Real frac;
    SCIP_Real bestfrac;
    SCIP_Real solval;
-   SCIP_Real avgsolval;
+   SCIP_Real bestsolval;
    SCIP_Bool bestcandmayrounddown;
    SCIP_Bool bestcandmayroundup;
    SCIP_Bool bestcandroundup;
@@ -270,6 +271,12 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
    maxdivedepth = MIN(maxdivedepth, maxdepth);
    maxdivedepth *= 10;
 
+   /* get best solution that should guide the search; if this solution lives in the original variable space,
+    * we can not use it since it might violate the global bounds of the current problem
+    */
+   bestsol = SCIPgetBestSol(scip);
+   if( SCIPsolGetOrigin(bestsol) == SCIP_SOLORIGIN_ORIGINAL )
+      return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
 
@@ -304,9 +311,10 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
 
       /* choose variable fixing:
        * - prefer variables that may not be rounded without destroying LP feasibility:
-       *   - of these variables, round a variable to its value in average solution, and choose the variable
-       *     that is closest to its rounded value
+       *   - of these variables, round a variable to its value in direction of incumbent solution, and choose the
+       *     variable that is closest to its rounded value
        * - if all remaining fractional variables may be rounded without destroying LP feasibility:
+       *   - round variable in direction that destroys LP feasibility (other direction is checked by SCIProundSol())
        *   - round variable with least increasing objective value
        */
       bestcand = -1;
@@ -323,16 +331,12 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
          solval = lpcandssol[c];
          frac = lpcandsfrac[c];
          obj = SCIPvarGetObj(var);
-         avgsolval = SCIPvarGetAvgSol(var);
-         assert(SCIPisGE(scip, avgsolval, SCIPvarGetLbGlobal(var)));
-         assert(SCIPisLE(scip, avgsolval, SCIPvarGetUbGlobal(var)));
+         bestsolval = SCIPgetSolVal(scip, bestsol, var);
+         assert(SCIPisGE(scip, bestsolval, SCIPvarGetLbGlobal(var)));
+         assert(SCIPisLE(scip, bestsolval, SCIPvarGetUbGlobal(var)));
 
          /* select default rounding direction */
-#if 0 /*?????????????? try this! */
-         roundup = (solval < SCIPfloor(scip, (solval + avgsolval)/2.0 + 0.5));
-#else
-         roundup = (solval < avgsolval);
-#endif
+         roundup = (solval < bestsolval);
 
          if( mayrounddown || mayroundup )
          {
@@ -340,9 +344,9 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
             if( bestcandmayrounddown || bestcandmayroundup )
             {
                /* choose rounding direction:
-                * - if variable may be rounded in both directions, round corresponding to its value in average solution
+                * - if variable may be rounded in both directions, round corresponding to its value in incumbent solution
                 * - otherwise, round in the infeasible direction, because feasible direction is tried by rounding
-                *   the current fractional solution
+                *   the current fractional solution with SCIProundSol()
                 */
                if( !mayrounddown || !mayroundup )
                   roundup = mayrounddown;
@@ -441,10 +445,10 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
       if( bestcandroundup )
       {
          /* round variable up */
-         SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%d/%d, sol=%g, avgsol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+         SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%d/%d, sol=%g, bestsol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
             divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
             SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
-            lpcandssol[bestcand], SCIPvarGetAvgSol(var),
+            lpcandssol[bestcand], SCIPgetSolVal(scip, bestsol, var),
             SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
             SCIPfeasCeil(scip, lpcandssol[bestcand]), SCIPvarGetUbLocal(var));
          SCIP_CALL( SCIPchgVarLbProbing(scip, var, SCIPfeasCeil(scip, lpcandssol[bestcand])) );
@@ -452,10 +456,10 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
       else
       {
          /* round variable down */
-         SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%d/%d, sol=%g, avgsol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+         SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%d/%d, sol=%g, bestsol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
             divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
             SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
-            lpcandssol[bestcand], SCIPvarGetAvgSol(var),
+            lpcandssol[bestcand], SCIPgetSolVal(scip, bestsol, var),
             SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
             SCIPvarGetLbLocal(var), SCIPfeasFloor(scip, lpcandssol[bestcand]));
          SCIP_CALL( SCIPchgVarUbProbing(scip, var, SCIPfeasFloor(scip, lpcandssol[bestcand])) );

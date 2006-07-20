@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_guideddiving.h,v 1.9 2006/01/03 12:22:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_guideddiving.h,v 1.10 2006/07/20 09:51:56 bzfpfend Exp $"
 
 /**@file   heur_guideddiving.h
- * @brief  LP diving heuristic that chooses fixings in direction of average of feasible solutions
+ * @brief  LP diving heuristic that chooses fixings in direction of incumbent solutions
  * @author Tobias Achterberg
  */
 

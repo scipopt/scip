@@ -60,6 +60,8 @@ plugins:
 - improved heuristic "octane"
 - improved heuristic "shifting"
 - slightly modified rens and localbranching heuristics
+- modified guided diving heuristic such that it equals the original version of the heuristic (i.e., round in direction
+  of the current incumbent solution instead of the average of all primal feasible solutions)
 
 parameters:
 - new parameter "reading/zplreader/changedir" to control behavior of path switching of ZIMPL file reader
