@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.282 2006/06/29 20:59:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.283 2006/08/08 15:17:14 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3214,10 +3214,13 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   SCIP_Bool             fixintegralrhs,     /**< should complementation tried to be adjusted such that rhs gets fractional? */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
+   SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
    SCIP_Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
+   SCIP_Real*            mksetcoefs,         /**< array to store mixed knapsack set coefficients: size nvars; or NULL */
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size SCIPgetNVars() */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    SCIP_Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
@@ -3618,9 +3621,21 @@ SCIP_RETCODE SCIPdelPoolCut(
    SCIP_ROW*             row                 /**< cutting plane to add */
    );
 
+/** gets current cuts in the global cut pool */
+extern
+SCIP_CUT** SCIPgetPoolCuts(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets current number of rows in the global cut pool */
 extern
 int SCIPgetNPoolCuts(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets the global cut pool used by SCIP */
+extern
+SCIP_CUTPOOL* SCIPgetGlobalCutpool(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

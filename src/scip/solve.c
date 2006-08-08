@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.226 2006/06/29 18:57:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.227 2006/08/08 15:17:14 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1424,7 +1424,7 @@ SCIP_RETCODE priceAndCutLoop(
                SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, TRUE, FALSE, lperror) );
                assert(lp->flushed);
                assert(lp->solved || *lperror);
-               delayedsepa = FALSE;
+               mustsepa = TRUE;
                mustprice = TRUE;
             }
          }
@@ -1463,7 +1463,7 @@ SCIP_RETCODE priceAndCutLoop(
                }
 
                mustprice = mustprice || !lp->flushed || (prob->ncolvars != npricedcolvars);
-               mustsepa = !lp->flushed;
+               mustsepa = mustsepa || !lp->flushed;
 
                if( !(*cutoff) )
                {

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shifting.c,v 1.5 2006/07/06 19:46:20 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_shifting.c,v 1.6 2006/08/08 15:17:13 bzfpfend Exp $"
 
 /**@file   heur_shifting.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities and shifts continuous variables
@@ -202,6 +202,7 @@ SCIP_RETCODE selectShifting(
    int nrowcols;
    SCIP_Real activitydelta;
    SCIP_Real bestshiftscore;
+   SCIP_Real bestdeltaobj;
    int c;
 
    assert(direction == +1 || direction == -1);
@@ -223,6 +224,7 @@ SCIP_RETCODE selectShifting(
 
    /* select shifting variable */
    bestshiftscore = SCIP_REAL_MAX;
+   bestdeltaobj = SCIPinfinity(scip);
    *shiftvar = NULL;
    *newsolval = 0.0;
    *oldsolval = 0.0;
@@ -266,6 +268,8 @@ SCIP_RETCODE selectShifting(
 
       if( shiftscore <= bestshiftscore )
       {
+         SCIP_Real deltaobj;
+
          if( !increase )
          {
             /* shifting down */
@@ -305,9 +309,12 @@ SCIP_RETCODE selectShifting(
 
          if( SCIPisEQ(scip, shiftval, solval) )
             continue;
-         if( shiftscore < bestshiftscore )
+
+         deltaobj = SCIPvarGetObj(var) * (shiftval - solval);
+         if( shiftscore < bestshiftscore || deltaobj < bestdeltaobj )
          {
             bestshiftscore = shiftscore;
+            bestdeltaobj = deltaobj;
             *shiftvar = var;
             *oldsolval = solval;
             *newsolval = shiftval;

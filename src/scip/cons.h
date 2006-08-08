@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.107 2006/06/07 11:47:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.108 2006/08/08 15:17:12 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -161,7 +161,8 @@ SCIP_RETCODE SCIPconshdlrExitsol(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< dynamic problem statistics */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
    );
 
 /** calls LP initialization method of constraint handler to separate all initial active constraints */

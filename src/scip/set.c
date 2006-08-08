@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.178 2006/06/13 13:34:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.179 2006/08/08 15:17:14 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -2543,7 +2543,8 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
 SCIP_RETCODE SCIPsetExitsolPlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_STAT*            stat                /**< dynamic problem statistics */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
    )
 {
    int i;
@@ -2560,7 +2561,7 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    /* constraint handlers */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
-      SCIP_CALL( SCIPconshdlrExitsol(set->conshdlrs[i], blkmem, set, stat) );
+      SCIP_CALL( SCIPconshdlrExitsol(set->conshdlrs[i], blkmem, set, stat, restart) );
    }
 
    /* conflict handlers */
@@ -2778,6 +2779,7 @@ int SCIPsetGetSepaMaxcuts(
 #undef SCIPsetIsSumNegative
 #undef SCIPsetSumFloor
 #undef SCIPsetSumCeil
+#undef SCIPsetSumFrac
 #undef SCIPsetIsFeasEQ
 #undef SCIPsetIsFeasLT
 #undef SCIPsetIsFeasLE
@@ -3177,6 +3179,17 @@ SCIP_Real SCIPsetSumCeil(
    assert(set != NULL);
 
    return EPSCEIL(val, set->num_sumepsilon);
+}
+
+/** returns fractional part of value, i.e. x - floor(x) in sumepsilon tolerance */
+SCIP_Real SCIPsetSumFrac(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   assert(set != NULL);
+
+   return EPSFRAC(val, set->num_sumepsilon);
 }
 
 /** checks, if relative difference of values is in range of feastol */

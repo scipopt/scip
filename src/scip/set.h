@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.94 2006/06/13 13:34:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.95 2006/08/08 15:17:14 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -567,7 +567,8 @@ extern
 SCIP_RETCODE SCIPsetExitsolPlugins(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_STAT*            stat                /**< dynamic problem statistics */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
    );
 
 /** calculate memory size for dynamically allocated arrays */
@@ -875,6 +876,13 @@ SCIP_Real SCIPsetSumCeil(
    SCIP_Real             val                 /**< value to process */
    );
 
+/** returns fractional part of value, i.e. x - floor(x) in sumepsilon tolerance */
+extern
+SCIP_Real SCIPsetSumFrac(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to process */
+   );
+
 /** checks, if values are in range of feasibility tolerance */
 extern
 SCIP_Bool SCIPsetIsFeasEQ(
@@ -1118,6 +1126,7 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetIsSumNegative(set, val)     ( EPSN(val, (set)->num_sumepsilon) )
 #define SCIPsetSumFloor(set, val)          ( EPSFLOOR(val, (set)->num_sumepsilon) )
 #define SCIPsetSumCeil(set, val)           ( EPSCEIL(val, (set)->num_sumepsilon) )
+#define SCIPsetSumFrac(set, val)           ( EPSFRAC(val, (set)->num_sumepsilon) )
 
 #define SCIPsetIsFeasEQ(set, val1, val2)   ( EPSZ(SCIPrelDiff(val1, val2), (set)->num_feastol) )
 #define SCIPsetIsFeasLT(set, val1, val2)   ( EPSN(SCIPrelDiff(val1, val2), (set)->num_feastol) )

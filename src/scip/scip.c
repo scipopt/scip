@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.379 2006/06/29 20:59:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.380 2006/08/08 15:17:13 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3315,7 +3315,7 @@ SCIP_RETCODE SCIPaddCons(
 {
    assert(cons != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPaddCons", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddCons", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE) );
 
    switch( scip->set->stage )
    {
@@ -3338,6 +3338,10 @@ SCIP_RETCODE SCIPaddCons(
          SCIP_CALL( SCIPnodeAddCons(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
                scip->tree, cons) );
       }
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_FREESOLVE:
+      SCIP_CALL( SCIPprobAddCons(scip->transprob, scip->set, scip->stat, cons) );
       return SCIP_OKAY;
 
    default:
@@ -4468,7 +4472,8 @@ SCIP_RETCODE initSolve(
 /** frees solution process data structures */
 static
 SCIP_RETCODE freeSolve(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             restart             /**< was this free solve call triggered by a restart? */
    )
 {
    assert(scip != NULL);
@@ -4491,15 +4496,15 @@ SCIP_RETCODE freeSolve(
    /* switch stage to FREESOLVE */
    scip->set->stage = SCIP_STAGE_FREESOLVE;
 
+   /* inform plugins that the branch and bound process is finished */
+   SCIP_CALL( SCIPsetExitsolPlugins(scip->set, scip->mem->solvemem, scip->stat, restart) );
+
    /* clear the LP, and flush the changes to clear the LP of the solver */
    SCIP_CALL( SCIPlpReset(scip->lp, scip->mem->solvemem, scip->set, scip->stat) );
    SCIPlpInvalidateRootObjval(scip->lp);
 
    /* clear all row references in internal data structures */
    SCIP_CALL( SCIPcutpoolClear(scip->cutpool, scip->mem->solvemem, scip->set, scip->lp) );
-
-   /* inform plugins that the branch and bound process is finished */
-   SCIP_CALL( SCIPsetExitsolPlugins(scip->set, scip->mem->solvemem, scip->stat) );
 
    /* we have to clear the tree prior to the problem deinitialization, because the rows stored in the forks and
     * subroots have to be released
@@ -4739,7 +4744,7 @@ SCIP_RETCODE SCIPsolve(
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
             "(run %d, node %lld) restarting after %d global fixings of integer variables\n\n",
             scip->stat->nruns, scip->stat->nnodes, scip->stat->nrootintfixingsrun);
-         SCIP_CALL( SCIPfreeSolve(scip) );
+         SCIP_CALL( freeSolve(scip, TRUE) );
          assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
       }
       restart = FALSE;
@@ -4912,7 +4917,7 @@ SCIP_RETCODE SCIPfreeSolve(
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
       /* free solution process data structures */
-      SCIP_CALL( freeSolve(scip) );
+      SCIP_CALL( freeSolve(scip, FALSE) );
       assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
       return SCIP_OKAY;
 
@@ -6912,23 +6917,63 @@ SCIP_RETCODE SCIPfixVar(
 
    SCIP_CALL( checkStage(scip, "SCIPfixVar", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
+   *infeasible = FALSE;
    *fixed = FALSE;
 
-   if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPsetIsFeasIntegral(scip->set, fixedval))
-      || SCIPsetIsFeasLT(scip->set, fixedval, SCIPvarGetLbLocal(var))
-      || SCIPsetIsFeasGT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
+   /* in the problem creation stage, modify the bounds as requested, independently from the current bounds */
+   if( scip->set->stage != SCIP_STAGE_PROBLEM )
    {
-      *infeasible = TRUE;
-      return SCIP_OKAY;
+      if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPsetIsFeasIntegral(scip->set, fixedval))
+         || SCIPsetIsFeasLT(scip->set, fixedval, SCIPvarGetLbLocal(var))
+         || SCIPsetIsFeasGT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
+      {
+         *infeasible = TRUE;
+         return SCIP_OKAY;
+      }
+      else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
+      {
+         *infeasible = !SCIPsetIsFeasEQ(scip->set, fixedval, SCIPvarGetLbLocal(var));
+         return SCIP_OKAY;
+      }
    }
-   else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
-   {
-      *infeasible = !SCIPsetIsFeasEQ(scip->set, fixedval, SCIPvarGetLbLocal(var));
-      return SCIP_OKAY;
-   }
+   else
+      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL);
 
    switch( scip->set->stage )
    {
+   case SCIP_STAGE_PROBLEM:
+      /* in the problem creation stage, modify the bounds as requested, independently from the current bounds;
+       * we have to make sure, that the order of the bound changes does not intermediately produce an invalid
+       * interval lb > ub
+       */
+      if( fixedval <= SCIPvarGetLbLocal(var) )
+      {
+         if( SCIPsetIsFeasGT(scip->set, fixedval, SCIPvarGetLbLocal(var)) )
+         {
+            SCIP_CALL( SCIPchgVarLb(scip, var, fixedval) );
+            *fixed = TRUE;
+         }
+         if( SCIPsetIsFeasLT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
+         {
+            SCIP_CALL( SCIPchgVarUb(scip, var, fixedval) );
+            *fixed = TRUE;
+         }
+      }
+      else
+      {
+         if( SCIPsetIsFeasGT(scip->set, fixedval, SCIPvarGetLbLocal(var)) )
+         {
+            SCIP_CALL( SCIPchgVarLb(scip, var, fixedval) );
+            *fixed = TRUE;
+         }
+         if( SCIPsetIsFeasLT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
+         {
+            SCIP_CALL( SCIPchgVarUb(scip, var, fixedval) );
+            *fixed = TRUE;
+         }
+      }
+      return SCIP_OKAY;
+
    case SCIP_STAGE_PRESOLVING:
       if( SCIPtreeGetCurrentDepth(scip->tree) == 0 )
       {
@@ -6937,10 +6982,8 @@ SCIP_RETCODE SCIPfixVar(
          return SCIP_OKAY;
       }
       /*lint -fallthrough*/
-   case SCIP_STAGE_PROBLEM:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      *infeasible = FALSE;
       if( SCIPsetIsFeasGT(scip->set, fixedval, SCIPvarGetLbLocal(var)) )
       {
          SCIP_CALL( SCIPchgVarLb(scip, var, fixedval) );
@@ -7978,7 +8021,7 @@ SCIP_RETCODE SCIPcreateCons(
    assert(name != NULL);
    assert(conshdlr != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPcreateCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPcreateCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
 
    switch( scip->set->stage )
    {
@@ -7991,6 +8034,7 @@ SCIP_RETCODE SCIPcreateCons(
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_FREESOLVE:
       SCIP_CALL( SCIPconsCreate(cons, scip->mem->solvemem, scip->set, name, conshdlr, consdata,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, FALSE) );
       return SCIP_OKAY;
@@ -8875,10 +8919,13 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   SCIP_Bool             fixintegralrhs,     /**< should complementation tried to be adjusted such that rhs gets fractional? */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
+   SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
    SCIP_Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
+   SCIP_Real*            mksetcoefs,         /**< array to store mixed knapsack set coefficients: size nvars; or NULL */
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size SCIPgetNVars() */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    SCIP_Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
@@ -8889,8 +8936,8 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_CALL( checkStage(scip, "SCIPcalcMIR", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPlpCalcMIR(scip->lp, scip->set, scip->stat, scip->transprob,
-         boundswitch, usevbds, allowlocal, maxweightrange, minfrac, weights, scale,
-         mircoef, mirrhs, cutactivity, success, cutislocal) );
+         boundswitch, usevbds, allowlocal, fixintegralrhs, maxweightrange, minfrac, maxfrac, weights, scale,
+         mksetcoefs, mircoef, mirrhs, cutactivity, success, cutislocal) );
 
    return SCIP_OKAY;
 }
@@ -9557,14 +9604,34 @@ SCIP_RETCODE SCIPdelPoolCut(
    return SCIP_OKAY;
 }
 
+/** gets current cuts in the global cut pool */
+SCIP_CUT** SCIPgetPoolCuts(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetPoolCuts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIPcutpoolGetCuts(scip->cutpool);
+}
+
 /** gets current number of rows in the global cut pool */
 int SCIPgetNPoolCuts(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPoolCuts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPoolCuts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
 
    return SCIPcutpoolGetNCuts(scip->cutpool);
+}
+
+/** gets the global cut pool used by SCIP */
+SCIP_CUTPOOL* SCIPgetGlobalCutpool(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetGlobalCutpool", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->cutpool;
 }
 
 /** creates a cut pool */

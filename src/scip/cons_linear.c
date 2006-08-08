@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.220 2006/06/07 11:47:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.221 2006/08/08 15:17:12 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3103,7 +3103,7 @@ SCIP_RETCODE tightenVarBounds(
          if( SCIPisUbBetter(scip, newub, lb, ub) )
          {
             /* tighten upper bound */
-            SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newub=%.9f\n",
+            SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%g,%g], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newub=%g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newub);
             SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(PROPRULE_1_RHS, pos),
                   &infeasible, &tightened) );
@@ -3137,7 +3137,7 @@ SCIP_RETCODE tightenVarBounds(
          if( SCIPisLbBetter(scip, newlb, lb, ub) )
          {
             /* tighten lower bound */
-            SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newlb=%.9f\n",
+            SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%g,%g], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newlb=%g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newlb);
             SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(PROPRULE_1_LHS, pos),
                   &infeasible, &tightened) );
@@ -3175,7 +3175,7 @@ SCIP_RETCODE tightenVarBounds(
          if( SCIPisLbBetter(scip, newlb, lb, ub) )
          {
             /* tighten lower bound */
-            SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newlb=%.9f\n",
+            SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%g,%g], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newlb=%g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newlb);
             SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(PROPRULE_1_RHS, pos),
                   &infeasible, &tightened) );
@@ -3209,7 +3209,7 @@ SCIP_RETCODE tightenVarBounds(
          if( SCIPisUbBetter(scip, newub, lb, ub) )
          {
             /* tighten upper bound */
-            SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g], newub=%.9f\n",
+            SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%g,%g], val=%g, resactivity=[%g,%g], sides=[%g,%g], newub=%g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newub);
             SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(PROPRULE_1_LHS, pos),
                   &infeasible, &tightened) );
@@ -5571,6 +5571,60 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinear)
       if( consdata->row != NULL )
       {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->row) );
+      }
+   }
+
+   /* if this is a restart, convert cutpool rows into linear constraints */
+   if( restart )
+   {
+      SCIP_CUT** cuts;
+      int ncuts;
+      int ncutsadded;
+
+      ncutsadded = 0;
+      cuts = SCIPgetPoolCuts(scip);
+      ncuts = SCIPgetNPoolCuts(scip);
+      for( c = 0; c < ncuts; ++c )
+      {
+         SCIP_ROW* row;
+
+         row = SCIPcutGetRow(cuts[c]);
+         assert(!SCIProwIsLocal(row));
+         assert(!SCIProwIsModifiable(row));
+         if( SCIPcutGetAge(cuts[c]) == 0 || SCIProwIsInLP(row) )
+         {
+            char name[SCIP_MAXSTRLEN];
+            SCIP_CONS* cons;
+            SCIP_COL** cols;
+            SCIP_VAR** vars;
+            int ncols;
+            int i;
+
+            /* create a linear constraint out of the cut */
+            cols = SCIProwGetCols(row);
+            ncols = SCIProwGetNNonz(row);
+            
+            SCIP_CALL( SCIPallocBufferArray(scip, &vars, ncols) );
+            for( i = 0; i < ncols; ++i )
+               vars[i] = SCIPcolGetVar(cols[i]);
+            
+            sprintf(name, "%s_%d", SCIProwGetName(row), SCIPgetNRuns(scip));
+            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, ncols, vars, SCIProwGetVals(row),
+                  SCIProwGetLhs(row) - SCIProwGetConstant(row), SCIProwGetRhs(row) - SCIProwGetConstant(row),
+                  TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+            SCIPfreeBufferArray(scip, &vars);
+
+            ncutsadded++;
+         }
+      }
+
+      if( ncutsadded > 0 )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+            "(restart) converted %d cuts from the global cut pool into linear constraints\n\n", ncutsadded);
       }
    }
 

@@ -49,6 +49,10 @@ interface:
 
 - new calls SCIPgetLPBInvCol() and SCIPgetLPBInvACol() to access the basis inverse and simplex tableau columnwise
 - new parameter "ndomredsfound" of SCIPpropagateProbing()
+- new parameters "fixintegralrhs", "maxfrac", "mksetcoefs", and "fracnotinrange" in SCIPcalcMIR()
+- modified SCIPfixVar() such that in problem creation stage it will change the bounds as requested even if the fixing
+  value is outside of the current bounds
+- new methods SCIPgetGlobalCutpool(), SCIPgetPoolCuts(), SCIPcutpoolGetCuts(), SCIPcutGetRow(), and SCIPcutGetAge()
 
 plugins:
 - new primal heuristic "rens"
@@ -62,6 +66,7 @@ plugins:
 - slightly modified rens and localbranching heuristics
 - modified guided diving heuristic such that it equals the original version of the heuristic (i.e., round in direction
   of the current incumbent solution instead of the average of all primal feasible solutions)
+- modified c-MIR cut separator to more closely resemble the original version of Marchand and Wolsey
 
 parameters:
 - new parameter "reading/zplreader/changedir" to control behavior of path switching of ZIMPL file reader
@@ -74,6 +79,9 @@ parameters:
 - new parameter "heuristics/octane/useavgray"
 - changed default value of "heuristics/rens/binarybounds" to TRUE
 - changed default value of "heuristics/octane/freq" to -1 in order to deactivate Octane
+- new parameter "separating/cmir/aggrtol"
+- new parameter "separating/cmir/fixintegralrhs"
+- new parameter "separating/cmir/densityscore"
 
 features:
 - primal heuristics that run before the node is solved now know already whether the LP will be solved at the current node
@@ -81,6 +89,7 @@ features:
 - command shell now understands escape characters ",', and \ which makes it possible to read in files with spaces in
   the name
 - updated XPress interface to XPress-MP 17 (contributed by Michael Perregard)
+- the EXITSOL callback of the plugins is now called before the LP and the global cut pool are freed
 
 fixed bugs:
 - fixed bug with adding constraints with INITIAL=true and separating them afterwards, which lead to a second addition

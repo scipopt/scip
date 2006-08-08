@@ -14,7 +14,7 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.5 2006/04/10 16:15:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.6 2006/08/08 15:17:12 bzfpfend Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -1813,9 +1813,9 @@ void BMSdisplayBlockMemory_call(
    int c;
 
 #ifndef NDEBUG
-   printInfo(" ElSize #Chunk #Eag  #Elems  #EagFr  #LazFr  #GCl #GFr  Free  First Allocator\n");
+   printInfo(" ElSize #Chunk #Eag  #Elems  #EagFr  #LazFr  #GCl #GFr  Free  MBytes First Allocator\n");
 #else
-   printInfo(" ElSize #Chunk #Eag  #Elems  #EagFr  #LazFr  Free\n");
+   printInfo(" ElSize #Chunk #Eag  #Elems  #EagFr  #LazFr  Free  MBytes\n");
 #endif
 
    assert(blkmem != NULL);
@@ -1857,22 +1857,24 @@ void BMSdisplayBlockMemory_call(
 	    freemem += (long long)chkmem->elemsize * ((long long)neagerelems + (long long)chkmem->lazyfreesize);
 
 #ifndef NDEBUG
-	    printInfo("%7lld %4d %4d %7d %7d %7d %5d %4d %5.1f%% %s:%d\n",
+	    printInfo("%7lld %6d %4d %7d %7d %7d %5d %4d %5.1f%% %6.1f %s:%d\n",
 	       (long long)(chkmem->elemsize), nchunks, neagerchunks, nelems,
 	       neagerelems, chkmem->lazyfreesize, chkmem->ngarbagecalls, chkmem->ngarbagefrees,
 	       100.0 * (double) (neagerelems + chkmem->lazyfreesize) / (double) (nelems), 
+               (double)chkmem->elemsize * nelems / (1024.0*1024.0),
                chkmem->filename, chkmem->line);
 #else
-	    printInfo("%7lld %4d %4d %7d %7d %7d %5.1f%%\n",
+	    printInfo("%7lld %6d %4d %7d %7d %7d %5.1f%% %6.1f\n",
 	       (long long)(chkmem->elemsize), nchunks, neagerchunks, nelems,
 	       neagerelems, chkmem->lazyfreesize,
-	       100.0 * (double) (neagerelems + chkmem->lazyfreesize) / (double) (nelems));
+	       100.0 * (double) (neagerelems + chkmem->lazyfreesize) / (double) (nelems),
+               (double)chkmem->elemsize * nelems / (1024.0*1024.0));
 #endif
 	 }
 	 else
 	 {
 #ifndef NDEBUG
-	    printInfo("%7lld <unused>                          %5d %4d        %s:%d\n",
+	    printInfo("%7lld <unused>                            %5d %4d        %s:%d\n",
 	       (long long)(chkmem->elemsize), chkmem->ngarbagecalls, chkmem->ngarbagefrees, 
                chkmem->filename, chkmem->line);
 #else
@@ -1893,14 +1895,16 @@ void BMSdisplayBlockMemory_call(
       }
    }
 #ifndef NDEBUG
-   printInfo("  Total %4d %4d %7d %7d %7d %5d %4d %5.1f%%\n",
+   printInfo("  Total %6d %4d %7d %7d %7d %5d %4d %5.1f%% %6.1f\n",
       totalnchunks, totalneagerchunks, totalnelems, totalneagerelems, totalnlazyelems, 
       totalngarbagecalls, totalngarbagefrees,
-      totalnelems > 0 ? 100.0 * (double) (totalneagerelems + totalnlazyelems) / (double) (totalnelems) : 0.0);
+      totalnelems > 0 ? 100.0 * (double) (totalneagerelems + totalnlazyelems) / (double) (totalnelems) : 0.0,
+      (double)allocedmem/(1024.0*1024.0));
 #else
-   printInfo("  Total %4d %4d %7d %7d %7d %5.1f%%\n",
+   printInfo("  Total %6d %4d %7d %7d %7d %5.1f%% %6.1f\n",
       totalnchunks, totalneagerchunks, totalnelems, totalneagerelems, totalnlazyelems, 
-      totalnelems > 0 ? 100.0 * (double) (totalneagerelems + totalnlazyelems) / (double) (totalnelems) : 0.0);
+      totalnelems > 0 ? 100.0 * (double) (totalneagerelems + totalnlazyelems) / (double) (totalnelems) : 0.0,
+      (double)allocedmem/(1024.0*1024.0));
 #endif
    printInfo("%d blocks (%d unused), %lld bytes allocated, %lld bytes free",
       nblocks + nunusedblocks, nunusedblocks, allocedmem, freemem);

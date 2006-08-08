@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.49 2006/06/07 08:21:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.50 2006/08/08 15:17:13 bzfpfend Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -225,6 +225,25 @@ SCIP_Bool cutIsAged(
    return (agelimit >= 0 && cut->age > agelimit);
 }
 
+/** gets the row of the cut */
+SCIP_ROW* SCIPcutGetRow(
+   SCIP_CUT*             cut                 /**< cut */
+   )
+{
+   assert(cut != NULL);
+
+   return cut->row;
+}
+
+/** gets the age of the cut: the number of consecutive cut pool separation rounds where the cut was neither in the LP nor violated */
+int SCIPcutGetAge(
+   SCIP_CUT*             cut                 /**< cut */
+   )
+{
+   assert(cut != NULL);
+
+   return cut->age;
+}
 
 
 
@@ -565,7 +584,17 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    return SCIP_OKAY;
 }
 
-/** get number of cuts in the cut pool */
+/** gets array of cuts in the cut pool */
+SCIP_CUT** SCIPcutpoolGetCuts(
+   SCIP_CUTPOOL*         cutpool             /**< cut pool */
+   )
+{
+   assert(cutpool != NULL);
+
+   return cutpool->cuts;
+}
+
+/** gets number of cuts in the cut pool */
 int SCIPcutpoolGetNCuts(
    SCIP_CUTPOOL*         cutpool             /**< cut pool */
    )
@@ -575,7 +604,7 @@ int SCIPcutpoolGetNCuts(
    return cutpool->ncuts;
 }
 
-/** get maximum number of cuts that were stored in the cut pool at the same time */
+/** gets maximum number of cuts that were stored in the cut pool at the same time */
 int SCIPcutpoolGetMaxNCuts(
    SCIP_CUTPOOL*         cutpool             /**< cut pool */
    )

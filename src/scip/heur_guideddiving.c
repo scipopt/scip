@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.32 2006/07/20 09:51:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.33 2006/08/08 15:17:13 bzfpfend Exp $"
 
 /**@file   heur_guideddiving.c
  * @brief  LP diving heuristic that chooses fixings in direction of incumbent solutions
@@ -332,8 +332,6 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
          frac = lpcandsfrac[c];
          obj = SCIPvarGetObj(var);
          bestsolval = SCIPgetSolVal(scip, bestsol, var);
-         assert(SCIPisGE(scip, bestsolval, SCIPvarGetLbGlobal(var)));
-         assert(SCIPisLE(scip, bestsolval, SCIPvarGetUbGlobal(var)));
 
          /* select default rounding direction */
          roundup = (solval < bestsolval);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.37 2006/05/22 15:51:53 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.38 2006/08/08 15:17:15 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -135,8 +135,10 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - conshdlr        : the constraint handler itself
  *  - conss           : array of constraints of the constraint handler
  *  - nconss          : number of constraints of the constraint handler
+ *  - restart         : was this exit solve call triggered by a restart?
+
  */
-#define SCIP_DECL_CONSEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss)
+#define SCIP_DECL_CONSEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_Bool restart)
 
 /** frees specific constraint data
  *

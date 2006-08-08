@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.13 2006/04/10 16:15:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.14 2006/08/08 15:17:14 bzfpfend Exp $"
 
 /**@file   sepa_impliedbounds.c
  * @brief  implied bounds separator
@@ -86,6 +86,7 @@ SCIP_RETCODE addCut(
 
       /* add cut */
       SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
+      /*SCIP_CALL( SCIPaddPoolCut(scip, cut) );*/
       (*ncuts)++;
       
       /* release cut */

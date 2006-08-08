@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cutpool.h,v 1.13 2006/06/07 08:21:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cutpool.h,v 1.14 2006/08/08 15:17:15 bzfpfend Exp $"
 
 /**@file   struct_cutpool.h
  * @brief  datastructures for storing cuts in a cut pool
@@ -54,7 +54,7 @@ struct SCIP_Cutpool
    SCIP_CUT**            cuts;               /**< stored cuts of the pool */
    int                   cutssize;           /**< size of cuts array */
    int                   ncuts;              /**< number of cuts stored in the pool */
-   int                   nremovablecuts;    /**< number of cuts stored in the pool that are marked to be removable */
+   int                   nremovablecuts;     /**< number of cuts stored in the pool that are marked to be removable */
    int                   agelimit;           /**< maximum age a cut can reach before it is deleted from the pool */
    int                   processedlp;        /**< last LP that has been processed */
    int                   firstunprocessed;   /**< first cut that has not been processed in the last LP */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.150 2006/06/07 11:52:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.151 2006/08/08 15:17:12 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -2224,7 +2224,8 @@ SCIP_RETCODE SCIPconshdlrExitsol(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< dynamic problem statistics */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
    )
 {
    assert(conshdlr != NULL);
@@ -2240,7 +2241,7 @@ SCIP_RETCODE SCIPconshdlrExitsol(
       conshdlrDelayUpdates(conshdlr);
 
       /* call external method */
-      SCIP_CALL( conshdlr->consexitsol(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
+      SCIP_CALL( conshdlr->consexitsol(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, restart) );
 
       /* perform the cached constraint updates */
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );

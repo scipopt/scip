@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.39 2006/07/12 13:08:45 bzfpfend Exp $
+# $Id: check.awk,v 1.40 2006/08/08 15:17:12 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -285,6 +285,8 @@ BEGIN {
       }
       if( aborted && tottime == 0.0 )
          tottime = timelimit;
+#      if( timeout && timelimit > 0.0 )
+#         tottime = timelimit;
 
       lps = primlps + duallps;
       simplex = primiter + dualiter;

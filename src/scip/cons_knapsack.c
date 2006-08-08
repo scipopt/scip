@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.137 2006/06/14 17:54:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.138 2006/08/08 15:17:12 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -1867,6 +1867,10 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
             {         
                SCIP_CALL( SCIPresetConsAge(scip, cons) );
                SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+               if( !SCIProwIsLocal(row) )
+               {
+                  SCIP_CALL( SCIPaddPoolCut(scip, row) );
+               }
                (*ncuts)++;
             }
             SCIP_CALL( SCIPreleaseRow(scip, &row) );

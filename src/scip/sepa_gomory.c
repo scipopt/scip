@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.55 2006/01/03 12:22:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.56 2006/08/08 15:17:14 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -48,8 +48,10 @@
 #define BOUNDSWITCH              0.9999
 #define USEVBDS                    TRUE
 #define ALLOWLOCAL                 TRUE
+#define FIXINTEGRALRHS            FALSE /*?????????????????*/
 #define MAKECONTINTEGRAL          FALSE
 #define MINFRAC                    0.05
+#define MAXFRAC                    1.00
 
 
 /** separator data */
@@ -360,8 +362,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow) );
 
                /* create a MIR cut out of the weighted LP rows using the B^-1 row as weights */
-               SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->maxweightrange, MINFRAC,
-                     binvrow, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
+               SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS,
+                     sepadata->maxweightrange, MINFRAC, MAXFRAC,
+                     binvrow, 1.0, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
                assert(ALLOWLOCAL || !cutislocal);
                SCIPdebugMessage(" -> success=%d: %g <= %g\n", success, cutact, cutrhs);
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.228 2006/06/29 18:57:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.229 2006/08/08 15:17:13 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6915,94 +6915,6 @@ void cleanupMIRRow(
       *mirrhs = SCIPsetInfinity(set);
 }
 
-/** returns LP solution value and index of variable lower bound that is closest to variable's current LP solution value */
-static
-void getClosestVlb(
-   SCIP_VAR*             var,                /**< active problem variable */
-   SCIP_Real*            closestvlb,         /**< pointer to store the value of the closest variable lower bound */
-   int*                  closestvlbidx       /**< pointer to store the index of the closest variable lower bound */
-   )
-{
-   SCIP_VAR** vlbvars;
-   SCIP_Real* vlbcoefs;
-   SCIP_Real* vlbconsts;
-   int nvlbs;
-   int i;
-
-   assert(closestvlb != NULL);
-   assert(closestvlbidx != NULL);
-
-   *closestvlbidx = -1;
-   *closestvlb = SCIP_REAL_MIN;
-
-   nvlbs = SCIPvarGetNVlbs(var);
-   if( nvlbs > 0 )
-   {
-      vlbvars = SCIPvarGetVlbVars(var);
-      vlbcoefs = SCIPvarGetVlbCoefs(var);
-      vlbconsts = SCIPvarGetVlbConstants(var);
-      
-      for( i = 0; i < nvlbs; i++ )
-      {
-         if( SCIPvarIsActive(vlbvars[i]) )
-         {
-            SCIP_Real vlbsol;
-            
-            vlbsol = vlbcoefs[i] * SCIPvarGetLPSol(vlbvars[i]) + vlbconsts[i];
-            if( vlbsol > *closestvlb )
-            {
-               *closestvlb = vlbsol;
-               *closestvlbidx = i;
-            }
-         }
-      }
-   }
-}
-
-/** returns LP solution value and index of variable upper bound that is closest to variable's current LP solution value */
-static
-void getClosestVub(
-   SCIP_VAR*             var,                /**< active problem variable */
-   SCIP_Real*            closestvub,         /**< pointer to store the value of the closest variable upper bound */
-   int*                  closestvubidx       /**< pointer to store the index of the closest variable upper bound */
-   )
-{
-   SCIP_VAR** vubvars;
-   SCIP_Real* vubcoefs;
-   SCIP_Real* vubconsts;
-   int nvubs;
-   int i;
-
-   assert(closestvub != NULL);
-   assert(closestvubidx != NULL);
-
-   *closestvubidx = -1;
-   *closestvub = SCIP_REAL_MAX;
-
-   nvubs = SCIPvarGetNVubs(var);
-   if( nvubs > 0 )
-   {
-      vubvars = SCIPvarGetVubVars(var);
-      vubcoefs = SCIPvarGetVubCoefs(var);
-      vubconsts = SCIPvarGetVubConstants(var);
-      
-      for( i = 0; i < nvubs; i++ )
-      {
-         if( SCIPvarIsActive(vubvars[i]) )
-         {
-            SCIP_Real vubsol;
-            
-            vubsol = vubcoefs[i] * SCIPvarGetLPSol(vubvars[i]) + vubconsts[i];
-            if( vubsol < *closestvub )
-            {
-               *closestvub = vubsol;
-               *closestvubidx = i;
-            }
-         }
-      }
-   }
-}
-
 /** Transform equation  a*x == b, lb <= x <= ub  into standard form
  *    a'*x' == b, 0 <= x' <= ub'.
  *  
@@ -7019,12 +6931,15 @@ void getClosestVub(
  *    a_{zu_j} := a_{zu_j} + a_j * bu_j
  */
 static
-void transformMIRRow(
+SCIP_RETCODE transformMIRRow(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   SCIP_Bool             fixintegralrhs,     /**< should complementation tried to be adjusted such that rhs gets fractional? */
+   SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
+   SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    int*                  varsign,            /**< stores the sign of the transformed variable in summation */
@@ -7034,12 +6949,10 @@ void transformMIRRow(
    SCIP_Bool*            localbdsused        /**< pointer to store whether local bounds were used in transformation */
    )
 {
-   SCIP_VAR* var;
-   SCIP_Real varsol;
-   SCIP_Real bestlb;
-   SCIP_Real bestub;
-   int bestlbtype;
-   int bestubtype;
+   SCIP_Real* bestlbs;
+   SCIP_Real* bestubs;
+   int* bestlbtypes;
+   int* bestubtypes;
    int v;
 
    assert(prob != NULL);
@@ -7052,7 +6965,13 @@ void transformMIRRow(
 
    *freevariable = FALSE;
    *localbdsused = FALSE;
-   
+
+   /* allocate temporary memory to store best bounds and bound types */
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &bestlbs, prob->nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &bestubs, prob->nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &bestlbtypes, prob->nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &bestubtypes, prob->nvars) );
+
    /* substitute continuous variables with best standard or variable bound (lb, ub, vlb or vub),
     * substitute integral variables with best standard bound (lb, ub);
     * start with continuous variables, because using variable bounds can affect the untransformed integral
@@ -7060,6 +6979,13 @@ void transformMIRRow(
     */
    for( v = prob->nvars-1; v >= 0; --v )
    {
+      SCIP_VAR* var;
+      SCIP_Real varsol;
+      SCIP_Real bestlb;
+      SCIP_Real bestub;
+      int bestlbtype;
+      int bestubtype;
+
       var = prob->vars[v];
       assert(v == SCIPvarGetProbindex(var));
 
@@ -7068,6 +6994,7 @@ void transformMIRRow(
       {
          varsign[v] = +1;
          boundtype[v] = -2;
+         mircoef[v] = 0.0;
          continue;
       }
 
@@ -7090,7 +7017,7 @@ void transformMIRRow(
          SCIP_Real bestvlb;
          int bestvlbidx;
 
-         getClosestVlb(var, &bestvlb, &bestvlbidx);
+         SCIPvarGetClosestVlb(var, &bestvlb, &bestvlbidx);
          if( bestvlbidx >= 0
             && (bestvlb > bestlb || (bestlbtype < 0 && SCIPsetIsGE(set, bestvlb, bestlb))) )
          {
@@ -7118,7 +7045,7 @@ void transformMIRRow(
          SCIP_Real bestvub;
          int bestvubidx;
 
-         getClosestVub(var, &bestvub, &bestvubidx);
+         SCIPvarGetClosestVub(var, &bestvub, &bestvubidx);
          if( bestvubidx >= 0
             && (bestvub < bestub || (bestubtype < 0 && SCIPsetIsLE(set, bestvub, bestub))) )
          {
@@ -7134,8 +7061,14 @@ void transformMIRRow(
           *  -> MIR row can't be transformed in standard form
           */
          *freevariable = TRUE;
-         return;
+         goto TERMINATE;
       }
+
+      /* remember best bounds and types */
+      bestlbs[v] = bestlb;
+      bestubs[v] = bestub;
+      bestlbtypes[v] = bestlbtype;
+      bestubtypes[v] = bestubtype;
 
       /* select transformation bound */
       varsol = SCIPvarGetLPSol(var);
@@ -7206,6 +7139,116 @@ void transformMIRRow(
          bestubtype >= 0 ? SCIPvarGetVubConstants(var)[bestubtype] : bestub,
          *mirrhs);
    }
+
+   if( fixintegralrhs )
+   {
+      SCIP_Real f0;
+
+      /* check if rhs is fractional */
+      f0 = SCIPsetSumFrac(set, *mirrhs);
+      if( f0 < minfrac || f0 > maxfrac )
+      {
+         SCIP_Real bestviolgain;
+         SCIP_Real bestnewf0;
+         int bestv;
+
+         /* choose complementation of one variable differently such that f0 is in correct range */
+         bestv = -1;
+         bestviolgain = -1e+100;
+         bestnewf0 = 1.0;
+         for( v = 0; v < prob->nvars; ++v )
+         {
+            if( mircoef[v] != 0.0 && boundtype[v] < 0
+               && ((varsign[v] == +1 && !SCIPsetIsInfinity(set, bestubs[v]) && bestubtypes[v] < 0)
+                  || (varsign[v] == -1 && !SCIPsetIsInfinity(set, -bestlbs[v]) && bestlbtypes[v] < 0)) )
+            {
+               SCIP_Real fj;
+               SCIP_Real newfj;
+               SCIP_Real newrhs;
+               SCIP_Real newf0;
+               SCIP_Real solval;
+               SCIP_Real viol;
+               SCIP_Real newviol;
+               SCIP_Real violgain;
+
+               /* currently:              a'_j =  varsign * a_j  ->  f'_j =  a'_j - floor(a'_j)
+                * after complementation: a''_j = -varsign * a_j  -> f''_j = a''_j - floor(a''_j) = 1 - f'_j
+                *                        rhs'' = rhs' + varsign * a_j * (lb_j - ub_j)
+                * cut violation from f0 and fj:   f'_0 -  f'_j *  x'_j
+                * after complementation:         f''_0 - f''_j * x''_j
+                *
+                * for continuous variables, we just set f'_j = f''_j = |a'_j|
+                */
+               newrhs = *mirrhs + varsign[v] * mircoef[v] * (bestlbs[v] - bestubs[v]);
+               newf0 = SCIPsetSumFrac(set, newrhs);
+               if( newf0 < minfrac || newf0 > maxfrac )
+                  continue;
+               if( SCIPvarGetType(prob->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+               {
+                  fj = REALABS(mircoef[v]);
+                  newfj = fj;
+               }
+               else
+               {
+                  fj = SCIPsetFrac(set, varsign[v] * mircoef[v]);
+                  newfj = SCIPsetFrac(set, -varsign[v] * mircoef[v]);
+               }
+
+               solval = SCIPvarGetLPSol(prob->vars[v]);
+               viol = f0 - fj * (varsign[v] == +1 ? solval - bestlbs[v] : bestubs[v] - solval);
+               newviol = newf0 - newfj * (varsign[v] == -1 ? solval - bestlbs[v] : bestubs[v] - solval);
+               violgain = newviol - viol;
+
+               /* prefer larger violations; for equal violations, prefer smaller f0 values since then the possibility that
+                * we f_j > f_0 is larger and we may improve some coefficients in rounding
+                */
+               if( SCIPsetIsGT(set, violgain, bestviolgain)
+                  || (SCIPsetIsGE(set, violgain, bestviolgain) && newf0 < bestnewf0) )
+               {
+                  bestv = v;
+                  bestviolgain = violgain;
+                  bestnewf0 = newf0;
+               }
+            }
+         }
+
+         if( bestv >= 0 )
+         {
+            assert(bestv < prob->nvars);
+            assert(boundtype[bestv] < 0);
+            assert(!SCIPsetIsInfinity(set, -bestlbs[bestv]));
+            assert(!SCIPsetIsInfinity(set, bestubs[bestv]));
+
+            /* switch the complementation of this variable */
+            (*mirrhs) += varsign[bestv] * mircoef[bestv] * (bestlbs[bestv] - bestubs[bestv]);
+            if( varsign[bestv] == +1 )
+            {
+               /* switch to upper bound */
+               assert(bestubtypes[bestv] < 0); /* cannot switch to a variable bound (would lead to further coef updates) */
+               boundtype[bestv] = bestubtypes[bestv];
+               varsign[bestv] = -1;
+            }
+            else
+            {
+               /* switch to lower bound */
+               assert(bestlbtypes[bestv] < 0); /* cannot switch to a variable bound (would lead to further coef updates) */
+               boundtype[bestv] = bestlbtypes[bestv];
+               varsign[bestv] = +1;
+            }
+            *localbdsused = *localbdsused || (boundtype[bestv] == -2);
+         }
+      }
+   }
+
+ TERMINATE:
+
+   /*free temporary memory */
+   SCIPsetFreeBufferArray(set, &bestubtypes);
+   SCIPsetFreeBufferArray(set, &bestlbtypes);
+   SCIPsetFreeBufferArray(set, &bestubs);
+   SCIPsetFreeBufferArray(set, &bestlbs);
+
+   return SCIP_OKAY;
 }
 
 /** Calculate fractionalities  f_0 := b - down(b), f_j := a'_j - down(a'_j) , and derive MIR cut
@@ -7599,10 +7642,13 @@ SCIP_RETCODE SCIPlpCalcMIR(
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   SCIP_Bool             fixintegralrhs,     /**< should complementation tried to be adjusted such that rhs gets fractional? */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
+   SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
    SCIP_Real*            weights,            /**< row weights in row summation */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
+   SCIP_Real*            mksetcoefs,         /**< array to store mixed knapsack set coefficients: size nvars; or NULL */
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    SCIP_Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
@@ -7637,12 +7683,13 @@ SCIP_RETCODE SCIPlpCalcMIR(
    /**@todo test, if a column based summation is faster */
 
    *success = FALSE;
-   *cutislocal = FALSE;
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &slacksign, lp->nrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &varsign, prob->nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &boundtype, prob->nvars) );
+
+   *cutislocal = FALSE;
 
    /* calculate the row summation */
    sumMIRRow(set, prob, lp, weights, scale, allowlocal, 
@@ -7654,7 +7701,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
    SCIPdebug(printMIR(prob, mircoef, rhs));
    
    /* remove all nearly-zero coefficients from MIR row and relaxes the right hand side correspondingly in order to
-    *  prevent numerical rounding errors
+    * prevent numerical rounding errors
     */
    cleanupMIRRow(set, prob, mircoef, &rhs, *cutislocal);
    SCIPdebug(printMIR(prob, mircoef, rhs));
@@ -7674,10 +7721,15 @@ SCIP_RETCODE SCIPlpCalcMIR(
     *   a_{zl_j} := a_{zl_j} + a_j * bl_j, or
     *   a_{zu_j} := a_{zu_j} + a_j * bu_j
     */
-   transformMIRRow(set, prob, boundswitch, usevbds, allowlocal, 
-      mircoef, &rhs, varsign, boundtype, &freevariable, &localbdsused);
+   SCIP_CALL( transformMIRRow(set, prob, boundswitch, usevbds, allowlocal, fixintegralrhs, minfrac, maxfrac, 
+         mircoef, &rhs, varsign, boundtype, &freevariable, &localbdsused) );
    assert(allowlocal || !localbdsused);
    *cutislocal = *cutislocal || localbdsused;
+
+   /* store the coefficients of the variables in the constructed mixed knapsack set */
+   if( mksetcoefs != NULL )
+      BMScopyMemoryArray(mksetcoefs, mircoef, prob->nvars);
+
    if( freevariable )
       goto TERMINATE;
    SCIPdebug(printMIR(prob, mircoef, rhs));
@@ -7711,7 +7763,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
     */
    downrhs = SCIPsetSumFloor(set, rhs);
    f0 = rhs - downrhs;
-   if( f0 < minfrac )
+   if( f0 < minfrac || f0 > maxfrac )
       goto TERMINATE;
 
    *mirrhs = downrhs;
@@ -7979,7 +8031,7 @@ void transformStrongCGRow(
          SCIP_Real bestvlb;
          int bestvlbidx;
 
-         getClosestVlb(var, &bestvlb, &bestvlbidx);
+         SCIPvarGetClosestVlb(var, &bestvlb, &bestvlbidx);
          if( bestvlbidx >= 0
             && (bestvlb > bestlb || (bestlbtype < 0 && SCIPsetIsGE(set, bestvlb, bestlb))) )
          {
@@ -8007,7 +8059,7 @@ void transformStrongCGRow(
          SCIP_Real bestvub;
          int bestvubidx;
 
-         getClosestVub(var, &bestvub, &bestvubidx);
+         SCIPvarGetClosestVub(var, &bestvub, &bestvubidx);
          if( bestvubidx >= 0
             && (bestvub < bestub || (bestubtype < 0 && SCIPsetIsLE(set, bestvub, bestub))) )
          {
@@ -8733,7 +8785,7 @@ SCIP_RETCODE lpPrimalSimplex(
    if( stat->nnodes == 1 && !lp->diving && !lp->probing )
    {
       char fname[SCIP_MAXSTRLEN];
-      sprintf(fname, "lp%"SCIP_LONGINT_FORMAT"_%d.mps", stat->nnodes, stat->lpcount);
+      sprintf(fname, "lp%"SCIP_LONGINT_FORMAT"_%d.lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
       SCIPmessagePrintInfo("wrote LP to file <%s> (primal simplex, uobjlim=%g, feastol=%g/%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol,
@@ -8834,7 +8886,7 @@ SCIP_RETCODE lpDualSimplex(
    if( stat->nnodes == 1 && !lp->diving && !lp->probing )
    {
       char fname[SCIP_MAXSTRLEN];
-      sprintf(fname, "lp%"SCIP_LONGINT_FORMAT"_%d.mps", stat->nnodes, stat->lpcount);
+      sprintf(fname, "lp%"SCIP_LONGINT_FORMAT"_%d.lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
       SCIPmessagePrintInfo("wrote LP to file <%s> (dual simplex, uobjlim=%g, feastol=%g/%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, 
@@ -8935,7 +8987,7 @@ SCIP_RETCODE lpBarrier(
    if( stat->nnodes == 1 && !lp->diving && !lp->probing )
    {
       char fname[SCIP_MAXSTRLEN];
-      sprintf(fname, "lp%"SCIP_LONGINT_FORMAT"_%d.mps", stat->nnodes, stat->lpcount);
+      sprintf(fname, "lp%"SCIP_LONGINT_FORMAT"_%d.lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
       SCIPmessagePrintInfo("wrote LP to file <%s> (barrier, uobjlim=%g, feastol=%g/%g, convtol=%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, lp->lpibarrierconvtol,

@@ -2027,8 +2027,8 @@ separating/cmir/maxaggrs = 3
 separating/cmir/maxaggrsroot = 6
 
 # maximal number of cmir cuts separated per separation round
-# [type: int, range: [0,2147483647], default: 50]
-separating/cmir/maxsepacuts = 50
+# [type: int, range: [0,2147483647], default: 100]
+separating/cmir/maxsepacuts = 100
 
 # maximal number of cmir cuts separated per separation round in the root node
 # [type: int, range: [0,2147483647], default: 500]
@@ -2041,6 +2041,10 @@ separating/cmir/maxslack = 0
 # maximal slack of rows to be used in aggregation in the root node
 # [type: real, range: [0,1.79769313486232e+308], default: 0.1]
 separating/cmir/maxslackroot = 0.1
+
+# weight of row density in the aggregation scoring of the rows
+# [type: real, range: [0,1.79769313486232e+308], default: 0.0001]
+separating/cmir/densityscore = 0.0001
 
 # weight of slack in the aggregation scoring of the rows
 # [type: real, range: [0,1.79769313486232e+308], default: 0.001]
@@ -2058,13 +2062,13 @@ separating/cmir/maxrowdensity = 0.05
 # [type: real, range: [0,1.79769313486232e+308], default: 10000]
 separating/cmir/maxrowfac = 10000
 
-# maximal number of different deltas to try
-# [type: int, range: [0,2147483647], default: 20]
-separating/cmir/maxtestdelta = 20
+# maximal number of different deltas to try (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: -1]
+separating/cmir/maxtestdelta = -1
 
-# maximal number of different deltas to try in the root node
-# [type: int, range: [0,2147483647], default: 100]
-separating/cmir/maxtestdeltaroot = 100
+# maximal number of different deltas to try in the root node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: -1]
+separating/cmir/maxtestdeltaroot = -1
 
 # maximal number of active continuous variables in aggregated row
 # [type: int, range: [0,2147483647], default: 10]
@@ -2074,9 +2078,17 @@ separating/cmir/maxconts = 10
 # [type: int, range: [0,2147483647], default: 10]
 separating/cmir/maxcontsroot = 10
 
+# tolerance for bounddistances used to select continuous variable in current aggregated constraint to be eliminated
+# [type: real, range: [0,1.79769313486232e+308], default: 0.1]
+separating/cmir/aggrtol = 0.1
+
 # should negative values also be tested in scaling?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/cmir/trynegscaling = TRUE
+
+# should an additional variable be complemented if f0 = 0?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/cmir/fixintegralrhs = TRUE
 
 # should generated cuts be removed from the LP if they are no longer tight?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]

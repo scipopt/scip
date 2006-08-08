@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cutpool.h,v 1.10 2006/01/03 12:22:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cutpool.h,v 1.11 2006/08/08 15:17:13 bzfpfend Exp $"
 
 /**@file   pub_cutpool.h
  * @brief  public methods for storing cuts in a cut pool
@@ -31,6 +31,24 @@
 #include "scip/type_cutpool.h"
 
 
+
+/** gets the row of the cut */
+extern
+SCIP_ROW* SCIPcutGetRow(
+   SCIP_CUT*             cut                 /**< cut */
+   );
+
+/** gets the age of the cut: the number of consecutive cut pool separation rounds where the cut was neither in the LP nor violated */
+extern
+int SCIPcutGetAge(
+   SCIP_CUT*             cut                 /**< cut */
+   );
+
+/** gets array of cuts in the cut pool */
+extern
+SCIP_CUT** SCIPcutpoolGetCuts(
+   SCIP_CUTPOOL*         cutpool             /**< cut pool */
+   );
 
 /** get number of cuts in the cut pool */
 extern
