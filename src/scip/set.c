@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.179 2006/08/08 15:17:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.180 2006/08/10 12:34:11 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -97,6 +97,9 @@
 #define SCIP_DEFAULT_CONF_REMOVEABLE       TRUE /**< should the conflict's relaxations be subject to LP aging and cleanup? */
 #define SCIP_DEFAULT_CONF_DEPTHSCOREFAC     1.0 /**< score factor for depth level in bound relaxation heuristic of LP analysis */
 #define SCIP_DEFAULT_CONF_SCOREFAC         0.98 /**< factor to decrease importance of variables' earlier conflict scores */
+#define SCIP_DEFAULT_CONF_RESTARTNUM          0 /**< number of successful conflict analysis calls that trigger a restart
+                                                 *   (0: disable conflict restarts) */
+#define SCIP_DEFAULT_CONF_RESTARTFAC        1.5 /**< factor to increase restartnum with after each restart */
 
 
 /* Constraints */
@@ -215,6 +218,7 @@
 #define SCIP_DEFAULT_SEPA_ORTHOFAC         1.00 /**< factor to scale orthogonality of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_EFFICACYNORM      'e' /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum,
                                                  *   's'um, 'd'iscrete) */
+#define SCIP_DEFAULT_SEPA_MAXRUNS            -1 /**< maximal number of runs for which separation is enabled (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDS           5 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDSROOT      -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXADDROUNDS        1 /**< maximal additional number of separation rounds in subsequent
@@ -521,6 +525,16 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/scorefac",
          "factor to decrease importance of variables' earlier conflict scores",
          &(*set)->conf_scorefac, SCIP_DEFAULT_CONF_SCOREFAC, 1e-6, 1.0,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
+         "conflict/restartnum",
+         "number of successful conflict analysis calls that trigger a restart (0: disable conflict restarts)",
+         &(*set)->conf_restartnum, SCIP_DEFAULT_CONF_RESTARTNUM, 0, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
+         "conflict/restartfac",
+         "factor to increase restartnum with after each restart",
+         &(*set)->conf_restartfac, SCIP_DEFAULT_CONF_RESTARTFAC, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
 
    /* constraint parameters */
@@ -890,6 +904,11 @@ SCIP_RETCODE SCIPsetCreate(
          "separating/efficacynorm",
          "row norm to use for efficacy calculation ('e'uclidean, 'm'aximum, 's'um, 'd'iscrete)",
          &(*set)->sepa_efficacynorm, SCIP_DEFAULT_SEPA_EFFICACYNORM, "emsd",
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
+         "separating/maxruns",
+         "maximal number of runs for which separation is enabled (-1: unlimited)",
+         &(*set)->sepa_maxruns, SCIP_DEFAULT_SEPA_MAXRUNS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "separating/maxrounds",

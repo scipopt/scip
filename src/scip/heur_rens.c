@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.5 2006/07/06 19:46:20 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.6 2006/08/10 12:34:10 bzfpfend Exp $"
 
 /**@file   heur_rens.c
  * @brief  RENS primal heuristic
@@ -225,21 +225,20 @@ static
 SCIP_RETCODE createNewSol(
    SCIP*                 scip,               /**< original SCIP data structure                        */
    SCIP*                 subscip,            /**< SCIP structure of the subproblem                    */
+   SCIP_VAR**            subvars,            /**< the variables of the subproblem                     */
    SCIP_HEUR*            heur,               /**< RENS heuristic structure                            */
+   SCIP_SOL*             subsol,             /**< solution of the subproblem                          */
    SCIP_Bool*            success             /**< used to store whether new solution was found or not */
    )
 {
-   SCIP_VAR** subvars;                       /* the subproblem's variables                      */
    SCIP_VAR** vars;                          /* the original problem's variables                */
    int        nvars;
    SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
    SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
-   SCIP_SOL*  subsol;                        /* incumbent of the subproblem                     */
         
    assert( scip != NULL );
    assert( subscip != NULL );
-
-   subsol = SCIPgetBestSol(subscip);
+   assert( subvars != NULL );
    assert( subsol != NULL );
 
    /* get variables' data */
@@ -249,7 +248,6 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
 
    /* copy the solution */
-   subvars = SCIPgetOrigVars(subscip); 
    SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
        
    /* create new solution for the original problem */
@@ -437,6 +435,7 @@ SCIP_DECL_HEUREXEC(heurExecRens)
    {
       int nbinvars;
       int nintvars;
+
       *result = SCIP_DIDNOTRUN;
       SCIP_CALL( SCIPfreeTransform(subscip) );
       SCIP_CALL( SCIPgetVarsData(subscip, NULL, NULL, &nbinvars, &nintvars, NULL, NULL) );
@@ -475,17 +474,23 @@ SCIP_DECL_HEUREXEC(heurExecRens)
     */
    if( ( nvars - SCIPgetNVars(subscip) ) / (SCIP_Real)nvars >= heurdata->minfixingrate / 2.0 )
    {
+      SCIP_SOL** subsols;
+      int nsubsols;
+
       SCIP_CALL( SCIPsolve(subscip) );
       
-      /* check, whether a solution was found */
-      if( SCIPgetNSols(subscip) > 0 )
+      /* check, whether a solution was found;
+       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
+       */
+      nsubsols = SCIPgetNSols(subscip);
+      subsols = SCIPgetSols(subscip);
+      success = FALSE;
+      for( i = 0; i < nsubsols && !success; ++i )
       {
-         success = FALSE;
-         SCIP_CALL( createNewSol(scip, subscip, heur, &success) );
-         if( success )
-            *result = SCIP_FOUNDSOL;
+         SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &success) );
       }
-
+      if( success )
+         *result = SCIP_FOUNDSOL;
    }
 
    /* free subproblem */

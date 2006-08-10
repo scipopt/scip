@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.45 2006/03/16 14:43:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.46 2006/08/10 12:34:12 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -89,6 +89,7 @@ struct SCIP_Stat
    SCIP_STATUS           status;             /**< SCIP solving status */
    SCIP_BRANCHDIR        lastbranchdir;      /**< direction of the last branching */
    int                   nruns;              /**< number of branch and bound runs on current problem, including current run */
+   int                   nconfrestarts;      /**< number of restarts performed due to conflict analysis */
    int                   nrootboundchgs;     /**< total number of bound changes generated in the root node */
    int                   nrootboundchgsrun;  /**< total number of bound changes generated in the root node of current run */
    int                   nrootintfixings;    /**< total number of global fixings of integer variables */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.380 2006/08/08 15:17:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.381 2006/08/10 12:34:10 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3500,9 +3500,9 @@ SCIP_CONS** SCIPgetOrigConss(
  *  only active in a small part of the tree although it is valid in a larger part.
  *  In this case, one should pass the more global node where the constraint is valid as "validnode".
  *  Note that the same constraint cannot be added twice to the branching tree with different "validnode" parameters.
- *  If the constraint is valid at the same as it is inserted (the usual case), one should pass NULL as "validnode".
- *  If a local constraint is added to the root node, or if the "validnode" is the root node, it is automatically
- *  upgraded into a global constraint, but still only added to the given node.
+ *  If the constraint is valid at the same node as it is inserted (the usual case), one should pass NULL as "validnode".
+ *  If the "validnode" is the root node, it is automatically upgraded into a global constraint, but still only added to
+ *  the given node. If a local constraint is added to the root node, it is added to the global problem instead.
  */
 SCIP_RETCODE SCIPaddConsNode(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3540,9 +3540,14 @@ SCIP_RETCODE SCIPaddConsNode(
    }
 
    if( SCIPnodeGetDepth(node) <= SCIPtreeGetEffectiveRootDepth(scip->tree) )
+   {
       SCIPconsSetLocal(cons, FALSE);
-
-   SCIP_CALL( SCIPnodeAddCons(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, cons) );
+      SCIP_CALL( SCIPprobAddCons(scip->transprob, scip->set, scip->stat, cons) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPnodeAddCons(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, cons) );
+   }
 
    return SCIP_OKAY;
 }
@@ -3553,9 +3558,9 @@ SCIP_RETCODE SCIPaddConsNode(
  *  only active in a small part of the tree although it is valid in a larger part.
  *  In this case, one should pass the more global node where the constraint is valid as "validnode".
  *  Note that the same constraint cannot be added twice to the branching tree with different "validnode" parameters.
- *  If the constraint is valid at the same as it is inserted (the usual case), one should pass NULL as "validnode".
- *  If a local constraint is added to the root node, or if the "validnode" is the root node, it is automatically
- *  upgraded into a global constraint.
+ *  If the constraint is valid at the same node as it is inserted (the usual case), one should pass NULL as "validnode".
+ *  If the "validnode" is the root node, it is automatically upgraded into a global constraint, but still only added to
+ *  the given node. If a local constraint is added to the root node, it is added to the global problem instead.
  */
 SCIP_RETCODE SCIPaddConsLocal(
    SCIP*                 scip,               /**< SCIP data structure */

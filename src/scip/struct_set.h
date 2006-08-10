@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.67 2006/06/07 08:21:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.68 2006/08/10 12:34:11 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -143,9 +143,12 @@ struct SCIP_Set
                                               *   decisions by deductions? */
    SCIP_Bool             conf_keepreprop;    /**< should constraints be kept for repropagation even if they are too long? */
    SCIP_Bool             conf_dynamic;       /**< should the conflict constraints be subject to aging? */
-   SCIP_Bool             conf_removable;    /**< should the conflict's relaxations be subject to LP aging and cleanup? */
+   SCIP_Bool             conf_removable;     /**< should the conflict's relaxations be subject to LP aging and cleanup? */
    SCIP_Real             conf_depthscorefac; /**< score factor for depth level in bound relaxation heuristic of LP analysis */
    SCIP_Real             conf_scorefac;      /**< factor to decrease importance of variables' earlier conflict scores */
+   int                   conf_restartnum;    /**< number of successful conflict analysis calls that trigger a restart
+                                              *   (0: disable conflict restarts) */
+   SCIP_Real             conf_restartfac;    /**< factor to increase restartnum with after each restart */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted
@@ -229,7 +232,6 @@ struct SCIP_Set
    SCIP_Real             presol_subrestartfac;/**< fraction of integer variables that were globally fixed during the
                                                *   solving process triggering a restart with preprocessing */
 
-
    /* pricing settings */
    SCIP_Real             price_abortfac;     /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
    int                   price_maxvars;      /**< maximal number of variables priced in per pricing round */
@@ -253,6 +255,7 @@ struct SCIP_Set
    SCIP_Real             sepa_orthofac;      /**< factor to scale orthogonality of cut in separation score calculation */
    char                  sepa_efficacynorm;  /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum, 's'um,
                                               *   'd'iscrete) */
+   int                   sepa_maxruns;       /**< maximal number of runs for which separation is enabled (-1: unlimited) */
    int                   sepa_maxrounds;     /**< maximal number of separation rounds per node (-1: unlimited) */
    int                   sepa_maxroundsroot; /**< maximal number of separation rounds in the root node (-1: unlimited) */
    int                   sepa_maxaddrounds;  /**< maximal additional number of separation rounds in subsequent price-and-cut

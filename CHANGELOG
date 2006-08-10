@@ -53,6 +53,8 @@ interface:
 - modified SCIPfixVar() such that in problem creation stage it will change the bounds as requested even if the fixing
   value is outside of the current bounds
 - new methods SCIPgetGlobalCutpool(), SCIPgetPoolCuts(), SCIPcutpoolGetCuts(), SCIPcutGetRow(), and SCIPcutGetAge()
+- slightly changed semantics of SCIPaddConsNode() and SCIPaddConsLocal(), such that a constraint which is added to the
+  root node now enters the global problem (and is still existing after a restart)
 
 plugins:
 - new primal heuristic "rens"
@@ -82,6 +84,8 @@ parameters:
 - new parameter "separating/cmir/aggrtol"
 - new parameter "separating/cmir/fixintegralrhs"
 - new parameter "separating/cmir/densityscore"
+- new parameter "separating/maxruns"
+- new parameters "conflict/restartnum" and "conflict/restartfac"
 
 features:
 - primal heuristics that run before the node is solved now know already whether the LP will be solved at the current node
@@ -90,6 +94,7 @@ features:
   the name
 - updated XPress interface to XPress-MP 17 (contributed by Michael Perregard)
 - the EXITSOL callback of the plugins is now called before the LP and the global cut pool are freed
+- possibility of SAT-like restarts after a number of conflict constraints have been found
 
 fixed bugs:
 - fixed bug with adding constraints with INITIAL=true and separating them afterwards, which lead to a second addition
@@ -104,6 +109,7 @@ fixed bugs:
   the implication graph presolving
 - fixed bug in cmir cut separator with weights fixed to zero, thus making the current aggregation invalid
 - fixed bug that SCIPvarGetAvgSol() always returned the upper bound (affected guided diving heuristic)
+- fixed bug in RENS heuristic with wrong variable - subvariable assignment
 
 
 SCIP version 0.82

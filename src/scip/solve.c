@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.227 2006/08/08 15:17:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.228 2006/08/10 12:34:11 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1277,6 +1277,7 @@ SCIP_RETCODE priceAndCutLoop(
    glblowerbound = SCIPtreeGetLowerbound(tree, set);
    separate = SCIPsetIsLE(set, loclowerbound - glblowerbound,
       set->sepa_maxbounddist * (primal->cutoffbound - glblowerbound));
+   separate = separate && (set->sepa_maxruns == -1 || stat->nruns <= set->sepa_maxruns);
 
    /* get maximal number of separation rounds */
    maxseparounds = (root ? set->sepa_maxroundsroot : set->sepa_maxrounds);
@@ -2582,6 +2583,7 @@ SCIP_RETCODE SCIPsolveCIP(
    SCIP_NODE* nextnode;
    SCIP_EVENT event;
    SCIP_Real restartfac;
+   SCIP_Real restartconfnum;
    int nnodes;
    int depth;
    SCIP_Bool cutoff;
@@ -2611,6 +2613,19 @@ SCIP_RETCODE SCIPsolveCIP(
    *restart = (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts)
       && stat->nrootintfixingsrun > restartfac * (prob->nvars - prob->ncontvars);
 
+   /* calculate the number of successful conflict analysis calls that should trigger a restart */
+   if( set->conf_restartnum > 0 )
+   {
+      int i;
+
+      restartconfnum = (SCIP_Real)set->conf_restartnum;
+      for( i = 0; i < stat->nconfrestarts; ++i )
+         restartconfnum *= set->conf_restartfac;
+   }
+   else
+      restartconfnum = SCIP_REAL_MAX;
+   assert(restartconfnum >= 0.0);
+
    /* switch status to UNKNOWN */
    stat->status = SCIP_STATUS_UNKNOWN;
 
@@ -2619,6 +2634,8 @@ SCIP_RETCODE SCIPsolveCIP(
 
    while( !SCIPsolveIsStopped(set, stat) && !(*restart) )
    {
+      SCIP_Longint nsuccessconflicts;
+
       assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
       foundsol = FALSE;
@@ -2792,6 +2809,19 @@ SCIP_RETCODE SCIPsolveCIP(
          assert(!tree->cutoffdelayed);
          if( nnodes != SCIPtreeGetNNodes(tree) )
             nextnode = NULL;
+      }
+
+      /* trigger restart due to conflicts */
+      nsuccessconflicts = SCIPconflictGetNPropSuccess(conflict) + SCIPconflictGetNInfeasibleLPSuccess(conflict)
+         + SCIPconflictGetNBoundexceedingLPSuccess(conflict) + SCIPconflictGetNStrongbranchSuccess(conflict)
+         + SCIPconflictGetNPseudoSuccess(conflict);
+      if( nsuccessconflicts >= restartconfnum )
+      {
+         SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+            "(run %d, node %"SCIP_LONGINT_FORMAT") restarting after %"SCIP_LONGINT_FORMAT" successful conflict analysis calls\n",
+            stat->nruns, stat->nnodes, nsuccessconflicts);
+         *restart = TRUE;
+         stat->nconfrestarts++;
       }
 
       /* display node information line */
