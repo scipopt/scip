@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.15 2006/07/06 19:46:20 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.16 2006/08/10 12:52:44 bzfpfend Exp $"
 
 /**@file   heur_crossover.c
  * @brief  crossover primal heuristic
@@ -515,23 +515,21 @@ static
 SCIP_RETCODE createNewSol(
    SCIP*                 scip,               /**< original SCIP data structure                        */
    SCIP*                 subscip,            /**< SCIP structure of the subproblem                    */
+   SCIP_VAR**            subvars,            /**< the variables of the subproblem                     */
    SCIP_HEUR*            heur,               /**< crossover heuristic structure                       */
+   SCIP_SOL*             subsol,             /**< solution of the subproblem                          */
    int*                  solindex,           /**< index of the solution                               */
    SCIP_Bool*            success             /**< used to store whether new solution was found or not */
    )
 {
-   SCIP_VAR** subvars;                       /* the subproblem's variables                      */
    SCIP_VAR** vars;                          /* the original problem's variables                */
    int        nvars;
-
    SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
-   SCIP_SOL*  subsol;                        /* incumbent of the subproblem                     */
    SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
         
    assert( scip != NULL );
    assert( subscip != NULL );
-
-   subsol = SCIPgetBestSol(subscip);
+   assert( subvars != NULL );
    assert( subsol != NULL );
 
    /* get variables' data */
@@ -541,7 +539,6 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
 
    /* copy the solution */
-   subvars = SCIPgetOrigVars(subscip); 
    SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
        
    /* create new solution for the original problem */
@@ -863,21 +860,33 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* check, whether a solution was found */
    if( SCIPgetNSols(subscip) > 0 )
    {
+      SCIP_SOL** subsols;
+      int nsubsols;
       int solindex;                             /* index of the solution created by crossover          */
 
-      solindex = -1;
+      /* check, whether a solution was found;
+       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
+       */
+      nsubsols = SCIPgetNSols(subscip);
+      subsols = SCIPgetSols(subscip);
       success = FALSE;
+      solindex = -1;
+      for( i = 0; i < nsubsols && !success; ++i )
+      {
+         SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &solindex, &success) );
+      }
 
-      /* try to insert the solution into scip and get its unique solindex */
-      SCIP_CALL( createNewSol(scip, subscip, heur, &solindex, &success) );
       if( success )
       {
          int tmp;
+
+         assert( solindex != -1 );
+
          *result = SCIP_FOUNDSOL;
        
-         assert( solindex != -1 );
          /* insert all crossings of the new solution and (nusedsols-1) of its parents into the hashtable 
-          * in order to avoid incest ;) */
+          * in order to avoid incest ;)
+          */
          for( i = 0; i < nusedsols; i++ )
          {
             SOLTUPLE* elem;
@@ -890,7 +899,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
          } 
          
          /* if solution was among the best ones, crossover should not be called until another good solution was found */
-         if( (!heurdata->randomization ) )
+         if( !heurdata->randomization )
          {
             heurdata->prevbestsol = SCIPgetBestSol(scip);
             heurdata->prevlastsol = SCIPgetSols(scip)[heurdata->nusedsols-1];
@@ -901,9 +910,11 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
       if( !success || solindex != SCIPsolGetIndex(SCIPgetBestSol(scip)))
          updateFailureStatistic(scip, heurdata);
    }
-   /* if no new solution was found, run was a failure */
    else
+   {
+      /* if no new solution was found, run was a failure */
       updateFailureStatistic(scip, heurdata);
+   }
    
    /* free subproblem */
    SCIPfreeBufferArray(scip, &selection);

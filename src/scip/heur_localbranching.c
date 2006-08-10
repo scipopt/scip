@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.15 2006/07/06 19:46:20 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.16 2006/08/10 12:52:44 bzfpfend Exp $"
 
 /**@file   heur_localbranching.c
  * @brief  localbranching primal heuristic
@@ -238,26 +238,24 @@ static
 SCIP_RETCODE createNewSol(
    SCIP*                 scip,               /**< SCIP data structure  of the original problem      */
    SCIP*                 subscip,            /**< SCIP data structure  of the subproblem            */
+   SCIP_VAR**            subvars,            /**< the variables of the subproblem                     */
    SCIP_HEUR*            heur,               /**< the Localbranching heuristic                      */
+   SCIP_SOL*             subsol,             /**< solution of the subproblem                          */
    SCIP_Bool*            success             /**< pointer to store, whether new solution was found  */
    )
 {
-   SCIP_VAR** subvars;
    SCIP_VAR** vars;
    int nvars;
    SCIP_SOL* newsol;
-   SCIP_SOL* subsol;
    SCIP_Real* subsolvals;
         
    assert( scip != NULL );
    assert( subscip != NULL );
-
-   subsol = SCIPgetBestSol(subscip);
+   assert( subvars != NULL );
    assert( subsol != NULL );
 
    /* copy the solution */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-   subvars = SCIPgetOrigVars(subscip);
    assert(nvars == SCIPgetNOrigVars(subscip));
    SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
    SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
@@ -494,12 +492,22 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    /* check, whether a solution was found */
    if( SCIPgetNSols(subscip) > 0 )
    {
+      SCIP_SOL** subsols;
+      int nsubsols;
       SCIP_Bool success;
 
+      /* check, whether a solution was found;
+       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
+       */
+      nsubsols = SCIPgetNSols(subscip);
+      subsols = SCIPgetSols(subscip);
       success = FALSE;
-      SCIP_CALL( createNewSol(scip, subscip, heur, &success) );
+      for( i = 0; i < nsubsols && !success; ++i )
+      {
+         SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &success) );
+      }
       if( success )
-         *result = SCIP_FOUNDSOL;  
+         *result = SCIP_FOUNDSOL;
    }
 
    /* check the status of the sub-MIP */

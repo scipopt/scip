@@ -109,7 +109,7 @@ fixed bugs:
   the implication graph presolving
 - fixed bug in cmir cut separator with weights fixed to zero, thus making the current aggregation invalid
 - fixed bug that SCIPvarGetAvgSol() always returned the upper bound (affected guided diving heuristic)
-- fixed bug in RENS heuristic with wrong variable - subvariable assignment
+- fixed bug in RENS, RINS, Local Branching, Crossover, and Mutation heuristics with wrong variable - subvariable assignments
 
 
 SCIP version 0.82
