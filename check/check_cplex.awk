@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.21 2006/05/22 11:01:28 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.22 2006/08/21 20:13:17 bzfpfend Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -74,8 +74,18 @@ BEGIN {
 #
 /^@01/ { 
     n  = split ($2, a, "/");
-    split(a[n], b, ".");
+    m = split(a[n], b, ".");
     prob = b[1];
+    if( b[m] == "gz" || b[m] == "z" || b[m] == "GZ" || b[m] == "Z" )
+       m--;
+    for( i = 2; i < m; ++i )
+       prob = prob "." b[i];
+
+    if( length(prob) > 18 )
+       shortprob = substr(prob, length(prob)-17, 18);
+    else
+       shortprob = prob;
+
     # Escape _ for TeX
     n = split(prob, a, "_");
     pprob = a[1];
@@ -97,6 +107,7 @@ BEGIN {
     sblps      = 0;
     sbiter     = 0;
     tottime    = 0.0;
+    aborted    = 1;
 }
 #
 # problem size
@@ -190,6 +201,7 @@ BEGIN {
 /^Solution/ {
    tottime   = $4;
    bbnodes   = $11;
+   aborted   = 0;
 }
 /^=ready=/ {
    if( !onlyinsolufile || solstatus[prob] != "" )
@@ -227,9 +239,15 @@ BEGIN {
          pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
    
       printf("%-26s %6d %6d %14.9g %14.9g %6s                 %7d %6.1f                      ",
-         prob, cons, vars, db, pb, gapstr, bbnodes, tottime);
+         shortprob, cons, vars, db, pb, gapstr, bbnodes, tottime);
    
-      if( solstatus[prob] == "opt" )
+      if( aborted )
+      {
+         printf("abort\n");
+         failtime += tottime;
+         fail++;
+      }
+      else if( solstatus[prob] == "opt" )
       {
          if ((abs(pb - db) > 1e-4) || (abs(pb - sol[prob]) > 1e-6*max(abs(pb),1.0)))
          {

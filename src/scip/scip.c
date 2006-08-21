@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.381 2006/08/10 12:34:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.382 2006/08/21 20:13:19 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3882,6 +3882,9 @@ SCIP_RETCODE initPresolve(
 
    /* increase number of branch and bound runs */
    scip->stat->nruns++;
+
+   /* remember problem size of previous run */
+   scip->stat->prevrunnvars = scip->transprob->nvars;
 
    /* switch stage to PRESOLVING */
    scip->set->stage = SCIP_STAGE_PRESOLVING;
@@ -14170,6 +14173,7 @@ void SCIPprintMemoryDiagnostic(
 {
    assert(scip != NULL);
    assert(scip->mem != NULL);
+   assert(scip->set != NULL);
 
    BMSdisplayMemory();
 
@@ -14181,6 +14185,9 @@ void SCIPprintMemoryDiagnostic(
 
    SCIPmessagePrintInfo("\nSolution Block Memory (%p):\n", scip->mem->solvemem);
    BMSdisplayBlockMemory(scip->mem->solvemem);
+
+   SCIPmessagePrintInfo("\nMemory Buffers:\n");
+   SCIPbufferPrint(scip->set->buffer);
 }
 
 

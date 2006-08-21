@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.6 2006/08/10 12:34:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.7 2006/08/21 20:13:19 bzfpfend Exp $"
 
 /**@file   heur_rens.c
  * @brief  RENS primal heuristic
@@ -388,6 +388,9 @@ SCIP_DECL_HEUREXEC(heurExecRens)
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
    SCIP_CALL( SCIPcreate(&subscip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
+
+   /* do not abort subproblem on CTRL-C */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
  
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
@@ -478,7 +481,7 @@ SCIP_DECL_HEUREXEC(heurExecRens)
       int nsubsols;
 
       SCIP_CALL( SCIPsolve(subscip) );
-      
+
       /* check, whether a solution was found;
        * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
        */

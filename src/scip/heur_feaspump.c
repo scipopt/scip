@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.42 2006/07/03 07:00:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.43 2006/08/21 20:13:18 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -30,7 +30,7 @@
 
 
 #define HEUR_NAME             "feaspump"
-#define HEUR_DESC             "feasibility pump heuristic by Fischetti, Glover and Lodi"
+#define HEUR_DESC             "feasibility pump heuristic by Bertacco, Fischetti, Glover and Lodi"
 #define HEUR_DISPCHAR         'F'
 #define HEUR_PRIORITY         -1000000
 #define HEUR_FREQ             20
@@ -355,7 +355,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    assert(heurdata != NULL);
 
    /* only apply heuristic, if only a few solutions have been found */
-   if( heurdata->maxsols >= 0 && SCIPgetNSolsFound(scip) >= heurdata->maxsols )
+   if( heurdata->maxsols >= 0 && SCIPgetNSolsFound(scip) > heurdata->maxsols )
       return SCIP_OKAY;
 
    /* get all variables of LP and number of fractional variables in LP solution that should be integral */
@@ -499,7 +499,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          }
          else
             newobjcoeff = alpha * orgobjcoeff;
-         
+
          /* change one coefficient of the objective */
          SCIP_CALL( SCIPchgVarObjDive(scip, var, newobjcoeff) );
          

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rins.c,v 1.18 2006/08/10 12:52:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rins.c,v 1.19 2006/08/21 20:13:19 bzfpfend Exp $"
 
 /**@file   heur_rins.c
  * @brief  RINS primal heuristic
@@ -383,6 +383,9 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
    SCIP_CALL( SCIPcreate(&subscip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
+ 
+   /* do not abort subproblem on CTRL-C */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
  
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );

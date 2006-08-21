@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.50 2006/06/07 11:47:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.51 2006/08/21 20:13:18 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for variable bound constraints
@@ -391,51 +391,58 @@ SCIP_RETCODE propagateCons(
          /* propagate bounds on x:
           *  (1) left hand side and bounds on y -> lower bound on x
           */
-         if( consdata->vbdcoef > 0.0 )
-            newlb = SCIPadjustedVarLb(scip, consdata->var, consdata->lhs - consdata->vbdcoef * yub);
-         else
-            newlb = SCIPadjustedVarLb(scip, consdata->var, consdata->lhs - consdata->vbdcoef * ylb);
-         if( newlb > xlb + 0.1 )
+         if( SCIPvarGetStatus(consdata->var) != SCIP_VARSTATUS_MULTAGGR ) /* cannot change bounds of multaggr vars */
          {
-            SCIPdebugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n", SCIPvarGetName(consdata->var), xlb, xub, newlb, xub);
-            SCIP_CALL( SCIPinferVarLbCons(scip, consdata->var, newlb, cons, (int)PROPRULE_1, &infeasible, &tightened) );
-            *cutoff = *cutoff || infeasible;
-            tightenedround = tightenedround || tightened;
-            xlb = newlb;
-            (*nchgbds)++;
+            if( consdata->vbdcoef > 0.0 )
+               newlb = SCIPadjustedVarLb(scip, consdata->var, consdata->lhs - consdata->vbdcoef * yub);
+            else
+               newlb = SCIPadjustedVarLb(scip, consdata->var, consdata->lhs - consdata->vbdcoef * ylb);
+            if( SCIPisLbBetter(scip, newlb, xlb, xub) || ylb > yub - 0.5 ) /*????????????? if( newlb > xlb + 0.1 )*/
+            {
+               SCIPdebugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n",
+                  SCIPvarGetName(consdata->var), xlb, xub, newlb, xub);
+               SCIP_CALL( SCIPinferVarLbCons(scip, consdata->var, newlb, cons, (int)PROPRULE_1, &infeasible, &tightened) );
+               *cutoff = *cutoff || infeasible;
+               tightenedround = tightenedround || tightened;
+               xlb = newlb;
+               (*nchgbds)++;
+            }
          }
 
          /* propagate bounds on y:
           *  (2) left hand side and upper bound on x -> bound on y
           */
-         if( consdata->vbdcoef > 0.0 )
+         if( SCIPvarGetStatus(consdata->vbdvar) != SCIP_VARSTATUS_MULTAGGR ) /* cannot change bounds of multaggr vars */
          {
-            newlb = SCIPadjustedVarLb(scip, consdata->vbdvar, (consdata->lhs - xub)/consdata->vbdcoef);
-            if( newlb > ylb + 0.5 )
+            if( consdata->vbdcoef > 0.0 )
             {
-               SCIPdebugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n", 
-                  SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
-               SCIP_CALL( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, (int)PROPRULE_2,
-                     &infeasible, &tightened) );
-               *cutoff = *cutoff || infeasible;
-               tightenedround = tightenedround || tightened;
-               ylb = newlb;
-               (*nchgbds)++;
+               newlb = SCIPadjustedVarLb(scip, consdata->vbdvar, (consdata->lhs - xub)/consdata->vbdcoef);
+               if( newlb > ylb + 0.5 )
+               {
+                  SCIPdebugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n", 
+                     SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
+                  SCIP_CALL( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, (int)PROPRULE_2,
+                        &infeasible, &tightened) );
+                  *cutoff = *cutoff || infeasible;
+                  tightenedround = tightenedround || tightened;
+                  ylb = newlb;
+                  (*nchgbds)++;
+               }
             }
-         }
-         else
-         {
-            newub = SCIPadjustedVarUb(scip, consdata->vbdvar, (consdata->lhs - xub)/consdata->vbdcoef);
-            if( newub < yub - 0.5 )
+            else
             {
-               SCIPdebugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n", 
-                  SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
-               SCIP_CALL( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, (int)PROPRULE_2,
-                     &infeasible, &tightened) );
-               *cutoff = *cutoff || infeasible;
-               tightenedround = tightenedround || tightened;
-               yub = newub;
-               (*nchgbds)++;
+               newub = SCIPadjustedVarUb(scip, consdata->vbdvar, (consdata->lhs - xub)/consdata->vbdcoef);
+               if( newub < yub - 0.5 )
+               {
+                  SCIPdebugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n", 
+                     SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
+                  SCIP_CALL( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, (int)PROPRULE_2,
+                        &infeasible, &tightened) );
+                  *cutoff = *cutoff || infeasible;
+                  tightenedround = tightenedround || tightened;
+                  yub = newub;
+                  (*nchgbds)++;
+               }
             }
          }
       }
@@ -446,59 +453,71 @@ SCIP_RETCODE propagateCons(
          /* propagate bounds on x:
           *  (3) right hand side and bounds on y -> upper bound on x
           */
-         if( consdata->vbdcoef > 0.0 )
-            newub = SCIPadjustedVarUb(scip, consdata->var, consdata->rhs - consdata->vbdcoef * ylb);
-         else
-            newub = SCIPadjustedVarUb(scip, consdata->var, consdata->rhs - consdata->vbdcoef * yub);
-         if( newub < xub - 0.1 )
+         if( SCIPvarGetStatus(consdata->var) != SCIP_VARSTATUS_MULTAGGR ) /* cannot change bounds of multaggr vars */
          {
-            SCIPdebugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n", SCIPvarGetName(consdata->var), xlb, xub, xlb, newub);
-            SCIP_CALL( SCIPinferVarUbCons(scip, consdata->var, newub, cons, (int)PROPRULE_3, &infeasible, &tightened) );
-            *cutoff = *cutoff || infeasible;
-            tightenedround = tightenedround || tightened;
-            xub = newub;
-            (*nchgbds)++;
+            if( consdata->vbdcoef > 0.0 )
+               newub = SCIPadjustedVarUb(scip, consdata->var, consdata->rhs - consdata->vbdcoef * ylb);
+            else
+               newub = SCIPadjustedVarUb(scip, consdata->var, consdata->rhs - consdata->vbdcoef * yub);
+            if( SCIPisUbBetter(scip, newub, xlb, xub) || ylb > yub - 0.5 ) /*????????????? if( newub < xub - 0.1 )*/
+            {
+               SCIPdebugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n",
+                  SCIPvarGetName(consdata->var), xlb, xub, xlb, newub);
+               SCIP_CALL( SCIPinferVarUbCons(scip, consdata->var, newub, cons, (int)PROPRULE_3, &infeasible, &tightened) );
+               *cutoff = *cutoff || infeasible;
+               tightenedround = tightenedround || tightened;
+               xub = newub;
+               (*nchgbds)++;
+            }
          }
 
          /* propagate bounds on y:
           *  (4) right hand side and lower bound on x -> bound on y
           */
-         if( consdata->vbdcoef > 0.0 )
+         if( SCIPvarGetStatus(consdata->vbdvar) != SCIP_VARSTATUS_MULTAGGR ) /* cannot change bounds of multaggr vars */
          {
-            newub = SCIPadjustedVarUb(scip, consdata->vbdvar, (consdata->rhs - xlb)/consdata->vbdcoef);
-            if( newub < yub - 0.5 )
+            if( consdata->vbdcoef > 0.0 )
             {
-               SCIPdebugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n", 
-                  SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
-               SCIP_CALL( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, (int)PROPRULE_4,
-                     &infeasible, &tightened) );
-               *cutoff = *cutoff || infeasible;
-               tightenedround = tightenedround || tightened;
-               yub = newub;
-               (*nchgbds)++;
+               newub = SCIPadjustedVarUb(scip, consdata->vbdvar, (consdata->rhs - xlb)/consdata->vbdcoef);
+               if( newub < yub - 0.5 )
+               {
+                  SCIPdebugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n", 
+                     SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
+                  SCIP_CALL( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, (int)PROPRULE_4,
+                        &infeasible, &tightened) );
+                  *cutoff = *cutoff || infeasible;
+                  tightenedround = tightenedround || tightened;
+                  yub = newub;
+                  (*nchgbds)++;
+               }
             }
-         }
-         else
-         {
-            newlb = SCIPadjustedVarLb(scip, consdata->vbdvar, (consdata->rhs - xlb)/consdata->vbdcoef);
-            if( newlb > ylb + 0.5 )
+            else
             {
-               SCIPdebugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n", 
-                  SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
-               SCIP_CALL( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, (int)PROPRULE_4,
-                     &infeasible, &tightened) );
-               *cutoff = *cutoff || infeasible;
-               tightenedround = tightenedround || tightened;
-               ylb = newlb;
-               (*nchgbds)++;
+               newlb = SCIPadjustedVarLb(scip, consdata->vbdvar, (consdata->rhs - xlb)/consdata->vbdcoef);
+               if( newlb > ylb + 0.5 )
+               {
+                  SCIPdebugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n", 
+                     SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
+                  SCIP_CALL( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, (int)PROPRULE_4,
+                        &infeasible, &tightened) );
+                  *cutoff = *cutoff || infeasible;
+                  tightenedround = tightenedround || tightened;
+                  ylb = newlb;
+                  (*nchgbds)++;
+               }
             }
          }
       }
    }
    while( !(*cutoff) && tightenedround );
 
-   /* if one of the two variables is fixed, the constraint is redundant */
-   if( SCIPisFeasEQ(scip, xlb, xub) || SCIPisFeasEQ(scip, ylb, yub) )
+   /* check for redundancy */
+   if( (SCIPisInfinity(scip, -consdata->lhs)
+         || (consdata->vbdcoef > 0.0 && SCIPisFeasGE(scip, xlb + consdata->vbdcoef * ylb, consdata->lhs))
+         || (consdata->vbdcoef < 0.0 && SCIPisFeasGE(scip, xlb + consdata->vbdcoef * yub, consdata->lhs)))
+      && (SCIPisInfinity(scip, consdata->rhs)
+         || (consdata->vbdcoef > 0.0 && SCIPisFeasLE(scip, xub + consdata->vbdcoef * yub, consdata->rhs))
+         || (consdata->vbdcoef < 0.0 && SCIPisFeasLE(scip, xub + consdata->vbdcoef * ylb, consdata->rhs))) )
    {
       SCIPdebugMessage("variable bound constraint <%s> is redundant: <%s>[%g,%g], <%s>[%g,%g]\n",
          SCIPconsGetName(cons), 
@@ -507,6 +526,12 @@ SCIP_RETCODE propagateCons(
       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
       if( ndelconss != NULL )
          (*ndelconss)++;
+   }
+   else
+   {
+      /* none of the two variables should be fixed; otherwise, the bounds should have been tightened and the constraint should be redundant */
+      assert(SCIPisFeasLT(scip, xlb, xub));
+      assert(SCIPisFeasLT(scip, ylb, yub));
    }
 
    /* mark the constraint propagated */
@@ -896,6 +921,100 @@ SCIP_RETCODE applyFixings(
    return SCIP_OKAY;
 }
 
+/** tightes variable bound coefficient by inspecting the global bounds of the involved variables;
+ *  note: this is also performed by the linear constraint handler - only necessary if the user directly creates variable bound constraints
+ */
+static
+SCIP_RETCODE tightenCoefs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< variable bound constraint */
+   int*                  nchgcoefs,          /**< pointer to count the number of changed coefficients */
+   int*                  nchgsides           /**< pointer to count the number of left and right hand sides */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Real xlb;
+   SCIP_Real xub;
+
+   assert(nchgcoefs != NULL);
+   assert(nchgsides != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* coefficient tightening only works for binary bound variable */
+   if( SCIPvarGetType(consdata->vbdvar) != SCIP_VARTYPE_BINARY )
+      return SCIP_OKAY;
+
+   /* get bounds of variable x */
+   xlb = SCIPvarGetLbGlobal(consdata->var);
+   xub = SCIPvarGetUbGlobal(consdata->var);
+
+   /* modification of coefficient can only be applied if only one side is finite */
+   if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, consdata->rhs) )
+   {
+      /* lhs <= x + c*y  =>  x >= lhs - c*y */
+      if( consdata->vbdcoef > 0.0 && SCIPisFeasGT(scip, xlb, consdata->lhs - consdata->vbdcoef) )
+      {
+         /* constraint has positive slack for the non-restricting case y = 1
+          * -> modify coefficients such that constraint is tight in the non-restricting case y = 1 and equivalent in the restricting case y = 0
+          * -> c' = lhs - xlb
+          */
+         SCIPdebugMessage("tighten binary VLB <%s>[%g,%g] %+g<%s> >= %g to <%s> %+g<%s> >= %g\n",
+            SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->lhs,
+            SCIPvarGetName(consdata->var), consdata->lhs - xlb, SCIPvarGetName(consdata->vbdvar), consdata->lhs);
+         consdata->vbdcoef = consdata->lhs - xlb;
+         (*nchgcoefs)++;
+      }
+      else if( consdata->vbdcoef < 0.0 && SCIPisFeasGT(scip, xlb, consdata->lhs) )
+      {
+         /* constraint has positive slack for the non-restricting case y = 0
+          * -> modify coefficients such that constraint is tight in the non-restricting case y = 0 and equivalent in the restricting case y = 1
+          * -> c' = c - lhs + xlb, lhs' = xlb
+          */
+         SCIPdebugMessage("tighten binary VLB <%s>[%g,%g] %+g<%s> >= %g to <%s> %+g<%s> >= %g\n",
+            SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->lhs,
+            SCIPvarGetName(consdata->var), consdata->vbdcoef - consdata->lhs + xlb, SCIPvarGetName(consdata->vbdvar), xlb);
+         consdata->vbdcoef = consdata->vbdcoef - consdata->lhs + xlb;
+         consdata->lhs = xlb;
+         (*nchgcoefs)++;
+         (*nchgsides)++;
+      }
+   }
+   else if( SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, consdata->rhs) )
+   {
+      /* x + c*y <= rhs  =>  x <= rhs - c*y */
+      if( consdata->vbdcoef < 0.0 && SCIPisFeasLT(scip, xub, consdata->rhs - consdata->vbdcoef) )
+      {
+         /* constraint has positive slack for the non-restricting case y = 1
+          * -> modify coefficients such that constraint is tight in the non-restricting case y = 1 and equivalent in the restricting case y = 0
+          * -> c' = rhs - xub
+          */
+         SCIPdebugMessage("tighten binary VUB <%s>[%g,%g] %+g<%s> <= %g to <%s> %+g<%s> <= %g\n",
+            SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs,
+            SCIPvarGetName(consdata->var), consdata->rhs - xub, SCIPvarGetName(consdata->vbdvar), consdata->rhs);
+         consdata->vbdcoef = consdata->rhs - xub;
+         (*nchgcoefs)++;
+      }
+      else if( consdata->vbdcoef > 0.0 && SCIPisFeasLT(scip, xlb, consdata->rhs) )
+      {
+         /* constraint has positive slack for the non-restricting case y = 0
+          * -> modify coefficients such that constraint is tight in the non-restricting case y = 0 and equivalent in the restricting case y = 1
+          * -> c' = c - rhs + xub, rhs' = xub
+          */
+         SCIPdebugMessage("tighten binary VUB <%s>[%g,%g] %+g<%s> <= %g to <%s> %+g<%s> <= %g\n",
+            SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs,
+            SCIPvarGetName(consdata->var), consdata->vbdcoef - consdata->rhs + xub, SCIPvarGetName(consdata->vbdvar), xub);
+         consdata->vbdcoef = consdata->vbdcoef - consdata->rhs + xub;
+         consdata->rhs = xub;
+         (*nchgcoefs)++;
+         (*nchgsides)++;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 
 
 
@@ -1196,7 +1315,8 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
       if( cutoff || !SCIPconsIsActive(conss[i]) )
          continue;
 
-      /**@todo tighten variable bound coefficient */
+      /* tighten variable bound coefficient */
+      SCIP_CALL( tightenCoefs(scip, conss[i], nchgcoefs, nchgsides) );
    } 
 
    /**@todo preprocess pairs of variable bound constraints */

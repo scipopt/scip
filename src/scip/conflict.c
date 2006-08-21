@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.126 2006/06/23 07:21:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.127 2006/08/21 20:13:17 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -783,8 +783,8 @@ void conflictsetFree(
    assert(conflictset != NULL);
    assert(*conflictset != NULL);
 
-   BMSfreeBlockMemoryArray(blkmem, &(*conflictset)->bdchginfos, (*conflictset)->bdchginfossize);
-   BMSfreeBlockMemoryArray(blkmem, &(*conflictset)->sortvals, (*conflictset)->bdchginfossize);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictset)->bdchginfos, (*conflictset)->bdchginfossize);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*conflictset)->sortvals, (*conflictset)->bdchginfossize);
    BMSfreeBlockMemory(blkmem, conflictset);
 }
 

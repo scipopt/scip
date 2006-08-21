@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.40 2006/08/08 15:17:12 bzfpfend Exp $
+# $Id: check.awk,v 1.41 2006/08/21 20:13:17 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -277,7 +277,7 @@ BEGIN {
             probtype = "MIP";
       }
 
-      if( endtime - starttime > timelimit && timelimit > 0.0 )
+      if( aborted && endtime - starttime > timelimit && timelimit > 0.0 )
       {
          timeout = 1;
          aborted = 0;

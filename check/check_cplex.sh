@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.sh,v 1.17 2006/01/09 13:40:58 bzfpfend Exp $
+# $Id: check_cplex.sh,v 1.18 2006/08/21 20:13:17 bzfpfend Exp $
 TSTNAME=$1
 CPLEXBIN=$2
 SETNAME=$3
@@ -67,6 +67,7 @@ do
 	echo set mip limits treememory $MEMLIMIT >> $TMPFILE
         echo write $SETFILE                     >> $TMPFILE
 	echo read $i                            >> $TMPFILE
+	echo display problem stats              >> $TMPFILE
 	echo optimize                           >> $TMPFILE
 	echo quit                               >> $TMPFILE
 	echo -----------------------------

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.46 2006/08/10 12:34:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.47 2006/08/21 20:13:21 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -94,6 +94,7 @@ struct SCIP_Stat
    int                   nrootboundchgsrun;  /**< total number of bound changes generated in the root node of current run */
    int                   nrootintfixings;    /**< total number of global fixings of integer variables */
    int                   nrootintfixingsrun; /**< total number of global fixings of integer variables of current run */
+   int                   prevrunnvars;       /**< number of variables in the previous run */
    int                   nvaridx;            /**< number of used variable indices */
    int                   ncolidx;            /**< number of used column indices */
    int                   nrowidx;            /**< number of used row indices */

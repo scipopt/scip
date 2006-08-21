@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.85 2006/03/29 13:39:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.86 2006/08/21 20:13:19 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -368,6 +368,9 @@ SCIP_RETCODE SCIPprobTransform(
 
    /* objective value is always integral, iff original objective value is always integral and shift is integral */
    (*target)->objisintegral = source->objisintegral && SCIPsetIsIntegral(set, (*target)->objoffset);
+
+   /* check, wheter objective value is always integral by inspecting the problem */
+   SCIPprobCheckObjIntegral(*target, set);
 
    return SCIP_OKAY;
 }

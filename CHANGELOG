@@ -69,6 +69,9 @@ plugins:
 - modified guided diving heuristic such that it equals the original version of the heuristic (i.e., round in direction
   of the current incumbent solution instead of the average of all primal feasible solutions)
 - modified c-MIR cut separator to more closely resemble the original version of Marchand and Wolsey
+- implemented additional dual presolving in linear constraint handler
+- slightly modified presolving of varbound constraint handler
+- c-MIR cuts try now to scale the cut to integral values; however, cuts are still generated if this fails
 
 parameters:
 - new parameter "reading/zplreader/changedir" to control behavior of path switching of ZIMPL file reader
@@ -86,6 +89,9 @@ parameters:
 - new parameter "separating/cmir/densityscore"
 - new parameter "separating/maxruns"
 - new parameters "conflict/restartnum" and "conflict/restartfac"
+- parameter "heuristics/feaspump/maxsols" is now strict, i.e., if n solutions were already found, the feasibility pump
+  starts to work only if maxsols <= n, instead of maxsols < n
+- new parameter "presolving/restartminred" which forbids another restart if the last one was not successful enough
 
 features:
 - primal heuristics that run before the node is solved now know already whether the LP will be solved at the current node
@@ -95,6 +101,14 @@ features:
 - updated XPress interface to XPress-MP 17 (contributed by Michael Perregard)
 - the EXITSOL callback of the plugins is now called before the LP and the global cut pool are freed
 - possibility of SAT-like restarts after a number of conflict constraints have been found
+- in the root node of the very first run, heuristics with timing AFTERNODELPNODE, AFTERLPPLUNGE, AFTERPSEUDONODE, and
+  AFTERPSEUDOPLUNGE are now called before the enforcement of the constraint handlers, in particular before the branching
+  rules; in this way, the branching rule can already benefit from a tighter primal bound
+- if a heuristic found a better solution after the LP loop (and in particular the AFTERNODE heuristics in the root node
+  of the very first run, see above), domain propagation and LP solving is triggered again; this allows for additional
+  reduced cost tightening and other dual propagations
+- hard-coded relative objective gain to consider a separation loop to be stalling is now changed from 1e-3 to 1e-4, which
+  means that separation is not aborted as early as before
 
 fixed bugs:
 - fixed bug with adding constraints with INITIAL=true and separating them afterwards, which lead to a second addition
@@ -110,6 +124,11 @@ fixed bugs:
 - fixed bug in cmir cut separator with weights fixed to zero, thus making the current aggregation invalid
 - fixed bug that SCIPvarGetAvgSol() always returned the upper bound (affected guided diving heuristic)
 - fixed bug in RENS, RINS, Local Branching, Crossover, and Mutation heuristics with wrong variable - subvariable assignments
+- fixed bug in cmir cut separator with wrong calculation of cut efficacies
+- objective function is now also checked for integrality after problem transformation (fixed a bug that a solution which
+  was generated between transformation and presolving for an integral objective function did not reduce the cutoff bound
+  by one)
+- fixed a bug with cmir cut efficacy calculation (however, on my first tests, the performance reduced slightly!)
 
 
 SCIP version 0.82

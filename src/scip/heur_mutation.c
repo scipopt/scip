@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.6 2006/08/10 12:52:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_mutation.c,v 1.7 2006/08/21 20:13:18 bzfpfend Exp $"
 
 /**@file   heur_mutation.c
  * @brief  mutation primal heuristic
@@ -397,6 +397,9 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
    createSubproblem(scip, subscip, subvars, heurdata->fixingrate, heurdata->randseed);
    
+   /* do not abort subproblem on CTRL-C */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
+ 
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
   

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.229 2006/08/08 15:17:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.230 2006/08/21 20:13:19 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -4248,7 +4248,7 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
     */
    gcd = 1;
    scm = 1;
-   rational = TRUE;
+   rational = (maxdnom > 1);
 
    /* first coefficient (to initialize gcd) */
    for( c = 0; c < row->len && rational; ++c )
@@ -9616,7 +9616,7 @@ SCIP_RETCODE lpFlushAndSolve(
    fastmip = fastmip && !lp->flushaddedcols && !lp->flushdeletedcols; /* turn off FASTMIP if columns were changed */
    
    /* select LP algorithm to apply */
-   resolve = lp->solisbasic && (lp->dualfeasible || lp->primalfeasible);
+   resolve = lp->solisbasic && (lp->dualfeasible || lp->primalfeasible) && !fromscratch;
    algo = resolve ? set->lp_resolvealgorithm : set->lp_initalgorithm;
    switch( algo )
    {
@@ -11594,7 +11594,7 @@ SCIP_RETCODE SCIPlpRemoveRedundantRows(
    /* get temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rowdstat, nrows) );
 
-   /* mark redundant rows to be deleted */
+   /* mark redundant rows to be deleted (only delete basic rows!) */
    ndelrows = 0;
    BMSclearMemoryArray(rowdstat, nrows);
    for( r = lp->firstnewrow; r < nrows; ++r )
@@ -11602,9 +11602,10 @@ SCIP_RETCODE SCIPlpRemoveRedundantRows(
       assert(rows[r] == lpirows[r]);
       assert(rows[r]->lppos == r);
       assert(rows[r]->lpipos == r);
-      if( SCIProwIsRedundant(lpirows[r], set, stat) )
+      if( (!lp->solisbasic || (SCIP_BASESTAT)lpirows[r]->basisstatus == SCIP_BASESTAT_BASIC)
+         && SCIProwIsRedundant(lpirows[r], set, stat) )
       {
-         SCIPdebugMessage("row <%s> is redundant: sides=[%g,%g], act=[%g,%g]\n",
+         SCIPdebugMessage("basic row <%s> is redundant: sides=[%g,%g], act=[%g,%g]\n",
             SCIProwGetName(lpirows[r]), SCIProwGetLhs(lpirows[r]), SCIProwGetRhs(lpirows[r]),
             SCIProwGetMinActivity(lpirows[r], set, stat), SCIProwGetMaxActivity(lpirows[r], set, stat));
          rowdstat[r] = 1;
@@ -11612,7 +11613,7 @@ SCIP_RETCODE SCIPlpRemoveRedundantRows(
       }
    }
 
-   SCIPdebugMessage("removing %d/%d redundant rows from LP\n", ndelrows, nrows);
+   SCIPdebugMessage("removing %d/%d redundant basic rows from LP\n", ndelrows, nrows);
 
    /* delete the marked rows in the LP solver interface, update the LP respectively */
    if( ndelrows > 0 )

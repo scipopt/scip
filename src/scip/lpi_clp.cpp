@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.32 2006/06/21 11:53:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.33 2006/08/21 20:13:19 bzfpfend Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -29,7 +29,6 @@
 #include <ClpDualRowSteepest.hpp>
 #include <CoinIndexedVector.hpp>
 #include <ClpFactorization.hpp>
-#include <ClpSimplexDual.hpp>    // ????????????????
 
 #include <iostream>
 #include <cassert>
@@ -48,6 +47,8 @@ extern "C"
 #undef NULL
 #define NULL 0
 
+
+#define DISABLE_SCALING  /* scaling seems to be bad for strong branching */
 
 
 /** LP interface for Clp */
@@ -335,6 +336,11 @@ SCIP_RETCODE SCIPlpiCreate(
 
    // turn off output by default
    (*lpi)->clp->setLogLevel(0);
+
+#ifdef DISABLE_SCALING
+   // turn off scaling
+   (*lpi)->clp->scaling(0);
+#endif
 
    return SCIP_OKAY;
 }
@@ -1559,13 +1565,24 @@ SCIP_RETCODE SCIPlpiStrongbranch(
       lpi->validFactorization = false;
 
    int scaling = clp->scalingFlag();
-   clp->scaling(0);
+   if( scaling != 0 )
+      clp->scaling(0);
    // the last three parameters are:
    // bool stopOnFirstInfeasible=true,
    // bool alwaysFinish=false);
    // int startFinishOptions
-   (void)clp->strongBranching(1, &col, up, down, outputSolution, outputStatus, outputIterations, false, true, lpi->validFactorization ? 3 : 1);
-   clp->scaling(scaling);
+#if 0
+   (void)clp->strongBranching(1, &col, up, down, outputSolution, outputStatus, outputIterations, false, true,
+      lpi->validFactorization ? 3 : 1);
+#else /*???????????????????*/
+   int specialoptions = clp->specialOptions();
+   clp->setSpecialOptions(specialoptions | (64|128|512|1024|2048|4096));  // 38592 = 32678+4096+1024+512+256+16+8+2
+   (void)clp->strongBranching(1, &col, up, down, outputSolution, outputStatus, outputIterations, false, true,
+      lpi->validFactorization ? 7 : 5);
+   clp->setSpecialOptions(specialoptions);
+#endif
+   if( scaling != 0 )
+      clp->scaling(scaling);
    lpi->scaledFactorization = false;
    lpi->validFactorization = true;
 
@@ -2556,11 +2573,15 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = lpi->startscratch;
       break;
    case SCIP_LPPAR_SCALING:
+#ifdef DISABLE_SCALING
+      return SCIP_PARAMETERUNKNOWN;
+#else      
       if( lpi->clp->scalingFlag() != 0 )     // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later)
 	 *ival = TRUE;
       else
 	 *ival = FALSE;
       break;
+#endif
    case SCIP_LPPAR_PRICING:
       *ival = lpi->pricing;          // store pricing method in LPI struct
       break;
@@ -2636,8 +2657,12 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->startscratch = ival;
       break;
    case SCIP_LPPAR_SCALING:
+#ifdef DISABLE_SCALING
+      return SCIP_PARAMETERUNKNOWN;
+#else
       lpi->clp->scaling(ival == TRUE ? 3 : 0);    // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later));
       break;
+#endif
    case SCIP_LPPAR_PRICING:
       SCIPABORT();
    case SCIP_LPPAR_LPINFO:

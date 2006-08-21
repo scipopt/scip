@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: buffer.c,v 1.27 2006/06/06 13:32:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: buffer.c,v 1.28 2006/08/21 20:13:17 bzfpfend Exp $"
 
 /**@file   buffer.c
  * @brief  methods for memory buffers for temporary objects
@@ -80,6 +80,7 @@ SCIP_RETCODE SCIPbufferAllocMem(
    int                   size                /**< minimal required size of the buffer */
    )
 {
+#ifndef SCIP_NOBUFFERMEM
    int bufnum;
 
    assert(buffer != NULL);
@@ -133,6 +134,10 @@ SCIP_RETCODE SCIPbufferAllocMem(
    SCIPdebugMessage("allocated buffer %d/%d at %p of size %d (required size: %d) for pointer %p\n", 
       bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, ptr);
 
+#else
+   SCIP_ALLOC( BMSallocMemorySize(ptr, size) );
+#endif
+
    return SCIP_OKAY;
 }
 
@@ -152,7 +157,7 @@ SCIP_RETCODE SCIPbufferDuplicateMem(
 
    /* copy the source memory into the buffer */
    BMScopyMemorySize(*ptr, source, size);
-
+   
    return SCIP_OKAY;
 }
 
@@ -164,6 +169,7 @@ SCIP_RETCODE SCIPbufferReallocMem(
    int                   size                /**< minimal required size of the buffer */
    )
 {
+#ifndef SCIP_NOBUFFERMEM
    int bufnum;
 
    assert(buffer != NULL);
@@ -206,6 +212,10 @@ SCIP_RETCODE SCIPbufferReallocMem(
    SCIPdebugMessage("reallocated buffer %d/%d at %p to size %d (required size: %d) for pointer %p\n", 
       bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, ptr);
 
+#else
+   SCIP_ALLOC( BMSreallocMemorySize(ptr, size) );
+#endif
+
    return SCIP_OKAY;
 }
 
@@ -216,6 +226,7 @@ void SCIPbufferFreeMem(
    int                   dummysize           /**< used to get a safer define for SCIPsetFreeBufferSize/Array */
    )
 {  /*lint --e{715}*/
+#ifndef SCIP_NOBUFFERMEM
    int bufnum;
 
    assert(buffer != NULL);
@@ -242,6 +253,10 @@ void SCIPbufferFreeMem(
 
    SCIPdebugMessage("freed buffer %d/%d at %p of size %d for pointer %p, first free is %d\n", 
       bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], ptr, buffer->firstfree);
+
+#else
+   BMSfreeMemory(ptr);
+#endif
 }
 
 /** gets number of used buffers */
@@ -253,3 +268,24 @@ int SCIPbufferGetNUsed(
 
    return buffer->firstfree;
 }
+
+/** outputs statistics about currently allocated buffers to the screen */
+void SCIPbufferPrint(
+   SCIP_BUFFER*          buffer              /**< memory buffer storage */
+   )
+{
+   int totalmem;
+   int i;
+
+   assert(buffer != NULL);
+
+   totalmem = 0;
+   for( i = 0; i < buffer->ndata; ++i )
+   {
+      printf("[%c] %8d bytes at %p\n", buffer->used[i] ? '*' : ' ', buffer->size[i], buffer->data[i]);
+      totalmem += buffer->size[i];
+   }
+   printf("    %8d bytes total in %d buffers\n", totalmem, buffer->ndata);
+}
+
+

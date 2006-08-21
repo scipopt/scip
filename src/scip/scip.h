@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.284 2006/08/10 12:34:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.285 2006/08/21 20:13:20 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -5869,6 +5869,7 @@ void SCIPprintReal(
 #define SCIPfreeBufferNull(scip,ptr)            { if( *(ptr) != NULL ) SCIPfreeBuffer(scip, ptr); }
 #define SCIPfreeBufferArray(scip,ptr)           SCIPfreeBufferSize(scip, (void**)(ptr), 0*(int)sizeof(**(ptr)))
 #define SCIPfreeBufferArrayNull(scip,ptr)       { if( *(ptr) != NULL ) SCIPfreeBufferArray(scip, ptr); }
+
 
 /** returns block memory to use at the current time */
 extern

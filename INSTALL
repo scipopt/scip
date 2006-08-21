@@ -101,13 +101,13 @@ Here is what you have to do to get SCIP running:
 
    (f) to use CLP
        - ln -s <path to CLP's and COIN's *.h files> <path to SCIP>/lib/clpinc
-         (e.g. "cd scip; ln -s /COIN/include lib/clpinc")
+         (e.g. "cd scip; ln -s /Coin-Clp/include lib/clpinc")
        - ln -s <file libClp.a> <path to SCIP>/lib/libclp.$(OSTYPE).$(ARCH).$(COMP).a
          for each operating system and architecture to use
-         (e.g. "cd scip; ln -s /COIN/lib/libClp.a lib/libclp.linux.x86.gnu.a")
+         (e.g. "cd scip; ln -s /Coin-Clp/lib/libClp.a lib/libclp.linux.x86.gnu.a")
        - ln -s <file libCoin.a> <path to SCIP>/lib/libcoin.$(OSTYPE).$(ARCH).$(COMP).a
          for each operating system and architecture to use
-         (e.g. "cd scip; ln -s /COIN/lib/libCoin.a lib/libcoin.linux.x86.gnu.a")
+         (e.g. "cd scip; ln -s /Coin-Clp/lib/libCoinUtils.a lib/libcoinutils.linux.x86.gnu.a")
 
    (g) to use ZIMPL as additional file reader for reading *.zpl files
        - mkdir <path to SCIP>/lib/zimplinc

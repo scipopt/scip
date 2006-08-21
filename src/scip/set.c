@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.180 2006/08/10 12:34:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.181 2006/08/21 20:13:20 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -187,6 +187,8 @@
                                                  *   complete root node evaluation) */
 #define SCIP_DEFAULT_PRESOL_SUBRESTARTFAC   1.0 /**< fraction of integer variables that were globally fixed during the
                                                  *   solving process triggering a restart with preprocessing */
+#define SCIP_DEFAULT_PRESOL_RESTARTMINRED   0.05/**< minimal fraction of integer variables removed after restart to allow
+                                                 *   for an additional restart */
 
 
 /* Pricing */
@@ -221,6 +223,7 @@
 #define SCIP_DEFAULT_SEPA_MAXRUNS            -1 /**< maximal number of runs for which separation is enabled (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDS           5 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDSROOT      -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
+#define SCIP_DEFAULT_SEPA_MAXROUNDSROOTSUBRUN 1 /**< maximal number of separation rounds in the root node of a subsequent run (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXADDROUNDS        1 /**< maximal additional number of separation rounds in subsequent
                                                  *   price-and-cut loops (-1: no additional restriction) */
 #define SCIP_DEFAULT_SEPA_MAXSTALLROUNDS      5 /**< maximal number of consecutive separation rounds without objective
@@ -829,6 +832,11 @@ SCIP_RETCODE SCIPsetCreate(
          "fraction of integer variables that were globally fixed during the solving process triggering a restart with preprocessing",
          &(*set)->presol_subrestartfac, SCIP_DEFAULT_PRESOL_SUBRESTARTFAC, 0.0, 1.0,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
+         "presolving/restartminred",
+         "minimal fraction of integer variables removed after restart to allow for an additional restart",
+         &(*set)->presol_restartminred, SCIP_DEFAULT_PRESOL_RESTARTMINRED, 0.0, 1.0,
+         NULL, NULL) );
 
    /* pricing parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
@@ -919,6 +927,11 @@ SCIP_RETCODE SCIPsetCreate(
          "separating/maxroundsroot",
          "maximal number of separation rounds in the root node (-1: unlimited)",
          &(*set)->sepa_maxroundsroot, SCIP_DEFAULT_SEPA_MAXROUNDSROOT, -1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
+         "separating/maxroundsrootsubrun",
+         "maximal number of separation rounds in the root node of a subsequent run (-1: unlimited)",
+         &(*set)->sepa_maxroundsrootsubrun, SCIP_DEFAULT_SEPA_MAXROUNDSROOTSUBRUN, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "separating/maxaddrounds",

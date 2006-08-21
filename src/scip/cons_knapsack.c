@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.138 2006/08/08 15:17:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.139 2006/08/21 20:13:18 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -1843,7 +1843,8 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
             int v;
             
             /* create LP row */
-            sprintf(name, "%s_card%"SCIP_LONGINT_FORMAT"_%d", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)), j);
+            sprintf(name, "%s_card%"SCIP_LONGINT_FORMAT"_%d", SCIPconsGetName(cons),
+               SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)), j);
             SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, 
                   SCIPconsIsLocal(cons), FALSE, SCIPconsIsRemovable(cons)) );
             

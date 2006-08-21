@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: buffer.h,v 1.19 2006/06/06 13:32:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: buffer.h,v 1.20 2006/08/21 20:13:17 bzfpfend Exp $"
 
 /**@file   buffer.h
  * @brief  internal methods for memory buffers for temporary objects
@@ -84,6 +84,12 @@ void SCIPbufferFreeMem(
 /** gets number of used buffers */
 extern
 int SCIPbufferGetNUsed(
+   SCIP_BUFFER*          buffer              /**< memory buffer storage */
+   );
+
+/** outputs statistics about currently allocated buffers to the screen */
+extern
+void SCIPbufferPrint(
    SCIP_BUFFER*          buffer              /**< memory buffer storage */
    );
 

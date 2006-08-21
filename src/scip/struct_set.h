@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.68 2006/08/10 12:34:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.69 2006/08/21 20:13:20 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -231,6 +231,8 @@ struct SCIP_Set
                                               *   complete root node evaluation) */
    SCIP_Real             presol_subrestartfac;/**< fraction of integer variables that were globally fixed during the
                                                *   solving process triggering a restart with preprocessing */
+   SCIP_Real             presol_restartminred;/**< minimal fraction of integer variables removed after restart to allow for
+                                               *   an additional restart */
 
    /* pricing settings */
    SCIP_Real             price_abortfac;     /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
@@ -258,6 +260,7 @@ struct SCIP_Set
    int                   sepa_maxruns;       /**< maximal number of runs for which separation is enabled (-1: unlimited) */
    int                   sepa_maxrounds;     /**< maximal number of separation rounds per node (-1: unlimited) */
    int                   sepa_maxroundsroot; /**< maximal number of separation rounds in the root node (-1: unlimited) */
+   int                   sepa_maxroundsrootsubrun; /**< maximal number of separation rounds in the root node of a subsequent run (-1: unlimited) */
    int                   sepa_maxaddrounds;  /**< maximal additional number of separation rounds in subsequent price-and-cut
                                               *   loops (-1: no additional restriction) */
    int                   sepa_maxstallrounds;/**< maximal number of consecutive separation rounds without objective

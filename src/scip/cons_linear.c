@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.222 2006/08/10 12:34:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.223 2006/08/21 20:13:18 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3649,7 +3649,7 @@ SCIP_RETCODE separateRelaxedKnapsack(
 #ifdef SCIP_DEBUG
          SCIP_Real act;
 
-         SCIPdebugMessage(" -> linear relaxed to knapsack:");
+         SCIPdebugMessage(" -> linear constraint <%s> relaxed to knapsack:", SCIPconsGetName(cons));
          act = 0.0;
          for( i = 0; i < nconsvars; ++i )
          {
@@ -3657,7 +3657,8 @@ SCIP_RETCODE separateRelaxedKnapsack(
                SCIPgetSolVal(scip, sol, consvars[i]));
             act += consvals[i] * SCIPgetSolVal(scip, sol, consvars[i]);
          }
-         SCIPdebugPrintf(" <= %"SCIP_LONGINT_FORMAT" (%g) [act: %g, max: %"SCIP_LONGINT_FORMAT"]\n", capacity, rhs, act, maxact);
+         SCIPdebugPrintf(" <= %"SCIP_LONGINT_FORMAT" (%g) [act: %g, max: %"SCIP_LONGINT_FORMAT"]\n",
+            capacity, rhs, act, maxact);
 #endif
 
          /* separate lifted cut from relaxed knapsack constraint */
@@ -4557,6 +4558,273 @@ SCIP_RETCODE convertEquality(
    {
       /* try to multi-aggregate one of the variables */
       SCIP_CALL( convertLongEquality(scip, cons, cutoff, naggrvars) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** returns whether the linear sum of all variables/coefficients except the given one divided by the given value is always
+ *  integral
+ */
+static
+SCIP_Bool consdataIsResidualIntegral(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< linear constraint */
+   int                   pos,                /**< position of variable to be left out */
+   SCIP_Real             val                 /**< value to divide the coefficients by */
+   )
+{
+   int v;
+   
+   assert(consdata != NULL);
+   assert(0 <= pos && pos < consdata->nvars);
+
+   for( v = 0; v < consdata->nvars; ++v )
+   {
+      if( v != pos && (!SCIPvarIsIntegral(consdata->vars[v]) || !SCIPisIntegral(scip, consdata->vals[v]/val)) )
+         return FALSE;
+   }
+
+   return TRUE;
+}
+
+/* applies dual presolving for variables that are locked only once in a direction, and this locking is due to a
+ * linear inequality
+ */
+static
+SCIP_RETCODE dualPresolve(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< linear constraint */
+   SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
+   int*                  nfixedvars,         /**< pointer to count number of fixed variables */
+   int*                  naggrvars,          /**< pointer to count number of aggregated variables */
+   int*                  ndelconss           /**< pointer to count number of deleted constraints */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool lhsexists;
+   SCIP_Bool rhsexists;
+   SCIP_Bool bestisint;
+   SCIP_Bool bestislhs;
+   int bestpos;
+   int i;
+
+   assert(cutoff != NULL);
+   assert(naggrvars != NULL);
+   assert(ndelconss != NULL);
+
+   /* only process checked constraints (for which the locks are increased);
+    * otherwise we would have to check for variables with nlocks == 0, and these are already processed by the
+    * dualfix presolver
+    */
+   if( !SCIPconsIsChecked(cons) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   lhsexists = !SCIPisInfinity(scip, -consdata->lhs);
+   rhsexists = !SCIPisInfinity(scip, consdata->rhs);
+
+   /* search for a single-locked variable which can be multi-aggregated; if a valid continuous variable was found, we
+    * can use it safely for aggregation and break the search loop
+    */
+   bestpos = -1;
+   bestisint = TRUE;
+   bestislhs = FALSE;
+   for( i = 0; i < consdata->nvars && bestisint; ++i )
+   {
+      SCIP_VAR* var;
+      SCIP_Bool isint;
+      SCIP_Real val;
+      SCIP_Real obj;
+      SCIP_Real lb;
+      SCIP_Real ub;
+      SCIP_Bool agglhs;
+      SCIP_Bool aggrhs;
+
+      var = consdata->vars[i];
+      isint = (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+
+      /* if we already found a candidate, skip integers */
+      if( bestpos >= 0 && isint )
+         continue;
+
+      /* better do not multi-aggregate binary variables, since most plugins rely on their binary variables to be either
+       * active, fixed, or single-aggregated with another binary variable
+       */
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && consdata->nvars > 2 )
+         continue;
+
+      val = consdata->vals[i];
+      obj = SCIPvarGetObj(var);
+      lb = SCIPvarGetLbGlobal(var);
+      ub = SCIPvarGetUbGlobal(var);
+
+      /* lhs <= a_0 * x_0 + a_1 * x_1 + ... + a_{n-1} * x_{n-1} <= rhs
+       *
+       * a_i >= 0, c_i >= 0, lhs exists, nlocksdown(x_i) == 1:
+       *  - constraint is the only one that forbids fixing the variable to its lower bound
+       *  - fix x_i to the smallest value for this constraint: x_i := lhs/a_i - \sum_{j \neq i} a_j/a_i * x_j
+       *
+       * a_i <= 0, c_i <= 0, lhs exists, nlocksup(x_i) == 1:
+       *  - constraint is the only one that forbids fixing the variable to its upper bound
+       *  - fix x_i to the largest value for this constraint: x_i := lhs/a_i - \sum_{j \neq i} a_j/a_i * x_j
+       *
+       * a_i >= 0, c_i <= 0, rhs exists, nlocksup(x_i) == 1:
+       *  - constraint is the only one that forbids fixing the variable to its upper bound
+       *  - fix x_i to the largest value for this constraint: x_i := rhs/a_i - \sum_{j \neq i} a_j/a_i * x_j
+       *
+       * a_i <= 0, c_i >= 0, rhs exists, nlocksdown(x_i) == 1:
+       *  - constraint is the only one that forbids fixing the variable to its lower bound
+       *  - fix x_i to the smallest value for this constraint: x_i := rhs/a_i - \sum_{j \neq i} a_j/a_i * x_j
+       *
+       * but: all this is only applicable, if the aggregated value is inside x_i's bounds for all possible values
+       *      of all x_j
+       */
+      agglhs = lhsexists
+         && ((val > 0.0 && SCIPvarGetNLocksDown(var) == 1 && !SCIPisNegative(scip, obj))
+            || (val < 0.0 && SCIPvarGetNLocksUp(var) == 1 && !SCIPisPositive(scip, obj)));
+      aggrhs = rhsexists
+         && ((val > 0.0 && SCIPvarGetNLocksUp(var) == 1 && !SCIPisPositive(scip, obj))
+            || (val < 0.0 && SCIPvarGetNLocksDown(var) == 1 && !SCIPisNegative(scip, obj)));
+      if( agglhs || aggrhs )
+      {
+         SCIP_Real minresactivity;
+         SCIP_Real maxresactivity;
+         SCIP_Real minval;
+         SCIP_Real maxval;
+
+         /* calculate bounds for \sum_{j \neq i} a_j * x_j */
+         consdataGetActivityResiduals(scip, consdata, var, val, &minresactivity, &maxresactivity);
+         assert(minresactivity <= maxresactivity);
+
+         if( agglhs )
+         {
+            /* check if lhs/a_i - \sum_{j \neq i} a_j/a_i * x_j is always inside the bounds of x_i */
+            if( val > 0.0 )
+            {
+               minval = (consdata->lhs - maxresactivity)/val;
+               maxval = (consdata->lhs - minresactivity)/val;
+            }
+            else
+            {
+               minval = (consdata->lhs - minresactivity)/val;
+               maxval = (consdata->lhs - maxresactivity)/val;
+            }
+            if( SCIPisFeasGE(scip, minval, lb) && SCIPisFeasLE(scip, maxval, ub) )
+            {
+               /* if the variable is integer, we have to check whether the integrality condition would always be satisfied
+                * in the multi-aggregation
+                */
+               if( !isint || (SCIPisIntegral(scip, consdata->lhs/val) && consdataIsResidualIntegral(scip, consdata, i, val)) )
+               {
+                  bestpos = i;
+                  bestisint = isint;
+                  bestislhs = TRUE;
+                  continue; /* no need to also look at the right hand side */
+               }
+            }
+         }
+
+         if( aggrhs )
+         {
+            /* check if rhs/a_i - \sum_{j \neq i} a_j/a_i * x_j is always inside the bounds of x_i */
+            if( val > 0.0 )
+            {
+               minval = (consdata->rhs - maxresactivity)/val;
+               maxval = (consdata->rhs - minresactivity)/val;
+            }
+            else
+            {
+               minval = (consdata->rhs - minresactivity)/val;
+               maxval = (consdata->rhs - maxresactivity)/val;
+            }
+            if( SCIPisFeasGE(scip, minval, lb) && SCIPisFeasLE(scip, maxval, ub) )
+            {
+               /* if the variable is integer, we have to check whether the integrality condition would always be satisfied
+                * in the multi-aggregation
+                */
+               if( !isint || (SCIPisIntegral(scip, consdata->rhs/val) && consdataIsResidualIntegral(scip, consdata, i, val)) )
+               {
+                  bestpos = i;
+                  bestisint = isint;
+                  bestislhs = FALSE;
+               }
+            }
+         }
+      }
+   }
+
+   if( bestpos >= 0 )
+   {
+      SCIP_VAR** aggrvars;
+      SCIP_Real* aggrcoefs;
+      SCIP_Real aggrconst;
+      SCIP_VAR* bestvar;
+      SCIP_Real bestval;
+      int naggrs;
+      int j;
+      SCIP_Bool infeasible;
+      SCIP_Bool aggregated;
+
+      assert(!bestislhs || lhsexists);
+      assert(bestislhs || rhsexists);
+
+      bestvar = consdata->vars[bestpos];
+      bestval = consdata->vals[bestpos];
+      assert(bestisint ==
+         (SCIPvarGetType(bestvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(bestvar) == SCIP_VARTYPE_INTEGER));
+
+      /* allocate temporary memory */
+      SCIP_CALL( SCIPallocBufferArray(scip, &aggrvars, consdata->nvars-1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &aggrcoefs, consdata->nvars-1) );
+            
+      /* set up the multi-aggregation */
+      SCIPdebug(SCIPprintCons(scip, cons, NULL));
+      SCIPdebugMessage("linear constraint <%s>: multi-aggregate <%s> ==", SCIPconsGetName(cons), SCIPvarGetName(bestvar));
+      naggrs = 0;
+      for( j = 0; j < consdata->nvars; ++j )
+      {
+         if( j != bestpos )
+         {
+            aggrvars[naggrs] = consdata->vars[j];
+            aggrcoefs[naggrs] = -consdata->vals[j]/consdata->vals[bestpos];
+            SCIPdebugPrintf(" %+g<%s>", aggrcoefs[naggrs], SCIPvarGetName(aggrvars[naggrs]));
+            assert(!bestisint || SCIPisIntegral(scip, aggrcoefs[naggrs]));
+            naggrs++;
+         }
+      }
+      aggrconst = (bestislhs ? consdata->lhs/bestval : consdata->rhs/bestval);
+      SCIPdebugPrintf(" %+g, bounds of <%s>: [%g,%g]\n", aggrconst, SCIPvarGetName(bestvar),
+         SCIPvarGetLbGlobal(bestvar), SCIPvarGetUbGlobal(bestvar));
+      assert(!bestisint || SCIPisIntegral(scip, aggrconst));
+      assert(naggrs == consdata->nvars-1);
+
+      /* perform the multi-aggregation */
+      SCIP_CALL( SCIPmultiaggregateVar(scip, bestvar, naggrs, aggrvars, aggrcoefs, aggrconst, &infeasible, &aggregated) );
+            
+      /* free temporary memory */
+      SCIPfreeBufferArray(scip, &aggrcoefs);
+      SCIPfreeBufferArray(scip, &aggrvars);
+            
+      /* check for infeasible aggregation */
+      if( infeasible )
+      {
+         SCIPdebugMessage("linear constraint <%s>: infeasible multi-aggregation\n", SCIPconsGetName(cons));
+         *cutoff = TRUE;
+         return SCIP_OKAY;
+      }
+
+      /* delete the constraint, if the aggregation was successful */
+      if( aggregated )
+      {
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         
+         if( !consdata->upgraded )
+            (*ndelconss)++;
+         (*naggrvars)++;
+      }
    }
 
    return SCIP_OKAY;
@@ -6169,6 +6437,13 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
 
          SCIP_CALL( convertEquality(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
       }
+
+      /* apply dual presolving for variables that appear in only one constraint */
+      if( !cutoff && SCIPconsIsActive(cons) )
+      {
+         SCIP_CALL( dualPresolve(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
+      }
+
 
       /* remember the first changed constraint to begin the next aggregation round with */
       if( firstchange == INT_MAX && consdata->changed )

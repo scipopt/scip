@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.53 2006/08/08 15:17:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.54 2006/08/21 20:13:20 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -104,7 +104,7 @@
 #define ALLOWLOCAL                 TRUE
 #define MINFRAC                    0.05
 #define MAXFRAC                    1.00
-#if 0
+#if 1
 #define MAKECONTINTEGRAL          FALSE
 #endif
 
@@ -320,10 +320,10 @@ SCIP_RETCODE addCut(
          cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
       SCIPdebug(SCIPprintRow(scip, cut, NULL));
       
-#if 0
-      /* try to scale the cut to integral values */
+#if 1
+      /* try to scale the cut to integral values, but only if the scaling is small; otherwise keep the fractional cut */
       SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
-            10000, 10000.0, MAKECONTINTEGRAL, &success) );
+            30, 100.0, MAKECONTINTEGRAL, &success) );
       if( success && !SCIPisCutEfficacious(scip, sol, cut) )
       {
          SCIPdebugMessage(" -> c-mir cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
@@ -331,6 +331,8 @@ SCIP_RETCODE addCut(
          SCIPdebug(SCIPprintRow(scip, cut, NULL));
          success = FALSE;
       }
+      else
+         success = TRUE; /* also use cut if scaling failed */
 #else
       success = TRUE;
 #endif
@@ -421,10 +423,14 @@ SCIP_Real calcEfficacy(
    
    assert(cutcoefs != NULL);
 
-   sqrnorm = 0;
+   if( cutact <= cutrhs )
+      return -1.0;
+
+   sqrnorm = 0.0;
    for( i = 0; i < nvars; ++i )
       sqrnorm += SQR(cutcoefs[i]);
-   sqrnorm = MIN(sqrnorm, 1e-06);
+   sqrnorm = MAX(sqrnorm, 1e-12);
+
    return (cutact - cutrhs)/SQRT(sqrnorm);
 }
 
@@ -584,10 +590,8 @@ SCIP_RETCODE cutGenerationHeuristic(
 
       /* ignore variables with current solution value on its bounds */
       primsol = varsolvals[vi];
-      lb = SCIPcolGetLb(SCIPvarGetCol(var));
-      ub = SCIPcolGetUb(SCIPvarGetCol(var));
-      assert(SCIPisEQ(scip, lb, SCIPvarGetLbLocal(var)));
-      assert(SCIPisEQ(scip, ub, SCIPvarGetUbLocal(var)));
+      lb = SCIPvarGetLbLocal(var);
+      ub = SCIPvarGetUbLocal(var);
       if( SCIPisEQ(scip, primsol, lb) || SCIPisEQ(scip, primsol, ub) )
          continue;
 
@@ -1278,7 +1282,8 @@ SCIP_RETCODE separateCuts(
             && rowdensity <= sepadata->maxrowdensity
             && rowdensity <= sepadata->maxaggdensity )  /*lint !e774*/
          {
-            rowlhsscores[r] = dualscore + sepadata->densityscore * (1.0-rowdensity) + sepadata->slackscore * MAX(1.0 - slack, 0.0);
+            rowlhsscores[r] = dualscore + sepadata->densityscore * (1.0-rowdensity)
+               + sepadata->slackscore * MAX(1.0 - slack, 0.0);
             assert(rowlhsscores[r] > 0.0);
          }
          else
@@ -1291,7 +1296,8 @@ SCIP_RETCODE separateCuts(
             && rowdensity <= sepadata->maxrowdensity
             && rowdensity <= sepadata->maxaggdensity )  /*lint !e774*/
          {
-            rowrhsscores[r] = dualscore + sepadata->densityscore * (1.0-rowdensity) + sepadata->slackscore * MAX(1.0 - slack, 0.0);
+            rowrhsscores[r] = dualscore + sepadata->densityscore * (1.0-rowdensity)
+               + sepadata->slackscore * MAX(1.0 - slack, 0.0);
             assert(rowrhsscores[r] > 0.0);
          }
          else
