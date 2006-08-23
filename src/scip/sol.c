@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.77 2006/06/23 09:03:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.78 2006/08/23 17:35:34 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -969,8 +969,10 @@ SCIP_RETCODE SCIPsolCheck(
 
 #ifdef SCIP_DEBUG
          if( !(*feasible) )
+         {
             SCIPdebugPrintf("  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
                SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+         }
 #endif
       }
    }
@@ -983,7 +985,10 @@ SCIP_RETCODE SCIPsolCheck(
 
 #ifdef SCIP_DEBUG
       if( !(*feasible) )
-         SCIPdebugPrintf("  -> infeasibility detected in constraint handler <%s>\n", SCIPconshdlrGetName(set->conshdlrs[h])); 
+      {
+         SCIPdebugPrintf("  -> infeasibility detected in constraint handler <%s>\n",
+            SCIPconshdlrGetName(set->conshdlrs[h]));
+      }
 #endif
    }
 

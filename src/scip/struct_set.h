@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.69 2006/08/21 20:13:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.70 2006/08/23 17:35:34 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -167,6 +167,8 @@ struct SCIP_Set
    SCIP_Real             limit_time;         /**< maximal time in seconds to run */
    SCIP_Real             limit_memory;       /**< maximal memory usage in MB */
    SCIP_Real             limit_gap;          /**< solving stops, if the given gap is reached */
+   SCIP_Real             limit_absgap;       /**< solving stops, if the absolute difference between primal and dual bound
+                                              *   reaches this value */
    SCIP_Longint          limit_nodes;        /**< maximal number of nodes to process (-1: no limit) */
    SCIP_Longint          limit_stallnodes;   /**< solving stops, if the given number of nodes was processed since the
                                               *   last improvement of the primal solution value (-1: no limit) */

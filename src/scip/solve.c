@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.229 2006/08/21 20:13:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.230 2006/08/23 17:35:34 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -85,6 +85,9 @@ SCIP_Bool SCIPsolveIsStopped(
    else if( SCIPgetMemUsed(set->scip) >= set->limit_memory*1024.0*1024.0 )
       stat->status = SCIP_STATUS_MEMLIMIT;
    else if( set->stage >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->limit_gap) )
+      stat->status = SCIP_STATUS_GAPLIMIT;
+   else if( set->stage >= SCIP_STAGE_SOLVING
+      && SCIPsetIsLT(set, SCIPgetUpperbound(set->scip) - SCIPgetLowerbound(set->scip), set->limit_absgap) )
       stat->status = SCIP_STATUS_GAPLIMIT;
    else if( set->limit_solutions >= 0 && set->stage >= SCIP_STAGE_PRESOLVED
       && SCIPgetNSolsFound(set->scip) >= set->limit_solutions )
@@ -1521,7 +1524,11 @@ SCIP_RETCODE priceAndCutLoop(
                      objreldiff = SCIPrelDiff(lpobjval, stalllpobjval);
                      SCIPdebugMessage(" -> LP bound moved from %g to %g (reldiff: %g)\n",
                         stalllpobjval, lpobjval, objreldiff);
+#if 0 /*???????????? -oldstall */
+                     if( objreldiff > 1e-03 || nfracs <= (0.9 - 0.1 * nsepastallrounds) * stallnfracs )
+#else
                      if( objreldiff > 1e-04/*?????????????1e-03*/ || nfracs <= (0.9 - 0.1 * nsepastallrounds) * stallnfracs )
+#endif
                      {
                         nsepastallrounds = 0;
                         stalllpobjval = lpobjval;
@@ -2320,9 +2327,8 @@ SCIP_RETCODE solveNode(
        * if this is the first loop of the first run's root node, call also AFTERNODE heuristics already here, since
        * they might help to improve the primal bound, thereby producing additional reduced cost strengthenings and
        * strong branching bound fixings
-       * ???????????? test, if this is a good idea!  if not -> remove if-statement at primalHeuristics(AFTERLPNODE) below!
        */
-      if( actdepth == 0 && stat->nruns == 1 && nloops == 1 ) /*???????????????*/
+      if( actdepth == 0 && stat->nruns == 1 && nloops == 1 )
       {
          SCIP_CALL( primalHeuristics(set, primal, tree, NULL, SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE,
                &foundsol) );
@@ -2868,7 +2874,7 @@ SCIP_RETCODE SCIPsolveCIP(
 
          /* call primal heuristics that should be applied after the node was solved */
          nnodes = SCIPtreeGetNNodes(tree);
-         if( !afternodeheur ) /*???????????????*/
+         if( !afternodeheur )
          {
             SCIP_CALL( primalHeuristics(set, primal, tree, nextnode, SCIP_HEURTIMING_AFTERNODE, &foundsol) );
             assert(SCIPbufferGetNUsed(set->buffer) == 0);

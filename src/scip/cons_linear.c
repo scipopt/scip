@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.223 2006/08/21 20:13:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.224 2006/08/23 17:35:34 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4782,7 +4782,7 @@ SCIP_RETCODE dualPresolve(
             
       /* set up the multi-aggregation */
       SCIPdebug(SCIPprintCons(scip, cons, NULL));
-      SCIPdebugMessage("linear constraint <%s>: multi-aggregate <%s> ==", SCIPconsGetName(cons), SCIPvarGetName(bestvar));
+      SCIPdebugMessage("linear constraint <%s> (dual): multi-aggregate <%s> ==", SCIPconsGetName(cons), SCIPvarGetName(bestvar));
       naggrs = 0;
       for( j = 0; j < consdata->nvars; ++j )
       {
@@ -4803,7 +4803,7 @@ SCIP_RETCODE dualPresolve(
 
       /* perform the multi-aggregation */
       SCIP_CALL( SCIPmultiaggregateVar(scip, bestvar, naggrs, aggrvars, aggrcoefs, aggrconst, &infeasible, &aggregated) );
-            
+       
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &aggrcoefs);
       SCIPfreeBufferArray(scip, &aggrvars);

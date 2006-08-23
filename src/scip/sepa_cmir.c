@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.54 2006/08/21 20:13:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.55 2006/08/23 17:35:34 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -529,7 +529,7 @@ SCIP_RETCODE cutGenerationHeuristic(
    SCIP_Real* testeddeltas;
    SCIP_Real bestdelta;
    SCIP_Real bestefficacy; 
-   SCIP_Real maxabsmksetcoefs;
+   SCIP_Real maxabsmksetcoef;
    int ntesteddeltas;
    int vi;
 
@@ -552,7 +552,7 @@ SCIP_RETCODE cutGenerationHeuristic(
    ntesteddeltas = 0;
    bestdelta = 0.0;
    bestefficacy = 0.0;
-   maxabsmksetcoefs = 0.0;
+   maxabsmksetcoef = 0.0;
 
    /* try delta = 1 and get the coefficients of all variables in the constructed mixed knapsack set */
    SCIP_CALL( tryDelta(scip, sepadata, nvars, rowweights, cutcoefs, mksetcoefs, testeddeltas, &ntesteddeltas, 1.0,
@@ -570,7 +570,7 @@ SCIP_RETCODE cutGenerationHeuristic(
       SCIP_Real primsol;
       SCIP_Real lb;
       SCIP_Real ub;
-      SCIP_Real absmksetcoefs;
+      SCIP_Real absmksetcoef;
             
       var = vars[vi];
       assert(vi == SCIPvarGetProbindex(var));
@@ -582,11 +582,11 @@ SCIP_RETCODE cutGenerationHeuristic(
        *   mult = +1 and delta = 1 and 
        *   mult = -1 and delta = 1 
        */
-      absmksetcoefs = REALABS(mksetcoefs[vi]);
-      maxabsmksetcoefs = MAX(maxabsmksetcoefs, absmksetcoefs);
+      absmksetcoef = REALABS(mksetcoefs[vi]);
+      maxabsmksetcoef = MAX(maxabsmksetcoef, absmksetcoef);
 
       if( ntesteddeltas >= maxtestdelta )
-         continue; /* remaining loop is only for maxabsmksetcoefs calculation */
+         continue; /* remaining loop is only for maxabsmksetcoef calculation */
 
       /* ignore variables with current solution value on its bounds */
       primsol = varsolvals[vi];
@@ -595,28 +595,28 @@ SCIP_RETCODE cutGenerationHeuristic(
       if( SCIPisEQ(scip, primsol, lb) || SCIPisEQ(scip, primsol, ub) )
          continue;
 
-      /* try to divide aggregated row by absmksetcoefs */
-      if( !SCIPisFeasZero(scip, absmksetcoefs) )
+      /* try to divide aggregated row by absmksetcoef */
+      if( !SCIPisFeasZero(scip, absmksetcoef) )
       {
          SCIP_CALL( tryDelta(scip, sepadata, nvars, rowweights, cutcoefs, NULL, testeddeltas, &ntesteddeltas,
-               1.0/absmksetcoefs, &bestdelta, &bestefficacy) );
+               1.0/absmksetcoef, &bestdelta, &bestefficacy) );
          if( sepadata->trynegscaling )
          {
             SCIP_CALL( tryDelta(scip, sepadata, nvars, rowweights, cutcoefs, NULL, testeddeltas, &ntesteddeltas,
-                  -1.0/absmksetcoefs, &bestdelta, &bestefficacy) );
+                  -1.0/absmksetcoef, &bestdelta, &bestefficacy) );
          }
       }
    }
 
    /* additionally try delta = maxabscoef+1 */
-   if( !SCIPisFeasZero(scip, maxabsmksetcoefs) )
+   if( !SCIPisFeasZero(scip, maxabsmksetcoef) )
    {
       SCIP_CALL( tryDelta(scip, sepadata, nvars, rowweights, cutcoefs, NULL, testeddeltas, &ntesteddeltas,
-            1.0/(maxabsmksetcoefs+1.0), &bestdelta, &bestefficacy) );
+            1.0/(maxabsmksetcoef+1.0), &bestdelta, &bestefficacy) );
       if( sepadata->trynegscaling )
       {
          SCIP_CALL( tryDelta(scip, sepadata, nvars, rowweights, cutcoefs, NULL, testeddeltas, &ntesteddeltas,
-               -1.0/(maxabsmksetcoefs+1.0), &bestdelta, &bestefficacy) );
+               -1.0/(maxabsmksetcoef+1.0), &bestdelta, &bestefficacy) );
       }
    }
 

@@ -92,6 +92,7 @@ parameters:
 - parameter "heuristics/feaspump/maxsols" is now strict, i.e., if n solutions were already found, the feasibility pump
   starts to work only if maxsols <= n, instead of maxsols < n
 - new parameter "presolving/restartminred" which forbids another restart if the last one was not successful enough
+- new parameter "limits/absgap" to define an absolute gap limit
 
 features:
 - primal heuristics that run before the node is solved now know already whether the LP will be solved at the current node

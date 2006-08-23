@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.h,v 1.21 2006/05/15 13:28:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.h,v 1.22 2006/08/23 17:35:34 bzfpfend Exp $"
 
 /**@file   debug.h
  * @brief  methods for debugging
@@ -27,7 +27,7 @@
 #define __SCIP_DEBUG_H__
 
 /** uncomment this define to activate debugging on given solution */
-/*#define SCIP_DEBUG_SOLUTION "flugpl.sol"*/
+/*#define SCIP_DEBUG_SOLUTION "neos5.sol"*/
 
 
 #include "scip/def.h"
