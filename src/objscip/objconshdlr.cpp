@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.30 2006/05/16 16:25:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.31 2006/08/24 17:04:57 bzfpfend Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -271,7 +271,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   SCIP_CALL( conshdlrdata->objconshdlr->scip_enfolp(scip, conshdlr, conss, nconss, nusefulconss, result) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_enfolp(scip, conshdlr, conss, nconss, nusefulconss, solinfeasible, result) );
 
    return SCIP_OKAY;
 }
@@ -288,7 +288,8 @@ SCIP_DECL_CONSENFOPS(consEnfopsObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   SCIP_CALL( conshdlrdata->objconshdlr->scip_enfops(scip, conshdlr, conss, nconss, nusefulconss, objinfeasible, result) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_enfops(scip, conshdlr, conss, nconss, nusefulconss, 
+         solinfeasible, objinfeasible, result) );
 
    return SCIP_OKAY;
 }
