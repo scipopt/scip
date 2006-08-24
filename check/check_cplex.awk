@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.22 2006/08/21 20:13:17 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.23 2006/08/24 17:12:34 bzfpfend Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -116,7 +116,7 @@ BEGIN {
 #
 # solution
 #
-/^Integer/  {
+/^Integer /  {
     if ($2 == "infeasible." || $2 == "infeasible")
     {
 	db = 1e+20;
@@ -133,7 +133,7 @@ BEGIN {
     }
     opti = ($2 == "optimal") ? 1 : 0;
 }
-/^MIP - Integer/  { # since CPLEX 10.0
+/^MIP - Integer /  { # since CPLEX 10.0
     if ($4 == "infeasible." || $4 == "infeasible")
     {
 	db = 1e+20;
@@ -158,34 +158,42 @@ BEGIN {
    pb = $10;
    timeout = 1;
 }
-/^Time/  {
+/^Time /  {
     pb = ($4 == "no") ? 1e+75 : $8;
     timeout = 1;
 }
-/^MIP - Time/  { # since CPLEX 10.0
+/^MIP - Time /  { # since CPLEX 10.0
     pb = ($6 == "no") ? 1e+75 : $10;
     timeout = 1;
 }
-/^Node/ {
+/^Memory limit exceeded, integer feasible:/ {
+   pb = $8;
+   timeout = 1;
+}
+/^MIP - Memory limit exceeded, integer feasible:/ {
+   pb = $10;
+   timeout = 1;
+}
+/^Node / {
     pb = ($4 == "no") ? 1e+75 : $8;
     timeout = 1;
 }
-/^MIP - Node/ { # since CPLEX 10.0
+/^MIP - Node / { # since CPLEX 10.0
     pb = ($6 == "no") ? 1e+75 : $10;
     timeout = 1;
 }
-/^Tree/  {
+/^Tree /  {
     pb = ($4 == "no") ? 1e+75 : $8;
     timeout = 1;
 }
-/^MIP - Tree/  { # since CPLEX 10.0
+/^MIP - Tree /  { # since CPLEX 10.0
     pb = ($6 == "no") ? 1e+75 : $10;
     timeout = 1;
 }
-/^Error/  {
+/^Error /  {
     pb = ($3 == "no") ? 1e+75 : $7;
 }
-/^MIP - Error/  { # since CPLEX 10.0
+/^MIP - Error /  { # since CPLEX 10.0
     pb = ($5 == "no") ? 1e+75 : $9;
 }
 /cuts applied/ { 
