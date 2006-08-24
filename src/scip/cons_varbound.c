@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.51 2006/08/21 20:13:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.52 2006/08/24 20:42:08 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for variable bound constraints
@@ -386,7 +386,7 @@ SCIP_RETCODE propagateCons(
       tightenedround = FALSE;
 
       /* propagate left hand side inequality: lhs <= x + c*y */
-      if( !SCIPisInfinity(scip, -consdata->lhs) )
+      if( !(*cutoff) && !SCIPisInfinity(scip, -consdata->lhs) )
       {
          /* propagate bounds on x:
           *  (1) left hand side and bounds on y -> lower bound on x
@@ -448,7 +448,7 @@ SCIP_RETCODE propagateCons(
       }
 
       /* propagate right hand side inequality: x + c*y <= rhs */
-      if( !SCIPisInfinity(scip, consdata->rhs) )
+      if( !(*cutoff) && !SCIPisInfinity(scip, consdata->rhs) )
       {
          /* propagate bounds on x:
           *  (3) right hand side and bounds on y -> upper bound on x

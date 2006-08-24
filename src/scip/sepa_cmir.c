@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.55 2006/08/23 17:35:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.56 2006/08/24 20:42:08 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -575,7 +575,7 @@ SCIP_RETCODE cutGenerationHeuristic(
       var = vars[vi];
       assert(vi == SCIPvarGetProbindex(var));
       assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
-      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+      assert(SCIPvarIsActive(var));
       assert(SCIPvarIsIntegral(var));
 
       /* update maximum coefficient of integer variables in constructed mixed knapsack set for 
