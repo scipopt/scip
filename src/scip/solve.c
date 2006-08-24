@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.230 2006/08/23 17:35:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.231 2006/08/24 17:06:10 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1524,11 +1524,7 @@ SCIP_RETCODE priceAndCutLoop(
                      objreldiff = SCIPrelDiff(lpobjval, stalllpobjval);
                      SCIPdebugMessage(" -> LP bound moved from %g to %g (reldiff: %g)\n",
                         stalllpobjval, lpobjval, objreldiff);
-#if 0 /*???????????? -oldstall */
-                     if( objreldiff > 1e-03 || nfracs <= (0.9 - 0.1 * nsepastallrounds) * stallnfracs )
-#else
-                     if( objreldiff > 1e-04/*?????????????1e-03*/ || nfracs <= (0.9 - 0.1 * nsepastallrounds) * stallnfracs )
-#endif
+                     if( objreldiff > 1e-04 || nfracs <= (0.9 - 0.1 * nsepastallrounds) * stallnfracs )
                      {
                         nsepastallrounds = 0;
                         stalllpobjval = lpobjval;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.43 2006/06/14 17:54:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.44 2006/08/24 17:06:10 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -381,6 +381,7 @@ public:
       SCIP_CONS**        conss,              /**< array of constraints to process */
       int                nconss,             /**< number of constraints to process */
       int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+      SCIP_Bool          solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
       SCIP_RESULT*       result              /**< pointer to store the result of the enforcing call */
       ) = 0;
 
@@ -420,6 +421,7 @@ public:
       SCIP_CONS**        conss,              /**< array of constraints to process */
       int                nconss,             /**< number of constraints to process */
       int                nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+      SCIP_Bool          solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
       SCIP_Bool          objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
       SCIP_RESULT*       result              /**< pointer to store the result of the enforcing call */
       ) = 0;
