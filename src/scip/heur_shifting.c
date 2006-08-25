@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shifting.c,v 1.6 2006/08/08 15:17:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_shifting.c,v 1.7 2006/08/25 08:09:12 bzfpfend Exp $"
 
 /**@file   heur_shifting.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities and shifts continuous variables
@@ -280,8 +280,9 @@ SCIP_RETCODE selectShifting(
             {
                SCIP_Real lb;
                
+               assert(activitydelta/val < 0.0);
                shiftval = solval + activitydelta/val;
-               assert(shiftval < solval);
+               assert(shiftval <= solval); /* may be equal due to numerical digit erasement in the subtraction */
                if( SCIPvarIsIntegral(var) )
                   shiftval = SCIPfeasFloor(scip, shiftval);
                lb = SCIPvarGetLbGlobal(var);
@@ -297,9 +298,10 @@ SCIP_RETCODE selectShifting(
             else
             {
                SCIP_Real ub;
-                  
+
+               assert(activitydelta/val > 0.0);
                shiftval = solval + activitydelta/val;
-               assert(shiftval > solval);
+               assert(shiftval >= solval); /* may be equal due to numerical digit erasement in the subtraction */
                if( SCIPvarIsIntegral(var) )
                   shiftval = SCIPfeasCeil(scip, shiftval);
                ub = SCIPvarGetUbGlobal(var);
