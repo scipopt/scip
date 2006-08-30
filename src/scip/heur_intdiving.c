@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intdiving.c,v 1.9 2006/07/20 09:51:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_intdiving.c,v 1.10 2006/08/30 09:25:45 bzfpfend Exp $"
 
 /**@file   heur_intdiving.c
  * @brief  LP diving heuristic that fixes variables with integral LP value
@@ -31,7 +31,7 @@
 
 #define HEUR_NAME             "intdiving"
 #define HEUR_DESC             "LP diving heuristic that fixes binary variables with large LP value to one"
-#define HEUR_DISPCHAR         'i'
+#define HEUR_DISPCHAR         'I'
 #define HEUR_PRIORITY         -1003500
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          9

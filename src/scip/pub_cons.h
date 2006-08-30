@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.32 2006/06/07 11:47:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.33 2006/08/30 09:25:46 bzfpfend Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -543,6 +543,18 @@ SCIP_Bool SCIPconsIsLocked(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** get number of times the roundings for variables in constraint are locked */
+extern
+int SCIPconsGetNLocksPos(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** get number of times the roundings for variables in constraint's negation are locked */
+extern
+int SCIPconsGetNLocksNeg(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -584,6 +596,8 @@ SCIP_Bool SCIPconsIsLocked(
 #define SCIPconsIsLockedPos(cons)       ((cons)->nlockspos > 0)
 #define SCIPconsIsLockedNeg(cons)       ((cons)->nlocksneg > 0)
 #define SCIPconsIsLocked(cons)          ((cons)->nlockspos > 0 || (cons)->nlocksneg > 0)
+#define SCIPconsGetNLocksPos(cons)      ((cons)->nlockspos)
+#define SCIPconsGetNLocksNeg(cons)      ((cons)->nlocksneg)
 
 #endif
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.60 2006/06/06 13:32:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.61 2006/08/30 09:25:45 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -142,6 +142,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
       
       if( feasible )
          SCIPdialogMessage(scip, NULL, "best solution is feasible in original problem\n");
+      else if( infeasconshdlr == NULL )
+      {
+         SCIPdialogMessage(scip, NULL, "best solution violates bounds\n");
+      }
       else if( infeascons == NULL )
       { 
          SCIPdialogMessage(scip, NULL, "best solution violates constraint handler [%s]\n",

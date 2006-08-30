@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.56 2006/08/08 15:17:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.57 2006/08/30 09:25:46 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -48,7 +48,7 @@
 #define BOUNDSWITCH              0.9999
 #define USEVBDS                    TRUE
 #define ALLOWLOCAL                 TRUE
-#define FIXINTEGRALRHS            FALSE /*?????????????????*/
+#define FIXINTEGRALRHS            FALSE
 #define MAKECONTINTEGRAL          FALSE
 #define MINFRAC                    0.05
 #define MAXFRAC                    1.00

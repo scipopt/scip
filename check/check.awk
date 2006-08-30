@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.41 2006/08/21 20:13:17 bzfpfend Exp $
+# $Id: check.awk,v 1.42 2006/08/30 09:25:44 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -25,6 +25,10 @@
 function abs(x)
 {
     return x < 0 ? -x : x;
+}
+function min(x,y)
+{
+    return (x) < (y) ? (x) : (y);
 }
 function max(x,y)
 {
@@ -135,7 +139,9 @@ BEGIN {
 }
 /@03/ { starttime = $2; }
 /@04/ { endtime = $2; }
+/^loaded parameter file/ { settings = $4; sub(/<settings\//, "", settings); sub(/.set>/, "", settings); }
 /^SCIP> loaded parameter file/ { settings = $5; sub(/<settings\//, "", settings); sub(/.set>/, "", settings); }
+/^parameter <limits\/time> set to/ { timelimit = $5; }
 /^SCIP> parameter <limits\/time> set to/ { timelimit = $6; }
 #
 # conflict analysis
@@ -285,8 +291,8 @@ BEGIN {
       }
       if( aborted && tottime == 0.0 )
          tottime = timelimit;
-#      if( timeout && timelimit > 0.0 )
-#         tottime = timelimit;
+      if( timelimit > 0.0 )
+         tottime = min(tottime, timelimit);
 
       lps = primlps + duallps;
       simplex = primiter + dualiter;
@@ -368,6 +374,23 @@ BEGIN {
             printf("ok\n");
             pass++;
          }
+      }
+      else if( solstatus[prob] == "best" )
+      {
+         if( db > sol[prob] + 1e-4 )
+         {
+            printf("fail\n");
+            failtime += tottime;
+            fail++;
+         }
+         else if (timeout)
+         {
+            printf("timeout\n");
+            timeouttime += tottime;
+            timeouts++;
+         }
+         else
+            printf("unknown\n");
       }
       else
       {

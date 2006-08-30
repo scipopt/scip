@@ -14,10 +14,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shifting.c,v 1.8 2006/08/30 09:25:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_intshifting.c,v 1.1 2006/08/30 09:25:46 bzfpfend Exp $"
 
-/**@file   heur_shifting.c
- * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities and shifts continuous variables
+/**@file   heur_intshifting.c
+ * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities, shifts integer variables, and
+ *         solves a final LP to calculate feasible values for continuous variables
  * @author Tobias Achterberg
  */
 
@@ -26,17 +27,17 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/heur_shifting.h"
+#include "scip/heur_intshifting.h"
 
 
-#define HEUR_NAME             "shifting"
-#define HEUR_DESC             "LP rounding heuristic with infeasibility recovering also using continuous variables"
-#define HEUR_DISPCHAR         's'
-#define HEUR_PRIORITY         -5000
+#define HEUR_NAME             "intshifting"
+#define HEUR_DESC             "LP rounding heuristic with infeasibility recovering and final LP solving"
+#define HEUR_DISPCHAR         'i'
+#define HEUR_PRIORITY         -10000
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP
+#define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 
 #define MAXSHIFTINGS          50        /**< maximal number of non improving shiftings */
 #define WEIGHTFACTOR          1.1
@@ -65,8 +66,10 @@ void updateViolations(
    SCIP_ROW**            violrows,           /**< array with currently violated rows */
    int*                  violrowpos,         /**< position of LP rows in violrows array */
    int*                  nviolrows,          /**< pointer to the number of currently violated rows */
-   SCIP_Real             oldactivity,        /**< old activity value of LP row */
-   SCIP_Real             newactivity         /**< new activity value of LP row */
+   SCIP_Real             oldminactivity,     /**< old minimal activity value of LP row */
+   SCIP_Real             oldmaxactivity,     /**< old maximal activity value of LP row */
+   SCIP_Real             newminactivity,     /**< new minimal activity value of LP row */
+   SCIP_Real             newmaxactivity      /**< new maximal activity value of LP row */
    )
 {
    SCIP_Real lhs;
@@ -80,8 +83,8 @@ void updateViolations(
 
    lhs = SCIProwGetLhs(row);
    rhs = SCIProwGetRhs(row);
-   oldviol = (SCIPisFeasLT(scip, oldactivity, lhs) || SCIPisFeasGT(scip, oldactivity, rhs));
-   newviol = (SCIPisFeasLT(scip, newactivity, lhs) || SCIPisFeasGT(scip, newactivity, rhs));
+   oldviol = (SCIPisFeasLT(scip, oldmaxactivity, lhs) || SCIPisFeasGT(scip, oldminactivity, rhs));
+   newviol = (SCIPisFeasLT(scip, newmaxactivity, lhs) || SCIPisFeasGT(scip, newminactivity, rhs));
    if( oldviol != newviol )
    {
       int rowpos;
@@ -119,7 +122,8 @@ void updateViolations(
 static
 SCIP_RETCODE updateActivities(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            activities,         /**< LP row activities */
+   SCIP_Real*            minactivities,      /**< LP row minimal activities */
+   SCIP_Real*            maxactivities,      /**< LP row maximal activities */
    SCIP_ROW**            violrows,           /**< array with currently violated rows */
    int*                  violrowpos,         /**< position of LP rows in violrows array */
    int*                  nviolrows,          /**< pointer to the number of currently violated rows */
@@ -136,9 +140,11 @@ SCIP_RETCODE updateActivities(
    int ncolrows;
    int r;
 
-   assert(activities != NULL);
+   assert(minactivities != NULL);
+   assert(maxactivities != NULL);
    assert(nviolrows != NULL);
    assert(0 <= *nviolrows && *nviolrows <= nlprows);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
 
    delta = newsolval - oldsolval;
    col = SCIPvarGetCol(var);
@@ -158,25 +164,42 @@ SCIP_RETCODE updateActivities(
 
       if( rowpos >= 0 && !SCIProwIsLocal(row) )
       {
-         SCIP_Real oldactivity;
-         SCIP_Real newactivity;
+         SCIP_Real oldminactivity;
+         SCIP_Real oldmaxactivity;
+         SCIP_Real newminactivity;
+         SCIP_Real newmaxactivity;
          
          assert(SCIProwIsInLP(row));
          
-         /* update row activity */
-         oldactivity = activities[rowpos];
-         newactivity = oldactivity + delta * colvals[r];
-         activities[rowpos] = newactivity;
+         /* update row activities */
+         oldminactivity = minactivities[rowpos];
+         oldmaxactivity = maxactivities[rowpos];
+         if( !SCIPisInfinity(scip, -oldminactivity) )
+         {
+            newminactivity = oldminactivity + delta * colvals[r];
+            minactivities[rowpos] = newminactivity;
+         }
+         else
+            newminactivity = oldminactivity;
+         if( !SCIPisInfinity(scip, oldmaxactivity) )
+         {
+            newmaxactivity = oldmaxactivity + delta * colvals[r];
+            maxactivities[rowpos] = newmaxactivity;
+         }
+         else
+            newmaxactivity = oldmaxactivity;
 
          /* update row violation arrays */
-         updateViolations(scip, row, violrows, violrowpos, nviolrows, oldactivity, newactivity);
+         updateViolations(scip, row, violrows, violrowpos, nviolrows, oldminactivity, oldmaxactivity,
+            newminactivity, newmaxactivity);
       }            
    }
 
    return SCIP_OKAY;
 }
 
-/** returns a variable, that pushes activity of the row in the given direction with minimal negative impact on other rows;
+/** returns an integer variable, that pushes activity of the row in the given direction with minimal negative impact on
+ *  other rows;
  *  if variables have equal impact, chooses the one with best objective value improvement in corresponding direction;
  *  prefer fractional integers over other variables in order to become integral during the process;
  *  shifting in a direction is forbidden, if this forces the objective value over the upper bound, or if the variable
@@ -236,7 +259,6 @@ SCIP_RETCODE selectShifting(
       SCIP_Real solval;
       SCIP_Real shiftval;
       SCIP_Real shiftscore;
-      SCIP_Bool isinteger;
       SCIP_Bool isfrac;
       SCIP_Bool increase;
       int probindex;
@@ -247,8 +269,11 @@ SCIP_RETCODE selectShifting(
       assert(!SCIPisZero(scip, val));
       solval = SCIPgetSolVal(scip, sol, var);
 
-      isinteger = (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
-      isfrac = isinteger && !SCIPisFeasIntegral(scip, solval);
+      /* only accept integer variables */
+      if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY && SCIPvarGetType(var) != SCIP_VARTYPE_INTEGER )
+         continue;
+
+      isfrac = !SCIPisFeasIntegral(scip, solval);
       increase = (direction * val > 0.0);
       probindex = SCIPvarGetProbindex(var);
 
@@ -262,8 +287,7 @@ SCIP_RETCODE selectShifting(
             shiftscore = ndecreases[probindex]/increaseweight;
          else
             shiftscore = nincreases[probindex]/increaseweight;
-         if( isinteger )
-            shiftscore += 1.0;
+         shiftscore += 1.0;
       }
 
       if( shiftscore <= bestshiftscore )
@@ -283,8 +307,7 @@ SCIP_RETCODE selectShifting(
                assert(activitydelta/val < 0.0);
                shiftval = solval + activitydelta/val;
                assert(shiftval <= solval); /* may be equal due to numerical digit erasement in the subtraction */
-               if( SCIPvarIsIntegral(var) )
-                  shiftval = SCIPfeasFloor(scip, shiftval);
+               shiftval = SCIPfeasFloor(scip, shiftval);
                lb = SCIPvarGetLbGlobal(var);
                shiftval = MAX(shiftval, lb);
             }
@@ -302,8 +325,7 @@ SCIP_RETCODE selectShifting(
                assert(activitydelta/val > 0.0);
                shiftval = solval + activitydelta/val;
                assert(shiftval >= solval); /* may be equal due to numerical digit erasement in the subtraction */
-               if( SCIPvarIsIntegral(var) )
-                  shiftval = SCIPfeasCeil(scip, shiftval);
+               shiftval = SCIPfeasCeil(scip, shiftval);
                ub = SCIPvarGetUbGlobal(var);
                shiftval = MIN(shiftval, ub);
             }
@@ -444,12 +466,12 @@ void addFracCounter(
  */
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-#define heurFreeShifting NULL
+#define heurFreeIntshifting NULL
 
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
-SCIP_DECL_HEURINIT(heurInitShifting) /*lint --e{715}*/
+SCIP_DECL_HEURINIT(heurInitIntshifting) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -468,7 +490,7 @@ SCIP_DECL_HEURINIT(heurInitShifting) /*lint --e{715}*/
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
-SCIP_DECL_HEUREXIT(heurExitShifting) /*lint --e{715}*/
+SCIP_DECL_HEUREXIT(heurExitIntshifting) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -486,7 +508,7 @@ SCIP_DECL_HEUREXIT(heurExitShifting) /*lint --e{715}*/
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 static
-SCIP_DECL_HEURINITSOL(heurInitsolShifting)
+SCIP_DECL_HEURINITSOL(heurInitsolIntshifting)
 {
    SCIP_HEURDATA* heurdata;
 
@@ -501,19 +523,20 @@ SCIP_DECL_HEURINITSOL(heurInitsolShifting)
 
 
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolShifting NULL
+#define heurExitsolIntshifting NULL
 
 
 /** execution method of primal heuristic */
 static
-SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
+SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_SOL* sol;
    SCIP_VAR** lpcands;
    SCIP_Real* lpcandssol;
    SCIP_ROW** lprows;
-   SCIP_Real* activities;
+   SCIP_Real* minactivities;
+   SCIP_Real* maxactivities;
    SCIP_ROW** violrows;
    SCIP_Real* nincreases;
    SCIP_Real* ndecreases;
@@ -544,6 +567,12 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
    assert(SCIPhasCurrentNodeLP(scip));
 
    *result = SCIP_DIDNOTRUN;
+
+   /* don't call heuristic, if no continuous variables are present
+    *  -> in this case, it is equivalent to shifting heuristic
+    */
+   if( SCIPgetNContVars(scip) == 0 )
+      return SCIP_OKAY;
 
    /* only call heuristic, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
@@ -579,11 +608,12 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
    /* get LP rows */
    SCIP_CALL( SCIPgetLPRowsData(scip, &lprows, &nlprows) );
 
-   SCIPdebugMessage("executing shifting heuristic: %d LP rows, %d fractionals\n", nlprows, nfrac);
+   SCIPdebugMessage("executing intshifting heuristic: %d LP rows, %d fractionals\n", nlprows, nfrac);
 
    /* get memory for activities, violated rows, and row violation positions */
    nvars = SCIPgetNVars(scip);
-   SCIP_CALL( SCIPallocBufferArray(scip, &activities, nlprows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &minactivities, nlprows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &maxactivities, nlprows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &violrows, nlprows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &violrowpos, nlprows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nfracsinrow, nlprows) );
@@ -593,8 +623,9 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
    BMSclearMemoryArray(nincreases, nvars);
    BMSclearMemoryArray(ndecreases, nvars);
 
-   /* get the activities for all globally valid rows;
-    * the rows should be feasible, but due to numerical inaccuracies in the LP solver, they can be violated
+   /* get the minimal and maximal activity for all globally valid rows for continuous variables in their full range;
+    * these are the values of a*x' with x' being the LP solution for integer variables and the lower or upper bound
+    * for the continuous variables
     */
    nviolrows = 0;
    for( r = 0; r < nlprows; ++r )
@@ -606,9 +637,73 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
 
       if( !SCIProwIsLocal(row) )
       {
-         activities[r] = SCIPgetRowActivity(scip, row);
-         if( SCIPisFeasLT(scip, activities[r], SCIProwGetLhs(row))
-            || SCIPisFeasGT(scip, activities[r], SCIProwGetRhs(row)) )
+         SCIP_COL** cols;
+         SCIP_Real* vals;
+         int nnonz;
+         SCIP_Bool mininf;
+         SCIP_Bool maxinf;
+
+         mininf = FALSE;
+         maxinf = FALSE;
+         minactivities[r] = 0.0;
+         maxactivities[r] = 0.0;
+         cols = SCIProwGetCols(row);
+         vals = SCIProwGetVals(row);
+         nnonz = SCIProwGetNNonz(row);
+         for( c = 0; c < nnonz && !(mininf && maxinf); ++c )
+         {
+            SCIP_VAR* var;
+
+            var = SCIPcolGetVar(cols[c]);
+            if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
+            {
+               SCIP_Real act;
+
+               act = vals[c] * SCIPcolGetPrimsol(cols[c]);
+               minactivities[r] += act;
+               maxactivities[r] += act;
+            }
+            else if( vals[c] > 0.0 )
+            {
+               SCIP_Real lb;
+               SCIP_Real ub;
+
+               lb = SCIPvarGetLbGlobal(var);
+               ub = SCIPvarGetUbGlobal(var);
+               if( SCIPisInfinity(scip, -lb) )
+                  mininf = TRUE;
+               else
+                  minactivities[r] += vals[c] * lb;
+               if( SCIPisInfinity(scip, ub) )
+                  maxinf = TRUE;
+               else
+                  maxactivities[r] += vals[c] * ub;
+            }
+            else if( vals[c] < 0.0 )
+            {
+               SCIP_Real lb;
+               SCIP_Real ub;
+
+               lb = SCIPvarGetLbGlobal(var);
+               ub = SCIPvarGetUbGlobal(var);
+               if( SCIPisInfinity(scip, ub) )
+                  mininf = TRUE;
+               else
+                  minactivities[r] += vals[c] * ub;
+               if( SCIPisInfinity(scip, -lb) )
+                  maxinf = TRUE;
+               else
+                  maxactivities[r] += vals[c] * lb;
+            }
+
+            if( mininf )
+               minactivities[r] = -SCIPinfinity(scip);
+            if( maxinf )
+               maxactivities[r] = SCIPinfinity(scip);
+         }
+
+         if( SCIPisFeasLT(scip, maxactivities[r], SCIProwGetLhs(row))
+            || SCIPisFeasGT(scip, minactivities[r], SCIProwGetRhs(row)) )
          {
             violrows[nviolrows] = row;
             violrowpos[r] = nviolrows;
@@ -652,7 +747,7 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
       SCIP_Bool oldsolvalisfrac;
       int probindex;
 
-      SCIPdebugMessage("shifting heuristic: nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g), cutoff=%g\n",
+      SCIPdebugMessage("intshifting heuristic: nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g), cutoff=%g\n",
          nfrac, nviolrows, SCIPgetSolOrigObj(scip, sol), SCIPretransformObj(scip, minobj),
          SCIPretransformObj(scip, SCIPgetCutoffbound(scip)));
 
@@ -697,39 +792,41 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
          }
          assert(violrowpos[rowpos] == rowidx);
 
-         SCIPdebugMessage("shifting heuristic: try to fix violated row <%s>: %g <= %g <= %g\n",
-            SCIProwGetName(row), SCIProwGetLhs(row), activities[rowpos], SCIProwGetRhs(row));
+         SCIPdebugMessage("intshifting heuristic: try to fix violated row <%s>: %g <= [%g,%g] <= %g\n",
+            SCIProwGetName(row), SCIProwGetLhs(row), minactivities[rowpos], maxactivities[rowpos], SCIProwGetRhs(row));
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
          /* get direction in which activity must be shifted */
-         assert(SCIPisFeasLT(scip, activities[rowpos], SCIProwGetLhs(row))
-            || SCIPisFeasGT(scip, activities[rowpos], SCIProwGetRhs(row)));
-         direction = SCIPisFeasLT(scip, activities[rowpos], SCIProwGetLhs(row)) ? +1 : -1;
+         assert(SCIPisFeasLT(scip, maxactivities[rowpos], SCIProwGetLhs(row))
+            || SCIPisFeasGT(scip, minactivities[rowpos], SCIProwGetRhs(row)));
+         direction = SCIPisFeasLT(scip, maxactivities[rowpos], SCIProwGetLhs(row)) ? +1 : -1;
 
-         /* search a variable that can shift the activity in the necessary direction */
-         SCIP_CALL( selectShifting(scip, sol, row, activities[rowpos], direction,
-               nincreases, ndecreases, increaseweight, &shiftvar, &oldsolval, &newsolval) );
+         /* search an integer variable that can shift the activity in the necessary direction */
+         SCIP_CALL( selectShifting(scip, sol, row, direction == +1 ? maxactivities[rowpos] : minactivities[rowpos],
+               direction, nincreases, ndecreases, increaseweight, &shiftvar, &oldsolval, &newsolval) );
       }
 
       if( shiftvar == NULL && nfrac > 0 )
       {
-         SCIPdebugMessage("shifting heuristic: search rounding variable and try to stay feasible\n");
+         SCIPdebugMessage("intshifting heuristic: search rounding variable and try to stay feasible\n");
          SCIP_CALL( selectEssentialRounding(scip, sol, minobj, lpcands, nlpcands, &shiftvar, &oldsolval, &newsolval) );
       }
 
       /* check, whether shifting was possible */
       if( shiftvar == NULL || SCIPisEQ(scip, oldsolval, newsolval) )
       {
-         SCIPdebugMessage("shifting heuristic:  -> didn't find a shifting variable\n");
+         SCIPdebugMessage("intshifting heuristic:  -> didn't find a shifting variable\n");
          break;
       }
 
-      SCIPdebugMessage("shifting heuristic:  -> shift var <%s>[%g,%g], type=%d, oldval=%g, newval=%g, obj=%g\n",
+      assert(SCIPvarGetType(shiftvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(shiftvar) == SCIP_VARTYPE_INTEGER);
+
+      SCIPdebugMessage("intshifting heuristic:  -> shift var <%s>[%g,%g], type=%d, oldval=%g, newval=%g, obj=%g\n",
          SCIPvarGetName(shiftvar), SCIPvarGetLbGlobal(shiftvar), SCIPvarGetUbGlobal(shiftvar), SCIPvarGetType(shiftvar),
          oldsolval, newsolval, SCIPvarGetObj(shiftvar));
          
       /* update row activities of globally valid rows */
-      SCIP_CALL( updateActivities(scip, activities, violrows, violrowpos, &nviolrows, nlprows, 
+      SCIP_CALL( updateActivities(scip, minactivities, maxactivities, violrows, violrowpos, &nviolrows, nlprows, 
             shiftvar, oldsolval, newsolval) );
       if( nviolrows >= nprevviolrows )
          nnonimprovingshifts++;
@@ -743,11 +840,9 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
       SCIP_CALL( SCIPsetSolVal(scip, sol, shiftvar, newsolval) );
 
       /* update fractionality counter and minimal objective value possible after shifting remaining variables */
-      oldsolvalisfrac = !SCIPisFeasIntegral(scip, oldsolval)
-         && (SCIPvarGetType(shiftvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(shiftvar) == SCIP_VARTYPE_INTEGER);
+      oldsolvalisfrac = !SCIPisFeasIntegral(scip, oldsolval);
       obj = SCIPvarGetObj(shiftvar);
-      if( (SCIPvarGetType(shiftvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(shiftvar) == SCIP_VARTYPE_INTEGER)
-         && oldsolvalisfrac )
+      if( oldsolvalisfrac )
       {
          assert(SCIPisFeasIntegral(scip, newsolval));
          nfrac--;
@@ -790,28 +885,72 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
          }
       }
 
-      SCIPdebugMessage("shifting heuristic:  -> nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g)\n",
+      SCIPdebugMessage("intshifting heuristic:  -> nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g)\n",
          nfrac, nviolrows, SCIPgetSolOrigObj(scip, sol), SCIPretransformObj(scip, minobj));
    }
 
-   /* check, if the new solution is feasible */
+   /* check, if the new solution is potentially feasible and solve the LP to calculate values for the continuous
+    * variables
+    */
    if( nfrac == 0 && nviolrows == 0 )
    {
-      SCIP_Bool stored;
+      SCIP_VAR** vars;
+      SCIP_Bool lperror;
+      int nintvars;
+      int v;
 
-      /* check solution for feasibility, and add it to solution store if possible
-       * neither integrality nor feasibility of LP rows has to be checked, because this is already
-       * done in the shifting heuristic itself; however, we better check feasibility of LP rows,
-       * because of numerical problems with activity updating
-       */
-      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, &stored) );
+      SCIPdebugMessage("shifted solution is potentially feasible -> solve LP to fix continuous variables\n");
 
-      if( stored )
+      /* start diving to calculate the LP relaxation */
+      SCIP_CALL( SCIPstartDive(scip) );
+
+      /* set the bounds of the variables: fixed for integers, global bounds for continuous */
+      vars = SCIPgetVars(scip);
+      nintvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+      for( v = 0; v < nvars; ++v )
       {
-         SCIPdebugMessage("found feasible shifted solution:\n");
-         SCIPdebug(SCIPprintSol(scip, sol, NULL, FALSE));
-         *result = SCIP_FOUNDSOL;
+         SCIP_CALL( SCIPchgVarLbDive(scip, vars[v], SCIPvarGetLbGlobal(vars[v])) );
+         SCIP_CALL( SCIPchgVarUbDive(scip, vars[v], SCIPvarGetUbGlobal(vars[v])) );
       }
+      for( v = 0; v < nintvars; ++v ) /* apply this after global bounds to not cause an error with intermediate empty domains */
+      {
+         SCIP_Real solval;
+
+         solval = SCIPgetSolVal(scip, sol, vars[v]);
+         SCIP_CALL( SCIPchgVarLbDive(scip, vars[v], solval) );
+         SCIP_CALL( SCIPchgVarUbDive(scip, vars[v], solval) );
+      }
+
+      /* solve LP */
+      SCIPdebugMessage(" -> old LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
+      SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror) );
+      SCIPdebugMessage(" -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
+      SCIPdebugMessage(" -> error=%d, status=%d\n", lperror, SCIPgetLPSolstat(scip));
+
+      /* check if this is a feasible solution */
+      if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+      {
+         SCIP_Bool stored;
+         
+         /* copy the current LP solution to the working solution */
+         SCIP_CALL( SCIPlinkLPSol(scip, sol) );
+
+         /* check solution for feasibility, and add it to solution store if possible
+          * neither integrality nor feasibility of LP rows has to be checked, because this is already
+          * done in the intshifting heuristic itself and due to the LP resolve
+          */
+         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, &stored) );
+         
+         if( stored )
+         {
+            SCIPdebugMessage("found feasible shifted solution:\n");
+            SCIPdebug(SCIPprintSol(scip, sol, NULL, FALSE));
+            *result = SCIP_FOUNDSOL;
+         }
+      }
+
+      /* terminate the diving */
+      SCIP_CALL( SCIPendDive(scip) );
    }
 
    /* free memory buffers */
@@ -820,7 +959,8 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
    SCIPfreeBufferArray(scip, &nfracsinrow);
    SCIPfreeBufferArray(scip, &violrowpos);
    SCIPfreeBufferArray(scip, &violrows);
-   SCIPfreeBufferArray(scip, &activities);
+   SCIPfreeBufferArray(scip, &maxactivities);
+   SCIPfreeBufferArray(scip, &minactivities);
 
    return SCIP_OKAY;
 }
@@ -832,16 +972,16 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
  * heuristic specific interface methods
  */
 
-/** creates the shifting heuristic with infeasibility recovering and includes it in SCIP */
-SCIP_RETCODE SCIPincludeHeurShifting(
+/** creates the intshifting heuristic with infeasibility recovering and includes it in SCIP */
+SCIP_RETCODE SCIPincludeHeurIntshifting(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    /* include heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING,
-         heurFreeShifting, heurInitShifting, heurExitShifting, 
-         heurInitsolShifting, heurExitsolShifting, heurExecShifting,
+         heurFreeIntshifting, heurInitIntshifting, heurExitIntshifting, 
+         heurInitsolIntshifting, heurExitsolIntshifting, heurExecIntshifting,
          NULL) );
 
    return SCIP_OKAY;

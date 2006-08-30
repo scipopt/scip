@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.151 2006/08/08 15:17:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.152 2006/08/30 09:25:45 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -5324,6 +5324,8 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyCons)
 #undef SCIPconsIsLockedPos
 #undef SCIPconsIsLockedNeg
 #undef SCIPconsIsLocked
+#undef SCIPconsGetNLocksPos
+#undef SCIPconsGetNLocksNeg
 
 /** returns the name of the constraint */
 const char* SCIPconsGetName(
@@ -5632,4 +5634,24 @@ SCIP_Bool SCIPconsIsLocked(
    assert(cons != NULL);
 
    return (cons->nlockspos > 0 || cons->nlocksneg > 0);
+}
+
+/** get number of times the roundings for variables in constraint are locked */
+int SCIPconsGetNLocksPos(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->nlockspos;
+}
+
+/** get number of times the roundings for variables in constraint's negation are locked */
+int SCIPconsGetNLocksNeg(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->nlocksneg;
 }

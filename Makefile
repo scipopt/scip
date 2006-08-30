@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.170 2006/08/24 17:12:33 bzfpfend Exp $
+# $Id: Makefile,v 1.171 2006/08/30 09:25:44 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -39,11 +39,11 @@ HOSTNAME	:=	$(shell uname -n | tr '[:upper:]' '[:lower:]')
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		:=	0.82d
+VERSION		:=	0.82e
 
 TIME     	=  	3600
 NODES           =       2100000000
-MEM		=	1024
+MEM		=	1536
 DISPFREQ	=	10000
 FEASTOL		=	default
 TEST		=	miplib
@@ -331,6 +331,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/heur_fracdiving.o \
 			scip/heur_guideddiving.o \
 			scip/heur_intdiving.o \
+			scip/heur_intshifting.o \
 			scip/heur_linesearchdiving.o \
 			scip/heur_localbranching.o \
 			scip/heur_mutation.o \

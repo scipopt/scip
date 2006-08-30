@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.52 2006/08/24 20:42:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.53 2006/08/30 09:25:45 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for variable bound constraints
@@ -529,9 +529,11 @@ SCIP_RETCODE propagateCons(
    }
    else
    {
-      /* none of the two variables should be fixed; otherwise, the bounds should have been tightened and the constraint should be redundant */
-      assert(SCIPisFeasLT(scip, xlb, xub));
-      assert(SCIPisFeasLT(scip, ylb, yub));
+      /* none of the two variables should be fixed; otherwise, the bounds should have been tightened and the constraint
+       * should be redundant
+       */
+      assert(*cutoff || SCIPvarGetStatus(consdata->vbdvar) == SCIP_VARSTATUS_MULTAGGR || SCIPisFeasLT(scip, xlb, xub));
+      assert(*cutoff || SCIPvarGetStatus(consdata->var) == SCIP_VARSTATUS_MULTAGGR || SCIPisFeasLT(scip, ylb, yub));
    }
 
    /* mark the constraint propagated */

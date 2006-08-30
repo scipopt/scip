@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.56 2006/08/24 20:42:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.57 2006/08/30 09:25:46 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -34,39 +34,6 @@
 #define SEPA_PRIORITY             -3000
 #define SEPA_FREQ                     0
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
-
-#if 0 /*????????????? these are Kati's more aggressive c-MIR settings */
-#define DEFAULT_MAXROUNDS             3 /**< maximal number of cmir separation rounds per node (-1: unlimited) */
-#define DEFAULT_MAXROUNDSROOT        10 /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
-#define DEFAULT_MAXTRIES            100 /**< maximal number of rows to start aggregation with per separation round
-                                         *   (-1: unlimited) */
-#define DEFAULT_MAXTRIESROOT         -1 /**< maximal number of rows to start aggregation with per round in the root node
-                                         *   (-1: unlimited) */
-#define DEFAULT_MAXFAILS             30 /**< maximal number of consecutive unsuccesful aggregation tries (-1: unlimited) */
-#define DEFAULT_MAXFAILSROOT        150 /**< maximal number of consecutive unsuccesful aggregation tries in the root node
-                                         *   (-1: unlimited) */
-#define DEFAULT_MAXAGGRS              3 /**< maximal number of aggregations for each row per separation round */
-#define DEFAULT_MAXAGGRSROOT          6 /**< maximal number of aggreagtions for each row per round in the root node */
-#define DEFAULT_MAXSEPACUTS          50 /**< maximal number of cmir cuts separated per separation round */
-#define DEFAULT_MAXSEPACUTSROOT     100 /**< maximal number of cmir cuts separated per separation round in root node */
-#define DEFAULT_MAXSLACK         1e+100 /**< maximal slack of rows to be used in aggregation */
-#define DEFAULT_MAXSLACKROOT     1e+100 /**< maximal slack of rows to be used in aggregation in the root node */
-#define DEFAULT_DENSITYSCORE      1e-04 /**< weight of row density in the aggregation scoring of the rows */
-#define DEFAULT_SLACKSCORE        1e-03 /**< weight of slack in the aggregation scoring of the rows */
-#define DEFAULT_MAXAGGDENSITY      1.00 /**< maximal density of aggregated row */
-#define DEFAULT_MAXROWDENSITY      1.00 /**< maximal density of row to be used in aggregation */
-#define DEFAULT_MAXROWFAC          1e+4 /**< maximal row aggregation factor */
-#define DEFAULT_MAXTESTDELTA         -1 /**< maximal number of different deltas to try (-1: unlimited) */
-#define DEFAULT_MAXTESTDELTAROOT     -1 /**< maximal number of different deltas to try in the root node (-1: unlimited) */
-#define DEFAULT_MAXCONTS             20 /**< maximal number of active continuous variables in aggregated row */
-#define DEFAULT_MAXCONTSROOT         20 /**< maximal number of active continuous variables in aggregated row in the root */
-#define DEFAULT_AGGRTOL             0.0 /**< aggregation heuristic: tolerance for bounddistances used to select real 
-                                         *   variable in current aggregated constraint to be eliminated */
-#define DEFAULT_TRYNEGSCALING      TRUE /**< should negative values also be tested in scaling? */
-#define DEFAULT_FIXINTEGRALRHS     TRUE /**< should an additional variable be complemented if f0 = 0? */
-#define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
-
-#else
 
 #define DEFAULT_MAXROUNDS             3 /**< maximal number of cmir separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        10 /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
@@ -97,16 +64,13 @@
 #define DEFAULT_TRYNEGSCALING      TRUE /**< should negative values also be tested in scaling? */
 #define DEFAULT_FIXINTEGRALRHS     TRUE /**< should an additional variable be complemented if f0 = 0? */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
-#endif
 
 #define BOUNDSWITCH                 0.5
 #define USEVBDS                    TRUE
 #define ALLOWLOCAL                 TRUE
 #define MINFRAC                    0.05
 #define MAXFRAC                    1.00
-#if 1
 #define MAKECONTINTEGRAL          FALSE
-#endif
 
 
 
@@ -320,7 +284,6 @@ SCIP_RETCODE addCut(
          cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
       SCIPdebug(SCIPprintRow(scip, cut, NULL));
       
-#if 1
       /* try to scale the cut to integral values, but only if the scaling is small; otherwise keep the fractional cut */
       SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
             30, 100.0, MAKECONTINTEGRAL, &success) );
@@ -333,9 +296,6 @@ SCIP_RETCODE addCut(
       }
       else
          success = TRUE; /* also use cut if scaling failed */
-#else
-      success = TRUE;
-#endif
 
       /* if scaling was successful, add the cut */
       if( success ) /*lint !e774*/ /* Boolean within 'if' always evaluates to True */

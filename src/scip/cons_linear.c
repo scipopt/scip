@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.224 2006/08/23 17:35:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.225 2006/08/30 09:25:45 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -5690,6 +5690,228 @@ SCIP_RETCODE preprocessConstraintPairs(
    return SCIP_OKAY;
 }
 
+/** applies full dual presolving on variables that only appear in linear constraints */
+static
+SCIP_RETCODE fullDualPresolve(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraint set */
+   int                   nconss,             /**< number of constraints */
+   int*                  nchgbds             /**< pointer to count the number of bound changes */
+   )
+{
+   SCIP_Real* redlb;
+   SCIP_Real* redub;
+   int* nlocksdown;
+   int* nlocksup;
+   SCIP_VAR** vars;
+   int nvars;
+   int nbinvars;
+   int v;
+   int c;
+
+   /* we calculate redundancy bounds with the following meaning:
+    *   redlb[v] == k : if x_v >= k, we can always round x_v down to x_v == k without violating any constraint
+    *   redub[v] == k : if x_v <= k, we can always round x_v up to x_v == k without violating any constraint
+    * then:
+    *   c_v >= 0 : x_v <= redlb[v] is feasible due to optimality
+    *   c_v <= 0 : x_v >= redub[v] is feasible due to optimality
+    */
+
+   assert(nconss == 0 || conss != NULL);
+   assert(nchgbds != NULL);
+
+   /* get active variables */
+   nvars = SCIPgetNVars(scip);
+   vars = SCIPgetVars(scip);
+
+   /* if the problem is a pure binary program, nothing can be achieved by full dual presolve */
+   nbinvars = SCIPgetNBinVars(scip);
+   if( nbinvars == nvars )
+      return SCIP_OKAY;
+
+   /* allocate temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &redlb, nvars - nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &redub, nvars - nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlocksdown, nvars - nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlocksup, nvars - nbinvars) );
+
+   /* initialize redundancy bounds */
+   for( v = nbinvars; v < nvars; ++v )
+   {
+      redlb[v - nbinvars] = SCIPvarGetLbGlobal(vars[v]);
+      redub[v - nbinvars] = SCIPvarGetUbGlobal(vars[v]);
+   }
+   BMSclearMemoryArray(nlocksdown, nvars - nbinvars);
+   BMSclearMemoryArray(nlocksup, nvars - nbinvars);
+
+   /* scan all constraints */
+   for( c = 0; c < nconss; ++c )
+   {
+      /* we only need to consider constraints that have been locked (i.e., checked constraints or constraints that are
+       * part of checked disjunctions)
+       */
+      if( SCIPconsIsLocked(conss[c]) )
+      {
+         SCIP_CONSDATA* consdata;
+         SCIP_Bool lhsexists;
+         SCIP_Bool rhsexists;
+         int nlockspos;
+         int i;
+
+         consdata = SCIPconsGetData(conss[c]);
+         assert(consdata != NULL);
+
+         /* get number of times the constraint was locked */
+         nlockspos = SCIPconsGetNLocksPos(conss[c]);
+
+         /* we do not want to include constraints with locked negation (this would be to weird) */
+         if( SCIPconsGetNLocksNeg(conss[c]) > 0 )
+            continue;
+
+         /* check for existing sides */
+         lhsexists = !SCIPisInfinity(scip, -consdata->lhs);
+         rhsexists = !SCIPisInfinity(scip, consdata->rhs);
+
+         /* count locks and update redundancy bounds */
+         for( i = 0; i < consdata->nvars; ++i )
+         {
+            SCIP_VAR* var;
+            SCIP_Real val;
+            SCIP_Real minresactivity;
+            SCIP_Real maxresactivity;
+            SCIP_Real newredlb;
+            SCIP_Real newredub;
+            int arrayindex;
+
+            /* we do not need to process binary variables */
+            var = consdata->vars[i];
+            if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+               continue;
+
+            /* calculate residual activity bounds if variable would be fixed to zero */
+            val = consdata->vals[i];
+            consdataGetGlbActivityResiduals(scip, consdata, var, val, &minresactivity, &maxresactivity);
+
+            arrayindex = SCIPvarGetProbindex(consdata->vars[i]) - nbinvars;
+            assert(0 <= arrayindex && arrayindex < nvars - nbinvars); /* variable should be active due to applyFixings() */
+
+            newredlb = redlb[arrayindex];
+            newredub = redub[arrayindex];
+            if( val > 0.0 )
+            {
+               if( lhsexists )
+               {
+                  /* lhs <= d*x + a*y, d > 0  ->  redundant in y if  x >= (lhs - min{a*y})/d */
+                  nlocksdown[arrayindex] += nlockspos;
+                  newredlb = (SCIPisInfinity(scip, -minresactivity) ? SCIPinfinity(scip)
+                     : (consdata->lhs - minresactivity)/val);
+               }
+               if( rhsexists )
+               {
+                  /* d*x + a*y <= rhs, d > 0  ->  redundant in y if  x <= (rhs - max{a*y})/d */
+                  nlocksup[arrayindex] += nlockspos;
+                  newredub = (SCIPisInfinity(scip, maxresactivity) ? -SCIPinfinity(scip)
+                     : (consdata->rhs - maxresactivity)/val);
+               }
+            }
+            else
+            {
+               if( lhsexists )
+               {
+                  /* lhs <= d*x + a*y, d < 0  ->  redundant in y if  x <= (lhs - min{a*y})/d */
+                  nlocksup[arrayindex] += nlockspos;
+                  newredub = (SCIPisInfinity(scip, -minresactivity) ? -SCIPinfinity(scip)
+                     : (consdata->lhs - minresactivity)/val);
+               }
+               if( rhsexists )
+               {
+                  /* d*x + a*y <= rhs, d < 0  ->  redundant in y if  x >= (rhs - max{a*y})/d */
+                  nlocksdown[arrayindex] += nlockspos;
+                  newredlb = (SCIPisInfinity(scip, maxresactivity) ? SCIPinfinity(scip)
+                     : (consdata->rhs - maxresactivity)/val);
+               }
+            }
+
+            /* if the variable is integer, we have to round the value to the next integral value */
+            if( SCIPvarIsIntegral(var) )
+            {
+               if( !SCIPisInfinity(scip, newredlb) )
+                  newredlb = SCIPceil(scip, newredlb);
+               if( !SCIPisInfinity(scip, -newredub) )
+                  newredub = SCIPfloor(scip, newredub);
+            }
+
+            /* update redundancy bounds */
+            redlb[arrayindex] = MAX(redlb[arrayindex], newredlb);
+            redub[arrayindex] = MIN(redub[arrayindex], newredub);
+         }
+      }
+   }
+
+   /* check if any bounds can be tightened due to optimality */
+   for( v = nbinvars; v < nvars; ++v )
+   {
+      SCIP_VAR* var;
+      SCIP_Real obj;
+      SCIP_Bool infeasible;
+      SCIP_Bool tightened;
+
+      assert(SCIPvarGetProbindex(vars[v]) == v);
+      assert(SCIPvarGetType(vars[v]) != SCIP_VARTYPE_BINARY);
+      assert(SCIPvarGetNLocksDown(vars[v]) >= nlocksdown[v - nbinvars]);
+      assert(SCIPvarGetNLocksUp(vars[v]) >= nlocksup[v - nbinvars]);
+
+      var = vars[v];
+      obj = SCIPvarGetObj(var);
+      if( obj >= 0.0 )
+      {
+         /* making the variable as small as possible does not increase the objective:
+          * check if all down locks of the variables are due to linear constraints
+          */
+         if( SCIPvarGetNLocksDown(var) == nlocksdown[v - nbinvars] && redlb[v - nbinvars] < SCIPvarGetUbGlobal(var) )
+         {
+            /* if x_v >= redlb[v], we can always round x_v down to x_v == redlb[v] without violating any constraint
+             *  -> tighten upper bound to x_v <= redlb[v]
+             */
+            SCIPdebugMessage("variable <%s> only locked down in linear constraints: dual presolve <%s>[%g,%g] <= %g\n",
+               SCIPvarGetName(var), SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
+               redlb[v - nbinvars]);
+            SCIP_CALL( SCIPtightenVarUb(scip, var, redlb[v - nbinvars], &infeasible, &tightened) );
+            assert(!infeasible);
+            if( tightened )
+               (*nchgbds)++;
+         }
+      }
+      if( obj <= 0.0 )
+      {
+         /* making the variable as large as possible does not increase the objective:
+          * check if all up locks of the variables are due to linear constraints
+          */
+         if( SCIPvarGetNLocksUp(var) == nlocksup[v - nbinvars] && redub[v - nbinvars] > SCIPvarGetLbGlobal(var) )
+         {
+            /* if x_v <= redub[v], we can always round x_v up to x_v == redub[v] without violating any constraint
+             *  -> tighten lower bound to x_v >= redub[v]
+             */
+            SCIPdebugMessage("variable <%s> only locked up in linear constraints: dual presolve <%s>[%g,%g] >= %g\n",
+               SCIPvarGetName(var), SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
+               redub[v - nbinvars]);
+            SCIP_CALL( SCIPtightenVarLb(scip, var, redub[v - nbinvars], &infeasible, &tightened) );
+            assert(!infeasible);
+            if( tightened )
+               (*nchgbds)++;
+         }
+      }
+   }
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &nlocksup);
+   SCIPfreeBufferArray(scip, &nlocksdown);
+   SCIPfreeBufferArray(scip, &redub);
+   SCIPfreeBufferArray(scip, &redlb);
+
+   return SCIP_OKAY;
+}
+
 
 
 
@@ -6476,6 +6698,17 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
    }
    else
       delay = TRUE;
+
+   /* before upgrading, check whether we can apply some additional dual presolving, because a variable only appears
+    * in linear constraints and we therefore have full information about it
+    */
+   if( !cutoff && firstupgradetry < nconss
+      && *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars && *nchgbds == oldnchgbds && *ndelconss == oldndelconss
+      && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides
+       )
+   {
+      SCIP_CALL( fullDualPresolve(scip, conss, nconss, nchgbds) );
+   }
 
    /* try to upgrade constraints into a more specific constraint type;
     * only upgrade constraints, if no reductions were found in this round (otherwise, the linear constraint handler
