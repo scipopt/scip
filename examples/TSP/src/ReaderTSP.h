@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ReaderTSP.h,v 1.4 2006/01/03 12:22:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: ReaderTSP.h,v 1.5 2006/08/30 09:46:04 bzfpfend Exp $"
 
 /**@file   ReaderTSP.h
  * @brief  C++ file reader for TSP data files
@@ -81,7 +81,7 @@ public:
 private:
    
    /** parses the node list */ 
-   void ReaderTSP::getNodesFromFile(
+   void getNodesFromFile(
       std::ifstream&     filedata,           /**< filestream containing the data to extract */
       double*            x_coords,           /**< double array to be filled with the x-coordinates of the nodes */
       double*            y_coords,           /**< same for y-coordinates */
@@ -89,7 +89,7 @@ private:
       );
 
    /** method asserting, that the file has had the correct format and everything was set correctly */
-   bool ReaderTSP::checkValid(
+   bool checkValid(
       GRAPH*             graph,              /**< the constructed graph, schould not be NULL */ 
       std::string        name,               /**< the name of the file */
       std::string        type,               /**< the type of the problem, should be "TSP" */

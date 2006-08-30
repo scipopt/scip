@@ -55,6 +55,7 @@ interface:
 - new methods SCIPgetGlobalCutpool(), SCIPgetPoolCuts(), SCIPcutpoolGetCuts(), SCIPcutGetRow(), and SCIPcutGetAge()
 - slightly changed semantics of SCIPaddConsNode() and SCIPaddConsLocal(), such that a constraint which is added to the
   root node now enters the global problem (and is still existing after a restart)
+- new methods SCIPconsGetNLocksPos() and SCIPconsGetNLocksNeg()
 
 plugins:
 - new primal heuristic "rens"
@@ -72,6 +73,8 @@ plugins:
 - implemented additional dual presolving in linear constraint handler
 - slightly modified presolving of varbound constraint handler
 - c-MIR cuts try now to scale the cut to integral values; however, cuts are still generated if this fails
+- ID character for intdiving heuristic is now 'I'
+- new heuristic "intshifting" (ID character 'i')
 
 parameters:
 - new parameter "reading/zplreader/changedir" to control behavior of path switching of ZIMPL file reader

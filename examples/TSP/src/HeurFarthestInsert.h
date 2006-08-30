@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: HeurFarthestInsert.h,v 1.6 2006/01/03 12:22:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: HeurFarthestInsert.h,v 1.7 2006/08/30 09:46:04 bzfpfend Exp $"
 
 /**@file   HeurFarthestInsert.h
  * @brief  farthest insert - combinatorial heuristic for TSP
@@ -40,7 +40,8 @@ namespace tsp
       /** default constructor */
       HeurFarthestInsert(
       )
-         : ObjHeur("farthestinsert", "farthest insert heuristic for TSPs", 'I',-10000, 0, 0, 0, TRUE, TRUE, FALSE, FALSE),
+         : ObjHeur("farthestinsert", "farthest insert heuristic for TSPs", 'I',-10000, 0, 0, 0,
+            SCIP_HEURTIMING_BEFORENODE),
            graph_(0)
       {
       }

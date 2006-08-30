@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.3 2006/01/03 12:22:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.4 2006/08/30 09:46:04 bzfpfend Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for p-median pricer example
@@ -193,52 +193,57 @@ SCIP_RETCODE runSCIP(
       SCIP_CONS* cons;
       
       vector<SCIP_CONS*> setpart_consptr_vector(num_points);
-      for (int i = 0; i < num_points; ++i) {
-	SCIP_CALL(SCIPcreateConsSetpart(scip, &cons, "set partitioning", 
-					 0, 0, 
-					 true,
-					 false,
-					 true,
-					 true,
-					 true,
-					 false,
-					 true,
-					 false,
-					 false));
-	SCIP_CALL(SCIPaddCons(scip, cons));
-	setpart_consptr_vector[i] = cons;
+      for (int i = 0; i < num_points; ++i)
+      {
+         SCIP_CALL( SCIPcreateConsSetpart(scip, &cons, "set partitioning", 
+               0, 0, 
+               true,  /* initial */         
+               false, /* separate */        
+               true,  /* enforce */         
+               true,  /* check */           
+               true,  /* propagate */       
+               false, /* local */           
+               true,  /* modifiable */      
+               false, /* dynamic */         
+               false, /* removable */       
+               false  /* stickingatnode */ ) );
+         SCIP_CALL(SCIPaddCons(scip, cons));
+         setpart_consptr_vector[i] = cons;
       }
 
       vector<SCIP_CONS*> setpack_consptr_vector(num_points);
-      for (int i = 0; i < num_points; ++i) {
-	SCIP_CALL(SCIPcreateConsSetpack(scip, &cons, "set packing", 
-					 0, 0, 
-					 true,
-					 false,
-					 true,
-					 true,
-					 true,
-					 false,
-					 true,
-					 false,
-					 false));
-	SCIP_CALL(SCIPaddCons(scip, cons));
-	setpack_consptr_vector[i] = cons;
+      for (int i = 0; i < num_points; ++i)
+      {
+         SCIP_CALL( SCIPcreateConsSetpack(scip, &cons, "set packing", 
+               0, 0, 
+               true,  /* initial */         
+               false, /* separate */        
+               true,  /* enforce */         
+               true,  /* check */           
+               true,  /* propagate */       
+               false, /* local */           
+               true,  /* modifiable */      
+               false, /* dynamic */         
+               false, /* removable */       
+               false  /* stickingatnode */ ) );
+         SCIP_CALL(SCIPaddCons(scip, cons));
+         setpack_consptr_vector[i] = cons;
       }
 
-      SCIP_CONS*              card_cons;
-      SCIP_CALL(SCIPcreateConsLinear(scip, &card_cons, "cardinality", 
-				      0, 0, 0,
-				      -SCIPinfinity(scip), num_centers,
-				      true,
-				      false,
-				      true,
-				      true,
-				      true,
-				      false,
-				      true,
-				      false,
-				      false));
+      SCIP_CONS* card_cons;
+      SCIP_CALL( SCIPcreateConsLinear(scip, &card_cons, "cardinality", 
+            0, 0, 0,
+            -SCIPinfinity(scip), num_centers,
+            true,  /* initial */         
+            false, /* separate */        
+            true,  /* enforce */         
+            true,  /* check */           
+            true,  /* propagate */       
+            false, /* local */           
+            true,  /* modifiable */      
+            false, /* dynamic */         
+            false, /* removable */       
+            false  /* stickingatnode */ ) );
       SCIP_CALL(SCIPaddCons(scip, card_cons));
 
       distance_pricer_ptr->init(num_points,

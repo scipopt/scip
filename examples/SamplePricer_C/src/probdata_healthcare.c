@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_healthcare.c,v 1.2 2006/01/03 12:22:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: probdata_healthcare.c,v 1.3 2006/08/30 09:46:04 bzfpfend Exp $"
 
 #include "probdata_healthcare.h"
 #include "scip/cons_setppc.h"
@@ -122,7 +122,7 @@ SCIP_RETCODE HCPgenerateModel(
 
       sprintf(consname, "servejobs_%d", i);
       SCIP_CALL( SCIPcreateConsSetpart(scip, &probdata->cons_servejobs[i], consname, 
-            0, NULL, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) );
+            0, NULL, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, probdata->cons_servejobs[i]) );
    }
 
@@ -133,7 +133,7 @@ SCIP_RETCODE HCPgenerateModel(
 
       sprintf(consname, "workers_%d", i);
       SCIP_CALL( SCIPcreateConsSetpack(scip, &probdata->cons_workers[i], consname, 
-            0, NULL, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) );
+            0, NULL, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, probdata->cons_workers[i]) );
    }
 
