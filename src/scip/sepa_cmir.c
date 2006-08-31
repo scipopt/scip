@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.57 2006/08/30 09:25:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.58 2006/08/31 08:27:28 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -420,6 +420,10 @@ SCIP_RETCODE tryDelta(
    assert(ntesteddeltas != NULL);
    assert(bestdelta != NULL);
    assert(bestefficacy != NULL);
+
+   /* do not use too small deltas */
+   if( SCIPisFeasZero(scip, delta) )
+      return SCIP_OKAY;
 
    /* check, if delta with mult was already tested */
    tested = FALSE;

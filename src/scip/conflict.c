@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.127 2006/08/21 20:13:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.128 2006/08/31 08:27:27 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -4249,7 +4249,8 @@ SCIP_RETCODE conflictAnalyzeLP(
     */
 
    /* get current bounds and current positions in lb/ubchginfos arrays of variables */
-   for( v = 0; v < nvars; ++v )
+   valid = TRUE;
+   for( v = 0; v < nvars && valid; ++v )
    {
       SCIP_VAR* var;
 
@@ -4270,10 +4271,22 @@ SCIP_RETCODE conflictAnalyzeLP(
 
          lb = SCIPvarGetLbLocal(var);
          ub = SCIPvarGetUbLocal(var);
-         if( !SCIPsetIsEQ(set, curvarlbs[v], lb) )
+         if( SCIPsetIsGT(set, curvarlbs[v], lb) )
             lbchginfoposs[v] = var->nlbchginfos;
-         if( !SCIPsetIsEQ(set, curvarubs[v], ub) )
+         else if( SCIPsetIsLT(set, curvarlbs[v], lb) )
+         {
+            /* the bound in the diving LP was relaxed -> the LP is not a subproblem of the current node -> abort! */
+            /**@todo we could still analyze such a conflict, but we would have to take care with our data structures */
+            valid = FALSE;
+         }
+         if( SCIPsetIsLT(set, curvarubs[v], ub) )
             ubchginfoposs[v] = var->nubchginfos;
+         else if( SCIPsetIsGT(set, curvarubs[v], ub) )
+         {
+            /* the bound in the diving LP was relaxed -> the LP is not a subproblem of the current node -> abort! */
+            /**@todo we could still analyze such a conflict, but we would have to take care with our data structures */
+            valid = FALSE;
+         }
       }
    }
 
@@ -4291,18 +4304,21 @@ SCIP_RETCODE conflictAnalyzeLP(
    lastnbdchgs = 0;
 
    /* undo as many bound changes as possible with the current LP solution */
-   if( SCIPlpiIsPrimalInfeasible(lpi) )
+   if( valid )
    {
-      SCIP_CALL( undoBdchgsDualfarkas(set, prob, lp, currentdepth, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
-            &bdchginds, &bdchgoldlbs, &bdchgoldubs, &bdchgnewlbs, &bdchgnewubs, &bdchgssize, &nbdchgs,
-            &valid, &resolve) );
-   }
-   else
-   {
-      assert(SCIPlpiIsDualFeasible(lpi) || SCIPlpiIsObjlimExc(lpi));
-      SCIP_CALL( undoBdchgsDualsol(set, prob, lp, currentdepth, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
-            &bdchginds, &bdchgoldlbs, &bdchgoldubs, &bdchgnewlbs, &bdchgnewubs, &bdchgssize, &nbdchgs,
-            &valid, &resolve) );
+      if( SCIPlpiIsPrimalInfeasible(lpi) )
+      {
+         SCIP_CALL( undoBdchgsDualfarkas(set, prob, lp, currentdepth, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
+               &bdchginds, &bdchgoldlbs, &bdchgoldubs, &bdchgnewlbs, &bdchgnewubs, &bdchgssize, &nbdchgs,
+               &valid, &resolve) );
+      }
+      else
+      {
+         assert(SCIPlpiIsDualFeasible(lpi) || SCIPlpiIsObjlimExc(lpi));
+         SCIP_CALL( undoBdchgsDualsol(set, prob, lp, currentdepth, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
+               &bdchginds, &bdchgoldlbs, &bdchgoldubs, &bdchgnewlbs, &bdchgnewubs, &bdchgssize, &nbdchgs,
+               &valid, &resolve) );
+      }
    }
 
    /* check if we want to solve the LP and if all columns are present in the LP */

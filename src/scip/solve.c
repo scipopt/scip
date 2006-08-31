@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.231 2006/08/24 17:06:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.232 2006/08/31 08:27:28 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -752,19 +752,58 @@ SCIP_RETCODE primalHeuristics(
    return SCIP_OKAY;
 }
 
+/** makes sure the LP is flushed and solved */
+static
+SCIP_RETCODE separationRoundResolveLP(
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
+   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved error in LP solving occured */
+   SCIP_Bool*            mustsepa,           /**< pointer to store TRUE if additional separation rounds should be performed */
+   SCIP_Bool*            mustprice           /**< pointer to store TRUE if additional pricing rounds should be performed */
+   )
+{
+   assert(lp != NULL);
+   assert(cutoff != NULL);
+   assert(lperror != NULL);
+   assert(mustsepa != NULL);
+   assert(mustprice != NULL);
+
+   /* if bound changes were applied in the separation round, we have to resolve the LP */
+   if( !(*cutoff) && !lp->flushed )
+   {
+      /* solve LP (with dual simplex) */
+      SCIPdebugMessage("separation: resolve LP\n");
+      SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, TRUE, FALSE, lperror) );
+      assert(lp->flushed);
+      assert(lp->solved || *lperror);
+      *mustsepa = TRUE;
+      *mustprice = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** applies one round of LP separation */
 static
 SCIP_RETCODE separationRoundLP(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    int                   actdepth,           /**< current depth in the tree */
    SCIP_Bool             onlydelayed,        /**< should only delayed separators be called? */
    SCIP_Bool*            delayed,            /**< pointer to store whether a separator was delayed */
    SCIP_Bool*            enoughcuts,         /**< pointer to store whether enough cuts have been found this round */
-   SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
+   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved error in LP solving occured */
+   SCIP_Bool*            mustsepa,           /**< pointer to store TRUE if additional separation rounds should be performed */
+   SCIP_Bool*            mustprice           /**< pointer to store TRUE if additional pricing rounds should be performed */
    )
 {
    SCIP_RESULT result;
@@ -778,10 +817,12 @@ SCIP_RETCODE separationRoundLP(
    assert(delayed != NULL);
    assert(enoughcuts != NULL);
    assert(cutoff != NULL);
+   assert(lperror != NULL);
 
    root = (actdepth == 0);
    *delayed = FALSE;
    *enoughcuts = (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
+   *lperror = FALSE;
    consadded = FALSE;
 
    SCIPdebugMessage("calling separators on LP solution in depth %d (onlydelayed: %d)\n", actdepth, onlydelayed);
@@ -790,7 +831,9 @@ SCIP_RETCODE separationRoundLP(
    SCIPsetSortSepas(set);
 
    /* call LP separators with nonnegative priority */
-   for( i = 0; i < set->nsepas && !(*cutoff) && !(*enoughcuts) && lp->flushed; ++i )
+   for( i = 0; i < set->nsepas && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
+           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+        ++i )
    {
       if( SCIPsepaGetPriority(set->sepas[i]) < 0 )
          continue;
@@ -810,6 +853,9 @@ SCIP_RETCODE separationRoundLP(
          SCIPdebugMessage(" -> separator <%s> detected cutoff\n", SCIPsepaGetName(set->sepas[i]));
       }
 
+      /* make sure the LP is solved (after adding bound changes, LP has to be flushed and resolved) */
+      SCIP_CALL( separationRoundResolveLP(blkmem, set, stat, prob, lp, cutoff, lperror, mustsepa, mustprice) );
+
       /* if we work off the delayed separators, we stop immediately if a cut was found */
       if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED) )
       {
@@ -820,7 +866,9 @@ SCIP_RETCODE separationRoundLP(
    }
 
    /* try separating constraints of the constraint handlers */
-   for( i = 0; i < set->nconshdlrs && !(*cutoff) && !(*enoughcuts) && lp->flushed; ++i )
+   for( i = 0; i < set->nconshdlrs && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
+           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+        ++i )
    {
       if( onlydelayed && !SCIPconshdlrWasLPSeparationDelayed(set->conshdlrs_sepa[i]) )
          continue;
@@ -839,6 +887,9 @@ SCIP_RETCODE separationRoundLP(
             SCIPconshdlrGetName(set->conshdlrs_sepa[i]));
       }
 
+      /* make sure the LP is solved (after adding bound changes, LP has to be flushed and resolved) */
+      SCIP_CALL( separationRoundResolveLP(blkmem, set, stat, prob, lp, cutoff, lperror, mustsepa, mustprice) );
+
       /* if we work off the delayed separators, we stop immediately if a cut was found */
       if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED) )
       {
@@ -850,7 +901,9 @@ SCIP_RETCODE separationRoundLP(
    }
 
    /* call LP separators with negative priority */
-   for( i = 0; i < set->nsepas && !(*cutoff) && !(*enoughcuts) && lp->flushed; ++i )
+   for( i = 0; i < set->nsepas && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
+           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+        ++i )
    {
       if( SCIPsepaGetPriority(set->sepas[i]) >= 0 )
          continue;
@@ -870,6 +923,9 @@ SCIP_RETCODE separationRoundLP(
          SCIPdebugMessage(" -> separator <%s> detected cutoff\n", SCIPsepaGetName(set->sepas[i]));
       }
 
+      /* make sure the LP is solved (after adding bound changes, LP has to be flushed and resolved) */
+      SCIP_CALL( separationRoundResolveLP(blkmem, set, stat, prob, lp, cutoff, lperror, mustsepa, mustprice) );
+
       /* if we work off the delayed separators, we stop immediately if a cut was found */
       if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED) )
       {
@@ -884,7 +940,9 @@ SCIP_RETCODE separationRoundLP(
    {
       consadded = FALSE;
 
-      for( i = 0; i < set->nconshdlrs && !(*cutoff) && !(*enoughcuts) && lp->flushed; ++i )
+      for( i = 0; i < set->nconshdlrs && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
+           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+           ++i )
       {
 	 if( onlydelayed && !SCIPconshdlrWasLPSeparationDelayed(set->conshdlrs_sepa[i]) )
 	    continue;
@@ -903,6 +961,9 @@ SCIP_RETCODE separationRoundLP(
                SCIPconshdlrGetName(set->conshdlrs_sepa[i]));
          }
 
+         /* make sure the LP is solved (after adding bound changes, LP has to be flushed and resolved) */
+         SCIP_CALL( separationRoundResolveLP(blkmem, set, stat, prob, lp, cutoff, lperror, mustsepa, mustprice) );
+
 	 /* if we work off the delayed separators, we stop immediately if a cut was found */
 	 if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED) )
 	 {
@@ -914,8 +975,8 @@ SCIP_RETCODE separationRoundLP(
       }
    }
 
-   SCIPdebugMessage(" -> separation round finished: delayed=%d, enoughcuts=%d, cutoff=%d\n",
-      *delayed, *enoughcuts, *cutoff);
+   SCIPdebugMessage(" -> separation round finished: delayed=%d, enoughcuts=%d, lpflushed=%d, cutoff=%d\n",
+      *delayed, *enoughcuts, lp->flushed, *cutoff);
 
    return SCIP_OKAY;
 }
@@ -1078,6 +1139,7 @@ SCIP_RETCODE SCIPseparationRound(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_SOL*             sol,                /**< primal solution that should be separated, or NULL for LP solution */
@@ -1098,8 +1160,16 @@ SCIP_RETCODE SCIPseparationRound(
 
    if( sol == NULL )
    {
+      SCIP_Bool lperror;
+      SCIP_Bool mustsepa;
+      SCIP_Bool mustprice;
+
       /* apply a separation round on the LP solution */
-      SCIP_CALL( separationRoundLP(blkmem, set, stat, lp, sepastore, actdepth, onlydelayed, delayed, &enoughcuts, cutoff) );
+      lperror = FALSE;
+      mustsepa = FALSE;
+      mustprice = FALSE;
+      SCIP_CALL( separationRoundLP(blkmem, set, stat, prob, lp, sepastore, actdepth, onlydelayed, delayed, &enoughcuts, 
+            cutoff, &lperror, &mustsepa, &mustprice) );
    }
    else
    {
@@ -1440,26 +1510,16 @@ SCIP_RETCODE priceAndCutLoop(
             && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) )
          {
             /* apply a separation round */
-            SCIP_CALL( separationRoundLP(blkmem, set, stat, lp, sepastore, actdepth, delayedsepa,
-                  &delayedsepa, &enoughcuts, cutoff) );
+            SCIP_CALL( separationRoundLP(blkmem, set, stat, prob, lp, sepastore, actdepth, delayedsepa,
+                  &delayedsepa, &enoughcuts, cutoff, lperror, &mustsepa, &mustprice) );
 
             /* if we are close to the stall round limit, also call the delayed separators */
-            if( nsepastallrounds >= maxnsepastallrounds-1 && delayedsepa )
+            if( !(*cutoff) && !(*lperror) && !enoughcuts && lp->solved
+               && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY)
+               && nsepastallrounds >= maxnsepastallrounds-1 && delayedsepa )
             {
-               SCIP_CALL( separationRoundLP(blkmem, set, stat, lp, sepastore, actdepth, delayedsepa,
-                     &delayedsepa, &enoughcuts, cutoff) );
-            }
-
-            /* if bound changes were applied in the separation round, we have to resolve the LP */
-            if( !(*cutoff) && !lp->flushed )
-            {
-               /* solve LP (with dual simplex) */
-               SCIPdebugMessage("separation: solve LP\n");
-               SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, TRUE, FALSE, lperror) );
-               assert(lp->flushed);
-               assert(lp->solved || *lperror);
-               mustsepa = TRUE;
-               mustprice = TRUE;
+               SCIP_CALL( separationRoundLP(blkmem, set, stat, prob, lp, sepastore, actdepth, delayedsepa,
+                     &delayedsepa, &enoughcuts, cutoff, lperror, &mustsepa, &mustprice) );
             }
          }
          assert(*cutoff || *lperror || (lp->flushed && lp->solved));
@@ -2324,15 +2384,18 @@ SCIP_RETCODE solveNode(
        * they might help to improve the primal bound, thereby producing additional reduced cost strengthenings and
        * strong branching bound fixings
        */
-      if( actdepth == 0 && stat->nruns == 1 && nloops == 1 )
+      if( !(*cutoff) || SCIPtreeGetNNodes(tree) > 0 )
       {
-         SCIP_CALL( primalHeuristics(set, primal, tree, NULL, SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE,
-               &foundsol) );
-         *afternodeheur = TRUE; /* the AFTERNODE heuristics should node be called again after the node */
-      }
-      else
-      {
-         SCIP_CALL( primalHeuristics(set, primal, tree, NULL, SCIP_HEURTIMING_AFTERLPLOOP, &foundsol) );
+         if( actdepth == 0 && stat->nruns == 1 && nloops == 1 )
+         {
+            SCIP_CALL( primalHeuristics(set, primal, tree, NULL, SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE,
+                  &foundsol) );
+            *afternodeheur = TRUE; /* the AFTERNODE heuristics should node be called again after the node */
+         }
+         else
+         {
+            SCIP_CALL( primalHeuristics(set, primal, tree, NULL, SCIP_HEURTIMING_AFTERLPLOOP, &foundsol) );
+         }
       }
 
       /* if an improved solution was found, propagate and solve the relaxations again */
@@ -2870,7 +2933,7 @@ SCIP_RETCODE SCIPsolveCIP(
 
          /* call primal heuristics that should be applied after the node was solved */
          nnodes = SCIPtreeGetNNodes(tree);
-         if( !afternodeheur )
+         if( !afternodeheur && (!cutoff || nnodes > 0) )
          {
             SCIP_CALL( primalHeuristics(set, primal, tree, nextnode, SCIP_HEURTIMING_AFTERNODE, &foundsol) );
             assert(SCIPbufferGetNUsed(set->buffer) == 0);
