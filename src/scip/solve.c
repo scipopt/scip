@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.232 2006/08/31 08:27:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.233 2006/08/31 13:09:41 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1377,7 +1377,7 @@ SCIP_RETCODE priceAndCutLoop(
    maxseparounds = (root ? set->sepa_maxroundsroot : set->sepa_maxrounds);
    if( maxseparounds == -1 )
       maxseparounds = INT_MAX;
-   if( stat->nruns > 1 && set->sepa_maxroundsrootsubrun >= 0 )
+   if( stat->nruns > 1 && root && set->sepa_maxroundsrootsubrun >= 0 )
       maxseparounds = MIN(maxseparounds, set->sepa_maxroundsrootsubrun);
    if( initiallpsolved && set->sepa_maxaddrounds >= 0 )
       maxseparounds = MIN(maxseparounds, stat->nseparounds + set->sepa_maxaddrounds);

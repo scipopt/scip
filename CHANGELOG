@@ -5,6 +5,7 @@ compiling:
 - added ncurses to the readline entries in the make/make.* files
 - added quotes to sed expressions in Makefile (needed under Windows)
 - modified makefiles for Windows/Intel
+- added automatic query script in the Makefile for soft-link names
 
 interface:
 - new parameter "solinfeasible" for constraint handler callback methods ENFOLP and ENFOPS

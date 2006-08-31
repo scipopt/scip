@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.171 2006/08/30 09:25:44 bzfpfend Exp $
+# $Id: Makefile,v 1.172 2006/08/31 13:09:41 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -56,6 +56,7 @@ COMP		=	gnu
 LINK		=	static
 LIBEXT		=	a
 LINKER  	=	C
+SOFTLINKS	=
 
 READLINE	=	true
 ZLIB		=	true
@@ -116,6 +117,7 @@ BINDIR		=	bin
 LIBDIR		=	lib
 EXEEXTENSION	=
 
+LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)
 LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
 #-----------------------------------------------------------------------------
@@ -150,6 +152,9 @@ FLAGS		+=	-I$(LIBDIR)/cpxinc
 LPSLDFLAGS	=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_cpx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
+SOFTLINKS	+=	$(LIBDIR)/cpxinc
+SOFTLINKS	+=	$(LIBDIR)/libcplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).a
+SOFTLINKS	+=	$(LIBDIR)/libcplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
 endif
 
 ifeq ($(LPS),cpx903)
@@ -157,6 +162,9 @@ FLAGS		+=	-I$(LIBDIR)/cpx903inc
 LPSLDFLAGS	=	$(LINKCC_l)cplex903.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_cpx903.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
+SOFTLINKS	+=	$(LIBDIR)/cpx903inc
+SOFTLINKS	+=	$(LIBDIR)/libcplex903.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).a
+SOFTLINKS	+=	$(LIBDIR)/libcplex903.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
 endif
 
 ifeq ($(LPS),xprs)
@@ -164,6 +172,9 @@ FLAGS		+=	-I$(LIBDIR)/xprsinc
 LPSLDFLAGS	=	$(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_xprs.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
+SOFTLINKS	+=	$(LIBDIR)/xprsinc
+SOFTLINKS	+=	$(LIBDIR)/libxpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).a
+SOFTLINKS	+=	$(LIBDIR)/libxpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
 endif
 
 ifeq ($(LPS),msk)
@@ -171,6 +182,9 @@ FLAGS		+=	-I$(LIBDIR)/mskinc
 LPSLDFLAGS	=	$(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_msk.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
+SOFTLINKS	+=	$(LIBDIR)/mskinc
+SOFTLINKS	+=	$(LIBDIR)/libmosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).a
+SOFTLINKS	+=	$(LIBDIR)/libmosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
 endif
 
 ifeq ($(LPS),spx)
@@ -179,6 +193,9 @@ FLAGS		+=	-I$(LIBDIR)/spxinc
 LPSLDFLAGS	=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_spx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_spx.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
+SOFTLINKS	+=	$(LIBDIR)/spxinc
+SOFTLINKS	+=	$(LIBDIR)/libsoplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).a
+SOFTLINKS	+=	$(LIBDIR)/libsoplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
 endif
 
 ifeq ($(LPS),spxdbg)
@@ -187,6 +204,9 @@ FLAGS		+=	-I$(LIBDIR)/spxinc
 LPSLDFLAGS	=	$(LINKCXX_l)soplexdbg.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_spx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_spx.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
+SOFTLINKS	+=	$(LIBDIR)/spxinc
+SOFTLINKS	+=	$(LIBDIR)/libsoplexdbg.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).a
+SOFTLINKS	+=	$(LIBDIR)/libsoplexdbg.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
 endif
 
 ifeq ($(LPS),spx121)
@@ -195,6 +215,9 @@ FLAGS		+=	-I$(LIBDIR)/spx121inc
 LPSLDFLAGS	=	$(LINKCXX_l)soplex121.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_spx121.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_spx121.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
+SOFTLINKS	+=	$(LIBDIR)/spx121inc
+SOFTLINKS	+=	$(LIBDIR)/libsoplex121.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).a
+SOFTLINKS	+=	$(LIBDIR)/libsoplex121.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
 endif
 
 ifeq ($(LPS),clp)
@@ -203,14 +226,24 @@ FLAGS		+=	-I$(LIBDIR)/clpinc
 LPSLDFLAGS	=	$(LINKCXX_L)$(LIBDIR) -Wl,-rpath,$(LIBDIR) $(LINKCXX_l)clp.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCXX_l)coinutils.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_clp.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
+SOFTLINKS	+=	$(LIBDIR)/clpinc
+SOFTLINKS	+=	$(LIBDIR)/libclp.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).a
+SOFTLINKS	+=	$(LIBDIR)/libclp.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
+SOFTLINKS	+=	$(LIBDIR)/libcoinutils.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).a
+SOFTLINKS	+=	$(LIBDIR)/libcoinutils.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
 endif
 
 ifeq ($(LPS),clpdbg)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/clpinc
-LPSLDFLAGS	=	$(LINKCXX_L)$(LIBDIR) -Wl,-rpath,$(LIBDIR) $(LINKCXX_l)clpdbg.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCXX_l)coindbg.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+LPSLDFLAGS	=	$(LINKCXX_L)$(LIBDIR) -Wl,-rpath,$(LIBDIR) $(LINKCXX_l)clpdbg.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCXX_l)coinutilsdbg.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_clp.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
+SOFTLINKS	+=	$(LIBDIR)/clpinc
+SOFTLINKS	+=	$(LIBDIR)/libclpdbg.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).a
+SOFTLINKS	+=	$(LIBDIR)/libclpdbg.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
+SOFTLINKS	+=	$(LIBDIR)/libcoinutilsdbg.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).a
+SOFTLINKS	+=	$(LIBDIR)/libcoinutilsdbg.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
 endif
 
 LPILIB		=	$(LPILIBNAME).$(BASE)
@@ -249,8 +282,12 @@ ZIMPLDEP	:=	$(SRCDIR)/depend.zimpl
 ZIMPLSRC	:=	$(shell cat $(ZIMPLDEP))
 ZIMPLOBJ	:=	$(addprefix $(LIBOBJDIR)/,$(ZIMPLSRC:.c=.o))
 ifeq ($(ZIMPL),true)
-FLAGS		+=	-DWITH_ZIMPL -Ilib/zimplinc
+FLAGS		+=	-DWITH_ZIMPL -I$(LIBDIR)/zimplinc
 LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)gmp$(LINKLIBSUFFIX) $(LINKCC_l)z$(LINKLIBSUFFIX) $(LINKCC_l)m$(LINKLIBSUFFIX)
+DIRECTORIES	+=	$(LIBDIR)/zimplinc
+SOFTLINKS	+=	$(LIBDIR)/zimplinc/zimpl
+SOFTLINKS	+=	$(LIBDIR)/libzimpl.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).a
+SOFTLINKS	+=	$(LIBDIR)/libzimpl.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
 endif
 
 
@@ -433,7 +470,7 @@ MAINOBJFILES	=	$(addprefix $(BINOBJDIR)/,$(MAINOBJ))
 #-----------------------------------------------------------------------------
 
 .PHONY: all
-all:            $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE)
+all:            $(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE)
 
 .PHONY: lint
 lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(MAINSRC)
@@ -647,6 +684,41 @@ endif
 		@echo "LAST_ZLIB=$(ZLIB)" >> $(LASTSETTINGS)
 		@echo "LAST_READLINE=$(READLINE)" >> $(LASTSETTINGS)
 		@echo "LAST_ZIMPL=$(ZIMPL)" >> $(LASTSETTINGS)
+
+$(LINKSMARKERFILE):
+		@$(MAKE) links
+
+.PHONY: links
+links:		echosoftlinks $(LIBDIR) $(DIRECTORIES) $(SOFTLINKS)
+		@rm -f $(LINKSMARKERFILE)
+		@echo "this is only a marker" > $(LINKSMARKERFILE)
+
+.PHONY: echosoftlinks
+echosoftlinks:
+		@echo
+		@echo "** creating softlinks: LPS=$(LPS) OSTYPE=$(OSTYPE) ARCH=$(ARCH) COMP=$(COMP) SUFFIX=$(LINKLIBSUFFIX) ZIMPL=$(ZIMPL)"
+		@echo
+
+$(DIRECTORIES):
+		@echo "** creating directory \"$@\""
+		@-mkdir -p $@
+
+.PHONY: $(SOFTLINKS)
+$(SOFTLINKS):
+		@$(SHELL) -ec 'if [ ! -e $@ ] ; \
+			then \
+				echo \*\* missing soft-link \"$@\" ; \
+				echo -n \*\* enter soft-link target file or directory for \"$@\" \(return to skip\):\  ; \
+				TARGET=`line` ; \
+				if [ "$$TARGET" != "" ] ; \
+				then \
+					echo -\> creating softlink \"$@\" -\> \"$$TARGET\" ; \
+					ln -s $$TARGET $@ ; \
+				else \
+					echo -\> skipped creation of softlink \"$@\". Call \"make links\" if needed later. ; \
+				fi ; \
+				echo ; \
+			fi'
 
 
 # --- EOF ---------------------------------------------------------------------
