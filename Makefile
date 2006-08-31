@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.175 2006/08/31 14:55:56 bzfpfend Exp $
+# $Id: Makefile,v 1.176 2006/08/31 15:42:05 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -710,21 +710,26 @@ $(SOFTLINKS):
 				DIRNAME=`dirname $@` ; \
 				BASENAMEA=`basename $@ .a` ; \
 				BASENAMESO=`basename $@ .so` ; \
-				echo \*\* probably missing soft-link \"$@\" ; \
-				echo \*\* For library files, you only need the .a or the .so file. If you do not need the soft-link, press return to skip. ; \
-				echo -n \*\* enter soft-link target file or directory for \"$@\" \(return if not needed\):\  ; \
+				echo "** missing soft-link \"$@\"" ; \
+				if [ -e $$DIRNAME/$$BASENAMEA.so ] ; \
+				then \
+					echo "** this soft-link is not necessarily needed since \"$$DIRNAME/$$BASENAMEA.so\" already exists - press return to skip" ; \
+				fi ; \
+				if [ -e $$DIRNAME/$$BASENAMESO.a ] ; \
+				then \
+					echo "** this soft-link is not necessarily needed since \"$$DIRNAME/$$BASENAMESO.a\" already exists - press return to skip" ; \
+				fi ; \
+				echo -n "** enter soft-link target file or directory for \"$@\" (return if not needed): " ; \
 				TARGET=`line` ; \
 				if [ "$$TARGET" != "" ] ; \
 				then \
-					echo -\> creating softlink \"$@\" -\> \"$$TARGET\" ; \
+					echo "-> creating softlink \"$@\" -> \"$$TARGET\"" ; \
 					ln -s $$TARGET $@ ; \
 				else \
-					echo -\> skipped creation of softlink \"$@\". Call \"make links\" if needed later. ; \
+					echo "-> skipped creation of softlink \"$@\". Call \"make links\" if needed later." ; \
 				fi ; \
 				echo ; \
 			fi'
 
 
 # --- EOF ---------------------------------------------------------------------
-#				if [ ! -e $$DIRNAME/$$BASENAMEA.so -a ! -e $$DIRNAME/$$BASENAMESO.a ] ; \
-#				then \
