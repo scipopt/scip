@@ -265,3 +265,8 @@ make[1]: Leaving directory `/sw/scip'
 
 5. To check the code with lint, you need to have flexelint installed, and
    enter "make lint"
+
+6. To run the MIPLIB 3 test bench, download the MIPLIB instances from "http://scip.zib.de" and extract
+   the "miplib3.zip" file into the SCIP base directory. The instances will be unziped into the subdirectory
+   "check/IP/miplib3/". Afterwards, enter "make [options] test" with the same options with which you
+   compiled SCIP in step 1.

@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.173 2006/08/31 13:24:21 bzfpfend Exp $
+# $Id: Makefile,v 1.174 2006/08/31 13:55:55 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -46,7 +46,7 @@ NODES           =       2100000000
 MEM		=	1536
 DISPFREQ	=	10000
 FEASTOL		=	default
-TEST		=	miplib
+TEST		=	miplib3
 SETTINGS        =       default
 
 VERBOSE		=	false
