@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.174 2006/08/31 13:55:55 bzfpfend Exp $
+# $Id: Makefile,v 1.175 2006/08/31 14:55:56 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -707,8 +707,12 @@ $(DIRECTORIES):
 $(SOFTLINKS):
 		@$(SHELL) -ec 'if [ ! -e $@ ] ; \
 			then \
-				echo \*\* missing soft-link \"$@\" ; \
-				echo -n \*\* enter soft-link target file or directory for \"$@\" \(return to skip\):\  ; \
+				DIRNAME=`dirname $@` ; \
+				BASENAMEA=`basename $@ .a` ; \
+				BASENAMESO=`basename $@ .so` ; \
+				echo \*\* probably missing soft-link \"$@\" ; \
+				echo \*\* For library files, you only need the .a or the .so file. If you do not need the soft-link, press return to skip. ; \
+				echo -n \*\* enter soft-link target file or directory for \"$@\" \(return if not needed\):\  ; \
 				TARGET=`line` ; \
 				if [ "$$TARGET" != "" ] ; \
 				then \
@@ -722,3 +726,5 @@ $(SOFTLINKS):
 
 
 # --- EOF ---------------------------------------------------------------------
+#				if [ ! -e $$DIRNAME/$$BASENAMEA.so -a ! -e $$DIRNAME/$$BASENAMESO.a ] ; \
+#				then \
