@@ -1,5 +1,5 @@
-current version
-===============
+SCIP version 0.90
+=================
 
 compiling:
 - added ncurses to the readline entries in the make/make.* files
