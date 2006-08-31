@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.28 2006/08/21 20:13:17 bzfpfend Exp $
+# $Id: check.sh,v 1.29 2006/08/31 13:35:39 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -26,6 +26,15 @@ MEMLIMIT=$7
 FEASTOL=$8
 DISPFREQ=$9
 
+if [ ! -e results ]
+then
+    mkdir results
+fi
+if [ ! -e settings ]
+then
+    mkdir settings
+fi
+
 OUTFILE=results/check.$TSTNAME.$BINID.$SETNAME.out
 ERRFILE=results/check.$TSTNAME.$BINID.$SETNAME.err
 RESFILE=results/check.$TSTNAME.$BINID.$SETNAME.res
@@ -34,8 +43,6 @@ TMPFILE=results/check.$TSTNAME.$BINID.$SETNAME.tmp
 SETFILE=results/check.$TSTNAME.$BINID.$SETNAME.set
 
 SETTINGS=settings/$SETNAME.set
-
-/home/optimi/adm_cple/ilm-2.6/ilmlist
 
 uname -a >$OUTFILE
 uname -a >$ERRFILE
@@ -90,8 +97,6 @@ rm $TMPFILE
 
 date >>$OUTFILE
 date >>$ERRFILE
-
-/home/optimi/adm_cple/ilm-2.6/ilmlist
 
 if [ -f $TSTNAME.solu ]
 then

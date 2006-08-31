@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.sh,v 1.18 2006/08/21 20:13:17 bzfpfend Exp $
+# $Id: check_cplex.sh,v 1.19 2006/08/31 13:35:39 bzfpfend Exp $
 TSTNAME=$1
 CPLEXBIN=$2
 SETNAME=$3
@@ -24,6 +24,15 @@ TIMELIMIT=$5
 NODELIMIT=$6
 MEMLIMIT=$7
 FEASTOL=$8
+
+if [ ! -e results ]
+then
+    mkdir results
+fi
+if [ ! -e settings ]
+then
+    mkdir settings
+fi
 
 OUTFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.out
 ERRFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.err
