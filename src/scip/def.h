@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.117 2006/08/31 13:24:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.118 2006/09/01 00:39:58 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -64,10 +64,12 @@
 #define SCIP_Longint long long                         /**< type used for long integer values */
 #define SCIP_LONGINT_MAX          LLONG_MAX
 #define SCIP_LONGINT_MIN          LLONG_MIN
+#ifndef SCIP_LONGINT_FORMAT
 #if defined(_WIN32) || defined(_WIN64)
 #define SCIP_LONGINT_FORMAT           "I64d"
 #else
 #define SCIP_LONGINT_FORMAT           "lld"
+#endif
 #endif
 
 
