@@ -32,7 +32,7 @@
  *
  * SCIP is a program and library to solve constraint integer programs (CIPs).
  *
- * - \ref CODE    "Coding style guidlines"
+ * - \ref CODE    "Coding style guidelines"
  * - \ref DOC     "How to search the documentation for interface methods"
  * - \ref CONS    "How to add constraint handlers"
  * - \ref PRICER  "How to add variable pricers"

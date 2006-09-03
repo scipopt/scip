@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.9 2006/08/30 09:46:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.10 2006/09/03 19:03:25 bzforlow Exp $"
 
 /**@file   ConshdlrSubtour.cpp
  * @brief  C++ file reader for TSP data files
@@ -179,7 +179,7 @@ SCIP_RETCODE sepaSubtour(
       { 
          int i = 0;
 
-         // create a new cutting plane for every suitable arc (representing a cut mit value < 2) of the Gomory Hu Tree
+         // create a new cutting plane for every suitable arc (representing a cut with value < 2) of the Gomory Hu Tree
          while( i < ncuts )
          {
             SCIP_ROW* row; 

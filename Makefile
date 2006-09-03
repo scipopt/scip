@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.176 2006/08/31 15:42:05 bzfpfend Exp $
+# $Id: Makefile,v 1.177 2006/09/03 19:03:24 bzforlow Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -58,8 +58,8 @@ LIBEXT		=	a
 LINKER  	=	C
 SOFTLINKS	=
 
-READLINE	=	true
-ZLIB		=	true
+READLINE	=	false
+ZLIB		=	false
 ZIMPL		=	false
 
 CC		=	gcc
