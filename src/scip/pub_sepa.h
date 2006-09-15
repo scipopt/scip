@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_sepa.h,v 1.15 2006/01/03 12:22:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_sepa.h,v 1.16 2006/09/15 03:32:20 bzfpfend Exp $"
 
 /**@file   pub_sepa.h
  * @brief  public methods for separators
@@ -71,6 +71,12 @@ int SCIPsepaGetPriority(
 /** gets frequency of separator */
 extern
 int SCIPsepaGetFreq(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
+/** get maximal bound distance at which the separator is called */
+extern
+SCIP_Real SCIPsepaGetMaxbounddist(
    SCIP_SEPA*            sepa                /**< separator */
    );
 

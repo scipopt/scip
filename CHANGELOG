@@ -1,6 +1,10 @@
 current version
 ===============
 
+interface:
+- new parameter "maxbounddist" for SCIPincludeSepa() and constructor ObjSepa()
+- new method SCIPsepaGetMaxbounddist()
+
 plugins:
 - improved performance of linear constraint propagation by delaying some floor/ceil calculations
 

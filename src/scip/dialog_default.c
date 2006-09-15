@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.61 2006/08/30 09:25:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.62 2006/09/15 03:32:20 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -592,15 +592,16 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySeparators)
 
    /* display list of separators */
    SCIPdialogMessage(scip, NULL, "\n");
-   SCIPdialogMessage(scip, NULL, " separator            priority  freq  description\n");
-   SCIPdialogMessage(scip, NULL, " ---------            --------  ----  -----------\n");
+   SCIPdialogMessage(scip, NULL, " separator            priority  freq bddist  description\n");
+   SCIPdialogMessage(scip, NULL, " ---------            --------  ---- ------  -----------\n");
    for( i = 0; i < nsepas; ++i )
    {
       SCIPdialogMessage(scip, NULL, " %-20s ", SCIPsepaGetName(sepas[i]));
       if( strlen(SCIPsepaGetName(sepas[i])) > 20 )
          SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
       SCIPdialogMessage(scip, NULL, "%8d%c ", SCIPsepaGetPriority(sepas[i]), SCIPsepaIsDelayed(sepas[i]) ? 'd' : ' ');
-      SCIPdialogMessage(scip, NULL, "%4d  ", SCIPsepaGetFreq(sepas[i]));
+      SCIPdialogMessage(scip, NULL, "%4d ", SCIPsepaGetFreq(sepas[i]));
+      SCIPdialogMessage(scip, NULL, "%6.2f  ", SCIPsepaGetMaxbounddist(sepas[i]));
       SCIPdialogMessage(scip, NULL, SCIPsepaGetDesc(sepas[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
