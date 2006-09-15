@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.42 2006/08/30 09:25:44 bzfpfend Exp $
+# $Id: check.awk,v 1.43 2006/09/15 02:00:04 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -58,8 +58,8 @@ BEGIN {
 #    printf("Name              | Type | Conss | Vars |   Dual Bound | Primal Bound | Gap% | Nodes | Time |       \n");
 #    printf("------------------+------+-------+------+--------------+--------------+------+-------+------+-------\n");
 
-    timegeomshift = 0.0;
-    nodegeomshift = 0.0;
+    timegeomshift = 60.0;
+    nodegeomshift = 1000.0;
     sblpgeomshift = 0.0;
     onlyinsolufile = 0;  # should only instances be reported that are included in the .solu file?
 
@@ -69,12 +69,18 @@ BEGIN {
     ssim = 0;
     ssblp = 0;
     stottime = 0.0;
-    nodegeom = nodegeomshift;
-    timegeom = timegeomshift;
-    sblpgeom = sblpgeomshift;
-    conftimegeom = timegeomshift;
-    basictimegeom = timegeomshift;
-    overheadtimegeom = timegeomshift;
+    nodegeom = 0.0;
+    timegeom = 0.0;
+    sblpgeom = 0.0;
+    conftimegeom = 0.0;
+    basictimegeom = 0.0;
+    overheadtimegeom = 0.0;
+    shiftednodegeom = nodegeomshift;
+    shiftedtimegeom = timegeomshift;
+    shiftedsblpgeom = sblpgeomshift;
+    shiftedconftimegeom = timegeomshift;
+    shiftedbasictimegeom = timegeomshift;
+    shiftedoverheadtimegeom = timegeomshift;
     timeouttime = 0.0;
     timeouts = 0;
     failtime = 0.0;
@@ -133,6 +139,7 @@ BEGIN {
     conftime = 0.0;
     overheadtime = 0.0;
     aborted = 1;
+    gapreached = 0;
     timelimit = 0.0;
     starttime = 0.0;
     endtime = 0.0;
@@ -204,6 +211,7 @@ BEGIN {
 #
 /^SCIP Status        :/ { aborted = 0; }
 /solving was interrupted/  { timeout = 1; }
+/gap limit reached/ { gapreached = 1; }
 /problem is solved/    { timeout = 0; }
 /^  Primal Bound     :/ {
    if( $4 == "infeasible" )
@@ -289,6 +297,8 @@ BEGIN {
          aborted = 0;
          tottime = endtime - starttime;
       }
+      else if( gapreached )
+         timeout = 0;
       if( aborted && tottime == 0.0 )
          tottime = timelimit;
       if( timelimit > 0.0 )
@@ -304,12 +314,20 @@ BEGIN {
       conftottime += conftime;
       overheadtottime += overheadtime;
       basictime = tottime - conftime - overheadtime;
-      nodegeom = nodegeom^((nprobs-1)/nprobs) * max(bbnodes+nodegeomshift, 1.0)^(1.0/nprobs);
-      sblpgeom = sblpgeom^((nprobs-1)/nprobs) * max(sblps+sblpgeomshift, 1.0)^(1.0/nprobs);
-      timegeom = timegeom^((nprobs-1)/nprobs) * max(tottime+timegeomshift, 1.0)^(1.0/nprobs);
-      conftimegeom = conftimegeom^((nprobs-1)/nprobs) * max(conftime+timegeomshift, 1.0)^(1.0/nprobs);
-      overheadtimegeom = overheadtimegeom^((nprobs-1)/nprobs) * max(overheadtime+timegeomshift, 1.0)^(1.0/nprobs);
-      basictimegeom = basictimegeom^((nprobs-1)/nprobs) * max(basictime+timegeomshift, 1.0)^(1.0/nprobs);
+
+      nodegeom = nodegeom^((nprobs-1)/nprobs) * max(bbnodes, 1.0)^(1.0/nprobs);
+      sblpgeom = sblpgeom^((nprobs-1)/nprobs) * max(sblps, 1.0)^(1.0/nprobs);
+      timegeom = timegeom^((nprobs-1)/nprobs) * max(tottime, 1.0)^(1.0/nprobs);
+      conftimegeom = conftimegeom^((nprobs-1)/nprobs) * max(conftime, 1.0)^(1.0/nprobs);
+      overheadtimegeom = overheadtimegeom^((nprobs-1)/nprobs) * max(overheadtime, 1.0)^(1.0/nprobs);
+      basictimegeom = basictimegeom^((nprobs-1)/nprobs) * max(basictime, 1.0)^(1.0/nprobs);
+
+      shiftednodegeom = shiftednodegeom^((nprobs-1)/nprobs) * max(bbnodes+nodegeomshift, 1.0)^(1.0/nprobs);
+      shiftedsblpgeom = shiftedsblpgeom^((nprobs-1)/nprobs) * max(sblps+sblpgeomshift, 1.0)^(1.0/nprobs);
+      shiftedtimegeom = shiftedtimegeom^((nprobs-1)/nprobs) * max(tottime+timegeomshift, 1.0)^(1.0/nprobs);
+      shiftedconftimegeom = shiftedconftimegeom^((nprobs-1)/nprobs) * max(conftime+timegeomshift, 1.0)^(1.0/nprobs);
+      shiftedoverheadtimegeom = shiftedoverheadtimegeom^((nprobs-1)/nprobs) * max(overheadtime+timegeomshift, 1.0)^(1.0/nprobs);
+      shiftedbasictimegeom = shiftedbasictimegeom^((nprobs-1)/nprobs) * max(basictime+timegeomshift, 1.0)^(1.0/nprobs);
 
       printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s & %8d & %7.1f &%s%8d &%s%7.1f & %7.1f & %7.1f & %7.1f \\\\\n",
          pprob, cons, vars, db, pb, gapstr, confclauses, (confclauses > 0 ? confliterals / confclauses : 0.0), 
@@ -331,7 +349,7 @@ BEGIN {
       }
       else if( solstatus[prob] == "opt" )
       {
-         if ((abs(pb - db) > 1e-4) || (abs(pb - sol[prob]) > 1e-6*max(abs(pb),1.0)))
+         if ((pb - db > 1e-4) || (abs(pb - sol[prob]) > 1e-6*max(abs(pb),1.0)))
          {
             if (timeout)
             {
@@ -406,18 +424,20 @@ BEGIN {
    }
 }
 END {
-   nodegeom -= nodegeomshift;
-   sblpgeom -= sblpgeomshift;
-   timegeom -= timegeomshift;
-   conftimegeom -= timegeomshift;
-   overheadtimegeom -= timegeomshift;
-   basictimegeom -= timegeomshift;
+   shiftednodegeom -= nodegeomshift;
+   shiftedsblpgeom -= sblpgeomshift;
+   shiftedtimegeom -= timegeomshift;
+   shiftedconftimegeom -= timegeomshift;
+   shiftedoverheadtimegeom -= timegeomshift;
+   shiftedbasictimegeom -= timegeomshift;
 
     printf("\\midrule\n")                                                 >TEXFILE;
     printf("%-14s (%2d) &        &        &                &                &        &          &         & %9d & %8.1f & %7.1f & %7.1f & %7.1f \\\\\n",
        "Total", nprobs, sbab, stottime, stottime - conftottime - overheadtottime, overheadtottime, conftottime) >TEXFILE;
     printf("%-14s      &        &        &                &                &        &          &         & %9d & %8.1f & %7.1f & %7.1f & %7.1f \\\\\n",
        "Geom. Mean", nodegeom, timegeom, basictimegeom, overheadtimegeom, conftimegeom) >TEXFILE;
+    printf("%-14s      &        &        &                &                &        &          &         & %9d & %8.1f & %7.1f & %7.1f & %7.1f \\\\\n",
+       "Shifted Geom.", shiftednodegeom, shiftedtimegeom, shiftedbasictimegeom, shiftedoverheadtimegeom, shiftedconftimegeom) >TEXFILE;
 #    printf("%-14s (%2d) &        &        &                &                &        & %9d & %8.1f \\\\\n",
 #       "Total", nprobs, sbab, stottime) >TEXFILE;
 #    printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
@@ -441,5 +461,7 @@ END {
        nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom, 
        stottime - conftottime - overheadtottime, basictimegeom,
        overheadtottime, overheadtimegeom, conftottime, conftimegeom);
+    printf(" shifted geom. [%5d/%5.1f]      %9.1f           %9.1f           %9.1f           %9.1f           %9.1f\n",
+       nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom, shiftedbasictimegeom, shiftedoverheadtimegeom, shiftedconftimegeom);
     printf("----------------------------------------------------------------------------------------------------------------------------\n");
 }

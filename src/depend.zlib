@@ -1,1 +1,1 @@
-./scip/misc.c ./scip/new/fileio.c ./scip/new/misc.c ./scip/fileio.c ./scip/bla/fileio.c ./scip/bla/misc.c ./scip/genconf/fileio.c ./scip/genconf/misc.c ./scip/old_beforecmirchange/fileio.c ./scip/old_beforecmirchange/misc.c ./scip/old_beforerestartcuts/fileio.c ./scip/old_beforerestartcuts/misc.c
+./scip/fileio.c ./scip/misc.c

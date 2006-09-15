@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.26 2006/04/10 16:15:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.27 2006/09/15 02:00:06 bzfpfend Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -38,8 +38,11 @@
 
 #define DEFAULT_SCALEVAL         1000.0 /**< factor for scaling weights */
 #define DEFAULT_MAXTREENODES         -1 /**< maximal number of nodes in branch and bound tree (-1: no limit) */
+#define DEFAULT_BACKTRACKFREQ     10000 /**< frequency for premature backtracking up to tree level 1 (0: no backtracking) */
 #define DEFAULT_MAXSEPACUTS          10 /**< maximal number of clique cuts separated per separation round (-1: no limit) */
 #define DEFAULT_MAXZEROEXTENSIONS  1000 /**< maximal number of zero-valued variables extending the clique (-1: no limit) */
+#define DEFAULT_CLIQUETABLEMEM  20000.0 /**< maximal memory size of dense clique table (in kb) */
+#define DEFAULT_CLIQUEDENSITY      0.05 /**< minimal density of cliques to use a dense clique table */
 
 
 
@@ -57,8 +60,11 @@ struct SCIP_SepaData
    SCIP_Real             scaleval;           /**< factor for scaling weights */
    SCIP_Longint          ncalls;             /**< number of calls to the clique separator */
    int                   maxtreenodes;       /**< maximal number of nodes in branch and bound tree (-1: no limit) */
+   int                   backtrackfreq;      /**< frequency for premature backtracking up to tree level 1 (0: no backtracking) */
    int                   maxsepacuts;        /**< maximal number of clique cuts separated per separation round (-1: no limit) */
    int                   maxzeroextensions;  /**< maximal number of zero-valued variables extending the clique (-1: no limit) */
+   SCIP_Real             cliquetablemem;     /**< maximal memory size of dense clique table (in kb) */
+   SCIP_Real             cliquedensity;      /**< minimal density of cliques to use a dense clique table */
    int                   ncuts;              /**< number of cuts found */
    SCIP_Bool             tcliquegraphloaded; /**< TRUE if tcliquegraph is allready loaded (tcliquegraph can be NULL),
                                               *   FALSE otherwise */
@@ -73,9 +79,11 @@ struct TCLIQUE_Graph
    int*                  cliqueidsidxs;      /**< indices in cliqueids array of first clique the node is contained in */
    int*                  adjnodes;           /**< adjacent nodes of edges */
    int*                  cliqueids;          /**< unique ids of cliques */
+   unsigned int*         cliquetable;        /**< dense bitvector clique table (array stored as a vector) */
    int                   adjnodessize;       /**< size of adjnodes array */
    int                   cliqueidssize;      /**< size of cliqueids array */
    int                   nnodes;             /**< number of nodes in graph */
+   int                   tablewidth;         /**< number of unsigned ints per row in the table */
 };
 
 
@@ -111,9 +119,11 @@ SCIP_RETCODE tcliquegraphCreate(
    (*tcliquegraph)->cliqueidsidxs[0] = 0; /* the last slot defines the end of the last node */
    (*tcliquegraph)->adjnodes = NULL;
    (*tcliquegraph)->cliqueids = NULL;
+   (*tcliquegraph)->cliquetable = NULL;
    (*tcliquegraph)->adjnodessize = 0;
    (*tcliquegraph)->cliqueidssize = 0;
    (*tcliquegraph)->nnodes = 0;
+   (*tcliquegraph)->tablewidth = 0;
 
    return SCIP_OKAY;
 }
@@ -143,6 +153,7 @@ SCIP_RETCODE tcliquegraphFree(
    SCIPfreeMemoryArray(scip, &(*tcliquegraph)->cliqueidsidxs);
    SCIPfreeMemoryArrayNull(scip, &(*tcliquegraph)->adjnodes);
    SCIPfreeMemoryArrayNull(scip, &(*tcliquegraph)->cliqueids);
+   SCIPfreeMemoryArrayNull(scip, &(*tcliquegraph)->cliquetable);
    SCIPfreeMemory(scip, tcliquegraph);
 
    return SCIP_OKAY;
@@ -650,6 +661,120 @@ SCIP_RETCODE tcliquegraphAddImplics(
    return SCIP_OKAY;
 }
 
+/** constructs dense clique incidence matrix */
+static
+SCIP_RETCODE tcliquegraphConstructCliqueTable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   TCLIQUE_GRAPH*        tcliquegraph,       /**< tclique graph data */
+   SCIP_Real             cliquetablemem,     /**< maximal memory size of dense clique table (in kb) */
+   SCIP_Real             cliquedensity       /**< minimal density of cliques to store as dense table */
+   )
+{
+   SCIP_CLIQUE** cliques;
+   int* varids;
+   unsigned int* cliquetable;
+   SCIP_Real density;
+   int nbits;
+   int tablesize;
+   int tablewidth;
+   int ncliques;
+   int nelems;
+   int i;
+
+   /* get clique table */
+   cliques = SCIPgetCliques(scip);
+   ncliques = SCIPgetNCliques(scip);
+   if( ncliques == 0 )
+      return SCIP_OKAY;
+
+   assert(tcliquegraph != NULL);
+
+   /* calculate size of dense clique table */
+   nbits = 8*sizeof(unsigned int);
+   tcliquegraph->tablewidth = (tcliquegraph->nnodes + nbits-1) / nbits; /* number of ints needed */
+   
+   /* check if dense clique table is too large (calculate as Reals to avoid overflow) */
+   if( (SCIP_Real)tcliquegraph->nnodes * (SCIP_Real)tcliquegraph->tablewidth/1024.0 > cliquetablemem )
+      return SCIP_OKAY;
+
+   /* calculate clique entry density */
+   nelems = 0;
+   for( i = 0; i < ncliques; ++i )
+      nelems += SCIPcliqueGetNVars(cliques[i]);
+   density = (SCIP_Real)nelems / ((SCIP_Real)ncliques * (SCIP_Real)tcliquegraph->nnodes);
+   if( density < cliquedensity )
+      return SCIP_OKAY;
+
+   /* allocate memory */
+   tablesize = tcliquegraph->nnodes * tcliquegraph->tablewidth;
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+      "clique separator: constructing dense clique table (%d kb, %d cliques, %d nodes, density: %.2f)\n",
+      tablesize/1024, SCIPgetNCliques(scip), tcliquegraph->nnodes, density);
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &tcliquegraph->cliquetable, tablesize) );
+   BMSclearMemoryArray(tcliquegraph->cliquetable, tablesize);
+
+   /* insert the cliques as complete graphs to the incidence matrix */
+   SCIP_CALL( SCIPallocBufferArray(scip, &varids, tcliquegraph->nnodes) );
+   cliquetable = tcliquegraph->cliquetable;
+   tablewidth = tcliquegraph->tablewidth;
+   for( i = 0; i < ncliques; ++i )
+   {
+      SCIP_VAR** vars;
+      SCIP_Bool* vals;
+      int nvars;
+      int u;
+      int v;
+
+      vars = SCIPcliqueGetVars(cliques[i]);
+      vals = SCIPcliqueGetValues(cliques[i]);
+      nvars = SCIPcliqueGetNVars(cliques[i]);
+      assert(nvars <= tcliquegraph->nnodes);
+
+      /* get the node numbers of the variables */
+      for( u = 0; u < nvars; ++u )
+      {
+         SCIP_VAR* var;
+
+         var = (vals[u] ? vars[u] : SCIPvarGetNegatedVar(vars[u]));
+         assert(var != NULL); /* var must exist even if negated, since it is stored in the tcliquegraph */
+         for( v = 0; v < tcliquegraph->nnodes && var != tcliquegraph->vars[v]; ++v )
+         {}
+         assert(v < tcliquegraph->nnodes);
+         varids[u] = v;
+      }
+
+      /* flag the edges in the indicence matrix (excluding diagonal entries) */
+      for( u = 0; u < nvars-1; ++u )
+      {
+         int nu;
+         int rowstart;
+         int colofs;
+         unsigned int colmask;
+
+         nu = varids[u];
+         rowstart = nu*tablewidth;
+         colofs = nu/nbits;
+         colmask = 1 << (nu % nbits);
+         for( v = u+1; v < nvars; ++v )
+         {
+            int nv;
+            unsigned int mask;
+
+            nv = varids[v];
+            mask = 1 << (nv % nbits);
+            cliquetable[rowstart+nv/nbits] |= mask;
+            cliquetable[nv*tablewidth+colofs] |= colmask;
+         }
+      }
+   }
+   SCIPfreeBufferArray(scip, &varids);
+
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "clique separator: finished constructing dense clique table\n");
+
+   return SCIP_OKAY;
+}
+
 /* creates tclique data structure using the implication graph;
  * only variables that are contained in a 3-clique are added as nodes to the clique graph
  */
@@ -691,6 +816,9 @@ SCIP_RETCODE loadTcliquegraph(
 
    /* add all implications between used variables to the tclique graph */
    SCIP_CALL( tcliquegraphAddImplics(scip, sepadata->tcliquegraph, cliquegraphidx) );
+
+   /* construct the dense clique table */
+   SCIP_CALL( tcliquegraphConstructCliqueTable(scip, sepadata->tcliquegraph, sepadata->cliquetablemem, sepadata->cliquedensity) );
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &cliquegraphidx[1]);
@@ -758,36 +886,58 @@ SCIP_Bool nodesHaveCommonClique(
    int                   node2               /**< second node */
    )
 {
-   int* cliqueids;
-   int i1;
-   int i2;
-   int endi1;
-   int endi2;
-
    assert(tcliquegraph != NULL);
 
-   cliqueids = tcliquegraph->cliqueids;
-   i1 = tcliquegraph->cliqueidsidxs[node1];
-   endi1 = tcliquegraph->cliqueidsidxs[node1+1];
-   i2 = tcliquegraph->cliqueidsidxs[node2];
-   endi2 = tcliquegraph->cliqueidsidxs[node2+1];
-   while( i1 < endi1 && i2 < endi2 )
+   /* return TRUE for equal nodes */
+   if( node1 == node2 )
+      return TRUE;
+
+   /* check whether the dense clique table was constructed */
+   if( tcliquegraph->cliquetable != NULL )
    {
-      while( i1 < endi1 && cliqueids[i1] < cliqueids[i2] )
-         i1++;
-      if( i1 == endi1 )
-         break;
+      int nbits;
+      unsigned int mask;
+      int colofs;
 
-      while( i2 < endi2 && cliqueids[i2] < cliqueids[i1] )
-         i2++;
-      if( i2 == endi2 )
-         break;
-
-      if( cliqueids[i1] == cliqueids[i2] )
-         return TRUE;
+      /* check entry in the table */
+      nbits = 8*sizeof(unsigned int);
+      mask = (1 << (node2 % nbits));
+      colofs = node2 / nbits;
+      assert(((tcliquegraph->cliquetable[node1*tcliquegraph->tablewidth + colofs] & mask) != 0)
+         == ((tcliquegraph->cliquetable[node2*tcliquegraph->tablewidth + node1/nbits] & (1 << (node1 % nbits))) != 0));
+      return ((tcliquegraph->cliquetable[node1*tcliquegraph->tablewidth + colofs] & mask) != 0);
    }
+   else
+   {
+      int* cliqueids;
+      int i1;
+      int i2;
+      int endi1;
+      int endi2;
+      
+      cliqueids = tcliquegraph->cliqueids;
+      i1 = tcliquegraph->cliqueidsidxs[node1];
+      endi1 = tcliquegraph->cliqueidsidxs[node1+1];
+      i2 = tcliquegraph->cliqueidsidxs[node2];
+      endi2 = tcliquegraph->cliqueidsidxs[node2+1];
+      while( i1 < endi1 && i2 < endi2 )
+      {
+         while( i1 < endi1 && cliqueids[i1] < cliqueids[i2] )
+            i1++;
+         if( i1 == endi1 )
+            break;
+         
+         while( i2 < endi2 && cliqueids[i2] < cliqueids[i1] )
+            i2++;
+         if( i2 == endi2 )
+            break;
 
-   return FALSE;
+         if( cliqueids[i1] == cliqueids[i2] )
+            return TRUE;
+      }
+      
+      return FALSE;
+   }
 }
 
 /** returns, whether the edge (node1, node2) is in the graph */
@@ -935,18 +1085,18 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
 
          SCIP_CALL_ABORT( SCIPcacheRowExtensions(scip, cut) );
          assert(ncliquenodes <= nvars);
-         SCIPdebugMessage("clique in graph:");
+         /*SCIPdebugMessage(" -> clique in graph:");*/
          for( i = 0; i < ncliquenodes; ++i )
          {
             assert(cliquenodes[i] < nvars);
             SCIP_CALL_ABORT( SCIPaddVarToRow(scip, cut, vars[cliquenodes[i]], 1.0) );
-            SCIPdebugPrintf(" [%d]<%s>", cliquenodes[i], SCIPvarGetName(vars[cliquenodes[i]]));
+            /*SCIPdebugPrintf(" [%d]<%s>", cliquenodes[i], SCIPvarGetName(vars[cliquenodes[i]]));*/
          }
-         SCIPdebugPrintf("\n");
+         /*SCIPdebugPrintf("\n");*/
          SCIP_CALL_ABORT( SCIPflushRowExtensions(scip, cut) );
 
-         SCIPdebugMessage("found clique cut (act=%g): ", unscaledweight);
-         SCIPdebug(SCIPprintRow(scip, cut, NULL));
+         SCIPdebugMessage(" -> found clique cut (act=%g)\n", unscaledweight);
+         /*SCIPdebug(SCIPprintRow(scip, cut, NULL));*/
 
          SCIP_CALL_ABORT( SCIPaddCut(scip, sepadata->sol, cut, FALSE) );
          SCIP_CALL_ABORT( SCIPaddPoolCut(scip, cut) );
@@ -1014,6 +1164,7 @@ SCIP_RETCODE separateCuts(
    {
       assert(sepadata->tcliquegraph == NULL);
 
+      SCIPdebugMessage("loading implication and clique graph\n");
       SCIP_CALL( loadTcliquegraph(scip, sepadata) );
       sepadata->tcliquegraphloaded = TRUE;
 
@@ -1022,6 +1173,7 @@ SCIP_RETCODE separateCuts(
          /* we did not find any variables that are contained in a clique with at least 3 variables in the
           * implication graph or in the clique table -> nothing has to be done
           */
+         SCIPdebugMessage("no 3-cliques found in implication graph\n");
          return SCIP_OKAY;
       }
    }
@@ -1037,12 +1189,16 @@ SCIP_RETCODE separateCuts(
    maxtreenodes = (sepadata->maxtreenodes == -1 ? INT_MAX : sepadata->maxtreenodes);
    maxzeroextensions = (sepadata->maxzeroextensions == -1 ? INT_MAX : sepadata->maxzeroextensions);
 
+   SCIPdebugMessage("searching for violated clique cuts\n");
+
    /* finds maximum weight clique in tclique */
    SCIP_CALL( SCIPallocBufferArray(scip, &cliquenodes, tcliquegraph->nnodes) );
    tcliqueMaxClique(tcliqueGetnnodesClique, tcliqueGetweightsClique, tcliqueIsedgeClique, tcliqueSelectadjnodesClique,
       tcliquegraph, tcliqueNewsolClique, (TCLIQUE_DATA*)sepadata,
       cliquenodes, &ncliquenodes, &cliqueweight, (int)sepadata->scaleval-1, (int)sepadata->scaleval+1,
-      maxtreenodes, maxzeroextensions, -1, &tcliquestatus);
+      maxtreenodes, sepadata->backtrackfreq, maxzeroextensions, -1, &tcliquestatus);
+
+   SCIPdebugMessage("finished searching clique cuts: found %d cuts\n", sepadata->ncuts);
 
    /* frees data structures */
    SCIPfreeBufferArray(scip, &cliquenodes);
@@ -1177,6 +1333,10 @@ SCIP_RETCODE SCIPincludeSepaClique(
          "maximal number of nodes in branch and bound tree (-1: no limit)",
          &sepadata->maxtreenodes, DEFAULT_MAXTREENODES, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
+         "separating/clique/backtrackfreq",
+         "frequency for premature backtracking up to tree level 1 (0: no backtracking)",
+         &sepadata->backtrackfreq, DEFAULT_BACKTRACKFREQ, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
          "separating/clique/maxsepacuts",
          "maximal number of clique cuts separated per separation round (-1: no limit)",
          &sepadata->maxsepacuts, DEFAULT_MAXSEPACUTS, -1, INT_MAX, NULL, NULL) );
@@ -1184,6 +1344,14 @@ SCIP_RETCODE SCIPincludeSepaClique(
          "separating/clique/maxzeroextensions",
          "maximal number of zero-valued variables extending the clique (-1: no limit)",
          &sepadata->maxzeroextensions, DEFAULT_MAXZEROEXTENSIONS, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/clique/cliquetablemem",
+         "maximal memory size of dense clique table (in kb)",
+         &sepadata->cliquetablemem, DEFAULT_CLIQUETABLEMEM, 0.0, (SCIP_Real)INT_MAX/1024.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/clique/cliquedensity",
+         "minimal density of cliques to use a dense clique table",
+         &sepadata->cliquedensity, DEFAULT_CLIQUEDENSITY, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }

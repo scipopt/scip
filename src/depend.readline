@@ -1,1 +1,1 @@
-./scip/dialog.c ./scip/new/dialog.c ./scip/bla/dialog.c ./scip/genconf/dialog.c ./scip/old_beforecmirchange/dialog.c ./scip/old_beforerestartcuts/dialog.c
+./scip/dialog.c

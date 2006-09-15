@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.c,v 1.9 2006/04/10 16:15:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_branch.c,v 1.10 2006/09/15 02:00:06 bzfpfend Exp $"
 
 /**@file   tclique_branch.c
  * @brief  branch and bound part of algorithm for maximum cliques
@@ -737,6 +737,7 @@ TCLIQUE_Bool branch(
                                          **  (for cliques with at least one fractional node) */
    int*             ntreenodes,         /**< pointer to store number of nodes of b&b tree */
    int              maxntreenodes,	/**< maximal number of nodes of b&b tree */
+   int              backtrackfreq,      /**< frequency to backtrack to first level of tree (0: no premature backtracking) */
    int              maxnzeroextensions, /**< maximal number of zero-valued variables extending the clique */
    int              fixednode,          /**< node that is forced to be in the clique, or -1; must have positive weight */
    TCLIQUE_STATUS*  status              /**< pointer to store the status of the solving call */
@@ -869,6 +870,10 @@ TCLIQUE_Bool branch(
       {
          int branchidx;
 
+         /* check if we meet the backtracking frequency - in this case abort the search until we have reached first level */
+         if( level > 1 && backtrackfreq > 0 && (*ntreenodes) % backtrackfreq == 0 )
+            break;
+
          /* get next branching node */
 	 if( level == 1 && fixednode >= 0 )
 	 {
@@ -927,7 +932,7 @@ TCLIQUE_Bool branch(
             level, Vcurrent, nVcurrent, Vzero, nVzero, gsd, iscolored, K, weightK,
             maxcliquenodes, nmaxcliquenodes, maxcliqueweight,
             curcliquenodes, ncurcliquenodes, curcliqueweight, tmpcliquenodes,
-            maxfirstnodeweight, ntreenodes, maxntreenodes, maxnzeroextensions, -1, status);
+            maxfirstnodeweight, ntreenodes, maxntreenodes, backtrackfreq, maxnzeroextensions, -1, status);
 
 	 /* if we had a fixed node, ignore all other nodes */
 	 if( fixednode >= 0 )
@@ -959,6 +964,13 @@ TCLIQUE_Bool branch(
       *curcliqueweight = 0;
    }
 
+#ifdef DEBUG
+   if( level > 1 && backtrackfreq > 0 && (*ntreenodes) % backtrackfreq == 0 )
+   {
+      debugMessage("premature backtracking after %d nodes - level %d\n", *ntreenodes, level);
+   }
+#endif
+
    /* free data structures */
    BMSfreeMemoryArray(&apbound);
 
@@ -981,6 +993,7 @@ void tcliqueMaxClique(
                                          *   for cliques with at least one fractional node) */
    TCLIQUE_WEIGHT   minweight,          /**< lower bound for weight of generated cliques */
    int              maxntreenodes,	/**< maximal number of nodes of b&b tree */
+   int              backtrackfreq,      /**< frequency to backtrack to first level of tree (0: no premature backtracking) */
    int              maxnzeroextensions, /**< maximal number of zero-valued variables extending the clique */
    int              fixednode,          /**< node that is forced to be in the clique, or -1; must have positive weight */
    TCLIQUE_STATUS*  status              /**< pointer to store the status of the solving call */
@@ -1010,6 +1023,7 @@ void tcliqueMaxClique(
    assert(nmaxcliquenodes != NULL);
    assert(maxcliqueweight != NULL);
    assert(maxntreenodes >= 0);
+   assert(backtrackfreq >= 0);
    assert(maxnzeroextensions >= 0);
    assert(status != NULL);
 
@@ -1078,7 +1092,7 @@ void tcliqueMaxClique(
       buffer, 0, V, nV, Vzero, nVzero, gsd, iscolored, K, 0,
       maxcliquenodes, nmaxcliquenodes, maxcliqueweight,
       curcliquenodes, &ncurcliquenodes, &curcliqueweight, tmpcliquenodes,
-      maxfirstnodeweight, &ntreenodes, maxntreenodes, maxnzeroextensions, fixednode, status);
+      maxfirstnodeweight, &ntreenodes, maxntreenodes, backtrackfreq, maxnzeroextensions, fixednode, status);
 
    if( userabort )
       *status = TCLIQUE_USERABORT;

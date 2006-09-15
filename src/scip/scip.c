@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.383 2006/08/31 08:27:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.384 2006/09/15 02:00:05 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4024,11 +4024,11 @@ SCIP_Bool isPresolveFinished(
             + scip->stat->npresolchgsides - lastnchgsides
             <= abortfac * scip->transprob->nconss));
 
-   /* don't abort, if enough changes were applied to the coefficients (assume a 20% density of non-zero elements) */
+   /* don't abort, if enough changes were applied to the coefficients (assume a 1% density of non-zero elements) */
    finished = finished
       && (scip->transprob->nvars == 0 || scip->transprob->nconss == 0
          || (scip->stat->npresolchgcoefs - lastnchgcoefs
-            <= abortfac * 0.2 * scip->transprob->nvars * scip->transprob->nconss));
+            <= abortfac * 0.01 * scip->transprob->nvars * scip->transprob->nconss));
 
 #if 0
    /* don't abort, if enough new implications or cliques were found (assume 100 implications per variable) */
@@ -6749,6 +6749,26 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    SCIPsetFreeBufferArray(scip->set, &cliquevars);
 
    return SCIP_OKAY;
+}
+
+/** gets the number of cliques in the clique table */
+int SCIPgetNCliques(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNCliques", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIPcliquetableGetNCliques(scip->cliquetable);
+}
+
+/** gets the array of cliques in the clique table */
+SCIP_CLIQUE** SCIPgetCliques(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetCliques", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIPcliquetableGetCliques(scip->cliquetable);
 }
 
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score
@@ -10456,7 +10476,7 @@ SCIP_RETCODE SCIPgetLPBranchCands(
 
    if( SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_OPTIMAL && SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY )
    {
-      SCIPerrorMessage("LP not solved to optimality\n");
+      SCIPerrorMessage("LP not solved to optimality - solstat=%d\n", SCIPlpGetSolstat(scip->lp));
       return SCIP_INVALIDDATA;
    }
 
@@ -13475,7 +13495,6 @@ SCIP_RETCODE SCIPprintStatistics(
       printRelaxatorStatistics(scip, file);
       printTreeStatistics(scip, file);
       printSolutionStatistics(scip, file);
-
       return SCIP_OKAY;
 
    default:

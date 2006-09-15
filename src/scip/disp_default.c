@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.62 2006/05/10 13:24:35 bzfhille Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.63 2006/09/15 02:00:05 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -229,6 +229,14 @@
 #define DISP_POSI_PRIMALBOUND   10000
 #define DISP_STRI_PRIMALBOUND   TRUE
 
+#define DISP_NAME_CUTOFFBOUND   "cutoffbound"
+#define DISP_DESC_CUTOFFBOUND   "current cutoff bound"
+#define DISP_HEAD_CUTOFFBOUND   "cutoffbound"
+#define DISP_WIDT_CUTOFFBOUND   14
+#define DISP_PRIO_CUTOFFBOUND   10
+#define DISP_POSI_CUTOFFBOUND   10100
+#define DISP_STRI_CUTOFFBOUND   TRUE
+
 #define DISP_NAME_GAP           "gap"
 #define DISP_DESC_GAP           "current relative primal-dual gap"
 #define DISP_HEAD_GAP           "gap"
@@ -236,6 +244,14 @@
 #define DISP_PRIO_GAP           60000
 #define DISP_POSI_GAP           20000
 #define DISP_STRI_GAP           TRUE
+
+#define DISP_NAME_NSOLS         "nsols"
+#define DISP_DESC_NSOLS         "current number of solutions found"
+#define DISP_HEAD_NSOLS         "nsols"
+#define DISP_WIDT_NSOLS         5
+#define DISP_PRIO_NSOLS         0
+#define DISP_POSI_NSOLS         30000
+#define DISP_STRI_NSOLS         TRUE
 
 
 
@@ -618,6 +634,25 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputPrimalbound)
 
 /** output method of display column to output file stream 'file' */
 static
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputCutoffbound)
+{  /*lint --e{715}*/
+   SCIP_Real cutoffbound;
+
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CUTOFFBOUND) == 0);
+   assert(scip != NULL);
+
+   cutoffbound = SCIPgetCutoffbound(scip);
+   if( SCIPisInfinity(scip, REALABS(cutoffbound)) )
+      SCIPinfoMessage(scip, file, "      --      ");
+   else
+      SCIPinfoMessage(scip, file, "%13.6e ", SCIPretransformObj(scip, cutoffbound));
+
+   return SCIP_OKAY;
+}
+
+/** output method of display column to output file stream 'file' */
+static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputGap)
 {  /*lint --e{715}*/
    SCIP_Real gap;
@@ -634,6 +669,15 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputGap)
       SCIPinfoMessage(scip, file, "  Large ");
    else
       SCIPinfoMessage(scip, file, "%7.2f%%", 100.0*gap);
+
+   return SCIP_OKAY;
+}
+
+/** output method of display column to output file stream 'file' */
+static
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputNsols)
+{
+   SCIPinfoMessage(scip, file, "%"SCIP_LONGINT_FORMAT, SCIPgetNSolsFound(scip));
 
    return SCIP_OKAY;
 }
@@ -725,9 +769,15 @@ SCIP_RETCODE SCIPincludeDispDefault(
    SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_PRIMALBOUND, DISP_DESC_PRIMALBOUND, DISP_HEAD_PRIMALBOUND,
          SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, NULL, NULL, SCIPdispOutputPrimalbound, NULL, 
          DISP_WIDT_PRIMALBOUND, DISP_PRIO_PRIMALBOUND, DISP_POSI_PRIMALBOUND, DISP_STRI_PRIMALBOUND) );
+   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_CUTOFFBOUND, DISP_DESC_CUTOFFBOUND, DISP_HEAD_CUTOFFBOUND,
+         SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, NULL, NULL, SCIPdispOutputCutoffbound, NULL, 
+         DISP_WIDT_CUTOFFBOUND, DISP_PRIO_CUTOFFBOUND, DISP_POSI_CUTOFFBOUND, DISP_STRI_CUTOFFBOUND) );
    SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_GAP, DISP_DESC_GAP, DISP_HEAD_GAP,
          SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, NULL, NULL, SCIPdispOutputGap, NULL, 
          DISP_WIDT_GAP, DISP_PRIO_GAP, DISP_POSI_GAP, DISP_STRI_GAP) );
+   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NSOLS, DISP_DESC_NSOLS, DISP_HEAD_NSOLS,
+         SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, NULL, NULL, SCIPdispOutputNsols, NULL, 
+         DISP_WIDT_NSOLS, DISP_PRIO_NSOLS, DISP_POSI_NSOLS, DISP_STRI_NSOLS) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.225 2006/08/30 09:25:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.226 2006/09/15 02:00:05 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2442,8 +2442,8 @@ SCIP_RETCODE scaleCons(
  *      Try to identify a rational representation of the fractional coefficients, and multiply all coefficients
  *      by the smallest common multiple of all denominators to get integral coefficients.
  *      Forbid large denominators due to numerical stability.
- *  - division by greatest common divisor
- *      If all coefficients are integral, divide them by the greatest common divisor.
+ *  - multiplication by greatest common divisor
+ *      If all coefficients are integral, multiply them by the greatest common divisor.
  */
 static
 SCIP_RETCODE normalizeCons(
@@ -3099,9 +3099,11 @@ SCIP_RETCODE tightenVarBounds(
          SCIP_Real newub;
 
          newub = (rhs - minresactivity)/val;
-         newub = SCIPfeasCeil(scip, newub/BOUNDSCALETOL) * BOUNDSCALETOL;
          if( SCIPisUbBetter(scip, newub, lb, ub) )
          {
+            /* adjust bound for numerical reasons */
+            newub = SCIPfeasCeil(scip, newub/BOUNDSCALETOL) * BOUNDSCALETOL;
+
             /* tighten upper bound */
             SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%g,%g], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newub=%g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newub);
@@ -3133,9 +3135,11 @@ SCIP_RETCODE tightenVarBounds(
          SCIP_Real newlb;
 
          newlb = (lhs - maxresactivity)/val;
-         newlb = SCIPfeasFloor(scip, newlb/BOUNDSCALETOL) * BOUNDSCALETOL;
          if( SCIPisLbBetter(scip, newlb, lb, ub) )
          {
+            /* adjust bound for numerical reasons */
+            newlb = SCIPfeasFloor(scip, newlb/BOUNDSCALETOL) * BOUNDSCALETOL;
+
             /* tighten lower bound */
             SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%g,%g], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newlb=%g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newlb);
@@ -3171,9 +3175,11 @@ SCIP_RETCODE tightenVarBounds(
          SCIP_Real newlb;
 
          newlb = (rhs - minresactivity)/val;
-         newlb = SCIPfeasFloor(scip, newlb/BOUNDSCALETOL) * BOUNDSCALETOL;
          if( SCIPisLbBetter(scip, newlb, lb, ub) )
          {
+            /* adjust bound for numerical reasons */
+            newlb = SCIPfeasFloor(scip, newlb/BOUNDSCALETOL) * BOUNDSCALETOL;
+
             /* tighten lower bound */
             SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%g,%g], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newlb=%g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newlb);
@@ -3205,9 +3211,11 @@ SCIP_RETCODE tightenVarBounds(
          SCIP_Real newub;
 
          newub = (lhs - maxresactivity)/val;
-         newub = SCIPfeasCeil(scip, newub/BOUNDSCALETOL) * BOUNDSCALETOL;
          if( SCIPisUbBetter(scip, newub, lb, ub) )
          {
+            /* adjust bound for numerical reasons */
+            newub = SCIPfeasCeil(scip, newub/BOUNDSCALETOL) * BOUNDSCALETOL;
+
             /* tighten upper bound */
             SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%g,%g], val=%g, resactivity=[%g,%g], sides=[%g,%g], newub=%g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newub);

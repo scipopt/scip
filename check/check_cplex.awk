@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.24 2006/08/30 09:25:44 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.25 2006/09/15 02:00:04 bzfpfend Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -48,8 +48,8 @@ BEGIN {
     printf("Name                     | Conss | Vars |   Dual Bound | Primal Bound | Gap% |               | Nodes | Time |                    |       \n");
     printf("-------------------------+-------+------+--------------+--------------+------+---------------+-------+------+--------------------+-------\n");
 
-    timegeomshift = 0.0;
-    nodegeomshift = 0.0;
+    timegeomshift = 60.0;
+    nodegeomshift = 1000.0;
     onlyinsolufile = 0;  # should only instances be reported that are included in the .solu file?
 
     nprobs   = 0;
@@ -57,8 +57,10 @@ BEGIN {
     scut     = 0;
     stottime = 0.0;
     sgap     = 0.0;
-    nodegeom = nodegeomshift;
-    timegeom = timegeomshift;
+    nodegeom = 0.0;
+    timegeom = 0.0;
+    shiftednodegeom = nodegeomshift;
+    shiftedtimegeom = timegeomshift;
     failtime = 0.0;
     timeouttime = 0.0;
     fail     = 0;
@@ -316,19 +318,23 @@ BEGIN {
       sbab     += bbnodes;
       scut     += cuts;
       stottime += tottime;
-      timegeom = timegeom^((nprobs-1)/nprobs) * max(tottime+timegeomshift, 1.0)^(1.0/nprobs);
-      nodegeom = nodegeom^((nprobs-1)/nprobs) * max(bbnodes+nodegeomshift, 1.0)^(1.0/nprobs);
+      timegeom = timegeom^((nprobs-1)/nprobs) * max(tottime, 1.0)^(1.0/nprobs);
+      nodegeom = nodegeom^((nprobs-1)/nprobs) * max(bbnodes, 1.0)^(1.0/nprobs);
+      shiftedtimegeom = shiftedtimegeom^((nprobs-1)/nprobs) * max(tottime+timegeomshift, 1.0)^(1.0/nprobs);
+      shiftednodegeom = shiftednodegeom^((nprobs-1)/nprobs) * max(bbnodes+nodegeomshift, 1.0)^(1.0/nprobs);
    }
 }
 END {
-   nodegeom -= nodegeomshift;
-   timegeom -= timegeomshift;
+   shiftednodegeom -= nodegeomshift;
+   shiftedtimegeom -= timegeomshift;
 
    printf("\\midrule\n")                                                 >TEXFILE;
    printf("%-14s (%2d) &        &        &                &                &        & %9d & %8.1f \\\\\n",
       "Total", nprobs, sbab, stottime) >TEXFILE;
    printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
       "Geom. Mean", nodegeom, timegeom) >TEXFILE;
+   printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
+      "Shifted Geom.", shiftednodegeom, shiftedtimegeom) >TEXFILE;
    printf("\\bottomrule\n")                                              >TEXFILE;
    printf("\\noalign{\\vspace{6pt}}\n")                                  >TEXFILE;
    printf("\\end{tabular*}\n")                                           >TEXFILE;
@@ -345,5 +351,7 @@ END {
    printf("----------------------------------------------------------------\n");
    printf("%5d %5d %5d %5d %9d %9.1f %9.1f %9.1f\n",
       nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom);
-      printf("----------------------------------------------------------------\n");
+   printf(" shifted geom. [%5d/%5.1f]      %9.1f           %9.1f\n",
+      nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
+   printf("----------------------------------------------------------------\n");
 }

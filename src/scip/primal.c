@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.80 2006/04/20 16:24:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.81 2006/09/15 02:00:05 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -164,7 +164,7 @@ SCIP_RETCODE primalSetCutoffbound(
    SCIPdebugMessage("changing cutoff bound from %g to %g\n", primal->cutoffbound, cutoffbound);
 
    primal->cutoffbound = MIN(cutoffbound, primal->upperbound); /* get rid of numerical issues */
-   
+
    /* set cut off value in LP solver */
    SCIP_CALL( SCIPlpSetCutoffbound(lp, set, primal->cutoffbound) );
 

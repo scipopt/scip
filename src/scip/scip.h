@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.285 2006/08/21 20:13:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.286 2006/09/15 02:00:06 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2286,6 +2286,18 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    SCIP_VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
    int                   nvars,              /**< number of variables in the clique */
    int*                  cliquepartition     /**< array of length nvars to store the clique partition */
+   );
+
+/** gets the number of cliques in the clique table */
+extern
+int SCIPgetNCliques(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets the array of cliques in the clique table */
+extern
+SCIP_CLIQUE** SCIPgetCliques(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score

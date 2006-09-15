@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.7 2006/08/21 20:13:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_mutation.c,v 1.8 2006/09/15 02:00:05 bzfpfend Exp $"
 
 /**@file   heur_mutation.c
  * @brief  mutation primal heuristic
@@ -80,7 +80,7 @@ SCIP_RETCODE createSubproblem(
    SCIP*                 subscip,            /**< SCIP data structure for the subproblem                        */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem                               */
    SCIP_Real             fixingrate,         /**< percentage of integer variables that have to be fixed         */
-   unsigned int          randseed
+   unsigned int*         randseed
    )
 {
    SCIP_VAR** vars;                          /* original scip variables                    */
@@ -131,7 +131,7 @@ SCIP_RETCODE createSubproblem(
    {
       do
       {
-         i = SCIPgetRandomInt(0,nbinvars+nintvars-1, &randseed);
+         i = SCIPgetRandomInt(0,nbinvars+nintvars-1, randseed);
       }
       while( marked[i] ); 
       marked[i] = TRUE;
@@ -305,6 +305,7 @@ SCIP_DECL_HEURINIT(heurInitMutation)
    return SCIP_OKAY;
 }
 
+
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 #define heurExitMutation NULL
 
@@ -395,7 +396,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
  
    success = FALSE;
    /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
-   createSubproblem(scip, subscip, subvars, heurdata->fixingrate, heurdata->randseed);
+   createSubproblem(scip, subscip, subvars, heurdata->fixingrate, &heurdata->randseed);
    
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );

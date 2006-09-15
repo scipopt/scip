@@ -1,5 +1,5 @@
 #!/bin/sh
-VERSION="0.90"
+VERSION="0.90a"
 NAME="scip-$VERSION"
 ln -s . $NAME
 zip release/$NAME.zip $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile $NAME/doc/* $NAME/lib \
@@ -22,7 +22,7 @@ $NAME/examples/TSP/lint/* $NAME/examples/TSP/lint/cpp/* $NAME/examples/TSP/lint/
 $NAME/examples/TSP/lint/posix/sys/* $NAME/examples/TSP/make/make.* \
 $NAME/examples/TSP/src/depend.* \
 $NAME/examples/TSP/src/*.c $NAME/examples/TSP/src/*.cpp $NAME/examples/TSP/src/*.h \
-$NAME/examples/TSP/tspviewer/*.java \
+$NAME/examples/TSP/tspviewer/*.java $NAME/examples/TSP/tspdata/*.tsp \
 $NAME/examples/SamplePricer/* $NAME/examples/SamplePricer/doc/* $NAME/examples/SamplePricer/lib \
 $NAME/examples/SamplePricer/lint/* $NAME/examples/SamplePricer/lint/cpp/* $NAME/examples/SamplePricer/lint/posix/* \
 $NAME/examples/SamplePricer/lint/posix/sys/* $NAME/examples/SamplePricer/make/make.* \

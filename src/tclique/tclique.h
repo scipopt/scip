@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique.h,v 1.5 2006/01/27 10:01:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique.h,v 1.6 2006/09/15 02:00:06 bzfpfend Exp $"
 
 /**@file   tclique.h
  * @brief  tclique user interface
@@ -274,6 +274,7 @@ void tcliqueMaxClique(
                                          *   for cliques with at least one fractional node) */
    TCLIQUE_WEIGHT   minweight,          /**< lower bound for weight of generated cliques */
    int              maxntreenodes,	/**< maximal number of nodes of b&b tree */
+   int              backtrackfreq,      /**< frequency to backtrack to first level of tree (0: no premature backtracking) */
    int              maxnzeroextensions, /**< maximal number of zero-valued variables extending the clique */
    int              fixednode,          /**< node that is forced to be in the clique, or -1; must have positive weight */
    TCLIQUE_STATUS*  status              /**< pointer to store the status of the solving call */

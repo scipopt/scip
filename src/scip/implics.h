@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.h,v 1.13 2006/06/21 07:44:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.h,v 1.14 2006/09/15 02:00:05 bzfpfend Exp $"
 
 /**@file   implics.h
  * @brief  methods for implications, variable bounds, and cliques
@@ -404,6 +404,12 @@ int SCIPcliquetableGetNCliques(
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
 
+/** gets the array of cliques stored in the clique table */
+extern
+SCIP_CLIQUE** SCIPcliquetableGetCliques(
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -414,6 +420,7 @@ int SCIPcliquetableGetNCliques(
 #define SCIPcliquelistGetCliques(cliquelist, value)  ((cliquelist) != NULL ? (cliquelist)->cliques[value] : NULL)
 #define SCIPcliquelistCheck(cliquelist, var)         /**/
 #define SCIPcliquetableGetNCliques(cliquetable)      ((cliquetable)->ncliques)
+#define SCIPcliquetableGetCliques(cliquetable)       ((cliquetable)->cliques)
 
 #endif
 

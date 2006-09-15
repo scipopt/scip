@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.17 2006/08/21 20:13:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.18 2006/09/15 02:00:05 bzfpfend Exp $"
 
 /**@file   heur_crossover.c
  * @brief  crossover primal heuristic
@@ -659,6 +659,7 @@ SCIP_DECL_HEUREXIT(heurExitCrossover)
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 #define heurInitsolCrossover NULL
+
 
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
 #define heurExitsolCrossover NULL

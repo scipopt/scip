@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.19 2006/06/21 07:44:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.20 2006/09/15 02:00:05 bzfpfend Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -1843,9 +1843,9 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 #undef SCIPcliqueGetId
 #undef SCIPcliquelistGetNCliques
 #undef SCIPcliquelistGetCliques
-#undef SCIPcliquetableGetNCliques
 #undef SCIPcliquelistCheck
 #undef SCIPcliquetableGetNCliques
+#undef SCIPcliquetableGetCliques
 
 /** gets number of variable bounds contained in given variable bounds data structure */
 int SCIPvboundsGetNVbds(
@@ -2037,4 +2037,14 @@ int SCIPcliquetableGetNCliques(
    assert(cliquetable != NULL);
 
    return cliquetable->ncliques;
+}
+
+/** gets the array of cliques stored in the clique table */
+SCIP_CLIQUE** SCIPcliquetableGetCliques(
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
+   )
+{
+   assert(cliquetable != NULL);
+
+   return cliquetable->cliques;
 }
