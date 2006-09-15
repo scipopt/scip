@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.29 2006/08/31 13:35:39 bzfpfend Exp $
+# $Id: check.sh,v 1.30 2006/09/15 02:11:20 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -44,10 +44,21 @@ SETFILE=results/check.$TSTNAME.$BINID.$SETNAME.set
 
 SETTINGS=settings/$SETNAME.set
 
+if [ -e $OUTFILE ]
+then
+    echo test output $OUTFILE already existing
+    exit
+fi
+
 uname -a >$OUTFILE
 uname -a >$ERRFILE
 date >>$OUTFILE
 date >>$ERRFILE
+
+HARDTIMELIMIT=`echo $TIMELIMIT*1.1 | bc`
+HARDMEMLIMIT=`echo $MEMLIMIT*1.2 | bc`
+echo hard time limit: $HARDTIMELIMIT >>$OUTFILE
+echo hard mem limit: $HARDMEMLIMIT >>$OUTFILE
 
 for i in `cat $TSTNAME.test`
 do
@@ -79,7 +90,8 @@ do
 	date >>$ERRFILE
 	echo -----------------------------
 	date +"@03 %s"
-	../$2 < $TMPFILE 2>>$ERRFILE
+	tcsh -c "limit cputime $HARDTIMELIMIT s; limit memoryuse $HARDMEMLIMIT M; ../$2 < $TMPFILE" 2>>$ERRFILE
+#	../$2 < $TMPFILE 2>>$ERRFILE
 	date +"@04 %s"
 	echo -----------------------------
 	date

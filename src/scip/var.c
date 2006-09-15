@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.212 2006/08/08 15:17:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.213 2006/09/15 02:11:43 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -9092,7 +9092,7 @@ SCIP_Real SCIPvarGetAvgInferences(
       return SCIPhistoryGetNBranchings(var->history, dir) > 0
          ? SCIPhistoryGetAvgInferences(var->history, dir)
          : (var->implics != NULL && SCIPimplicsGetNImpls(var->implics, dir == SCIP_BRANCHDIR_UPWARDS) > 0
-            ? SCIPimplicsGetNImpls(var->implics, dir == SCIP_BRANCHDIR_UPWARDS)
+            ? SCIPvarGetNImpls(var, dir == SCIP_BRANCHDIR_UPWARDS) + 2 * SCIPvarGetNCliques(var, dir == SCIP_BRANCHDIR_UPWARDS)
             : SCIPhistoryGetAvgInferences(stat->glbhistory, dir));
 
    case SCIP_VARSTATUS_FIXED:
@@ -9143,7 +9143,7 @@ SCIP_Real SCIPvarGetAvgInferencesCurrentRun(
       return SCIPhistoryGetNBranchings(var->historycrun, dir) > 0
          ? SCIPhistoryGetAvgInferences(var->historycrun, dir)
          : (var->implics != NULL && SCIPimplicsGetNImpls(var->implics, dir == SCIP_BRANCHDIR_UPWARDS) > 0
-            ? SCIPimplicsGetNImpls(var->implics, dir == SCIP_BRANCHDIR_UPWARDS)
+            ? SCIPvarGetNImpls(var, dir == SCIP_BRANCHDIR_UPWARDS) + 2 * SCIPvarGetNCliques(var, dir == SCIP_BRANCHDIR_UPWARDS)
             : SCIPhistoryGetAvgInferences(stat->glbhistorycrun, dir));
 
    case SCIP_VARSTATUS_FIXED:
