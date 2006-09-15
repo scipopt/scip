@@ -98,6 +98,14 @@ conflict/depthscorefac = 1
 # [type: real, range: [1e-06,1], default: 0.98]
 conflict/scorefac = 0.98
 
+# number of successful conflict analysis calls that trigger a restart (0: disable conflict restarts)
+# [type: int, range: [0,2147483647], default: 0]
+conflict/restartnum = 0
+
+# factor to increase restartnum with after each restart
+# [type: real, range: [0,1.79769313486232e+308], default: 1.5]
+conflict/restartfac = 1.5
+
 # maximum age an unnecessary constraint can reach before it is deleted (0: dynamic, -1: keep all constraints)
 # [type: int, range: [-1,2147483647], default: 0]
 constraints/agelimit = 0
@@ -142,9 +150,13 @@ limits/stallnodes = -1
 # [type: real, range: [0,1.79769313486232e+308], default: 1e+20]
 limits/memory = 1e+20
 
-# solving stops, if the gap = |(primalbound - dualbound)/dualbound| is below the given value
+# solving stops, if the relative gap = |(primalbound - dualbound)/dualbound| is below the given value
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
 limits/gap = 0
+
+# solving stops, if the absolute gap = |primalbound - dualbound| is below the given value
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+limits/absgap = 0
 
 # solving stops, if the given number of solutions were found (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -310,6 +322,10 @@ presolving/restartfac = 0
 # [type: real, range: [0,1], default: 1]
 presolving/subrestartfac = 1
 
+# minimal fraction of integer variables removed after restart to allow for an additional restart
+# [type: real, range: [0,1], default: 0.05]
+presolving/restartminred = 0.05
+
 # maximal number of variables priced in per pricing round
 # [type: int, range: [1,2147483647], default: 100]
 pricing/maxvars = 100
@@ -335,8 +351,8 @@ propagating/maxroundsroot = 1000
 propagating/abortoncutoff = TRUE
 
 # maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separation (0.0: only on current best node, 1.0: on all nodes)
-# [type: real, range: [0,1], default: 0.2]
-separating/maxbounddist = 0.2
+# [type: real, range: [0,1], default: 1]
+separating/maxbounddist = 1
 
 # minimal efficacy for a cut to enter the LP
 # [type: real, range: [0,1e+98], default: 0.05]
@@ -366,6 +382,10 @@ separating/orthofac = 1
 # [type: char, range: {emsd}, default: e]
 separating/efficacynorm = e
 
+# maximal number of runs for which separation is enabled (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: -1]
+separating/maxruns = -1
+
 # maximal number of separation rounds per node (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: 5]
 separating/maxrounds = 5
@@ -373,6 +393,10 @@ separating/maxrounds = 5
 # maximal number of separation rounds in the root node (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: -1]
 separating/maxroundsroot = -1
+
+# maximal number of separation rounds in the root node of a subsequent run (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 1]
+separating/maxroundsrootsubrun = 1
 
 # maximal additional number of separation rounds in subsequent price-and-cut loops (-1: no additional restriction)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -1426,6 +1450,22 @@ heuristics/intdiving/maxdiveubquotnosol = 0.1
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/intdiving/maxdiveavgquotnosol = 0
 
+# priority of heuristic <intshifting>
+# [type: int, range: [-2147483648,2147483647], default: -10000]
+heuristics/intshifting/priority = -10000
+
+# frequency for calling primal heuristic <intshifting> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/intshifting/freq = 10
+
+# frequency offset for calling primal heuristic <intshifting>
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/intshifting/freqofs = 0
+
+# maximal depth level to call primal heuristic <intshifting> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/intshifting/maxdepth = -1
+
 # priority of heuristic <linesearchdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1006000]
 heuristics/linesearchdiving/priority = -1006000
@@ -1962,6 +2002,10 @@ separating/clique/priority = -5000
 # [type: int, range: [-1,2147483647], default: 0]
 separating/clique/freq = 0
 
+# maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <clique> (0.0: only on current best node, 1.0: on all nodes)
+# [type: real, range: [0,1], default: 0]
+separating/clique/maxbounddist = 0
+
 # should separator be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/clique/delay = FALSE
@@ -1974,6 +2018,10 @@ separating/clique/scaleval = 1000
 # [type: int, range: [-1,2147483647], default: -1]
 separating/clique/maxtreenodes = -1
 
+# frequency for premature backtracking up to tree level 1 (0: no backtracking)
+# [type: int, range: [0,2147483647], default: 10000]
+separating/clique/backtrackfreq = 10000
+
 # maximal number of clique cuts separated per separation round (-1: no limit)
 # [type: int, range: [-1,2147483647], default: 10]
 separating/clique/maxsepacuts = 10
@@ -1982,6 +2030,14 @@ separating/clique/maxsepacuts = 10
 # [type: int, range: [-1,2147483647], default: 1000]
 separating/clique/maxzeroextensions = 1000
 
+# maximal memory size of dense clique table (in kb)
+# [type: real, range: [0,2097151.99902344], default: 20000]
+separating/clique/cliquetablemem = 20000
+
+# minimal density of cliques to use a dense clique table
+# [type: real, range: [0,1], default: 0.05]
+separating/clique/cliquedensity = 0.05
+
 # priority of separator <cmir>
 # [type: int, range: [-2147483648,2147483647], default: -3000]
 separating/cmir/priority = -3000
@@ -1989,6 +2045,10 @@ separating/cmir/priority = -3000
 # frequency for calling separator <cmir> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
 separating/cmir/freq = 0
+
+# maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <cmir> (0.0: only on current best node, 1.0: on all nodes)
+# [type: real, range: [0,1], default: 0]
+separating/cmir/maxbounddist = 0
 
 # should separator be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -2102,6 +2162,10 @@ separating/gomory/priority = -1000
 # [type: int, range: [-1,2147483647], default: 0]
 separating/gomory/freq = 0
 
+# maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <gomory> (0.0: only on current best node, 1.0: on all nodes)
+# [type: real, range: [0,1], default: 0]
+separating/gomory/maxbounddist = 0
+
 # should separator be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/gomory/delay = FALSE
@@ -2138,6 +2202,10 @@ separating/impliedbounds/priority = -50
 # [type: int, range: [-1,2147483647], default: 0]
 separating/impliedbounds/freq = 0
 
+# maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <impliedbounds> (0.0: only on current best node, 1.0: on all nodes)
+# [type: real, range: [0,1], default: 0]
+separating/impliedbounds/maxbounddist = 0
+
 # should separator be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/impliedbounds/delay = FALSE
@@ -2149,6 +2217,10 @@ separating/intobj/priority = -100
 # frequency for calling separator <intobj> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 separating/intobj/freq = -1
+
+# maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <intobj> (0.0: only on current best node, 1.0: on all nodes)
+# [type: real, range: [0,1], default: 0]
+separating/intobj/maxbounddist = 0
 
 # should separator be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -2162,9 +2234,17 @@ separating/redcost/priority = 10000000
 # [type: int, range: [-1,2147483647], default: 1]
 separating/redcost/freq = 1
 
+# maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <redcost> (0.0: only on current best node, 1.0: on all nodes)
+# [type: real, range: [0,1], default: 1]
+separating/redcost/maxbounddist = 1
+
 # should separator be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/redcost/delay = FALSE
+
+# should reduced cost fixing be also applied to continuous variables?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/redcost/continuous = FALSE
 
 # priority of separator <strongcg>
 # [type: int, range: [-2147483648,2147483647], default: -2000]
@@ -2173,6 +2253,10 @@ separating/strongcg/priority = -2000
 # frequency for calling separator <strongcg> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
 separating/strongcg/freq = 0
+
+# maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <strongcg> (0.0: only on current best node, 1.0: on all nodes)
+# [type: real, range: [0,1], default: 0]
+separating/strongcg/maxbounddist = 0
 
 # should separator be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -2302,7 +2386,15 @@ display/dualbound/active = 1
 # [type: int, range: [0,2], default: 1]
 display/primalbound/active = 1
 
+# display activation status of display column <cutoffbound> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/cutoffbound/active = 1
+
 # display activation status of display column <gap> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]
 display/gap/active = 1
+
+# display activation status of display column <nsols> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/nsols/active = 1
 

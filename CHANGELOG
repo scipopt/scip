@@ -12,6 +12,7 @@ parameters:
 - new parameter "separating/clique/backtrackfreq" to speed up clique cut separation in heuristic fashion
 - new parameters "separating/*/maxbounddist" to have individual maxbounddist parameters per separator
 - changed default value of global "separating/maxbounddist" to 1.0
+- new parameter "separating/redcost/continuous"
 
 
 SCIP version 0.90

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_redcost.c,v 1.2 2006/09/15 03:14:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_redcost.c,v 1.3 2006/09/15 21:49:32 bzfpfend Exp $"
 
 /**@file   sepa_redcost.c
  * @brief  reduced cost strengthening separator
@@ -35,6 +35,14 @@
 #define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
+#define DEFAULT_CONTINUOUS        FALSE /**< should reduced cost fixing be also applied to continuous variables? */
+
+
+/** separator data */
+struct SCIP_SepaData
+{
+   SCIP_Bool             continuous;         /**< should reduced cost fixing be also applied to continuous variables? */
+};
 
 
 
@@ -43,7 +51,23 @@
  */
 
 /** destructor of separator to free user data (called when SCIP is exiting) */
-#define sepaFreeRedcost NULL
+static
+SCIP_DECL_SEPAFREE(sepaFreeRedcost)
+{  /*lint --e{715}*/
+   SCIP_SEPADATA* sepadata;
+
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* free separator data */
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   SCIPfreeMemory(scip, &sepadata);
+
+   SCIPsepaSetData(sepa, NULL);
+
+   return SCIP_OKAY;
+}
 
 
 /** initialization method of separator (called after problem was transformed) */
@@ -66,6 +90,7 @@
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpRedcost)
 {  /*lint --e{715}*/
+   SCIP_SEPADATA* sepadata;
    SCIP_COL** cols;
    SCIP_Real cutoffbound;
    SCIP_Real lpobjval;
@@ -102,13 +127,22 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRedcost)
 
    *result = SCIP_DIDNOTFIND;
 
+   /* get separator data */
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
    /* get LP objective value */
    lpobjval = SCIPgetLPObjval(scip);
 
    /* check reduced costs for non-basic columns */
    for( c = 0; c < ncols; ++c )
    {
+      SCIP_VAR* var;
       SCIP_Real redcost;
+
+      var = SCIPcolGetVar(cols[c]);
+      if( !sepadata->continuous && !SCIPvarIsIntegral(var) )
+         continue;
 
       switch( SCIPcolGetBasisStatus(cols[c]) )
       {
@@ -117,11 +151,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRedcost)
          assert(!SCIPisFeasNegative(scip, redcost));
          if( SCIPisFeasPositive(scip, redcost) )
          {
-            SCIP_VAR* var;
             SCIP_Real oldlb;
             SCIP_Real oldub;
 
-            var = SCIPcolGetVar(cols[c]);
             oldlb = SCIPvarGetLbLocal(var);
             oldub = SCIPvarGetUbLocal(var);
             assert(SCIPisEQ(scip, oldlb, SCIPcolGetLb(cols[c])));
@@ -139,7 +171,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRedcost)
                 *  - continuous variables: strengthening must cut part of the variable's dynamic range, and
                 *                          at least 20% of the current domain
                 */
-               if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+               if( SCIPvarIsIntegral(var) )
                {
                   newub = SCIPadjustedVarUb(scip, var, newub);
                   strengthen = (newub < oldub - 0.5);
@@ -167,11 +199,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRedcost)
          assert(!SCIPisFeasPositive(scip, redcost));
          if( SCIPisFeasNegative(scip, redcost) )
          {
-            SCIP_VAR* var;
             SCIP_Real oldlb;
             SCIP_Real oldub;
 
-            var = SCIPcolGetVar(cols[c]);
             oldlb = SCIPvarGetLbLocal(var);
             oldub = SCIPvarGetUbLocal(var);
             assert(SCIPisEQ(scip, oldlb, SCIPcolGetLb(cols[c])));
@@ -189,7 +219,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRedcost)
                 *  - continuous variables: strengthening must cut part of the variable's dynamic range, and
                 *                          at least 20% of the current domain
                 */
-               if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+               if( SCIPvarIsIntegral(var) )
                {
                   newlb = SCIPadjustedVarLb(scip, var, newlb);
                   strengthen = (newlb > oldlb + 0.5);
@@ -242,7 +272,7 @@ SCIP_RETCODE SCIPincludeSepaRedcost(
    SCIP_SEPADATA* sepadata;
 
    /* create redcost separator data */
-   sepadata = NULL;
+   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
@@ -250,6 +280,12 @@ SCIP_RETCODE SCIPincludeSepaRedcost(
          sepaInitsolRedcost, sepaExitsolRedcost,
          sepaExeclpRedcost, sepaExecsolRedcost,
          sepadata) );
+
+   /* add separator parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/redcost/continuous",
+         "should reduced cost fixing be also applied to continuous variables?",
+         &sepadata->continuous, DEFAULT_CONTINUOUS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

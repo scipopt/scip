@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.58 2006/09/15 03:14:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.59 2006/09/15 21:49:32 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -206,6 +206,7 @@ SCIP_DECL_SEPAFREE(sepaFreeGomory)
 
    return SCIP_OKAY;
 }
+
 
 /** initialization method of separator (called when problem solving starts) */
 #define sepaInitGomory NULL
