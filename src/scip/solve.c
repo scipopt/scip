@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.233 2006/08/31 13:09:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.234 2006/09/15 03:14:21 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -797,6 +797,7 @@ SCIP_RETCODE separationRoundLP(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    int                   actdepth,           /**< current depth in the tree */
+   SCIP_Real             bounddist,          /**< current relative distance of local dual bound to global dual bound */
    SCIP_Bool             onlydelayed,        /**< should only delayed separators be called? */
    SCIP_Bool*            delayed,            /**< pointer to store whether a separator was delayed */
    SCIP_Bool*            enoughcuts,         /**< pointer to store whether enough cuts have been found this round */
@@ -843,7 +844,7 @@ SCIP_RETCODE separationRoundLP(
 
       SCIPdebugMessage(" -> executing separator <%s> with priority %d\n",
          SCIPsepaGetName(set->sepas[i]), SCIPsepaGetPriority(set->sepas[i]));
-      SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, onlydelayed, &result) );
+      SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, bounddist, onlydelayed, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
       *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
@@ -913,7 +914,7 @@ SCIP_RETCODE separationRoundLP(
 
       SCIPdebugMessage(" -> executing separator <%s> with priority %d\n",
          SCIPsepaGetName(set->sepas[i]), SCIPsepaGetPriority(set->sepas[i]));
-      SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, onlydelayed, &result) );
+      SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, bounddist, onlydelayed, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
       *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
@@ -1168,7 +1169,7 @@ SCIP_RETCODE SCIPseparationRound(
       lperror = FALSE;
       mustsepa = FALSE;
       mustprice = FALSE;
-      SCIP_CALL( separationRoundLP(blkmem, set, stat, prob, lp, sepastore, actdepth, onlydelayed, delayed, &enoughcuts, 
+      SCIP_CALL( separationRoundLP(blkmem, set, stat, prob, lp, sepastore, actdepth, 0.0, onlydelayed, delayed, &enoughcuts, 
             cutoff, &lperror, &mustsepa, &mustprice) );
    }
    else
@@ -1333,6 +1334,7 @@ SCIP_RETCODE priceAndCutLoop(
    SCIP_EVENT event;
    SCIP_Real loclowerbound;
    SCIP_Real glblowerbound;
+   SCIP_Real bounddist;
    SCIP_Real stalllpobjval;
    SCIP_Bool separate;
    SCIP_Bool mustprice;
@@ -1369,8 +1371,9 @@ SCIP_RETCODE priceAndCutLoop(
    /* check, if we want to separate at this node */
    loclowerbound = SCIPnodeGetLowerbound(focusnode);
    glblowerbound = SCIPtreeGetLowerbound(tree, set);
-   separate = SCIPsetIsLE(set, loclowerbound - glblowerbound,
-      set->sepa_maxbounddist * (primal->cutoffbound - glblowerbound));
+   assert(primal->cutoffbound > glblowerbound);
+   bounddist = (loclowerbound - glblowerbound)/(primal->cutoffbound - glblowerbound);
+   separate = SCIPsetIsLE(set, bounddist, set->sepa_maxbounddist);
    separate = separate && (set->sepa_maxruns == -1 || stat->nruns <= set->sepa_maxruns);
 
    /* get maximal number of separation rounds */
@@ -1510,7 +1513,7 @@ SCIP_RETCODE priceAndCutLoop(
             && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) )
          {
             /* apply a separation round */
-            SCIP_CALL( separationRoundLP(blkmem, set, stat, prob, lp, sepastore, actdepth, delayedsepa,
+            SCIP_CALL( separationRoundLP(blkmem, set, stat, prob, lp, sepastore, actdepth, bounddist, delayedsepa,
                   &delayedsepa, &enoughcuts, cutoff, lperror, &mustsepa, &mustprice) );
 
             /* if we are close to the stall round limit, also call the delayed separators */
@@ -1518,7 +1521,7 @@ SCIP_RETCODE priceAndCutLoop(
                && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY)
                && nsepastallrounds >= maxnsepastallrounds-1 && delayedsepa )
             {
-               SCIP_CALL( separationRoundLP(blkmem, set, stat, prob, lp, sepastore, actdepth, delayedsepa,
+               SCIP_CALL( separationRoundLP(blkmem, set, stat, prob, lp, sepastore, actdepth, bounddist, delayedsepa,
                      &delayedsepa, &enoughcuts, cutoff, lperror, &mustsepa, &mustprice) );
             }
          }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.384 2006/09/15 02:00:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.385 2006/09/15 03:14:20 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1634,6 +1634,8 @@ SCIP_RETCODE SCIPincludeSepa(
    const char*           desc,               /**< description of separator */
    int                   priority,           /**< priority of separator (>= 0: before, < 0: after constraint handlers) */
    int                   freq,               /**< frequency for calling separator */
+   SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound compared
+                                              *   to best node's dual bound for applying separation */
    SCIP_Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
    SCIP_DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
    SCIP_DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
@@ -1650,7 +1652,7 @@ SCIP_RETCODE SCIPincludeSepa(
    SCIP_CALL( checkStage(scip, "SCIPincludeSepa", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPsepaCreate(&sepa, scip->set, scip->mem->setmem,
-         name, desc, priority, freq, delay,
+         name, desc, priority, freq, maxbounddist, delay,
          sepafree, sepainit, sepaexit, sepainitsol, sepaexitsol, sepaexeclp, sepaexecsol, sepadata) );
    SCIP_CALL( SCIPsetIncludeSepa(scip->set, sepa) );
 

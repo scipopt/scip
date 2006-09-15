@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.57 2006/08/30 09:25:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.58 2006/09/15 03:14:21 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -36,6 +36,7 @@
 #define SEPA_DESC              "Gomory MIR cuts separator"
 #define SEPA_PRIORITY             -1000
 #define SEPA_FREQ                     0
+#define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of gomory separation rounds per node (-1: unlimited) */
@@ -496,7 +497,7 @@ SCIP_RETCODE SCIPincludeSepaGomory(
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
          sepaFreeGomory, sepaInitGomory, sepaExitGomory,
          sepaInitsolGomory, sepaExitsolGomory, 
          sepaExeclpGomory, sepaExecsolGomory,

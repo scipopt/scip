@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.h,v 1.23 2006/06/14 17:54:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objsepa.h,v 1.24 2006/09/15 03:14:20 bzfpfend Exp $"
 
 /**@file   objsepa.h
  * @brief  C++ wrapper for cut separators
@@ -53,6 +53,11 @@ public:
    /** frequency for calling separator */
    const int scip_freq_;
 
+   /** maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying
+    *  separation (0.0: only on current best node, 1.0: on all nodes)
+    */
+   const SCIP_Real scip_maxbounddist_;
+
    /** should separator be delayed, if other separators found cuts? */
    const SCIP_Bool scip_delay_;
 
@@ -62,12 +67,15 @@ public:
       const char*        desc,               /**< description of cut separator */
       int                priority,           /**< priority of the cut separator */
       int                freq,               /**< frequency for calling separator */
+      SCIP_Real          maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound compared
+                                              *   to best node's dual bound for applying separation */
       SCIP_Bool          delay               /**< should separator be delayed, if other separators found cuts? */
       )
       : scip_name_(0),
         scip_desc_(0),
         scip_priority_(priority),
         scip_freq_(freq),
+        scip_maxbounddist_(maxbounddist),
         scip_delay_(delay)
    {
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, strlen(name)+1) );

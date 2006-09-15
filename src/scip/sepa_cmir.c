@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.58 2006/08/31 08:27:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.59 2006/09/15 03:14:21 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -33,6 +33,7 @@
 #define SEPA_DESC              "complemented mixed integer rounding cuts separator (Marchand's version)"
 #define SEPA_PRIORITY             -3000
 #define SEPA_FREQ                     0
+#define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXROUNDS             3 /**< maximal number of cmir separation rounds per node (-1: unlimited) */
@@ -1399,7 +1400,7 @@ SCIP_RETCODE SCIPincludeSepaCmir(
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
          sepaFreeCmir, sepaInitCmir, sepaExitCmir, 
          sepaInitsolCmir, sepaExitsolCmir, 
          sepaExeclpCmir, sepaExecsolCmir,

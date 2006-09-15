@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.286 2006/09/15 02:00:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.287 2006/09/15 03:14:21 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -825,6 +825,8 @@ SCIP_RETCODE SCIPincludeSepa(
    const char*           desc,               /**< description of separator */
    int                   priority,           /**< priority of separator (>= 0: before, < 0: after constraint handlers) */
    int                   freq,               /**< frequency for calling separator */
+   SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound compared
+                                              *   to best node's dual bound for applying separation */
    SCIP_Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
    SCIP_DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
    SCIP_DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_redcost.c,v 1.1 2006/02/23 12:41:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_redcost.c,v 1.2 2006/09/15 03:14:21 bzfpfend Exp $"
 
 /**@file   sepa_redcost.c
  * @brief  reduced cost strengthening separator
@@ -32,6 +32,7 @@
 #define SEPA_DESC              "reduced cost strengthening separator"
 #define SEPA_PRIORITY         +10000000
 #define SEPA_FREQ                     1
+#define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 
@@ -244,7 +245,7 @@ SCIP_RETCODE SCIPincludeSepaRedcost(
    sepadata = NULL;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
          sepaFreeRedcost, sepaInitRedcost, sepaExitRedcost, 
          sepaInitsolRedcost, sepaExitsolRedcost,
          sepaExeclpRedcost, sepaExecsolRedcost,

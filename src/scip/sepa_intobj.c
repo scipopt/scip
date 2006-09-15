@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.24 2006/01/03 12:22:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.25 2006/09/15 03:14:21 bzfpfend Exp $"
 
 /**@file   sepa_intobj.c
  * @brief  integer objective value separator
@@ -32,6 +32,7 @@
 #define SEPA_DESC              "integer objective value separator"
 #define SEPA_PRIORITY              -100
 #define SEPA_FREQ                    -1
+#define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define EVENTHDLR_NAME         "intobj"
@@ -407,7 +408,7 @@ SCIP_RETCODE SCIPincludeSepaIntobj(
    SCIP_CALL( sepadataCreate(scip, &sepadata) );
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
          sepaFreeIntobj, sepaInitIntobj, sepaExitIntobj, 
          sepaInitsolIntobj, sepaExitsolIntobj, 
          sepaExeclpIntobj, sepaExecsolIntobj,

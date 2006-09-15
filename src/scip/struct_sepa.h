@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sepa.h,v 1.18 2006/01/03 12:22:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_sepa.h,v 1.19 2006/09/15 03:14:21 bzfpfend Exp $"
 
 /**@file   struct_sepa.h
  * @brief  datastructures for separators
@@ -41,6 +41,8 @@ struct SCIP_Sepa
    SCIP_Longint          ncutsfound;         /**< number of cutting planes found so far by this separator */
    SCIP_Longint          nconssfound;        /**< number of additional constraints added by this separator */
    SCIP_Longint          ndomredsfound;      /**< number of domain reductions found so far by this separator */
+   SCIP_Real             maxbounddist;       /**< maximal relative distance from current node's dual bound to primal bound compared
+                                              *   to best node's dual bound for applying separation */
    char*                 name;               /**< name of separator */
    char*                 desc;               /**< description of separator */
    SCIP_DECL_SEPAFREE    ((*sepafree));      /**< destructor of separator */

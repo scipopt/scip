@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.h,v 1.44 2006/01/03 12:22:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.h,v 1.45 2006/09/15 03:14:21 bzfpfend Exp $"
 
 /**@file   sepa.h
  * @brief  internal methods for separators
@@ -49,6 +49,8 @@ SCIP_RETCODE SCIPsepaCreate(
    const char*           desc,               /**< description of separator */
    int                   priority,           /**< priority of separator (>= 0: before, < 0: after constraint handlers) */
    int                   freq,               /**< frequency for calling separator */
+   SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound compared
+                                              *   to best node's dual bound for applying separation */
    SCIP_Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
    SCIP_DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
    SCIP_DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
@@ -103,6 +105,7 @@ SCIP_RETCODE SCIPsepaExecLP(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    int                   depth,              /**< depth of current node */
+   SCIP_Real             bounddist,          /**< current relative distance of local dual bound to global dual bound */
    SCIP_Bool             execdelayed,        /**< execute separator even if it is marked to be delayed */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );

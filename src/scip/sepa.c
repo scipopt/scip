@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.53 2006/01/03 12:22:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.54 2006/09/15 03:14:21 bzfpfend Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -70,6 +70,8 @@ SCIP_RETCODE SCIPsepaCreate(
    const char*           desc,               /**< description of separator */
    int                   priority,           /**< priority of separator (>= 0: before, < 0: after constraint handlers) */
    int                   freq,               /**< frequency for calling separator */
+   SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound compared
+                                              *   to best node's dual bound for applying separation */
    SCIP_Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
    SCIP_DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
    SCIP_DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
@@ -88,6 +90,7 @@ SCIP_RETCODE SCIPsepaCreate(
    assert(name != NULL);
    assert(desc != NULL);
    assert(freq >= -1);
+   assert(0.0 <= maxbounddist && maxbounddist <= 1.0);
    assert(sepaexeclp != NULL || sepaexecsol != NULL);
 
    SCIP_ALLOC( BMSallocMemory(sepa) );
@@ -95,6 +98,7 @@ SCIP_RETCODE SCIPsepaCreate(
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*sepa)->desc, desc, strlen(desc)+1) );
    (*sepa)->priority = priority;
    (*sepa)->freq = freq;
+   (*sepa)->maxbounddist = maxbounddist;
    (*sepa)->sepafree = sepafree;
    (*sepa)->sepainit = sepainit;
    (*sepa)->sepaexit = sepaexit;
@@ -127,6 +131,12 @@ SCIP_RETCODE SCIPsepaCreate(
    sprintf(paramdesc, "frequency for calling separator <%s> (-1: never, 0: only in root node)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*sepa)->freq, freq, -1, INT_MAX, NULL, NULL) );
+
+   sprintf(paramname, "separating/%s/maxbounddist", name);
+   sprintf(paramdesc, "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <%s> (0.0: only on current best node, 1.0: on all nodes)",
+      name);
+   SCIP_CALL( SCIPsetAddRealParam(set, blkmem, paramname, paramdesc,
+         &(*sepa)->maxbounddist, maxbounddist, 0.0, 1.0, NULL, NULL) );
 
    sprintf(paramname, "separating/%s/delay", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
@@ -263,12 +273,15 @@ SCIP_RETCODE SCIPsepaExecLP(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    int                   depth,              /**< depth of current node */
+   SCIP_Real             bounddist,          /**< current relative distance of local dual bound to global dual bound */
    SCIP_Bool             execdelayed,        /**< execute separator even if it is marked to be delayed */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    assert(sepa != NULL);
    assert(sepa->freq >= -1);
+   assert(0.0 <= sepa->maxbounddist && sepa->maxbounddist <= 1.0);
+   assert(0.0 <= bounddist && bounddist <= 1.0);
    assert(set != NULL);
    assert(set->scip != NULL);
    assert(stat != NULL);
@@ -276,6 +289,7 @@ SCIP_RETCODE SCIPsepaExecLP(
    assert(result != NULL);
 
    if( sepa->sepaexeclp != NULL
+      && SCIPsetIsLE(set, bounddist, sepa->maxbounddist)
       && ((depth == 0 && sepa->freq == 0) || (sepa->freq > 0 && depth % sepa->freq == 0) || sepa->lpwasdelayed) )
    {
       if( !sepa->delay || execdelayed )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.14 2006/08/08 15:17:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.15 2006/09/15 03:14:21 bzfpfend Exp $"
 
 /**@file   sepa_impliedbounds.c
  * @brief  implied bounds separator
@@ -33,6 +33,7 @@
 #define SEPA_DESC              "implied bounds separator"
 #define SEPA_PRIORITY               -50
 #define SEPA_FREQ                     0
+#define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 
@@ -388,7 +389,7 @@ SCIP_RETCODE SCIPincludeSepaImpliedbounds(
    sepadata = NULL;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
          sepaFreeImpliedbounds, sepaInitImpliedbounds, sepaExitImpliedbounds, 
          sepaInitsolImpliedbounds, sepaExitsolImpliedbounds, 
          sepaExeclpImpliedbounds, sepaExecsolImpliedbounds,

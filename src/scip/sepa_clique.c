@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.27 2006/09/15 02:00:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.28 2006/09/15 03:14:21 bzfpfend Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -34,6 +34,7 @@
 #define SEPA_DESC              "clique separator of stable set relaxation"
 #define SEPA_PRIORITY             -5000
 #define SEPA_FREQ                     0
+#define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_SCALEVAL         1000.0 /**< factor for scaling weights */
@@ -1317,7 +1318,7 @@ SCIP_RETCODE SCIPincludeSepaClique(
    sepadata->tcliquegraphloaded = FALSE;
 
    /* include separator */
-   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
+   SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
          sepaFreeClique, sepaInitClique, sepaExitClique,
          sepaInitsolClique, sepaExitsolClique,
          sepaExeclpClique, sepaExecsolClique,

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.182 2006/08/23 17:35:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.183 2006/09/15 03:14:21 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -211,7 +211,7 @@
 
 /* Separation */
 
-#define SCIP_DEFAULT_SEPA_MAXBOUNDDIST      0.2 /**< maximal relative distance from current node's dual bound to primal
+#define SCIP_DEFAULT_SEPA_MAXBOUNDDIST      1.0 /**< maximal relative distance from current node's dual bound to primal
                                                  *   bound compared to best node's dual bound for applying separation
                                                  *   (0.0: only on current best node, 1.0: on all nodes) */
 #define SCIP_DEFAULT_SEPA_MINEFFICACY      0.05 /**< minimal efficacy for a cut to enter the LP */
