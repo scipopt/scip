@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.30 2006/09/15 02:11:20 bzfpfend Exp $
+# $Id: check.sh,v 1.31 2006/09/15 03:49:55 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -44,10 +44,14 @@ SETFILE=results/check.$TSTNAME.$BINID.$SETNAME.set
 
 SETTINGS=settings/$SETNAME.set
 
+DATEINT=`date +"%s"`
 if [ -e $OUTFILE ]
 then
-    echo test output $OUTFILE already existing
-    exit
+    mv $OUTFILE $OUTFILE.old-$DATEINT
+fi
+if [ -e $ERRFILE ]
+then
+    mv $ERRFILE $ERRFILE.old-$DATEINT
 fi
 
 uname -a >$OUTFILE
