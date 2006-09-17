@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.180 2006/09/17 01:58:39 bzfpfend Exp $
+# $Id: Makefile,v 1.181 2006/09/17 20:46:06 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -721,7 +721,7 @@ $(SOFTLINKS):
 					echo "** this soft-link is not necessarily needed since \"$$DIRNAME/$$BASENAMESO.a\" already exists - press return to skip" ; \
 				fi ; \
 				echo -n "** enter soft-link target file or directory for \"$@\" (return if not needed): " ; \
-				TARGET=`line` ; \
+				read TARGET ; \
 				if [ "$$TARGET" != "" ] ; \
 				then \
 					echo "-> creating softlink \"$@\" -> \"$$TARGET\"" ; \
