@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.47 2006/09/17 01:58:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_estimate.c,v 1.1 2006/09/17 01:58:42 bzfpfend Exp $"
 
-/**@file   nodesel_bfs.c
- * @brief  node selector for best first search
+/**@file   nodesel_estimate.c
+ * @brief  node selector for best estimate search
  * @author Tobias Achterberg
  */
 
@@ -26,14 +26,14 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/nodesel_bfs.h"
+#include "scip/nodesel_estimate.h"
 
 
-#define NODESEL_NAME             "bfs"
-#define NODESEL_DESC             "best first search"
-#define NODESEL_STDPRIORITY      100000
+#define NODESEL_NAME             "estimate"
+#define NODESEL_DESC             "best estimate search"
+#define NODESEL_STDPRIORITY       80000
 #define NODESEL_MEMSAVEPRIORITY       0
-#define NODESEL_LOWESTFIRST        TRUE   /**< are the nodes sorted such that the lowest bound node comes first? */
+#define NODESEL_LOWESTFIRST       FALSE   /**< are the nodes sorted such that the lowest bound node comes first? */
 
 
 
@@ -45,11 +45,11 @@
 #define MINPLUNGEDEPTH               -1 /**< minimal plunging depth, before new best node may be selected (-1 for dynamic setting) */
 #define MAXPLUNGEDEPTH               -1 /**< maximal plunging depth, before new best node is forced to be selected (-1 for dynamic setting) */
 #define MAXPLUNGEQUOT              0.25 /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
-                                              *   where plunging is performed */
+                                         *   where plunging is performed */
+#define BESTNODEFREQ                100 /**< frequency at which the best node instead of the best estimate is selected (0: never) */
 
 
-
-/** node selector data for best first search node selection */
+/** node selector data for best estimate search node selection */
 struct SCIP_NodeselData
 {
    SCIP_Real             maxplungequot;      /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
@@ -58,6 +58,8 @@ struct SCIP_NodeselData
                                               *   (-1 for dynamic setting) */
    int                   maxplungedepth;     /**< maximal plunging depth, before new best node is forced to be selected
                                               *   (-1 for dynamic setting) */
+   int                   bestnodefreq;       /**< frequency at which the best node instead of the best estimate is selected
+                                              *   (0: never) */
 };
 
 
@@ -68,7 +70,7 @@ struct SCIP_NodeselData
 
 /** destructor of node selector to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_NODESELFREE(nodeselFreeBfs)
+SCIP_DECL_NODESELFREE(nodeselFreeEstimate)
 {  /*lint --e{715}*/
    SCIP_NODESELDATA* nodeseldata;
 
@@ -86,29 +88,30 @@ SCIP_DECL_NODESELFREE(nodeselFreeBfs)
 }
 
 /** initialization method of node selector (called after problem was transformed) */
-#define nodeselInitBfs NULL
+#define nodeselInitEstimate NULL
 
 
 /** deinitialization method of node selector (called before transformed problem is freed) */
-#define nodeselExitBfs NULL
+#define nodeselExitEstimate NULL
 
 
 /** solving process initialization method of node selector (called when branch and bound process is about to begin) */
-#define nodeselInitsolBfs NULL
+#define nodeselInitsolEstimate NULL
 
 
 /** solving process deinitialization method of node selector (called before branch and bound process data is freed) */
-#define nodeselExitsolBfs NULL
+#define nodeselExitsolEstimate NULL
 
 
 /** node selection method of node selector */
 static
-SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
+SCIP_DECL_NODESELSELECT(nodeselSelectEstimate)
 {  /*lint --e{715}*/
    SCIP_NODESELDATA* nodeseldata;
    int minplungedepth;
    int maxplungedepth;
    int plungedepth;
+   int bestnodefreq;
    SCIP_Real maxplungequot;
 
    assert(nodesel != NULL);
@@ -137,6 +140,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
    if( maxplungedepth == -1 )
       maxplungedepth = SCIPgetMaxDepth(scip)/2;
    maxplungedepth = MAX(maxplungedepth, minplungedepth);
+   bestnodefreq = (nodeseldata->bestnodefreq == 0 ? INT_MAX : nodeseldata->bestnodefreq);
 
    /* check, if we exceeded the maximal plunging depth */
    plungedepth = SCIPgetPlungeDepth(scip);
@@ -144,7 +148,10 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
    {
       /* we don't want to plunge again: select best node from the tree */
       SCIPdebugMessage("plungedepth: [%d,%d], cur: %d -> abort plunging\n", minplungedepth, maxplungedepth, plungedepth);
-      *selnode = SCIPgetBestNode(scip);
+      if( SCIPgetNNodes(scip) % bestnodefreq == 0 )
+         *selnode = SCIPgetBestboundNode(scip);
+      else
+         *selnode = SCIPgetBestNode(scip);
       SCIPdebugMessage("  -> best node   : lower=%g\n",
          *selnode != NULL ? SCIPnodeGetLowerbound(*selnode) : SCIPinfinity(scip));
    }
@@ -178,44 +185,47 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
          minplungedepth, maxplungedepth, plungedepth, lowerbound, cutoffbound, maxbound);
 
       /* we want to plunge again: prefer children over siblings, and siblings over leaves,
-       * but only select a child or sibling, if its dual bound is small enough;
+       * but only select a child or sibling, if its estimate is small enough;
        * prefer using nodes with higher node selection priority assigned by the branching rule
        */
       node = SCIPgetPrioChild(scip);
-      if( node != NULL && SCIPnodeGetLowerbound(node) < maxbound )
+      if( node != NULL && SCIPnodeGetEstimate(node) < maxbound )
       {
          *selnode = node;
-         SCIPdebugMessage("  -> selected prio child: lower=%g\n", SCIPnodeGetLowerbound(*selnode));
+         SCIPdebugMessage("  -> selected prio child: estimate=%g\n", SCIPnodeGetEstimate(*selnode));
       }
       else
       {
          node = SCIPgetBestChild(scip);
-         if( node != NULL && SCIPnodeGetLowerbound(node) < maxbound )
+         if( node != NULL && SCIPnodeGetEstimate(node) < maxbound )
          {
             *selnode = node;
-            SCIPdebugMessage("  -> selected best child: lower=%g\n", SCIPnodeGetLowerbound(*selnode));
+            SCIPdebugMessage("  -> selected best child: estimate=%g\n", SCIPnodeGetEstimate(*selnode));
          }
          else
          {
             node = SCIPgetPrioSibling(scip);
-            if( node != NULL && SCIPnodeGetLowerbound(node) < maxbound )
+            if( node != NULL && SCIPnodeGetEstimate(node) < maxbound )
             {
                *selnode = node;
-               SCIPdebugMessage("  -> selected prio sibling: lower=%g\n", SCIPnodeGetLowerbound(*selnode));
+               SCIPdebugMessage("  -> selected prio sibling: estimate=%g\n", SCIPnodeGetEstimate(*selnode));
             }
             else
             {
                node = SCIPgetBestSibling(scip);
-               if( node != NULL && SCIPnodeGetLowerbound(node) < maxbound )
+               if( node != NULL && SCIPnodeGetEstimate(node) < maxbound )
                {
                   *selnode = node;
-                  SCIPdebugMessage("  -> selected best sibling: lower=%g\n", SCIPnodeGetLowerbound(*selnode));
+                  SCIPdebugMessage("  -> selected best sibling: estimate=%g\n", SCIPnodeGetEstimate(*selnode));
                }
                else
                {
-                  *selnode = SCIPgetBestNode(scip);
-                  SCIPdebugMessage("  -> selected best leaf: lower=%g\n",
-                     *selnode != NULL ? SCIPnodeGetLowerbound(*selnode) : SCIPinfinity(scip));
+                  if( SCIPgetNNodes(scip) % bestnodefreq == 0 )
+                     *selnode = SCIPgetBestboundNode(scip);
+                  else
+                     *selnode = SCIPgetBestNode(scip);
+                  SCIPdebugMessage("  -> selected best leaf: estimate=%g\n",
+                     *selnode != NULL ? SCIPnodeGetEstimate(*selnode) : SCIPinfinity(scip));
                }
             }
          }
@@ -228,31 +238,31 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
 
 /** node comparison method of node selector */
 static
-SCIP_DECL_NODESELCOMP(nodeselCompBfs)
+SCIP_DECL_NODESELCOMP(nodeselCompEstimate)
 {  /*lint --e{715}*/
-   SCIP_Real lowerbound1;
-   SCIP_Real lowerbound2;
+   SCIP_Real estimate1;
+   SCIP_Real estimate2;
 
    assert(nodesel != NULL);
    assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
 
-   lowerbound1 = SCIPnodeGetLowerbound(node1);
-   lowerbound2 = SCIPnodeGetLowerbound(node2);
-   if( SCIPisLT(scip, lowerbound1, lowerbound2) )
+   estimate1 = SCIPnodeGetEstimate(node1);
+   estimate2 = SCIPnodeGetEstimate(node2);
+   if( SCIPisLT(scip, estimate1, estimate2) )
       return -1;
-   else if( SCIPisGT(scip, lowerbound1, lowerbound2) )
+   else if( SCIPisGT(scip, estimate1, estimate2) )
       return +1;
    else
    {
-      SCIP_Real estimate1;
-      SCIP_Real estimate2;
+      SCIP_Real lowerbound1;
+      SCIP_Real lowerbound2;
 
-      estimate1 = SCIPnodeGetEstimate(node1);
-      estimate2 = SCIPnodeGetEstimate(node2);
-      if( SCIPisLT(scip, estimate1, estimate2) )
+      lowerbound1 = SCIPnodeGetLowerbound(node1);
+      lowerbound2 = SCIPnodeGetLowerbound(node2);
+      if( SCIPisLT(scip, lowerbound1, lowerbound2) )
          return -1;
-      else if( SCIPisGT(scip, estimate1, estimate2) )
+      else if( SCIPisGT(scip, lowerbound1, lowerbound2) )
          return +1;
       else
       {
@@ -292,11 +302,11 @@ SCIP_DECL_NODESELCOMP(nodeselCompBfs)
 
 
 /*
- * bfs specific interface methods
+ * estimate specific interface methods
  */
 
-/** creates the node selector for best first search and includes it in SCIP */
-SCIP_RETCODE SCIPincludeNodeselBfs(
+/** creates the node selector for best estimate search and includes it in SCIP */
+SCIP_RETCODE SCIPincludeNodeselEstimate(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -308,23 +318,27 @@ SCIP_RETCODE SCIPincludeNodeselBfs(
    /* include node selector */
    SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
          NODESEL_LOWESTFIRST,
-         nodeselFreeBfs, nodeselInitBfs, nodeselExitBfs, 
-         nodeselInitsolBfs, nodeselExitsolBfs, nodeselSelectBfs, nodeselCompBfs,
+         nodeselFreeEstimate, nodeselInitEstimate, nodeselExitEstimate, 
+         nodeselInitsolEstimate, nodeselExitsolEstimate, nodeselSelectEstimate, nodeselCompEstimate,
          nodeseldata) );
 
    /* add node selector parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
-         "nodeselection/bfs/minplungedepth",
+         "nodeselection/estimate/minplungedepth",
          "minimal plunging depth, before new best node may be selected (-1 for dynamic setting)",
          &nodeseldata->minplungedepth, MINPLUNGEDEPTH, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "nodeselection/bfs/maxplungedepth",
+         "nodeselection/estimate/maxplungedepth",
          "maximal plunging depth, before new best node is forced to be selected (-1 for dynamic setting)",
          &nodeseldata->maxplungedepth, MAXPLUNGEDEPTH, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "nodeselection/bfs/maxplungequot",
-         "maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where plunging is performed",
+         "nodeselection/estimate/maxplungequot",
+         "maximal quotient (estimate - lowerbound)/(cutoffbound - lowerbound) where plunging is performed",
          &nodeseldata->maxplungequot, MAXPLUNGEQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "nodeselection/estimate/bestnodefreq",
+         "frequency at which the best node instead of the best estimate is selected (0: never)",
+         &nodeseldata->bestnodefreq, BESTNODEFREQ, 0, INT_MAX, NULL, NULL) );
    
    return SCIP_OKAY;
 }

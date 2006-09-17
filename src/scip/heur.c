@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.59 2006/06/29 18:57:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.60 2006/09/17 01:58:40 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -140,7 +140,7 @@ SCIP_RETCODE SCIPheurCreate(
    sprintf(paramname, "heuristics/%s/priority", name);
    sprintf(paramdesc, "priority of heuristic <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-                  &(*heur)->priority, priority, INT_MIN, INT_MAX, 
+                  &(*heur)->priority, priority, INT_MIN/4, INT_MAX/4, 
                   paramChgdHeurPriority, (SCIP_PARAMDATA*)(*heur)) ); /*lint !e740*/
    sprintf(paramname, "heuristics/%s/freq", name);
    sprintf(paramdesc, "frequency for calling primal heuristic <%s> (-1: never, 0: only at depth freqofs)", name);

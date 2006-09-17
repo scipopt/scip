@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.29 2006/03/09 12:52:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.30 2006/09/17 01:58:40 bzfpfend Exp $"
 
 /**@file   branch_allfullstrong.c
  * @brief  all variables full strong LP branching rule
@@ -302,102 +302,41 @@ SCIP_RETCODE branch(
 
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
    {
-      SCIP_NODE* node;
+      SCIP_NODE* downchild;
+      SCIP_NODE* eqchild;
+      SCIP_NODE* upchild;
       SCIP_VAR* var;
-      SCIP_Real solval;
-      SCIP_Real lb;
-      SCIP_Real ub;
-      SCIP_Real newlb;
-      SCIP_Real newub;
-      SCIP_Real downprio;
 
       assert(*result == SCIP_DIDNOTRUN);
       assert(0 <= bestpseudocand && bestpseudocand < npseudocands);
       assert(SCIPisLT(scip, provedbound, cutoffbound));
 
       var = pseudocands[bestpseudocand];
-      solval = SCIPvarGetLPSol(var);
-      lb = SCIPvarGetLbLocal(var);
-      ub = SCIPvarGetUbLocal(var);
-
-      /* choose preferred branching direction */
-      switch( SCIPvarGetBranchDirection(var) )
-      {
-      case SCIP_BRANCHDIR_DOWNWARDS:
-         downprio = 1.0;
-         break;
-      case SCIP_BRANCHDIR_UPWARDS:
-         downprio = -1.0;
-         break;
-      case SCIP_BRANCHDIR_AUTO:
-         downprio = SCIPvarGetRootSol(var) - solval;
-         break;
-      default:
-         SCIPerrorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 
-            SCIPvarGetBranchDirection(var), SCIPvarGetName(var));
-         return SCIP_INVALIDDATA;
-      }
 
       /* perform the branching */
       SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s>[%g,%g] (solval=%g, down=%g, up=%g, score=%g)\n",
-         npseudocands, bestpseudocand, SCIPvarGetName(var), lb, ub, solval, bestdown, bestup, bestscore);
+         npseudocands, bestpseudocand, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLPSol(var),
+         bestdown, bestup, bestscore);
+      SCIP_CALL( SCIPbranchVar(scip, var, &downchild, &eqchild, &upchild) );
 
-      /* create child node with x <= ceil(x'-1) */
-      newub = SCIPfeasCeil(scip, solval-1.0);
-      if( newub >= lb - 0.5 )
+      /* update the lower bounds in the children */
+      if( allcolsinlp && !exactsolve )
       {
-         SCIPdebugMessage(" -> creating child: <%s> <= %g\n", SCIPvarGetName(var), newub);
-         SCIP_CALL( SCIPcreateChild(scip, &node, downprio) );
-         SCIP_CALL( SCIPchgVarUbNode(scip, node, var, newub) );
-         if( allcolsinlp && !exactsolve )
+         if( downchild != NULL )
          {
-            SCIP_CALL( SCIPupdateNodeLowerbound(scip, node, provedbound) );
-            if( bestdownvalid )
-            {
-               SCIP_CALL( SCIPupdateNodeLowerbound(scip, node, bestdown) );
-            }
+            SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, bestdownvalid ? MAX(bestdown, provedbound) : provedbound) );
+            SCIPdebugMessage(" -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
          }
-         SCIPdebugMessage(" -> child's lowerbound: %g\n", SCIPnodeGetLowerbound(node));
-      }
-
-      /* if the solution was integral, create child x == x' */
-      if( SCIPisFeasIntegral(scip, solval) )
-      {
-         assert(solval > lb + 0.5 || solval < ub - 0.5); /* otherwise, the variable is already fixed */
-
-         SCIPdebugMessage(" -> creating child: <%s> == %g\n", SCIPvarGetName(var), solval);
-         SCIP_CALL( SCIPcreateChild(scip, &node, SCIPinfinity(scip)) );
-         if( solval > lb + 0.5 )
+         if( eqchild != NULL )
          {
-            SCIP_CALL( SCIPchgVarLbNode(scip, node, var, solval) );
+            SCIP_CALL( SCIPupdateNodeLowerbound(scip, eqchild, provedbound) );
+            SCIPdebugMessage(" -> eq child's lowerbound:   %g\n", SCIPnodeGetLowerbound(eqchild));
          }
-         if( solval < ub - 0.5 )
+         if( upchild != NULL )
          {
-            SCIP_CALL( SCIPchgVarUbNode(scip, node, var, solval) );
+            SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, bestupvalid ? MAX(bestup, provedbound) : provedbound) );
+            SCIPdebugMessage(" -> up child's lowerbound:   %g\n", SCIPnodeGetLowerbound(upchild));
          }
-         if( allcolsinlp && !exactsolve )
-         {
-            SCIP_CALL( SCIPupdateNodeLowerbound(scip, node, provedbound) );
-         }
-         SCIPdebugMessage(" -> child's lowerbound: %g\n", SCIPnodeGetLowerbound(node));
-      }
-
-      /* create child node with x >= floor(x'+1) */
-      newlb = SCIPfeasFloor(scip, solval+1.0);
-      if( newlb <= ub + 0.5 )
-      {
-         SCIPdebugMessage(" -> creating child: <%s> >= %g\n", SCIPvarGetName(var), newlb);
-         SCIP_CALL( SCIPcreateChild(scip, &node, -downprio) );
-         SCIP_CALL( SCIPchgVarLbNode(scip, node, var, newlb) );
-         if( allcolsinlp && !exactsolve )
-         {
-            SCIP_CALL( SCIPupdateNodeLowerbound(scip, node, provedbound) );
-            if( bestupvalid )
-            {
-               SCIP_CALL( SCIPupdateNodeLowerbound(scip, node, bestup) );
-            }
-         }
-         SCIPdebugMessage(" -> child's lowerbound: %g\n", SCIPnodeGetLowerbound(node));
       }
 
       *result = SCIP_BRANCHED;

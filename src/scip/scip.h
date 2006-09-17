@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.287 2006/09/15 03:14:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.288 2006/09/17 01:58:43 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1644,6 +1644,18 @@ extern
 SCIP_RETCODE SCIPdelConsLocal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint to locally delete */
+   );
+
+/** gets estimate of best primal solution w.r.t. original problem contained in current subtree */
+extern
+SCIP_Real SCIPgetLocalOrigEstimate(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets estimate of best primal solution w.r.t. transformed problem contained in current subtree */
+extern
+SCIP_Real SCIPgetLocalTransEstimate(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** gets dual bound of current node */
@@ -4055,12 +4067,33 @@ SCIP_Real SCIPgetBranchScoreMultiple(
    SCIP_Real*            gains               /**< prediction of objective gain for each child */
    );
 
+/** calculates the node selection priority for moving the given variable's LP value to the given target value;
+ *  this node selection priority can be given to the SCIPcreateChild() call
+ */
+extern
+SCIP_Real SCIPcalcNodeselPriority(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable on which the branching is applied */
+   SCIP_Real             targetvalue         /**< new value of the variable in the child node */
+   );
+
+/** calculates an estimate for the objective of the best feasible solution contained in the subtree after applying the given 
+ *  branching; this estimate can be given to the SCIPcreateChild() call
+ */
+extern
+SCIP_Real SCIPcalcChildEstimate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable on which the branching is applied */
+   SCIP_Real             targetvalue         /**< new value of the variable in the child node */
+   );
+
 /** creates a child node of the focus node */
 extern
 SCIP_RETCODE SCIPcreateChild(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE**           node,               /**< pointer to node data structure */
-   SCIP_Real             nodeselprio         /**< node selection priority of new node */
+   SCIP_Real             nodeselprio,        /**< node selection priority of new node */
+   SCIP_Real             estimate            /**< estimate for value of best feasible solution in subtree */
    );
 
 /** branches on a variable; if solution value x' is fractional, two child nodes are created
@@ -4071,7 +4104,9 @@ extern
 SCIP_RETCODE SCIPbranchVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to branch on */
-   SCIP_BRANCHDIR        branchdir           /**< preferred branching direction; maybe overridden by user settings */
+   SCIP_NODE**           downchild,          /**< pointer to return the left child with variable rounded down, or NULL */
+   SCIP_NODE**           eqchild,            /**< pointer to return the middle child with variable fixed, or NULL */
+   SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
    );
 
 /** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.385 2006/09/15 03:14:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.386 2006/09/17 01:58:42 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3652,6 +3652,33 @@ SCIP_RETCODE SCIPdelConsLocal(
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
+}
+
+/** gets estimate of best primal solution w.r.t. original problem contained in current subtree */
+SCIP_Real SCIPgetLocalOrigEstimate(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_NODE* node;
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetLocalOrigEstimate", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   node = SCIPtreeGetCurrentNode(scip->tree);
+   return node != NULL ? SCIPprobExternObjval(scip->transprob, scip->set, SCIPnodeGetEstimate(node)) : SCIP_INVALID;
+}
+
+/** gets estimate of best primal solution w.r.t. transformed problem contained in current subtree */
+SCIP_Real SCIPgetLocalTransEstimate(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_NODE* node;
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetLocalTransEstimate", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   node = SCIPtreeGetCurrentNode(scip->tree);
+
+   return node != NULL ? SCIPnodeGetEstimate(node) : SCIP_INVALID;
 }
 
 /** gets dual bound of current node */
@@ -10622,18 +10649,47 @@ SCIP_Real SCIPgetBranchScoreMultiple(
    return SCIPbranchGetScoreMultiple(scip->set, var, nchildren, gains);
 }
 
+/** calculates the node selection priority for moving the given variable's LP value to the given target value;
+ *  this node selection priority can be given to the SCIPcreateChild() call
+ */
+SCIP_Real SCIPcalcNodeselPriority(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable on which the branching is applied */
+   SCIP_Real             targetvalue         /**< new value of the variable in the child node */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPcalcNodeselPriority", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPtreeCalcNodeselPriority(scip->tree, scip->set, scip->stat, var, targetvalue);
+}
+
+/** calculates an estimate for the objective of the best feasible solution contained in the subtree after applying the given 
+ *  branching; this estimate can be given to the SCIPcreateChild() call
+ */
+SCIP_Real SCIPcalcChildEstimate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable on which the branching is applied */
+   SCIP_Real             targetvalue         /**< new value of the variable in the child node */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPcalcChildEstimate", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPtreeCalcChildEstimate(scip->tree, scip->set, scip->stat, var, targetvalue);
+}
+
 /** creates a child node of the focus node */
 SCIP_RETCODE SCIPcreateChild(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE**           node,               /**< pointer to node data structure */
-   SCIP_Real             nodeselprio         /**< node selection priority of new node */
+   SCIP_Real             nodeselprio,        /**< node selection priority of new node */
+   SCIP_Real             estimate            /**< estimate for value of best feasible solution in subtree */
    )
 {
    assert(node != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPcreateChild", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnodeCreateChild(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, nodeselprio) );
+   SCIP_CALL( SCIPnodeCreateChild(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, nodeselprio, estimate) );
 
    return SCIP_OKAY;
 }
@@ -10645,7 +10701,9 @@ SCIP_RETCODE SCIPcreateChild(
 SCIP_RETCODE SCIPbranchVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to branch on */
-   SCIP_BRANCHDIR        branchdir           /**< preferred branching direction; maybe overridden by user settings */
+   SCIP_NODE**           downchild,          /**< pointer to return the left child with variable rounded down, or NULL */
+   SCIP_NODE**           eqchild,            /**< pointer to return the middle child with variable fixed, or NULL */
+   SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPbranchVar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
@@ -10663,7 +10721,7 @@ SCIP_RETCODE SCIPbranchVar(
    }
 
    SCIP_CALL( SCIPtreeBranchVar(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->branchcand,
-         scip->eventqueue, var, branchdir) );
+         scip->eventqueue, var, downchild, eqchild, upchild) );
 
    return SCIP_OKAY;
 }
@@ -12641,7 +12699,8 @@ SCIP_Real SCIPgetAvgPseudocostCount(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetAvgPseudocostCount", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   return SCIPhistoryGetPseudocostCount(scip->stat->glbhistory, dir) / MAX(scip->transprob->nvars, 1);
+   return SCIPhistoryGetPseudocostCount(scip->stat->glbhistory, dir)
+      / MAX(scip->transprob->nbinvars + scip->transprob->nintvars, 1);
 }
 
 /** gets the average number of pseudo cost updates for the given direction over all variables,
@@ -12654,7 +12713,8 @@ SCIP_Real SCIPgetAvgPseudocostCountCurrentRun(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetAvgPseudocostCountCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   return SCIPhistoryGetPseudocostCount(scip->stat->glbhistorycrun, dir) / MAX(scip->transprob->nvars, 1);
+   return SCIPhistoryGetPseudocostCount(scip->stat->glbhistorycrun, dir)
+      / MAX(scip->transprob->nbinvars + scip->transprob->nintvars, 1);
 }
 
 /** gets the average pseudo cost score value over all variables, assuming a fractionality of 0.5 */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.26 2006/06/20 20:24:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.27 2006/09/17 01:58:41 bzfpfend Exp $"
 
 /**@file   heur_simplerounding.c
  * @brief  simple and fast LP rounding heuristic
@@ -45,6 +45,7 @@ struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
    SCIP_Longint          lastlp;             /**< last LP number where the heuristic was applied */
+   int                   nroundablevars;     /**< number of variables that can be rounded (-1 if not yet calculated) */
 };
 
 
@@ -71,6 +72,7 @@ SCIP_DECL_HEURINIT(heurInitSimplerounding) /*lint --e{715}*/
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    heurdata->lastlp = -1;
+   heurdata->nroundablevars = -1;
    SCIPheurSetData(heur, heurdata);
 
    return SCIP_OKAY;
@@ -142,6 +144,29 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
+   /* on our first call, calculate the number of roundable variables */
+   if( heurdata->nroundablevars == -1 )
+   {
+      SCIP_VAR** vars;
+      int nvars;
+      int nroundablevars;
+      int i;
+
+      vars = SCIPgetVars(scip);
+      nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+      nroundablevars = 0;
+      for( i = 0; i < nvars; ++i )
+      {
+         if( SCIPvarMayRoundDown(vars[i]) || SCIPvarMayRoundUp(vars[i]) )
+            nroundablevars++;
+      }
+      heurdata->nroundablevars = nroundablevars;
+   }
+
+   /* don't call heuristic if there are no roundable variables */
+   if( heurdata->nroundablevars == 0 )
+      return SCIP_OKAY;
+
    /* don't call heuristic, if we have already processed the current LP solution */
    nlps = SCIPgetNLPs(scip);
    if( nlps == heurdata->lastlp )
@@ -154,6 +179,11 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
    /* only call heuristic, if LP solution is fractional */
    if( nlpcands == 0 )
       return SCIP_OKAY;
+
+   /* don't call heuristic, if there are more fractional variables than roundable ones */
+   if( nlpcands > heurdata->nroundablevars )
+      return SCIP_OKAY;
+
 
    *result = SCIP_DIDNOTFIND;
 

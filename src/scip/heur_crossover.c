@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.18 2006/09/15 02:00:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.19 2006/09/17 01:58:40 bzfpfend Exp $"
 
 /**@file   heur_crossover.c
  * @brief  crossover primal heuristic
@@ -825,8 +825,11 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcuts", 0) ); 
    SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcutsroot", 0) );
    
-   /* use pseudo cost branching without strong branching */
-   SCIP_CALL( SCIPsetIntParam(subscip, "branching/pscost/priority", INT_MAX) );
+   /* use inference branching */
+   SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
+
+   /* use best estimate node selection */
+   SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) ); 
 
    /* disable expensive presolving */
    SCIP_CALL( SCIPsetIntParam(subscip, "presolving/probing/maxrounds", 0) );

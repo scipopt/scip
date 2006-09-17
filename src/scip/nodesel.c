@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.50 2006/06/07 08:21:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.51 2006/09/17 01:58:42 bzfpfend Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -756,13 +756,13 @@ SCIP_RETCODE SCIPnodeselCreate(
    sprintf(paramname, "nodeselection/%s/stdpriority", name);
    sprintf(paramdesc, "priority of branching rule <%s> in standard mode", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-                  &(*nodesel)->stdpriority, stdpriority, INT_MIN, INT_MAX, 
+                  &(*nodesel)->stdpriority, stdpriority, INT_MIN/4, INT_MAX/4, 
                   paramChgdNodeselStdPriority, (SCIP_PARAMDATA*)(*nodesel)) ); /*lint !e740*/
 
    sprintf(paramname, "nodeselection/%s/memsavepriority", name);
    sprintf(paramdesc, "priority of branching rule <%s> in memory saving mode", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-                  &(*nodesel)->memsavepriority, memsavepriority, INT_MIN, INT_MAX, 
+                  &(*nodesel)->memsavepriority, memsavepriority, INT_MIN/4, INT_MAX/4, 
                   paramChgdNodeselMemsavePriority, (SCIP_PARAMDATA*)(*nodesel)) ); /*lint !e740*/
 
    return SCIP_OKAY;

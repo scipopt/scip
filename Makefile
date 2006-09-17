@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.179 2006/09/15 02:00:04 bzfpfend Exp $
+# $Id: Makefile,v 1.180 2006/09/17 01:58:39 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -384,6 +384,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/heur_veclendiving.o \
 			scip/nodesel_bfs.o \
 			scip/nodesel_dfs.o \
+			scip/nodesel_estimate.o \
 			scip/nodesel_restartdfs.o \
 			scip/presol_dualfix.o \
 			scip/presol_implics.o \

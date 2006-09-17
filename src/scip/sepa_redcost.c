@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_redcost.c,v 1.3 2006/09/15 21:49:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_redcost.c,v 1.4 2006/09/17 01:58:43 bzfpfend Exp $"
 
 /**@file   sepa_redcost.c
  * @brief  reduced cost strengthening separator
@@ -55,8 +55,6 @@ static
 SCIP_DECL_SEPAFREE(sepaFreeRedcost)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
-
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
 
    /* free separator data */
    sepadata = SCIPsepaGetData(sepa);

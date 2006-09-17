@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.47 2006/03/09 12:52:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.48 2006/09/17 01:58:40 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -327,64 +327,31 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
 
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
    {
-      SCIP_NODE* node;
-      SCIP_Real downprio;
+      SCIP_NODE* downchild;
+      SCIP_NODE* upchild;
+      SCIP_VAR* var;
 
       assert(*result == SCIP_DIDNOTRUN);
       assert(0 <= bestcand && bestcand < nlpcands);
       assert(SCIPisLT(scip, provedbound, cutoffbound));
 
+      var = lpcands[bestcand];
+
       /* perform the branching */
       SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%g, down=%g, up=%g, score=%g)\n",
-         nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandssol[bestcand], bestdown, bestup, bestscore);
+         nlpcands, bestcand, SCIPvarGetName(var), lpcandssol[bestcand], bestdown, bestup, bestscore);
+      SCIP_CALL( SCIPbranchVar(scip, var, &downchild, NULL, &upchild) );
+      assert(downchild != NULL);
+      assert(upchild != NULL);
 
-      /* choose preferred branching direction */
-      switch( SCIPvarGetBranchDirection(lpcands[bestcand]) )
-      {
-      case SCIP_BRANCHDIR_DOWNWARDS:
-         downprio = 1.0;
-         break;
-      case SCIP_BRANCHDIR_UPWARDS:
-         downprio = -1.0;
-         break;
-      case SCIP_BRANCHDIR_AUTO:
-         downprio = SCIPvarGetRootSol(lpcands[bestcand]) - lpcandssol[bestcand];
-         break;
-      default:
-         SCIPerrorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 
-            SCIPvarGetBranchDirection(lpcands[bestcand]), SCIPvarGetName(lpcands[bestcand]));
-         return SCIP_INVALIDDATA;
-      }
-
-      /* create child node with x <= floor(x') */
-      SCIPdebugMessage(" -> creating child: <%s> <= %g\n",
-         SCIPvarGetName(lpcands[bestcand]), SCIPfeasFloor(scip, lpcandssol[bestcand]));
-      SCIP_CALL( SCIPcreateChild(scip, &node, downprio) );
-      SCIP_CALL( SCIPchgVarUbNode(scip, node, lpcands[bestcand], SCIPfeasFloor(scip, lpcandssol[bestcand])) );
+      /* update the lower bounds in the children */
       if( allcolsinlp && !exactsolve )
       {
-         SCIP_CALL( SCIPupdateNodeLowerbound(scip, node, provedbound) );
-         if( bestdownvalid )
-         {
-            SCIP_CALL( SCIPupdateNodeLowerbound(scip, node, bestdown) );
-         }
+         SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, bestdownvalid ? MAX(bestdown, provedbound) : provedbound) );
+         SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, bestupvalid ? MAX(bestup, provedbound) : provedbound) );
       }
-      SCIPdebugMessage(" -> child's lowerbound: %g\n", SCIPnodeGetLowerbound(node));
-      
-      /* create child node with x >= ceil(x') */
-      SCIPdebugMessage(" -> creating child: <%s> >= %g\n", 
-         SCIPvarGetName(lpcands[bestcand]), SCIPfeasCeil(scip, lpcandssol[bestcand]));
-      SCIP_CALL( SCIPcreateChild(scip, &node, -downprio) );
-      SCIP_CALL( SCIPchgVarLbNode(scip, node, lpcands[bestcand], SCIPfeasCeil(scip, lpcandssol[bestcand])) );
-      if( allcolsinlp && !exactsolve )
-      {
-         SCIP_CALL( SCIPupdateNodeLowerbound(scip, node, provedbound) );
-         if( bestupvalid )
-         {
-            SCIP_CALL( SCIPupdateNodeLowerbound(scip, node, bestup) );
-         }
-      }
-      SCIPdebugMessage(" -> child's lowerbound: %g\n", SCIPnodeGetLowerbound(node));
+      SCIPdebugMessage(" -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
+      SCIPdebugMessage(" -> up child's lowerbound: %g\n", SCIPnodeGetLowerbound(upchild));
 
       *result = SCIP_BRANCHED;
    }

@@ -4,15 +4,31 @@ current version
 interface:
 - new parameter "maxbounddist" for SCIPincludeSepa() and constructor ObjSepa()
 - new method SCIPsepaGetMaxbounddist()
+- removed parameter "branchdir" from SCIPbranchVar()
+- new parameters "leftchild", "eqchild", and "downchild" for SCIPbranchVar()
+- new method SCIPcalcNodeselPriority()
+- new parameter "estimate" for SCIPcreateChild()
+- removed method SCIPnodeGetPriority()
+- new method SCIPnodeGetEstimate()
+- new methods SCIPgetLocalOrigEstimate() and SCIPgetLocalTransEstimate()
 
 plugins:
 - improved performance of linear constraint propagation by delaying some floor/ceil calculations
+- new nodeselection rule "estimate" (best estimate search)
+- best estimate search is now used in all large neighborhood search heuristics
 
 parameters:
 - new parameter "separating/clique/backtrackfreq" to speed up clique cut separation in heuristic fashion
 - new parameters "separating/*/maxbounddist" to have individual maxbounddist parameters per separator
 - changed default value of global "separating/maxbounddist" to 1.0
 - new parameter "separating/redcost/continuous"
+- new parameter "heuristics/feaspump/maxstallloops"
+- priority parameters are now restricted to be in [INT_MIN/4,INT_MAX/4] to avoid overflow errors in comparison methods
+
+bugs:
+- SCIPgetAvgPseudocostCount() and SCIPgetAvgPseudocostCountCurrentRun() now return the average over all integer variables instead
+  of all variables, since pseudo costs are not recorded for continuous variables
+- fixed wrong sorting of plugins with priorities close to INT_MIN or INT_MAX
 
 
 SCIP version 0.90

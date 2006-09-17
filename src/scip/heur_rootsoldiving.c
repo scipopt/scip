@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.34 2006/07/03 07:00:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.35 2006/09/17 01:58:41 bzfpfend Exp $"
 
 /**@file   heur_rootsoldiving.c
  * @brief  LP diving heuristic that changes variable's objective values using root LP solution as guide
@@ -36,7 +36,7 @@
 #define HEUR_FREQ         20
 #define HEUR_FREQOFS       5
 #define HEUR_MAXDEPTH     -1
-#define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
+#define HEUR_TIMING       SCIP_HEURTIMING_AFTERLPPLUNGE
 
 
 
@@ -70,6 +70,7 @@ struct SCIP_HeurData
    SCIP_Real             depthfac;           /**< maximal diving depth: number of binary/integer variables times depthfac */
    SCIP_Real             depthfacnosol;      /**< maximal diving depth factor if no feasible solution was found yet */
    SCIP_Longint          nlpiterations;      /**< LP iterations used in this heuristic */
+   int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
 };
 
 /*
@@ -114,6 +115,7 @@ SCIP_DECL_HEURINIT(heurInitRootsoldiving) /*lint --e{715}*/
 
    /* initialize data */
    heurdata->nlpiterations = 0;
+   heurdata->nsuccess = 0;
 
    return SCIP_OKAY;
 }
@@ -218,7 +220,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    /* calculate the maximal number of LP iterations until heuristic is aborted */
    nlpiterations = SCIPgetNNodeLPIterations(scip);
    ncalls = SCIPheurGetNCalls(heur);
-   nsolsfound = SCIPheurGetNSolsFound(heur);
+   nsolsfound = 10*SCIPheurGetNBestSolsFound(heur) + heurdata->nsuccess;
    maxnlpiterations = (SCIP_Longint)((1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations);
    maxnlpiterations += heurdata->maxlpiterofs;
 
@@ -474,6 +476,9 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
 
    /* end diving */
    SCIP_CALL( SCIPendDive(scip) );
+
+   if( *result == SCIP_FOUNDSOL )
+      heurdata->nsuccess++;
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &softroundings);

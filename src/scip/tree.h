@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.91 2006/04/10 16:15:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.92 2006/09/17 01:58:43 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -59,7 +59,8 @@ SCIP_RETCODE SCIPnodeCreateChild(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_Real             nodeselprio         /**< node selection priority of new node */
+   SCIP_Real             nodeselprio,        /**< node selection priority of new node */
+   SCIP_Real             estimate            /**< estimate for value of best feasible solution in subtree */
    );
 
 /** frees node */
@@ -220,6 +221,14 @@ void SCIPnodeUpdateLowerbound(
    SCIP_Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    );
 
+/** sets the node's estimated bound to the new value */
+extern
+void SCIPnodeSetEstimate(
+   SCIP_NODE*            node,               /**< node to update lower bound for */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real             newestimate         /**< new estimated bound for the node */
+   );
+
 /** propagates implications of binary fixings at the given node triggered by the implication graph and the clique table */
 extern
 SCIP_RETCODE SCIPnodePropagateImplics(
@@ -355,6 +364,30 @@ SCIP_RETCODE SCIPtreeLoadLPState(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
+/** calculates the node selection priority for moving the given variable's LP value to the given target value;
+ *  this node selection priority can be given to the SCIPcreateChild() call
+ */
+extern
+SCIP_Real SCIPtreeCalcNodeselPriority(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
+   SCIP_Real             targetvalue         /**< new value of the variable in the child node */
+   );
+
+/** calculates an estimate for the objective of the best feasible solution contained in the subtree after applying the given 
+ *  branching; this estimate can be given to the SCIPcreateChild() call
+ */
+extern
+SCIP_Real SCIPtreeCalcChildEstimate(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
+   SCIP_Real             targetvalue         /**< new value of the variable in the child node */
+   );
+
 /** branches on a variable; if solution value x' is fractional, two child nodes are created
  *  (x <= floor(x'), x >= ceil(x')), if solution value is integral, three child nodes are created
  *  (x <= x'-1, x == x', x >= x'+1)
@@ -369,7 +402,9 @@ SCIP_RETCODE SCIPtreeBranchVar(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_VAR*             var,                /**< variable to branch on */
-   SCIP_BRANCHDIR        branchdir           /**< preferred branching direction; maybe overridden by user settings */
+   SCIP_NODE**           downchild,          /**< pointer to return the left child with variable rounded down, or NULL */
+   SCIP_NODE**           eqchild,            /**< pointer to return the middle child with variable fixed, or NULL */
+   SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
    );
 
 /** switches to probing mode and creates a probing root */

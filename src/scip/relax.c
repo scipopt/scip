@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.c,v 1.12 2006/01/03 12:22:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: relax.c,v 1.13 2006/09/17 01:58:42 bzfpfend Exp $"
 
 /**@file   relax.c
  * @brief  methods and datastructures for relaxators
@@ -108,7 +108,7 @@ SCIP_RETCODE SCIPrelaxCreate(
    sprintf(paramname, "relaxing/%s/priority", name);
    sprintf(paramdesc, "priority of relaxator <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-         &(*relax)->priority, priority, INT_MIN, INT_MAX, 
+         &(*relax)->priority, priority, INT_MIN/4, INT_MAX/4, 
          paramChgdRelaxPriority, (SCIP_PARAMDATA*)(*relax)) ); /*lint !e740*/
    sprintf(paramname, "relaxing/%s/freq", name);
    sprintf(paramdesc, "frequency for calling relaxator <%s> (-1: never, 0: only in root node)", name);

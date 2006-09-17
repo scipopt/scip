@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.55 2006/09/15 03:32:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.56 2006/09/17 01:58:43 bzfpfend Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -124,7 +124,7 @@ SCIP_RETCODE SCIPsepaCreate(
    sprintf(paramname, "separating/%s/priority", name);
    sprintf(paramdesc, "priority of separator <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-         &(*sepa)->priority, priority, INT_MIN, INT_MAX,
+         &(*sepa)->priority, priority, INT_MIN/4, INT_MAX/4,
          paramChgdSepaPriority, (SCIP_PARAMDATA*)(*sepa)) ); /*lint !e740*/
 
    sprintf(paramname, "separating/%s/freq", name);

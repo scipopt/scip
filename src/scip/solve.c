@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.234 2006/09/15 03:14:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.235 2006/09/17 01:58:43 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -490,6 +490,47 @@ SCIP_RETCODE nodeUpdateLowerboundLP(
       lpobjval = SCIPlpGetObjval(lp, set);
 
    SCIPnodeUpdateLowerbound(node, stat, lpobjval);
+
+   return SCIP_OKAY;
+}
+
+/** updates the estimated value of a primal feasible solution for the focus node after the LP was solved */
+static
+SCIP_RETCODE updateEstimate(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   )
+{
+   SCIP_NODE* focusnode;
+   SCIP_VAR** lpcands;
+   SCIP_Real* lpcandsfrac;
+   SCIP_Real estimate;
+   int nlpcands;
+   int i;
+
+   assert(SCIPtreeHasFocusNodeLP(tree));
+
+   focusnode = SCIPtreeGetFocusNode(tree);
+   assert(focusnode != NULL);
+
+   /* get the fractional variables */
+   SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, &lpcands, NULL, &lpcandsfrac, &nlpcands, NULL) );
+
+   /* calculate the estimate: lowerbound + sum(min{f_j * pscdown_j, (1-f_j) * pscup_j}) */
+   estimate = SCIPnodeGetLowerbound(focusnode);
+   for( i = 0; i < nlpcands; ++i )
+   {
+      SCIP_Real pscdown;
+      SCIP_Real pscup;
+
+      pscdown = SCIPvarGetPseudocost(lpcands[i], stat, 0.0-lpcandsfrac[i]);
+      pscup = SCIPvarGetPseudocost(lpcands[i], stat, 1.0-lpcandsfrac[i]);
+      estimate += MIN(pscdown, pscup);
+   }
+   SCIPnodeSetEstimate(focusnode, stat, estimate);
 
    return SCIP_OKAY;
 }
@@ -1428,6 +1469,9 @@ SCIP_RETCODE priceAndCutLoop(
          SCIP_CALL( nodeUpdateLowerboundLP(focusnode, set, stat, lp) );
          SCIPdebugMessage(" -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
             SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set));
+
+         /* update node estimate */
+         SCIP_CALL( updateEstimate(set, stat, tree, lp, branchcand) );
       }
       else
       {
@@ -1621,6 +1665,9 @@ SCIP_RETCODE priceAndCutLoop(
       assert(lp->solved);
 
       SCIP_CALL( nodeUpdateLowerboundLP(focusnode, set, stat, lp) );
+
+      /* update node estimate */
+      SCIP_CALL( updateEstimate(set, stat, tree, lp, branchcand) );
 
       /* issue LPSOLVED event */
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_LPSOLVED) );

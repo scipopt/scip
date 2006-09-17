@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.63 2006/09/15 02:00:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.64 2006/09/17 01:58:40 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -204,6 +204,14 @@
 #define DISP_PRIO_CURDUALBOUND  400
 #define DISP_POSI_CURDUALBOUND  7000
 #define DISP_STRI_CURDUALBOUND  TRUE
+
+#define DISP_NAME_ESTIMATE      "estimate"
+#define DISP_DESC_ESTIMATE      "estimated value of feasible solution in current node"
+#define DISP_HEAD_ESTIMATE      "estimate"
+#define DISP_WIDT_ESTIMATE      14
+#define DISP_PRIO_ESTIMATE      200
+#define DISP_POSI_ESTIMATE      7500
+#define DISP_STRI_ESTIMATE      TRUE
 
 #define DISP_NAME_AVGDUALBOUND  "avgdualbound"
 #define DISP_DESC_AVGDUALBOUND  "average dual bound of all unprocessed nodes"
@@ -577,6 +585,25 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputCurdualbound)
 
 /** output method of display column to output file stream 'file' */
 static
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputEstimate)
+{  /*lint --e{715}*/
+   SCIP_Real estimate;
+
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_ESTIMATE) == 0);
+   assert(scip != NULL);
+
+   estimate = SCIPgetLocalOrigEstimate(scip);
+   if( SCIPisInfinity(scip, REALABS(estimate)) )
+      SCIPinfoMessage(scip, file, "      --      ");
+   else
+      SCIPinfoMessage(scip, file, "%13.6e ", estimate);
+
+   return SCIP_OKAY;
+}
+
+/** output method of display column to output file stream 'file' */
+static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputAvgdualbound)
 {  /*lint --e{715}*/
    SCIP_Real avgdualbound;
@@ -760,6 +787,9 @@ SCIP_RETCODE SCIPincludeDispDefault(
    SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_CURDUALBOUND, DISP_DESC_CURDUALBOUND, DISP_HEAD_CURDUALBOUND,
          SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, NULL, NULL, SCIPdispOutputCurdualbound, NULL, 
          DISP_WIDT_CURDUALBOUND, DISP_PRIO_CURDUALBOUND, DISP_POSI_CURDUALBOUND, DISP_STRI_CURDUALBOUND) );
+   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_ESTIMATE, DISP_DESC_ESTIMATE, DISP_HEAD_ESTIMATE,
+         SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, NULL, NULL, SCIPdispOutputEstimate, NULL, 
+         DISP_WIDT_ESTIMATE, DISP_PRIO_ESTIMATE, DISP_POSI_ESTIMATE, DISP_STRI_ESTIMATE) );
    SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_AVGDUALBOUND, DISP_DESC_AVGDUALBOUND, DISP_HEAD_AVGDUALBOUND,
          SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, NULL, NULL, SCIPdispOutputAvgdualbound, NULL, 
          DISP_WIDT_AVGDUALBOUND, DISP_PRIO_AVGDUALBOUND, DISP_POSI_AVGDUALBOUND, DISP_STRI_AVGDUALBOUND) );

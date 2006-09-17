@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.42 2006/07/18 09:42:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.43 2006/09/17 01:58:41 bzfpfend Exp $"
 
 /**@file   heur_pscostdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the pseudo cost values
@@ -74,6 +74,7 @@ struct SCIP_HeurData
    SCIP_Real             maxdiveubquotnosol; /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
    SCIP_Real             maxdiveavgquotnosol;/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
    SCIP_Longint          nlpiterations;      /**< LP iterations used in this heuristic */
+   int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
 };
 
 
@@ -184,6 +185,7 @@ SCIP_DECL_HEURINIT(heurInitPscostdiving) /*lint --e{715}*/
 
    /* initialize data */
    heurdata->nlpiterations = 0;
+   heurdata->nsuccess = 0;
 
    return SCIP_OKAY;
 }
@@ -293,7 +295,7 @@ SCIP_DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
    /* calculate the maximal number of LP iterations until heuristic is aborted */
    nlpiterations = SCIPgetNNodeLPIterations(scip);
    ncalls = SCIPheurGetNCalls(heur);
-   nsolsfound = SCIPheurGetNSolsFound(heur);
+   nsolsfound = 10*SCIPheurGetNBestSolsFound(heur) + heurdata->nsuccess;
    maxnlpiterations = (SCIP_Longint)((1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations);
    maxnlpiterations += heurdata->maxlpiterofs;
 
@@ -559,6 +561,9 @@ SCIP_DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
 
    /* end diving */
    SCIP_CALL( SCIPendProbing(scip) );
+
+   if( *result == SCIP_FOUNDSOL )
+      heurdata->nsuccess++;
 
    SCIPdebugMessage("pscostdiving heuristic finished\n");
 

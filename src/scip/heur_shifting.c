@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shifting.c,v 1.8 2006/08/30 09:25:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_shifting.c,v 1.9 2006/09/17 01:58:41 bzfpfend Exp $"
 
 /**@file   heur_shifting.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities and shifts continuous variables
@@ -561,7 +561,7 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
 
    /* don't call heuristic, if it was not successful enough in the past */
    ncalls = SCIPheurGetNCalls(heur);
-   nsolsfound = SCIPheurGetNSolsFound(heur);
+   nsolsfound = 10*SCIPheurGetNBestSolsFound(heur) + SCIPheurGetNSolsFound(heur);
    nnodes = SCIPgetNNodes(scip);
    if( nnodes % ((ncalls/100)/(nsolsfound+1)+1) != 0 )
       return SCIP_OKAY;

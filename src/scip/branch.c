@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.71 2006/01/03 12:22:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.72 2006/09/17 01:58:40 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -790,7 +790,7 @@ SCIP_RETCODE SCIPbranchruleCreate(
    sprintf(paramname, "branching/%s/priority", name);
    sprintf(paramdesc, "priority of branching rule <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-         &(*branchrule)->priority, priority, INT_MIN, INT_MAX, 
+         &(*branchrule)->priority, priority, INT_MIN/4, INT_MAX/4, 
          paramChgdBranchrulePriority, (SCIP_PARAMDATA*)(*branchrule)) ); /*lint !e740*/
    sprintf(paramname, "branching/%s/maxdepth", name);
    sprintf(paramdesc, "maximal depth level, up to which branching rule <%s> should be used (-1 for no limit)", name);
@@ -1469,7 +1469,7 @@ SCIP_RETCODE SCIPbranchExecLP(
       assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-      SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, stat, lp, branchcand, eventqueue, var, SCIP_BRANCHDIR_AUTO) );
+      SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, stat, lp, branchcand, eventqueue, var, NULL, NULL, NULL) );
 
       *result = SCIP_BRANCHED;
    }
@@ -1545,7 +1545,7 @@ SCIP_RETCODE SCIPbranchExecPseudo(
       assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-      SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, stat, lp, branchcand, eventqueue, var, SCIP_BRANCHDIR_AUTO) );
+      SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, stat, lp, branchcand, eventqueue, var, NULL, NULL, NULL) );
 
       *result = SCIP_BRANCHED;
    }

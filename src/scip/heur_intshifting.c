@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intshifting.c,v 1.1 2006/08/30 09:25:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_intshifting.c,v 1.2 2006/09/17 01:58:41 bzfpfend Exp $"
 
 /**@file   heur_intshifting.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities, shifts integer variables, and
@@ -590,9 +590,9 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
 
    /* don't call heuristic, if it was not successful enough in the past */
    ncalls = SCIPheurGetNCalls(heur);
-   nsolsfound = SCIPheurGetNSolsFound(heur);
+   nsolsfound = 10*SCIPheurGetNBestSolsFound(heur) + SCIPheurGetNSolsFound(heur);
    nnodes = SCIPgetNNodes(scip);
-   if( nnodes % ((ncalls/100)/(nsolsfound+1)+1) != 0 )
+   if( nnodes % (ncalls/(nsolsfound+1)+1) != 0 )  /*?????????? ncalls/100 */
       return SCIP_OKAY;
 
    /* get fractional variables, that should be integral */

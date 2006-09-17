@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.46 2006/05/09 13:07:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.47 2006/09/17 01:58:40 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -719,43 +719,29 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    /* if no domain could be reduced, create the branching */
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
    {
-      SCIP_NODE* node;
+      SCIP_NODE* downchild;
+      SCIP_NODE* upchild;
+      SCIP_VAR* var;
       SCIP_Real proveddown;
       SCIP_Real provedup;
-      SCIP_Real downprio;
 
       assert(*result == SCIP_DIDNOTRUN);
       assert(0 <= bestcand && bestcand < nlpcands);
       assert(!SCIPisFeasIntegral(scip, lpcandssol[bestcand]));
       assert(SCIPisLT(scip, provedbound, cutoffbound));
 
+      var = lpcands[bestcand];
+
       /* perform the branching */
       SCIPdebugMessage(" -> %d (%d) cands, sel cand %d: var <%s> (sol=%g, down=%g (%+g), up=%g (%+g), sb=%d, psc=%g/%g [%g])\n",
-         nlpcands, ninitcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandssol[bestcand],
+         nlpcands, ninitcands, bestcand, SCIPvarGetName(var), lpcandssol[bestcand],
          bestsbdown, bestsbdown - lpobjval, bestsbup, bestsbup - lpobjval, bestisstrongbranch,
-         SCIPgetVarPseudocostCurrentRun(scip, lpcands[bestcand], 
-            SCIPfeasFloor(scip, lpcandssol[bestcand]) - lpcandssol[bestcand]),
-         SCIPgetVarPseudocostCurrentRun(scip, lpcands[bestcand], 
-            SCIPfeasCeil(scip, lpcandssol[bestcand]) - lpcandssol[bestcand]),
-         SCIPgetVarPseudocostScoreCurrentRun(scip, lpcands[bestcand], lpcandssol[bestcand]));
-
-      /* choose preferred branching direction */
-      switch( SCIPvarGetBranchDirection(lpcands[bestcand]) )
-      {
-      case SCIP_BRANCHDIR_DOWNWARDS:
-         downprio = 1.0;
-         break;
-      case SCIP_BRANCHDIR_UPWARDS:
-         downprio = -1.0;
-         break;
-      case SCIP_BRANCHDIR_AUTO:
-         downprio = SCIPvarGetRootSol(lpcands[bestcand]) - lpcandssol[bestcand];
-         break;
-      default:
-         SCIPerrorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 
-            SCIPvarGetBranchDirection(lpcands[bestcand]), SCIPvarGetName(lpcands[bestcand]));
-         return SCIP_INVALIDDATA;
-      }
+         SCIPgetVarPseudocostCurrentRun(scip, var, SCIPfeasFloor(scip, lpcandssol[bestcand]) - lpcandssol[bestcand]),
+         SCIPgetVarPseudocostCurrentRun(scip, var, SCIPfeasCeil(scip, lpcandssol[bestcand]) - lpcandssol[bestcand]),
+         SCIPgetVarPseudocostScoreCurrentRun(scip, var, lpcandssol[bestcand]));
+      SCIP_CALL( SCIPbranchVar(scip, var, &downchild, NULL, &upchild) );
+      assert(downchild != NULL);
+      assert(upchild != NULL);
 
       /* calculate proved lower bounds for children */
       proveddown = provedbound;
@@ -768,29 +754,16 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
             provedup = MAX(provedbound, bestsbup);
       }
       
-      /* create child node with x <= floor(x') */
-      SCIPdebugMessage(" -> creating child: <%s> <= %g\n",
-         SCIPvarGetName(lpcands[bestcand]), SCIPfeasFloor(scip, lpcandssol[bestcand]));
-      SCIP_CALL( SCIPcreateChild(scip, &node, downprio) );
-      SCIP_CALL( SCIPchgVarUbNode(scip, node, lpcands[bestcand], SCIPfeasFloor(scip, lpcandssol[bestcand])) );
+      /* update the lower bounds in the children */
       if( allcolsinlp && !exactsolve )
       {
          assert(SCIPisLT(scip, proveddown, cutoffbound));
-         SCIP_CALL( SCIPupdateNodeLowerbound(scip, node, proveddown) );
-      }
-      SCIPdebugMessage(" -> child's lowerbound: %g\n", SCIPnodeGetLowerbound(node));
-      
-      /* create child node with x >= ceil(x') */
-      SCIPdebugMessage(" -> creating child: <%s> >= %g\n", 
-         SCIPvarGetName(lpcands[bestcand]), SCIPfeasCeil(scip, lpcandssol[bestcand]));
-      SCIP_CALL( SCIPcreateChild(scip, &node, -downprio) );
-      SCIP_CALL( SCIPchgVarLbNode(scip, node, lpcands[bestcand], SCIPfeasCeil(scip, lpcandssol[bestcand])) );
-      if( allcolsinlp && !exactsolve )
-      {
          assert(SCIPisLT(scip, provedup, cutoffbound));
-         SCIP_CALL( SCIPupdateNodeLowerbound(scip, node, provedup) );
+         SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, proveddown) );
+         SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, provedup) );
       }
-      SCIPdebugMessage(" -> child's lowerbound: %g\n", SCIPnodeGetLowerbound(node));
+      SCIPdebugMessage(" -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
+      SCIPdebugMessage(" -> up child's lowerbound  : %g\n", SCIPnodeGetLowerbound(upchild));
 
       *result = SCIP_BRANCHED;
    }

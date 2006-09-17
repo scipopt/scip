@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.14 2006/01/03 12:22:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.15 2006/09/17 01:58:40 bzfpfend Exp $"
 
 /**@file   branch_pscost.c
  * @brief  pseudo costs branching rule
@@ -66,13 +66,11 @@
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
 {  /*lint --e{715}*/
-   SCIP_NODE* node;
    SCIP_VAR** lpcands;
    SCIP_Real* lpcandssol;
    SCIP_Real* lpcandsfrac;
    SCIP_Real bestscore;
    SCIP_Real bestrootdiff;
-   SCIP_Real downprio;
    int nlpcands;
    int bestcand;
    int c;
@@ -114,36 +112,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
    SCIPdebugMessage(" -> %d cands, selected cand %d: variable <%s> (solval=%g, score=%g)\n",
       nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandssol[bestcand], bestscore);
 
-   /* choose preferred branching direction */
-   switch( SCIPvarGetBranchDirection(lpcands[bestcand]) )
-   {
-   case SCIP_BRANCHDIR_DOWNWARDS:
-      downprio = 1.0;
-      break;
-   case SCIP_BRANCHDIR_UPWARDS:
-      downprio = -1.0;
-      break;
-   case SCIP_BRANCHDIR_AUTO:
-      downprio = SCIPvarGetRootSol(lpcands[bestcand]) - lpcandssol[bestcand];
-      break;
-   default:
-      SCIPerrorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 
-         SCIPvarGetBranchDirection(lpcands[bestcand]), SCIPvarGetName(lpcands[bestcand]));
-      return SCIP_INVALIDDATA;
-   }
-
-   /* create child node with x <= floor(x') */
-   SCIPdebugMessage(" -> creating child: <%s> <= %g\n",
-      SCIPvarGetName(lpcands[bestcand]), SCIPfeasFloor(scip, lpcandssol[bestcand]));
-   SCIP_CALL( SCIPcreateChild(scip, &node, downprio) );
-   SCIP_CALL( SCIPchgVarUbNode(scip, node, lpcands[bestcand], SCIPfeasFloor(scip, lpcandssol[bestcand])) );
-      
-   /* create child node with x >= ceil(x') */
-   SCIPdebugMessage(" -> creating child: <%s> >= %g\n", 
-      SCIPvarGetName(lpcands[bestcand]), SCIPfeasCeil(scip, lpcandssol[bestcand]));
-   SCIP_CALL( SCIPcreateChild(scip, &node, -downprio) );
-   SCIP_CALL( SCIPchgVarLbNode(scip, node, lpcands[bestcand], SCIPfeasCeil(scip, lpcandssol[bestcand])) );
-
+   /* perform the branching */
+   SCIP_CALL( SCIPbranchVar(scip, lpcands[bestcand], NULL, NULL, NULL) );
    *result = SCIP_BRANCHED;
 
    return SCIP_OKAY;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.7 2006/08/21 20:13:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.8 2006/09/17 01:58:41 bzfpfend Exp $"
 
 /**@file   heur_rens.c
  * @brief  RENS primal heuristic
@@ -60,12 +60,9 @@ struct SCIP_HeurData
    SCIP_Longint          minnodes;          /**< minimum number of nodes to regard in the subproblem                 */
    SCIP_Longint          nodesofs;          /**< number of nodes added to the contingent of the total nodes          */
    SCIP_Longint          usednodes;         /**< nodes already used by RENS in earlier calls                         */
-
    SCIP_Real             minfixingrate;     /**< minimum percentage of integer variables that have to be fixed       */
    SCIP_Real             minimprove;        /**< factor by which RENS should at least improve the incumbent          */
    SCIP_Real             nodesquot;         /**< subproblem nodes in relation to nodes of the original problem       */
-   SCIP_Real             nsuccesses;        /**< number of RENS-calls, where a real improvement was achieved         */
-
    SCIP_Bool             binarybounds;      /**< should general integers get binary bounds [floor(.),ceil(.)] ?      */
 };
 
@@ -303,7 +300,6 @@ SCIP_DECL_HEURINIT(heurInitRens)
 
    /* initialize data */
    heurdata->usednodes = 0;
-   heurdata->nsuccesses = 0;
 
    return SCIP_OKAY;
 }
@@ -358,7 +354,7 @@ SCIP_DECL_HEUREXEC(heurExecRens)
    nstallnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
    
    /* reward RENS if it succeeded often */
-   nstallnodes = (SCIP_Longint)(nstallnodes * 3.0 * (heurdata->nsuccesses+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
+   nstallnodes = (SCIP_Longint)(nstallnodes * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
    nstallnodes -= 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-MIP as 100 nodes */
    nstallnodes += heurdata->nodesofs;
 
@@ -407,15 +403,18 @@ SCIP_DECL_HEUREXEC(heurExecRens)
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) ); 
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
 
+   /* use best estimate node selection */
+   SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) ); 
+
    /* disable cut separation in sub problem */
    SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxrounds", 0) );
    SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxroundsroot", 0) );
    SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcuts", 0) ); 
    SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcutsroot", 0) );
 
-   /* use pseudo cost branching without strong branching */
-   SCIP_CALL( SCIPsetIntParam(subscip, "branching/pscost/priority", INT_MAX) );
- 
+   /* use inference branching */
+   SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
+
    /* disable expensive presolving */
    SCIP_CALL( SCIPsetIntParam(subscip, "presolving/probing/maxrounds", 0) );
    SCIP_CALL( SCIPsetIntParam(subscip, "constraints/linear/maxpresolpairrounds", 0) );

@@ -1,1 +1,1 @@
-./scip/new/reader_zpl.c ./scip/bla/reader_zpl.c ./scip/reader_zpl.c ./scip/genconf/reader_zpl.c ./scip/old_beforecmirchange/reader_zpl.c ./scip/old_beforerestartcuts/reader_zpl.c
+./scip/new/reader_zpl.c ./scip/old/reader_zpl.c ./scip/old2/reader_zpl.c ./scip/test_new/reader_zpl.c ./scip/test_old/reader_zpl.c ./scip/ILOG_solpools/reader_zpl.c ./scip/reader_zpl.c

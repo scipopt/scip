@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rins.c,v 1.19 2006/08/21 20:13:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rins.c,v 1.20 2006/09/17 01:58:41 bzfpfend Exp $"
 
 /**@file   heur_rins.c
  * @brief  RINS primal heuristic
@@ -61,7 +61,6 @@ struct SCIP_HeurData
    SCIP_Real             minimprove;        /**< factor by which RINS should at least improve the incumbent          */
    SCIP_Longint          usednodes;         /**< nodes already used by RINS in earlier calls                         */
    SCIP_Real             nodesquot;         /**< subproblem nodes in relation to nodes of the original problem       */
-   SCIP_Real             nsuccesses;        /**< number of RINS-calls, where a real improvement was achieved         */
 };
 
 /*
@@ -289,7 +288,6 @@ SCIP_DECL_HEURINIT(heurInitRins)
 
    /* initialize data */
    heurdata->usednodes = 0;
-   heurdata->nsuccesses = 0;
 
    return SCIP_OKAY;
 }
@@ -353,7 +351,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    nstallnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
    
    /* reward RINS if it succeeded often */
-   nstallnodes = (SCIP_Longint)(nstallnodes * 3.0 * (heurdata->nsuccesses+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
+   nstallnodes = (SCIP_Longint)(nstallnodes * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
    nstallnodes -= 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-MIP as 100 nodes */
    nstallnodes += heurdata->nodesofs;
 
@@ -408,8 +406,11 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcuts", 0) ); 
    SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcutsroot", 0) );
    
-   /* use pseudo cost branching without strong branching */
-   SCIP_CALL( SCIPsetIntParam(subscip, "branching/pscost/priority", INT_MAX) );
+   /* use inference branching */
+   SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
+
+   /* use best estimate node selection */
+   SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) ); 
 
    /* disable expensive presolving */
    SCIP_CALL( SCIPsetIntParam(subscip, "presolving/probing/maxrounds", 0) );
@@ -481,11 +482,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
          SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &success) );
       }
       if( success )
-      {
          *result = SCIP_FOUNDSOL;
-         if( SCIPgetNBestSolsFound(subscip) > 0 )
-            heurdata->nsuccesses++;
-      }
    }
 
    /* free subproblem */

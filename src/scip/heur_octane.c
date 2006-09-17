@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.14 2006/07/17 13:57:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.15 2006/09/17 01:58:41 bzfpfend Exp $"
 
 /**@file   heur_octane.c
  * @brief  octane primal heuristic based on Balas, Ceria, Dawande, Margot, and Pataki
@@ -44,16 +44,17 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_SOL* sol;                 /**< working solution */
-   int f_max;                     /**< {0,1}-points to be checked */
-   int f_first;                   /**< {0,1}-points to be generated at first in order to check whether restart is neccessary */
-   int lastrule;                  /**< last ray selection rule that was performed */
-   SCIP_Bool usefracspace;        /**< use heuristic for the space of fractional variables or for the whole space? */
-   SCIP_Bool useobjray;           /**< should the inner normal of the objective be used as one ray direction? */
-   SCIP_Bool useavgray;           /**< should the average ray of the basic cone be used as one ray direction? */
-   SCIP_Bool usediffray;          /**< should difference between root sol and current LP sol be used as one ray direction? */
-   SCIP_Bool useavgwgtray;        /**< should the weighted average ray of the basic cone be used as one ray direction? */
-   SCIP_Bool useavgnbray;         /**< should the average ray of the nonbasic cone be used as one ray direction? */
+   SCIP_SOL*             sol;                /**< working solution */
+   int                   f_max;              /**< {0,1}-points to be checked */
+   int                   f_first;            /**< {0,1}-points to be generated at first in order to check whether restart is neccessary */
+   int                   lastrule;           /**< last ray selection rule that was performed */
+   SCIP_Bool             usefracspace;       /**< use heuristic for the space of fractional variables or for the whole space? */
+   SCIP_Bool             useobjray;          /**< should the inner normal of the objective be used as one ray direction? */
+   SCIP_Bool             useavgray;          /**< should the average ray of the basic cone be used as one ray direction? */
+   SCIP_Bool             usediffray;         /**< should difference between root sol and current LP sol be used as one ray direction? */
+   SCIP_Bool             useavgwgtray;       /**< should the weighted average ray of the basic cone be used as one ray direction? */
+   SCIP_Bool             useavgnbray;        /**< should the average ray of the nonbasic cone be used as one ray direction? */
+   int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
 };
 
 /*
@@ -651,7 +652,8 @@ SCIP_DECL_HEURINIT(heurInitOctane)
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
    /* initialize data */
-   heurdata->lastrule=0;
+   heurdata->lastrule = 0;
+   heurdata->nsuccess = 0;
 
    return SCIP_OKAY;
 }
@@ -723,8 +725,6 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    int* fracspace;       /* maps the variables of the subspace to the original variables */
 
    SCIP_Longint ncalls;
-   SCIP_Longint nsolsfound;
-   SCIP_Longint nbestsolsfound;
    SCIP_Longint nnodes;
 
    assert(heur != NULL);
@@ -747,12 +747,14 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    if( nvars != nbinvars )
       return SCIP_OKAY;
 
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert( heurdata != NULL );
+
    /* don't call heuristic, if it was not successful enough in the past */
    ncalls = SCIPheurGetNCalls(heur);
-   nsolsfound = SCIPheurGetNSolsFound(heur);
-   nbestsolsfound = SCIPheurGetNBestSolsFound(heur);
    nnodes = SCIPgetNNodes(scip);
-   if( nnodes % ((ncalls/10)/(nsolsfound+9*nbestsolsfound+1)+1) != 0 )
+   if( nnodes % ((ncalls/10)/(10*SCIPheurGetNBestSolsFound(heur) + heurdata->nsuccess + 1)+1) != 0 )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPgetLPBranchCands(scip, &fracvars, NULL, NULL, &nfracvars, NULL) );
@@ -761,9 +763,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    if( nfracvars == 0 )
       return SCIP_OKAY;
 
-   /* get heuristic's data */
-   heurdata = SCIPheurGetData(heur);
-   assert( heurdata != NULL );
+   /* get working pointers from heurdata */
    sol = heurdata->sol;
    assert( sol != NULL );
    f_max = heurdata->f_max;  
@@ -1052,9 +1052,11 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       {
          SCIP_CALL( SCIPfreeSol(scip, &first_sols[i]) );
       }
-      
    }
    heurdata->lastrule = r;
+
+   if( *result == SCIP_FOUNDSOL )
+      heurdata->nsuccess++;
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &first_sols);

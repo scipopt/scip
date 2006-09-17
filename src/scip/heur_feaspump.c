@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.43 2006/08/21 20:13:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.44 2006/09/17 01:58:40 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -43,6 +43,7 @@
 #define DEFAULT_MAXSOLS             5   /**< total number of feasible solutions found up to which heuristic is called
                                          *   (-1: no limit) */
 #define DEFAULT_MAXLOOPS        10000   /**< maximal number of pumping rounds (-1: no limit) */
+#define DEFAULT_MAXSTALLLOOPS      10   /**< maximal number of pumping rounds without fractionality improvement (-1: no limit) */
 #define DEFAULT_MINFLIPS           10   /**< minimum number of random variables to flip, if a 1-cycle is encountered */
 #define DEFAULT_CYCLELENGTH         3   /**< maximum length of cycles to be checked explicitly in each round */
 #define DEFAULT_PERTURBFREQ       100   /**< number of iterations until a random perturbation is forced */
@@ -66,9 +67,11 @@ struct SCIP_HeurData
    SCIP_Real             objfactor;          /**< factor by which the regard of the objective is decreased in each round, 
                                               *   1.0 for dynamic, depending on solutions already found */
    int                   maxloops;           /**< maximum number of loops (-1: no limit) */ 
+   int                   maxstallloops;      /**< maximal number of pumping rounds without fractionality improvement (-1: no limit) */
    int                   minflips;           /**< minimum number of random variables to flip, if a 1-cycle is encountered */
    int                   cyclelength;        /**< maximum length of cycles to be checked explicitly in each round */
    int                   perturbfreq;        /**< number of iterations until a random perturbation is forced */
+   int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
    unsigned int          randseed;           /**< seed value for random number generator */
 };
 
@@ -249,6 +252,7 @@ SCIP_DECL_HEURINIT(heurInitFeaspump)
 
    /* initialize data */
    heurdata->nlpiterations = 0;
+   heurdata->nsuccess = 0;
    heurdata->randseed = 0;
 
    return SCIP_OKAY;
@@ -305,6 +309,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    SCIP_Real objfactor;       /* factor by which the regard of the objective is decreased in each round, in [0,0.99] */
    SCIP_Real alpha;           /* factor how the original objective is regarded, used for convex combination of two functions */
    SCIP_Real objnorm;         /* Euclidean norm of the objective function, used for scaling */
+   SCIP_Real scalingfactor;   /* factor to scale the original objective function with */
 
    int nvars;            /* number of variables  */
    int nbinvars;         /* number of 0-1-variables */
@@ -317,6 +322,9 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    int nloops;           /* how many pumping rounds have been made */
    int maxflips;         /* maximum number of flips, if a 1-cycle is found (depending on heurdata->minflips) */ 
    int maxloops;         /* maximum number of pumping rounds */
+   int nstallloops;      /* number of loops without reducing the current best number of factional variables */
+   int maxstallloops;    /* maximal number of allowed stalling loops */
+   int bestnfracs;       /* best number of fractional variables */
 
    SCIP_Longint nlpiterations;    /* number of LP iterations done during one pumping round */
    SCIP_Longint maxnlpiterations; /* maximum number of LP iterations fpr this heuristic */
@@ -368,7 +376,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    /* calculate the maximal number of LP iterations until heuristic is aborted */
    nlpiterations = SCIPgetNNodeLPIterations(scip);
    ncalls = SCIPheurGetNCalls(heur);
-   nsolsfound = SCIPheurGetNSolsFound(heur);
+   nsolsfound = 10*SCIPheurGetNBestSolsFound(heur) + heurdata->nsuccess;
    maxnlpiterations = (SCIP_Longint)((1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations);
    maxnlpiterations += heurdata->maxlpiterofs;
   
@@ -381,10 +389,9 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    
    /* calculate maximal number of flips and loops */
    maxflips = 3*heurdata->minflips;
-   maxloops = heurdata->maxloops;
-   if( maxloops == -1 )
-      maxloops = INT_MAX;
-
+   maxloops = (heurdata->maxloops == -1 ? INT_MAX : heurdata->maxloops);
+   maxstallloops = (heurdata->maxstallloops == -1 ? INT_MAX : heurdata->maxstallloops);
+   
    SCIPdebugMessage("executing feasibility pump heuristic, maxnlpit:%"SCIP_LONGINT_FORMAT", maxflips:%d \n", maxnlpiterations, maxflips);
 
    *result = SCIP_DIDNOTFIND;
@@ -416,14 +423,18 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    else  
       objfactor = heurdata->objfactor;
    alpha = 1.0;
+   scalingfactor = SQRT((SCIP_Real)(nbinvars + nintvars)) / objnorm;
    nloops = 0;
+   nstallloops = 0;
    nbestsolsfound = SCIPgetNBestSolsFound(scip);
-   while( nfracs > 0 &&  heurdata->nlpiterations < maxnlpiterations && nloops < maxloops )
+   bestnfracs = INT_MAX;
+   while( nfracs > 0 &&  heurdata->nlpiterations < maxnlpiterations && nloops < maxloops && nstallloops < maxstallloops )
    {
       nloops++;
       alpha *= objfactor;
 
-      SCIPdebugMessage("feasibility pump loop %d: %d fractional variables\n", nloops, nfracs);
+      SCIPdebugMessage("feasibility pump loop %d: %d fractional variables (stall: %d/%d)\n", 
+         nloops, nfracs, nstallloops, maxstallloops);
 
       /* create solution from diving LP and try to round it */
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
@@ -440,7 +451,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->roundedsol) );
 
       /* randomly choose maximum number of variables to flip in current pumping round in case of a 1-cycle */
-      maxnflipcands = SCIPgetRandomInt(heurdata->minflips, maxflips, &heurdata->randseed);
+      maxnflipcands = SCIPgetRandomInt(MIN(nfracs/2+1, heurdata->minflips), MIN(nfracs, maxflips), &heurdata->randseed);
       nflipcands = 0;
 
       /* check, whether there is the possibility of j-cycling */
@@ -452,10 +463,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       {
          var = vars[i];
          solval = SCIPvarGetLPSol(var);
-         /**@todo the scaling factor (nbinvars + nintvars) should be replaced by the number of bins/ints that are on
-          *       one of the bounds
-          */
-         orgobjcoeff = SCIPvarGetObj(var) * SQRT((SCIP_Real)(nbinvars + nintvars)) / objnorm;
+         orgobjcoeff = SCIPvarGetObj(var);
 
          /* handle all integer variables*/
          if( i < nbinvars + nintvars )
@@ -471,9 +479,9 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
                lb = SCIPvarGetLbLocal(var);
                ub = SCIPvarGetUbLocal(var);
                if( SCIPisFeasEQ(scip, solval, lb) )
-                  newobjcoeff = (1.0 - alpha) + alpha * orgobjcoeff;
+                  newobjcoeff = (1.0 - alpha)/scalingfactor + alpha * orgobjcoeff;
                else if( SCIPisFeasEQ(scip, solval, ub) )
-                  newobjcoeff = - (1.0 - alpha) + alpha * orgobjcoeff;
+                  newobjcoeff = - (1.0 - alpha)/scalingfactor + alpha * orgobjcoeff;
                else
                   newobjcoeff = alpha * orgobjcoeff;
             }
@@ -484,12 +492,12 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
                   insertFlipCand(mostfracvars, mostfracvals, &nflipcands, maxnflipcands, var, frac);
                if( frac > 0.5 )
                {
-                  newobjcoeff = - (1.0 - alpha) + alpha * orgobjcoeff;
+                  newobjcoeff = - (1.0 - alpha)/scalingfactor + alpha * orgobjcoeff;
                   solval = SCIPfeasCeil(scip, solval);
                }            
                else
                {
-                  newobjcoeff = (1.0 - alpha) + alpha * orgobjcoeff;
+                  newobjcoeff = (1.0 - alpha)/scalingfactor + alpha * orgobjcoeff;
                   solval = SCIPfeasFloor(scip, solval);
                }
 
@@ -524,6 +532,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          SCIPdebugMessage(" -> random perturbation\n");
          SCIP_CALL( handleCycle(scip, heurdata, vars, nintvars+nbinvars, alpha) );
          nbestsolsfound = SCIPgetNBestSolsFound(scip);
+         nstallloops = MIN(nstallloops, maxstallloops-2); /* don't abort immediately after random perturbation */
       }
       else 
       {
@@ -543,6 +552,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
                   SCIPdebugMessage(" -> avoiding %d-cycle by random flip\n", j+1);
                   SCIP_CALL( handleCycle(scip, heurdata, vars, nintvars+nbinvars, alpha) );
                }
+               nstallloops = MIN(nstallloops, maxstallloops-2); /* don't abort immediately after random perturbation */
                break;
             }
          }
@@ -553,26 +563,35 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       SCIP_CALL( SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
       lpsolstat = SCIPgetLPSolstat(scip);
 
+      /* update iteration count */
+      heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
+      SCIPdebugMessage(" -> number of iterations: %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT"\n", 
+         heurdata->nlpiterations, maxnlpiterations);
+
       /* check whether LP was solved optimal */
       if( lperror || lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
          break; 
       
-      /* update iteration count */
-      heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
-      nfracs = SCIPgetNLPBranchCands(scip);
-      SCIPdebugMessage(" -> number of iterations: %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT"\n", 
-         heurdata->nlpiterations, maxnlpiterations);
-
       /* swap the last solutions */
       tmpsol = lastroundedsols[heurdata->cyclelength-1];
       for( j = heurdata->cyclelength-1; j > 0; j-- )
          lastroundedsols[j] = lastroundedsols[j-1]; 
       lastroundedsols[0] = heurdata->roundedsol;
       heurdata->roundedsol = tmpsol;
+
+      /* check for improvement in number of fractionals */
+      nfracs = SCIPgetNLPBranchCands(scip);
+      if( nfracs < bestnfracs )
+      {
+         bestnfracs = nfracs;
+         nstallloops = 0;
+      }
+      else
+         nstallloops++;
    }
 
    /* try final solution, if no more fractional variables are left */
-   if( nfracs == 0 && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
+   if( nfracs == 0 && !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
    {
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
       SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
@@ -582,6 +601,9 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
    /* end diving */
    SCIP_CALL( SCIPendDive(scip) );
+
+   if( *result == SCIP_FOUNDSOL )
+      heurdata->nsuccess++;
 
    /* free memory */
    for( j = 0; j < heurdata->cyclelength; j++ )
@@ -639,6 +661,10 @@ SCIP_RETCODE SCIPincludeHeurFeaspump(
          "heuristics/feaspump/maxloops",
          "maximal number of pumping loops (-1: no limit)",
          &heurdata->maxloops, DEFAULT_MAXLOOPS, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "heuristics/feaspump/maxstallloops",
+         "maximal number of pumping rounds without fractionality improvement (-1: no limit)",
+         &heurdata->maxstallloops, DEFAULT_MAXSTALLLOOPS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/feaspump/minflips", 
          "minimum number of random variables to flip, if a 1-cycle is encountered",

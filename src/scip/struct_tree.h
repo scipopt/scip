@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.35 2006/05/15 08:23:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.36 2006/09/17 01:58:43 bzfpfend Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -111,8 +111,8 @@ struct SCIP_Subroot
 struct SCIP_Node
 {
    SCIP_Longint          number;             /**< successively assigned number of the node */
-   SCIP_Real             lowerbound;         /**< lower (dual) SCIP_LP bound of subtree */
-   SCIP_Real             priority;           /**< node selection priority assigned by the branching rule */
+   SCIP_Real             lowerbound;         /**< lower (dual) bound of subtree */
+   SCIP_Real             estimate;           /**< estimated value of feasible solution in subtree */
    union
    {
       SCIP_PROBINGNODE*  probingnode;        /**< data for probing nodes */

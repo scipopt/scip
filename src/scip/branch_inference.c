@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_inference.c,v 1.18 2006/01/03 12:22:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_inference.c,v 1.19 2006/09/17 01:58:40 bzfpfend Exp $"
 
 /**@file   branch_inference.c
  * @brief  inference history branching rule
@@ -61,13 +61,10 @@ SCIP_RETCODE performBranching(
    )
 {
    SCIP_VAR* var;
-   SCIP_BRANCHDIR branchdir;
    SCIP_Real bestscore;
    SCIP_Real score;
    int bestcand;
    int c;
-   SCIP_Real downscore;
-   SCIP_Real upscore;
 
    /* search for variable with best score w.r.t. average inferences per branching */
    bestscore = 0.0;
@@ -87,20 +84,10 @@ SCIP_RETCODE performBranching(
    assert(0 <= bestcand && bestcand < ncands);
    var = cands[bestcand];
 
-   /* select the preferred branching direction: try to find a conflict as fast as possible */
-   downscore = SCIPgetVarAvgInferences(scip, var, SCIP_BRANCHDIR_DOWNWARDS);
-   upscore = SCIPgetVarAvgInferences(scip, var, SCIP_BRANCHDIR_UPWARDS);
-   if( downscore > upscore + 1.0 )
-      branchdir = SCIP_BRANCHDIR_DOWNWARDS;
-   else if( downscore < upscore - 1.0 )
-      branchdir = SCIP_BRANCHDIR_UPWARDS;
-   else
-      branchdir = SCIP_BRANCHDIR_AUTO;
-
    /* perform the branching */
    SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s> (prio=%d, solval=%.12f, score=%g)\n",
       ncands, bestcand, SCIPvarGetName(var), SCIPvarGetBranchPriority(var), SCIPgetVarSol(scip, var), bestscore);
-   SCIP_CALL( SCIPbranchVar(scip, var, branchdir) );
+   SCIP_CALL( SCIPbranchVar(scip, var, NULL, NULL, NULL) );
 
    return SCIP_OKAY;
 }

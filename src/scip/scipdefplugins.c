@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.58 2006/08/30 09:25:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.59 2006/09/17 01:58:43 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -66,6 +66,7 @@
 #include "scip/heur_veclendiving.h"
 #include "scip/nodesel_bfs.h"
 #include "scip/nodesel_dfs.h"
+#include "scip/nodesel_estimate.h"
 #include "scip/nodesel_restartdfs.h"
 #include "scip/presol_dualfix.h"
 #include "scip/presol_implics.h"
@@ -134,6 +135,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePresolTrivial(scip) );
    SCIP_CALL( SCIPincludeNodeselBfs(scip) );
    SCIP_CALL( SCIPincludeNodeselDfs(scip) );
+   SCIP_CALL( SCIPincludeNodeselEstimate(scip) );
    SCIP_CALL( SCIPincludeNodeselRestartdfs(scip) );
    SCIP_CALL( SCIPincludeBranchruleAllfullstrong(scip) );
    SCIP_CALL( SCIPincludeBranchruleFullstrong(scip) );

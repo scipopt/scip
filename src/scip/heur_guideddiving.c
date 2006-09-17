@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.33 2006/08/08 15:17:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.34 2006/09/17 01:58:41 bzfpfend Exp $"
 
 /**@file   heur_guideddiving.c
  * @brief  LP diving heuristic that chooses fixings in direction of incumbent solutions
@@ -70,6 +70,7 @@ struct SCIP_HeurData
    SCIP_Real             maxdiveavgquot;     /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
                                               *   where diving is performed (0.0: no limit) */
    SCIP_Longint          nlpiterations;      /**< LP iterations used in this heuristic */
+   int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
 };
 
 
@@ -125,6 +126,7 @@ SCIP_DECL_HEURINIT(heurInitGuideddiving) /*lint --e{715}*/
 
    /* initialize data */
    heurdata->nlpiterations = 0;
+   heurdata->nsuccess = 0;
 
    return SCIP_OKAY;
 }
@@ -242,7 +244,7 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
    /* calculate the maximal number of LP iterations until heuristic is aborted */
    nlpiterations = SCIPgetNNodeLPIterations(scip);
    ncalls = SCIPheurGetNCalls(heur);
-   nsolsfound = SCIPheurGetNSolsFound(heur);
+   nsolsfound = 10*SCIPheurGetNBestSolsFound(heur) + heurdata->nsuccess;
    maxnlpiterations = (SCIP_Longint)((1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations);
    maxnlpiterations += heurdata->maxlpiterofs;
 
@@ -528,6 +530,9 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
 
    /* end diving */
    SCIP_CALL( SCIPendProbing(scip) );
+
+   if( *result == SCIP_FOUNDSOL )
+      heurdata->nsuccess++;
 
    SCIPdebugMessage("guideddiving heuristic finished\n");
 
