@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.213 2006/09/15 02:11:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.214 2006/09/17 20:09:23 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -9089,11 +9089,17 @@ SCIP_Real SCIPvarGetAvgInferences(
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      return SCIPhistoryGetNBranchings(var->history, dir) > 0
-         ? SCIPhistoryGetAvgInferences(var->history, dir)
-         : (var->implics != NULL && SCIPimplicsGetNImpls(var->implics, dir == SCIP_BRANCHDIR_UPWARDS) > 0
-            ? SCIPvarGetNImpls(var, dir == SCIP_BRANCHDIR_UPWARDS) + 2 * SCIPvarGetNCliques(var, dir == SCIP_BRANCHDIR_UPWARDS)
-            : SCIPhistoryGetAvgInferences(stat->glbhistory, dir));
+      if( SCIPhistoryGetNBranchings(var->history, dir) > 0 )
+         return SCIPhistoryGetAvgInferences(var->history, dir);
+      else
+      {
+         int nimpls;
+         int ncliques;
+         
+         nimpls = SCIPvarGetNImpls(var, dir == SCIP_BRANCHDIR_UPWARDS);
+         ncliques = SCIPvarGetNCliques(var, dir == SCIP_BRANCHDIR_UPWARDS);
+         return nimpls + ncliques > 0 ? (SCIP_Real)(nimpls + 2*ncliques) : SCIPhistoryGetAvgInferences(stat->glbhistory, dir);
+      }
 
    case SCIP_VARSTATUS_FIXED:
       return 0.0;
@@ -9140,11 +9146,17 @@ SCIP_Real SCIPvarGetAvgInferencesCurrentRun(
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      return SCIPhistoryGetNBranchings(var->historycrun, dir) > 0
-         ? SCIPhistoryGetAvgInferences(var->historycrun, dir)
-         : (var->implics != NULL && SCIPimplicsGetNImpls(var->implics, dir == SCIP_BRANCHDIR_UPWARDS) > 0
-            ? SCIPvarGetNImpls(var, dir == SCIP_BRANCHDIR_UPWARDS) + 2 * SCIPvarGetNCliques(var, dir == SCIP_BRANCHDIR_UPWARDS)
-            : SCIPhistoryGetAvgInferences(stat->glbhistorycrun, dir));
+      if( SCIPhistoryGetNBranchings(var->historycrun, dir) > 0 )
+         return SCIPhistoryGetAvgInferences(var->historycrun, dir);
+      else
+      {
+         int nimpls;
+         int ncliques;
+         
+         nimpls = SCIPvarGetNImpls(var, dir == SCIP_BRANCHDIR_UPWARDS);
+         ncliques = SCIPvarGetNCliques(var, dir == SCIP_BRANCHDIR_UPWARDS);
+         return nimpls + ncliques > 0 ? (SCIP_Real)(nimpls + 2*ncliques) : SCIPhistoryGetAvgInferences(stat->glbhistorycrun, dir);
+      }
 
    case SCIP_VARSTATUS_FIXED:
       return 0.0;

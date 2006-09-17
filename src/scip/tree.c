@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.186 2006/09/17 02:23:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.187 2006/09/17 20:09:23 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4110,8 +4110,8 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
    SCIP_Real prio;
    SCIP_Real varsol;
    SCIP_Real varrootsol;
-   SCIP_Real downinfscore;
-   SCIP_Real upinfscore;
+   SCIP_Real downinfs;
+   SCIP_Real upinfs;
    SCIP_Bool isroot;
    SCIP_Bool haslp;
 
@@ -4120,8 +4120,8 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
    haslp = SCIPtreeHasFocusNodeLP(tree);
    varsol = SCIPvarGetSol(var, haslp);
    varrootsol = SCIPvarGetRootSol(var);
-   downinfscore = SCIPvarGetAvgInferences(var, stat, SCIP_BRANCHDIR_DOWNWARDS);
-   upinfscore = SCIPvarGetAvgInferences(var, stat, SCIP_BRANCHDIR_UPWARDS);
+   downinfs = SCIPvarGetAvgInferences(var, stat, SCIP_BRANCHDIR_DOWNWARDS);
+   upinfs = SCIPvarGetAvgInferences(var, stat, SCIP_BRANCHDIR_UPWARDS);
 
    if( targetvalue < varsol )
    {
@@ -4135,10 +4135,9 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
          prio = -1.0;
          break;
       case SCIP_BRANCHDIR_AUTO:
+         prio = downinfs + SCIPsetEpsilon(set);
          if( !isroot && haslp )
-            prio = varrootsol - varsol;
-         else
-            prio = downinfscore - upinfscore;
+            prio *= (varrootsol - varsol + 1.0);
          break;
       default:
          SCIPerrorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 
@@ -4159,10 +4158,9 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
          prio = +1.0;
          break;
       case SCIP_BRANCHDIR_AUTO:
+         prio = upinfs  + SCIPsetEpsilon(set);
          if( !isroot && haslp )
-            prio = varsol - varrootsol;
-         else
-            prio = upinfscore - downinfscore;
+            prio *= (varsol - varrootsol + 1.0);
          break;
       default:
          SCIPerrorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 

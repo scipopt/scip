@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.235 2006/09/17 01:58:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.236 2006/09/17 20:09:23 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -512,6 +512,10 @@ SCIP_RETCODE updateEstimate(
    int i;
 
    assert(SCIPtreeHasFocusNodeLP(tree));
+
+   /* estimate is only available if LP was solved to optimality */
+   if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
 
    focusnode = SCIPtreeGetFocusNode(tree);
    assert(focusnode != NULL);
