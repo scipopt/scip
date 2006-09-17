@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.185 2006/09/17 01:58:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.186 2006/09/17 02:23:33 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4135,7 +4135,7 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
          prio = -1.0;
          break;
       case SCIP_BRANCHDIR_AUTO:
-         if( !isroot && haslp && REALABS(downinfscore - upinfscore) <= 1.0 )
+         if( !isroot && haslp )
             prio = varrootsol - varsol;
          else
             prio = downinfscore - upinfscore;
@@ -4159,7 +4159,7 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
          prio = +1.0;
          break;
       case SCIP_BRANCHDIR_AUTO:
-         if( !isroot && haslp && REALABS(downinfscore - upinfscore) <= 1.0 )
+         if( !isroot && haslp )
             prio = varsol - varrootsol;
          else
             prio = upinfscore - downinfscore;
