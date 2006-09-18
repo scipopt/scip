@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.sh,v 1.19 2006/08/31 13:35:39 bzfpfend Exp $
+# $Id: check_cplex.sh,v 1.20 2006/09/18 04:27:57 bzfpfend Exp $
 TSTNAME=$1
 CPLEXBIN=$2
 SETNAME=$3
@@ -41,7 +41,7 @@ TEXFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.tex
 TMPFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.tmp
 SETFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.prm
 
-SETTINGS=settings/$SETNAME.cpxset
+SETTINGS=settings/$SETNAME.prm
 
 uname -a >$OUTFILE
 uname -a >$ERRFILE
@@ -57,7 +57,7 @@ do
 	echo @01 $i ===========                 >> $ERRFILE
 	if [ $SETNAME != "default" ]
 	then
-	    cp $SETTINGS $TMPFILE
+	    echo read $SETTINGS                  > $TMPFILE
 	else
 	    echo ""                              > $TMPFILE
 	fi

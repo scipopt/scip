@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.31 2006/09/15 03:49:55 bzfpfend Exp $
+# $Id: check.sh,v 1.32 2006/09/18 04:27:57 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -86,7 +86,7 @@ do
 	echo read $i                           >> $TMPFILE
 	echo optimize                          >> $TMPFILE
 	echo display statistics                >> $TMPFILE
-	echo display solution                  >> $TMPFILE
+#	echo display solution                  >> $TMPFILE
 	echo checksol                          >> $TMPFILE
 	echo quit                              >> $TMPFILE
 	echo -----------------------------

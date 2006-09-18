@@ -1,3 +1,4 @@
+#!/bin/gawk -f
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -14,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.25 2006/09/15 02:00:04 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.26 2006/09/18 04:27:57 bzfpfend Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -30,42 +31,53 @@ function max(x,y)
     return (x) > (y) ? (x) : (y);
 }
 BEGIN {
-    printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
-    printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
-    printf("\\usepackage{amsmath,amsfonts,amssymb,booktabs}\n")      >TEXFILE;
-    printf("\\pagestyle{empty}\n\n")                                 >TEXFILE;
-    printf("\\begin{document}\n\n")                                  >TEXFILE;
-    printf("\\begin{table}[p]\n")                                    >TEXFILE;
-    printf("\\begin{center}\n")                                      >TEXFILE;
-    printf("\\setlength{\\tabcolsep}{2pt}\n")                        >TEXFILE;
-    printf("\\newcommand{\\g}{\\raisebox{0.25ex}{\\tiny $>$}}\n")    >TEXFILE;
-    printf("\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrrrrrrr@{}}\n") >TEXFILE;
-    printf("\\toprule\n")                                            >TEXFILE;
-    printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &     Nodes &     Time \\\\\n") > TEXFILE;
-    printf("\\midrule\n")                                            >TEXFILE;
+   timegeomshift = 60.0;
+   nodegeomshift = 1000.0;
+   onlyinsolufile = 0;  # should only instances be reported that are included in the .solu file?
+   conflictstats = 0;   # should output format match that of SCIP's statistics including conflicts?
 
-    printf("-------------------------+-------+------+--------------+--------------+------+---------------+-------+------+--------------------+-------\n");
-    printf("Name                     | Conss | Vars |   Dual Bound | Primal Bound | Gap% |               | Nodes | Time |                    |       \n");
-    printf("-------------------------+-------+------+--------------+--------------+------+---------------+-------+------+--------------------+-------\n");
+   printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
+   printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
+   printf("\\usepackage{amsmath,amsfonts,amssymb,booktabs}\n")      >TEXFILE;
+   printf("\\pagestyle{empty}\n\n")                                 >TEXFILE;
+   printf("\\begin{document}\n\n")                                  >TEXFILE;
+   printf("\\begin{table}[p]\n")                                    >TEXFILE;
+   printf("\\begin{center}\n")                                      >TEXFILE;
+   printf("\\setlength{\\tabcolsep}{2pt}\n")                        >TEXFILE;
+   printf("\\newcommand{\\g}{\\raisebox{0.25ex}{\\tiny $>$}}\n")    >TEXFILE;
+   printf("\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrrrrrrr@{}}\n") >TEXFILE;
+   printf("\\toprule\n")                                            >TEXFILE;
+   printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &     Nodes &     Time \\\\\n") > TEXFILE;
+   printf("\\midrule\n")                                            >TEXFILE;
 
-    timegeomshift = 60.0;
-    nodegeomshift = 1000.0;
-    onlyinsolufile = 0;  # should only instances be reported that are included in the .solu file?
+   if( conflictstats )
+   {
+      printf("------------------+------+-------+------+----------------+----------------+------+-------+-------+-------+------+------+------+------+-------\n");
+      printf("Name              | Type | Conss | Vars |   Dual Bound   |  Primal Bound  | Gap% | Confs |  Lits | Nodes | Time | BTim | OTim | CTim |       \n");
+      printf("------------------+------+-------+------+----------------+----------------+------+-------+-------+-------+------+------+------+------+-------\n");
+   }
+   else
+   {
+      printf("------------------+------+-------+------+----------------+----------------+------+-------+------+-------\n");
+      printf("Name              | Type | Conss | Vars |   Dual Bound   |  Primal Bound  | Gap% | Nodes | Time |       \n");
+      printf("------------------+------+-------+------+----------------+----------------+------+-------+------+-------\n");
+   }
 
-    nprobs   = 0;
-    sbab     = 0;
-    scut     = 0;
-    stottime = 0.0;
-    sgap     = 0.0;
-    nodegeom = 0.0;
-    timegeom = 0.0;
-    shiftednodegeom = nodegeomshift;
-    shiftedtimegeom = timegeomshift;
-    failtime = 0.0;
-    timeouttime = 0.0;
-    fail     = 0;
-    pass     = 0;
-    timeouts = 0;
+   nprobs   = 0;
+   sbab     = 0;
+   scut     = 0;
+   stottime = 0.0;
+   sgap     = 0.0;
+   nodegeom = 0.0;
+   timegeom = 0.0;
+   shiftednodegeom = nodegeomshift;
+   shiftedtimegeom = timegeomshift;
+   failtime = 0.0;
+   timeouttime = 0.0;
+   fail     = 0;
+   pass     = 0;
+   timeouts = 0;
+   settings = "default";
 }
 /=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }  # get optimum
 /=inf=/  { solstatus[$2] = "inf"; sol[$2] = 0.0; } # problem infeasible
@@ -75,41 +87,53 @@ BEGIN {
 # problem name
 #
 /^@01/ { 
-    n  = split ($2, a, "/");
-    m = split(a[n], b, ".");
-    prob = b[1];
-    if( b[m] == "gz" || b[m] == "z" || b[m] == "GZ" || b[m] == "Z" )
-       m--;
-    for( i = 2; i < m; ++i )
-       prob = prob "." b[i];
-
-    if( length(prob) > 18 )
-       shortprob = substr(prob, length(prob)-17, 18);
-    else
-       shortprob = prob;
-
-    # Escape _ for TeX
-    n = split(prob, a, "_");
-    pprob = a[1];
-    for( i = 2; i <= n; i++ )
-       pprob = pprob "\\_" a[i];
-    vars       = 0;
-    cons       = 0;
-    timeout    = 0;
-    opti       = 0;
-    feasible   = 1;
-    cuts       = 0;
-    pb         = 0.0;
-    db         = 0.0;
-    bbnodes    = 0;
-    primlps    = 0;
-    primiter   = 0;
-    duallps    = 0;
-    dualiter   = 0;
-    sblps      = 0;
-    sbiter     = 0;
-    tottime    = 0.0;
-    aborted    = 1;
+   n  = split ($2, a, "/");
+   m = split(a[n], b, ".");
+   prob = b[1];
+   if( b[m] == "gz" || b[m] == "z" || b[m] == "GZ" || b[m] == "Z" )
+      m--;
+   for( i = 2; i < m; ++i )
+      prob = prob "." b[i];
+   
+   if( length(prob) > 18 )
+      shortprob = substr(prob, length(prob)-17, 18);
+   else
+      shortprob = prob;
+   
+   # Escape _ for TeX
+   n = split(prob, a, "_");
+   pprob = a[1];
+   for( i = 2; i <= n; i++ )
+      pprob = pprob "\\_" a[i];
+   vars       = 0;
+   cons       = 0;
+   timeout    = 0;
+   opti       = 0;
+   feasible   = 1;
+   cuts       = 0;
+   pb         = 0.0;
+   db         = 0.0;
+   bbnodes    = 0;
+   primlps    = 0;
+   primiter   = 0;
+   duallps    = 0;
+   dualiter   = 0;
+   sblps      = 0;
+   sbiter     = 0;
+   tottime    = 0.0;
+   aborted    = 1;
+}
+/^CPLEX> Parameter file / {
+   settings = $4;
+   settings = substr(settings, 2, length(settings)-2);
+   sub(/settings\//, "", settings);
+   sub(/\.prm/, "", settings);
+}
+/^Parameter file / {
+   settings = $3;
+   settings = substr(settings, 2, length(settings)-2);
+   sub(/settings\//, "", settings);
+   sub(/\.prm/, "", settings);
 }
 #
 # problem size
@@ -119,38 +143,38 @@ BEGIN {
 # solution
 #
 /^Integer /  {
-    if ($2 == "infeasible." || $2 == "infeasible")
-    {
-	db = 1e+20;
-	pb = 1e+20;
-	absgap = 0.0;
-        feasible = 0;
-    }
-    else
-    {
-	db = $NF;
-	pb = $NF;
-	absgap = 0.0;
-        feasible = 1;
-    }
-    opti = ($2 == "optimal") ? 1 : 0;
+   if ($2 == "infeasible." || $2 == "infeasible")
+   {
+      db = 1e+20;
+      pb = 1e+20;
+      absgap = 0.0;
+      feasible = 0;
+   }
+   else
+   {
+      db = $NF;
+      pb = $NF;
+      absgap = 0.0;
+      feasible = 1;
+   }
+   opti = ($2 == "optimal") ? 1 : 0;
 }
 /^MIP - Integer /  { # since CPLEX 10.0
-    if ($4 == "infeasible." || $4 == "infeasible")
-    {
-	db = 1e+20;
-	pb = 1e+20;
-	absgap = 0.0;
-        feasible = 0;
-    }
-    else
-    {
-	db = $NF;
-	pb = $NF;
-	absgap = 0.0;
-        feasible = 1;
-    }
-    opti = ($4 == "optimal") ? 1 : 0;
+   if ($4 == "infeasible." || $4 == "infeasible")
+   {
+      db = 1e+20;
+      pb = 1e+20;
+      absgap = 0.0;
+      feasible = 0;
+   }
+   else
+   {
+      db = $NF;
+      pb = $NF;
+      absgap = 0.0;
+      feasible = 1;
+   }
+   opti = ($4 == "optimal") ? 1 : 0;
 }
 /^Solution limit exceeded, integer feasible:/ {
    pb = $8;
@@ -161,12 +185,12 @@ BEGIN {
    timeout = 1;
 }
 /^Time /  {
-    pb = ($4 == "no") ? 1e+75 : $8;
-    timeout = 1;
+   pb = ($4 == "no") ? 1e+75 : $8;
+   timeout = 1;
 }
 /^MIP - Time /  { # since CPLEX 10.0
-    pb = ($6 == "no") ? 1e+75 : $10;
-    timeout = 1;
+   pb = ($6 == "no") ? 1e+75 : $10;
+   timeout = 1;
 }
 /^Memory limit exceeded, integer feasible:/ {
    pb = $8;
@@ -177,36 +201,36 @@ BEGIN {
    timeout = 1;
 }
 /^Node / {
-    pb = ($4 == "no") ? 1e+75 : $8;
-    timeout = 1;
+   pb = ($4 == "no") ? 1e+75 : $8;
+   timeout = 1;
 }
 /^MIP - Node / { # since CPLEX 10.0
-    pb = ($6 == "no") ? 1e+75 : $10;
-    timeout = 1;
+   pb = ($6 == "no") ? 1e+75 : $10;
+   timeout = 1;
 }
 /^Tree /  {
-    pb = ($4 == "no") ? 1e+75 : $8;
-    timeout = 1;
+   pb = ($4 == "no") ? 1e+75 : $8;
+   timeout = 1;
 }
 /^MIP - Tree /  { # since CPLEX 10.0
-    pb = ($6 == "no") ? 1e+75 : $10;
-    timeout = 1;
+   pb = ($6 == "no") ? 1e+75 : $10;
+   timeout = 1;
 }
 /^Error /  {
-    pb = ($3 == "no") ? 1e+75 : $7;
+   pb = ($3 == "no") ? 1e+75 : $7;
 }
 /^MIP - Error /  { # since CPLEX 10.0
-    pb = ($5 == "no") ? 1e+75 : $9;
+   pb = ($5 == "no") ? 1e+75 : $9;
 }
 /cuts applied/ { 
-    cuts += $NF;
+   cuts += $NF;
 }
 /^Current MIP best bound =/ {
-    db = $6;
-    split ($9, a, ",");
-    absgap = a[1];
-    if (opti == 1) 
-	absgap = 0.0;
+   db = $6;
+   split ($9, a, ",");
+   absgap = a[1];
+   if (opti == 1) 
+      absgap = 0.0;
 }
 /^Solution time/ {
    tottime   = $4;
@@ -247,10 +271,14 @@ BEGIN {
 
       printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
          pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
-   
-      printf("%-26s %6d %6d %14.9g %14.9g %6s                 %7d %6.1f                      ",
-         shortprob, cons, vars, db, pb, gapstr, bbnodes, tottime);
-   
+
+      if( conflictstats )
+         printf("%-19s --     %6d %6d %16.9g %16.9g %6s       -       - %7d %6.1f      -      -      - ",
+            shortprob, cons, vars, db, pb, gapstr, bbnodes, tottime);
+      else
+         printf("%-19s --     %6d %6d %16.9g %16.9g %6s %7d %6.1f ",
+            shortprob, cons, vars, db, pb, gapstr, bbnodes, tottime);
+
       if( aborted )
       {
          printf("abort\n");
@@ -259,7 +287,7 @@ BEGIN {
       }
       else if( solstatus[prob] == "opt" )
       {
-         if ((abs(pb - db) > 1e-4) || (abs(pb - sol[prob]) > 1e-6*max(abs(pb),1.0)))
+         if ((abs(pb - db) > 1e-4) || (abs(pb - sol[prob]) > 1e-5*max(abs(pb),1.0)))
          {
             if (timeout)
             {
@@ -342,9 +370,12 @@ END {
    printf("\\end{center}\n")                                             >TEXFILE;
    printf("\\end{table}\n")                                              >TEXFILE;
    printf("\\end{document}\n")                                           >TEXFILE;
-    
-   printf("-------------------------+-------+------+--------------+--------------+------+---------------+-------+------+--------------------+-------\n");
-    
+
+   if( conflictstats )
+      printf("------------------+------+-------+------+----------------+----------------+------+-------+-------+-------+------+------+------+------+-------\n");
+   else
+      printf("------------------+------+-------+------+----------------+----------------+------+-------+------+-------\n");
+
    printf("\n");
    printf("------------------------------[Nodes]---------------[Time]------\n");
    printf("  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom. \n");
@@ -354,4 +385,6 @@ END {
    printf(" shifted geom. [%5d/%5.1f]      %9.1f           %9.1f\n",
       nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
    printf("----------------------------------------------------------------\n");
+
+   printf("@01 CPLEX:%s\n", settings);
 }
