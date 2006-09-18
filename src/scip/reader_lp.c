@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.17 2006/06/28 08:22:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.18 2006/09/18 00:20:58 bzfpfend Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -320,11 +320,18 @@ SCIP_Bool getNextToken(
       }
       while( !isDelimChar(buf[lpinput->linepos]) && !isTokenChar(buf[lpinput->linepos]) );
 
-      /* if the token is an equation sense '<', '>', or '=', skip a following '=' */
+      /* if the token is an equation sense '<', '>', or '=', skip a following '='
+       * if the token is an equality token '=' and the next character is a '<' or '>', replace the token by the inequality sense
+       */
       if( tokenlen >= 1
          && (lpinput->token[tokenlen-1] == '<' || lpinput->token[tokenlen-1] == '>' || lpinput->token[tokenlen-1] == '=')
          && buf[lpinput->linepos] == '=' )
       {
+         lpinput->linepos++;
+      }
+      else if( lpinput->token[tokenlen-1] == '=' && (buf[lpinput->linepos] == '<' || buf[lpinput->linepos] == '>') )
+      {
+         lpinput->token[tokenlen-1] = buf[lpinput->linepos];
          lpinput->linepos++;
       }
    }
