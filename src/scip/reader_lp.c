@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.18 2006/09/18 00:20:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.19 2006/09/18 00:33:23 bzfpfend Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -683,13 +683,14 @@ SCIP_RETCODE readStart(
 {
    assert(lpinput != NULL);
 
-   /* get token */
-   if( !getNextToken(lpinput) )
-      return SCIP_OKAY;
-
-   /* switch to given section */
-   if( !isNewSection(lpinput) )
-      syntaxError(scip, lpinput, "characters before first section");
+   /* everything before first section is treated as comment */
+   do
+   {
+      /* get token */
+      if( !getNextToken(lpinput) )
+         return SCIP_OKAY;
+   }
+   while( !isNewSection(lpinput) );
 
    return SCIP_OKAY;
 }
