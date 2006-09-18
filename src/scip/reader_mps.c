@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.68 2006/06/07 11:47:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.69 2006/09/18 00:05:00 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  MPS file reader
@@ -392,13 +392,15 @@ SCIP_Bool mpsinputReadLine(
    int space;
    char* s;
    SCIP_Bool is_marker;
+   SCIP_Bool is_empty;
    char* nexttok;
 
    do
    {
       mpsi->f0  = mpsi->f1 = mpsi->f2 = mpsi->f3 = mpsi->f4 = mpsi->f5 = 0;
       is_marker = FALSE;
-   
+      is_empty = FALSE;
+
       /* Read until we have a not comment line.
        */
       do
@@ -549,8 +551,11 @@ SCIP_Bool mpsinputReadLine(
             mpsi->f5 = 0;
       }
       while(FALSE);
+
+      /* check for empty lines */
+      is_empty = (mpsi->f0 == NULL && mpsi->f1 == NULL);
    }
-   while(is_marker);
+   while(is_marker || is_empty);
 
    return TRUE;
 }
@@ -739,6 +744,7 @@ SCIP_RETCODE readRows(
 
          return SCIP_OKAY;
       }
+
       if (*mpsinputField1(mpsi) == 'N')
       {
          if (*mpsinputObjname(mpsi) == '\0')
