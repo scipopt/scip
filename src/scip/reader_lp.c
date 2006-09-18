@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.19 2006/09/18 00:33:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.20 2006/09/18 00:41:31 bzfpfend Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -407,6 +407,7 @@ SCIP_Bool isNewSection(
             pushToken(lpinput, lpinput->token);
       }
       pushToken(lpinput, s);
+      getNextToken(lpinput);
    }
 
    if( strcasecmp(lpinput->token, "SUCH") == 0 )
@@ -429,6 +430,7 @@ SCIP_Bool isNewSection(
             pushToken(lpinput, lpinput->token);
       }
       pushToken(lpinput, s);
+      getNextToken(lpinput);
    }
 
    if( strcasecmp(lpinput->token, "st") == 0
@@ -462,6 +464,7 @@ SCIP_Bool isNewSection(
             pushToken(lpinput, lpinput->token);
       }
       pushToken(lpinput, s);
+      getNextToken(lpinput);
    }
 
    if( strcasecmp(lpinput->token, "USER") == 0 )
@@ -484,6 +487,7 @@ SCIP_Bool isNewSection(
             pushToken(lpinput, lpinput->token);
       }
       pushToken(lpinput, s);
+      getNextToken(lpinput);
    }
 
    if( strcasecmp(lpinput->token, "BOUNDS") == 0
