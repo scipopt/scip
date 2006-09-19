@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.44 2006/09/18 04:27:57 bzfpfend Exp $
+# $Id: check.awk,v 1.45 2006/09/19 23:17:26 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -150,6 +150,7 @@ BEGIN {
    conftime = 0.0;
    overheadtime = 0.0;
    aborted = 1;
+   readerror = 0;
    gapreached = 0;
    timelimit = 0.0;
    starttime = 0.0;
@@ -220,6 +221,7 @@ BEGIN {
 #
 # solution
 #
+/^Original Problem   : no problem exists./ { readerror = 1; }
 /^SCIP Status        :/ { aborted = 0; }
 /solving was interrupted/  { timeout = 1; }
 /gap limit reached/ { gapreached = 1; }
@@ -357,7 +359,13 @@ BEGIN {
             shortprob, probtype, cons, vars, db, pb, gapstr, bbnodes, tottime);
       }
 
-      if( aborted )
+      if( readerror )
+      {
+         printf("readerror\n");
+         failtime += tottime;
+         fail++;
+      }
+      else if( aborted )
       {
          printf("abort\n");
          failtime += tottime;

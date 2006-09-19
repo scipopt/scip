@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.5 2006/09/19 22:11:45 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.6 2006/09/19 23:17:26 bzfpfend Exp $
 #
 #@file    compare.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -63,7 +63,7 @@ BEGIN {
 }
 // {
    # check if this is a useable line
-   if( $10 == "ok" || $10 == "timeout" || $10 == "unknown" || $10 == "abort" || $10 == "fail" )
+   if( $10 == "ok" || $10 == "timeout" || $10 == "unknown" || $10 == "abort" || $10 == "fail" || $10 == "readerror" )
    {
       # collect data
       name[nsolver,nprobs[nsolver]] = $1;
@@ -140,101 +140,103 @@ END {
    for( i = 0; i < problistlen; ++i )
    {
       p = problist[i];
-#???????????      if( probcnt[p] == nsolver )
+      printf("%-18s", p);
+      fail = 0;
+      readerror = 0;
+      maxdb = -1e+100;
+      minpb = +1e+100;
+      nodecomp = -1;
+      timecomp = -1;
+      for( o = 0; o < nsolver; ++o )
       {
-         printf("%-18s", p);
-         fail = 0;
-         maxdb = -1e+100;
-         minpb = +1e+100;
-         nodecomp = -1;
-         timecomp = -1;
-         for( o = 0; o < nsolver; ++o )
+         s = printorder[o];
+         pidx = probidx[p,s];
+         processed = (pidx != "");
+         if( processed && name[s,pidx] != p )
+            printf("Error: solver %d, probidx %d, <%s> != <%s>\n", solvername[s], pidx, name[s,pidx], p);
+
+         # check if solver ran successfully (i.e., no abort nor fail)
+         if( !processed )
+            marker = "?";
+         else if( status[s,pidx] == "ok" || status[s,pidx] == "unknown" )
          {
-            s = printorder[o];
-            pidx = probidx[p,s];
-            processed = (pidx != "");
-            if( processed && name[s,pidx] != p )
-               printf("Error: solver %d, probidx %d, <%s> != <%s>\n", solvername[s], pidx, name[s,pidx], p);
-
-            # check if solver ran successfully (i.e., no abort nor fail)
-            if( !processed )
-               marker = "?";
-            else if( status[s,pidx] == "ok" || status[s,pidx] == "unknown" )
-            {
-               nsolved[s]++;
-               marker = " ";
-               maxdb = max(maxdb, dualbound[s,pidx]);
-               minpb = min(minpb, primalbound[s,pidx]);
-            }
-            else if( status[s,pidx] == "timeout" )
-            {
-               ntimeouts[s]++;
-               marker = ">";
-            }
-            else
-            {
-               nfails[s]++;
-               fail = 1;
-               marker = "!";
-            }
-
-            # print statistics
-            if( !processed )
-               printf("          -       -");
-            else
-            {
-               printf(" %10d %s%6.1f", nodes[s,pidx], marker, time[s,pidx]);
-               if( nodecomp == -1 )
-               {
-                  nodecomp = nodes[s,pidx];
-                  timecomp = time[s,pidx];
-               }
-            }
-            if( o > 0 )
-            {
-               if( !processed )
-                  printf("      -");
-               else if( nodes[s,pidx]/nodecomp > 999.99 )
-                  printf("  Large");
-               else
-                  printf(" %6.2f", nodes[s,pidx]/nodecomp);
-               if( !processed )
-                  printf("      -");
-               else if( time[s,pidx]/timecomp > 999.99 )
-                  printf("  Large");
-               else
-                  printf(" %6.2f", time[s,pidx]/timecomp);
-            }
+            nsolved[s]++;
+            marker = " ";
+            maxdb = max(maxdb, dualbound[s,pidx]);
+            minpb = min(minpb, primalbound[s,pidx]);
          }
-
-         # check for inconsistency in the primal and dual bounds
-         if( fail )
-            printf("  fail");
-         else if( maxdb - minpb > 1e-5 * max(max(abs(maxdb), abs(minpb)), 1.0) )
+         else if( status[s,pidx] == "timeout" )
          {
-            printf("  inconsistent");
-            fail = 1;
+            ntimeouts[s]++;
+            marker = ">";
          }
-         else if( probcnt[p] != nsolver )
-            printf("  unprocessed");
          else
-            printf("  ok");
-         printf("\n");
-
-         # calculate totals and means for instances where no solver failes
-         if( !fail && probcnt[p] == nsolver )
          {
-            nevalprobs++;
-            for( s = 0; s < nsolver; ++s )
+            if( status[s,pidx] == "readerror" )
+               readerror = 1;
+            nfails[s]++;
+            fail = 1;
+            marker = "!";
+         }
+
+         # print statistics
+         if( !processed )
+            printf("          -       -");
+         else
+         {
+            printf(" %10d %s%6.1f", nodes[s,pidx], marker, time[s,pidx]);
+            if( nodecomp == -1 )
             {
-               pidx = probidx[p,s];
-               timetotal[s] += time[s,pidx];
-               nodetotal[s] += nodes[s,pidx];
-               timegeom[s] = timegeom[s]^((nevalprobs-1)/nevalprobs) * time[s,pidx]^(1.0/nevalprobs);
-               nodegeom[s] = nodegeom[s]^((nevalprobs-1)/nevalprobs) * nodes[s,pidx]^(1.0/nevalprobs);
-               timeshiftedgeom[s] = timeshiftedgeom[s]^((nevalprobs-1)/nevalprobs) * (time[s,pidx]+timegeomshift)^(1.0/nevalprobs);
-               nodeshiftedgeom[s] = nodeshiftedgeom[s]^((nevalprobs-1)/nevalprobs) * (nodes[s,pidx]+nodegeomshift)^(1.0/nevalprobs);
+               nodecomp = nodes[s,pidx];
+               timecomp = time[s,pidx];
             }
+         }
+         if( o > 0 )
+         {
+            if( !processed )
+               printf("      -");
+            else if( nodes[s,pidx]/nodecomp > 999.99 )
+               printf("  Large");
+            else
+               printf(" %6.2f", nodes[s,pidx]/nodecomp);
+            if( !processed )
+               printf("      -");
+            else if( time[s,pidx]/timecomp > 999.99 )
+               printf("  Large");
+            else
+               printf(" %6.2f", time[s,pidx]/timecomp);
+         }
+      }
+
+      # check for inconsistency in the primal and dual bounds
+      if( readerror )
+         printf("  readerror");
+      else if( fail )
+         printf("  fail");
+      else if( maxdb - minpb > 1e-5 * max(max(abs(maxdb), abs(minpb)), 1.0) )
+      {
+         printf("  inconsistent");
+         fail = 1;
+      }
+      else if( probcnt[p] != nsolver )
+         printf("  unprocessed");
+      else
+         printf("  ok");
+      printf("\n");
+
+      # calculate totals and means for instances where no solver failes
+      if( !fail && probcnt[p] == nsolver )
+      {
+         nevalprobs++;
+         for( s = 0; s < nsolver; ++s )
+         {
+            pidx = probidx[p,s];
+            timetotal[s] += time[s,pidx];
+            nodetotal[s] += nodes[s,pidx];
+            timegeom[s] = timegeom[s]^((nevalprobs-1)/nevalprobs) * time[s,pidx]^(1.0/nevalprobs);
+            nodegeom[s] = nodegeom[s]^((nevalprobs-1)/nevalprobs) * nodes[s,pidx]^(1.0/nevalprobs);
+            timeshiftedgeom[s] = timeshiftedgeom[s]^((nevalprobs-1)/nevalprobs) * (time[s,pidx]+timegeomshift)^(1.0/nevalprobs);
+            nodeshiftedgeom[s] = nodeshiftedgeom[s]^((nevalprobs-1)/nevalprobs) * (nodes[s,pidx]+nodegeomshift)^(1.0/nevalprobs);
          }
       }
    }
