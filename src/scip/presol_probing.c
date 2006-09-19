@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.33 2006/06/29 20:59:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.34 2006/09/19 08:12:10 bzforlow Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -517,7 +517,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
          if( SCIPpressedCtrlC(scip) )
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-               "   (%.1fs) probing aborted: user interrupe\n", SCIPgetSolvingTime(scip));
+               "   (%.1fs) probing aborted: user interrupt\n", SCIPgetSolvingTime(scip));
          }
          else if( presoldata->nuseless >= maxuseless )
          {
