@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.2 2006/09/19 00:48:52 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.3 2006/09/19 01:22:23 bzfpfend Exp $
 #
 #@file    compare.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -96,13 +96,30 @@ END {
       nodeshiftedgeom[s] = nodegeomshift;
    }
 
-   # print headers
+   # calculate the order in which the columns should be printed: CPLEX < SCIP, default < non-default
    for( s = 0; s < nsolver; ++s )
    {
-       if( s == 0 )
-          printf(" %35s |", solvername[s]);
-       else
-          printf(" %30s |", solvername[s]);
+      for( i = 0; i < s; ++i )
+      {
+         if( substr(solvername[s], 1, 5) == "CPLEX" && substr(solvername[i], 1, 5) != "CPLEX" )
+            break;
+         if( substr(solvername[s], 1, 5) == substr(solvername[i], 1, 5) &&
+            match(solvername[s], "default") != 0 && match(solvername[i], "default") == 0 )
+            break;
+      }
+      for( j = i; j < s; ++j )
+         printorder[j+1] = printorder[j];
+      printorder[i] = s;
+   }
+
+   # print headers
+   for( o = 0; o < nsolver; ++o )
+   {
+      s = printorder[o];
+      if( s == 0 )
+         printf(" %35s |", solvername[s]);
+      else
+         printf(" %30s |", solvername[s]);
    }
    printf("\n");
    printhline(nsolver);
@@ -127,8 +144,9 @@ END {
          fail = 0;
          maxdb = -1e+100;
          minpb = +1e+100;
-         for( s = 0; s < nsolver; ++s )
+         for( o = 0; o < nsolver; ++o )
          {
+            s = printorder[o];
             pidx = probidx[p,s];
             if( name[s,pidx] != p )
                printf("Error: solver %d, probidx %d, <%s> != <%s>\n", solvername[s], pidx, name[s,pidx], p);
@@ -155,7 +173,7 @@ END {
 
             # print statistics
             printf(" %10d %s%6d", nodes[s,pidx], marker, time[s,pidx]);
-            if( s == 0 )
+            if( o == 0 )
             {
                nodecomp = nodes[s,pidx];
                timecomp = time[s,pidx];
@@ -207,42 +225,56 @@ END {
    # print solvers' overall statistics
    probnumstr = "("nevalprobs")";
    printf("%-12s %5s", "total", probnumstr);
-   for( s = 0; s < nsolver; ++s )
+   for( o = 0; o < nsolver; ++o )
    {
-      if( s == 0 )
+      s = printorder[o];
+      if( o == 0 )
          printf(" %10d %7d", nodetotal[s], timetotal[s]);
       else
          printf(" %10d %7d              ", nodetotal[s], timetotal[s]);
    }
    printf("\n");
    printf("%-18s", "geom. mean");
-   for( s = 0; s < nsolver; ++s )
+   for( o = 0; o < nsolver; ++o )
    {
-      if( s == 0 )
+      s = printorder[o];
+      if( o == 0 )
+      {
          printf(" %10d %7d", nodegeom[s], timegeom[s]);
+         nodegeomcomp = nodegeom[s];
+         timegeomcomp = timegeom[s];
+      }
       else
-         printf(" %10d %7d %6.2f %6.2f", nodegeom[s], timegeom[s], nodegeom[s]/nodegeom[0], timegeom[s]/timegeom[0]);
+         printf(" %10d %7d %6.2f %6.2f", nodegeom[s], timegeom[s], nodegeom[s]/nodegeomcomp, timegeom[s]/timegeomcomp);
    }
    printf("\n");
    printf("%-18s", "shifted geom.");
-   for( s = 0; s < nsolver; ++s )
+   for( o = 0; o < nsolver; ++o )
    {
+      s = printorder[o];
       nodeshiftedgeom[s] -= nodegeomshift;
       timeshiftedgeom[s] -= timegeomshift;
-      if( s == 0 )
+      nodeshiftedgeom[s] = max(nodeshiftedgeom[s], 1.0);
+      timeshiftedgeom[s] = max(timeshiftedgeom[s], 1.0);
+      if( o == 0 )
+      {
          printf(" %10d %7d", nodeshiftedgeom[s], timeshiftedgeom[s]);
+         nodeshiftedgeomcomp = nodeshiftedgeom[s];
+         timeshiftedgeomcomp = timeshiftedgeom[s];
+      }
       else
          printf(" %10d %7d %6.2f %6.2f", nodeshiftedgeom[s], timeshiftedgeom[s],
-            nodeshiftedgeom[s]/nodeshiftedgeom[0], timeshiftedgeom[s]/timeshiftedgeom[0]);
+            nodeshiftedgeom[s]/nodeshiftedgeom[0], timeshiftedgeomcomp/timeshiftedgeomcomp);
    }
    printf("\n");
    printhline(nsolver);
 
    printf("\n");
-   for( s = 0; s < nsolver; ++s )
+   for( o = 0; o < nsolver; ++o )
    {
+      s = printorder[o];
       printf("%-30s fails: %4d  timeouts: %4d  solved: %4d  time: %6.1f  shtime: %6.1f  timeQ: %5.2f  shtimeQ: %5.2f\n", 
          solvername[s], nfails[s], ntimeouts[s], nsolved[s], timegeom[s], timeshiftedgeom[s],
-         timegeom[s]/timegeom[0], timeshiftedgeom[s]/timeshiftedgeom[0]);
+         timegeom[s]/timegeomcomp, timeshiftedgeom[s]/timeshiftedgeomcomp);
    }
 }
