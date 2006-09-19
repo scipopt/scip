@@ -15,9 +15,9 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: allcmpres.sh,v 1.1 2006/09/19 01:00:07 bzfpfend Exp $
+# $Id: allcmpres.sh,v 1.2 2006/09/19 22:57:48 bzfpfend Exp $
 
-for i in `ls -1 --color=none $@ | sed 's!\([^ ]*\)\.\([^ .]*\)\.res!\1!g' | sort -u`
+for i in `ls -1 --color=none $@ | sed 's!check\.\([^ .]*\)\.\([^ ]*\)\.res!check.\1!g' | sort -u`
 do
     TESTSET=`echo $i | sed 's!results/check\.\([^ .]*\)\..*!\1!g'`
     echo
