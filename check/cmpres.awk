@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.3 2006/09/19 01:22:23 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.4 2006/09/19 02:01:19 bzfpfend Exp $
 #
 #@file    compare.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -52,6 +52,7 @@ BEGIN {
    timegeomshift = 60.0;
    nodegeomshift = 1000.0;
    
+   problistlen = 0;
    nsolver = 0;
    nprobs[nsolver] = 0;
 }
@@ -116,7 +117,7 @@ END {
    for( o = 0; o < nsolver; ++o )
    {
       s = printorder[o];
-      if( s == 0 )
+      if( o == 0 )
          printf(" %35s |", solvername[s]);
       else
          printf(" %30s |", solvername[s]);
