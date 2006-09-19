@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.1 2006/09/18 04:27:57 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.2 2006/09/19 00:48:52 bzfpfend Exp $
 #
 #@file    compare.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -77,6 +77,11 @@ BEGIN {
       probidx[$1,nsolver] = nprobs[nsolver];
       probcnt[$1]++;
       nprobs[nsolver]++;
+      if( nsolver == 0 )
+      {
+         problist[problistlen] = $1;
+         problistlen++;
+      }
    }
 }
 END {
@@ -113,8 +118,9 @@ END {
    
    # display the problem results and calculate mean values
    nevalprobs = 0;
-   for( p in probcnt )
+   for( i = 0; i < problistlen; ++i )
    {
+      p = problist[i];
       if( probcnt[p] == nsolver )
       {
          printf("%-18s", p);
@@ -155,7 +161,16 @@ END {
                timecomp = time[s,pidx];
             }
             else
-               printf(" %6.1f %6.1f", min(nodes[s,pidx]/nodecomp, 9999.9), min(time[s,pidx]/timecomp, 9999.9));
+            {
+               if( nodes[s,pidx]/nodecomp > 999.99 )
+                  printf("  Large");
+               else
+                  printf(" %6.2f", nodes[s,pidx]/nodecomp);
+               if( time[s,pidx]/timecomp > 999.99 )
+                  printf("  Large");
+               else
+                  printf(" %6.2f", time[s,pidx]/timecomp);
+            }
          }
 
          # check for inconsistency in the primal and dual bounds
@@ -206,7 +221,7 @@ END {
       if( s == 0 )
          printf(" %10d %7d", nodegeom[s], timegeom[s]);
       else
-         printf(" %10d %7d %6.1f %6.1f", nodegeom[s], timegeom[s], nodegeom[s]/nodegeom[0], timegeom[s]/timegeom[0]);
+         printf(" %10d %7d %6.2f %6.2f", nodegeom[s], timegeom[s], nodegeom[s]/nodegeom[0], timegeom[s]/timegeom[0]);
    }
    printf("\n");
    printf("%-18s", "shifted geom.");
@@ -217,7 +232,7 @@ END {
       if( s == 0 )
          printf(" %10d %7d", nodeshiftedgeom[s], timeshiftedgeom[s]);
       else
-         printf(" %10d %7d %6.1f %6.1f", nodeshiftedgeom[s], timeshiftedgeom[s],
+         printf(" %10d %7d %6.2f %6.2f", nodeshiftedgeom[s], timeshiftedgeom[s],
             nodeshiftedgeom[s]/nodeshiftedgeom[0], timeshiftedgeom[s]/timeshiftedgeom[0]);
    }
    printf("\n");
@@ -226,7 +241,8 @@ END {
    printf("\n");
    for( s = 0; s < nsolver; ++s )
    {
-      printf("%-30s fails: %4d  timeouts: %4d  solved: %4d  time: %6.1f  shtime: %6.1f\n", 
-         solvername[s], nfails[s], ntimeouts[s], nsolved[s], timegeom[s], timeshiftedgeom[s]);
+      printf("%-30s fails: %4d  timeouts: %4d  solved: %4d  time: %6.1f  shtime: %6.1f  timeQ: %5.2f  shtimeQ: %5.2f\n", 
+         solvername[s], nfails[s], ntimeouts[s], nsolved[s], timegeom[s], timeshiftedgeom[s],
+         timegeom[s]/timegeom[0], timeshiftedgeom[s]/timeshiftedgeom[0]);
    }
 }
