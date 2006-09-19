@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.4 2006/09/19 02:01:19 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.5 2006/09/19 22:11:45 bzfpfend Exp $
 #
 #@file    compare.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -35,7 +35,7 @@ function max(x,y)
 }
 function ceil(x)
 {
-   return (x) == int(x) ? (x) : int(x+1.0);
+   return (10*x) == int(10*x) ? (x) : int(10*x+1.0)/10.0;
 }
 function printhline(nsolver)
 {
@@ -59,6 +59,7 @@ BEGIN {
 /^@01 / {
    solvername[nsolver] = $2;
    nsolver++;
+   nprobs[nsolver] = 0;
 }
 // {
    # check if this is a useable line
@@ -78,7 +79,7 @@ BEGIN {
       probidx[$1,nsolver] = nprobs[nsolver];
       probcnt[$1]++;
       nprobs[nsolver]++;
-      if( nsolver == 0 )
+      if( probcnt[$1] == 1 )
       {
          problist[problistlen] = $1;
          problistlen++;
@@ -139,21 +140,26 @@ END {
    for( i = 0; i < problistlen; ++i )
    {
       p = problist[i];
-      if( probcnt[p] == nsolver )
+#???????????      if( probcnt[p] == nsolver )
       {
          printf("%-18s", p);
          fail = 0;
          maxdb = -1e+100;
          minpb = +1e+100;
+         nodecomp = -1;
+         timecomp = -1;
          for( o = 0; o < nsolver; ++o )
          {
             s = printorder[o];
             pidx = probidx[p,s];
-            if( name[s,pidx] != p )
+            processed = (pidx != "");
+            if( processed && name[s,pidx] != p )
                printf("Error: solver %d, probidx %d, <%s> != <%s>\n", solvername[s], pidx, name[s,pidx], p);
 
             # check if solver ran successfully (i.e., no abort nor fail)
-            if( status[s,pidx] == "ok" || status[s,pidx] == "unknown" )
+            if( !processed )
+               marker = "?";
+            else if( status[s,pidx] == "ok" || status[s,pidx] == "unknown" )
             {
                nsolved[s]++;
                marker = " ";
@@ -173,19 +179,28 @@ END {
             }
 
             # print statistics
-            printf(" %10d %s%6d", nodes[s,pidx], marker, time[s,pidx]);
-            if( o == 0 )
-            {
-               nodecomp = nodes[s,pidx];
-               timecomp = time[s,pidx];
-            }
+            if( !processed )
+               printf("          -       -");
             else
             {
-               if( nodes[s,pidx]/nodecomp > 999.99 )
+               printf(" %10d %s%6.1f", nodes[s,pidx], marker, time[s,pidx]);
+               if( nodecomp == -1 )
+               {
+                  nodecomp = nodes[s,pidx];
+                  timecomp = time[s,pidx];
+               }
+            }
+            if( o > 0 )
+            {
+               if( !processed )
+                  printf("      -");
+               else if( nodes[s,pidx]/nodecomp > 999.99 )
                   printf("  Large");
                else
                   printf(" %6.2f", nodes[s,pidx]/nodecomp);
-               if( time[s,pidx]/timecomp > 999.99 )
+               if( !processed )
+                  printf("      -");
+               else if( time[s,pidx]/timecomp > 999.99 )
                   printf("  Large");
                else
                   printf(" %6.2f", time[s,pidx]/timecomp);
@@ -200,12 +215,14 @@ END {
             printf("  inconsistent");
             fail = 1;
          }
+         else if( probcnt[p] != nsolver )
+            printf("  unprocessed");
          else
             printf("  ok");
          printf("\n");
 
          # calculate totals and means for instances where no solver failes
-         if( !fail )
+         if( !fail && probcnt[p] == nsolver )
          {
             nevalprobs++;
             for( s = 0; s < nsolver; ++s )
@@ -241,12 +258,12 @@ END {
       s = printorder[o];
       if( o == 0 )
       {
-         printf(" %10d %7d", nodegeom[s], timegeom[s]);
+         printf(" %10d %7.1f", nodegeom[s], timegeom[s]);
          nodegeomcomp = nodegeom[s];
          timegeomcomp = timegeom[s];
       }
       else
-         printf(" %10d %7d %6.2f %6.2f", nodegeom[s], timegeom[s], nodegeom[s]/nodegeomcomp, timegeom[s]/timegeomcomp);
+         printf(" %10d %7.1f %6.2f %6.2f", nodegeom[s], timegeom[s], nodegeom[s]/nodegeomcomp, timegeom[s]/timegeomcomp);
    }
    printf("\n");
    printf("%-18s", "shifted geom.");
@@ -259,13 +276,13 @@ END {
       timeshiftedgeom[s] = max(timeshiftedgeom[s], 1.0);
       if( o == 0 )
       {
-         printf(" %10d %7d", nodeshiftedgeom[s], timeshiftedgeom[s]);
+         printf(" %10d %7.1f", nodeshiftedgeom[s], timeshiftedgeom[s]);
          nodeshiftedgeomcomp = nodeshiftedgeom[s];
          timeshiftedgeomcomp = timeshiftedgeom[s];
       }
       else
-         printf(" %10d %7d %6.2f %6.2f", nodeshiftedgeom[s], timeshiftedgeom[s],
-            nodeshiftedgeom[s]/nodeshiftedgeom[0], timeshiftedgeomcomp/timeshiftedgeomcomp);
+         printf(" %10d %7.1f %6.2f %6.2f", nodeshiftedgeom[s], timeshiftedgeom[s],
+            nodeshiftedgeom[s]/nodeshiftedgeomcomp, timeshiftedgeom[s]/timeshiftedgeomcomp);
    }
    printf("\n");
    printhline(nsolver);

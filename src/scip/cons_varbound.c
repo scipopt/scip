@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.54 2006/08/31 08:27:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.55 2006/09/19 22:11:45 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for variable bound constraints
@@ -397,15 +397,18 @@ SCIP_RETCODE propagateCons(
                newlb = SCIPadjustedVarLb(scip, consdata->var, consdata->lhs - consdata->vbdcoef * yub);
             else
                newlb = SCIPadjustedVarLb(scip, consdata->var, consdata->lhs - consdata->vbdcoef * ylb);
-            if( SCIPisLbBetter(scip, newlb, xlb, xub) || ylb > yub - 0.5 ) /*????????????? if( newlb > xlb + 0.1 )*/
+            if( SCIPisLbBetter(scip, newlb, xlb, xub) || ylb > yub - 0.5 )
             {
                SCIPdebugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n",
                   SCIPvarGetName(consdata->var), xlb, xub, newlb, xub);
                SCIP_CALL( SCIPinferVarLbCons(scip, consdata->var, newlb, cons, (int)PROPRULE_1, &infeasible, &tightened) );
                *cutoff = *cutoff || infeasible;
-               tightenedround = tightenedround || tightened;
+               if( tightened )
+               {
+                  tightenedround = TRUE;
+                  (*nchgbds)++;
+               }
                xlb = newlb;
-               (*nchgbds)++;
             }
          }
 
@@ -424,9 +427,12 @@ SCIP_RETCODE propagateCons(
                   SCIP_CALL( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, (int)PROPRULE_2,
                         &infeasible, &tightened) );
                   *cutoff = *cutoff || infeasible;
-                  tightenedround = tightenedround || tightened;
+                  if( tightened )
+                  {
+                     tightenedround = TRUE;
+                     (*nchgbds)++;
+                  }
                   ylb = newlb;
-                  (*nchgbds)++;
                }
             }
             else
@@ -439,9 +445,12 @@ SCIP_RETCODE propagateCons(
                   SCIP_CALL( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, (int)PROPRULE_2,
                         &infeasible, &tightened) );
                   *cutoff = *cutoff || infeasible;
-                  tightenedround = tightenedround || tightened;
+                  if( tightened )
+                  {
+                     tightenedround = TRUE;
+                     (*nchgbds)++;
+                  }
                   yub = newub;
-                  (*nchgbds)++;
                }
             }
          }
@@ -459,16 +468,19 @@ SCIP_RETCODE propagateCons(
                newub = SCIPadjustedVarUb(scip, consdata->var, consdata->rhs - consdata->vbdcoef * ylb);
             else
                newub = SCIPadjustedVarUb(scip, consdata->var, consdata->rhs - consdata->vbdcoef * yub);
-            if( SCIPisUbBetter(scip, newub, xlb, xub) || ylb > yub - 0.5 ) /*????????????? if( newub < xub - 0.1 )*/
+            if( SCIPisUbBetter(scip, newub, xlb, xub) || ylb > yub - 0.5 )
             {
                SCIPdebugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n",
                   SCIPvarGetName(consdata->var), xlb, xub, xlb, newub);
                SCIP_CALL( SCIPinferVarUbCons(scip, consdata->var, newub, cons, (int)PROPRULE_3, &infeasible, &tightened) );
                *cutoff = *cutoff || infeasible;
-               tightenedround = tightenedround || tightened;
+               if( tightened )
+               {
+                  tightenedround = TRUE;
+                  (*nchgbds)++;
+               }
                xub = newub;
-               (*nchgbds)++;
-            }
+             }
          }
 
          /* propagate bounds on y:
@@ -486,9 +498,12 @@ SCIP_RETCODE propagateCons(
                   SCIP_CALL( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, (int)PROPRULE_4,
                         &infeasible, &tightened) );
                   *cutoff = *cutoff || infeasible;
-                  tightenedround = tightenedround || tightened;
+                  if( tightened )
+                  {
+                     tightenedround = TRUE;
+                     (*nchgbds)++;
+                  }
                   yub = newub;
-                  (*nchgbds)++;
                }
             }
             else
@@ -501,9 +516,12 @@ SCIP_RETCODE propagateCons(
                   SCIP_CALL( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, (int)PROPRULE_4,
                         &infeasible, &tightened) );
                   *cutoff = *cutoff || infeasible;
-                  tightenedround = tightenedround || tightened;
+                  if( tightened )
+                  {
+                     tightenedround = TRUE;
+                     (*nchgbds)++;
+                  }
                   ylb = newlb;
-                  (*nchgbds)++;
                }
             }
          }
