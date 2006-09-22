@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.236 2006/09/17 20:09:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.237 2006/09/22 01:30:30 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -2627,8 +2627,7 @@ SCIP_RETCODE solveNode(
       *restart = *restart
          || (actdepth == 0
             && (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts)
-            && set->presol_restartfac > 0.0
-            && stat->nrootintfixingsrun > set->presol_restartfac * (prob->nvars - prob->ncontvars)
+            && stat->nrootintfixingsrun > set->presol_immrestartfac * (prob->nvars - prob->ncontvars)
             && (stat->nruns == 1 || prob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars));
 
       SCIPdebugMessage("node solving iteration %d finished: cutoff=%d, propagateagain=%d, solverelaxagain=%d, solvelpagain=%d, nlperrors=%d, restart=%d\n",

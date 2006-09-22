@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.70 2006/08/23 17:35:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.71 2006/09/22 01:30:30 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -229,8 +229,9 @@ struct SCIP_Set
    int                   presol_maxrounds;   /**< maximal number of presolving rounds (-1: unlimited) */
    int                   presol_maxrestarts; /**< maximal number of restarts (-1: unlimited) */
    SCIP_Real             presol_restartfac;  /**< fraction of integer variables that were fixed in the root node
-                                              *   triggering a restart with preprocessing (0.0: restart only after
-                                              *   complete root node evaluation) */
+                                              *   triggering a restart with preprocessing after root node evaluation */
+   SCIP_Real             presol_immrestartfac;/**< fraction of integer variables that were fixed in the root node triggereing an
+                                               *   immediate restart with preprcessing */
    SCIP_Real             presol_subrestartfac;/**< fraction of integer variables that were globally fixed during the
                                                *   solving process triggering a restart with preprocessing */
    SCIP_Real             presol_restartminred;/**< minimal fraction of integer variables removed after restart to allow for

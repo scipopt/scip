@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.183 2006/09/15 03:14:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.184 2006/09/22 01:30:30 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -185,8 +185,9 @@
 #define SCIP_DEFAULT_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds (-1: unlimited) */
 #define SCIP_DEFAULT_PRESOL_MAXRESTARTS      -1 /**< maximal number of restarts (-1: unlimited) */
 #define SCIP_DEFAULT_PRESOL_RESTARTFAC      0.0 /**< fraction of integer variables that were fixed in the root node
-                                                 *   triggering a restart with preprocessing (0.0: restart only after
-                                                 *   complete root node evaluation) */
+                                                 *   triggering a restart with preprocessing after root node evaluation */
+#define SCIP_DEFAULT_PRESOL_IMMRESTARTFAC   0.2 /**< fraction of integer variables that were fixed in the root node triggereing an
+                                                 *   immediate restart with preprcessing */
 #define SCIP_DEFAULT_PRESOL_SUBRESTARTFAC   1.0 /**< fraction of integer variables that were globally fixed during the
                                                  *   solving process triggering a restart with preprocessing */
 #define SCIP_DEFAULT_PRESOL_RESTARTMINRED   0.05/**< minimal fraction of integer variables removed after restart to allow
@@ -799,7 +800,7 @@ SCIP_RETCODE SCIPsetCreate(
          paramChgdBarrierconvtol, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/boundstreps",
-         "minimal improve for strengthening bounds",
+         "minimal relative improve for strengthening bounds",
          &(*set)->num_boundstreps, SCIP_DEFAULT_BOUNDSTREPS, SCIP_MINEPSILON*1e+03, SCIP_INVALID/10.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
@@ -831,8 +832,13 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "presolving/restartfac",
-         "fraction of integer variables that were fixed in the root node triggering a restart with preprocessing (0.0: restart only after complete root node evaluation)",
+         "fraction of integer variables that were fixed in the root node triggering a restart with preprocessing after root node evaluation",
          &(*set)->presol_restartfac, SCIP_DEFAULT_PRESOL_RESTARTFAC, 0.0, 1.0,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
+         "presolving/immrestartfac",
+         "fraction of integer variables that were fixed in the root node triggering an immediate restart with preprocessing",
+         &(*set)->presol_immrestartfac, SCIP_DEFAULT_PRESOL_IMMRESTARTFAC, 0.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "presolving/subrestartfac",

@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.181 2006/09/17 20:46:06 bzfpfend Exp $
+# $Id: Makefile,v 1.182 2006/09/22 01:30:29 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -361,6 +361,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/cons_xor.o \
 			scip/dialog_default.o \
 			scip/disp_default.o \
+			scip/heur_actconsdiving.o \
 			scip/heur_coefdiving.o \
 			scip/heur_crossover.o \
 			scip/heur_feaspump.o \
