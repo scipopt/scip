@@ -16,6 +16,7 @@ plugins:
 - improved performance of linear constraint propagation by delaying some floor/ceil calculations
 - new nodeselection rule "estimate" (best estimate search)
 - best estimate search is now used in all large neighborhood search heuristics
+- new heuristic "actconsdiving" following an idea of John Chinneck
 
 parameters:
 - new parameter "separating/clique/backtrackfreq" to speed up clique cut separation in heuristic fashion
@@ -24,6 +25,8 @@ parameters:
 - new parameter "separating/redcost/continuous"
 - new parameter "heuristics/feaspump/maxstallloops"
 - priority parameters are now restricted to be in [INT_MIN/4,INT_MAX/4] to avoid overflow errors in comparison methods
+- new parameter "presolving/immrestartfac"
+- changed default value of "numerics/boundstreps" to 0.05 in order to avoid very long propagation loops on continuous variables
 
 bugs:
 - SCIPgetAvgPseudocostCount() and SCIPgetAvgPseudocostCountCurrentRun() now return the average over all integer variables instead

@@ -290,7 +290,7 @@ numerics/dualfeastol = 1e-09
 # [type: real, range: [1e-17,0.001], default: 1e-10]
 numerics/barrierconvtol = 1e-10
 
-# minimal improve for strengthening bounds
+# minimal relative improve for strengthening bounds
 # [type: real, range: [1e-17,1e+98], default: 0.0001]
 numerics/boundstreps = 0.0001
 
@@ -314,9 +314,13 @@ presolving/abortfac = 0.0001
 # [type: int, range: [-1,2147483647], default: -1]
 presolving/maxrestarts = -1
 
-# fraction of integer variables that were fixed in the root node triggering a restart with preprocessing (0.0: restart only after complete root node evaluation)
+# fraction of integer variables that were fixed in the root node triggering a restart with preprocessing after root node evaluation
 # [type: real, range: [0,1], default: 0]
 presolving/restartfac = 0
+
+# fraction of integer variables that were fixed in the root node triggering an immediate restart with preprocessing
+# [type: real, range: [0,1], default: 0.2]
+presolving/immrestartfac = 0.2
 
 # fraction of integer variables that were globally fixed during the solving process triggering a restart with preprocessing
 # [type: real, range: [0,1], default: 1]
@@ -1166,6 +1170,54 @@ branching/relpscost/inititer = 0
 # [type: int, range: [-1,2147483647], default: 5]
 branching/relpscost/maxbdchgs = 5
 
+# priority of heuristic <actconsdiving>
+# [type: int, range: [-536870912,536870911], default: -1003700]
+heuristics/actconsdiving/priority = -1003700
+
+# frequency for calling primal heuristic <actconsdiving> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/actconsdiving/freq = -1
+
+# frequency offset for calling primal heuristic <actconsdiving>
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/actconsdiving/freqofs = 0
+
+# maximal depth level to call primal heuristic <actconsdiving> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/actconsdiving/maxdepth = -1
+
+# minimal relative depth to start diving
+# [type: real, range: [0,1], default: 0]
+heuristics/actconsdiving/minreldepth = 0
+
+# maximal relative depth to start diving
+# [type: real, range: [0,1], default: 1]
+heuristics/actconsdiving/maxreldepth = 1
+
+# maximal fraction of diving LP iterations compared to node LP iterations
+# [type: real, range: [0,1.79769313486232e+308], default: 0.05]
+heuristics/actconsdiving/maxlpiterquot = 0.05
+
+# additional number of allowed LP iterations
+# [type: int, range: [0,2147483647], default: 1000]
+heuristics/actconsdiving/maxlpiterofs = 1000
+
+# maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed (0.0: no limit)
+# [type: real, range: [0,1], default: 0.8]
+heuristics/actconsdiving/maxdiveubquot = 0.8
+
+# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+heuristics/actconsdiving/maxdiveavgquot = 0
+
+# maximal UBQUOT when no solution was found yet (0.0: no limit)
+# [type: real, range: [0,1], default: 0.1]
+heuristics/actconsdiving/maxdiveubquotnosol = 0.1
+
+# maximal AVGQUOT when no solution was found yet (0.0: no limit)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+heuristics/actconsdiving/maxdiveavgquotnosol = 0
+
 # priority of heuristic <coefdiving>
 # [type: int, range: [-536870912,536870911], default: -1001000]
 heuristics/coefdiving/priority = -1001000
@@ -1302,7 +1354,7 @@ heuristics/feaspump/objfactor = 1
 # [type: int, range: [-1,2147483647], default: 10000]
 heuristics/feaspump/maxloops = 10000
 
-# maxumal number of pumping rounds without fractionality improvement (-1: no limit)
+# maximal number of pumping rounds without fractionality improvement (-1: no limit)
 # [type: int, range: [-1,2147483647], default: 10]
 heuristics/feaspump/maxstallloops = 10
 
