@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.184 2006/09/22 01:30:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.185 2006/09/23 00:18:35 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -177,6 +177,10 @@
 #define SCIP_DEFAULT_MISC_CATCHCTRLC       TRUE /**< should the CTRL-C interrupt be caught by SCIP? */
 #define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
 
+
+/* Node Selection */
+#define SCIP_DEFAULT_NODESEL_CHILDSEL       'h' /**< child selection rule ('d'own, 'u'p, 'i'nference, 'l'p value,
+                                                 *   'h'brid inference/LP value) */
 
 /* Presolving */
 
@@ -766,6 +770,13 @@ SCIP_RETCODE SCIPsetCreate(
 #else
    (*set)->misc_exactsolve = SCIP_DEFAULT_MISC_EXACTSOLVE;
 #endif
+
+   /* node selection */
+   SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
+         "nodeselection/childsel",
+         "child selection rule ('d'own, 'u'p, 'i'nference, 'l'p value, 'h'brid inference/LP value)",
+         &(*set)->nodesel_childsel, SCIP_DEFAULT_NODESEL_CHILDSEL, "duilh",
+         NULL, NULL) );
 
    /* numerical parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,

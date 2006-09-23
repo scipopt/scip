@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.71 2006/09/22 01:30:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.72 2006/09/23 00:18:35 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -212,6 +212,10 @@ struct SCIP_Set
    /* miscellaneous settings */
    SCIP_Bool             misc_catchctrlc;    /**< should the CTRL-C interrupt be caught by SCIP? */
    SCIP_Bool             misc_exactsolve;    /**< should the problem be solved exactly (with proven dual bounds)? */
+
+   /* node selection settings */
+   char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'i'nference, 'l'p value,
+                                              *   'h'brid inference/LP value) */
 
    /* numerical settings */
    SCIP_Real             num_infinity;       /**< values larger than this are considered infinity */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.187 2006/09/17 20:09:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.188 2006/09/23 00:18:35 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4115,6 +4115,8 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
    SCIP_Bool isroot;
    SCIP_Bool haslp;
 
+   assert(set != NULL);
+
    /* extract necessary information */
    isroot = (SCIPtreeGetCurrentDepth(tree) == 0);
    haslp = SCIPtreeHasFocusNodeLP(tree);
@@ -4135,9 +4137,30 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
          prio = -1.0;
          break;
       case SCIP_BRANCHDIR_AUTO:
-         prio = downinfs + SCIPsetEpsilon(set);
-         if( !isroot && haslp )
-            prio *= (varrootsol - varsol + 1.0);
+         switch( set->nodesel_childsel )
+         {
+         case 'd':
+            prio = +1.0;
+            break;
+         case 'u':
+            prio = -1.0;
+            break;
+         case 'i':
+            prio = downinfs;
+            break;
+         case 'l':
+            prio = varrootsol - varsol;
+            break;
+         case 'h':
+            prio = downinfs + SCIPsetEpsilon(set);
+            if( !isroot && haslp )
+               prio *= (varrootsol - varsol + 1.0);
+            break;
+         default:
+            SCIPerrorMessage("invalid child selection rule <%c>\n", set->nodesel_childsel);
+            prio = 0.0;
+            break;
+         }
          break;
       default:
          SCIPerrorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 
@@ -4158,10 +4181,32 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
          prio = +1.0;
          break;
       case SCIP_BRANCHDIR_AUTO:
-         prio = upinfs  + SCIPsetEpsilon(set);
-         if( !isroot && haslp )
-            prio *= (varsol - varrootsol + 1.0);
+         switch( set->nodesel_childsel )
+         {
+         case 'd':
+            prio = -1.0;
+            break;
+         case 'u':
+            prio = +1.0;
+            break;
+         case 'i':
+            prio = upinfs;
+            break;
+         case 'l':
+            prio = varsol - varrootsol;
+            break;
+         case 'h':
+            prio = upinfs  + SCIPsetEpsilon(set);
+            if( !isroot && haslp )
+               prio *= (varsol - varrootsol + 1.0);
+            break;
+         default:
+            SCIPerrorMessage("invalid child selection rule <%c>\n", set->nodesel_childsel);
+            prio = 0.0;
+            break;
+         }
          break;
+
       default:
          SCIPerrorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 
             SCIPvarGetBranchDirection(var), SCIPvarGetName(var));

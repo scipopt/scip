@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_actconsdiving.c,v 1.1 2006/09/22 01:30:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_actconsdiving.c,v 1.2 2006/09/23 00:18:35 bzfpfend Exp $"
 
 /**@file   heur_actconsdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the active constraints the variable appear in
@@ -34,7 +34,7 @@
 #define HEUR_DISPCHAR         'a'
 #define HEUR_PRIORITY         -1003700
 #define HEUR_FREQ             -1
-#define HEUR_FREQOFS          0
+#define HEUR_FREQOFS          5
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 
@@ -54,6 +54,7 @@
                                               *   where diving is performed (0.0: no limit) */
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
+#define DEFAULT_BACKTRACK         FALSE /**< use one level of backtracking if infeasibility is encountered? */
 
 #define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
 
@@ -73,6 +74,7 @@ struct SCIP_HeurData
                                               *   where diving is performed (0.0: no limit) */
    SCIP_Real             maxdiveubquotnosol; /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
    SCIP_Real             maxdiveavgquotnosol;/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
+   SCIP_Bool             backtrack;          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Longint          nlpiterations;      /**< LP iterations used in this heuristic */
    int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
 };
@@ -274,7 +276,7 @@ SCIP_DECL_HEUREXEC(heurExecActconsdiving) /*lint --e{715}*/
    SCIP_Bool roundup;
    SCIP_Bool lperror;
    SCIP_Bool cutoff;
-   SCIP_Bool backtrack;
+   SCIP_Bool backtracked;
    SCIP_Longint ncalls;
    SCIP_Longint nsolsfound;
    SCIP_Longint nlpiterations;
@@ -367,7 +369,7 @@ SCIP_DECL_HEUREXEC(heurExecActconsdiving) /*lint --e{715}*/
          searchavgbound = SCIPinfinity(scip);
    }
    searchbound = MIN(searchubbound, searchavgbound);
-   if( SCIPisObjIntegral(scip) ) /*?????????????? do this also in other diving heuristics! */
+   if( SCIPisObjIntegral(scip) )
       searchbound = SCIPceil(scip, searchbound);
 
    /* calculate the maximal diving depth: 10 * min{number of integer variables, max depth} */
@@ -420,130 +422,125 @@ SCIP_DECL_HEUREXEC(heurExecActconsdiving) /*lint --e{715}*/
       bestcandmayrounddown = TRUE;
       bestcandmayroundup = TRUE;
       bestcandroundup = FALSE;
-      backtrack = FALSE;
-      do
+      for( c = 0; c < nlpcands; ++c )
       {
-         /* if we have backtracked, select the same variable but with opposite direction */
-         if( !backtrack )
+         var = lpcands[c];
+         mayrounddown = SCIPvarMayRoundDown(var);
+         mayroundup = SCIPvarMayRoundUp(var);
+         frac = lpcandsfrac[c];
+         if( mayrounddown || mayroundup )
          {
-            for( c = 0; c < nlpcands; ++c )
-            {
-               var = lpcands[c];
-               mayrounddown = SCIPvarMayRoundDown(var);
-               mayroundup = SCIPvarMayRoundUp(var);
-               frac = lpcandsfrac[c];
-               if( mayrounddown || mayroundup )
-               {
-                  /* the candidate may be rounded: choose this candidate only, if the best candidate may also be rounded */
-                  if( bestcandmayrounddown || bestcandmayroundup )
-                  {
-                     /* choose rounding direction:
-                      * - if variable may be rounded in both directions, round corresponding to the fractionality
-                      * - otherwise, round in the infeasible direction, because feasible direction is tried by rounding
-                      *   the current fractional solution
-                      */
-                     if( mayrounddown && mayroundup )
-                        roundup = (frac > 0.5);
-                     else
-                        roundup = mayrounddown;
-
-                     if( roundup )
-                        frac = 1.0 - frac;
-                     actscore = getNActiveConsScore(scip, var, &downscore, &upscore);
-
-                     /* penalize too small fractions */
-                     if( frac < 0.01 )
-                        actscore *= 0.01;
-            
-                     /* prefer decisions on binary variables */
-                     if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
-                        actscore *= 0.01;
-
-                     /* check, if candidate is new best candidate */
-                     assert(0.0 < frac && frac < 1.0);
-                     if( SCIPisGT(scip, actscore, bestactscore) || (SCIPisGE(scip, actscore, bestactscore) && frac < bestfrac) )
-                     {
-                        bestcand = c;
-                        bestactscore = actscore;
-                        bestfrac = frac;
-                        bestcandmayrounddown = mayrounddown;
-                        bestcandmayroundup = mayroundup;
-                        bestcandroundup = roundup;
-                     }
-                  }
-               }
-               else
-               {
-                  /* the candidate may not be rounded */
-                  actscore = getNActiveConsScore(scip, var, &downscore, &upscore);
-                  roundup = (downscore < upscore);
-                  if( roundup )
-                     frac = 1.0 - frac;
-
-                  /* penalize too small fractions */
-                  if( frac < 0.01 )
-                     actscore *= 0.01;
-            
-                  /* prefer decisions on binary variables */
-                  if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
-                     actscore *= 0.01;
-
-                  /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
-                  assert(0.0 < frac && frac < 1.0);
-                  if( bestcandmayrounddown || bestcandmayroundup || SCIPisGT(scip, actscore, bestactscore) ||
-                     (SCIPisGE(scip, actscore, bestactscore) && frac < bestfrac) )
-                  {
-                     bestcand = c;
-                     bestactscore = actscore;
-                     bestfrac = frac;
-                     bestcandmayrounddown = FALSE;
-                     bestcandmayroundup = FALSE;
-                     bestcandroundup = roundup;
-                  }
-                  assert(bestfrac < SCIP_INVALID);
-               }
-            }
-            assert(bestcand != -1);
-
-            /* if all candidates are roundable, try to round the solution */
+            /* the candidate may be rounded: choose this candidate only, if the best candidate may also be rounded */
             if( bestcandmayrounddown || bestcandmayroundup )
             {
-               SCIP_Bool success;
-         
-               /* create solution from diving LP and try to round it */
-               SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
-               SCIP_CALL( SCIProundSol(scip, heurdata->sol, &success) );
+               /* choose rounding direction:
+                * - if variable may be rounded in both directions, round corresponding to the fractionality
+                * - otherwise, round in the infeasible direction, because feasible direction is tried by rounding
+                *   the current fractional solution
+                */
+               if( mayrounddown && mayroundup )
+                  roundup = (frac > 0.5);
+               else
+                  roundup = mayrounddown;
 
-               if( success )
-               {
-                  SCIPdebugMessage("actconsdiving found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
-         
-                  /* try to add solution to SCIP */
-                  SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
+               if( roundup )
+                  frac = 1.0 - frac;
+               actscore = getNActiveConsScore(scip, var, &downscore, &upscore);
+
+               /* penalize too small fractions */
+               if( frac < 0.01 )
+                  actscore *= 0.01;
             
-                  /* check, if solution was feasible and good enough */
-                  if( success )
-                  {
-                     SCIPdebugMessage(" -> solution was feasible and good enough\n");
-                     *result = SCIP_FOUNDSOL;
-                  }
+               /* prefer decisions on binary variables */
+               if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+                  actscore *= 0.01;
+
+               /* check, if candidate is new best candidate */
+               assert(0.0 < frac && frac < 1.0);
+               if( SCIPisGT(scip, actscore, bestactscore) || (SCIPisGE(scip, actscore, bestactscore) && frac < bestfrac) )
+               {
+                  bestcand = c;
+                  bestactscore = actscore;
+                  bestfrac = frac;
+                  bestcandmayrounddown = mayrounddown;
+                  bestcandmayroundup = mayroundup;
+                  bestcandroundup = roundup;
                }
             }
          }
-         assert(bestcand != -1);
-
-         var = lpcands[bestcand];
-
-         /* if the variable is already fixed, abort diving due to numerical troubles */
-         if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
+         else
          {
-            SCIPdebugMessage("numerical troubles: selected variable <%s> already fixed to [%g,%g] (solval: %.9f)\n",
-               SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), lpcandssol[bestcand]);
-            break;
-         }
+            /* the candidate may not be rounded */
+            actscore = getNActiveConsScore(scip, var, &downscore, &upscore);
+            roundup = (downscore < upscore);
+            if( roundup )
+               frac = 1.0 - frac;
 
+            /* penalize too small fractions */
+            if( frac < 0.01 )
+               actscore *= 0.01;
+            
+            /* prefer decisions on binary variables */
+            if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+               actscore *= 0.01;
+
+            /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
+            assert(0.0 < frac && frac < 1.0);
+            if( bestcandmayrounddown || bestcandmayroundup || SCIPisGT(scip, actscore, bestactscore) ||
+               (SCIPisGE(scip, actscore, bestactscore) && frac < bestfrac) )
+            {
+               bestcand = c;
+               bestactscore = actscore;
+               bestfrac = frac;
+               bestcandmayrounddown = FALSE;
+               bestcandmayroundup = FALSE;
+               bestcandroundup = roundup;
+            }
+            assert(bestfrac < SCIP_INVALID);
+         }
+      }
+      assert(bestcand != -1);
+
+      /* if all candidates are roundable, try to round the solution */
+      if( bestcandmayrounddown || bestcandmayroundup )
+      {
+         SCIP_Bool success;
+         
+         /* create solution from diving LP and try to round it */
+         SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
+         SCIP_CALL( SCIProundSol(scip, heurdata->sol, &success) );
+
+         if( success )
+         {
+            SCIPdebugMessage("actconsdiving found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
+         
+            /* try to add solution to SCIP */
+            SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
+            
+            /* check, if solution was feasible and good enough */
+            if( success )
+            {
+               SCIPdebugMessage(" -> solution was feasible and good enough\n");
+               *result = SCIP_FOUNDSOL;
+            }
+         }
+      }
+      assert(bestcand != -1);
+      var = lpcands[bestcand];
+
+      /* if the variable is already fixed, abort diving due to numerical troubles */
+      if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
+      {
+         SCIPdebugMessage("numerical troubles: selected variable <%s> already fixed to [%g,%g] (solval: %.9f)\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), lpcandssol[bestcand]);
+         break;
+      }
+
+      backtracked = FALSE;
+      do
+      {
          /* apply rounding of best candidate */
-         if( bestcandroundup == !backtrack )
+         if( bestcandroundup == !backtracked )
          {
             /* round variable up */
             SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%d/%d, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
@@ -583,17 +580,17 @@ SCIP_DECL_HEUREXEC(heurExecActconsdiving) /*lint --e{715}*/
          }
 
          /* perform backtracking if a cutoff was detected */
-         if( cutoff && !backtrack ) /*?????????????? do this also in other diving heuristics! */
+         if( cutoff && !backtracked && heurdata->backtrack )
          {
             SCIPdebugMessage("  *** cutoff detected at level %d - backtracking\n", SCIPgetProbingDepth(scip));
             SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
             SCIP_CALL( SCIPnewProbingNode(scip) );
-            backtrack = TRUE;
+            backtracked = TRUE;
          }
          else
-            backtrack = FALSE;
+            backtracked = FALSE;
       }
-      while( backtrack );
+      while( backtracked );
 
       if( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
       {
@@ -712,6 +709,10 @@ SCIP_RETCODE SCIPincludeHeurActconsdiving(
          "heuristics/actconsdiving/maxdiveavgquotnosol", 
          "maximal AVGQUOT when no solution was found yet (0.0: no limit)",
          &heurdata->maxdiveavgquotnosol, DEFAULT_MAXDIVEAVGQUOTNOSOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "heuristics/actconsdiving/backtrack", 
+         "use one level of backtracking if infeasibility is encountered?",
+         &heurdata->backtrack, DEFAULT_BACKTRACK, NULL, NULL) );
    
    return SCIP_OKAY;
 }

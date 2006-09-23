@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_linesearchdiving.c,v 1.34 2006/09/17 01:58:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_linesearchdiving.c,v 1.35 2006/09/23 00:18:35 bzfpfend Exp $"
 
 /**@file   heur_linesearchdiving.c
  * @brief  linesearchdiving primal heuristic
@@ -54,6 +54,7 @@
                                               *   where diving is performed (0.0: no limit) */
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
+#define DEFAULT_BACKTRACK         FALSE /**< use one level of backtracking if infeasibility is encountered? */
 
 #define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
 
@@ -77,6 +78,7 @@ struct SCIP_HeurData
                                               *   where diving is performed (0.0: no limit) */
    SCIP_Real             maxdiveubquotnosol; /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
    SCIP_Real             maxdiveavgquotnosol;/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
+   SCIP_Bool             backtrack;          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Longint          nlpiterations;      /**< LP iterations used in this heuristic */
    int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
 };
@@ -191,6 +193,7 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
    SCIP_Bool bestcandroundup;
    SCIP_Bool lperror;
    SCIP_Bool cutoff;
+   SCIP_Bool backtracked;
    SCIP_Bool success;
    SCIP_Longint ncalls;
    SCIP_Longint nsolsfound;
@@ -279,6 +282,8 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
          searchavgbound = SCIPinfinity(scip);
    }
    searchbound = MIN(searchubbound, searchavgbound);
+   if( SCIPisObjIntegral(scip) )
+      searchbound = SCIPceil(scip, searchbound);
 
    /* calculate the maximal diving depth: 10 * min{number of integer variables, max depth} */
    maxdivedepth = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
@@ -393,44 +398,63 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
          break;
       }
 
-      if( bestcandroundup )
+      backtracked = FALSE;
+      do
       {
-         /* round variable up */
-         SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, sol=%g, root=%g, [%g,%g] -> [%g,%g]\n",
-            divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
-            SCIPvarGetName(var), lpcandssol[bestcand], SCIPvarGetRootSol(var),
-            SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-            SCIPfeasCeil(scip, lpcandssol[bestcand]), SCIPvarGetUbLocal(var));
-         SCIP_CALL( SCIPchgVarLbProbing(scip, var, SCIPfeasCeil(scip, lpcandssol[bestcand])) );
+         /* apply rounding of best candidate */
+         if( bestcandroundup == !backtracked )
+         {
+            /* round variable up */
+            SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, sol=%g, root=%g, [%g,%g] -> [%g,%g]\n",
+               divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
+               SCIPvarGetName(var), lpcandssol[bestcand], SCIPvarGetRootSol(var),
+               SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+               SCIPfeasCeil(scip, lpcandssol[bestcand]), SCIPvarGetUbLocal(var));
+            SCIP_CALL( SCIPchgVarLbProbing(scip, var, SCIPfeasCeil(scip, lpcandssol[bestcand])) );
+         }
+         else
+         {
+            /* round variable down */
+            SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, sol=%g, root=%g, [%g,%g] -> [%g,%g]\n",
+               divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
+               SCIPvarGetName(var), lpcandssol[bestcand], SCIPvarGetRootSol(var),
+               SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+               SCIPvarGetLbLocal(var), SCIPfeasFloor(scip, lpcandssol[bestcand]));
+            SCIP_CALL( SCIPchgVarUbProbing(scip, var, SCIPfeasFloor(scip, lpcandssol[bestcand])) );
+         }
+
+         /* apply domain propagation */
+         SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, NULL) );
+         if( !cutoff )
+         {
+            /* resolve the diving LP */
+            nlpiterations = SCIPgetNLPIterations(scip);
+            SCIP_CALL( SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
+            if( lperror )
+               break;
+
+            /* update iteration count */
+            heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
+
+            /* get LP solution status, objective value, and fractional variables, that should be integral */
+            lpsolstat = SCIPgetLPSolstat(scip);
+            cutoff = (lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
+         }
+
+         /* perform backtracking if a cutoff was detected */
+         if( cutoff && !backtracked && heurdata->backtrack )
+         {
+            SCIPdebugMessage("  *** cutoff detected at level %d - backtracking\n", SCIPgetProbingDepth(scip));
+            SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
+            SCIP_CALL( SCIPnewProbingNode(scip) );
+            backtracked = TRUE;
+         }
+         else
+            backtracked = FALSE;
       }
-      else
-      {
-         /* round variable down */
-         SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, sol=%g, root=%g, [%g,%g] -> [%g,%g]\n",
-            divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
-            SCIPvarGetName(var), lpcandssol[bestcand], SCIPvarGetRootSol(var),
-            SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-            SCIPvarGetLbLocal(var), SCIPfeasFloor(scip, lpcandssol[bestcand]));
-         SCIP_CALL( SCIPchgVarUbProbing(scip, var, SCIPfeasFloor(scip, lpcandssol[bestcand])) );
-      }
+      while( backtracked );
 
-      /* apply domain propagation */
-      SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, NULL) );
-      if( cutoff )
-         break;
-
-      /* resolve the diving LP */
-      nlpiterations = SCIPgetNLPIterations(scip);
-      SCIP_CALL( SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
-      if( lperror )
-         break;
-
-      /* update iteration count */
-      heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
-
-      /* get LP solution status, objective value, and fractional variables, that should be integral */
-      lpsolstat = SCIPgetLPSolstat(scip);
-      if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
+      if( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
       {
          /* get new objective value */
          oldobjval = objval;
@@ -544,6 +568,10 @@ SCIP_RETCODE SCIPincludeHeurLinesearchdiving(
          "heuristics/linesearchdiving/maxdiveavgquotnosol",
          "maximal AVGQUOT when no solution was found yet (0.0: no limit)",
          &heurdata->maxdiveavgquotnosol, DEFAULT_MAXDIVEAVGQUOTNOSOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "heuristics/linesearchdiving/backtrack", 
+         "use one level of backtracking if infeasibility is encountered?",
+         &heurdata->backtrack, DEFAULT_BACKTRACK, NULL, NULL) );
 
    return SCIP_OKAY;
 }
