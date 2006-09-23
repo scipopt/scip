@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.185 2006/09/23 00:18:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.186 2006/09/23 05:38:29 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -179,7 +179,7 @@
 
 
 /* Node Selection */
-#define SCIP_DEFAULT_NODESEL_CHILDSEL       'h' /**< child selection rule ('d'own, 'u'p, 'i'nference, 'l'p value,
+#define SCIP_DEFAULT_NODESEL_CHILDSEL       'h' /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
                                                  *   'h'brid inference/LP value) */
 
 /* Presolving */
@@ -774,8 +774,8 @@ SCIP_RETCODE SCIPsetCreate(
    /* node selection */
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "nodeselection/childsel",
-         "child selection rule ('d'own, 'u'p, 'i'nference, 'l'p value, 'h'brid inference/LP value)",
-         &(*set)->nodesel_childsel, SCIP_DEFAULT_NODESEL_CHILDSEL, "duilh",
+         "child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value, 'h'brid inference/LP value)",
+         &(*set)->nodesel_childsel, SCIP_DEFAULT_NODESEL_CHILDSEL, "dupilh",
          NULL, NULL) );
 
    /* numerical parameters */

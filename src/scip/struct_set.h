@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.72 2006/09/23 00:18:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.73 2006/09/23 05:38:29 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -214,7 +214,7 @@ struct SCIP_Set
    SCIP_Bool             misc_exactsolve;    /**< should the problem be solved exactly (with proven dual bounds)? */
 
    /* node selection settings */
-   char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'i'nference, 'l'p value,
+   char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
                                               *   'h'brid inference/LP value) */
 
    /* numerical settings */
