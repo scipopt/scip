@@ -266,6 +266,10 @@ memory/pathgrowinit = 256
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 misc/catchctrlc = TRUE
 
+# child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value, 'h'brid inference/LP value)
+# [type: char, range: {dupilh}, default: h]
+nodeselection/childsel = h
+
 # values larger than this are considered infinity
 # [type: real, range: [10000000000,1e+98], default: 1e+20]
 numerics/infinity = 1e+20
@@ -291,8 +295,8 @@ numerics/dualfeastol = 1e-09
 numerics/barrierconvtol = 1e-10
 
 # minimal relative improve for strengthening bounds
-# [type: real, range: [1e-17,1e+98], default: 0.0001]
-numerics/boundstreps = 0.0001
+# [type: real, range: [1e-17,1e+98], default: 0.05]
+numerics/boundstreps = 0.05
 
 # minimal variable distance value to use for branching pseudo cost updates
 # [type: real, range: [1e-17,1], default: 0.1]
@@ -987,12 +991,12 @@ nodeselection/dfs/stdpriority = 0
 nodeselection/dfs/memsavepriority = 100000
 
 # priority of branching rule <estimate> in standard mode
-# [type: int, range: [-536870912,536870911], default: 80000]
-nodeselection/estimate/stdpriority = 80000
+# [type: int, range: [-536870912,536870911], default: 200000]
+nodeselection/estimate/stdpriority = 200000
 
 # priority of branching rule <estimate> in memory saving mode
-# [type: int, range: [-536870912,536870911], default: 0]
-nodeselection/estimate/memsavepriority = 0
+# [type: int, range: [-536870912,536870911], default: 100]
+nodeselection/estimate/memsavepriority = 100
 
 # minimal plunging depth, before new best node may be selected (-1 for dynamic setting)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -1007,8 +1011,8 @@ nodeselection/estimate/maxplungedepth = -1
 nodeselection/estimate/maxplungequot = 0.25
 
 # frequency at which the best node instead of the best estimate is selected (0: never)
-# [type: int, range: [0,2147483647], default: 100]
-nodeselection/estimate/bestnodefreq = 100
+# [type: int, range: [0,2147483647], default: 10]
+nodeselection/estimate/bestnodefreq = 10
 
 # priority of branching rule <restartdfs> in standard mode
 # [type: int, range: [-536870912,536870911], default: 50000]
@@ -1179,8 +1183,8 @@ heuristics/actconsdiving/priority = -1003700
 heuristics/actconsdiving/freq = -1
 
 # frequency offset for calling primal heuristic <actconsdiving>
-# [type: int, range: [0,2147483647], default: 0]
-heuristics/actconsdiving/freqofs = 0
+# [type: int, range: [0,2147483647], default: 5]
+heuristics/actconsdiving/freqofs = 5
 
 # maximal depth level to call primal heuristic <actconsdiving> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -1217,6 +1221,10 @@ heuristics/actconsdiving/maxdiveubquotnosol = 0.1
 # maximal AVGQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/actconsdiving/maxdiveavgquotnosol = 0
+
+# use one level of backtracking if infeasibility is encountered?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/actconsdiving/backtrack = FALSE
 
 # priority of heuristic <coefdiving>
 # [type: int, range: [-536870912,536870911], default: -1001000]
@@ -1265,6 +1273,10 @@ heuristics/coefdiving/maxdiveubquotnosol = 0.1
 # maximal AVGQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/coefdiving/maxdiveavgquotnosol = 0
+
+# use one level of backtracking if infeasibility is encountered?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/coefdiving/backtrack = FALSE
 
 # priority of heuristic <crossover>
 # [type: int, range: [-536870912,536870911], default: -1011000]
@@ -1442,6 +1454,10 @@ heuristics/fracdiving/maxdiveubquotnosol = 0.1
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/fracdiving/maxdiveavgquotnosol = 0
 
+# use one level of backtracking if infeasibility is encountered?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/fracdiving/backtrack = FALSE
+
 # priority of heuristic <guideddiving>
 # [type: int, range: [-536870912,536870911], default: -1007000]
 heuristics/guideddiving/priority = -1007000
@@ -1481,6 +1497,10 @@ heuristics/guideddiving/maxdiveubquot = 0.8
 # maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/guideddiving/maxdiveavgquot = 0
+
+# use one level of backtracking if infeasibility is encountered?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/guideddiving/backtrack = FALSE
 
 # priority of heuristic <intdiving>
 # [type: int, range: [-536870912,536870911], default: -1003500]
@@ -1529,6 +1549,10 @@ heuristics/intdiving/maxdiveubquotnosol = 0.1
 # maximal AVGQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/intdiving/maxdiveavgquotnosol = 0
+
+# use one level of backtracking if infeasibility is encountered?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/intdiving/backtrack = FALSE
 
 # priority of heuristic <intshifting>
 # [type: int, range: [-536870912,536870911], default: -10000]
@@ -1593,6 +1617,10 @@ heuristics/linesearchdiving/maxdiveubquotnosol = 0.1
 # maximal AVGQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/linesearchdiving/maxdiveavgquotnosol = 0
+
+# use one level of backtracking if infeasibility is encountered?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/linesearchdiving/backtrack = FALSE
 
 # priority of heuristic <localbranching>
 # [type: int, range: [-536870912,536870911], default: -1010000]
@@ -1817,6 +1845,10 @@ heuristics/pscostdiving/maxdiveubquotnosol = 0.1
 # maximal AVGQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/pscostdiving/maxdiveavgquotnosol = 0
+
+# use one level of backtracking if infeasibility is encountered?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/pscostdiving/backtrack = FALSE
 
 # priority of heuristic <rens>
 # [type: int, range: [-536870912,536870911], default: -1100000]
@@ -2045,6 +2077,10 @@ heuristics/veclendiving/maxdiveubquotnosol = 0.1
 # maximal AVGQUOT when no solution was found yet (0.0: no limit)
 # [type: real, range: [0,1.79769313486232e+308], default: 0]
 heuristics/veclendiving/maxdiveavgquotnosol = 0
+
+# use one level of backtracking if infeasibility is encountered?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/veclendiving/backtrack = FALSE
 
 # priority of propagator <pseudoobj>
 # [type: int, range: [-536870912,536870911], default: 0]

@@ -29,6 +29,7 @@ parameters:
 - changed default value of "numerics/boundstreps" to 0.05 in order to avoid very long propagation loops on continuous variables
 - new parameter "nodeselection/childsel" to control the child selection
 - new parameters "heuristics/*diving/backtrack" to activate 1-level backtracking for most of the diving heuristics
+- increased priority of "estimate" node selector, such that this is the new default node selector
 
 bugs:
 - SCIPgetAvgPseudocostCount() and SCIPgetAvgPseudocostCountCurrentRun() now return the average over all integer variables instead

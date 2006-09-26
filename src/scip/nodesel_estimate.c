@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_estimate.c,v 1.1 2006/09/17 01:58:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_estimate.c,v 1.2 2006/09/26 12:54:19 bzfpfend Exp $"
 
 /**@file   nodesel_estimate.c
  * @brief  node selector for best estimate search
@@ -31,8 +31,8 @@
 
 #define NODESEL_NAME             "estimate"
 #define NODESEL_DESC             "best estimate search"
-#define NODESEL_STDPRIORITY       80000
-#define NODESEL_MEMSAVEPRIORITY       0
+#define NODESEL_STDPRIORITY      200000
+#define NODESEL_MEMSAVEPRIORITY     100
 #define NODESEL_LOWESTFIRST       FALSE   /**< are the nodes sorted such that the lowest bound node comes first? */
 
 
@@ -46,7 +46,7 @@
 #define MAXPLUNGEDEPTH               -1 /**< maximal plunging depth, before new best node is forced to be selected (-1 for dynamic setting) */
 #define MAXPLUNGEQUOT              0.25 /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
                                          *   where plunging is performed */
-#define BESTNODEFREQ                100 /**< frequency at which the best node instead of the best estimate is selected (0: never) */
+#define BESTNODEFREQ                 10 /**< frequency at which the best node instead of the best estimate is selected (0: never) */
 
 
 /** node selector data for best estimate search node selection */
