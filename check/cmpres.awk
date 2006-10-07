@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.6 2006/09/19 23:17:26 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.7 2006/10/07 13:45:33 bzfpfend Exp $
 #
 #@file    compare.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -109,7 +109,7 @@ END {
             match(solvername[s], "default") != 0 && match(solvername[i], "default") == 0 )
             break;
       }
-      for( j = i; j < s; ++j )
+      for( j = s-1; j >= i; --j )
          printorder[j+1] = printorder[j];
       printorder[i] = s;
    }
