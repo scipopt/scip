@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.7 2006/10/07 13:45:33 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.8 2006/10/10 14:09:08 bzfpfend Exp $
 #
 #@file    compare.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -51,7 +51,8 @@ function printhline(nsolver)
 BEGIN {
    timegeomshift = 60.0;
    nodegeomshift = 1000.0;
-   
+   wintolerance = 0.05;
+
    problistlen = 0;
    nsolver = 0;
    nprobs[nsolver] = 0;
@@ -96,6 +97,9 @@ END {
       nodegeom[s] = 1.0;
       timeshiftedgeom[s] = timegeomshift;
       nodeshiftedgeom[s] = nodegeomshift;
+      wins[s] = 0;
+      better[s] = 0;
+      worse[s] = 0;
    }
 
    # calculate the order in which the columns should be printed: CPLEX < SCIP, default < non-default
@@ -147,6 +151,7 @@ END {
       minpb = +1e+100;
       nodecomp = -1;
       timecomp = -1;
+      besttime = +1e+100;
       for( o = 0; o < nsolver; ++o )
       {
          s = printorder[o];
@@ -164,6 +169,7 @@ END {
             marker = " ";
             maxdb = max(maxdb, dualbound[s,pidx]);
             minpb = min(minpb, primalbound[s,pidx]);
+            besttime = min(besttime, time[s,pidx]);
          }
          else if( status[s,pidx] == "timeout" )
          {
@@ -224,7 +230,7 @@ END {
          printf("  ok");
       printf("\n");
 
-      # calculate totals and means for instances where no solver failes
+      # calculate totals and means for instances where no solver failed
       if( !fail && probcnt[p] == nsolver )
       {
          nevalprobs++;
@@ -237,6 +243,12 @@ END {
             nodegeom[s] = nodegeom[s]^((nevalprobs-1)/nevalprobs) * nodes[s,pidx]^(1.0/nevalprobs);
             timeshiftedgeom[s] = timeshiftedgeom[s]^((nevalprobs-1)/nevalprobs) * (time[s,pidx]+timegeomshift)^(1.0/nevalprobs);
             nodeshiftedgeom[s] = nodeshiftedgeom[s]^((nevalprobs-1)/nevalprobs) * (nodes[s,pidx]+nodegeomshift)^(1.0/nevalprobs);
+            if( time[s,pidx] <= (1.0+wintolerance)*besttime )
+               wins[s]++;
+            if( time[s,pidx] < (1.0-wintolerance)*time[0,pidx] )
+               better[s]++;
+            else if( time[s,pidx] > (1.0+wintolerance)*time[0,pidx] )
+               worse[s]++;
          }
       }
    }
@@ -290,11 +302,12 @@ END {
    printhline(nsolver);
 
    printf("\n");
+   printf("solver                           fails timeout  solved    wins  better   worse    time  shtime   timeQ shtimeQ\n");
    for( o = 0; o < nsolver; ++o )
    {
       s = printorder[o];
-      printf("%-30s fails: %4d  timeouts: %4d  solved: %4d  time: %6.1f  shtime: %6.1f  timeQ: %5.2f  shtimeQ: %5.2f\n", 
-         solvername[s], nfails[s], ntimeouts[s], nsolved[s], timegeom[s], timeshiftedgeom[s],
+      printf("%-30s %7d %7d %7d %7d %7d %7d %7.1f %7.1f %7.2f %7.2f\n", 
+         solvername[s], nfails[s], ntimeouts[s], nsolved[s], wins[s], better[s], worse[s], timegeom[s], timeshiftedgeom[s],
          timegeom[s]/timegeomcomp, timeshiftedgeom[s]/timeshiftedgeomcomp);
    }
 }
