@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.34 2006/09/19 08:12:10 bzforlow Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.35 2006/10/11 02:21:21 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -589,6 +589,13 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
          presoldata->ntotaluseless = 0;
          continue; /* don't try upwards direction, because the variable is already fixed */
       }
+
+      /* ignore variables, that were fixed, aggregated, or deleted in prior probings
+       * (propagators in zero-probe might have found global fixings but did not trigger the localcutoff)
+       */
+      if( !SCIPvarIsActive(vars[i]) || SCIPvarIsDeleted(vars[i])
+         || SCIPvarGetLbGlobal(vars[i]) > 0.5 || SCIPvarGetUbGlobal(vars[i]) < 0.5 )
+         continue;
 
       /* apply probing for fixing the variable to one */
       SCIP_CALL( applyProbing(scip, presoldata, vars, nvars, i, TRUE, oneimpllbs, oneimplubs, oneproplbs, onepropubs,
