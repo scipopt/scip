@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.55 2006/09/19 22:11:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.56 2006/10/11 01:46:10 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for variable bound constraints
@@ -678,6 +678,8 @@ SCIP_RETCODE applyFixings(
    vbdvarconstant = 0.0;
    SCIP_CALL( SCIPvarGetProbvarSum(&vbdvar, &vbdvarscalar, &vbdvarconstant) );
    varschanged = (var != consdata->var || vbdvar != consdata->vbdvar);
+
+   /**@todo fix bug: active variables might be MULTAGGR -> no bound changes possible! */
 
    /* if the variables are equal, the variable bound constraint reduces to standard bounds on the single variable */
    if( var == vbdvar )

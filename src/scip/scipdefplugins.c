@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.60 2006/09/22 01:30:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.61 2006/10/11 01:46:10 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -29,6 +29,7 @@
 #include "scip/branch_mostinf.h"
 #include "scip/branch_leastinf.h"
 #include "scip/branch_pscost.h"
+#include "scip/branch_random.h"
 #include "scip/branch_relpscost.h"
 #include "scip/cons_and.h"
 #include "scip/cons_bounddisjunction.h"
@@ -144,6 +145,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeBranchruleMostinf(scip) );
    SCIP_CALL( SCIPincludeBranchruleLeastinf(scip) );
    SCIP_CALL( SCIPincludeBranchrulePscost(scip) );
+   SCIP_CALL( SCIPincludeBranchruleRandom(scip) );
    SCIP_CALL( SCIPincludeBranchruleRelpscost(scip) );
    SCIP_CALL( SCIPincludeHeurActconsdiving(scip) );
    SCIP_CALL( SCIPincludeHeurCoefdiving(scip) );

@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.182 2006/09/22 01:30:29 bzfpfend Exp $
+# $Id: Makefile,v 1.183 2006/10/11 01:46:09 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -39,7 +39,7 @@ HOSTNAME	:=	$(shell uname -n | tr '[:upper:]' '[:lower:]')
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		:=	0.90a
+VERSION		:=	0.90b
 
 TIME     	=  	3600
 NODES           =       2100000000
@@ -344,6 +344,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/branch_mostinf.o \
 			scip/branch_leastinf.o \
 			scip/branch_pscost.o \
+			scip/branch_random.o \
 			scip/branch_relpscost.o \
 			scip/cons_and.o \
 			scip/cons_binpack.o \
