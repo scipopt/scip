@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.8 2006/10/10 14:09:08 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.9 2006/10/11 01:07:58 bzfpfend Exp $
 #
 #@file    compare.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -302,11 +302,11 @@ END {
    printhline(nsolver);
 
    printf("\n");
-   printf("solver                           fails timeout  solved    wins  better   worse    time  shtime   timeQ shtimeQ\n");
+   printf("solver                              fails timeout  solved    wins  better   worse    time  shtime   timeQ shtimeQ\n");
    for( o = 0; o < nsolver; ++o )
    {
       s = printorder[o];
-      printf("%-30s %7d %7d %7d %7d %7d %7d %7.1f %7.1f %7.2f %7.2f\n", 
+      printf("%-33s %7d %7d %7d %7d %7d %7d %7.1f %7.1f %7.2f %7.2f\n", 
          solvername[s], nfails[s], ntimeouts[s], nsolved[s], wins[s], better[s], worse[s], timegeom[s], timeshiftedgeom[s],
          timegeom[s]/timegeomcomp, timeshiftedgeom[s]/timeshiftedgeomcomp);
    }
