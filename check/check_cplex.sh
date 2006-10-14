@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.sh,v 1.20 2006/09/18 04:27:57 bzfpfend Exp $
+# $Id: check_cplex.sh,v 1.21 2006/10/14 23:20:48 bzfpfend Exp $
 TSTNAME=$1
 CPLEXBIN=$2
 SETNAME=$3
@@ -42,6 +42,16 @@ TMPFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.tmp
 SETFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.prm
 
 SETTINGS=settings/$SETNAME.prm
+
+DATEINT=`date +"%s"`
+if [ -e $OUTFILE ]
+then
+    mv $OUTFILE $OUTFILE.old-$DATEINT
+fi
+if [ -e $ERRFILE ]
+then
+    mv $ERRFILE $ERRFILE.old-$DATEINT
+fi
 
 uname -a >$OUTFILE
 uname -a >$ERRFILE

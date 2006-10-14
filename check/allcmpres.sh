@@ -15,13 +15,14 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: allcmpres.sh,v 1.2 2006/09/19 22:57:48 bzfpfend Exp $
+# $Id: allcmpres.sh,v 1.3 2006/10/14 23:20:48 bzfpfend Exp $
 
+FILELIST=`ls -1 --color=none $@`
 for i in `ls -1 --color=none $@ | sed 's!check\.\([^ .]*\)\.\([^ ]*\)\.res!check.\1!g' | sort -u`
 do
     TESTSET=`echo $i | sed 's!results/check\.\([^ .]*\)\..*!\1!g'`
     echo
     echo ====vvvv==== $TESTSET ====vvvv====
-    cmpres.awk $i.*.res
+    cmpres.awk `echo $FILELIST | grep "$i.*.res"`
     echo ====^^^^==== $TESTSET ====^^^^====
 done

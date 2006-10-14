@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.32 2006/09/18 04:27:57 bzfpfend Exp $
+# $Id: check.sh,v 1.33 2006/10/14 23:20:48 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -94,7 +94,7 @@ do
 	date >>$ERRFILE
 	echo -----------------------------
 	date +"@03 %s"
-	tcsh -c "limit cputime $HARDTIMELIMIT s; limit memoryuse $HARDMEMLIMIT M; ../$2 < $TMPFILE" 2>>$ERRFILE
+	tcsh -c "limit cputime $HARDTIMELIMIT s; limit memoryuse $HARDMEMLIMIT M; limit filesize 200 M; ../$2 < $TMPFILE" 2>>$ERRFILE
 #	../$2 < $TMPFILE 2>>$ERRFILE
 	date +"@04 %s"
 	echo -----------------------------
