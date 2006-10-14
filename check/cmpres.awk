@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.10 2006/10/11 01:25:41 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.11 2006/10/14 23:33:37 bzfpfend Exp $
 #
 #@file    compare.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -147,11 +147,15 @@ END {
       printf("%-18s", p);
       fail = 0;
       readerror = 0;
+      mindb = +1e+100;
       maxdb = -1e+100;
       minpb = +1e+100;
+      maxpb = -1e+100;
       nodecomp = -1;
       timecomp = -1;
       besttime = +1e+100;
+      ismini = 0;
+      ismaxi = 0;
       for( o = 0; o < nsolver; ++o )
       {
          s = printorder[o];
@@ -167,8 +171,6 @@ END {
          {
             nsolved[s]++;
             marker = " ";
-            maxdb = max(maxdb, dualbound[s,pidx]);
-            minpb = min(minpb, primalbound[s,pidx]);
             besttime = min(besttime, time[s,pidx]);
          }
          else if( status[s,pidx] == "timeout" )
@@ -184,6 +186,16 @@ END {
             fail = 1;
             marker = "!";
          }
+
+         if( processed && !fail )
+	 {
+	    mindb = min(mindb, dualbound[s,pidx]);
+            maxdb = max(maxdb, dualbound[s,pidx]);
+            minpb = min(minpb, primalbound[s,pidx]);
+	    maxpb = max(maxpb, primalbound[s,pidx]);
+	    ismini = ismini || (primalbound[s,pidx] > dualbound[s,pidx] + 1e-06);
+	    ismaxi = ismaxi || (primalbound[s,pidx] < dualbound[s,pidx] - 1e-06);
+	 }
 
          # print statistics
          if( !processed )
@@ -219,7 +231,10 @@ END {
          printf("  readerror");
       else if( fail )
          printf("  fail");
-      else if( maxdb - minpb > 1e-5 * max(max(abs(maxdb), abs(minpb)), 1.0) )
+      else if( (ismini && ismaxi) ||
+	       (ismini && maxdb - minpb > 1e-5 * max(max(abs(maxdb), abs(minpb)), 1.0)) ||
+	       (ismaxi && maxpb - mindb > 1e-5 * max(max(abs(maxpb), abs(mindb)), 1.0)) ||
+	       (!ismini && !ismaxi && abs(maxpb - minpb) > 1e-5 * max(abs(maxpb), 1.0)) )
       {
          printf("  inconsistent");
          fail = 1;
