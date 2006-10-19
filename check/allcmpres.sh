@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: allcmpres.sh,v 1.4 2006/10/14 23:33:37 bzfpfend Exp $
+# $Id: allcmpres.sh,v 1.5 2006/10/19 19:43:29 bzfpfend Exp $
 
 for i in `ls -1 --color=none $@ | sed 's!check\.\([^ .]*\)\.\([^ ]*\)\.res!check.\1!g' | sort -u`
 do
