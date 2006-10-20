@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.12 2006/10/19 19:43:29 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.13 2006/10/20 23:02:11 bzfpfend Exp $
 #
 #@file    compare.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -53,7 +53,10 @@ BEGIN {
    nodegeomshift = 1000.0;
    mintime = 0.1;
    wintolerance = 0.05;
-   marktolerance = 5.0;
+   markbettertime = 1.2;
+   markworsetime  = 1.2;
+   markbetternode = 5.0;
+   markworsenode  = 5.0;
    onlymarked = 0;
 
    problistlen = 0;
@@ -236,8 +239,10 @@ END {
             else
 	       line = sprintf("%s %6.2f", line, time[s,pidx]/timecomp);
 	    if( processed &&
-		(time[s,pidx] >= marktolerance * timecomp ||
-		 time[s,pidx] <= 1.0/marktolerance * timecomp ) )
+		(nodes[s,pidx] > markworsenode * nodecomp ||
+		 nodes[s,pidx] < 1.0/markbetternode * nodecomp ||
+		 time[s,pidx] > markworsetime * timecomp ||
+		 time[s,pidx] < 1.0/markbettertime * timecomp ) )
 	       mark = "*";
          }
       }
