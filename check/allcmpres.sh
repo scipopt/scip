@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: allcmpres.sh,v 1.7 2006/10/23 20:11:11 bzfpfend Exp $
+# $Id: allcmpres.sh,v 1.8 2006/10/23 20:19:01 bzfpfend Exp $
 
 AWKARGS=""
 FILES=""
@@ -43,12 +43,3 @@ do
     cmpres.awk $AWKARGS `ls -1 --color=none $FILES | grep "$i\..*\.res"`
     echo ====^^^^==== $i ====^^^^====
 done
-
-#for i in `ls -1 --color=none $FILES | sed 's!check\.\([^ .]*\)\.\([^ ]*\)\.res!check.\1!g' | sort -u`
-#do
-#    TESTSET=`basename $i | sed 's!check\.\([^ .]*\)!\1!g'`
-#    echo
-#    echo ====vvvv==== $TESTSET ====vvvv====
-#    cmpres.awk $AWKARGS `ls -1 --color=none $FILES | grep "$i\..*\.res"`
-#    echo ====^^^^==== $TESTSET ====^^^^====
-#done
