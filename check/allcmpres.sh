@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: allcmpres.sh,v 1.6 2006/10/20 23:02:10 bzfpfend Exp $
+# $Id: allcmpres.sh,v 1.7 2006/10/23 20:11:11 bzfpfend Exp $
 
 AWKARGS=""
 FILES=""
@@ -29,11 +29,26 @@ do
     fi
 done
 
-for i in `ls -1 --color=none $FILES | sed 's!check\.\([^ .]*\)\.\([^ ]*\)\.res!check.\1!g' | sort -u`
+TESTSETS=""
+for i in `ls -1 --color=none $FILES | sed 's!\(.*\)check\.\([^ .]*\)\.\([^ ]*\)\.res!\2!g' | sort -u`
 do
-    TESTSET=`echo $i | sed 's!results/check\.\([^ .]*\)\..*!\1!g'`
-    echo
-    echo ====vvvv==== $TESTSET ====vvvv====
-    cmpres.awk $AWKARGS `ls -1 --color=none $FILES | grep "$i\..*\.res"`
-    echo ====^^^^==== $TESTSET ====^^^^====
+    TESTSETS="$TESTSETS $i"
 done
+echo $TESTSETS
+
+for i in $TESTSETS
+do
+    echo
+    echo ====vvvv==== $i ====vvvv====
+    cmpres.awk $AWKARGS `ls -1 --color=none $FILES | grep "$i\..*\.res"`
+    echo ====^^^^==== $i ====^^^^====
+done
+
+#for i in `ls -1 --color=none $FILES | sed 's!check\.\([^ .]*\)\.\([^ ]*\)\.res!check.\1!g' | sort -u`
+#do
+#    TESTSET=`basename $i | sed 's!check\.\([^ .]*\)!\1!g'`
+#    echo
+#    echo ====vvvv==== $TESTSET ====vvvv====
+#    cmpres.awk $AWKARGS `ls -1 --color=none $FILES | grep "$i\..*\.res"`
+#    echo ====^^^^==== $TESTSET ====^^^^====
+#done
