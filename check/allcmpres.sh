@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: allcmpres.sh,v 1.8 2006/10/23 20:19:01 bzfpfend Exp $
+# $Id: allcmpres.sh,v 1.9 2006/10/25 03:46:13 bzfpfend Exp $
 
 AWKARGS=""
 FILES=""
