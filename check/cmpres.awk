@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.14 2006/10/25 03:46:13 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.15 2006/10/25 05:01:30 bzfpfend Exp $
 #
 #@file    compare.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -52,9 +52,9 @@ BEGIN {
    timegeomshift = 60.0;
    nodegeomshift = 1000.0;
    mintime = 0.1;
-   wintolerance = 1.05;
-   markbettertime = 1.2;
-   markworsetime  = 1.2;
+   wintolerance = 1.1;
+   markbettertime = 1.1;
+   markworsetime  = 1.1;
    markbetternode = 5.0;
    markworsenode  = 5.0;
    onlymarked = 0;
@@ -281,6 +281,7 @@ END {
       if( !fail && !unprocessed )
       {
          nevalprobs++;
+	 reftime = time[printorder[0],probidx[p,printorder[0]]];
          for( s = 0; s < nsolver; ++s )
          {
             pidx = probidx[p,s];
@@ -292,9 +293,9 @@ END {
             nodeshiftedgeom[s] = nodeshiftedgeom[s]^((nevalprobs-1)/nevalprobs) * (nodes[s,pidx]+nodegeomshift)^(1.0/nevalprobs);
             if( time[s,pidx] <= wintolerance*besttime )
                wins[s]++;
-            if( time[s,pidx] < 1.0/wintolerance*time[printorder[0],pidx] )
+            if( time[s,pidx] < 1.0/wintolerance*reftime )
                better[s]++;
-            else if( time[s,pidx] > wintolerance*time[printorder[0],pidx] )
+            else if( time[s,pidx] > wintolerance*reftime )
                worse[s]++;
          }
       }
