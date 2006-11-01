@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.sh,v 1.21 2006/10/14 23:20:48 bzfpfend Exp $
+
 TSTNAME=$1
 CPLEXBIN=$2
 SETNAME=$3
@@ -24,6 +24,8 @@ TIMELIMIT=$5
 NODELIMIT=$6
 MEMLIMIT=$7
 FEASTOL=$8
+MIPGAP=$9
+CONTINUE=${10}
 
 if [ ! -e results ]
 then
@@ -41,69 +43,105 @@ TEXFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.tex
 TMPFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.tmp
 SETFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.prm
 
-SETTINGS=settings/$SETNAME.prm
+SETTINGS=settings/$SETNAME.cpxset
+
+if [ "$CONTINUE" == "true" ]
+then
+    MVORCP=cp
+else
+    MVORCP=mv
+fi
 
 DATEINT=`date +"%s"`
 if [ -e $OUTFILE ]
 then
-    mv $OUTFILE $OUTFILE.old-$DATEINT
+    $MVORCP $OUTFILE $OUTFILE.old-$DATEINT
 fi
 if [ -e $ERRFILE ]
 then
-    mv $ERRFILE $ERRFILE.old-$DATEINT
+    $MVORCP $ERRFILE $ERRFILE.old-$DATEINT
 fi
 
-uname -a >$OUTFILE
-uname -a >$ERRFILE
+if [ "$CONTINUE" == "true" ]
+then
+    LASTPROB=`getlastprob.awk $OUTFILE`
+    echo Continuing benchmark. Last solved instance: $LASTPROB
+    echo "" >> $OUTFILE
+    echo "----- Continuing from here. Last solved: $LASTPROB -----" >> $OUTFILE
+    echo "" >> $OUTFILE
+else
+    LASTPROB=""
+fi
+
+uname -a >>$OUTFILE
+uname -a >>$ERRFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
+HARDTIMELIMIT=`echo $TIMELIMIT*1.1 | bc`
+HARDMEMLIMIT=`echo $MEMLIMIT*1.2 | bc`
+echo hard time limit: $HARDTIMELIMIT >>$OUTFILE
+echo hard mem limit: $HARDMEMLIMIT >>$OUTFILE
+
 for i in `cat $TSTNAME.test`
 do
-    if [ -f $i ]
+    if [ "$LASTPROB" == "" ]
     then
-        rm -f $SETFILE
-	echo @01 $i ===========
-	echo @01 $i ===========                 >> $ERRFILE
-	if [ $SETNAME != "default" ]
+	LASTPROB=""
+	if [ -f $i ]
 	then
-	    echo read $SETTINGS                  > $TMPFILE
+	    rm -f $SETFILE
+	    echo @01 $i ===========
+	    echo @01 $i ===========                 >> $ERRFILE
+	    if [ $SETNAME != "default" ]
+	    then
+#	        echo read $SETTINGS                  > $TMPFILE
+		cp $SETTINGS $TMPFILE
+	    else
+		echo ""                              > $TMPFILE
+	    fi
+	    if [ $FEASTOL != "default" ]
+	    then
+		echo set simplex tolerances feas $FEASTOL    >> $TMPFILE
+		echo set mip tolerances integrality $FEASTOL >> $TMPFILE
+	    fi
+	    echo set timelimit $TIMELIMIT           >> $TMPFILE
+	    echo set clocktype 1                    >> $TMPFILE
+	    echo set mip display 3                  >> $TMPFILE
+	    echo set mip interval 10000             >> $TMPFILE
+	    if [ $MIPGAP != "default" ]
+	    then
+		echo set mip tolerances mipgap $MIPGAP >> $TMPFILE
+	    fi
+	    echo set mip limits nodes $NODELIMIT    >> $TMPFILE
+	    echo set mip limits treememory $MEMLIMIT >> $TMPFILE
+	    echo write $SETFILE                     >> $TMPFILE
+	    echo read $i                            >> $TMPFILE
+	    echo display problem stats              >> $TMPFILE
+	    echo optimize                           >> $TMPFILE
+	    echo quit                               >> $TMPFILE
+	    echo -----------------------------
+	    date
+	    echo -----------------------------
+	    tcsh -c "limit cputime $HARDTIMELIMIT s; limit memoryuse $HARDMEMLIMIT M; limit filesize 1000 M; $CPLEXBIN < $TMPFILE" 2>>$ERRFILE
+	    echo -----------------------------
+	    date
+	    echo -----------------------------
+	    echo =ready=
 	else
-	    echo ""                              > $TMPFILE
+	    echo @02 FILE NOT FOUND: $i ===========
+	    echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
 	fi
-	if [ $FEASTOL != "default" ]
-	then
-	    echo set simplex tolerances feas $FEASTOL    >> $TMPFILE
-	    echo set mip tolerances integrality $FEASTOL >> $TMPFILE
-	fi
-	echo set timelimit $TIMELIMIT           >> $TMPFILE
-	echo set clocktype 1                    >> $TMPFILE
-	echo set mip display 3                  >> $TMPFILE
-	echo set mip interval 10000             >> $TMPFILE
-	echo set mip tolerances absmipgap 1e-9  >> $TMPFILE
-	echo set mip tolerances mipgap 0.0      >> $TMPFILE
-	echo set mip limits nodes $NODELIMIT    >> $TMPFILE
-	echo set mip limits treememory $MEMLIMIT >> $TMPFILE
-        echo write $SETFILE                     >> $TMPFILE
-	echo read $i                            >> $TMPFILE
-	echo display problem stats              >> $TMPFILE
-	echo optimize                           >> $TMPFILE
-	echo quit                               >> $TMPFILE
-	echo -----------------------------
-	date
-	echo -----------------------------
-	$CPLEXBIN < $TMPFILE 2>>$ERRFILE
-	echo -----------------------------
-	date
-	echo -----------------------------
-	echo =ready=
     else
-	echo @02 FILE NOT FOUND: $i ===========
-	echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
+	echo skipping $i
+	if [ "$LASTPROB" == "$i" ]
+	then
+	    LASTPROB=""
+        fi
     fi
 done | tee -a $OUTFILE
 
-rm $TMPFILE
+rm -f $TMPFILE
 
 date >>$OUTFILE
 date >>$ERRFILE

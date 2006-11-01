@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.33 2006/10/14 23:20:48 bzfpfend Exp $
+# $Id: check.sh,v 1.34 2006/11/01 21:45:36 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -25,6 +25,7 @@ NODELIMIT=$6
 MEMLIMIT=$7
 FEASTOL=$8
 DISPFREQ=$9
+CONTINUE=${10}
 
 if [ ! -e results ]
 then
@@ -44,18 +45,36 @@ SETFILE=results/check.$TSTNAME.$BINID.$SETNAME.set
 
 SETTINGS=settings/$SETNAME.set
 
+if [ "$CONTINUE" == "true" ]
+then
+    MVORCP=cp
+else
+    MVORCP=mv
+fi
+
 DATEINT=`date +"%s"`
 if [ -e $OUTFILE ]
 then
-    mv $OUTFILE $OUTFILE.old-$DATEINT
+    $MVORCP $OUTFILE $OUTFILE.old-$DATEINT
 fi
 if [ -e $ERRFILE ]
 then
-    mv $ERRFILE $ERRFILE.old-$DATEINT
+    $MVORCP $ERRFILE $ERRFILE.old-$DATEINT
 fi
 
-uname -a >$OUTFILE
-uname -a >$ERRFILE
+if [ "$CONTINUE" == "true" ]
+then
+    LASTPROB=`getlastprob.awk $OUTFILE`
+    echo Continuing benchmark. Last solved instance: $LASTPROB
+    echo "" >> $OUTFILE
+    echo "----- Continuing from here. Last solved: $LASTPROB -----" >> $OUTFILE
+    echo "" >> $OUTFILE
+else
+    LASTPROB=""
+fi
+
+uname -a >>$OUTFILE
+uname -a >>$ERRFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
@@ -66,46 +85,56 @@ echo hard mem limit: $HARDMEMLIMIT >>$OUTFILE
 
 for i in `cat $TSTNAME.test`
 do
-    if [ -f $i ]
+    if [ "$LASTPROB" == "" ]
     then
-        echo @01 $i ===========
-	echo @01 $i ===========                >> $ERRFILE
-	echo set load $SETTINGS                >  $TMPFILE
-	if [ $FEASTOL != "default" ]
+	LASTPROB=""
+	if [ -f $i ]
 	then
-	    echo set numerics feastol $FEASTOL    >> $TMPFILE
+	    echo @01 $i ===========
+	    echo @01 $i ===========                >> $ERRFILE
+	    echo set load $SETTINGS                >  $TMPFILE
+	    if [ $FEASTOL != "default" ]
+	    then
+		echo set numerics feastol $FEASTOL    >> $TMPFILE
+	    fi
+	    echo set limits time $TIMELIMIT        >> $TMPFILE
+	    echo set limits nodes $NODELIMIT       >> $TMPFILE
+	    echo set limits memory $MEMLIMIT       >> $TMPFILE
+	    echo set timing clocktype 1            >> $TMPFILE
+	    echo set display verblevel 4           >> $TMPFILE
+	    echo set display freq $DISPFREQ        >> $TMPFILE
+	    echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
+	    echo set save $SETFILE                 >> $TMPFILE
+	    echo read $i                           >> $TMPFILE
+	    echo optimize                          >> $TMPFILE
+	    echo display statistics                >> $TMPFILE
+#	    echo display solution                  >> $TMPFILE
+	    echo checksol                          >> $TMPFILE
+	    echo quit                              >> $TMPFILE
+	    echo -----------------------------
+	    date
+	    date >>$ERRFILE
+	    echo -----------------------------
+	    date +"@03 %s"
+	    tcsh -c "limit cputime $HARDTIMELIMIT s; limit memoryuse $HARDMEMLIMIT M; limit filesize 200 M; ../$2 < $TMPFILE" 2>>$ERRFILE
+#	    ../$2 < $TMPFILE 2>>$ERRFILE
+	    date +"@04 %s"
+	    echo -----------------------------
+	    date
+	    date >>$ERRFILE
+	    echo -----------------------------
+	    echo
+	    echo =ready=
+	else
+	    echo @02 FILE NOT FOUND: $i ===========
+	    echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
 	fi
-	echo set limits time $TIMELIMIT        >> $TMPFILE
-	echo set limits nodes $NODELIMIT       >> $TMPFILE
-	echo set limits memory $MEMLIMIT       >> $TMPFILE
-	echo set timing clocktype 1            >> $TMPFILE
-	echo set display verblevel 4           >> $TMPFILE
-	echo set display freq $DISPFREQ        >> $TMPFILE
-	echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
-	echo set save $SETFILE                 >> $TMPFILE
-	echo read $i                           >> $TMPFILE
-	echo optimize                          >> $TMPFILE
-	echo display statistics                >> $TMPFILE
-#	echo display solution                  >> $TMPFILE
-	echo checksol                          >> $TMPFILE
-	echo quit                              >> $TMPFILE
-	echo -----------------------------
-	date
-	date >>$ERRFILE
-	echo -----------------------------
-	date +"@03 %s"
-	tcsh -c "limit cputime $HARDTIMELIMIT s; limit memoryuse $HARDMEMLIMIT M; limit filesize 200 M; ../$2 < $TMPFILE" 2>>$ERRFILE
-#	../$2 < $TMPFILE 2>>$ERRFILE
-	date +"@04 %s"
-	echo -----------------------------
-	date
-	date >>$ERRFILE
-	echo -----------------------------
-	echo
-	echo =ready=
     else
-	echo @02 FILE NOT FOUND: $i ===========
-	echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
+	echo skipping $i
+	if [ "$LASTPROB" == "$i" ]
+	then
+	    LASTPROB=""
+        fi
     fi
 done | tee -a $OUTFILE
 

@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.15 2006/10/25 05:01:30 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.16 2006/11/01 21:45:36 bzfpfend Exp $
 #
 #@file    compare.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -58,6 +58,7 @@ BEGIN {
    markbetternode = 5.0;
    markworsenode  = 5.0;
    onlymarked = 0;
+   maxscore = 10.0;
 
    problistlen = 0;
    nsolver = 0;
@@ -106,6 +107,7 @@ END {
       wins[s] = 0;
       better[s] = 0;
       worse[s] = 0;
+      score[s] = 1.0;
    }
 
    # calculate the order in which the columns should be printed: CPLEX < SCIP, default < non-default
@@ -297,6 +299,10 @@ END {
                better[s]++;
             else if( time[s,pidx] > wintolerance*reftime )
                worse[s]++;
+	    thisscore = reftime/time[s,pidx];
+	    thisscore = max(thisscore, 1/maxscore);
+	    thisscore = min(thisscore, maxscore);
+	    score[s] = score[s]^((nevalprobs-1)/nevalprobs) * thisscore^(1.0/nevalprobs);
          }
       }
    }
@@ -350,13 +356,14 @@ END {
    printhline(nsolver);
 
    printf("\n");
-   printf("solver                            fail time solv wins bett wors     nodes   shnodes    nodesQ  shnodesQ    time  shtime   timeQ shtimeQ\n");
+   printf("solver                            fail time solv wins bett wors     nodes   shnodes    nodesQ  shnodesQ    time  shtime   timeQ shtimeQ   score\n");
    for( o = 0; o < nsolver; ++o )
    {
       s = printorder[o];
-      printf("%-33s %4d %4d %4d %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f\n", 
+      printf("%-33s %4d %4d %4d %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7.2f\n", 
          solvername[s], nfails[s], ntimeouts[s], nsolved[s], wins[s], better[s], worse[s],
          nodegeom[s], nodeshiftedgeom[s], nodegeom[s]/nodegeomcomp, nodeshiftedgeom[s]/nodeshiftedgeomcomp,
-         timegeom[s], timeshiftedgeom[s], timegeom[s]/timegeomcomp, timeshiftedgeom[s]/timeshiftedgeomcomp);
+         timegeom[s], timeshiftedgeom[s], timegeom[s]/timegeomcomp, timeshiftedgeom[s]/timeshiftedgeomcomp,
+	 score[s]);
    }
 }
