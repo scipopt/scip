@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.183 2006/10/11 01:46:09 bzfpfend Exp $
+# $Id: Makefile,v 1.184 2006/11/01 21:46:47 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -48,6 +48,7 @@ DISPFREQ	=	10000
 FEASTOL		=	default
 TEST		=	miplib3
 SETTINGS        =       default
+CONTINUE	=	false
 
 VERBOSE		=	false
 OPT		=	opt
@@ -492,12 +493,17 @@ doc:
 .PHONY: test
 test:		
 		cd check; \
-		/bin/sh ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(MAIN).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ);
+		/bin/sh ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(MAIN).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
+
+.PHONY: testpre
+testpre:		
+		cd check; \
+		/bin/sh ./checkpre.sh $(TEST) $(MAINFILE) $(SETTINGS) $(MAIN).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
 
 .PHONY: testcplex
 testcplex:		
 		cd check; \
-		/bin/sh ./check_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL);
+		/bin/sh ./check_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(CONTINUE);
 
 $(OBJDIR):	
 		@-mkdir -p $(OBJDIR)
