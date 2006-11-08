@@ -39,6 +39,7 @@ bugs:
   of all variables, since pseudo costs are not recorded for continuous variables
 - fixed wrong sorting of plugins with priorities close to INT_MIN or INT_MAX
 - replaced "line" by "read" in Makefile, since "line" is non-standard
+- fixed bug in variable bound constraint handler with changing bounds on multi-aggregated variables
 
 
 SCIP version 0.90

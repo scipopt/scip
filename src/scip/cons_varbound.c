@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.56 2006/10/11 01:46:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.57 2006/11/08 23:48:13 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for variable bound constraints
@@ -682,7 +682,7 @@ SCIP_RETCODE applyFixings(
    /**@todo fix bug: active variables might be MULTAGGR -> no bound changes possible! */
 
    /* if the variables are equal, the variable bound constraint reduces to standard bounds on the single variable */
-   if( var == vbdvar )
+   if( var == vbdvar && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
    {
       SCIP_Real scalar;
       SCIP_Real constant;
@@ -771,66 +771,70 @@ SCIP_RETCODE applyFixings(
          SCIPdebugMessage("variable bound constraint <%s>: variable <%s> is fixed to %g\n",
             SCIPconsGetName(cons), SCIPvarGetName(consdata->var), varconstant);
 
-         /* x is fixed to varconstant: update bounds of y and delete the variable bound constraint */
-         if( !SCIPisInfinity(scip, -consdata->lhs) && !(*cutoff) )
+         /* can not change bounds on multi-aggregated variables */
+         if( SCIPvarGetStatus(vbdvar) != SCIP_VARSTATUS_MULTAGGR )
          {
-            if( consdata->vbdcoef > 0.0 )
+            /* x is fixed to varconstant: update bounds of y and delete the variable bound constraint */
+            if( !SCIPisInfinity(scip, -consdata->lhs) && !(*cutoff) )
             {
-               SCIP_Bool tightened;
-
-               SCIP_CALL( SCIPtightenVarLb(scip, consdata->vbdvar, (consdata->lhs - varconstant)/consdata->vbdcoef,
-                     cutoff, &tightened) );
-               if( tightened )
+               if( consdata->vbdcoef > 0.0 )
                {
-                  SCIPdebugMessage(" -> tightened lower bound: <%s> >= %g\n", 
-                     SCIPvarGetName(consdata->vbdvar), SCIPvarGetLbGlobal(consdata->vbdvar));
-                  (*nchgbds)++;
+                  SCIP_Bool tightened;
+
+                  SCIP_CALL( SCIPtightenVarLb(scip, consdata->vbdvar, (consdata->lhs - varconstant)/consdata->vbdcoef,
+                        cutoff, &tightened) );
+                  if( tightened )
+                  {
+                     SCIPdebugMessage(" -> tightened lower bound: <%s> >= %g\n", 
+                        SCIPvarGetName(consdata->vbdvar), SCIPvarGetLbGlobal(consdata->vbdvar));
+                     (*nchgbds)++;
+                  }
+               }
+               else
+               {
+                  SCIP_Bool tightened;
+
+                  SCIP_CALL( SCIPtightenVarUb(scip, consdata->vbdvar, (consdata->lhs - varconstant)/consdata->vbdcoef,
+                        cutoff, &tightened) );
+                  if( tightened )
+                  {
+                     SCIPdebugMessage(" -> tightened upper bound: <%s> <= %g\n", 
+                        SCIPvarGetName(consdata->vbdvar), SCIPvarGetUbGlobal(consdata->vbdvar));
+                     (*nchgbds)++;
+                  }
                }
             }
-            else
+            if( !SCIPisInfinity(scip, consdata->rhs) && !(*cutoff) )
             {
-               SCIP_Bool tightened;
-
-               SCIP_CALL( SCIPtightenVarUb(scip, consdata->vbdvar, (consdata->lhs - varconstant)/consdata->vbdcoef,
-                     cutoff, &tightened) );
-               if( tightened )
+               if( consdata->vbdcoef > 0.0 )
                {
-                  SCIPdebugMessage(" -> tightened upper bound: <%s> <= %g\n", 
-                     SCIPvarGetName(consdata->vbdvar), SCIPvarGetUbGlobal(consdata->vbdvar));
-                  (*nchgbds)++;
+                  SCIP_Bool tightened;
+
+                  SCIP_CALL( SCIPtightenVarUb(scip, consdata->vbdvar, (consdata->rhs - varconstant)/consdata->vbdcoef,
+                        cutoff, &tightened) );
+                  if( tightened )
+                  {
+                     SCIPdebugMessage(" -> tightened upper bound: <%s> <= %g\n", 
+                        SCIPvarGetName(consdata->vbdvar), SCIPvarGetUbGlobal(consdata->vbdvar));
+                     (*nchgbds)++;
+                  }
+               }
+               else
+               {
+                  SCIP_Bool tightened;
+
+                  SCIP_CALL( SCIPtightenVarLb(scip, consdata->vbdvar, (consdata->rhs - varconstant)/consdata->vbdcoef,
+                        cutoff, &tightened) );
+                  if( tightened )
+                  {
+                     SCIPdebugMessage(" -> tightened lower bound: <%s> >= %g\n", 
+                        SCIPvarGetName(consdata->vbdvar), SCIPvarGetLbGlobal(consdata->vbdvar));
+                     (*nchgbds)++;
+                  }
                }
             }
+            redundant = TRUE;
          }
-         if( !SCIPisInfinity(scip, consdata->rhs) && !(*cutoff) )
-         {
-            if( consdata->vbdcoef > 0.0 )
-            {
-               SCIP_Bool tightened;
-
-               SCIP_CALL( SCIPtightenVarUb(scip, consdata->vbdvar, (consdata->rhs - varconstant)/consdata->vbdcoef,
-                     cutoff, &tightened) );
-               if( tightened )
-               {
-                  SCIPdebugMessage(" -> tightened upper bound: <%s> <= %g\n", 
-                     SCIPvarGetName(consdata->vbdvar), SCIPvarGetUbGlobal(consdata->vbdvar));
-                  (*nchgbds)++;
-               }
-            }
-            else
-            {
-               SCIP_Bool tightened;
-
-               SCIP_CALL( SCIPtightenVarLb(scip, consdata->vbdvar, (consdata->rhs - varconstant)/consdata->vbdcoef,
-                     cutoff, &tightened) );
-               if( tightened )
-               {
-                  SCIPdebugMessage(" -> tightened lower bound: <%s> >= %g\n", 
-                     SCIPvarGetName(consdata->vbdvar), SCIPvarGetLbGlobal(consdata->vbdvar));
-                  (*nchgbds)++;
-               }
-            }
-         }
-         redundant = TRUE;
       }
       else if( var != consdata->var )
       {
@@ -873,34 +877,38 @@ SCIP_RETCODE applyFixings(
          SCIPdebugMessage("variable bound constraint <%s>: vbd variable <%s> is fixed to %g\n",
             SCIPconsGetName(cons), SCIPvarGetName(consdata->vbdvar), vbdvarconstant);
 
-         /* y is fixed to vbdvarconstant: update bounds of x and delete the variable bound constraint */
-         if( !SCIPisInfinity(scip, -consdata->lhs) && !(*cutoff) )
+         /* can not change bounds on multi-aggregated variables */
+         if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
          {
-            SCIP_Bool tightened;
-
-            SCIP_CALL( SCIPtightenVarLb(scip, consdata->var, consdata->lhs - consdata->vbdcoef * vbdvarconstant,
-                  cutoff, &tightened) );
-            if( tightened )
+            /* y is fixed to vbdvarconstant: update bounds of x and delete the variable bound constraint */
+            if( !SCIPisInfinity(scip, -consdata->lhs) && !(*cutoff) )
             {
-               SCIPdebugMessage(" -> tightened lower bound: <%s> >= %g\n", 
-                  SCIPvarGetName(consdata->var), SCIPvarGetLbGlobal(consdata->var));
-               (*nchgbds)++;
-            }
-         }
-         if( !SCIPisInfinity(scip, consdata->rhs) && !(*cutoff) )
-         {
-            SCIP_Bool tightened;
+               SCIP_Bool tightened;
 
-            SCIP_CALL( SCIPtightenVarUb(scip, consdata->var, consdata->rhs - consdata->vbdcoef * vbdvarconstant,
-                  cutoff, &tightened) );
-            if( tightened )
-            {
-               SCIPdebugMessage(" -> tightened upper bound: <%s> <= %g\n", 
-                  SCIPvarGetName(consdata->var), SCIPvarGetUbGlobal(consdata->var));
-               (*nchgbds)++;
+               SCIP_CALL( SCIPtightenVarLb(scip, consdata->var, consdata->lhs - consdata->vbdcoef * vbdvarconstant,
+                     cutoff, &tightened) );
+               if( tightened )
+               {
+                  SCIPdebugMessage(" -> tightened lower bound: <%s> >= %g\n", 
+                     SCIPvarGetName(consdata->var), SCIPvarGetLbGlobal(consdata->var));
+                  (*nchgbds)++;
+               }
             }
+            if( !SCIPisInfinity(scip, consdata->rhs) && !(*cutoff) )
+            {
+               SCIP_Bool tightened;
+
+               SCIP_CALL( SCIPtightenVarUb(scip, consdata->var, consdata->rhs - consdata->vbdcoef * vbdvarconstant,
+                     cutoff, &tightened) );
+               if( tightened )
+               {
+                  SCIPdebugMessage(" -> tightened upper bound: <%s> <= %g\n", 
+                     SCIPvarGetName(consdata->var), SCIPvarGetUbGlobal(consdata->var));
+                  (*nchgbds)++;
+               }
+            }
+            redundant = TRUE;
          }
-         redundant = TRUE;
       }
       else if( vbdvar != consdata->vbdvar )
       {
