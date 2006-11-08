@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.34 2006/11/01 21:45:36 bzfpfend Exp $
+# $Id: check.sh,v 1.35 2006/11/08 23:22:43 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -44,6 +44,11 @@ TMPFILE=results/check.$TSTNAME.$BINID.$SETNAME.tmp
 SETFILE=results/check.$TSTNAME.$BINID.$SETNAME.set
 
 SETTINGS=settings/$SETNAME.set
+
+if [ ! -e $OUTFILE ]
+then
+    CONTINUE=false
+fi
 
 if [ "$CONTINUE" == "true" ]
 then
@@ -138,7 +143,7 @@ do
     fi
 done | tee -a $OUTFILE
 
-rm $TMPFILE
+rm -f $TMPFILE
 
 date >>$OUTFILE
 date >>$ERRFILE

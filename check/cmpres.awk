@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.16 2006/11/01 21:45:36 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.17 2006/11/08 23:22:43 bzfpfend Exp $
 #
 #@file    compare.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -71,19 +71,19 @@ BEGIN {
 }
 // {
    # check if this is a useable line
-   if( $10 == "ok" || $10 == "timeout" || $10 == "unknown" || $10 == "abort" || $10 == "fail" || $10 == "readerror" )
+   if( $12 == "ok" || $12 == "timeout" || $12 == "unknown" || $12 == "abort" || $12 == "fail" || $12 == "readerror" )
    {
       # collect data
       name[nsolver,nprobs[nsolver]] = $1;
       type[nsolver,nprobs[nsolver]] = $2;
-      conss[nsolver,nprobs[nsolver]] = $3;
-      vars[nsolver,nprobs[nsolver]] = $4;
-      dualbound[nsolver,nprobs[nsolver]] = $5;
-      primalbound[nsolver,nprobs[nsolver]] = $6;
-      gap[nsolver,nprobs[nsolver]] = $7;
-      nodes[nsolver,nprobs[nsolver]] = max($8,1);
-      time[nsolver,nprobs[nsolver]] = ceil(max($9,mintime));
-      status[nsolver,nprobs[nsolver]] = $10;
+      conss[nsolver,nprobs[nsolver]] = $5;
+      vars[nsolver,nprobs[nsolver]] = $6;
+      dualbound[nsolver,nprobs[nsolver]] = $7;
+      primalbound[nsolver,nprobs[nsolver]] = $8;
+      gap[nsolver,nprobs[nsolver]] = $9;
+      nodes[nsolver,nprobs[nsolver]] = max($10,1);
+      time[nsolver,nprobs[nsolver]] = ceil(max($11,mintime));
+      status[nsolver,nprobs[nsolver]] = $12;
       probidx[$1,nsolver] = nprobs[nsolver];
       probcnt[$1]++;
       nprobs[nsolver]++;

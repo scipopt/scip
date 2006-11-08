@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_actconsdiving.c,v 1.2 2006/09/23 00:18:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_actconsdiving.c,v 1.3 2006/11/08 23:22:44 bzfpfend Exp $"
 
 /**@file   heur_actconsdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the active constraints the variable appear in
@@ -54,7 +54,7 @@
                                               *   where diving is performed (0.0: no limit) */
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
-#define DEFAULT_BACKTRACK         FALSE /**< use one level of backtracking if infeasibility is encountered? */
+#define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
 
 #define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
 

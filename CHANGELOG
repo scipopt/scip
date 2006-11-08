@@ -14,9 +14,10 @@ interface:
 
 plugins:
 - improved performance of linear constraint propagation by delaying some floor/ceil calculations
-- new nodeselection rule "estimate" (best estimate search)
+- new node selection rule "estimate" (best estimate search)
 - best estimate search is now used in all large neighborhood search heuristics
 - new heuristic "actconsdiving" following an idea of John Chinneck
+- new node selection rule "hybridestim"
 
 parameters:
 - new parameter "separating/clique/backtrackfreq" to speed up clique cut separation in heuristic fashion
@@ -30,6 +31,8 @@ parameters:
 - new parameter "nodeselection/childsel" to control the child selection
 - new parameters "heuristics/*diving/backtrack" to activate 1-level backtracking for most of the diving heuristics
 - increased priority of "estimate" node selector, such that this is the new default node selector
+- changed default value of "separating/objparalfac" to 0.01 for performance reasons
+- changed default values of "heuristics/*diving/backtrack to TRUE
 
 bugs:
 - SCIPgetAvgPseudocostCount() and SCIPgetAvgPseudocostCountCurrentRun() now return the average over all integer variables instead

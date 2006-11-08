@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.184 2006/11/01 21:46:47 bzfpfend Exp $
+# $Id: Makefile,v 1.185 2006/11/08 23:22:43 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -39,7 +39,7 @@ HOSTNAME	:=	$(shell uname -n | tr '[:upper:]' '[:lower:]')
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		:=	0.90b
+VERSION		:=	0.90c
 
 TIME     	=  	3600
 NODES           =       2100000000
@@ -388,6 +388,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/nodesel_bfs.o \
 			scip/nodesel_dfs.o \
 			scip/nodesel_estimate.o \
+			scip/nodesel_hybridestim.o \
 			scip/nodesel_restartdfs.o \
 			scip/presol_dualfix.o \
 			scip/presol_implics.o \

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.59 2006/09/15 21:49:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.60 2006/11/08 23:22:45 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -45,6 +45,8 @@
 #define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of gomory cuts separated per separation round in root node */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_MAXWEIGHTRANGE    1e+04 /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
+
+//#define MAKECUTINTEGRAL  /* uncomment to allow all Gomory cuts to be added */
 
 #define BOUNDSWITCH              0.9999
 #define USEVBDS                    TRUE
@@ -415,9 +417,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                      SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
                      SCIPdebug(SCIPprintRow(scip, cut, NULL));
 
+#ifdef MAKECUTINTEGRAL
                      /* try to scale the cut to integral values */
                      SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
                            maxdnom, maxscale, MAKECONTINTEGRAL, &success) );
+#else
+		     success = TRUE;
+#endif
 
                      if( success )
                      {

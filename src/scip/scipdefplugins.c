@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.61 2006/10/11 01:46:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.62 2006/11/08 23:22:45 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -69,6 +69,7 @@
 #include "scip/nodesel_bfs.h"
 #include "scip/nodesel_dfs.h"
 #include "scip/nodesel_estimate.h"
+#include "scip/nodesel_hybridestim.h"
 #include "scip/nodesel_restartdfs.h"
 #include "scip/presol_dualfix.h"
 #include "scip/presol_implics.h"
@@ -138,6 +139,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeNodeselBfs(scip) );
    SCIP_CALL( SCIPincludeNodeselDfs(scip) );
    SCIP_CALL( SCIPincludeNodeselEstimate(scip) );
+   SCIP_CALL( SCIPincludeNodeselHybridestim(scip) );
    SCIP_CALL( SCIPincludeNodeselRestartdfs(scip) );
    SCIP_CALL( SCIPincludeBranchruleAllfullstrong(scip) );
    SCIP_CALL( SCIPincludeBranchruleFullstrong(scip) );
