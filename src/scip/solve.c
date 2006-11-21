@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.237 2006/09/22 01:30:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.238 2006/11/21 12:09:44 bzfpfets Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -939,7 +939,7 @@ SCIP_RETCODE separationRoundLP(
       /* if we work off the delayed separators, we stop immediately if a cut was found */
       if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED) )
       {
-         SCIPdebugMessage(" -> delayed constraint handler <%s> found a cut\n", 
+         SCIPdebugMessage(" -> delayed constraint handler <%s> found a cut\n",
             SCIPconshdlrGetName(set->conshdlrs_sepa[i]));
          *delayed = TRUE;
          return SCIP_OKAY;
@@ -1214,7 +1214,7 @@ SCIP_RETCODE SCIPseparationRound(
       lperror = FALSE;
       mustsepa = FALSE;
       mustprice = FALSE;
-      SCIP_CALL( separationRoundLP(blkmem, set, stat, prob, lp, sepastore, actdepth, 0.0, onlydelayed, delayed, &enoughcuts, 
+      SCIP_CALL( separationRoundLP(blkmem, set, stat, prob, lp, sepastore, actdepth, 0.0, onlydelayed, delayed, &enoughcuts,
             cutoff, &lperror, &mustsepa, &mustprice) );
    }
    else
@@ -1851,7 +1851,7 @@ void markRelaxsUnsolved(
    for( r = 0; r < set->nrelaxs; ++r )
       SCIPrelaxMarkUnsolved(set->relaxs[r]);
 }
-   
+
 /** enforces constraints by branching, separation, or domain reduction */
 static
 SCIP_RETCODE enforceConstraints(
@@ -1933,7 +1933,7 @@ SCIP_RETCODE enforceConstraints(
       }
       else
       {
-         SCIP_CALL( SCIPconshdlrEnforcePseudoSol(set->conshdlrs_enfo[h], blkmem, set, stat, tree, *infeasible, 
+         SCIP_CALL( SCIPconshdlrEnforcePseudoSol(set->conshdlrs_enfo[h], blkmem, set, stat, tree, *infeasible,
                objinfeasible, &result) );
          if( SCIPsepastoreGetNCuts(sepastore) != 0 )
          {
@@ -2149,7 +2149,7 @@ SCIP_RETCODE applyBounding(
          }
       }
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -3040,6 +3040,9 @@ SCIP_RETCODE SCIPsolveCIP(
    /* check if we finised solving */
    if( SCIPtreeGetNNodes(tree) == 0 && SCIPtreeGetCurrentNode(tree) == NULL )
    {
+      /* no restart necessary */
+      *restart = FALSE;
+
       /* set the solution status */
       if( unbounded )
       {
