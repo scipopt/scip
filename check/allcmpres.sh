@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: allcmpres.sh,v 1.9 2006/10/25 03:46:13 bzfpfend Exp $
+# $Id: allcmpres.sh,v 1.10 2006/11/24 08:47:02 bzfpfend Exp $
 
 AWKARGS=""
 FILES=""
@@ -34,7 +34,6 @@ for i in `ls -1 --color=none $FILES | sed 's!\(.*\)check\.\([^ .]*\)\.\([^ ]*\)\
 do
     TESTSETS="$TESTSETS $i"
 done
-echo $TESTSETS
 
 for i in $TESTSETS
 do
