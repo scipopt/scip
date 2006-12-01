@@ -40,6 +40,7 @@ bugs:
 - fixed wrong sorting of plugins with priorities close to INT_MIN or INT_MAX
 - replaced "line" by "read" in Makefile, since "line" is non-standard
 - fixed bug in variable bound constraint handler with changing bounds on multi-aggregated variables
+- fixed bug in variable bounds search and insertion method
 
 
 SCIP version 0.90
