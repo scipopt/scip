@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.62 2006/09/15 03:32:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.63 2006/12/06 13:04:55 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -783,7 +783,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecNewstart)
 {  /*lint --e{715}*/
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
-   SCIP_CALL( SCIPfreeSolve(scip) );
+   SCIP_CALL( SCIPfreeSolve(scip, TRUE) );
 
    *nextdialog = SCIPdialogGetParent(dialog);
 

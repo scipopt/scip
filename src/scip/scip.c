@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.386 2006/09/17 01:58:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.387 2006/12/06 13:04:56 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4924,7 +4924,8 @@ SCIP_RETCODE SCIPsolve(
  *  preserved
  */
 SCIP_RETCODE SCIPfreeSolve(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             restart             /**< should certain data be preserved for improved restarting? */
    )
 {
    SCIP_Bool unbounded;
@@ -4954,7 +4955,7 @@ SCIP_RETCODE SCIPfreeSolve(
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
       /* free solution process data structures */
-      SCIP_CALL( freeSolve(scip, FALSE) );
+      SCIP_CALL( freeSolve(scip, restart) );
       assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
       return SCIP_OKAY;
 
@@ -4991,7 +4992,7 @@ SCIP_RETCODE SCIPfreeTransform(
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
       /* free solution process data */
-      SCIP_CALL( SCIPfreeSolve(scip) );
+      SCIP_CALL( SCIPfreeSolve(scip, FALSE) );
       assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
 
       /*lint -fallthrough*/

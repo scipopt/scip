@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.189 2006/09/23 05:38:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.190 2006/12/06 13:04:56 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -5130,6 +5130,7 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
 #undef SCIPnodeGetDepth
 #undef SCIPnodeGetLowerbound
 #undef SCIPnodeGetEstimate
+#undef SCIPnodeGetDomchg
 #undef SCIPnodeIsActive
 #undef SCIPnodeIsPropagatedAgain
 #undef SCIPtreeGetNLeaves
@@ -5199,6 +5200,18 @@ SCIP_Real SCIPnodeGetEstimate(
    assert(node != NULL);
 
    return node->estimate;
+}
+
+/** gets the domain change information of the node, i.e., the information about the differences in the
+ *  variables domains to the parent node
+ */
+SCIP_DOMCHG* SCIPnodeGetDomchg(
+   SCIP_NODE*            node                /**< node */
+   )
+{
+   assert(node != NULL);
+
+   return node->domchg;
 }
 
 /** returns whether node is in the path to the current node */

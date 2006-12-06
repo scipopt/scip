@@ -11,6 +11,10 @@ interface:
 - removed method SCIPnodeGetPriority()
 - new method SCIPnodeGetEstimate()
 - new methods SCIPgetLocalOrigEstimate() and SCIPgetLocalTransEstimate()
+- new parameter "restart" for method SCIPfreeSolve()
+- new method SCIPnodeGetDomchg()
+- new methods SCIPboundchgGetNewbound(), SCIPboundchgGetVar(), SCIPboundchgGetBoundchgtype(),
+  SCIPboundchgGetBoundtype(), SCIPboundchgIsRedundant(), SCIPdomchgGetNBoundchgs(), SCIPdomchgGetBoundchg()
 
 plugins:
 - improved performance of linear constraint propagation by delaying some floor/ceil calculations

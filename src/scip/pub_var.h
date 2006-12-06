@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.63 2006/08/08 15:17:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.64 2006/12/06 13:04:56 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -999,6 +999,49 @@ SCIP_Bool SCIPbdchginfoIsTighter(
    SCIP_BDCHGINFO*       bdchginfo2          /**< second bound change information */
    );
 
+/** returns the new value of the bound in the bound change data */
+extern
+SCIP_Real SCIPboundchgGetNewbound(
+   SCIP_BOUNDCHG*        boundchg            /**< bound change data */
+   );
+
+/** returns the variable of the bound change in the bound change data */
+extern
+SCIP_VAR* SCIPboundchgGetVar(
+   SCIP_BOUNDCHG*        boundchg            /**< bound change data */
+   );
+
+/** returns the bound change type of the bound change in the bound change data */
+extern
+SCIP_BOUNDCHGTYPE SCIPboundchgGetBoundchgtype(
+   SCIP_BOUNDCHG*        boundchg            /**< bound change data */
+   );
+
+/** returns the bound type of the bound change in the bound change data */
+extern
+SCIP_BOUNDTYPE SCIPboundchgGetBoundtype(
+   SCIP_BOUNDCHG*        boundchg            /**< bound change data */
+   );
+
+/** returns whether the bound change is redundant due to a more global bound that is at least as strong */
+extern
+SCIP_Bool SCIPboundchgIsRedundant(
+   SCIP_BOUNDCHG*        boundchg            /**< bound change data */
+   );
+
+/** returns the number of bound changes in the domain change data */
+extern
+int SCIPdomchgGetNBoundchgs(
+   SCIP_DOMCHG*          domchg              /**< domain change data */
+   );
+
+/** returns a particular bound change in the domain change data */
+extern
+SCIP_BOUNDCHG* SCIPdomchgGetBoundchg(
+   SCIP_DOMCHG*          domchg,             /**< domain change data */
+   int                   pos                 /**< position of the bound change in the domain change data */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -1028,6 +1071,13 @@ SCIP_Bool SCIPbdchginfoIsTighter(
       || ((bdchginfo)->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && (bdchginfo)->inferencedata.reason.prop != NULL))
 #define SCIPbdchginfoIsTighter(bdchginfo1,bdchginfo2) ((bdchginfo1)->boundtype == SCIP_BOUNDTYPE_LOWER \
       ? (bdchginfo1)->newbound > bdchginfo2->newbound : (bdchginfo1)->newbound < bdchginfo2->newbound)
+#define SCIPboundchgGetNewbound(boundchg)      ((boundchg)->newbound)
+#define SCIPboundchgGetVar(boundchg)           ((boundchg)->var)
+#define SCIPboundchgGetBoundchgtype(boundchg)  ((SCIP_BOUNDCHGTYPE)((boundchg)->boundchgtype))
+#define SCIPboundchgGetBoundtype(boundchg)     ((SCIP_BOUNDTYPE)((boundchg)->boundtype))
+#define SCIPboundchgIsRedundant(boundchg)      ((boundchg)->redundant)
+#define SCIPdomchgGetNBoundchgs(domchg)        ((domchg) != NULL ? (domchg)->domchgbound.nboundchgs : 0)
+#define SCIPdomchgGetBoundchg(domchg, pos)     (&(domchg)->domchgbound.boundchgs[pos])
 
 #endif
 

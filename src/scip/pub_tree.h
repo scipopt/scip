@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_tree.h,v 1.19 2006/09/17 01:58:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_tree.h,v 1.20 2006/12/06 13:04:55 bzfpfend Exp $"
 
 /**@file   pub_tree.h
  * @brief  public methods for branch and bound tree
@@ -81,6 +81,14 @@ SCIP_Real SCIPnodeGetEstimate(
    SCIP_NODE*            node                /**< node */
    );
 
+/** gets the domain change information of the node, i.e., the information about the differences in the
+ *  variables domains to the parent node
+ */
+extern
+SCIP_DOMCHG* SCIPnodeGetDomchg(
+   SCIP_NODE*            node                /**< node */
+   );
+
 /** returns whether node is in the path to the current node */
 extern
 SCIP_Bool SCIPnodeIsActive(
@@ -104,6 +112,7 @@ SCIP_Bool SCIPnodeIsPropagatedAgain(
 #define SCIPnodeGetDepth(node)          ((node)->depth)
 #define SCIPnodeGetLowerbound(node)     ((node)->lowerbound)
 #define SCIPnodeGetEstimate(node)       ((node)->estimate)
+#define SCIPnodeGetDomchg(node)         ((node)->domchg)
 #define SCIPnodeIsActive(node)          ((node)->active)
 #define SCIPnodeIsPropagatedAgain(node) ((node)->reprop)
 

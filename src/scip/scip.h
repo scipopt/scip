@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.288 2006/09/17 01:58:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.289 2006/12/06 13:04:56 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1757,7 +1757,8 @@ SCIP_RETCODE SCIPsolve(
  */
 extern
 SCIP_RETCODE SCIPfreeSolve(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             restart             /**< should certain data be preserved for improved restarting? */
    );
 
 /** frees all solution process data including presolving and transformed problem, only original problem is kept */
