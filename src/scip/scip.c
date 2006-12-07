@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.389 2006/12/07 20:18:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.390 2006/12/07 20:36:10 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5366,7 +5366,8 @@ SCIP_RETCODE SCIPgetVarStrongbranch(
                                               *   infeasible downwards branch, or NULL */
    SCIP_Bool*            upconflict,         /**< pointer to store whether a conflict constraint was created for an
                                               *   infeasible upwards branch, or NULL */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured or the
+                                              *   solving process should be stopped (e.g., due to a time limit) */
    )
 {
    SCIP_COL* col;

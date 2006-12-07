@@ -16,6 +16,8 @@ interface:
 - new methods SCIPboundchgGetNewbound(), SCIPboundchgGetVar(), SCIPboundchgGetBoundchgtype(),
   SCIPboundchgGetBoundtype(), SCIPboundchgIsRedundant(), SCIPdomchgGetNBoundchgs(), SCIPdomchgGetBoundchg()
 - new method SCIPisStopped()
+- SCIPgetVarStrongbranch() now also returns lperror == TRUE if the solving process should be stopped, e.g., because
+  of a time limit
 
 plugins:
 - improved performance of linear constraint propagation by delaying some floor/ceil calculations
@@ -42,7 +44,7 @@ parameters:
 
 features:
 - improved performance of clique cut separator
-- presolving, cut separation, and strong branching now better respect time limit
+- presolving, cut separation, primal heuristics, and strong branching now better respect time limit
 
 fixed bugs:
 - SCIPgetAvgPseudocostCount() and SCIPgetAvgPseudocostCountCurrentRun() now return the average over all integer variables instead

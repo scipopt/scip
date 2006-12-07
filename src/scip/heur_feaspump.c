@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.44 2006/09/17 01:58:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.45 2006/12/07 20:36:09 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -428,7 +428,8 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    nstallloops = 0;
    nbestsolsfound = SCIPgetNBestSolsFound(scip);
    bestnfracs = INT_MAX;
-   while( nfracs > 0 &&  heurdata->nlpiterations < maxnlpiterations && nloops < maxloops && nstallloops < maxstallloops )
+   while( !SCIPisStopped(scip) && nfracs > 0 &&  heurdata->nlpiterations < maxnlpiterations
+      && nloops < maxloops && nstallloops < maxstallloops )
    {
       nloops++;
       alpha *= objfactor;

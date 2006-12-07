@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intshifting.c,v 1.2 2006/09/17 01:58:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_intshifting.c,v 1.3 2006/12/07 20:36:09 bzfpfend Exp $"
 
 /**@file   heur_intshifting.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities, shifts integer variables, and
@@ -739,7 +739,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
    nnonimprovingshifts = 0;
    minnviolrows = INT_MAX;
    increaseweight = 1.0;
-   while( (nfrac > 0 || nviolrows > 0) && nnonimprovingshifts < MAXSHIFTINGS )
+   while( !SCIPisStopped(scip) && (nfrac > 0 || nviolrows > 0) && nnonimprovingshifts < MAXSHIFTINGS )
    {
       SCIP_VAR* shiftvar;
       SCIP_Real oldsolval;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_veclendiving.c,v 1.5 2006/11/08 23:22:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_veclendiving.c,v 1.6 2006/12/07 20:36:10 bzfpfend Exp $"
 
 /**@file   heur_veclendiving.c
  * @brief  LP diving heuristic that rounds variables with long column vectors
@@ -298,7 +298,7 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
    cutoff = FALSE;
    divedepth = 0;
    startnlpcands = nlpcands;
-   while( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
+   while( !SCIPisStopped(scip) && !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
       && (divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
          || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations && objval < searchbound)) )
