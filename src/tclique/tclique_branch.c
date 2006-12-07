@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.c,v 1.10 2006/09/15 02:00:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_branch.c,v 1.11 2006/12/07 19:35:31 bzfpfend Exp $"
 
 /**@file   tclique_branch.c
  * @brief  branch and bound part of algorithm for maximum cliques
@@ -703,10 +703,10 @@ int getMaxApBoundIndexNotMaxWeight(
 }
 
 /** branches the searching tree, branching nodes are selected in decreasing order of their apriori bound,
- *  returns whether to stop branching
+ *  returns the level to which we should backtrack, or INT_MAX for continuing normally
  */
 static
-TCLIQUE_Bool branch(
+int branch(
    TCLIQUE_GETNNODES((*getnnodes)),     /**< user function to get the number of nodes */
    TCLIQUE_GETWEIGHTS((*getweights)),   /**< user function to get the node weights */
    TCLIQUE_ISEDGE   ((*isedge)),        /**< user function to check for existence of an edge */
@@ -743,13 +743,13 @@ TCLIQUE_Bool branch(
    TCLIQUE_STATUS*  status              /**< pointer to store the status of the solving call */
    )
 {
-   TCLIQUE_Bool stopsolving;
    TCLIQUE_Bool isleaf;
    const TCLIQUE_WEIGHT* weights;
    TCLIQUE_WEIGHT* apbound;
    TCLIQUE_WEIGHT subgraphweight;
    TCLIQUE_WEIGHT weightKold;
    TCLIQUE_WEIGHT tmpcliqueweight;
+   int backtracklevel;
    int ntmpcliquenodes;
    int i;
 
@@ -794,7 +794,7 @@ TCLIQUE_Bool branch(
    }
 
    weights = getweights(tcliquegraph);
-   stopsolving = FALSE;
+   backtracklevel = INT_MAX;
    isleaf = TRUE;
 
    /* allocate temporary memory for a priori bounds */
@@ -866,13 +866,16 @@ TCLIQUE_Bool branch(
       debugMessage("============================ branching level %d ===============================\n", level);
 
       /* branch on the nodes of V by decreasing order of their apriori bound */
-      while( !stopsolving && nValive > 0 )
+      while( backtracklevel >= level && nValive > 0 )
       {
          int branchidx;
 
          /* check if we meet the backtracking frequency - in this case abort the search until we have reached first level */
          if( level > 1 && backtrackfreq > 0 && (*ntreenodes) % backtrackfreq == 0 )
+         {
+            backtracklevel = 1;
             break;
+         }
 
          /* get next branching node */
 	 if( level == 1 && fixednode >= 0 )
@@ -897,9 +900,9 @@ TCLIQUE_Bool branch(
          if( (weightKold + apbound[branchidx]) <= *maxcliqueweight )
             break;
 
-         debugMessage("%d. branching in level %d: bidx=%d, node %d, weight %d, upperbound: %d+%d = %d, maxclique=%d\n",
-            nV-nValive+1, level, branchidx, V[branchidx], weights[V[branchidx]], weightKold, apbound[branchidx],
-            weightKold + apbound[branchidx], *maxcliqueweight);
+         debugMessage("%d. branching in level %d (treenode %d): bidx=%d, node %d, weight %d, upperbound: %d+%d = %d, maxclique=%d\n",
+            nV-nValive+1, level, *ntreenodes, branchidx, V[branchidx], weights[V[branchidx]], weightKold,
+            apbound[branchidx], weightKold + apbound[branchidx], *maxcliqueweight);
 
          /* because we branch on this node, the node is no leaf in the tree */
          isleaf = FALSE;
@@ -927,16 +930,25 @@ TCLIQUE_Bool branch(
          nVcurrent = selectadjnodes(tcliquegraph, branchingnode, V, nValive, Vcurrent);
 
          /* process the selected subtree */
-         stopsolving = branch(getnnodes, getweights, isedge, selectadjnodes, tcliquegraph, newsol, tcliquedata,
+         backtracklevel = branch(getnnodes, getweights, isedge, selectadjnodes, tcliquegraph, newsol, tcliquedata,
             mem, cliquehash, buffer,
             level, Vcurrent, nVcurrent, Vzero, nVzero, gsd, iscolored, K, weightK,
             maxcliquenodes, nmaxcliquenodes, maxcliqueweight,
             curcliquenodes, ncurcliquenodes, curcliqueweight, tmpcliquenodes,
             maxfirstnodeweight, ntreenodes, maxntreenodes, backtrackfreq, maxnzeroextensions, -1, status);
 
+         /* if all other candidates stayed in the candidate list, the current branching was optimal and
+          * there is no need to try the remaining ones
+          */
+         if( nVcurrent == nValive )
+         {
+            debugMessage("branching on node %d was optimal - ignoring remaining candidates\n", branchingnode);
+            nValive = 0;
+         }
+
 	 /* if we had a fixed node, ignore all other nodes */
 	 if( fixednode >= 0 )
-	    nValive = 0;
+            nValive = 0;
       }
 
       debugMessage("========================== branching level %d end =============================\n\n", level);
@@ -953,10 +965,15 @@ TCLIQUE_Bool branch(
        */
       if( *curcliqueweight > *maxcliqueweight )
       {
+         TCLIQUE_Bool stopsolving;
+
          debugMessage("found clique of weight %d at node %d in level %d\n", *curcliqueweight, *ntreenodes, level);
          newSolution(selectadjnodes, tcliquegraph, newsol, tcliquedata, cliquehash, buffer, Vzero, nVzero,
             maxnzeroextensions, curcliquenodes, *ncurcliquenodes, *curcliqueweight,
             maxcliquenodes, nmaxcliquenodes, maxcliqueweight, &stopsolving);
+
+         if( stopsolving )
+            backtracklevel = 0;
       }
 
       /* discard the current clique */
@@ -964,8 +981,8 @@ TCLIQUE_Bool branch(
       *curcliqueweight = 0;
    }
 
-#ifdef DEBUG
-   if( level > 1 && backtrackfreq > 0 && (*ntreenodes) % backtrackfreq == 0 )
+#ifdef TCLIQUE_DEBUG
+   if( level > backtracklevel )
    {
       debugMessage("premature backtracking after %d nodes - level %d\n", *ntreenodes, level);
    }
@@ -974,7 +991,7 @@ TCLIQUE_Bool branch(
    /* free data structures */
    BMSfreeMemoryArray(&apbound);
 
-   return stopsolving;
+   return backtracklevel;
 }
 
 /** finds maximum weight clique */

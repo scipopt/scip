@@ -37,8 +37,12 @@ parameters:
 - increased priority of "estimate" node selector, such that this is the new default node selector
 - changed default value of "separating/objparalfac" to 0.01 for performance reasons
 - changed default values of "heuristics/*diving/backtrack to TRUE
+- changed default value of "nodeselection/restartdfs/stdpriority" to 10000
 
-bugs:
+features:
+- improved performance of clique cut separator
+
+fixed bugs:
 - SCIPgetAvgPseudocostCount() and SCIPgetAvgPseudocostCountCurrentRun() now return the average over all integer variables instead
   of all variables, since pseudo costs are not recorded for continuous variables
 - fixed wrong sorting of plugins with priorities close to INT_MIN or INT_MAX
