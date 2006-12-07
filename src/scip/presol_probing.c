@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.35 2006/10/11 02:21:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.36 2006/12/07 20:03:09 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -506,18 +506,18 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
       int j;
 
       /* check whether probing should be aborted */
-      if( SCIPpressedCtrlC(scip) || presoldata->nuseless >= maxuseless || presoldata->ntotaluseless >= maxtotaluseless
-         || presoldata->nsumuseless >= maxsumuseless )
+      if( SCIPisStopped(scip) || presoldata->nuseless >= maxuseless
+         || presoldata->ntotaluseless >= maxtotaluseless || presoldata->nsumuseless >= maxsumuseless )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
             "   (%.1fs) probing: %d/%d (%.1f%%) - %d fixings, %d aggregations, %d implications, %d bound changes\n", 
             SCIPgetSolvingTime(scip), i+1, nbinvars, 100.0*(SCIP_Real)(i+1)/(SCIP_Real)nbinvars,
             presoldata->nfixings, presoldata->naggregations, presoldata->nimplications, presoldata->nbdchgs);
 
-         if( SCIPpressedCtrlC(scip) )
+         if( SCIPisStopped(scip) )
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-               "   (%.1fs) probing aborted: user interrupt\n", SCIPgetSolvingTime(scip));
+               "   (%.1fs) probing aborted: solving stopped\n", SCIPgetSolvingTime(scip));
          }
          else if( presoldata->nuseless >= maxuseless )
          {

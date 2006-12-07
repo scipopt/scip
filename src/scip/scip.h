@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.289 2006/12/06 13:04:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.290 2006/12/07 20:03:10 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -202,6 +202,15 @@ SCIP_Bool SCIPisExactSolve(
 /** returns whether the user pressed CTRL-C to interrupt the solving process */
 extern
 SCIP_Bool SCIPpressedCtrlC(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns whether the solving process should be / was stopped before proving optimality;
+ *  if the solving process should be / was stopped, the status returned by SCIPgetStatus() yields
+ *  the reason for the premature abort
+ */
+extern
+SCIP_Bool SCIPisStopped(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

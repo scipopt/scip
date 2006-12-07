@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.387 2006/12/06 13:04:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.388 2006/12/07 20:03:09 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -654,6 +654,19 @@ SCIP_Bool SCIPpressedCtrlC(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPpressedCtrlC", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return SCIPinterrupted();
+}
+
+/** returns whether the solving process should be / was stopped before proving optimality;
+ *  if the solving process should be / was stopped, the status returned by SCIPgetStatus() yields
+ *  the reason for the premature abort
+ */
+SCIP_Bool SCIPisStopped(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisStopped", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPsolveIsStopped(scip->set, scip->stat);
 }
 
 

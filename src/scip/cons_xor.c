@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.49 2006/06/20 16:04:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.50 2006/12/07 20:03:09 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -1902,7 +1902,7 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
    {
       if( conshdlrdata->maxpresolpairrounds == -1 || nrounds < conshdlrdata->maxpresolpairrounds )
       {
-         for( c = firstchange; c < nconss && !cutoff && !SCIPpressedCtrlC(scip); ++c )
+         for( c = firstchange; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
          {
             if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
             {
