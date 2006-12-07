@@ -42,7 +42,7 @@ parameters:
 
 features:
 - improved performance of clique cut separator
-- presolving now better respects time limit
+- presolving, cut separation, and strong branching now better respect time limit
 
 fixed bugs:
 - SCIPgetAvgPseudocostCount() and SCIPgetAvgPseudocostCountCurrentRun() now return the average over all integer variables instead

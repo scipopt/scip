@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.388 2006/12/07 20:03:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.389 2006/12/07 20:18:37 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5401,6 +5401,14 @@ SCIP_RETCODE SCIPgetVarStrongbranch(
    {
       SCIPerrorMessage("cannot get strong branching information on variable <%s> not in current LP\n", SCIPvarGetName(var));
       return SCIP_INVALIDDATA;
+   }
+
+   /* check if the solving process should be aborted */
+   if( SCIPsolveIsStopped(scip->set, scip->stat) )
+   {
+      /* mark this as if the LP failed */
+      *lperror = TRUE;
+      return SCIP_OKAY;
    }
 
    /* call strong branching for column */

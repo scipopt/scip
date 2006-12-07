@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.239 2006/11/22 10:34:24 bzfpfets Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.240 2006/12/07 20:18:37 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -716,6 +716,7 @@ SCIP_RETCODE solveNodeInitialLP(
 static
 SCIP_RETCODE primalHeuristics(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_NODE*            nextnode,           /**< next node that will be processed, or NULL if no more nodes left */
@@ -743,6 +744,10 @@ SCIP_RETCODE primalHeuristics(
 
    /* nothing to do, if no heuristics are available, or if the branch-and-bound process is finished */
    if( set->nheurs == 0 || (heurtiming == SCIP_HEURTIMING_AFTERNODE && nextnode == NULL) )
+      return SCIP_OKAY;
+
+   /* check if solving should be aborted */
+   if( SCIPsolveIsStopped(set, stat) )
       return SCIP_OKAY;
 
    /* sort heuristics by priority, but move the delayed heuristics to the front */
@@ -878,7 +883,8 @@ SCIP_RETCODE separationRoundLP(
 
    /* call LP separators with nonnegative priority */
    for( i = 0; i < set->nsepas && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
-           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY)
+           && !SCIPsolveIsStopped(set, stat);
         ++i )
    {
       if( SCIPsepaGetPriority(set->sepas[i]) < 0 )
@@ -913,7 +919,8 @@ SCIP_RETCODE separationRoundLP(
 
    /* try separating constraints of the constraint handlers */
    for( i = 0; i < set->nconshdlrs && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
-           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY)
+           && !SCIPsolveIsStopped(set, stat);
         ++i )
    {
       if( onlydelayed && !SCIPconshdlrWasLPSeparationDelayed(set->conshdlrs_sepa[i]) )
@@ -948,7 +955,8 @@ SCIP_RETCODE separationRoundLP(
 
    /* call LP separators with negative priority */
    for( i = 0; i < set->nsepas && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
-           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY)
+           && !SCIPsolveIsStopped(set, stat);
         ++i )
    {
       if( SCIPsepaGetPriority(set->sepas[i]) >= 0 )
@@ -987,7 +995,8 @@ SCIP_RETCODE separationRoundLP(
       consadded = FALSE;
 
       for( i = 0; i < set->nconshdlrs && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
-           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+              && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY)
+              && !SCIPsolveIsStopped(set, stat);
            ++i )
       {
 	 if( onlydelayed && !SCIPconshdlrWasLPSeparationDelayed(set->conshdlrs_sepa[i]) )
@@ -1064,7 +1073,7 @@ SCIP_RETCODE separationRoundSol(
    SCIPsetSortSepas(set);
 
    /* call separators with nonnegative priority */
-   for( i = 0; i < set->nsepas && !(*cutoff) && !(*enoughcuts); ++i )
+   for( i = 0; i < set->nsepas && !(*cutoff) && !(*enoughcuts) && !SCIPsolveIsStopped(set, stat); ++i )
    {
       if( SCIPsepaGetPriority(set->sepas[i]) < 0 )
          continue;
@@ -1091,7 +1100,7 @@ SCIP_RETCODE separationRoundSol(
    }
 
    /* try separating constraints of the constraint handlers */
-   for( i = 0; i < set->nconshdlrs && !(*cutoff) && !(*enoughcuts); ++i )
+   for( i = 0; i < set->nconshdlrs && !(*cutoff) && !(*enoughcuts) && !SCIPsolveIsStopped(set, stat); ++i )
    {
       if( onlydelayed && !SCIPconshdlrWasSolSeparationDelayed(set->conshdlrs_sepa[i]) )
          continue;
@@ -1117,7 +1126,7 @@ SCIP_RETCODE separationRoundSol(
    }
 
    /* call separators with negative priority */
-   for( i = 0; i < set->nsepas && !(*cutoff) && !(*enoughcuts); ++i )
+   for( i = 0; i < set->nsepas && !(*cutoff) && !(*enoughcuts) && !SCIPsolveIsStopped(set, stat); ++i )
    {
       if( SCIPsepaGetPriority(set->sepas[i]) >= 0 )
          continue;
@@ -1148,7 +1157,7 @@ SCIP_RETCODE separationRoundSol(
    {
       consadded = FALSE;
 
-      for( i = 0; i < set->nconshdlrs && !(*cutoff) && !(*enoughcuts); ++i )
+      for( i = 0; i < set->nconshdlrs && !(*cutoff) && !(*enoughcuts) && !SCIPsolveIsStopped(set, stat); ++i )
       {
 	 if( onlydelayed && !SCIPconshdlrWasSolSeparationDelayed(set->conshdlrs_sepa[i]) )
 	    continue;
@@ -1485,7 +1494,7 @@ SCIP_RETCODE priceAndCutLoop(
       /* call primal heuristics that are applicable during node LP solving loop */
       if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
       {
-         SCIP_CALL( primalHeuristics(set, primal, tree, NULL, SCIP_HEURTIMING_DURINGLPLOOP, &foundsol) );
+         SCIP_CALL( primalHeuristics(set, stat, primal, tree, NULL, SCIP_HEURTIMING_DURINGLPLOOP, &foundsol) );
       }
       else
          foundsol = FALSE;
@@ -2270,7 +2279,7 @@ SCIP_RETCODE solveNode(
    SCIPtreeSetFocusNodeLP(tree, focusnodehaslp);
 
    /* call primal heuristics that should be applied before the node was solved */
-   SCIP_CALL( primalHeuristics(set, primal, tree, NULL, SCIP_HEURTIMING_BEFORENODE, &foundsol) );
+   SCIP_CALL( primalHeuristics(set, stat, primal, tree, NULL, SCIP_HEURTIMING_BEFORENODE, &foundsol) );
    assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
    /* external node solving loop:
@@ -2442,13 +2451,13 @@ SCIP_RETCODE solveNode(
       {
          if( actdepth == 0 && stat->nruns == 1 && nloops == 1 )
          {
-            SCIP_CALL( primalHeuristics(set, primal, tree, NULL, SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE,
-                  &foundsol) );
+            SCIP_CALL( primalHeuristics(set, stat, primal, tree, NULL,
+                  SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE, &foundsol) );
             *afternodeheur = TRUE; /* the AFTERNODE heuristics should node be called again after the node */
          }
          else
          {
-            SCIP_CALL( primalHeuristics(set, primal, tree, NULL, SCIP_HEURTIMING_AFTERLPLOOP, &foundsol) );
+            SCIP_CALL( primalHeuristics(set, stat, primal, tree, NULL, SCIP_HEURTIMING_AFTERLPLOOP, &foundsol) );
          }
       }
 
@@ -2988,7 +2997,7 @@ SCIP_RETCODE SCIPsolveCIP(
          nnodes = SCIPtreeGetNNodes(tree);
          if( !afternodeheur && (!cutoff || nnodes > 0) )
          {
-            SCIP_CALL( primalHeuristics(set, primal, tree, nextnode, SCIP_HEURTIMING_AFTERNODE, &foundsol) );
+            SCIP_CALL( primalHeuristics(set, stat, primal, tree, nextnode, SCIP_HEURTIMING_AFTERNODE, &foundsol) );
             assert(SCIPbufferGetNUsed(set->buffer) == 0);
          }
 
