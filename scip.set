@@ -1043,8 +1043,8 @@ nodeselection/hybridestim/bestnodefreq = 1000
 nodeselection/hybridestim/estimweight = 0.1
 
 # priority of branching rule <restartdfs> in standard mode
-# [type: int, range: [-536870912,536870911], default: 50000]
-nodeselection/restartdfs/stdpriority = 50000
+# [type: int, range: [-536870912,536870911], default: 10000]
+nodeselection/restartdfs/stdpriority = 10000
 
 # priority of branching rule <restartdfs> in memory saving mode
 # [type: int, range: [-536870912,536870911], default: 50000]
