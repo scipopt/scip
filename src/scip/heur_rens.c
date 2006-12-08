@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.8 2006/09/17 01:58:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.9 2006/12/08 11:18:01 bzfpfend Exp $"
 
 /**@file   heur_rens.c
  * @brief  RENS primal heuristic
@@ -364,7 +364,10 @@ SCIP_DECL_HEUREXEC(heurExecRens)
 
    /* check whether we have enough nodes left to call subproblem solving */
    if( nstallnodes < heurdata->minnodes )
+   {
+      SCIPdebugMessage("skipping RENS: nstallnodes=%"SCIP_LONGINT_FORMAT", minnodes=%"SCIP_LONGINT_FORMAT"\n", nstallnodes, heurdata->minnodes);
       return SCIP_OKAY;
+   }
 
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
@@ -427,10 +430,17 @@ SCIP_DECL_HEUREXEC(heurExecRens)
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) );
    SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
 
+#ifdef SCIP_DEBUG
+   /* for debugging RENS, enable MIP output */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1) );
+#endif
+
    success = FALSE;
 
    /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
    SCIP_CALL( createSubproblem(scip, subscip, subvars, heurdata->minfixingrate, heurdata->binarybounds, &success) );
+   SCIPdebugMessage("RENS subproblem: %d vars, %d cons, success=%d\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), success);
 
    /* if the subproblem could not be created, free memory and return */
    if( !success )
@@ -470,6 +480,7 @@ SCIP_DECL_HEUREXEC(heurExecRens)
 
    /* solve the subproblem */
    SCIP_CALL( SCIPpresolve(subscip) );
+   SCIPdebugMessage("RENS presolved subproblem: %d vars, %d cons, success=%d\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), success);
 
    /* after presolving, we should have at least reached a certain fixing rate over ALL variables (including continuous)
     * to ensure that not only the MIP but also the LP relaxation is easy enough
@@ -479,6 +490,7 @@ SCIP_DECL_HEUREXEC(heurExecRens)
       SCIP_SOL** subsols;
       int nsubsols;
 
+      SCIPdebugMessage("solving subproblem: nstallnodes=%"SCIP_LONGINT_FORMAT", maxnodes=%"SCIP_LONGINT_FORMAT"\n", nstallnodes, heurdata->maxnodes);
       SCIP_CALL( SCIPsolve(subscip) );
 
       /* check, whether a solution was found;
