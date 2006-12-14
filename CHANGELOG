@@ -1,6 +1,9 @@
 current version
 ===============
 
+compiling:
+- added .exe extension to binaries of MinGW
+
 interface:
 - new parameter "maxbounddist" for SCIPincludeSepa() and constructor ObjSepa()
 - new method SCIPsepaGetMaxbounddist()
