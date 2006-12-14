@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.35 2006/11/08 23:22:43 bzfpfend Exp $
+# $Id: check.sh,v 1.36 2006/12/14 15:52:50 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -26,6 +26,8 @@ MEMLIMIT=$7
 FEASTOL=$8
 DISPFREQ=$9
 CONTINUE=${10}
+LOCK=${11}
+VERSION=${12}
 
 if [ ! -e results ]
 then
@@ -35,6 +37,13 @@ if [ ! -e settings ]
 then
     mkdir settings
 fi
+if [ ! -e locks ]
+then
+    mkdir locks
+fi
+
+LOCKFILE=locks/$TSTNAME.$SETNAME.$VERSION.lock
+DONEFILE=locks/$TSTNAME.$SETNAME.$VERSION.done
 
 OUTFILE=results/check.$TSTNAME.$BINID.$SETNAME.out
 ERRFILE=results/check.$TSTNAME.$BINID.$SETNAME.err
@@ -44,6 +53,16 @@ TMPFILE=results/check.$TSTNAME.$BINID.$SETNAME.tmp
 SETFILE=results/check.$TSTNAME.$BINID.$SETNAME.set
 
 SETTINGS=settings/$SETNAME.set
+
+if [ "$LOCK" == "true" ]
+then
+    if [ -e $LOCKFILE ]
+    then
+	echo skipping test due to existing lock file $LOCKFILE
+	exit
+    fi
+    date > $LOCKFILE
+fi
 
 if [ ! -e $OUTFILE ]
 then
@@ -153,4 +172,9 @@ then
     gawk -f check.awk -vTEXFILE=$TEXFILE $TSTNAME.solu $OUTFILE | tee $RESFILE
 else
     gawk -f check.awk -vTEXFILE=$TEXFILE $OUTFILE | tee $RESFILE
+fi
+
+if [ "$LOCK" == "true" ]
+then
+    date > $DONEFILE
 fi

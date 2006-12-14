@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.186 2006/12/01 11:45:29 bzfpfend Exp $
+# $Id: Makefile,v 1.187 2006/12/14 15:52:50 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -49,6 +49,7 @@ FEASTOL		=	default
 TEST		=	miplib3
 SETTINGS        =       default
 CONTINUE	=	false
+LOCK		=	false
 
 VERBOSE		=	false
 OPT		=	opt
@@ -494,7 +495,7 @@ doc:
 .PHONY: test
 test:		
 		cd check; \
-		/bin/sh ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(MAIN).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
+		/bin/sh ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(MAIN).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION);
 
 .PHONY: testpre
 testpre:		
