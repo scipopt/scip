@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.391 2006/12/20 16:41:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.392 2006/12/20 16:49:08 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5405,7 +5405,7 @@ SCIP_RETCODE SCIPgetVarStrongbranch(
    }
 
    /* check if the solving process should be aborted */
-   if( SCIPsolveIsStopped(scip->set, scip->stat, FALSE) ) /* ???????????????????????????? */
+   if( SCIPsolveIsStopped(scip->set, scip->stat, FALSE) )
    {
       /* mark this as if the LP failed */
       *lperror = TRUE;
