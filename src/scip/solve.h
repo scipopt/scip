@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.46 2006/08/31 08:27:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.47 2006/12/20 16:41:31 bzfberth Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -52,7 +52,8 @@
 extern
 SCIP_Bool SCIPsolveIsStopped(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< dynamic problem statistics */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_Bool             checknodelimits     /**< should the node limits be involved in the check? */
    );
 
 /** applies domain propagation on current node and flushes the conflict storage afterwards */

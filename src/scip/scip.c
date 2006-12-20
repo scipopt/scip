@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.390 2006/12/07 20:36:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.391 2006/12/20 16:41:30 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -507,7 +507,7 @@ SCIP_RETCODE SCIPprintStage(
       SCIPmessageFPrintInfo(file, "problem transformed");
       break;
    case SCIP_STAGE_PRESOLVING:
-      if( SCIPsolveIsStopped(scip->set, scip->stat) )
+      if( SCIPsolveIsStopped(scip->set, scip->stat, TRUE) )
       {
          SCIPmessageFPrintInfo(file, "solving was interrupted [");
          SCIP_CALL( SCIPprintStatus(scip, file) );
@@ -523,7 +523,7 @@ SCIP_RETCODE SCIPprintStage(
       SCIPmessageFPrintInfo(file, "solving process initialization");
       break;
    case SCIP_STAGE_SOLVING:
-      if( SCIPsolveIsStopped(scip->set, scip->stat) )
+      if( SCIPsolveIsStopped(scip->set, scip->stat, TRUE) )
       {
          SCIPmessageFPrintInfo(file, "solving was interrupted [");
          SCIP_CALL( SCIPprintStatus(scip, file) );
@@ -666,7 +666,7 @@ SCIP_Bool SCIPisStopped(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPisStopped", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   return SCIPsolveIsStopped(scip->set, scip->stat);
+   return SCIPsolveIsStopped(scip->set, scip->stat, FALSE);
 }
 
 
@@ -4323,7 +4323,7 @@ SCIP_RETCODE presolve(
    SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "presolving:\n");
 
    finished = (*unbounded || *infeasible || scip->stat->npresolrounds >= maxnrounds);
-   stopped = SCIPsolveIsStopped(scip->set, scip->stat);
+   stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
 
    /* perform presolving rounds */
    while( !finished && !stopped )
@@ -4392,7 +4392,7 @@ SCIP_RETCODE presolve(
       }
 
       /* abort if time limit was reached or user interrupted */
-      stopped = SCIPsolveIsStopped(scip->set, scip->stat);
+      stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
    }
 
    /* deinitialize presolving */
@@ -4863,7 +4863,7 @@ SCIP_RETCODE SCIPsolve(
          return SCIP_ERROR;
       }  /*lint !e788*/
    }
-   while( restart && !SCIPsolveIsStopped(scip->set, scip->stat) );
+   while( restart && !SCIPsolveIsStopped(scip->set, scip->stat, TRUE) );
 
    /* stop solving timer */
    SCIPclockStop(scip->stat->solvingtime, scip->set);
@@ -5405,7 +5405,7 @@ SCIP_RETCODE SCIPgetVarStrongbranch(
    }
 
    /* check if the solving process should be aborted */
-   if( SCIPsolveIsStopped(scip->set, scip->stat) )
+   if( SCIPsolveIsStopped(scip->set, scip->stat, FALSE) ) /* ???????????????????????????? */
    {
       /* mark this as if the LP failed */
       *lperror = TRUE;

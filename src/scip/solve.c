@@ -14,11 +14,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.240 2006/12/07 20:18:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.241 2006/12/20 16:41:31 bzfberth Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
  * @author Tobias Achterberg
+ * @author Timo Berthold
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -65,7 +66,8 @@
  */
 SCIP_Bool SCIPsolveIsStopped(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< dynamic problem statistics */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_Bool             checknodelimits     /**< should the node limits be involved in the check? */
    )
 {
    assert(set != NULL);
@@ -76,10 +78,6 @@ SCIP_Bool SCIPsolveIsStopped(
       stat->status = SCIP_STATUS_USERINTERRUPT;
       stat->userinterrupt = FALSE;
    }
-   else if( set->limit_nodes >= 0 && stat->nnodes >= set->limit_nodes )
-      stat->status = SCIP_STATUS_NODELIMIT;
-   else if( set->limit_stallnodes >= 0 && stat->nnodes >= stat->bestsolnode + set->limit_stallnodes )
-      stat->status = SCIP_STATUS_STALLNODELIMIT;
    else if( SCIPclockGetTime(stat->solvingtime) >= set->limit_time )
       stat->status = SCIP_STATUS_TIMELIMIT;
    else if( SCIPgetMemUsed(set->scip) >= set->limit_memory*1024.0*1024.0 )
@@ -95,6 +93,10 @@ SCIP_Bool SCIPsolveIsStopped(
    else if( set->limit_bestsol >= 0 && set->stage >= SCIP_STAGE_PRESOLVED
       && SCIPgetNBestSolsFound(set->scip) >= set->limit_bestsol )
       stat->status = SCIP_STATUS_BESTSOLLIMIT;
+   else if( checknodelimits && set->limit_nodes >= 0 && stat->nnodes >= set->limit_nodes )
+      stat->status = SCIP_STATUS_NODELIMIT;
+   else if( checknodelimits && set->limit_stallnodes >= 0 && stat->nnodes >= stat->bestsolnode + set->limit_stallnodes )
+      stat->status = SCIP_STATUS_STALLNODELIMIT;
 
    return (stat->status != SCIP_STATUS_UNKNOWN);
 }
@@ -747,7 +749,7 @@ SCIP_RETCODE primalHeuristics(
       return SCIP_OKAY;
 
    /* check if solving should be aborted */
-   if( SCIPsolveIsStopped(set, stat) )
+   if( SCIPsolveIsStopped(set, stat, FALSE) )
       return SCIP_OKAY;
 
    /* sort heuristics by priority, but move the delayed heuristics to the front */
@@ -884,7 +886,7 @@ SCIP_RETCODE separationRoundLP(
    /* call LP separators with nonnegative priority */
    for( i = 0; i < set->nsepas && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
            && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY)
-           && !SCIPsolveIsStopped(set, stat);
+           && !SCIPsolveIsStopped(set, stat, FALSE);
         ++i )
    {
       if( SCIPsepaGetPriority(set->sepas[i]) < 0 )
@@ -920,7 +922,7 @@ SCIP_RETCODE separationRoundLP(
    /* try separating constraints of the constraint handlers */
    for( i = 0; i < set->nconshdlrs && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
            && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY)
-           && !SCIPsolveIsStopped(set, stat);
+           && !SCIPsolveIsStopped(set, stat, FALSE);
         ++i )
    {
       if( onlydelayed && !SCIPconshdlrWasLPSeparationDelayed(set->conshdlrs_sepa[i]) )
@@ -956,7 +958,7 @@ SCIP_RETCODE separationRoundLP(
    /* call LP separators with negative priority */
    for( i = 0; i < set->nsepas && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
            && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY)
-           && !SCIPsolveIsStopped(set, stat);
+           && !SCIPsolveIsStopped(set, stat, FALSE);
         ++i )
    {
       if( SCIPsepaGetPriority(set->sepas[i]) >= 0 )
@@ -996,7 +998,7 @@ SCIP_RETCODE separationRoundLP(
 
       for( i = 0; i < set->nconshdlrs && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
               && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY)
-              && !SCIPsolveIsStopped(set, stat);
+              && !SCIPsolveIsStopped(set, stat, FALSE);
            ++i )
       {
 	 if( onlydelayed && !SCIPconshdlrWasLPSeparationDelayed(set->conshdlrs_sepa[i]) )
@@ -1073,7 +1075,7 @@ SCIP_RETCODE separationRoundSol(
    SCIPsetSortSepas(set);
 
    /* call separators with nonnegative priority */
-   for( i = 0; i < set->nsepas && !(*cutoff) && !(*enoughcuts) && !SCIPsolveIsStopped(set, stat); ++i )
+   for( i = 0; i < set->nsepas && !(*cutoff) && !(*enoughcuts) && !SCIPsolveIsStopped(set, stat, FALSE); ++i )
    {
       if( SCIPsepaGetPriority(set->sepas[i]) < 0 )
          continue;
@@ -1100,7 +1102,7 @@ SCIP_RETCODE separationRoundSol(
    }
 
    /* try separating constraints of the constraint handlers */
-   for( i = 0; i < set->nconshdlrs && !(*cutoff) && !(*enoughcuts) && !SCIPsolveIsStopped(set, stat); ++i )
+   for( i = 0; i < set->nconshdlrs && !(*cutoff) && !(*enoughcuts) && !SCIPsolveIsStopped(set, stat, FALSE); ++i )
    {
       if( onlydelayed && !SCIPconshdlrWasSolSeparationDelayed(set->conshdlrs_sepa[i]) )
          continue;
@@ -1126,7 +1128,7 @@ SCIP_RETCODE separationRoundSol(
    }
 
    /* call separators with negative priority */
-   for( i = 0; i < set->nsepas && !(*cutoff) && !(*enoughcuts) && !SCIPsolveIsStopped(set, stat); ++i )
+   for( i = 0; i < set->nsepas && !(*cutoff) && !(*enoughcuts) && !SCIPsolveIsStopped(set, stat, FALSE); ++i )
    {
       if( SCIPsepaGetPriority(set->sepas[i]) >= 0 )
          continue;
@@ -1157,7 +1159,7 @@ SCIP_RETCODE separationRoundSol(
    {
       consadded = FALSE;
 
-      for( i = 0; i < set->nconshdlrs && !(*cutoff) && !(*enoughcuts) && !SCIPsolveIsStopped(set, stat); ++i )
+      for( i = 0; i < set->nconshdlrs && !(*cutoff) && !(*enoughcuts) && !SCIPsolveIsStopped(set, stat, FALSE); ++i )
       {
 	 if( onlydelayed && !SCIPconshdlrWasSolSeparationDelayed(set->conshdlrs_sepa[i]) )
 	    continue;
@@ -2826,7 +2828,7 @@ SCIP_RETCODE SCIPsolveCIP(
    nextnode = NULL;
    unbounded = FALSE;
 
-   while( !SCIPsolveIsStopped(set, stat) && !(*restart) )
+   while( !SCIPsolveIsStopped(set, stat, TRUE) && !(*restart) )
    {
       SCIP_Longint nsuccessconflicts;
       SCIP_Bool afternodeheur;
