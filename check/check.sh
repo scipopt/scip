@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.36 2006/12/14 15:52:50 bzfpfend Exp $
+# $Id: check.sh,v 1.37 2006/12/22 14:42:34 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -43,6 +43,7 @@ then
 fi
 
 LOCKFILE=locks/$TSTNAME.$SETNAME.$VERSION.lock
+RUNFILE=locks/$TSTNAME.$SETNAME.$VERSION.run.$BINID
 DONEFILE=locks/$TSTNAME.$SETNAME.$VERSION.done
 
 OUTFILE=results/check.$TSTNAME.$BINID.$SETNAME.out
@@ -56,12 +57,23 @@ SETTINGS=settings/$SETNAME.set
 
 if [ "$LOCK" == "true" ]
 then
-    if [ -e $LOCKFILE ]
+    if [ -e $DONEFILE ]
     then
-	echo skipping test due to existing lock file $LOCKFILE
+	echo skipping test due to existing done file $DONEFILE
 	exit
     fi
+    if [ -e $LOCKFILE ]
+    then
+	if [ -e $RUNFILE ]
+        then
+	    echo continuing aborted run with run file $RUNFILE
+	else
+	    echo skipping test due to existing lock file $LOCKFILE
+	    exit
+	fi
+    fi
     date > $LOCKFILE
+    date > $RUNFILE
 fi
 
 if [ ! -e $OUTFILE ]
@@ -107,8 +119,14 @@ HARDMEMLIMIT=`echo $MEMLIMIT*1.2 | bc`
 echo hard time limit: $HARDTIMELIMIT >>$OUTFILE
 echo hard mem limit: $HARDMEMLIMIT >>$OUTFILE
 
-for i in `cat $TSTNAME.test`
+for i in `cat $TSTNAME.test` DONE
 do
+    if [ "$i" == "DONE" ]
+    then
+	date > $DONEFILE
+	break
+    fi
+
     if [ "$LASTPROB" == "" ]
     then
 	LASTPROB=""
@@ -135,6 +153,9 @@ do
 #	    echo display solution                  >> $TMPFILE
 	    echo checksol                          >> $TMPFILE
 	    echo quit                              >> $TMPFILE
+
+	    waitcplex.sh  # ????????????
+
 	    echo -----------------------------
 	    date
 	    date >>$ERRFILE
@@ -167,14 +188,17 @@ rm -f $TMPFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-if [ -f $TSTNAME.solu ]
+if [ -e $DONEFILE ]
 then
-    gawk -f check.awk -vTEXFILE=$TEXFILE $TSTNAME.solu $OUTFILE | tee $RESFILE
-else
-    gawk -f check.awk -vTEXFILE=$TEXFILE $OUTFILE | tee $RESFILE
-fi
+    if [ -f $TSTNAME.solu ]
+    then
+	gawk -f check.awk -vTEXFILE=$TEXFILE $TSTNAME.solu $OUTFILE | tee $RESFILE
+    else
+	gawk -f check.awk -vTEXFILE=$TEXFILE $OUTFILE | tee $RESFILE
+    fi
 
-if [ "$LOCK" == "true" ]
-then
-    date > $DONEFILE
+    if [ "$LOCK" == "true" ]
+    then
+	rm -f $RUNFILE
+    fi
 fi
