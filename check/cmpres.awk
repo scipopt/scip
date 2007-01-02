@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.20 2006/12/07 13:42:21 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.21 2007/01/02 13:00:06 bzfpfend Exp $
 #
 #@file    compare.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -42,9 +42,9 @@ function printhline(nsolver)
    for( s = 0; s < nsolver; ++s )
    {
       if( s == 0 )
-         printf("--------------------+----------+--------+");
+         printf("--------------------+-----------+--------+");
       else
-         printf("----------+--------+------+------+");
+         printf("-----------+--------+------+------+");
    }
    printf("-------------\n");
 }
@@ -129,6 +129,7 @@ END {
       wins[s] = 0;
       better[s] = 0;
       worse[s] = 0;
+      feasibles[s] = 0;
       score[s] = 1.0;
    }
 
@@ -153,18 +154,18 @@ END {
    {
       s = printorder[o];
       if( o == 0 )
-         printf(" %38s |", solvername[s]);
+         printf(" %39s |", solvername[s]);
       else
-         printf(" %31s |", solvername[s]);
+         printf(" %32s |", solvername[s]);
    }
    printf("\n");
    printhline(nsolver);
    for( s = 0; s < nsolver; ++s )
    {
       if( s == 0 )
-         printf("  Name              |    Nodes |   Time |");
+         printf("  Name              |F|   Nodes |   Time |");
       else
-         printf("    Nodes |   Time | NodQ | TimQ |");
+         printf("F|   Nodes |   Time | NodQ | TimQ |");
    }
    printf(" bounds check\n");
    printhline(nsolver);
@@ -226,6 +227,11 @@ END {
             marker = "!";
          }
 
+	 if( primalbound[s,pidx] < 1e+20 )
+	    feasmark = " ";
+	 else
+	    feasmark = "#";
+
          if( processed && !fail )
 	 {
 	    mindb = min(mindb, dualbound[s,pidx]);
@@ -238,10 +244,10 @@ END {
 
          # print statistics
          if( !processed )
-            line = sprintf("%s          -        -", line);
+            line = sprintf("%s           -        -", line);
          else
          {
-            line = sprintf("%s %10d %s%7.1f", line, nodes[s,pidx], marker, time[s,pidx]);
+            line = sprintf("%s %s%10d %s%7.1f", line, feasmark, nodes[s,pidx], marker, time[s,pidx]);
             if( nodecomp == -1 )
             {
                nodecomp = nodes[s,pidx];
@@ -327,6 +333,16 @@ END {
 	    score[s] = score[s]^((nevalprobs-1)/nevalprobs) * thisscore^(1.0/nevalprobs);
          }
       }
+
+      # calculate number of instances for which feasible solution has been found
+      if( !unprocessed )
+      {
+         for( s = 0; s < nsolver; ++s )
+         {
+	    if( primalbound[s,pidx] < 1e+20 )
+	       feasibles[s]++;
+	 }
+      }
    }
    printhline(nsolver);
 
@@ -378,12 +394,12 @@ END {
    printhline(nsolver);
 
    printf("\n");
-   printf("solver                            fail time solv wins bett wors     nodes   shnodes    nodesQ  shnodesQ    time  shtime   timeQ shtimeQ   score\n");
+   printf("solver                            fail time solv wins bett wors feas     nodes   shnodes    nodesQ  shnodesQ    time  shtime   timeQ shtimeQ   score\n");
    for( o = 0; o < nsolver; ++o )
    {
       s = printorder[o];
-      printf("%-33s %4d %4d %4d %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7.2f\n", 
-         solvername[s], nfails[s], ntimeouts[s], nsolved[s], wins[s], better[s], worse[s],
+      printf("%-33s %4d %4d %4d %4d %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7.2f\n", 
+         solvername[s], nfails[s], ntimeouts[s], nsolved[s], wins[s], better[s], worse[s], feasibles[s],
          nodegeom[s], nodeshiftedgeom[s], nodegeom[s]/nodegeomcomp, nodeshiftedgeom[s]/nodeshiftedgeomcomp,
          timegeom[s], timeshiftedgeom[s], timegeom[s]/timegeomcomp, timeshiftedgeom[s]/timeshiftedgeomcomp,
 	 score[s]);
