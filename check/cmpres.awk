@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.21 2007/01/02 13:00:06 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.22 2007/01/03 14:13:50 bzfpfend Exp $
 #
 #@file    compare.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -353,9 +353,9 @@ END {
    {
       s = printorder[o];
       if( o == 0 )
-         printf(" %10d %8d", nodetotal[s], timetotal[s]);
+         printf(" %11d %8d", nodetotal[s], timetotal[s]);
       else
-         printf(" %10d %8d              ", nodetotal[s], timetotal[s]);
+         printf(" %11d %8d              ", nodetotal[s], timetotal[s]);
    }
    printf("\n");
    printf("%-20s", "geom. mean");
@@ -364,12 +364,12 @@ END {
       s = printorder[o];
       if( o == 0 )
       {
-         printf(" %10d %8.1f", nodegeom[s], timegeom[s]);
+         printf(" %11d %8.1f", nodegeom[s], timegeom[s]);
          nodegeomcomp = nodegeom[s];
          timegeomcomp = timegeom[s];
       }
       else
-         printf(" %10d %8.1f %6.2f %6.2f", nodegeom[s], timegeom[s], nodegeom[s]/nodegeomcomp, timegeom[s]/timegeomcomp);
+         printf(" %11d %8.1f %6.2f %6.2f", nodegeom[s], timegeom[s], nodegeom[s]/nodegeomcomp, timegeom[s]/timegeomcomp);
    }
    printf("\n");
    printf("%-20s", "shifted geom.");
@@ -382,12 +382,12 @@ END {
       timeshiftedgeom[s] = max(timeshiftedgeom[s], 1.0);
       if( o == 0 )
       {
-         printf(" %10d %8.1f", nodeshiftedgeom[s], timeshiftedgeom[s]);
+         printf(" %11d %8.1f", nodeshiftedgeom[s], timeshiftedgeom[s]);
          nodeshiftedgeomcomp = nodeshiftedgeom[s];
          timeshiftedgeomcomp = timeshiftedgeom[s];
       }
       else
-         printf(" %10d %8.1f %6.2f %6.2f", nodeshiftedgeom[s], timeshiftedgeom[s],
+         printf(" %11d %8.1f %6.2f %6.2f", nodeshiftedgeom[s], timeshiftedgeom[s],
             nodeshiftedgeom[s]/nodeshiftedgeomcomp, timeshiftedgeom[s]/timeshiftedgeomcomp);
    }
    printf("\n");
