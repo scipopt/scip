@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.26 2006/09/18 04:27:57 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.27 2007/01/08 12:32:04 bzfpfend Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -111,8 +111,10 @@ BEGIN {
    opti       = 0;
    feasible   = 1;
    cuts       = 0;
-   pb         = 0.0;
-   db         = 0.0;
+   pb         = +1e+75;
+   db         = -1e+75;
+   mipgap     = 1e-4;
+   absmipgap  = 1e-6;
    bbnodes    = 0;
    primlps    = 0;
    primiter   = 0;
@@ -134,6 +136,26 @@ BEGIN {
    settings = substr(settings, 2, length(settings)-2);
    sub(/settings\//, "", settings);
    sub(/\.prm/, "", settings);
+}
+/^CPLEX> Non-default parameters written to file / {
+   n = split ($7, a, ".");
+   settings = a[n-2];
+}
+/^Non-default parameters written to file / {
+   n = split ($6, a, ".");
+   settings = a[n-2];
+}
+/^CPLEX> New value for mixed integer optimality gap tolerance: / {
+   mipgap = $10;
+}
+/^New value for mixed integer optimality gap tolerance: / {
+   mipgap = $9;
+}
+/^CPLEX> New value for absolute mixed integer optimality gap tolerance: / {
+   absmipgap = $11;
+}
+/^New value for absolute mixed integer optimality gap tolerance: / {
+   absmipgap = $10;
 }
 #
 # problem size
@@ -222,6 +244,9 @@ BEGIN {
 /^MIP - Error /  { # since CPLEX 10.0
    pb = ($5 == "no") ? 1e+75 : $9;
 }
+/^MIP - Unknown status / {
+   pb = ($6 == "Objective") ? $8 : 1e+75;
+}
 /cuts applied/ { 
    cuts += $NF;
 }
@@ -287,7 +312,9 @@ BEGIN {
       }
       else if( solstatus[prob] == "opt" )
       {
-         if ((abs(pb - db) > 1e-4) || (abs(pb - sol[prob]) > 1e-5*max(abs(pb),1.0)))
+ 	 reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
+	 abstol = max(absmipgap, 1e-4);
+         if( (abs(pb - db) > max(abstol, reltol)) || (abs(pb - sol[prob]) > reltol) )
          {
             if (timeout)
             {

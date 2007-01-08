@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.22 2007/01/03 14:13:50 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.23 2007/01/08 12:32:05 bzfpfend Exp $
 #
 #@file    compare.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -42,9 +42,9 @@ function printhline(nsolver)
    for( s = 0; s < nsolver; ++s )
    {
       if( s == 0 )
-         printf("--------------------+-----------+--------+");
+         printf("--------------------+-+---------+--------+");
       else
-         printf("-----------+--------+------+------+");
+         printf("-+---------+--------+------+------+");
    }
    printf("-------------\n");
 }
@@ -58,6 +58,7 @@ BEGIN {
    markbetternodes = 5.0;
    markworsenodes  = 5.0;
    onlymarked = 0;
+   onlyprocessed = 1;
    maxscore = 10.0;
 
    problistlen = 0;
@@ -172,6 +173,7 @@ END {
    
    # display the problem results and calculate mean values
    nevalprobs = 0;
+   nprocessedprobs = 0;
    for( i = 0; i < problistlen; ++i )
    {
       p = problist[i];
@@ -304,8 +306,8 @@ END {
       }
       else
          line = sprintf("%s  ok", line);
-      if( !onlymarked || mark == "*" )
-	printf("%s %s\n", mark, line);
+      if( (!onlymarked || mark == "*") && (!onlyprocessed || !unprocessed) )
+         printf("%s %s\n", mark, line);
 
       # calculate totals and means for instances where no solver failed
       if( !fail && !unprocessed )
@@ -337,8 +339,10 @@ END {
       # calculate number of instances for which feasible solution has been found
       if( !unprocessed )
       {
+         nprocessedprobs++;
          for( s = 0; s < nsolver; ++s )
          {
+            pidx = probidx[p,s];
 	    if( primalbound[s,pidx] < 1e+20 )
 	       feasibles[s]++;
 	 }
@@ -394,7 +398,8 @@ END {
    printhline(nsolver);
 
    printf("\n");
-   printf("solver                            fail time solv wins bett wors feas     nodes   shnodes    nodesQ  shnodesQ    time  shtime   timeQ shtimeQ   score\n");
+   printf("solver (%4d proc, %4d eval)     fail time solv wins bett wors feas     nodes   shnodes    nodesQ  shnodesQ    time  shtime   timeQ shtimeQ   score\n",
+          nprocessedprobs, nevalprobs);
    for( o = 0; o < nsolver; ++o )
    {
       s = printorder[o];
