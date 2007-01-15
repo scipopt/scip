@@ -56,6 +56,7 @@ fixed bugs:
 - replaced "line" by "read" in Makefile, since "line" is non-standard
 - fixed bug in variable bound constraint handler with changing bounds on multi-aggregated variables
 - fixed bug in variable bounds search and insertion method
+- fixed bug with LP size management in probing if column generation is used
 
 
 SCIP version 0.90

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.190 2006/12/06 13:04:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.191 2007/01/15 16:14:12 bzfneuma Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -2060,8 +2060,17 @@ void treeUpdatePathLPSize(
             || (ncols == node->data.probingnode->ninitialcols && nrows == node->data.probingnode->ninitialrows));
          assert(ncols <= node->data.probingnode->ncols);
          assert(nrows <= node->data.probingnode->nrows);
-         ncols = node->data.probingnode->ncols;
-         nrows = node->data.probingnode->nrows;
+         if( i < tree->pathlen-1 )
+         {
+            ncols = node->data.probingnode->ncols;
+            nrows = node->data.probingnode->nrows;
+         }
+         else
+         {
+            /* for the current probing node, the initial LP size is stored in the path */
+            ncols = node->data.probingnode->ninitialcols;
+            nrows = node->data.probingnode->ninitialrows;
+         }
          break;
       case SCIP_NODETYPE_SIBLING:
          SCIPerrorMessage("sibling cannot be in the active path\n");
@@ -2673,8 +2682,17 @@ void treeCheckPath(
             || (ncols == node->data.probingnode->ninitialcols && nrows == node->data.probingnode->ninitialrows));
          assert(ncols <= node->data.probingnode->ncols);
          assert(nrows <= node->data.probingnode->nrows);
-         ncols = node->data.probingnode->ncols;
-         nrows = node->data.probingnode->nrows;
+         if( d < tree->pathlen-1 )
+         {
+            ncols = node->data.probingnode->ncols;
+            nrows = node->data.probingnode->nrows;
+         }
+         else
+         {
+            /* for the current probing node, the initial LP size is stored in the path */
+            ncols = node->data.probingnode->ninitialcols;
+            nrows = node->data.probingnode->ninitialrows;
+         }
          break;
       case SCIP_NODETYPE_JUNCTION:
          break;
@@ -4483,14 +4501,14 @@ SCIP_RETCODE treeCreateProbingNode(
    tree->path[tree->pathlen] = node;
    tree->pathlen++;
 
-   /* count the new LP sizes of the path */
-   treeUpdatePathLPSize(tree, tree->pathlen-1);
+   /* update the path LP size for the previous node and set the (initial) path LP size for the newly created node */
+   treeUpdatePathLPSize(tree, tree->pathlen-2);
 
-   /* mark the LP's size, such that we know which rows and columns were added in the new node */
-   assert(tree->pathlen >= 2);
-   assert(lp->firstnewrow == tree->pathnlprows[tree->pathlen-2]); /* marked LP size should be final size of parent node */
-   assert(lp->firstnewcol == tree->pathnlpcols[tree->pathlen-2]);
+   /* mark the LP's size */
    SCIPlpMarkSize(lp);
+   assert(tree->pathlen >= 2);
+   assert(lp->firstnewrow == tree->pathnlprows[tree->pathlen-1]); /* marked LP size should be initial size of new node */
+   assert(lp->firstnewcol == tree->pathnlpcols[tree->pathlen-1]);
 
    /* the current probing node does not yet have a solved LP */
    tree->probingnodehaslp = FALSE;
@@ -4635,10 +4653,6 @@ SCIP_RETCODE SCIPtreeMarkProbingNodeHasLP(
    /* update LP information in probingnode data */
    SCIP_CALL( probingnodeUpdate(node->data.probingnode, blkmem, tree, lp) );
 
-   /* update LP size in path */
-   tree->pathnlpcols[tree->pathlen-1] = node->data.probingnode->ncols;
-   tree->pathnlprows[tree->pathlen-1] = node->data.probingnode->nrows;
-
    return SCIP_OKAY;
 }
 
@@ -4704,6 +4718,14 @@ SCIP_RETCODE treeBacktrackProbing(
       }
       assert(tree->pathlen == newpathlen);
 
+      /* reset the path LP size to the initial size of the probing node */
+      if( SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE )
+      {
+	 tree->pathnlpcols[tree->pathlen-1] = tree->path[tree->pathlen-1]->data.probingnode->ninitialcols;
+	 tree->pathnlprows[tree->pathlen-1] = tree->path[tree->pathlen-1]->data.probingnode->ninitialrows;
+      }
+      else
+	 assert(SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_FOCUSNODE);
       treeCheckPath(tree);
 
       /* undo LP extensions */
@@ -4711,7 +4733,7 @@ SCIP_RETCODE treeBacktrackProbing(
       SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, nrows) );
       tree->probingloadlpistate = FALSE; /* LP state must be reloaded if the next LP is solved */
 
-      /* reset the LP's marked size */
+      /* reset the LP's marked size to the initial size of the LP at the node stored in the path */
       SCIPlpSetSizeMark(lp, tree->pathnlprows[tree->pathlen-1], tree->pathnlpcols[tree->pathlen-1]);
 
       /* if the highest cutoff or repropagation depth is inside the deleted part of the probing path,

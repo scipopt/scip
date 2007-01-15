@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.392 2006/12/20 16:49:08 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.393 2007/01/15 16:14:11 bzfneuma Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -10450,6 +10450,12 @@ SCIP_RETCODE solveProbingLP(
          SCIP_CALL( SCIPpriceLoop(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
                scip->pricestore, scip->branchcand, scip->eventqueue, pretendroot, displayinfo, maxpricerounds,
                &npricedcolvars, &mustsepa, lperror) );
+
+	 /* mark the probing node again to update the LP size in the node and the tree path */
+	 if( !(*lperror) )
+	 {
+	    SCIP_CALL( SCIPtreeMarkProbingNodeHasLP(scip->tree, scip->mem->solvemem, scip->lp) );
+	 }
       }
    }
 

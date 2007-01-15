@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.36 2006/09/17 01:58:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.37 2007/01/15 16:14:12 bzfneuma Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -169,9 +169,9 @@ struct SCIP_Tree
    SCIP_Real*            childrenprio;       /**< array with node selection priorities of children */
    SCIP_Real*            siblingsprio;       /**< array with node selection priorities of children */
    int*                  pathnlpcols;        /**< array with number of LP columns for each problem in active path (except
-                                              *   newly added columns of the focus node) */
+                                              *   newly added columns of the focus node and the current probing node) */
    int*                  pathnlprows;        /**< array with number of LP rows for each problem in active path (except
-                                              *   newly added rows of the focus node) */
+                                              *   newly added rows of the focus node and the current probing node) */
    SCIP_LPISTATE*        probinglpistate;    /**< LP state information before probing started */
    SCIP_PENDINGBDCHG*    pendingbdchgs;      /**< array of pending bound changes, or NULL */
    int                   pendingbdchgssize;  /**< size of pendingbdchgs array */
