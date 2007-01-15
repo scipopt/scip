@@ -57,6 +57,7 @@ fixed bugs:
 - fixed bug in variable bound constraint handler with changing bounds on multi-aggregated variables
 - fixed bug in variable bounds search and insertion method
 - fixed bug with LP size management in probing if column generation is used
+- fixed bug with branching rules that produce only one child with no changes to the problem
 
 
 SCIP version 0.90

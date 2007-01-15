@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.152 2006/08/30 09:25:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.153 2007/01/15 20:11:34 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -438,6 +438,8 @@ SCIP_RETCODE conshdlrMarkConsObsolete(
             conshdlr->lastenfolplpcount = -1;
             conshdlr->lastenfolpdomchgcount = -1;
             conshdlr->lastenfopsdomchgcount = -1;
+            conshdlr->lastenfolpnode = -1;
+            conshdlr->lastenfopsnode = -1;
          }
 
          /* switch the last useful (non-obsolete) enfo constraint with this constraint */
@@ -799,6 +801,8 @@ SCIP_RETCODE conshdlrAddEnfocons(
       conshdlr->lastenfolplpcount = -1;
       conshdlr->lastenfolpdomchgcount = -1;
       conshdlr->lastenfopsdomchgcount = -1;
+      conshdlr->lastenfolpnode = -1;
+      conshdlr->lastenfopsnode = -1;
    }
    conshdlr->enfoconss[insertpos] = cons;
    cons->enfoconsspos = insertpos;
@@ -1842,6 +1846,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->lastenfolplpcount = -1;
    (*conshdlr)->lastenfolpdomchgcount = -1;
    (*conshdlr)->lastenfopsdomchgcount = -1;
+   (*conshdlr)->lastenfolpnode = -1;
+   (*conshdlr)->lastenfopsnode = -1;
    (*conshdlr)->lastnfixedvars = 0;
    (*conshdlr)->lastnaggrvars = 0;
    (*conshdlr)->lastnchgvartypes = 0;
@@ -1981,6 +1987,8 @@ SCIP_RETCODE SCIPconshdlrInit(
    conshdlr->lastpropdomchgcount = -1;
    conshdlr->lastenfolpdomchgcount = -1;
    conshdlr->lastenfopsdomchgcount = -1;
+   conshdlr->lastenfolpnode = -1;
+   conshdlr->lastenfopsnode = -1;
    conshdlr->maxnactiveconss = conshdlr->nactiveconss;
    conshdlr->startnactiveconss = 0;
    conshdlr->lastsepalpcount = -1;
@@ -2578,7 +2586,9 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
-   assert(conshdlr->lastenfolplpcount != stat->lpcount || conshdlr->lastenfolpdomchgcount != stat->domchgcount
+   assert(conshdlr->lastenfolplpcount != stat->lpcount
+      || conshdlr->lastenfolpdomchgcount != stat->domchgcount
+      || conshdlr->lastenfolpnode != stat->nnodes
       || (0 <= conshdlr->lastnusefulenfoconss && conshdlr->lastnusefulenfoconss <= conshdlr->nusefulenfoconss));
    assert(set != NULL);
    assert(stat != NULL);
@@ -2595,8 +2605,10 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
       int firstcons;
       SCIP_Bool lpchanged;
 
-      /* check, if this LP solution was already enforced */
-      if( conshdlr->lastenfolplpcount == stat->lpcount && conshdlr->lastenfolpdomchgcount == stat->domchgcount )
+      /* check, if this LP solution was already enforced at this node */
+      if( conshdlr->lastenfolplpcount == stat->lpcount
+         && conshdlr->lastenfolpdomchgcount == stat->domchgcount
+         && conshdlr->lastenfolpnode == stat->nnodes )
       {
          /* all constraints that were not yet enforced on the new LP solution must be useful constraints, which means,
           * that the new constraints are the last constraints of the useful ones
@@ -2608,7 +2620,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
       }
       else
       {
-         /* on a new LP solution, we want to enforce all constraints */
+         /* on a new LP solution or a new node, we want to enforce all constraints */
          nconss = conshdlr->nenfoconss;
          nusefulconss = conshdlr->nusefulenfoconss;
          firstcons = 0;
@@ -2632,6 +2644,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
          /* remember the number of processed constraints on the current LP solution */
          conshdlr->lastenfolplpcount = stat->lpcount;
          conshdlr->lastenfolpdomchgcount = stat->domchgcount;
+         conshdlr->lastenfolpnode = stat->nnodes;
          conshdlr->lastnusefulenfoconss = conshdlr->nusefulenfoconss;
 
          /* get the array of the constraints to be processed */
@@ -2719,6 +2732,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
    assert(conshdlr->lastenfopsdomchgcount != stat->domchgcount
+      || conshdlr->lastenfopsnode != stat->nnodes
       || (0 <= conshdlr->lastnusefulenfoconss && conshdlr->lastnusefulenfoconss <= conshdlr->nusefulenfoconss));
    assert(set != NULL);
    assert(stat != NULL);
@@ -2735,8 +2749,8 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
       int firstcons;
       SCIP_Bool pschanged;
 
-      /* check, if this LP solution was already enforced */
-      if( conshdlr->lastenfopsdomchgcount == stat->domchgcount )
+      /* check, if this LP solution was already enforced at this node */
+      if( conshdlr->lastenfopsdomchgcount == stat->domchgcount && conshdlr->lastenfopsnode == stat->nnodes )
       {
          /* all constraints that were not yet enforced on the new LP solution must be useful constraints, which means,
           * that the new constraints are the last constraints of the useful ones
@@ -2748,7 +2762,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
       }
       else
       {
-         /* on a new pseudo solution, we want to enforce all constraints */
+         /* on a new pseudo solution or a new node, we want to enforce all constraints */
          nconss = conshdlr->nenfoconss;
          nusefulconss = conshdlr->nusefulenfoconss;
          firstcons = 0;
@@ -2769,6 +2783,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
 
          /* remember the number of processed constraints on the current pseudo solution */
          conshdlr->lastenfopsdomchgcount = stat->domchgcount;
+         conshdlr->lastenfopsnode = stat->nnodes;
          conshdlr->lastnusefulenfoconss = conshdlr->nusefulenfoconss;
 
          /* get the array of the constraints to be processed */
