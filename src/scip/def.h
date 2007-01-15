@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.123 2006/12/01 11:45:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.124 2007/01/15 17:12:28 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -35,7 +35,7 @@
 
 
 #define SCIP_VERSION                 90 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION             "d" /**< SCIP sub version string */
+#define SCIP_SUBVERSION             "e" /**< SCIP sub version string */
 #define SCIP_COPYRIGHT   "Copyright (c) 2002-2006 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
@@ -89,7 +89,6 @@
 #define SCIP_DEFAULT_DUALFEASTOL      1e-09  /**< default feasibility tolerance for reduced costs */
 #define SCIP_DEFAULT_BARRIERCONVTOL   1e-10  /**< default convergence tolerance used in barrier algorithm */
 #define SCIP_DEFAULT_BOUNDSTREPS       0.05  /**< default minimal relative improve for strengthening bounds */
-/*????????????#define SCIP_DEFAULT_BOUNDSTREPS      1e-04*/  /**< default minimal relative improve for strengthening bounds */
 #define SCIP_DEFAULT_PSEUDOCOSTEPS    1e-01  /**< default minimal variable distance value to use for pseudo cost updates */
 #define SCIP_DEFAULT_PSEUDOCOSTDELTA  1e-04  /**< default minimal objective distance value to use for pseudo cost updates */
 #define SCIP_MAXEPSILON               1e-03  /**< maximum value for any numerical epsilon */
