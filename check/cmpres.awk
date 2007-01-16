@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.23 2007/01/08 12:32:05 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.24 2007/01/16 09:34:02 bzfpfend Exp $
 #
 #@file    compare.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -58,7 +58,7 @@ BEGIN {
    markbetternodes = 5.0;
    markworsenodes  = 5.0;
    onlymarked = 0;
-   onlyprocessed = 1;
+   onlyprocessed = 0;
    maxscore = 10.0;
 
    problistlen = 0;
@@ -130,6 +130,8 @@ END {
       wins[s] = 0;
       better[s] = 0;
       worse[s] = 0;
+      betterobj[s] = 0;
+      worseobj[s] = 0;
       feasibles[s] = 0;
       score[s] = 1.0;
    }
@@ -314,6 +316,7 @@ END {
       {
          nevalprobs++;
 	 reftime = time[printorder[0],probidx[p,printorder[0]]];
+	 refobj = primalbound[printorder[0],probidx[p,printorder[0]]];
          for( s = 0; s < nsolver; ++s )
          {
             pidx = probidx[p,s];
@@ -329,6 +332,13 @@ END {
                better[s]++;
             else if( time[s,pidx] > wintolerance*reftime )
                worse[s]++;
+	    pb = primalbound[s,pidx];
+	    if( (ismini && pb - refobj < -0.01 * max(max(abs(refobj), abs(pb)), 1.0)) ||
+		(ismaxi && pb - refobj > +0.01 * max(max(abs(refobj), abs(pb)), 1.0)) )
+ 	       betterobj[s]++;
+	    else if( (ismini && pb - refobj > +0.01 * max(max(abs(refobj), abs(pb)), 1.0)) ||
+		     (ismaxi && pb - refobj < -0.01 * max(max(abs(refobj), abs(pb)), 1.0)) )
+ 	       worseobj[s]++;
 	    thisscore = reftime/time[s,pidx];
 	    thisscore = max(thisscore, 1/maxscore);
 	    thisscore = min(thisscore, maxscore);
@@ -398,13 +408,13 @@ END {
    printhline(nsolver);
 
    printf("\n");
-   printf("solver (%4d proc, %4d eval)     fail time solv wins bett wors feas     nodes   shnodes    nodesQ  shnodesQ    time  shtime   timeQ shtimeQ   score\n",
+   printf("solver (%4d proc, %4d eval)     fail time solv wins bett wors bobj wobj feas     nodes   shnodes    nodesQ  shnodesQ    time  shtime   timeQ shtimeQ   score\n",
           nprocessedprobs, nevalprobs);
    for( o = 0; o < nsolver; ++o )
    {
       s = printorder[o];
-      printf("%-33s %4d %4d %4d %4d %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7.2f\n", 
-         solvername[s], nfails[s], ntimeouts[s], nsolved[s], wins[s], better[s], worse[s], feasibles[s],
+      printf("%-33s %4d %4d %4d %4d %4d %4d %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7.2f\n", 
+         solvername[s], nfails[s], ntimeouts[s], nsolved[s], wins[s], better[s], worse[s], betterobj[s], worseobj[s], feasibles[s],
          nodegeom[s], nodeshiftedgeom[s], nodegeom[s]/nodegeomcomp, nodeshiftedgeom[s]/nodeshiftedgeomcomp,
          timegeom[s], timeshiftedgeom[s], timegeom[s]/timegeomcomp, timeshiftedgeom[s]/timeshiftedgeomcomp,
 	 score[s]);

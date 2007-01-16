@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.27 2007/01/08 12:32:04 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.28 2007/01/16 09:34:02 bzfpfend Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -94,7 +94,7 @@ BEGIN {
       m--;
    for( i = 2; i < m; ++i )
       prob = prob "." b[i];
-   
+
    if( length(prob) > 18 )
       shortprob = substr(prob, length(prob)-17, 18);
    else
@@ -136,6 +136,10 @@ BEGIN {
    settings = substr(settings, 2, length(settings)-2);
    sub(/settings\//, "", settings);
    sub(/\.prm/, "", settings);
+}
+/^CPLEX> CPLEX> Non-default parameters written to file / {
+   n = split ($8, a, ".");
+   settings = a[n-2];
 }
 /^CPLEX> Non-default parameters written to file / {
    n = split ($7, a, ".");
