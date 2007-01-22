@@ -48,6 +48,9 @@ parameters:
 features:
 - improved performance of clique cut separator
 - presolving, cut separation, primal heuristics, and strong branching now better respect time limit
+- modified reader "sol", st. files which where created via typing the order of commands 'set log *.sol', 'disp sol var -', 
+  'set log cplex.log' in Cplex can now be read
+
 
 fixed bugs:
 - SCIPgetAvgPseudocostCount() and SCIPgetAvgPseudocostCountCurrentRun() now return the average over all integer variables instead

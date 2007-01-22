@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sol.c,v 1.5 2006/06/28 08:22:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_sol.c,v 1.6 2007/01/22 17:11:59 bzfberth Exp $"
 
 /**@file   reader_sol.c
  * @brief  file reader for primal solutions
@@ -91,13 +91,15 @@ SCIP_RETCODE readSol(
          break;
       lineno++;
 
-      /* the lines "solution status: ..." and "objective value: ..." may preceed the solution information */
-      if( strncasecmp(buffer, "solution status:", 16) == 0 || strncasecmp(buffer, "objective value:", 16) == 0 )
+      /* there are some lines which may preceed the solution information */
+      if( strncasecmp(buffer, "solution status:", 16) == 0 || strncasecmp(buffer, "objective value:", 16) == 0 ||
+          strncasecmp(buffer, "Log started", 11) == 0 || strncasecmp(buffer, "Variable Name", 13) == 0 ||
+          strncasecmp(buffer, "All other variables", 19) == 0 || strncasecmp(buffer, "\n", 1) == 0)
          continue;
 
       /* parse the line */
-      nread = sscanf(buffer, "%s %s %s\n", varname, valuestring, objstring);
-      if( nread < 2 )
+      nread = sscanf(buffer, "%s %s %s\n", varname, valuestring, objstring); 
+       if( nread < 2 )
       {
          SCIPwarningMessage("invalid input line %d in solution file <%s>: <%s>\n", lineno, filename, buffer);
          error = TRUE;
