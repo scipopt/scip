@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.20 2006/09/18 00:41:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.21 2007/01/23 11:34:17 bzfpfend Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -365,7 +365,30 @@ SCIP_Bool isNewSection(
    LPINPUT*              lpinput             /**< LP reading data */
    )
 {
+   char firsttoken[LP_MAX_LINELEN];
+   SCIP_Bool iscolon;
+
    assert(lpinput != NULL);
+
+   /* get first token */
+   strncpy(firsttoken, lpinput->token, LP_MAX_LINELEN);
+   firsttoken[LP_MAX_LINELEN-1] = '\0';
+
+   /* look at next token: if this is a ':', the first token is a name and no section keyword */
+   iscolon = FALSE;
+   if( getNextToken(lpinput) )
+   {
+      iscolon = (strcmp(lpinput->token, ":") == 0);
+      pushToken(lpinput, lpinput->token);
+   }
+
+   /* push and pop token, to reinstall it as current token */
+   pushToken(lpinput, firsttoken);
+   (void)getNextToken(lpinput);
+
+   /* check for ':' */
+   if( iscolon )
+      return FALSE;
 
    if( strcasecmp(lpinput->token, "MINIMIZE") == 0
       || strcasecmp(lpinput->token, "MINIMUM") == 0

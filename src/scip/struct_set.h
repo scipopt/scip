@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.73 2006/09/23 05:38:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.74 2007/01/23 11:34:18 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -215,7 +215,7 @@ struct SCIP_Set
 
    /* node selection settings */
    char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
-                                              *   'h'brid inference/LP value) */
+                                              *   'r'oot LP value difference, 'h'brid inference/root LP value difference) */
 
    /* numerical settings */
    SCIP_Real             num_infinity;       /**< values larger than this are considered infinity */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.191 2007/01/15 16:14:12 bzfneuma Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.192 2007/01/23 11:34:18 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4170,6 +4170,9 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
             prio = downinfs;
             break;
          case 'l':
+            prio = targetvalue - varsol;
+            break;
+         case 'r':
             prio = varrootsol - varsol;
             break;
          case 'h':
@@ -4217,6 +4220,9 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
             prio = upinfs;
             break;
          case 'l':
+            prio = varsol - targetvalue;
+            break;
+         case 'r':
             prio = varsol - varrootsol;
             break;
          case 'h':

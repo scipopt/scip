@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.36 2006/12/07 20:03:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.37 2007/01/23 11:34:17 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -437,7 +437,6 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
    SCIPdebugMessage("executing probing (used %.1f sec)\n", SCIPpresolGetTime(presol));
 
    *result = SCIP_DIDNOTFIND;
-   presoldata->called = TRUE;
 
    /* allow some additional probings */
    presoldata->nuseless -= presoldata->nuseless/10;
@@ -465,11 +464,23 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
       }
    }
 
-   /* sort the binary variables by number of rounding locks, if the at least 100 variables were probed since last sort */
+   /* if we probed all binary variables in previous runs, start again with the first one */
+   if( !presoldata->called && presoldata->startidx >= nbinvars )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+                      "   (%.1fs) probing cycle finished: starting next cycle\n", SCIPgetSolvingTime(scip));
+      presoldata->startidx = 0;
+      presoldata->lastsortstartidx = -1;
+   }
+   presoldata->called = TRUE;
+
+   /* sort the binary variables by number of rounding locks, if at least 100 variables were probed since last sort */
    if( presoldata->lastsortstartidx < 0 || presoldata->startidx - presoldata->lastsortstartidx >= 100 )
    {
       SCIP_CALL( sortVariables(scip, presoldata, presoldata->startidx) );
       presoldata->lastsortstartidx = presoldata->startidx;
+      presoldata->nuseless = 0;
+      presoldata->ntotaluseless = 0;
    }
 
    vars = presoldata->sortedvars;

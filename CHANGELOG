@@ -28,6 +28,10 @@ plugins:
 - best estimate search is now used in all large neighborhood search heuristics
 - new heuristic "actconsdiving" following an idea of John Chinneck
 - new node selection rule "hybridestim"
+- improved performance of clique cut separator
+- modified reader "sol", st. files which where created via typing the order of commands 'set log *.sol', 'disp sol var -', 
+  'set log cplex.log' in Cplex can now be read
+- modified probing presolver to do multiple cycles if called in subsequent runs
 
 parameters:
 - new parameter "separating/clique/backtrackfreq" to speed up clique cut separation in heuristic fashion
@@ -44,13 +48,10 @@ parameters:
 - changed default value of "separating/objparalfac" to 0.01 for performance reasons
 - changed default values of "heuristics/*diving/backtrack to TRUE
 - changed default value of "nodeselection/restartdfs/stdpriority" to 10000
+- changed meaning of parameter setting "nodeselection/childsel = l"; old meaning is now called 'r'
 
 features:
-- improved performance of clique cut separator
 - presolving, cut separation, primal heuristics, and strong branching now better respect time limit
-- modified reader "sol", st. files which where created via typing the order of commands 'set log *.sol', 'disp sol var -', 
-  'set log cplex.log' in Cplex can now be read
-
 
 fixed bugs:
 - SCIPgetAvgPseudocostCount() and SCIPgetAvgPseudocostCountCurrentRun() now return the average over all integer variables instead
@@ -61,6 +62,9 @@ fixed bugs:
 - fixed bug in variable bounds search and insertion method
 - fixed bug with LP size management in probing if column generation is used
 - fixed bug with branching rules that produce only one child with no changes to the problem
+- fixed bug in linear constraint handler: only tight cuts are transformed into linear constraints after restart
+- fixed bug in LP file reader with row names identical to section keywords
+
 
 
 SCIP version 0.90

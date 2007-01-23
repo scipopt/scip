@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.228 2007/01/15 17:12:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.229 2007/01/23 11:34:17 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -6091,7 +6091,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinear)
          row = SCIPcutGetRow(cuts[c]);
          assert(!SCIProwIsLocal(row));
          assert(!SCIProwIsModifiable(row));
-         if( SCIPcutGetAge(cuts[c]) == 0 || SCIProwIsInLP(row) )
+         if( SCIPcutGetAge(cuts[c]) == 0 && SCIProwIsInLP(row) )
          {
             char name[SCIP_MAXSTRLEN];
             SCIP_CONS* cons;

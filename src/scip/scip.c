@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.393 2007/01/15 16:14:11 bzfneuma Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.394 2007/01/23 11:34:17 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -13637,7 +13637,8 @@ SCIP_RETCODE SCIPprintBranchingStatistics(
       for( v = 0; v < scip->transprob->nvars; ++v )
       {
          if( SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_DOWNWARDS) > 0
-            || SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_UPWARDS) > 0 )
+             || SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_UPWARDS) > 0
+             || SCIPgetVarNStrongbranchs(scip, vars[v]) > 0 )
          {
             int nstrongbranchs;
 
