@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.37 2006/12/22 14:42:34 bzfpfend Exp $
+# $Id: check.sh,v 1.38 2007/01/24 10:17:23 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -153,8 +153,6 @@ do
 #	    echo display solution                  >> $TMPFILE
 	    echo checksol                          >> $TMPFILE
 	    echo quit                              >> $TMPFILE
-
-	    waitcplex.sh  # ????????????
 
 	    echo -----------------------------
 	    date
