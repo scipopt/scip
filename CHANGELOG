@@ -64,6 +64,7 @@ fixed bugs:
 - fixed bug with branching rules that produce only one child with no changes to the problem
 - fixed bug in linear constraint handler: only tight cuts are transformed into linear constraints after restart
 - fixed bug in LP file reader with row names identical to section keywords
+- fixed bug that external relaxator is not reset appropriately for a new problem instance
 
 
 

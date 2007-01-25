@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.c,v 1.13 2006/09/17 01:58:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: relax.c,v 1.14 2007/01/25 14:48:48 bzfpfend Exp $"
 
 /**@file   relax.c
  * @brief  methods and datastructures for relaxators
@@ -160,6 +160,7 @@ SCIP_RETCODE SCIPrelaxInit(
 
    SCIPclockReset(relax->relaxclock);
    relax->ncalls = 0;
+   relax->lastsolvednode = -1;
 
    if( relax->relaxinit != NULL )
    {
