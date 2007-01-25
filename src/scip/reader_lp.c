@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.21 2007/01/23 11:34:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.22 2007/01/25 18:27:37 bzfpfend Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -49,6 +49,7 @@
 
 #define LP_MAX_LINELEN       65536
 #define LP_MAX_PUSHEDTOKENS  2
+#define LP_INIT_COEFSSIZE    8192
 
 /** Section in LP File */
 enum LpSection
@@ -76,8 +77,9 @@ struct LpInput
    char                 linebuf[LP_MAX_LINELEN];
    char                 probname[LP_MAX_LINELEN];
    char                 objname[LP_MAX_LINELEN];
-   char                 token[LP_MAX_LINELEN];
-   char                 pushedtokens[LP_MAX_PUSHEDTOKENS][LP_MAX_LINELEN];
+   char*                token;
+   char*                tokenbuf;
+   char*                pushedtokens[LP_MAX_PUSHEDTOKENS];
    int                  npushedtokens;
    int                  linenumber;
    int                  linepos;
@@ -245,6 +247,20 @@ SCIP_Bool getNextLine(
    return TRUE;
 }
 
+/** swaps the addresses of two pointers */
+static
+void swapPointers(
+   char**                pointer1,           /**< first pointer */
+   char**                pointer2            /**< second pointer */
+   )
+{
+   char* tmp;
+
+   tmp = *pointer1;
+   *pointer1 = *pointer2;
+   *pointer2 = tmp;
+}
+
 /** reads the next token from the input file into the token buffer; returns whether a token was read */
 static
 SCIP_Bool getNextToken(
@@ -262,7 +278,7 @@ SCIP_Bool getNextToken(
    /* check the token stack */
    if( lpinput->npushedtokens > 0 )
    {
-      strcpy(lpinput->token, lpinput->pushedtokens[lpinput->npushedtokens-1]);
+      swapPointers(&lpinput->token, &lpinput->pushedtokens[lpinput->npushedtokens-1]);
       lpinput->npushedtokens--;
       SCIPdebugMessage("(line %d) read token again: '%s'\n", lpinput->linenumber, lpinput->token);
       return TRUE;
@@ -343,20 +359,41 @@ SCIP_Bool getNextToken(
    return TRUE;
 }
 
-/** puts a token on the token stack, such that it is read at the next call to getNextToken() */
+/** puts the current token on the token stack, such that it is read at the next call to getNextToken() */
 static
 void pushToken(
-   LPINPUT*              lpinput,            /**< LP reading data */
-   const char*           token               /**< token to push on the token stack */
+   LPINPUT*              lpinput             /**< LP reading data */
    )
 {
    assert(lpinput != NULL);
    assert(lpinput->npushedtokens < LP_MAX_PUSHEDTOKENS);
-   assert(token != NULL);
-
-   strncpy(lpinput->pushedtokens[lpinput->npushedtokens], token, LP_MAX_LINELEN);
-   lpinput->pushedtokens[lpinput->npushedtokens][LP_MAX_LINELEN-1] = '\0';
+   
+   swapPointers(&lpinput->pushedtokens[lpinput->npushedtokens], &lpinput->token);
    lpinput->npushedtokens++;
+}
+
+/** puts the buffered token on the token stack, such that it is read at the next call to getNextToken() */
+static
+void pushBufferToken(
+   LPINPUT*              lpinput             /**< LP reading data */
+   )
+{
+   assert(lpinput != NULL);
+   assert(lpinput->npushedtokens < LP_MAX_PUSHEDTOKENS);
+   
+   swapPointers(&lpinput->pushedtokens[lpinput->npushedtokens], &lpinput->tokenbuf);
+   lpinput->npushedtokens++;
+}
+
+/** swaps the current token with the token buffer */
+static
+void swapTokenBuffer(
+   LPINPUT*              lpinput             /**< LP reading data */
+   )
+{
+   assert(lpinput != NULL);
+   
+   swapPointers(&lpinput->token, &lpinput->tokenbuf);
 }
 
 /** checks whether the current token is a section identifier, and if yes, switches to the corresponding section */
@@ -365,26 +402,23 @@ SCIP_Bool isNewSection(
    LPINPUT*              lpinput             /**< LP reading data */
    )
 {
-   char firsttoken[LP_MAX_LINELEN];
    SCIP_Bool iscolon;
 
    assert(lpinput != NULL);
 
-   /* get first token */
-   strncpy(firsttoken, lpinput->token, LP_MAX_LINELEN);
-   firsttoken[LP_MAX_LINELEN-1] = '\0';
+   /* remember first token by swapping the token buffer */
+   swapTokenBuffer(lpinput);
 
    /* look at next token: if this is a ':', the first token is a name and no section keyword */
    iscolon = FALSE;
    if( getNextToken(lpinput) )
    {
       iscolon = (strcmp(lpinput->token, ":") == 0);
-      pushToken(lpinput, lpinput->token);
+      pushToken(lpinput);
    }
 
-   /* push and pop token, to reinstall it as current token */
-   pushToken(lpinput, firsttoken);
-   (void)getNextToken(lpinput);
+   /* reinstall the previous token by swapping back the token buffer */
+   swapTokenBuffer(lpinput);
 
    /* check for ':' */
    if( iscolon )
@@ -412,10 +446,8 @@ SCIP_Bool isNewSection(
 
    if( strcasecmp(lpinput->token, "SUBJECT") == 0 )
    {
-      char s[LP_MAX_LINELEN];
-
-      strncpy(s, lpinput->token, LP_MAX_LINELEN);
-      s[LP_MAX_LINELEN-1] = '\0';
+      /* check if the next token is 'TO' */
+      swapTokenBuffer(lpinput);
       if( getNextToken(lpinput) )
       {
          if( strcasecmp(lpinput->token, "TO") == 0 )
@@ -427,18 +459,15 @@ SCIP_Bool isNewSection(
             return TRUE;
          }
          else
-            pushToken(lpinput, lpinput->token);
+            pushToken(lpinput);
       }
-      pushToken(lpinput, s);
-      getNextToken(lpinput);
+      swapTokenBuffer(lpinput);
    }
 
    if( strcasecmp(lpinput->token, "SUCH") == 0 )
    {
-      char s[LP_MAX_LINELEN];
-
-      strncpy(s, lpinput->token, LP_MAX_LINELEN);
-      s[LP_MAX_LINELEN-1] = '\0';
+      /* check if the next token is 'THAT' */
+      swapTokenBuffer(lpinput);
       if( getNextToken(lpinput) )
       {
          if( strcasecmp(lpinput->token, "THAT") == 0 )
@@ -450,10 +479,9 @@ SCIP_Bool isNewSection(
             return TRUE;
          }
          else
-            pushToken(lpinput, lpinput->token);
+            pushToken(lpinput);
       }
-      pushToken(lpinput, s);
-      getNextToken(lpinput);
+      swapTokenBuffer(lpinput);
    }
 
    if( strcasecmp(lpinput->token, "st") == 0
@@ -469,10 +497,8 @@ SCIP_Bool isNewSection(
 
    if( strcasecmp(lpinput->token, "LAZY") == 0 )
    {
-      char s[LP_MAX_LINELEN];
-
-      strncpy(s, lpinput->token, LP_MAX_LINELEN);
-      s[LP_MAX_LINELEN-1] = '\0';
+      /* check if the next token is 'CONSTRAINTS' */
+      swapTokenBuffer(lpinput);
       if( getNextToken(lpinput) )
       {
          if( strcasecmp(lpinput->token, "CONSTRAINTS") == 0 )
@@ -484,18 +510,15 @@ SCIP_Bool isNewSection(
             return TRUE;
          }
          else
-            pushToken(lpinput, lpinput->token);
+            pushToken(lpinput);
       }
-      pushToken(lpinput, s);
-      getNextToken(lpinput);
+      swapTokenBuffer(lpinput);
    }
 
    if( strcasecmp(lpinput->token, "USER") == 0 )
    {
-      char s[LP_MAX_LINELEN];
-
-      strncpy(s, lpinput->token, LP_MAX_LINELEN);
-      s[LP_MAX_LINELEN-1] = '\0';
+      /* check if the next token is 'CUTS' */
+      swapTokenBuffer(lpinput);
       if( getNextToken(lpinput) )
       {
          if( strcasecmp(lpinput->token, "CUTS") == 0 )
@@ -507,10 +530,9 @@ SCIP_Bool isNewSection(
             return TRUE;
          }
          else
-            pushToken(lpinput, lpinput->token);
+            pushToken(lpinput);
       }
-      pushToken(lpinput, s);
-      getNextToken(lpinput);
+      swapTokenBuffer(lpinput);
    }
 
    if( strcasecmp(lpinput->token, "BOUNDS") == 0
@@ -727,7 +749,8 @@ static
 SCIP_RETCODE readCoefficients(
    SCIP*                 scip,               /**< SCIP data structure */
    LPINPUT*              lpinput,            /**< LP reading data */
-   char*                 name,               /**< pointer to store the name of the line */
+   char*                 name,               /**< pointer to store the name of the line; must be at least of size
+                                              *   LP_MAX_LINELEN */
    SCIP_VAR***           vars,               /**< pointer to store the array with variables (must be freed by caller) */
    SCIP_Real**           coefs,              /**< pointer to store the array with coefficients (must be freed by caller) */
    int*                  ncoefs,             /**< pointer to store the number of coefficients */
@@ -756,8 +779,6 @@ SCIP_RETCODE readCoefficients(
    /* read the first token, which may be the name of the line */
    if( getNextToken(lpinput) )
    {
-      char firsttoken[LP_MAX_LINELEN];
-      
       /* check if we reached a new section */
       if( isNewSection(lpinput) )
       {
@@ -765,9 +786,8 @@ SCIP_RETCODE readCoefficients(
          return SCIP_OKAY;
       }
 
-      /* remember the token */
-      strncpy(firsttoken, lpinput->token, LP_MAX_LINELEN);
-      firsttoken[LP_MAX_LINELEN-1] = '\0';
+      /* remember the token in the token buffer */
+      swapTokenBuffer(lpinput);
       
       /* get the next token and check, whether it is a colon */
       if( getNextToken(lpinput) )
@@ -775,22 +795,28 @@ SCIP_RETCODE readCoefficients(
          if( strcmp(lpinput->token, ":") == 0 )
          {
             /* the second token was a colon: the first token is the line name */
-            strcpy(name, firsttoken);
+            strncpy(name, lpinput->tokenbuf, LP_MAX_LINELEN);
+            name[LP_MAX_LINELEN-1] = '\0';
             SCIPdebugMessage("(line %d) read constraint name: '%s'\n", lpinput->linenumber, name);
          }
          else
          {
             /* the second token was no colon: push the tokens back onto the token stack and parse them as coefficients */
-            pushToken(lpinput, lpinput->token);
-            pushToken(lpinput, firsttoken);
+            pushToken(lpinput);
+            pushBufferToken(lpinput);
          }
       }
       else
       {
          /* there was only one token left: push it back onto the token stack and parse it as coefficient */
-         pushToken(lpinput, firsttoken);
+         pushBufferToken(lpinput);
       }
    }
+
+   /* initialize buffers for storing the coefficients */
+   coefssize = LP_INIT_COEFSSIZE;
+   SCIP_CALL( SCIPallocMemoryArray(scip, vars, coefssize) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, coefs, coefssize) );
 
    /* read the coefficients */
    coefsign = +1;
@@ -798,7 +824,6 @@ SCIP_RETCODE readCoefficients(
    havesign = FALSE;
    havevalue = FALSE;
    *ncoefs = 0;
-   coefssize = 0;
    while( getNextToken(lpinput) )
    {
       SCIP_VAR* var;
@@ -814,7 +839,7 @@ SCIP_RETCODE readCoefficients(
       if( isSense(lpinput, NULL) )
       {
          /* put the sense back onto the token stack */
-         pushToken(lpinput, lpinput->token);
+         pushToken(lpinput);
          break;
       }
 
@@ -849,20 +874,21 @@ SCIP_RETCODE readCoefficients(
       /* the token is a variable name: get the corresponding variable (or create a new one) */
       SCIP_CALL( getVariable(scip, lpinput->token, &var, NULL) );
 
-      /* resize the vars and coefs array if needed */
-      if( *ncoefs >= coefssize )
-      {
-         coefssize *= 2;
-         coefssize = MAX(coefssize, (*ncoefs)+1);
-         SCIP_CALL( SCIPreallocMemoryArray(scip, vars, coefssize) );
-         SCIP_CALL( SCIPreallocMemoryArray(scip, coefs, coefssize) );
-      }
-      assert(*ncoefs < coefssize);
-
       /* insert the coefficient */
       SCIPdebugMessage("(line %d) read coefficient: %+g<%s>\n", lpinput->linenumber, coefsign * coef, SCIPvarGetName(var));
       if( !SCIPisZero(scip, coef) )
       {
+         /* resize the vars and coefs array if needed */
+         if( *ncoefs >= coefssize )
+         {
+            coefssize *= 2;
+            coefssize = MAX(coefssize, (*ncoefs)+1);
+            SCIP_CALL( SCIPreallocMemoryArray(scip, vars, coefssize) );
+            SCIP_CALL( SCIPreallocMemoryArray(scip, coefs, coefssize) );
+         }
+         assert(*ncoefs < coefssize);
+
+         /* add coefficient */
          (*vars)[*ncoefs] = var;
          (*coefs)[*ncoefs] = coefsign * coef;
          (*ncoefs)++;
@@ -885,7 +911,7 @@ SCIP_RETCODE readObjective(
    LPINPUT*              lpinput             /**< LP reading data */
    )
 {
-   char name[SCIP_MAXSTRLEN];
+   char name[LP_MAX_LINELEN];
    SCIP_VAR** vars;
    SCIP_Real* coefs;
    int ncoefs;
@@ -920,7 +946,7 @@ SCIP_RETCODE readConstraints(
    LPINPUT*              lpinput             /**< LP reading data */
    )
 {
-   char name[SCIP_MAXSTRLEN];
+   char name[LP_MAX_LINELEN];
    SCIP_CONS* cons;
    SCIP_VAR** vars;
    SCIP_Real* coefs;
@@ -1106,7 +1132,7 @@ SCIP_RETCODE readBounds(
          return SCIP_OKAY;
       }
       else
-         pushToken(lpinput, lpinput->token);
+         pushToken(lpinput);
 
       /* the next token must be a variable name */
       if( !getNextToken(lpinput) )
@@ -1188,7 +1214,7 @@ SCIP_RETCODE readBounds(
          else
          {
             /* the token was no sense: push it back to the token stack */
-            pushToken(lpinput, lpinput->token);
+            pushToken(lpinput);
          }
       }
 
@@ -1410,13 +1436,22 @@ static
 SCIP_DECL_READERREAD(readerReadLp)
 {  /*lint --e{715}*/
    LPINPUT lpinput;
+   int i;
 
    /* initialize LP input data */
    lpinput.file = NULL;
    lpinput.linebuf[0] = '\0';
    lpinput.probname[0] = '\0';
    lpinput.objname[0] = '\0';
+   SCIP_CALL( SCIPallocMemoryArray(scip, &lpinput.token, LP_MAX_LINELEN) );
    lpinput.token[0] = '\0';
+   SCIP_CALL( SCIPallocMemoryArray(scip, &lpinput.tokenbuf, LP_MAX_LINELEN) );
+   lpinput.tokenbuf[0] = '\0';
+   for( i = 0; i < LP_MAX_PUSHEDTOKENS; ++i )
+   {
+      SCIP_CALL( SCIPallocMemoryArray(scip, &lpinput.pushedtokens[i], LP_MAX_LINELEN) );
+   }
+
    lpinput.npushedtokens = 0;
    lpinput.linenumber = 0;
    lpinput.linepos = 0;
@@ -1428,6 +1463,14 @@ SCIP_DECL_READERREAD(readerReadLp)
 
    /* read the file */
    SCIP_CALL( readLPFile(scip, &lpinput, filename) );
+
+   /* free dynamically allocated memory */
+   SCIPfreeMemoryArray(scip, &lpinput.token);
+   SCIPfreeMemoryArray(scip, &lpinput.tokenbuf);
+   for( i = 0; i < LP_MAX_PUSHEDTOKENS; ++i )
+   {
+      SCIPfreeMemoryArray(scip, &lpinput.pushedtokens[i]);
+   }
 
    /* evaluate the result */
    if( lpinput.haserror )

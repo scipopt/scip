@@ -32,6 +32,7 @@ plugins:
 - modified reader "sol", st. files which where created via typing the order of commands 'set log *.sol', 'disp sol var -', 
   'set log cplex.log' in Cplex can now be read
 - modified probing presolver to do multiple cycles if called in subsequent runs
+- greatly improved performance of LP file reader by replacing string copies with pointer copies
 
 parameters:
 - new parameter "separating/clique/backtrackfreq" to speed up clique cut separation in heuristic fashion
