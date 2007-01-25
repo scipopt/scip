@@ -65,6 +65,7 @@ fixed bugs:
 - fixed bug in linear constraint handler: only tight cuts are transformed into linear constraints after restart
 - fixed bug in LP file reader with row names identical to section keywords
 - fixed bug that external relaxator is not reset appropriately for a new problem instance
+- fixed potential bugs due to errors in resolving the LP after diving or probing
 
 
 

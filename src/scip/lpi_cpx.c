@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.110 2006/09/17 01:58:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.111 2007/01/25 18:08:16 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX >= 8.0
@@ -1816,6 +1816,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    SCIPdebugMessage("calling CPXprimopt()\n");
    retval = CPXprimopt(cpxenv, lpi->cpxlp);
+   lpi->iterations = CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp);
    switch( retval  )
    {
    case 0:
@@ -1826,7 +1827,6 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       return SCIP_LPERROR;
    }
 
-   lpi->iterations = CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp);
    lpi->solisbasic = TRUE;
    lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
    lpi->instabilityignored = FALSE;
@@ -1899,6 +1899,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
    SCIPdebugMessage("calling CPXdualopt()\n");
    retval = CPXdualopt(cpxenv, lpi->cpxlp);
+   lpi->iterations = CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp);
    switch( retval  )
    {
    case 0:
@@ -1909,7 +1910,6 @@ SCIP_RETCODE SCIPlpiSolveDual(
       return SCIP_LPERROR;
    }
 
-   lpi->iterations = CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp);
    lpi->solisbasic = TRUE;
    lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
    lpi->instabilityignored = FALSE;
@@ -2059,6 +2059,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 
    SCIPdebugMessage("calling CPXhybaropt()\n");
    retval = CPXhybbaropt(cpxenv, lpi->cpxlp, crossover ? 0 : CPX_ALG_NONE);
+   lpi->iterations = CPXgetbaritcnt(cpxenv, lpi->cpxlp);
    switch( retval  )
    {
    case 0:
@@ -2069,7 +2070,6 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
       return SCIP_LPERROR;
    }
 
-   lpi->iterations = CPXgetbaritcnt(cpxenv, lpi->cpxlp);
    lpi->solisbasic = crossover;
    lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
    lpi->instabilityignored = FALSE;
@@ -2695,7 +2695,6 @@ SCIP_RETCODE SCIPlpiGetIterations(
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
-   assert(lpi->solstat >= 0);
    assert(iterations != NULL);
 
    *iterations = lpi->iterations;
