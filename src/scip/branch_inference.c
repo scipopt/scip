@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_inference.c,v 1.19 2006/09/17 01:58:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_inference.c,v 1.20 2007/01/25 14:50:12 bzfpfend Exp $"
 
 /**@file   branch_inference.c
  * @brief  inference history branching rule
@@ -78,8 +78,8 @@ SCIP_RETCODE performBranching(
          bestscore = score;
          bestcand = c;
       }
-      SCIPdebugMessage(" -> cand <%s>: prio=%d, score=%g\n", SCIPvarGetName(cands[c]), SCIPvarGetBranchPriority(cands[c]),
-         score);
+      SCIPdebugMessage(" -> cand <%s>: prio=%d, solval=%g, score=%g\n", SCIPvarGetName(cands[c]), SCIPvarGetBranchPriority(cands[c]),
+                       SCIPgetVarSol(scip, cands[c]), score);
    }
    assert(0 <= bestcand && bestcand < ncands);
    var = cands[bestcand];
