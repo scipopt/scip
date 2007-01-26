@@ -33,6 +33,7 @@ plugins:
   'set log cplex.log' in Cplex can now be read
 - modified probing presolver to do multiple cycles if called in subsequent runs
 - greatly improved performance of LP file reader by replacing string copies with pointer copies
+- changed sort algorithm in probing presolver
 
 parameters:
 - new parameter "separating/clique/backtrackfreq" to speed up clique cut separation in heuristic fashion
@@ -53,6 +54,7 @@ parameters:
 
 features:
 - presolving, cut separation, primal heuristics, and strong branching now better respect time limit
+- time limit is now forwarded to lp solving algorithm
 
 fixed bugs:
 - SCIPgetAvgPseudocostCount() and SCIPgetAvgPseudocostCountCurrentRun() now return the average over all integer variables instead
@@ -67,8 +69,9 @@ fixed bugs:
 - fixed bug in LP file reader with row names identical to section keywords
 - fixed bug that external relaxator is not reset appropriately for a new problem instance
 - fixed potential bugs due to errors in resolving the LP after diving or probing
-
-
+- removed wrong assert in function paramWrite()
+- fixed potential bugs in SCIPpriceLoop() and priceAndCutLoop(), st. now all LP solution stati are handled appropriately
+- fixed bug with uninitialized in check.awk
 
 SCIP version 0.90
 =================
