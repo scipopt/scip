@@ -14,8 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.242 2007/01/25 18:08:16 bzfpfend Exp $"
-
+#pragma ident "@(#) $Id: solve.c,v 1.243 2007/01/26 14:42:46 bzfberth Exp $"
 /**@file   solve.c
  * @brief  main solving loop and node processing
  * @author Tobias Achterberg
@@ -702,11 +701,14 @@ SCIP_RETCODE solveNodeInitialLP(
    {
       SCIP_EVENT event;
 
-      /* issue FIRSTLPSOLVED event */
-      SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_FIRSTLPSOLVED) );
-      SCIP_CALL( SCIPeventChgNode(&event, SCIPtreeGetFocusNode(tree)) );
-      SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
-
+      if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_ITERLIMIT && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_TIMELIMIT )
+      {         
+         /* issue FIRSTLPSOLVED event */
+         SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_FIRSTLPSOLVED) );
+         SCIP_CALL( SCIPeventChgNode(&event, SCIPtreeGetFocusNode(tree)) );
+         SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+      }
+      
       /* update pseudo cost values */
       SCIP_CALL( updatePseudocost(set, stat, tree, lp) );
    }
@@ -1276,7 +1278,9 @@ SCIP_RETCODE SCIPpriceLoop(
    *lperror = FALSE;
 
    /* if the LP is unbounded, we don't need to price */
-   mustprice = (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+   mustprice = (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL 
+      || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE 
+      || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT);
 
    /* if all the variables are already in the LP, we don't need to price */
    mustprice = mustprice && !SCIPprobAllColsInLP(prob, set, lp);
@@ -1358,7 +1362,11 @@ SCIP_RETCODE SCIPpriceLoop(
       }
 
       /* if the LP is unbounded, we can stop pricing */
-      mustprice = mustprice && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+      mustprice = mustprice && 
+         (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL 
+            || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
+          || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT );
+
    }
    assert(lp->flushed);
    assert(lp->solved || *lperror);
@@ -1523,8 +1531,7 @@ SCIP_RETCODE priceAndCutLoop(
 
       /* if the LP is infeasible or exceeded the objective limit, we don't need to separate cuts */
       if( !separate
-         || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE)
-         || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT)
+         || (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY)
          || SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound) )
       {
          mustsepa = FALSE;
@@ -1674,7 +1681,7 @@ SCIP_RETCODE priceAndCutLoop(
       }
    }
 
-   /* update lower bound w.r.t. the the LP solution */
+   /* update lower bound w.r.t. the LP solution */
    if( *cutoff )
    {
       SCIPnodeUpdateLowerbound(focusnode, stat, SCIPsetInfinity(set));
@@ -1690,9 +1697,12 @@ SCIP_RETCODE priceAndCutLoop(
       SCIP_CALL( updateEstimate(set, stat, tree, lp, branchcand) );
 
       /* issue LPSOLVED event */
-      SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_LPSOLVED) );
-      SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
-      SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+      if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_ITERLIMIT && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_TIMELIMIT )
+      {         
+         SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_LPSOLVED) );
+         SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
+         SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+      }
 
       /* analyze an infeasible LP (not necessary in the root node) */
       if( !set->misc_exactsolve && !root
@@ -1940,7 +1950,7 @@ SCIP_RETCODE enforceConstraints(
       assert(SCIPsepastoreGetNCuts(sepastore) == 0); /* otherwise, the LP should have been resolved first */
 
       if( SCIPtreeHasFocusNodeLP(tree) )
-      {
+      { 
          assert(lp->flushed);
          assert(lp->solved);
          assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
@@ -2406,6 +2416,9 @@ SCIP_RETCODE solveNode(
                "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %d -- using pseudo solution instead (loop %d)\n",
                stat->nnodes, stat->nlps, nlperrors);
          }
+         
+         if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_TIMELIMIT )
+            SCIPtreeSetFocusNodeLP(tree, FALSE);
 
          /* if we solve exactly, the LP claims to be infeasible but the infeasibility could not be proved,
           * we have to forget about the LP and use the pseudo solution instead
@@ -2429,7 +2442,6 @@ SCIP_RETCODE solveNode(
                   stat->nnodes, stat->nlps, SCIPbranchcandGetNPseudoCands(branchcand));
             }
          }
-
          /* update lower bound with the pseudo objective value, and cut off node by bounding */
          SCIP_CALL( applyBounding(blkmem, set, stat, prob, primal, tree, lp, conflict, cutoff) );
       }

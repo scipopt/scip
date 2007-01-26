@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.111 2007/01/25 18:08:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.112 2007/01/26 14:42:46 bzfberth Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX >= 8.0
@@ -2241,6 +2241,11 @@ SCIP_RETCODE SCIPlpiStrongbranch(
       if( retval == CPXERR_NEED_OPT_SOLN )
       {
          SCIPdebugMessage(" -> no optimal solution available\n");
+         return SCIP_LPERROR;
+      }
+      else if( retval == CPXERR_TILIM_STRONGBRANCH )
+      {
+         SCIPdebugMessage(" -> time limit exceeded during strong branching\n");
          return SCIP_LPERROR;
       }
       CHECK_ZERO( retval );

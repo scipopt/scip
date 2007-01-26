@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.47 2006/11/24 08:47:02 bzfpfend Exp $
+# $Id: check.awk,v 1.48 2007/01/26 14:42:45 bzfberth Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -252,7 +252,7 @@ BEGIN {
 }
 /^  Dual Bound       :/ { 
    if( $4 == "-" ) 
-      db = 1e+20;
+      db = -1e+20;
    else
       db = $4;
 }

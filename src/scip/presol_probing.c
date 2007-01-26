@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.37 2007/01/23 11:34:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.38 2007/01/26 14:42:46 bzfberth Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -144,6 +144,68 @@ SCIP_RETCODE freeSortedvars(
    return SCIP_OKAY;
 }
 
+/** boring method, only swapping two elements of an array */
+static 
+void swap(
+   int*                  scores,             /* array in which two elements should be swapped */
+   SCIP_VAR**            vars,               /* array in which two elements should be swapped */
+   int                   i,                  /* position of the first element                 */
+   int                   j                   /* position of the second element                */
+   ) 
+{
+   int tmp_score;
+   SCIP_VAR* tmp_var;
+
+   tmp_score = scores[i]; 
+   scores[i] = scores[j]; 
+   scores[j] = tmp_score;
+
+   tmp_var = vars[i]; 
+   vars[i] = vars[j]; 
+   vars[j] = tmp_var;
+}
+
+/** quicksort algorithm that sorts scores and vars by the values of scores */
+static 
+void quicksort(
+   int*                  scores,             /**< the array which should be sorted */
+   SCIP_VAR**            vars,               /**< array which is permuted          */
+   int                   l,                  /**< left end                         */
+   int                   r                   /**< right end                        */
+   )
+{
+   int i;
+   int j;
+
+   if( r <= l )
+      return;
+   
+   i = l;
+   j = r-1;
+  
+   /* quicksort with right most element as pivot */
+   while( i <= j )
+   {      
+      while( i <= r && scores[i] > scores[r] )
+         i++;
+      while( j >= l && scores[j] < scores[r] )
+         j--;
+      if( i >= j ) 
+         break;
+      else 
+         swap(scores,vars,i,j);
+      i++;
+      j--;
+   }
+
+   /* put in the pivot */
+   swap(scores,vars,i,r);
+    
+   /* recursion */
+   quicksort(scores, vars, l, i-1);
+   quicksort(scores, vars, i+1, r);
+}
+
 /** sorts the binary variables starting with the given index by rounding locks and implications */
 static
 SCIP_RETCODE sortVariables(
@@ -153,7 +215,7 @@ SCIP_RETCODE sortVariables(
    )
 {
    SCIP_VAR** vars;
-   int* varsscores;
+   int* scores;
    int nvars;
    int i;
 
@@ -168,30 +230,25 @@ SCIP_RETCODE sortVariables(
    SCIPdebugMessage("resorting probing variables %d to %d\n", firstidx, presoldata->nsortedbinvars-1);
 
    /* sort the variables by number of rounding locks and implications */
-   SCIP_CALL( SCIPallocBufferArray(scip, &varsscores, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &scores, nvars) );
+
    for( i = 0; i < nvars; ++i )
    {
       SCIP_VAR* var;
-      int j;
-      int scores;
-
       var = vars[i];
+
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
       if( SCIPvarIsActive(var) )
-         scores = SCIPvarGetNLocksDown(var) + SCIPvarGetNLocksUp(var)
+         scores[i] = SCIPvarGetNLocksDown(var) + SCIPvarGetNLocksUp(var)
             + SCIPvarGetNImpls(var, FALSE) + SCIPvarGetNImpls(var, TRUE)
             + 5*(SCIPvarGetNCliques(var, FALSE) + SCIPvarGetNCliques(var, TRUE));
       else
-         scores = -1;
-      for( j = i; j > 0 && scores > varsscores[j-1]; --j )
-      {
-         vars[j] = vars[j-1];
-         varsscores[j] = varsscores[j-1];
-      }
-      vars[j] = var;
-      varsscores[j] = scores;
+      scores[i] = -1;
    }
-   SCIPfreeBufferArray(scip, &varsscores);
+
+   quicksort(scores,vars,0,nvars-1);
+
+   SCIPfreeBufferArray(scip, &scores);
 
    return SCIP_OKAY;
 }
@@ -585,6 +642,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
       /* apply probing for fixing the variable to zero */
       SCIP_CALL( applyProbing(scip, presoldata, vars, nvars, i, FALSE, zeroimpllbs, zeroimplubs, zeroproplbs, zeropropubs,
             &localcutoff) );
+
       if( localcutoff )
       {
          SCIP_Bool fixed;
@@ -611,6 +669,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
       /* apply probing for fixing the variable to one */
       SCIP_CALL( applyProbing(scip, presoldata, vars, nvars, i, TRUE, oneimpllbs, oneimplubs, oneproplbs, onepropubs,
             &localcutoff) );
+
       if( localcutoff )
       {
          SCIP_Bool fixed;
@@ -626,6 +685,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
          presoldata->ntotaluseless = 0;
          continue; /* don't analyze probing deductions, because the variable is already fixed */
       }
+
 
       /* analyze probing deductions */
       for( j = 0; j < nvars && !cutoff; ++j )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.35 2006/08/08 15:17:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.36 2007/01/26 14:42:46 bzfberth Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -1130,15 +1130,14 @@ SCIP_RETCODE paramParseString(
 static
 SCIP_RETCODE paramWrite(
    SCIP_PARAM*           param,              /**< parameter */
-   FILE*                 file,               /**< file to write parameter to */
+   FILE*                 file,               /**< file stream to write parameter to, or NULL for stdout  */
    SCIP_Bool             comments,           /**< should parameter descriptions be written as comments? */
    SCIP_Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
    )
 {
    assert(param != NULL);
-   assert(file != NULL);
 
-   /* write paramters at default values only, if the onlychanged flag is not set */
+   /* write parameters at default values only, if the onlychanged flag is not set */
    if( onlychanged && SCIPparamIsDefault(param) )
       return SCIP_OKAY;
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.19 2006/09/17 01:58:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.20 2007/01/26 14:42:45 bzfberth Exp $"
 
 /**@file   heur_crossover.c
  * @brief  crossover primal heuristic
@@ -858,7 +858,8 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
       cutoff = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
 
    SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
-
+   
+   SCIPdebugMessage("Solve Crossover subMIP\n");
    /* solve the subproblem */
    SCIP_CALL( SCIPsolve(subscip) );
    

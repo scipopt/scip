@@ -14,11 +14,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.192 2007/01/23 11:34:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.193 2007/01/26 14:42:46 bzfberth Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
  * @author Tobias Achterberg
+ * @author Timo Berthold
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -4841,6 +4842,15 @@ SCIP_RETCODE SCIPtreeEndProbing(
                "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles while resolving LP %d after probing\n",
                stat->nnodes, stat->nlps);
             lp->resolvelperror = TRUE;
+         }
+         else if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL 
+            && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_INFEASIBLE
+            && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY
+            && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OBJLIMIT )
+         {
+            SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "LP was not resolved to a sufficient status after diving\n");
+            lp->resolvelperror = TRUE;      
          }
       }
    }

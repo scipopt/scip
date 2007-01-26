@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.15 2006/09/17 01:58:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.16 2007/01/26 14:42:45 bzfberth Exp $"
 
 /**@file   heur_octane.c
  * @brief  octane primal heuristic based on Balas, Ceria, Dawande, Margot, and Pataki
@@ -130,7 +130,7 @@ void resortCoords(
    {      
       while( i <= r && v[i] > v[r] )
          i++;
-      while(  j >= l && v[j] < v[r])
+      while( j >= l && v[j] < v[r] )
          j--;
       if( i >= j ) 
          break;

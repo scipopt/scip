@@ -14,11 +14,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.230 2006/08/21 20:13:19 bzfpfend Exp $"
-
+#pragma ident "@(#) $Id: lp.c,v 1.231 2007/01/26 14:42:45 bzfberth Exp $"
 /**@file   lp.c
  * @brief  LP management methods and datastructures
  * @author Tobias Achterberg
+ * @author Timo Berthold
  * @author Kati Wolter
  *
  *  In LP management, we have to differ between the current LP and the SCIP_LP
@@ -9070,7 +9070,21 @@ SCIP_RETCODE lpAlgorithm(
    assert(lp->flushed);
    assert(lperror != NULL);
 
-   SCIPdebugMessage("calling LP algorithm <%s>\n", lpalgoName(lpalgo));
+   SCIP_Real timelimit;
+   SCIP_Bool success;
+
+   timelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
+   timelimit = MAX( timelimit, 0.0 );
+
+   lpSetRealpar(lp,SCIP_LPPAR_LPTILIM,timelimit,&success);
+   if( !success )
+   {
+      *lperror =  FALSE;
+      SCIPdebugMessage("time limit of %f seconds could not be set\n", timelimit);
+      return SCIP_OKAY;
+   }
+
+   SCIPdebugMessage("calling LP algorithm <%s>\n with a time limit of %f seconds", lpalgoName(lpalgo), timelimit);
 
    /* call appropriate LP algorithm */
    switch( lpalgo )
@@ -9829,12 +9843,12 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_ITERLIMIT:
+         SCIPdebugMessage(" -> LP iteration limit exceeded\n");
          break;
 
       case SCIP_LPSOLSTAT_TIMELIMIT:
-         /**@todo time limit exceeded processing */
-         SCIPerrorMessage("LP time limit exceeded -- case not implemented yet\n");
-         return SCIP_ERROR;
+         SCIPdebugMessage(" -> LP time limit exceeded\n");
+         break;
 
       case SCIP_LPSOLSTAT_ERROR:
       case SCIP_LPSOLSTAT_NOTSOLVED:
@@ -11725,7 +11739,16 @@ SCIP_RETCODE SCIPlpEndDive(
          "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles while resolving LP %d after diving\n", stat->nnodes, stat->nlps);
       lp->resolvelperror = TRUE;
    }
-
+   else if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL 
+      && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_INFEASIBLE
+      && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY
+      && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OBJLIMIT )
+   {
+      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "LP was not resolved to a sufficient status after diving\n");
+      lp->resolvelperror = TRUE;      
+   }
+   
    /* switch to standard (non-diving) mode */
    lp->diving = FALSE;
    lp->divingobjchg = FALSE;
