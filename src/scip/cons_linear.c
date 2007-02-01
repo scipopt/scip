@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.229 2007/01/23 11:34:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.230 2007/02/01 13:58:32 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3795,6 +3795,9 @@ SCIP_RETCODE propagateCons(
    if( consdata->propagated && (!tightenbounds || consdata->boundstightened) )
       return SCIP_OKAY;
 
+   /* mark constraint to be propagated */
+   consdata->propagated = TRUE;
+
    /* we can only infer activity bounds of the linear constraint, if it is not modifiable */
    if( !SCIPconsIsModifiable(cons) )
    {
@@ -3852,9 +3855,6 @@ SCIP_RETCODE propagateCons(
          }
       }
    }
-
-   /* mark constraint to be propagated */
-   consdata->propagated = TRUE;
 
    return SCIP_OKAY;
 }
