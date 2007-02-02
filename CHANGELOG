@@ -72,6 +72,8 @@ fixed bugs:
 - removed wrong assert in function paramWrite()
 - fixed potential bugs in SCIPpriceLoop() and priceAndCutLoop(), st. now all LP solution stati are handled appropriately
 - fixed bug with uninitialized in check.awk
+- fixed bug with primal heuristics reducing the cutoff bound such that the current node is cut off
+
 
 SCIP version 0.90
 =================

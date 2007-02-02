@@ -14,7 +14,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.243 2007/01/26 14:42:46 bzfberth Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.244 2007/02/02 12:23:50 bzfpfets Exp $"
+
 /**@file   solve.c
  * @brief  main solving loop and node processing
  * @author Tobias Achterberg
@@ -2485,6 +2486,9 @@ SCIP_RETCODE solveNode(
          {
             SCIP_CALL( primalHeuristics(set, stat, primal, tree, lp, NULL, SCIP_HEURTIMING_AFTERLPLOOP, &foundsol) );
          }
+
+	 /* heuristics might have found a solution or set the cutoff bound such that the current node is cut off */
+	 SCIP_CALL( applyBounding(blkmem, set, stat, prob, primal, tree, lp, conflict, cutoff) );
       }
 
       /* check if heuristics leave us with an invalid LP */
