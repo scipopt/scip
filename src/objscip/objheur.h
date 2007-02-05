@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.h,v 1.25 2006/06/20 20:23:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objheur.h,v 1.26 2007/02/05 18:25:23 bzfpfend Exp $"
 
 /**@file   objheur.h
  * @brief  C++ wrapper for primal heuristics
@@ -74,7 +74,8 @@ public:
       int                freq,               /**< frequency for calling primal heuristic */
       int                freqofs,            /**< frequency offset for calling primal heuristic */
       int                maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
-      unsigned int       timingmask          /**< positions in the node solving loop where heuristic should be executed */
+      unsigned int       timingmask          /**< positions in the node solving loop where heuristic should be executed;
+                                              *   see definition of SCIP_HeurTiming for possible values */
       )
       : scip_name_(0),
         scip_desc_(0),
