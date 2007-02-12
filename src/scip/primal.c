@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.81 2006/09/15 02:00:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.82 2007/02/12 11:02:52 bzfpfets Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -561,7 +561,10 @@ SCIP_Bool primalExistsSol(
 
    assert(primal != NULL);
    assert(0 <= insertpos && insertpos <= primal->nsols);
-   assert(SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL);
+
+   /* original solutions are always accepted */
+   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+      return FALSE;
 
    obj = SCIPsolGetObj(sol, set, prob);
 
