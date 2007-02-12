@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.24 2007/01/16 09:34:02 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.25 2007/02/12 16:47:25 bzfpfend Exp $
 #
 #@file    compare.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -135,6 +135,16 @@ END {
       feasibles[s] = 0;
       score[s] = 1.0;
    }
+   besttimegeom = 1.0;
+   bestnodegeom = 1.0;
+   besttimeshiftedgeom = timegeomshift;
+   bestnodeshiftedgeom = nodegeomshift;
+   bestnsolved = 0;
+   bestntimeouts = 0;
+   bestnfails = 0;
+   bestbetter = 0;
+   bestbetterobj = 0;
+   bestfeasibles = 0;
 
    # calculate the order in which the columns should be printed: CPLEX < SCIP, default < non-default
    for( s = 0; s < nsolver; ++s )
@@ -190,6 +200,10 @@ END {
       nodecomp = -1;
       timecomp = -1;
       besttime = +1e+100;
+      bestnodes = +1e+100;
+      nthissolved = 0;
+      nthistimeouts = 0;
+      nthisfails = 0;
       ismini = 0;
       ismaxi = 0;
       mark = " ";
@@ -216,11 +230,16 @@ END {
             nsolved[s]++;
             marker = " ";
             besttime = min(besttime, time[s,pidx]);
+	    bestnodes = min(bestnodes, nodes[s,pidx]);
+	    nthissolved++;
          }
          else if( status[s,pidx] == "timeout" )
          {
             ntimeouts[s]++;
             marker = ">";
+            besttime = min(besttime, time[s,pidx]);
+	    bestnodes = min(bestnodes, nodes[s,pidx]);
+	    nthistimeouts++;
          }
          else
          {
@@ -229,6 +248,7 @@ END {
             nfails[s]++;
             fail = 1;
             marker = "!";
+	    nthisfails++;
          }
 
 	 if( primalbound[s,pidx] < 1e+20 )
@@ -281,6 +301,14 @@ END {
          }
       }
 
+      # update the best status information
+      if( nthissolved > 0 )
+	bestnsolved++;
+      else if( nthistimeouts > 0 )
+	bestntimeouts++;
+      else if( nthisfails > 0 )
+	bestnfails++;
+
       # check for inconsistency in the primal and dual bounds
       if( readerror )
       {
@@ -317,6 +345,8 @@ END {
          nevalprobs++;
 	 reftime = time[printorder[0],probidx[p,printorder[0]]];
 	 refobj = primalbound[printorder[0],probidx[p,printorder[0]]];
+	 hasbetter = 0;
+	 hasbetterobj = 0;
          for( s = 0; s < nsolver; ++s )
          {
             pidx = probidx[p,s];
@@ -328,14 +358,18 @@ END {
             nodeshiftedgeom[s] = nodeshiftedgeom[s]^((nevalprobs-1)/nevalprobs) * (nodes[s,pidx]+nodegeomshift)^(1.0/nevalprobs);
             if( time[s,pidx] <= wintolerance*besttime )
                wins[s]++;
-            if( time[s,pidx] < 1.0/wintolerance*reftime )
+            if( time[s,pidx] < 1.0/wintolerance*reftime ) {
                better[s]++;
+	       hasbetter = 1;
+	    }
             else if( time[s,pidx] > wintolerance*reftime )
                worse[s]++;
 	    pb = primalbound[s,pidx];
 	    if( (ismini && pb - refobj < -0.01 * max(max(abs(refobj), abs(pb)), 1.0)) ||
-		(ismaxi && pb - refobj > +0.01 * max(max(abs(refobj), abs(pb)), 1.0)) )
+		(ismaxi && pb - refobj > +0.01 * max(max(abs(refobj), abs(pb)), 1.0)) ) {
  	       betterobj[s]++;
+	       hasbetterobj = 1;
+	    }
 	    else if( (ismini && pb - refobj > +0.01 * max(max(abs(refobj), abs(pb)), 1.0)) ||
 		     (ismaxi && pb - refobj < -0.01 * max(max(abs(refobj), abs(pb)), 1.0)) )
  	       worseobj[s]++;
@@ -344,18 +378,30 @@ END {
 	    thisscore = min(thisscore, maxscore);
 	    score[s] = score[s]^((nevalprobs-1)/nevalprobs) * thisscore^(1.0/nevalprobs);
          }
+	 besttimegeom = besttimegeom^((nevalprobs-1)/nevalprobs) * besttime^(1.0/nevalprobs);
+	 bestnodegeom = bestnodegeom^((nevalprobs-1)/nevalprobs) * bestnodes^(1.0/nevalprobs);
+	 besttimeshiftedgeom = besttimeshiftedgeom^((nevalprobs-1)/nevalprobs) * (besttime+timegeomshift)^(1.0/nevalprobs);
+	 bestnodeshiftedgeom = bestnodeshiftedgeom^((nevalprobs-1)/nevalprobs) * (bestnodes+nodegeomshift)^(1.0/nevalprobs);
+	 if( hasbetter )
+	   bestbetter++;
+	 if( hasbetterobj )
+	   bestbetterobj++;
       }
-
       # calculate number of instances for which feasible solution has been found
       if( !unprocessed )
       {
          nprocessedprobs++;
+	 hasfeasible = 0;
          for( s = 0; s < nsolver; ++s )
          {
             pidx = probidx[p,s];
-	    if( primalbound[s,pidx] < 1e+20 )
+	    if( primalbound[s,pidx] < 1e+20 ) {
 	       feasibles[s]++;
+	       hasfeasible = 1;
+	    }
 	 }
+	 if( hasfeasible )
+	   bestfeasibles++;
       }
    }
    printhline(nsolver);
@@ -404,19 +450,29 @@ END {
          printf(" %11d %8.1f %6.2f %6.2f", nodeshiftedgeom[s], timeshiftedgeom[s],
             nodeshiftedgeom[s]/nodeshiftedgeomcomp, timeshiftedgeom[s]/timeshiftedgeomcomp);
    }
+   bestnodeshiftedgeom -= nodegeomshift;
+   besttimeshiftedgeom -= timegeomshift;
+   bestnodeshiftedgeom = max(bestnodeshiftedgeom, 1.0);
+   besttimeshiftedgeom = max(besttimeshiftedgeom, 1.0);
+   
    printf("\n");
    printhline(nsolver);
 
    printf("\n");
-   printf("solver (%4d proc, %4d eval)     fail time solv wins bett wors bobj wobj feas     nodes   shnodes    nodesQ  shnodesQ    time  shtime   timeQ shtimeQ   score\n",
+   printf("solver (%4d proc, %4d eval)       fail time solv wins bett wors bobj wobj feas     nodes   shnodes    nodesQ  shnodesQ    time  shtime   timeQ shtimeQ   score\n",
           nprocessedprobs, nevalprobs);
    for( o = 0; o < nsolver; ++o )
    {
       s = printorder[o];
-      printf("%-33s %4d %4d %4d %4d %4d %4d %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7.2f\n", 
+      printf("%-35s %4d %4d %4d %4d %4d %4d %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7.2f\n", 
          solvername[s], nfails[s], ntimeouts[s], nsolved[s], wins[s], better[s], worse[s], betterobj[s], worseobj[s], feasibles[s],
          nodegeom[s], nodeshiftedgeom[s], nodegeom[s]/nodegeomcomp, nodeshiftedgeom[s]/nodeshiftedgeomcomp,
          timegeom[s], timeshiftedgeom[s], timegeom[s]/timegeomcomp, timeshiftedgeom[s]/timeshiftedgeomcomp,
 	 score[s]);
    }
+   printf("%-35s %4d %4d %4d %4s %4d %4s %4d %4s %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7s\n", 
+	  "optimal auto settings", bestnfails, bestntimeouts, bestnsolved, "", bestbetter, "", bestbetterobj, "", bestfeasibles,
+	  bestnodegeom, bestnodeshiftedgeom, bestnodegeom/nodegeomcomp, bestnodeshiftedgeom/nodeshiftedgeomcomp,
+	  besttimegeom, besttimeshiftedgeom, besttimegeom/timegeomcomp, besttimeshiftedgeom/timeshiftedgeomcomp,
+	  "");
 }

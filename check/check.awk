@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.48 2007/01/26 14:42:45 bzfberth Exp $
+# $Id: check.awk,v 1.49 2007/02/12 16:47:25 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -117,7 +117,7 @@ BEGIN {
       prob = prob "." b[i];
 
    if( length(prob) > 18 )
-      shortprob = substr(prob, length(prob)-17, 18);
+      shortprob = sprintf("%s*%s", substr(prob, 1, 6), substr(prob, length(prob)-10, 11));
    else
       shortprob = prob;
 

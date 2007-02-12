@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.28 2007/01/16 09:34:02 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.29 2007/02/12 16:47:25 bzfpfend Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -96,7 +96,7 @@ BEGIN {
       prob = prob "." b[i];
 
    if( length(prob) > 18 )
-      shortprob = substr(prob, length(prob)-17, 18);
+      shortprob = sprintf("%s*%s", substr(prob, 1, 6), substr(prob, length(prob)-10, 11));
    else
       shortprob = prob;
    
