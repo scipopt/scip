@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.49 2007/02/12 16:47:25 bzfpfend Exp $
+# $Id: check.awk,v 1.50 2007/02/14 17:58:26 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -103,7 +103,14 @@ BEGIN {
    overheadtottime = 0.0;
    timelimit = 0.0;
 }
-/=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }  # get optimum
+/=opt=/  {  # get optimum
+   if (NF >= 3 ) {
+      solstatus[$2] = "opt";
+      sol[$2] = $3;
+   }
+   else
+      solstatus[$2] = "feas";
+}
 /=inf=/  { solstatus[$2] = "inf"; sol[$2] = 0.0; } # problem infeasible
 /=best=/ { solstatus[$2] = "best"; sol[$2] = $3; } # get best known solution value
 /=unkn=/ { solstatus[$2] = "unkn"; }               # no feasible solution known
@@ -155,6 +162,7 @@ BEGIN {
    aborted = 1;
    readerror = 0;
    gapreached = 0;
+   sollimitreached = 0;
    timelimit = 0.0;
    starttime = 0.0;
    endtime = 0.0;
@@ -240,6 +248,7 @@ BEGIN {
 /^SCIP Status        :/ { aborted = 0; }
 /solving was interrupted/  { timeout = 1; }
 /gap limit reached/ { gapreached = 1; }
+/solution limit reached/ { sollimitreached = 1; }
 /problem is solved/    { timeout = 0; }
 /^  Primal Bound     :/ {
    if( $4 == "infeasible" )
@@ -325,7 +334,7 @@ BEGIN {
          aborted = 0;
          tottime = endtime - starttime;
       }
-      else if( gapreached )
+      else if( gapreached || sollimitreached )
          timeout = 0;
       if( aborted && tottime == 0.0 )
          tottime = timelimit;
@@ -372,7 +381,7 @@ BEGIN {
       }
       else if( solstatus[prob] == "opt" )
       {
-         if ((pb - db > 1e-4) || (abs(pb - sol[prob]) > 1e-5*max(abs(pb),1.0)))
+         if (!sollimitreached && ((pb - db > 1e-4) || (abs(pb - sol[prob]) > 1e-5*max(abs(pb),1.0))))
          {
             if (timeout)
             {
@@ -393,9 +402,9 @@ BEGIN {
             pass++;
          }
       }
-      else if( solstatus[prob] == "inf" )
+      else if( solstatus[prob] == "feas" || solstatus[prob] == "inf" )
       {
-         if (feasible)
+         if (feasible != (solstatus[prob] == "feas"))
          {
             if (timeout)
             {
@@ -429,6 +438,11 @@ BEGIN {
             status = "timeout";
             timeouttime += tottime;
             timeouts++;
+         }
+         else if (sollimitreached)
+         {
+            status = "ok";
+            pass++;
          }
          else
             status = "unknown";
