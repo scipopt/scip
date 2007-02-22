@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.60 2006/11/08 23:22:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.61 2007/02/22 16:55:00 bzfwolte Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -366,7 +366,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow) );
 
                /* create a MIR cut out of the weighted LP rows using the B^-1 row as weights */
-               SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS,
+               SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, NULL, NULL,
                      sepadata->maxweightrange, MINFRAC, MAXFRAC,
                      binvrow, 1.0, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
                assert(ALLOWLOCAL || !cutislocal);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.292 2007/02/05 18:25:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.293 2007/02/22 16:55:00 bzfwolte Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3253,6 +3253,11 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Bool             fixintegralrhs,     /**< should complementation tried to be adjusted such that rhs gets fractional? */
+   int*                  boundsfortrans,     /**< bounds that should be used for transformed variables: vlb_idx/vub_idx,  
+                                              *   -1 for global lb/ub, -2 for local lb/ub, or -3 for using closest bound;
+                                              *   NULL for using closest bound for all variables */
+   SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bounds that should be used for transformed variables; 
+                                              *   NULL for using closest bound for all variables */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */

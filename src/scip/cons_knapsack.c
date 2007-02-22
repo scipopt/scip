@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.139 2006/08/21 20:13:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.140 2007/02/22 16:54:58 bzfwolte Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -578,7 +578,266 @@ SCIP_RETCODE checkCons(
    return SCIP_OKAY;
 }
 
+/** merge entries from index left to index middle, allready sorted such that 
+ *  profits[left]/weights[left] >= ... >= profits[middle]/weights[middle], and index middle+1 to index right, allready 
+ *  sorted such that profits[middle+1]/weights[middle+1] >= ... >=  profits[right]/weights[right] of given arrays such that
+ *  profits[left]/weights[left] >= ... >= profits[right]/weights[right]
+ */
+static
+SCIP_RETCODE mergeForSolveKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Longint*         weights,            /**< item weights */
+   SCIP_Real*            profits,            /**< item profits */
+   int*                  items,              /**< item numbers */
+   int                   left,               /**< left index of the area, to be merged */
+   int                   middle,             /**< middle index of the area, to be merged  */ 
+   int                   right               /**< right index of the area, to be merged  */
+   )
+{
+   SCIP_Longint* weights1;
+   SCIP_Longint* weights2;
+   SCIP_Real* profits1;
+   SCIP_Real* profits2;
+   int* items1;
+   int* items2;
+   int i;
+   int j;
+   int k;
+   int m;
+   int n;
+
+   assert(scip != NULL);
+   assert(weights != NULL);
+   assert(profits != NULL);
+   assert(items != NULL);
+   assert(left >= 0);
+   assert(left <= middle && middle <= right); 
+
+   /* makes copy of first part */
+   m = middle - left + 1;
+   SCIP_CALL( SCIPallocBufferArray(scip, &items1, m) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &weights1, m) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &profits1, m) );
+   for( i = 0; i < m; i++ )
+   {
+      items1[i] = items[left + i];
+      weights1[i] = weights[left + i];
+      profits1[i] = profits[left + i];
+   }
+
+   /* makes copy of second part */
+   n = right - middle;
+   SCIP_CALL( SCIPallocBufferArray(scip, &items2, n) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &weights2, n) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &profits2, n) );
+   for( j = 0; j < n; j++ )
+   {
+      items2[j] = items[middle + 1 + j];
+      weights2[j] = weights[middle + 1 + j];
+      profits2[j] = profits[middle + 1 + j];
+   }
+
+   i = 0;
+   j = 0;
+   k = 0;
+   
+   /* merges both parts until i == m or j == n */
+   while( i < m && j < n )
+   {
+      if( SCIPisFeasGE(scip, profits1[i]/weights1[i], profits2[j]/weights2[j]) )
+      {
+         items[left + k] = items1[i];
+         weights[left + k] = weights1[i];
+         profits[left + k] = profits1[i];
+         assert(0 <= weights[left+k] && weights[left+k] < SCIP_LONGINT_MAX);
+         i++;
+         k++;
+         
+      }
+      else
+      {
+         items[left + k] = items2[j];
+         weights[left + k] = weights2[j];
+         profits[left + k] = profits2[j];
+         assert(0 <= weights[left+k] && weights[left+k] < SCIP_LONGINT_MAX);
+         j++;
+         k++;
+      }
+   }
+
+   /* copies rest of first part if necessary */
+   while( i < m )
+   {
+      items[left + k] = items1[i];
+      weights[left + k] = weights1[i];
+      profits[left + k] = profits1[i];
+      assert(0 <= weights[left+k] && weights[left+k] < SCIP_LONGINT_MAX);
+      i++;
+      k++;
+   }
+
+   /* copies rest of second part if necessary */
+   while( j < n )
+   {
+      items[left + k] = items2[j];
+      weights[left + k] = weights2[j];
+      profits[left + k] = profits2[j];
+      assert(0 <= weights[left+k] && weights[left+k] < SCIP_LONGINT_MAX);
+      j++;
+      k++;
+   }
+
+   /* frees temporary memory */
+   SCIPfreeBufferArray(scip, &profits2);
+   SCIPfreeBufferArray(scip, &weights2);
+   SCIPfreeBufferArray(scip, &items2);
+   SCIPfreeBufferArray(scip, &profits1);
+   SCIPfreeBufferArray(scip, &weights1);
+   SCIPfreeBufferArray(scip, &items1);
+
+   
+   return SCIP_OKAY;
+}
+
+/** sort all entries from index first to index last of given arrays such that 
+ *  profits[first]/weights[first] >= ... >= profits[last]/weights[last]
+ */
+static
+SCIP_RETCODE mergeSortForSolveKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Longint*         weights,            /**< item weights */
+   SCIP_Real*            profits,            /**< item profits */
+   int*                  items,              /**< item numbers */
+   int                   first,              /**< first index of the area, to be sorted */        
+   int                   last                /**< last index of the area, to be sorted */        
+   )
+{
+   int middle;
+
+   assert(scip != NULL);
+   assert(weights != NULL);
+   assert(profits != NULL);
+   assert(items != NULL);
+   assert(first >= 0);
+   assert(last >= -1); 
+
+   if( first < last )
+   {
+      middle = (first + last)/2;
+      SCIP_CALL( mergeSortForSolveKnapsack(scip, weights, profits, items, first, middle) );
+      SCIP_CALL( mergeSortForSolveKnapsack(scip, weights, profits, items, middle + 1, last) );
+      SCIP_CALL( mergeForSolveKnapsack(scip, weights, profits, items, first, middle, last) );
+   }
+
+   return SCIP_OKAY;
+}
+
 #define IDX(j,d) ((j)*(intcap+1)+(d))
+
+/** solves knapsack problem in maximization form exactly using dynamic programming;
+ *  if needed, one can provide arrays to store all selected items and all not selected items
+ */
+SCIP_RETCODE SCIPsolveKnapsackExactly(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nitems,             /**< number of available items */
+   SCIP_Longint*         weights,            /**< item weights */
+   SCIP_Real*            profits,            /**< item profits */
+   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   int*                  items,              /**< item numbers */
+   int*                  solitems,           /**< array to store items in solution, or NULL */
+   int*                  nonsolitems,        /**< array to store items not in solution, or NULL */
+   int*                  nsolitems,          /**< pointer to store number of items in solution, or NULL */
+   int*                  nnonsolitems,       /**< pointer to store number of items not in solution, or NULL */
+   SCIP_Real*            solval              /**< pointer to store optimal solution value, or NULL */
+   ) 
+{
+   SCIP_Real* optvalues;
+   int intcap;
+   int d;
+   int j;
+
+   assert(weights != NULL);
+   assert(profits != NULL);
+   assert(capacity >= 0);
+   assert(capacity < INT_MAX);
+   assert(items != NULL);
+   assert(nitems >= 0);
+
+   intcap = (int)capacity;
+   assert(intcap >= 0);
+   SCIP_CALL( SCIPallocBufferArray(scip, &optvalues, (nitems+1)*(intcap+1)) );
+   
+   /* sorts items such that p_1 / w_1 >= p_2 / w_2 >= ... >= p_n / w_n */
+   SCIP_CALL( mergeSortForSolveKnapsack(scip, weights, profits, items, 0, nitems-1) );
+
+   /* fills dynamic programming table with optimal values */
+   for( d = 0; d <= intcap; d++ )
+      optvalues[IDX(0,d)] = 0.0;
+   for( j = 1; j <= nitems; j++ )
+   {
+      int intweight;
+
+      assert(0 <= weights[j-1] && weights[j-1] < SCIP_LONGINT_MAX);
+      if( weights[j-1] >= INT_MAX )
+      {
+         assert(weights[j-1] > capacity);
+         intweight = INT_MAX;
+      }
+      else
+         intweight = (int)weights[j-1];
+      assert(intweight >= 0);
+
+      for( d = 0; d < intweight && d <= intcap; d++ )
+         optvalues[IDX(j,d)] = optvalues[IDX(j-1,d)];
+      for( d = intweight; d <= intcap; d++ )
+      {
+         SCIP_Real sumprofit;
+
+         sumprofit = optvalues[IDX(j-1,d-intweight)] + profits[j-1];
+         optvalues[IDX(j,d)] = MAX(sumprofit, optvalues[IDX(j-1,d)]);
+      } 
+   }
+
+   /* produces optimal solution by following the table */
+   if( solitems != NULL)
+   {
+      assert(items != NULL);
+      assert(nsolitems != NULL);
+      assert(nonsolitems != NULL);
+      assert(nnonsolitems != NULL);
+
+      *nnonsolitems = 0;
+      *nsolitems = 0;
+      d = intcap;
+      
+      for( j = nitems; j > 0; j-- )
+      {
+         if( optvalues[IDX(j,d)] > optvalues[IDX(j-1,d)] )
+         {
+            assert(0 <= weights[j-1] && weights[j-1] < INT_MAX);
+            solitems[*nsolitems] = items[j-1];
+            (*nsolitems)++;
+            d -= (int)weights[j-1];
+         } 
+         else
+         { 
+            nonsolitems[*nnonsolitems] = items[j-1];
+            (*nnonsolitems)++;
+         }
+         assert(d >= 0);
+      }
+      assert(*nsolitems + *nnonsolitems == nitems);
+   }
+
+   if( solval != NULL )
+      *solval = optvalues[IDX(nitems,intcap)];
+
+   SCIPfreeBufferArray(scip, &optvalues);
+
+   return SCIP_OKAY;
+}
+
+/**todo: use SCIPsolveKnapsackExactly() instead of SCIPsolveKnapsack() in all methods of cons_knapsack */
 
 /** solves knapsack problem with dynamic programming;
  *  if needed, one can provide arrays to store all selected items and all not selected items

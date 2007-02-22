@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.62 2006/11/08 23:22:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.63 2007/02/22 16:55:00 bzfwolte Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -86,6 +86,7 @@
 #include "scip/reader_zpl.h"
 #include "scip/sepa_clique.h"
 #include "scip/sepa_cmir.h"
+#include "scip/sepa_flowcover.h"
 #include "scip/sepa_gomory.h"
 #include "scip/sepa_impliedbounds.h"
 #include "scip/sepa_intobj.h"
@@ -175,6 +176,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePropRootredcost(scip) );
    SCIP_CALL( SCIPincludeSepaClique(scip) );
    SCIP_CALL( SCIPincludeSepaCmir(scip) );
+   SCIP_CALL( SCIPincludeSepaFlowcover(scip) );
    SCIP_CALL( SCIPincludeSepaGomory(scip) );
    SCIP_CALL( SCIPincludeSepaImpliedbounds(scip) );
    SCIP_CALL( SCIPincludeSepaIntobj(scip) );

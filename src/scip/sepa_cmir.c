@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.59 2006/09/15 03:14:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.60 2007/02/22 16:55:00 bzfwolte Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -441,8 +441,9 @@ SCIP_RETCODE tryDelta(
       (*ntesteddeltas)++;
 
       /* create a MIR cut out of the weighted LP rows */
-      SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, sepadata->maxrowfac,
-            MINFRAC, MAXFRAC, rowweights, delta, mksetcoefs, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
+      SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL, 
+            sepadata->maxrowfac, MINFRAC, MAXFRAC, rowweights, delta, mksetcoefs, cutcoefs, &cutrhs, &cutact, 
+            &success, &cutislocal) );
       assert(ALLOWLOCAL || !cutislocal);
       SCIPdebugMessage("delta = %g  -> success: %d\n", delta, success);
                
@@ -605,8 +606,9 @@ SCIP_RETCODE cutGenerationHeuristic(
       }
 
       /* generate cut with bestdelta and best boundswitch value */
-      SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, sepadata->maxrowfac,
-            MINFRAC, MAXFRAC, rowweights, bestdelta, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
+      SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL, 
+            sepadata->maxrowfac, MINFRAC, MAXFRAC, rowweights, bestdelta, NULL, cutcoefs, &cutrhs, &cutact, 
+            &success, &cutislocal) );
       assert(ALLOWLOCAL || !cutislocal);
       assert(success); 
 #ifndef NDEBUG

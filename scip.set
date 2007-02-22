@@ -266,8 +266,8 @@ memory/pathgrowinit = 256
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 misc/catchctrlc = TRUE
 
-# child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value, 'h'brid inference/LP value)
-# [type: char, range: {dupilh}, default: h]
+# child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value, 'r'oot LP value difference, 'h'brid inference/root LP value difference)
+# [type: char, range: {dupilrh}, default: h]
 nodeselection/childsel = h
 
 # values larger than this are considered infinity
@@ -2309,6 +2309,82 @@ separating/cmir/fixintegralrhs = TRUE
 # should generated cuts be removed from the LP if they are no longer tight?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/cmir/dynamiccuts = TRUE
+
+# priority of separator <flowcover>
+# [type: int, range: [-536870912,536870911], default: -4000]
+separating/flowcover/priority = -4000
+
+# frequency for calling separator <flowcover> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 0]
+separating/flowcover/freq = 0
+
+# maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <flowcover> (0.0: only on current best node, 1.0: on all nodes)
+# [type: real, range: [0,1], default: 0]
+separating/flowcover/maxbounddist = 0
+
+# should separator be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/flowcover/delay = FALSE
+
+# maximal number of separation rounds per node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 5]
+separating/flowcover/maxrounds = 5
+
+# maximal number of separation rounds in the root node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 10]
+separating/flowcover/maxroundsroot = 10
+
+# maximal number of rows to separate flow cover cuts for per separation round (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 100]
+separating/flowcover/maxtries = 100
+
+# maximal number of rows to separate flow cover cuts for per separation round in the root (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: -1]
+separating/flowcover/maxtriesroot = -1
+
+# maximal number of consecutive fails to generate a cut per separation round (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 50]
+separating/flowcover/maxfails = 50
+
+# maximal number of consecutive fails to generate a cut per separation round in the root (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 100]
+separating/flowcover/maxfailsroot = 100
+
+# maximal number of flow cover cuts separated per separation round
+# [type: int, range: [0,2147483647], default: 100]
+separating/flowcover/maxsepacuts = 100
+
+# maximal number of flow cover cuts separated per separation round in the root
+# [type: int, range: [0,2147483647], default: 200]
+separating/flowcover/maxsepacutsroot = 200
+
+# maximal slack of rows to separate flow cover cuts for
+# [type: real, range: [0,1.79769313486232e+308], default: 1.79769313486232e+308]
+separating/flowcover/maxslack = 1.79769e+308
+
+# maximal slack of rows to separate flow cover cuts for in the root
+# [type: real, range: [0,1.79769313486232e+308], default: 1.79769313486232e+308]
+separating/flowcover/maxslackroot = 1.79769e+308
+
+# weight of slack in the scoring of the rows
+# [type: real, range: [0,1.79769313486232e+308], default: 0.001]
+separating/flowcover/slackscore = 0.001
+
+# maximal density of row to separate flow cover cuts for
+# [type: real, range: [0,1], default: 1]
+separating/flowcover/maxrowdensity = 1
+
+# should generated cuts be removed from the LP if they are no longer tight?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/flowcover/dynamiccuts = TRUE
+
+# should flow cover cuts be separated for 0-1 single node flow set with reversed arcs in addition?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/flowcover/multbyminusone = TRUE
+
+# cut generation heuristic: maximal number of different deltas to try
+# [type: int, range: [0,2147483647], default: 10]
+separating/flowcover/maxtestdelta = 10
 
 # priority of separator <gomory>
 # [type: int, range: [-536870912,536870911], default: -1000]
