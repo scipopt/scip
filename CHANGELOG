@@ -34,6 +34,7 @@ plugins:
 - modified probing presolver to do multiple cycles if called in subsequent runs
 - greatly improved performance of LP file reader by replacing string copies with pointer copies
 - changed sort algorithm in probing presolver
+- added flow cover separator
 
 parameters:
 - new parameter "separating/clique/backtrackfreq" to speed up clique cut separation in heuristic fashion
