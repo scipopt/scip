@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.86 2006/08/21 20:13:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.87 2007/02/26 14:36:22 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -703,7 +703,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
       var = prob->deletedvars[i];
 
       /* don't delete the variable, if it was fixed or aggregated in the meantime */
-      if( SCIPvarGetProbindex(var) == -1 )
+      if( SCIPvarGetProbindex(var) >= 0 )
       {
          SCIPdebugMessage("perform deletion of <%s> [%p]\n", SCIPvarGetName(var), var);
          
