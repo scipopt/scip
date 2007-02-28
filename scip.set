@@ -1838,6 +1838,22 @@ heuristics/octane/useavgwgtray = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/octane/useavgnbray = TRUE
 
+# priority of heuristic <oneopt>
+# [type: int, range: [-536870912,536870911], default: -20000]
+heuristics/oneopt/priority = -20000
+
+# frequency for calling primal heuristic <oneopt> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/oneopt/freq = -1
+
+# frequency offset for calling primal heuristic <oneopt>
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/oneopt/freqofs = 0
+
+# maximal depth level to call primal heuristic <oneopt> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/oneopt/maxdepth = -1
+
 # priority of heuristic <pscostdiving>
 # [type: int, range: [-536870912,536870911], default: -1002000]
 heuristics/pscostdiving/priority = -1002000
@@ -2360,11 +2376,11 @@ separating/flowcover/maxsepacutsroot = 200
 
 # maximal slack of rows to separate flow cover cuts for
 # [type: real, range: [0,1.79769313486232e+308], default: 1.79769313486232e+308]
-separating/flowcover/maxslack = 1.79769e+308
+separating/flowcover/maxslack = 1.79769313486232e+308
 
 # maximal slack of rows to separate flow cover cuts for in the root
 # [type: real, range: [0,1.79769313486232e+308], default: 1.79769313486232e+308]
-separating/flowcover/maxslackroot = 1.79769e+308
+separating/flowcover/maxslackroot = 1.79769313486232e+308
 
 # weight of slack in the scoring of the rows
 # [type: real, range: [0,1.79769313486232e+308], default: 0.001]
