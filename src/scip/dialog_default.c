@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.65 2007/02/28 11:04:07 bzfberth Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.66 2007/02/28 16:22:13 bzfberth Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -1542,7 +1542,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
    if( filename[0] != '\0' )
    {
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
-      SCIP_CALL( SCIPwriteMIP(scip, filename, FALSE) );
+      SCIP_CALL( SCIPwriteMIP(scip, filename, FALSE, FALSE) );
       SCIPdialogMessage(scip, NULL, "written node MIP relaxation to file <%s>\n", filename);
    }
 
