@@ -5,6 +5,8 @@ compiling:
 - added .exe extension to binaries of MinGW
 
 interface:
+- new method SCIPwriteMIP()
+- calling SCIPwriteLP is now possible in Solved Stage
 - new parameter "maxbounddist" for SCIPincludeSepa() and constructor ObjSepa()
 - new method SCIPsepaGetMaxbounddist()
 - removed parameter "branchdir" from SCIPbranchVar()
@@ -23,6 +25,7 @@ interface:
   of a time limit
 
 plugins:
+- new improvement heuristic "oneopt"
 - improved performance of linear constraint propagation by delaying some floor/ceil calculations
 - new node selection rule "estimate" (best estimate search)
 - best estimate search is now used in all large neighborhood search heuristics
