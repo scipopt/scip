@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.189 2007/02/22 16:54:58 bzfwolte Exp $
+# $Id: Makefile,v 1.190 2007/02/28 09:58:01 bzfberth Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -378,6 +378,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/heur_mutation.o \
 			scip/heur_objpscostdiving.o \
 			scip/heur_octane.o \
+			scip/heur_oneopt.o \
 			scip/heur_pscostdiving.o \
 			scip/heur_rens.o \
 			scip/heur_rins.o \

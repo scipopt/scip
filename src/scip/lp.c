@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.232 2007/02/22 16:54:59 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.233 2007/02/28 09:58:02 bzfberth Exp $"
 /**@file   lp.c
  * @brief  LP management methods and datastructures
  * @author Tobias Achterberg
@@ -47,7 +47,7 @@
 #include "scip/var.h"
 #include "scip/prob.h"
 #include "scip/sol.h"
-
+#include "scip/pub_fileio.h"
 
 /*
  * memory growing methods for dynamically allocated arrays
@@ -12437,6 +12437,8 @@ SCIP_RETCODE SCIPlpIsInfeasibilityProved(
    return SCIP_OKAY;
 }
 
+
+
 /** writes LP to a file */
 SCIP_RETCODE SCIPlpWrite(
    SCIP_LP*              lp,                 /**< current LP data */
@@ -12471,8 +12473,311 @@ SCIP_RETCODE SCIPlpWrite(
    return SCIP_OKAY;
 }
 
+#if 1
+/** writes MIP relaxation of the current B&B node to a file using generic variable and row names */
+SCIP_RETCODE SCIPlpWriteMipGenericNames(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           fname               /**< file name */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(fname != NULL);
+
+   FILE* file;
+   int i;
+   int j;
+
+   SCIPdebugMessage("Start to write MIP to file <%s>\n", fname);
+   file = fopen(fname, "w");
+
+   fprintf(file, "\\\\ Original Variable and Constraint Names have been replaced by generic names.\n\n"); 
 
 
+
+   /* TODO: Think about pure satisfiability problems */
+   /* print objective function */
+   fprintf(file,"Minimize");
+   j = 0;
+   for( i = 0; i < lp->ncols; i++ )
+   {
+      if( lp->cols[i]->obj != 0.0 )
+      {
+         fprintf(file," %+gx_%d", lp->cols[i]->obj, lp->cols[i]->lppos);
+         j++;
+         if( j % 10 == 0 )
+            fprintf(file,"\n        ");
+      }
+   }
+   /* print constraint section */
+   fprintf(file,"\n\nSubject to\n");
+   for( i = 0; i < lp->nrows; i++ )
+   {
+      char type;
+      type = 'i';
+
+      /* constraint types: 'l' means: only lhs exists, 'r' means: only rhs exists, 'e' means: both sides exist and are
+       * equal, 'b' and 'B' mean: both sides exist, if the type is 'b', the lhs will be written, if the type is 'B', 
+       * the rhs will be written. Ergo: set type to b first, change it to 'B' afterwards and go back to WRITEROW.
+       * type 'i' means: lhs and rhs are both infinite */      
+      if( SCIPsetIsInfinity(set,ABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set,ABS(lp->rows[i]->rhs)) )
+         type = 'r';
+      else if( !SCIPsetIsInfinity(set,ABS(lp->rows[i]->lhs)) && SCIPsetIsInfinity(set,ABS(lp->rows[i]->rhs)) )
+         type = 'l';
+      else if( lp->rows[i]->lhs == lp->rows[i]->rhs && !SCIPsetIsInfinity(set,ABS(lp->rows[i]->lhs)) )
+         type = 'e';
+      else if( !SCIPsetIsInfinity(set,ABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set,ABS(lp->rows[i]->rhs)) )
+         type = 'b';
+
+      /* print name of row */
+   WRITEROW:
+      switch( type )
+      {
+      case 'r':
+      case 'l':
+      case 'e':
+         fprintf(file,"row_%d: ",lp->rows[i]->lppos);
+         break;
+      case 'b':
+         fprintf(file,"row_%d_l: ",lp->rows[i]->lppos);
+         break;
+      case 'B':
+         fprintf(file,"row_%d_r: ",lp->rows[i]->lppos);
+         break;
+      case 'i':
+         fprintf(file,"\\\\ WARNING: The lhs and the rhs of the row with original name <%s>",lp->rows[i]->name); 
+         fprintf(file,"are not in a valid range. The following two constraints may be corrupted!\n");
+         SCIPwarningMessage("The lhs and rhs of row <%s> are not in a valid range.\n",lp->rows[i]->name);
+         type = 'b';
+         goto WRITEROW;
+      default:
+         SCIPerrorMessage("Undefined row type!\n");
+         return SCIP_ERROR;
+      }
+
+      /* print coefficients and variables */
+      for( j = 0; j < lp->rows[i]->nlpcols; ++j )
+      {
+         fprintf(file," %+gx_%d", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->lppos);
+         if( (j+1) % 10 == 0 )
+            fprintf(file,"\n          ");
+      }
+      
+      /* print right hand side */
+      switch( type )
+      {
+      case 'b':
+         fprintf(file," >= %+g\n",lp->rows[i]->lhs - lp->rows[i]->constant);         
+         type = 'B';
+         goto WRITEROW;
+      case 'l':
+         fprintf(file," >= %+g",lp->rows[i]->lhs - lp->rows[i]->constant);
+         break;
+      case 'B':
+      case 'r':
+         fprintf(file," <= %+g",lp->rows[i]->rhs - lp->rows[i]->constant);
+         break;
+      case 'e':
+         fprintf(file," = %+g",lp->rows[i]->lhs - lp->rows[i]->constant);
+         break;
+      default:
+         SCIPerrorMessage("Undefined row type!\n");
+         return SCIP_ERROR;
+      }
+      fprintf(file,"\n");
+   }
+
+   /* print variable bounds */
+   fprintf(file,"\n\nBounds\n");
+   j = 0;
+   for( i = 0; i < lp->ncols; i++ )
+   {
+      if( !SCIPsetIsInfinity(set,-lp->cols[i]->lb) || !SCIPsetIsInfinity(set,-lp->cols[i]->ub) )
+      {
+         if( !SCIPsetIsInfinity(set,-lp->cols[i]->lb) )
+            fprintf(file," %+g <=", lp->cols[i]->lb);
+         fprintf(file," x_%d ", lp->cols[i]->lppos);
+         if( !SCIPsetIsInfinity(set,lp->cols[i]->ub) )
+            fprintf(file,"<= %+g", lp->cols[i]->ub);
+         fprintf(file,"\n");
+      }
+   }
+
+   /* print integer variables */
+   fprintf(file,"\n\nInteger\n ");
+   j = 0;
+   for( i = 0; i < lp->ncols; i++ )
+   {
+      if( SCIPvarIsIntegral(lp->cols[i]->var) )
+      {
+         fprintf(file," x_%d",lp->cols[i]->lppos);
+         j++;
+         if( j % 10 == 0 )
+            fprintf(file,"\n ");
+      }
+   }
+
+   fprintf(file,"\n\nEnd");
+   fclose(file);
+
+
+   return SCIP_OKAY;
+}
+
+
+
+/** writes  MIP relaxation of the current B&B node  to a file using original variable and row names */
+SCIP_RETCODE SCIPlpWriteMipOriginalNames(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           fname               /**< file name */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(fname != NULL);
+
+   FILE* file;
+   int i;
+   int j;
+
+   SCIPdebugMessage("Start to write MIP to file <%s>\n", fname);
+   file = fopen(fname, "w");
+   
+   fprintf(file, "\\\\ WARNING: Variable and Constraint Names should be reservated keywords, ");
+   fprintf(file, " delimiters or special characters. If this is the case, the model may be corrupted!\n");
+   fprintf(file, "\\\\ Especially, variable names must not start with the character 'e' or 'E'!\n\n");
+   
+
+   /* print objective function */
+   fprintf(file,"Minimize");
+   j = 0;
+   for( i = 0; i < lp->ncols; i++ )
+   {
+      if( lp->cols[i]->obj != 0.0 )
+      {
+         fprintf(file," %+g%s", lp->cols[i]->obj, lp->cols[i]->var->name);
+         j++;
+         if( j % 10 == 0 )
+            fprintf(file,"\n        ");
+      }
+   }
+   /* print constraint section */
+   fprintf(file,"\n\nSubject to\n");
+   for( i = 0; i < lp->nrows; i++ )
+   {
+      char type;
+      type = 'i';
+      
+      /* constraint types: 'l' means: only lhs exists, 'r' means: only rhs exists, 'e' means: both sides exist and are
+       * equal, 'b' and 'B' mean: both sides exist, if the type is 'b', the lhs will be written, if the type is 'B', 
+       * the rhs will be written. Ergo: set type to b first, change it to 'B' afterwards and go back to WRITEROW.
+       * type 'i' means: lhs and rhs are both infinite */
+      if( SCIPsetIsInfinity(set,ABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set,ABS(lp->rows[i]->rhs)) )
+         type = 'r';
+      else if( !SCIPsetIsInfinity(set,ABS(lp->rows[i]->lhs)) && SCIPsetIsInfinity(set,ABS(lp->rows[i]->rhs)) )
+         type = 'l';
+      else if( lp->rows[i]->lhs == lp->rows[i]->rhs && !SCIPsetIsInfinity(set,ABS(lp->rows[i]->lhs)) )
+         type = 'e';
+      else if( !SCIPsetIsInfinity(set,ABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set,ABS(lp->rows[i]->rhs)) )
+         type = 'b';
+
+      /* print name of row */
+   WRITEROW:
+      switch( type )
+      {
+      case 'r':
+      case 'l':
+      case 'e':
+         fprintf(file,"%s: ",lp->rows[i]->name);
+         break;
+      case 'b':
+         fprintf(file,"%s_lhs: ",lp->rows[i]->name);
+         break;
+      case 'B':
+         fprintf(file,"%s_rhs: ",lp->rows[i]->name);
+         break;
+      case 'i':
+         fprintf(file,"\\\\ WARNING: The lhs and the rhs of the row with original name <%s>",lp->rows[i]->name); 
+         fprintf(file,"are not in a valid range. The following two constraints may be corrupted!\n");
+         SCIPwarningMessage("The lhs and rhs of row <%s> are not in a valid range.\n",lp->rows[i]->name);
+         type = 'b';
+         goto WRITEROW;
+      default:
+         SCIPerrorMessage("Undefined row type!\n");
+         return SCIP_ERROR;
+      }
+
+      /* print coefficients and variables */
+      for( j = 0; j < lp->rows[i]->nlpcols; ++j )
+      {
+         fprintf(file," %+g%s", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->var->name);
+         if( (j+1) % 10 == 0 )
+            fprintf(file,"\n          ");
+      }
+      
+      /* print right hand side */
+      switch( type )
+      {
+      case 'b':
+         fprintf(file," >= %+g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
+         type = 'B';
+         goto WRITEROW;
+      case 'l':
+         fprintf(file," >= %+g",lp->rows[i]->lhs - lp->rows[i]->constant);
+         break;
+      case 'B':
+      case 'r':
+         fprintf(file," <= %+g",lp->rows[i]->rhs - lp->rows[i]->constant);
+         break;
+      case 'e':
+         fprintf(file," = %+g",lp->rows[i]->lhs - lp->rows[i]->constant);
+         break;
+      default:
+         SCIPerrorMessage("Undefined row type!\n");
+         return SCIP_ERROR;
+      }
+      fprintf(file,"\n");
+   }
+
+   /* print variable bounds */
+   fprintf(file,"\n\nBounds\n");
+   j = 0;
+   for( i = 0; i < lp->ncols; i++ )
+   {
+      if( !SCIPsetIsInfinity(set,-lp->cols[i]->lb) || !SCIPsetIsInfinity(set,-lp->cols[i]->ub) )
+      {
+         if( !SCIPsetIsInfinity(set,-lp->cols[i]->lb) )
+            fprintf(file," %+g <=", lp->cols[i]->lb);
+         fprintf(file," %s ", lp->cols[i]->var->name);
+         if( !SCIPsetIsInfinity(set,lp->cols[i]->ub) )
+            fprintf(file,"<= %+g", lp->cols[i]->ub);
+         fprintf(file,"\n");
+      }
+   }
+
+   /* print integer variables */
+   fprintf(file,"\n\nInteger\n ");
+   j = 0;
+   for( i = 0; i < lp->ncols; i++ )
+   {
+      if( SCIPvarIsIntegral(lp->cols[i]->var) )
+      {
+         fprintf(file," %s",lp->cols[i]->var->name);
+         j++;
+         if( j % 10 == 0 )
+            fprintf(file,"\n ");
+      }
+   }
+
+   fprintf(file,"\n\nEnd");
+
+   fclose(file);
+
+   return SCIP_OKAY;
+}
+#endif
 
 /*
  * simple functions implemented as defines

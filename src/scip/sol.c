@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.78 2006/08/23 17:35:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.79 2007/02/28 09:58:03 bzfberth Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -252,6 +252,7 @@ SCIP_RETCODE SCIPsolCreate(
    (*sol)->obj = 0.0;
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
+   (*sol)->wasimproved = FALSE;
    stat->solindex++;
    solStamp(*sol, stat, tree);
 
@@ -440,17 +441,6 @@ SCIP_RETCODE SCIPsolFree(
    BMSfreeBlockMemory(blkmem, sol);
 
    return SCIP_OKAY;
-}
-
-/** informs the solution that it now belongs to the given primal heuristic */
-void SCIPsolSetHeur(
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
-   )
-{
-   assert(sol != NULL);
-
-   sol->heur = heur;
 }
 
 /** copies current LP solution into CIP solution by linking */
@@ -1309,6 +1299,9 @@ SCIP_RETCODE SCIPsolPrint(
 #undef SCIPsolGetPrimalIndex
 #undef SCIPsolSetPrimalIndex
 #undef SCIPsolGetIndex
+#undef SCIPsolSetHeur
+#undef SCIPsolGetWasImproved
+#undef SCIPsolSetWasImproved
 
 /** gets origin of solution */
 SCIP_SOLORIGIN SCIPsolGetOrigin(
@@ -1399,4 +1392,37 @@ int SCIPsolGetIndex(
    assert(sol != NULL);
 
    return sol->index;
+}
+
+/** informs the solution that it now belongs to the given primal heuristic */
+extern
+void SCIPsolSetHeur(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   )
+{
+   assert(sol != NULL);
+ 
+   sol->heur = heur;
+}
+
+/**  Returns, whether the solution is marked as the starting point of some successful improvement heuristic */
+SCIP_Bool SCIPsolGetWasImproved(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+
+   return sol->wasimproved;
+}
+
+/** informs the solution whether it was the starting point of some successful improvement heuristic */
+void SCIPsolSetWasImproved(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Bool             wasimproved         /**< TRUE, if solution has been improved, FALSE otherwise */
+   )
+{
+   assert(sol != NULL);
+ 
+   sol->wasimproved = wasimproved;
 }

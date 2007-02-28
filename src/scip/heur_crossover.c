@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.20 2007/01/26 14:42:45 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.21 2007/02/28 09:58:02 bzfberth Exp $"
 
 /**@file   heur_crossover.c
  * @brief  crossover primal heuristic
@@ -176,7 +176,7 @@ static void sortArray(
    int j;
    int tmp;
    
-   /* simple insertion sort aolgorithm */
+   /* simple insertion sort algorithm */
    for( i = 1; i < size; i++ )
    {
       tmp = a[i];

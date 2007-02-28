@@ -14,11 +14,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_sol.h,v 1.14 2006/03/09 12:52:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_sol.h,v 1.15 2007/02/28 09:58:02 bzfberth Exp $"
 
 /**@file   pub_sol.h
  * @brief  public methods for primal CIP solutions
  * @author Tobias Achterberg
+ * @author Timo Berthold
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -78,11 +79,33 @@ SCIP_HEUR* SCIPsolGetHeur(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
+/** informs the solution that it now belongs to the given primal heuristic */
+extern
+void SCIPsolSetHeur(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
 /** returns unique index of given solution */
 extern
 int SCIPsolGetIndex(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
+
+/**  Returns, whether the solution is marked as the starting point of some successful improvement heuristic */
+extern
+SCIP_Bool SCIPsolGetWasImproved(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** informs the solution whether it was the starting point of some successful improvement heuristic */
+extern
+void SCIPsolSetWasImproved(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Bool             wasimproved         /**< TRUE, if solution has been improved, FALSE otherwise */
+   );
+
+
 
 #else
 
@@ -97,7 +120,9 @@ int SCIPsolGetIndex(
 #define SCIPsolGetDepth(sol)            (sol)->depth
 #define SCIPsolGetHeur(sol)             (sol)->heur
 #define SCIPsolGetIndex(sol)            (sol)->index
-
+#define SCIPsolGetWasImproved(sol)      (sol)->wasimproved
+#define SCIPsolSetHeur(sol,heur)        { (sol)->heur = heur; }
+#define SCIPsolSetWasImproved(sol,imp)  { (sol)->wasimproved = imp; }
 #endif
 
 #endif

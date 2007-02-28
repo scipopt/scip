@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.293 2007/02/22 16:55:00 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.294 2007/02/28 09:58:03 bzfberth Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3297,6 +3297,15 @@ extern
 SCIP_RETCODE SCIPwriteLP(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           fname               /**< file name */
+   );
+
+/** writes current MIP to a file */
+extern
+SCIP_RETCODE SCIPwriteMIP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           fname,              /**< file name */
+   SCIP_Bool             genericnames        /**< should generic names like x_i and row_j be used in order to avoid
+                                              *   with reservated strings? */
    );
 
 /** gets the LP interface of SCIP;

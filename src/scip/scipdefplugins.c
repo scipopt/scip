@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.63 2007/02/22 16:55:00 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.64 2007/02/28 09:58:03 bzfberth Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -58,6 +58,7 @@
 #include "scip/heur_mutation.h"
 #include "scip/heur_objpscostdiving.h"
 #include "scip/heur_octane.h"
+#include "scip/heur_oneopt.h"
 #include "scip/heur_pscostdiving.h"
 #include "scip/heur_rens.h"
 #include "scip/heur_rins.h"
@@ -164,6 +165,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurMutation(scip) );
    SCIP_CALL( SCIPincludeHeurObjpscostdiving(scip) );
    SCIP_CALL( SCIPincludeHeurOctane(scip) );
+   SCIP_CALL( SCIPincludeHeurOneopt(scip) );
    SCIP_CALL( SCIPincludeHeurPscostdiving(scip) );
    SCIP_CALL( SCIPincludeHeurRens(scip) );
    SCIP_CALL( SCIPincludeHeurRins(scip) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.395 2007/02/22 16:54:59 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.396 2007/02/28 09:58:02 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -9061,10 +9061,32 @@ SCIP_RETCODE SCIPwriteLP(
    const char*           fname               /**< file name */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPwriteLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPwriteLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPlpWrite(scip->lp, fname) );
 
+   return SCIP_OKAY;
+}
+
+/** writes MIP relaxation of the current B&B node to a file */
+SCIP_RETCODE SCIPwriteMIP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           fname,              /**< file name */
+   SCIP_Bool             genericnames        /**< should generic names like x_i and row_j be used in order to avoid
+                                              *   with reservated strings? */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPwriteMIP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   if( genericnames )
+   {
+      SCIP_CALL( SCIPlpWriteMipGenericNames(scip->lp, scip->set, fname) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPlpWriteMipOriginalNames(scip->lp, scip->set, fname) );
+   }
+  
    return SCIP_OKAY;
 }
 

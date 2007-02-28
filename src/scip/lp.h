@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.121 2007/02/22 16:54:59 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.122 2007/02/28 09:58:02 bzfberth Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -1130,7 +1130,21 @@ SCIP_RETCODE SCIPlpWrite(
    const char*           fname               /**< file name */
    );
 
+/** writes LP to a file */
+extern 
+SCIP_RETCODE SCIPlpWriteMipGenericNames(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           fname               /**< file name */
+   );
 
+/** writes LP to a file */
+extern 
+SCIP_RETCODE SCIPlpWriteMipOriginalNames(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           fname               /**< file name */
+   );
 
 #ifndef NDEBUG
 
