@@ -14,11 +14,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.64 2007/02/28 10:24:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.65 2007/02/28 11:04:07 bzfberth Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
  * @author Tobias Achterberg
+ * @author Timo Berthold
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1477,10 +1478,24 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteLp)
 
    SCIPdialogMessage(scip, NULL, "\n");
 
+   /* node relaxations only exist in solving & solved stage */
+   if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
+   {
+      SCIPdialogMessage(scip, NULL, "There is no node LP relaxation before solving starts\n");
+      *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+      return SCIP_OKAY;
+   }
+   if( SCIPgetStage(scip) > SCIP_STAGE_SOLVED )
+   {
+      SCIPdialogMessage(scip, NULL, "There is no node LP relaxation after problem was solved\n");
+      *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+      return SCIP_OKAY;
+   }
+
    SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
    if( endoffile )
    {
-      *nextdialog = NULL;
+      *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
       return SCIP_OKAY;
    }
    if( filename[0] != '\0' )
@@ -1504,7 +1519,19 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
    char* filename;
    SCIP_Bool endoffile;
 
-   SCIPdialogMessage(scip, NULL, "\n");
+   /* node relaxations only exist in solving & solved stage */
+   if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
+   {
+      SCIPdialogMessage(scip, NULL, "There is no node MIP relaxation before solving starts\n");
+      *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+      return SCIP_OKAY;
+   }
+   if( SCIPgetStage(scip) > SCIP_STAGE_SOLVED )
+   {
+      SCIPdialogMessage(scip, NULL, "There is no node MIP relaxation after problem was solved\n");
+      *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+      return SCIP_OKAY;
+   }
 
    SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
    if( endoffile )

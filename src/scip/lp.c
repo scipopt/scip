@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.233 2007/02/28 09:58:02 bzfberth Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.234 2007/02/28 11:04:07 bzfberth Exp $"
 /**@file   lp.c
  * @brief  LP management methods and datastructures
  * @author Tobias Achterberg
@@ -12645,10 +12645,8 @@ SCIP_RETCODE SCIPlpWriteMipOriginalNames(
    SCIPdebugMessage("Start to write MIP to file <%s>\n", fname);
    file = fopen(fname, "w");
    
-   fprintf(file, "\\\\ WARNING: Variable and Constraint Names should be reservated keywords, ");
-   fprintf(file, " delimiters or special characters. If this is the case, the model may be corrupted!\n");
-   fprintf(file, "\\\\ Especially, variable names must not start with the character 'e' or 'E'!\n\n");
-   
+   fprintf(file, "\\\\ Warning: Variable and Constraint Names should not contain special characters like '+', '=' etc.");
+   fprintf(file, "If this is the case, the model may be corrupted!\n");
 
    /* print objective function */
    fprintf(file,"Minimize");
