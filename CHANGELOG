@@ -59,6 +59,7 @@ parameters:
 features:
 - presolving, cut separation, primal heuristics, and strong branching now better respect time limit
 - time limit is now forwarded to lp solving algorithm
+- added option to write node LP and MIP relaxations to LP file from interactive shell
 
 fixed bugs:
 - SCIPgetAvgPseudocostCount() and SCIPgetAvgPseudocostCountCurrentRun() now return the average over all integer variables instead
