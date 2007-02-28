@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.63 2006/12/06 13:04:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.64 2007/02/28 10:24:23 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -1468,6 +1468,64 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the write lp command */
+static
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteLp)
+{  /*lint --e{715}*/
+   char* filename;
+   SCIP_Bool endoffile;
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
+   if( filename[0] != '\0' )
+   {
+      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
+      SCIP_CALL( SCIPwriteLP(scip, filename) );
+      SCIPdialogMessage(scip, NULL, "written node LP relaxation to file <%s>\n", filename);
+   }
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the write mip command */
+static
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
+{  /*lint --e{715}*/
+   char* filename;
+   SCIP_Bool endoffile;
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
+   if( filename[0] != '\0' )
+   {
+      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
+      SCIP_CALL( SCIPwriteMIP(scip, filename, FALSE) );
+      SCIPdialogMessage(scip, NULL, "written node MIP relaxation to file <%s>\n", filename);
+   }
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the write problem command */
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteProblem)
@@ -1932,6 +1990,24 @@ SCIP_RETCODE SCIPincludeDialogDefault(
    {
       SCIPerrorMessage("write sub menu not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
+   
+   /* write lp */
+   if( !SCIPdialogHasEntry(submenu, "lp") )
+   {
+      SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecWriteLp, NULL,
+            "lp", "write current node LP relaxation in LP format to file", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
+   /* write mip */
+   if( !SCIPdialogHasEntry(submenu, "mip") )
+   {
+      SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecWriteMip, NULL,
+            "mip", "write current node MIP relaxation in LP format to file", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
    
    /* write problem */
