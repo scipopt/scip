@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.122 2007/02/28 09:58:02 bzfberth Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.123 2007/02/28 16:16:56 bzfberth Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -1135,7 +1135,9 @@ extern
 SCIP_RETCODE SCIPlpWriteMipGenericNames(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   const char*           fname               /**< file name */
+   const char*           fname,              /**< file name */
+   SCIP_Real             objoffset,           /**< objective offset, eg. caused by variable fixings in presolving */
+   SCIP_Bool             addobjoffset        /**< should the objective offset be integrated via an artificial variable? */
    );
 
 /** writes LP to a file */
@@ -1143,7 +1145,9 @@ extern
 SCIP_RETCODE SCIPlpWriteMipOriginalNames(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   const char*           fname               /**< file name */
+   const char*           fname,              /**< file name */
+   SCIP_Real             objoffset,           /**< objective offset, eg. caused by variable fixings in presolving */
+   SCIP_Bool             addobjoffset        /**< should the objective offset be integrated via an artificial variable? */
    );
 
 #ifndef NDEBUG

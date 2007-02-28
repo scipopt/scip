@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.396 2007/02/28 09:58:02 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.397 2007/02/28 16:16:56 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -9072,19 +9072,23 @@ SCIP_RETCODE SCIPwriteLP(
 SCIP_RETCODE SCIPwriteMIP(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           fname,              /**< file name */
-   SCIP_Bool             genericnames        /**< should generic names like x_i and row_j be used in order to avoid
-                                              *   with reservated strings? */
+   SCIP_Bool             genericnames,       /**< should generic names like x_i and row_j be used in order to avoid
+                                              *   troubles with reserved symbols? */
+   SCIP_Bool             addobjoffset        /**< should the objective offset be integrated via an artificial variable? */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPwriteMIP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
+   SCIP_Real objoffset;
+   objoffset = SCIPretransformObj(scip,0);
+   
    if( genericnames )
    {
-      SCIP_CALL( SCIPlpWriteMipGenericNames(scip->lp, scip->set, fname) );
+      SCIP_CALL( SCIPlpWriteMipGenericNames(scip->lp, scip->set, fname, objoffset, addobjoffset) );
    }
    else
    {
-      SCIP_CALL( SCIPlpWriteMipOriginalNames(scip->lp, scip->set, fname) );
+      SCIP_CALL( SCIPlpWriteMipOriginalNames(scip->lp, scip->set, fname, objoffset, addobjoffset) );
    }
   
    return SCIP_OKAY;

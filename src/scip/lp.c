@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.234 2007/02/28 11:04:07 bzfberth Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.235 2007/02/28 16:16:56 bzfberth Exp $"
 /**@file   lp.c
  * @brief  LP management methods and datastructures
  * @author Tobias Achterberg
@@ -12478,7 +12478,9 @@ SCIP_RETCODE SCIPlpWrite(
 SCIP_RETCODE SCIPlpWriteMipGenericNames(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   const char*           fname               /**< file name */
+   const char*           fname,              /**< file name */
+   SCIP_Real             objoffset,          /**< objective offset, eg. caused by variable fixings in presolving */
+   SCIP_Bool             addobjoffset        /**< should the objective offset be integrated via an artificial variable? */
    )
 {
    assert(lp != NULL);
@@ -12492,10 +12494,16 @@ SCIP_RETCODE SCIPlpWriteMipGenericNames(
    SCIPdebugMessage("Start to write MIP to file <%s>\n", fname);
    file = fopen(fname, "w");
 
-   fprintf(file, "\\\\ Original Variable and Constraint Names have been replaced by generic names.\n\n"); 
-
-
-
+   fprintf(file, "\\\\ Original Variable and Constraint Names have been replaced by generic names.\n"); 
+   if( objoffset != 0 )
+   {
+      fprintf(file, "\\\\ An artifical variable 'objoffset' has been added to the problem.\n"); 
+      if( addobjoffset )
+         fprintf(file, "\\\\ Switching this variable to 0 will disable the offset in the objective.\n\n"); 
+      else
+         fprintf(file, "\\\\ Switching this variable to 1 will enable the offset in the objective.\n\n"); 
+   }
+   
    /* TODO: Think about pure satisfiability problems */
    /* print objective function */
    fprintf(file,"Minimize");
@@ -12510,6 +12518,9 @@ SCIP_RETCODE SCIPlpWriteMipGenericNames(
             fprintf(file,"\n        ");
       }
    }
+   if( objoffset != 0 )
+      fprintf(file," %+gobjoffset", objoffset);
+   
    /* print constraint section */
    fprintf(file,"\n\nSubject to\n");
    for( i = 0; i < lp->nrows; i++ )
@@ -12603,6 +12614,13 @@ SCIP_RETCODE SCIPlpWriteMipGenericNames(
          fprintf(file,"\n");
       }
    }
+   if( objoffset != 0 )
+   {   
+      if( addobjoffset )
+         fprintf(file,"objoffset = 1");
+      else
+         fprintf(file,"objoffset = 0");
+   }
 
    /* print integer variables */
    fprintf(file,"\n\nInteger\n ");
@@ -12631,7 +12649,9 @@ SCIP_RETCODE SCIPlpWriteMipGenericNames(
 SCIP_RETCODE SCIPlpWriteMipOriginalNames(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   const char*           fname               /**< file name */
+   const char*           fname,              /**< file name */
+   SCIP_Real             objoffset,           /**< objective offset, eg. caused by variable fixings in presolving */
+   SCIP_Bool             addobjoffset        /**< should the objective offset be integrated via an artificial variable? */
    )
 {
    assert(lp != NULL);
@@ -12645,9 +12665,17 @@ SCIP_RETCODE SCIPlpWriteMipOriginalNames(
    SCIPdebugMessage("Start to write MIP to file <%s>\n", fname);
    file = fopen(fname, "w");
    
-   fprintf(file, "\\\\ Warning: Variable and Constraint Names should not contain special characters like '+', '=' etc.");
-   fprintf(file, "If this is the case, the model may be corrupted!\n");
-
+   fprintf(file,"\\\\ Warning: Variable and Constraint Names should not contain special characters like '+', '=' etc.\n");
+   fprintf(file, "\\\\ If this is the case, the model may be corrupted!\n");
+   if( objoffset != 0 )
+   {   
+      fprintf(file, "\\\\ An artifical variable objoffset has been added to the problem.\n"); 
+      if( addobjoffset )
+         fprintf(file, "\\\\ Switching this variable to 0 will disable the offset in the objective.\n\n"); 
+      else
+         fprintf(file, "\\\\ Switching this variable to 1 will enable the offset in the objective.\n\n"); 
+   }
+   
    /* print objective function */
    fprintf(file,"Minimize");
    j = 0;
@@ -12661,6 +12689,9 @@ SCIP_RETCODE SCIPlpWriteMipOriginalNames(
             fprintf(file,"\n        ");
       }
    }
+   if( objoffset != 0 )
+      fprintf(file," %+gobjoffset", objoffset);
+
    /* print constraint section */
    fprintf(file,"\n\nSubject to\n");
    for( i = 0; i < lp->nrows; i++ )
@@ -12753,6 +12784,13 @@ SCIP_RETCODE SCIPlpWriteMipOriginalNames(
             fprintf(file,"<= %+g", lp->cols[i]->ub);
          fprintf(file,"\n");
       }
+   }
+   if( objoffset != 0 )
+   {   
+      if( addobjoffset )
+         fprintf(file,"objoffset = 1");
+      else
+         fprintf(file,"objoffset = 0");
    }
 
    /* print integer variables */
