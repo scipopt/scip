@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.28 2006/09/15 03:14:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.29 2007/03/06 13:24:14 bzfberth Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -708,8 +708,7 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
 
    /* allocate memory */
    tablesize = tcliquegraph->nnodes * tcliquegraph->tablewidth;
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-      "clique separator: constructing dense clique table (%d kb, %d cliques, %d nodes, density: %.2f)\n",
+   SCIPdebugMessage("clique separator: constructing dense clique table (%d kb, %d cliques, %d nodes, density: %.2f)\n",
       tablesize/1024, SCIPgetNCliques(scip), tcliquegraph->nnodes, density);
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &tcliquegraph->cliquetable, tablesize) );
@@ -771,7 +770,7 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
    }
    SCIPfreeBufferArray(scip, &varids);
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "clique separator: finished constructing dense clique table\n");
+   SCIPdebugMessage("clique separator: finished constructing dense clique table\n");
 
    return SCIP_OKAY;
 }
