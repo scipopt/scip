@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.2 2007/03/05 18:50:36 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.3 2007/03/06 13:19:45 bzfberth Exp $"
 
 /**@file   heur_oneopt.c
  * @brief  oneopt primal heuristic
@@ -32,12 +32,12 @@
 #define HEUR_DESC             "1-opt heuristic which tries to improve setting of single integer variables"
 #define HEUR_DISPCHAR         'k'
 #define HEUR_PRIORITY         -20000
-#define HEUR_FREQ             -1
+#define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
 
-
+#define DEFAULT_WEIGHTEDOBJ   TRUE
 
 
 /*
@@ -48,6 +48,7 @@
 struct SCIP_HeurData
 {
    SCIP_SOL* prevsol;
+   SCIP_Bool weightedobj;
 };
 
 
@@ -235,35 +236,17 @@ SCIP_DECL_HEURINIT(heurInitOneopt)
    SCIP_HEURDATA* heurdata;
 
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-   assert(SCIPheurGetData(heur) == NULL);
    
    /* create heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
    heurdata->prevsol = NULL;
-   SCIPheurSetData(heur, heurdata);
-
+   
    return SCIP_OKAY;
 }
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
-static
-SCIP_DECL_HEUREXIT(heurExitOneopt)
-{     
-   SCIP_HEURDATA* heurdata;
-
-   assert( heur != NULL );
-   assert( scip != NULL );
-
-   /* get heuristic data */
-   heurdata = SCIPheurGetData(heur);
-   assert( heurdata != NULL );
-
-   /* free heuristic data */   
-   SCIPfreeMemory(scip, &heurdata);
-   SCIPheurSetData(heur, NULL);
-
-   return SCIP_OKAY;
-}
+#define heurExitOneopt NULL
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 #define heurInitsolOneopt NULL
@@ -281,9 +264,10 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    SCIP_SOL* worksol;                        /* heuristic's working solution */
 
    SCIP_VAR** vars;                          /* SCIP variables                */
-   SCIP_VAR** shiftcands;                     /* shiftable variables           */
+   SCIP_VAR** shiftcands;                    /* shiftable variables           */
    SCIP_ROW** lprows;                        /* SCIP LP rows                  */
    SCIP_Real* activities;                    /* row activities for working solution */
+   SCIP_Real* shiftvals;
 
    int nbinvars;
    int nintvars;
@@ -324,6 +308,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    SCIP_CALL( SCIPgetLPRowsData(scip, &lprows, &nlprows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &activities, nlprows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &shiftcands, shiftcandssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &shiftvals, shiftcandssize) );
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );  
    nintvars = nbinvars + nintvars;
 
@@ -376,8 +361,10 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          {
             shiftcandssize *= 8;
             SCIP_CALL( SCIPreallocBufferArray(scip, &shiftcands, shiftcandssize) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &shiftvals, shiftcandssize) );
          }
          shiftcands[nshiftcands] = vars[i];
+         shiftvals[nshiftcands] = shiftval;
          nshiftcands++;
       }
    }
@@ -395,7 +382,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          var = shiftcands[0];
          assert( var != NULL );
          solval = SCIPgetSolVal(scip,bestsol,var);
-         shiftval = calcShiftVal(scip,var,solval,activities);
+         shiftval = shiftvals[0];
          assert( !SCIPisFeasZero(scip,shiftval) );
          SCIPdebugMessage(" Only one shiftcand found, var <%s>, which is now shifted by<%1.1f> \n", 
             SCIPvarGetName(var), shiftval);
@@ -406,14 +393,22 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          SCIP_Real* objcoeffs;
          SCIP_CALL( SCIPallocBufferArray(scip, &objcoeffs, nshiftcands) );
 
-         /* sort the variables by their objective TODO: Sorting by obj*val would be better! */
-         for( i = 0; i < nshiftcands; ++i )
-            objcoeffs[i] = SCIPvarGetObj(shiftcands[i]);         
+         SCIPdebugMessage(" %d shiftcands found \n", nshiftcands); 
+
+         /* sort the variables by their objective, optionally weighted with the shiftval */
+         if( heurdata->weightedobj )
+         {
+            for( i = 0; i < nshiftcands; ++i )
+               objcoeffs[i] = SCIPvarGetObj(shiftcands[i])*shiftvals[i];         
+         }
+         else
+         {
+            for( i = 0; i < nshiftcands; ++i )
+               objcoeffs[i] = SCIPvarGetObj(shiftcands[i]);         
+         }
          sortByObj(objcoeffs,shiftcands,nshiftcands);
          
-         SCIPdebugMessage(" %d shiftcands found \n", nshiftcands); 
-            
-         /* try to shift each variable -> Activiities have to be updated */
+         /* try to shift each variable -> Activities have to be updated */
          for( i = 0; i < nshiftcands; ++i )
          {
             var = shiftcands[i];
@@ -498,6 +493,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    SCIPdebugMessage("Finished 1-opt heuristic\n");   
    SCIPfreeSol(scip,&worksol);
    SCIPfreeBufferArray(scip, &activities);
+   SCIPfreeBufferArray(scip, &shiftvals);
    SCIPfreeBufferArray(scip, &shiftcands);
 
    return SCIP_OKAY;
@@ -516,14 +512,23 @@ SCIP_RETCODE SCIPincludeHeurOneopt(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_HEURDATA* heurdata;
+
+   /* create heuristic data */
+   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING,
          heurFreeOneopt, heurInitOneopt, heurExitOneopt, 
          heurInitsolOneopt, heurExitsolOneopt, heurExecOneopt,
-         NULL) );
+         heurdata) );
 
    /* add oneopt primal heuristic parameters */
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/oneopt/weightedobj",
+         "should the objective be weighted with the potential shifting value when sorting the shifting candidates?",
+         &heurdata->weightedobj, DEFAULT_WEIGHTEDOBJ, NULL, NULL) );
 
    return SCIP_OKAY;
 }
