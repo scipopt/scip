@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.35 2006/07/17 13:57:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.36 2007/03/07 16:07:33 bzfpfend Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -462,6 +462,13 @@ SCIP_RETCODE SCIPdialoghdlrGetWord(
          /* read characters as they are until the next " */
          while( dialoghdlr->buffer[dialoghdlr->bufferpos] != '\0' && dialoghdlr->buffer[dialoghdlr->bufferpos] != '"' )
          {
+            /* watch out for \" and \\ which should be treated as " and \, respectively */
+            if( dialoghdlr->buffer[dialoghdlr->bufferpos] == '\\'
+               && (dialoghdlr->buffer[dialoghdlr->bufferpos+1] == '"'
+                  || dialoghdlr->buffer[dialoghdlr->bufferpos+1] == '\\') )
+            {
+               dialoghdlr->bufferpos++;
+            }
             dialoghdlr->buffer[pos] = dialoghdlr->buffer[dialoghdlr->bufferpos];
             pos++;
             dialoghdlr->bufferpos++;
@@ -474,6 +481,13 @@ SCIP_RETCODE SCIPdialoghdlrGetWord(
          /* read characters as they are until the next ' */
          while( dialoghdlr->buffer[dialoghdlr->bufferpos] != '\0' && dialoghdlr->buffer[dialoghdlr->bufferpos] != '\'' )
          {
+            /* watch out for \' and \\ which should be treated as ' and \, respectively */
+            if( dialoghdlr->buffer[dialoghdlr->bufferpos] == '\\'
+               && (dialoghdlr->buffer[dialoghdlr->bufferpos+1] == '\''
+                  || dialoghdlr->buffer[dialoghdlr->bufferpos+1] == '\\') )
+            {
+               dialoghdlr->bufferpos++;
+            }
             dialoghdlr->buffer[pos] = dialoghdlr->buffer[dialoghdlr->bufferpos];
             pos++;
             dialoghdlr->bufferpos++;
