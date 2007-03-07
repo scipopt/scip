@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.36 2007/01/26 14:42:46 bzfberth Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.37 2007/03/07 09:56:14 bzfpfend Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -126,7 +126,8 @@ SCIP_RETCODE paramCheckReal(
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_REAL);
 
-   if( !(value >= param->data.realparam.minvalue && value <= param->data.realparam.maxvalue) )
+   if( (value < param->data.realparam.minvalue && param->data.realparam.minvalue > SCIP_REAL_MIN)
+      || (value > param->data.realparam.maxvalue && param->data.realparam.maxvalue < SCIP_REAL_MAX) )
    {
       SCIPwarningMessage("Invalid real parameter value <%g> for parameter <%s>. Must be in range [%g,%g].\n",
          value, param->name, param->data.realparam.minvalue, param->data.realparam.maxvalue);
