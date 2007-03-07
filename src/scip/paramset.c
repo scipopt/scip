@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.37 2007/03/07 09:56:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.38 2007/03/07 10:04:48 bzfpfend Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -133,7 +133,9 @@ SCIP_RETCODE paramCheckReal(
          value, param->name, param->data.realparam.minvalue, param->data.realparam.maxvalue);
       return SCIP_PARAMETERWRONGVAL;
    }
-   
+   value = MAX(value, SCIP_REAL_MIN);
+   value = MIN(value, SCIP_REAL_MAX);
+
    return SCIP_OKAY;
 }
 
