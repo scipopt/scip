@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.16 2006/03/13 15:35:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.17 2007/03/12 14:50:20 bzfpfend Exp $"
 
 /**@file   prop_pseudoobj.c
  * @brief  pseudoobj propagator
@@ -35,7 +35,7 @@
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 
 #define DEFAULT_MAXCANDS            100 /**< maximal number of variables to look at in a single propagation round
-                                              *   (-1: process all variables) */
+                                         *   (-1: process all variables) */
 
 
 
@@ -231,7 +231,8 @@ SCIP_DECL_PROPEXEC(propExecPseudoobj)
          newub = lb + (cutoffbound - pseudoobjval)/obj;
          if( SCIPisUbBetter(scip, newub, lb, ub) )
          {
-            SCIPdebugMessage(" -> new upper bound of variable <%s>[%.10f,%.10f]: %.10f\n", SCIPvarGetName(var), lb, ub, newub);
+            SCIPdebugMessage(" -> new upper bound of variable <%s>[%.10f,%.10f]: %.10f\n",
+               SCIPvarGetName(var), lb, ub, newub);
             SCIP_CALL( SCIPinferVarUbProp(scip, var, newub, prop, 0, &infeasible, &tightened) );
             assert(!infeasible);
             if( tightened ) /* might not be tightened due to numerical reasons */

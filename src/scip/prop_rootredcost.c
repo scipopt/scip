@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_rootredcost.c,v 1.3 2006/04/10 16:15:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_rootredcost.c,v 1.4 2007/03/12 14:50:20 bzfpfend Exp $"
 
 /**@file   prop_rootredcost.c
  * @brief  reduced cost strengthening at the root node
@@ -104,7 +104,6 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
    SCIP_VAR** vars;
    SCIP_Real cutoffbound;
    SCIP_Real lpobjval;
-   SCIP_Bool root;
    int nvars;
    int v;
 
@@ -144,7 +143,6 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
    SCIPdebugMessage("searching for root node reduced cost fixings due to new cutoffbound %g\n", cutoffbound);
 
    *result = SCIP_DIDNOTFIND;
-   root = (SCIPgetDepth(scip) == 0);
 
    /* check reduced costs for variables that were columns of the root LP */
    for( v = 0; v < nvars; ++v )
@@ -173,22 +171,14 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
          /* calculate reduced cost based bound */
          newub = (cutoffbound - lpobjval) / redcost + rootsol;
 
-         /* check, if new bound is good enough:
-          *  - in the root node: strengthenings lead to a resolve
-          *     - integer variables: take all possible strengthenings
-          *     - continuous variables: strengthening must cut at least 20% of the current domain
-          *  - at other nodes: strengthening is applied only once, because the root LP is not resolved
-          *     - take all possible strengthenings
-          */
+         /* check, if new bound is good enough */
          if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
          {
             newub = SCIPadjustedVarUb(scip, var, newub);
             strengthen = (newub < oldub - 0.5);
          }
-         else if( root )
-            strengthen = SCIPisUbBetter(scip, newub, oldlb, oldub);
          else
-            strengthen = (newub <= 0.2 * oldlb + 0.8 * oldub);
+            strengthen = SCIPisUbBetter(scip, newub, oldlb, oldub);
 
          if( strengthen )
          {
@@ -215,22 +205,14 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
          /* calculate reduced cost based bound */
          newlb = (cutoffbound - lpobjval) / redcost + rootsol;
 
-         /* check, if new bound is good enough:
-          *  - in the root node: strengthenings lead to a resolve
-          *     - integer variables: take all possible strengthenings
-          *     - continuous variables: strengthening must cut at least 20% of the current domain
-          *  - at other nodes: strengthening is applied only once, because the root LP is not resolved
-          *     - take all possible strengthenings
-          */
+         /* check, if new bound is good enough */
          if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
          {
             newlb = SCIPadjustedVarLb(scip, var, newlb);
             strengthen = (newlb > oldlb + 0.5);
          }
-         else if( root )
-            strengthen = SCIPisLbBetter(scip, newlb, oldlb, oldub);
          else
-            strengthen = (newlb >= 0.8 * oldlb + 0.2 * oldub);
+            strengthen = SCIPisLbBetter(scip, newlb, oldlb, oldub);
 
          if( strengthen )
          {
