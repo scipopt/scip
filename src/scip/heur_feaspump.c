@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.45 2006/12/07 20:36:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.46 2007/03/12 18:24:50 bzfberth Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -678,5 +678,6 @@ SCIP_RETCODE SCIPincludeHeurFeaspump(
          "heuristics/feaspump/perturbfreq", 
          "number of iterations until a random perturbation is forced",
          &heurdata->perturbfreq, DEFAULT_PERTURBFREQ, 1, INT_MAX, NULL, NULL) );
+
    return SCIP_OKAY;
 }

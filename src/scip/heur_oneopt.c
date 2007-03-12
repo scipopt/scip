@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.3 2007/03/06 13:19:45 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.4 2007/03/12 18:24:51 bzfberth Exp $"
 
 /**@file   heur_oneopt.c
  * @brief  oneopt primal heuristic
@@ -227,7 +227,23 @@ SCIP_RETCODE updateRowActivities(
  */
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-#define heurFreeOneopt NULL
+static
+SCIP_DECL_HEURFREE(heurFreeOneopt)
+{   /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   assert(scip != NULL);
+
+   /* free heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+   SCIPfreeMemory(scip, &heurdata);
+   SCIPheurSetData(heur, NULL);
+
+   return SCIP_OKAY;
+}
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
