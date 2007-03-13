@@ -62,6 +62,9 @@ features:
 - added option to write node LP and MIP relaxations to LP file from interactive shell
 
 fixed bugs:
+- fixed bug with too long variable names
+- fixed bug with strange user descriptions of plugins
+- changed position of some asserts to prevent segmentation faults
 - SCIPgetAvgPseudocostCount() and SCIPgetAvgPseudocostCountCurrentRun() now return the average over all integer variables instead
   of all variables, since pseudo costs are not recorded for continuous variables
 - fixed wrong sorting of plugins with priorities close to INT_MIN or INT_MAX
