@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.66 2007/02/28 16:22:13 bzfberth Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.67 2007/03/13 18:33:28 bzfberth Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -240,7 +240,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayBranching)
          SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
       SCIPdialogMessage(scip, NULL, "%8d %8d %8.1f%%  ", SCIPbranchruleGetPriority(sorted[i]), 
          SCIPbranchruleGetMaxdepth(sorted[i]), 100.0 * SCIPbranchruleGetMaxbounddist(sorted[i]));
-      SCIPdialogMessage(scip, NULL, SCIPbranchruleGetDesc(sorted[i]));
+      SCIPdialogMessage(scip, NULL, "%s", SCIPbranchruleGetDesc(sorted[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
    SCIPdialogMessage(scip, NULL, "\n");
@@ -282,7 +282,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayConflict)
       if( strlen(SCIPconflicthdlrGetName(sorted[i])) > 20 )
          SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
       SCIPdialogMessage(scip, NULL, "%8d  ", SCIPconflicthdlrGetPriority(sorted[i]));
-      SCIPdialogMessage(scip, NULL, SCIPconflicthdlrGetDesc(sorted[i]));
+      SCIPdialogMessage(scip, NULL, "%s", SCIPconflicthdlrGetDesc(sorted[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
    SCIPdialogMessage(scip, NULL, "\n");
@@ -323,7 +323,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayConshdlrs)
          SCIPconshdlrGetSepaFreq(conshdlrs[i]),
          SCIPconshdlrGetPropFreq(conshdlrs[i]),
          SCIPconshdlrGetEagerFreq(conshdlrs[i]));
-      SCIPdialogMessage(scip, NULL, SCIPconshdlrGetDesc(conshdlrs[i]));
+      SCIPdialogMessage(scip, NULL, "%s", SCIPconshdlrGetDesc(conshdlrs[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
    SCIPdialogMessage(scip, NULL, "\n");
@@ -375,7 +375,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayDisplaycols)
          SCIPdialogMessage(scip, NULL, "%6s  ", "???");
          break;
       }
-      SCIPdialogMessage(scip, NULL, SCIPdispGetDesc(disps[i]));
+      SCIPdialogMessage(scip, NULL, "%s", SCIPdispGetDesc(disps[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
    SCIPdialogMessage(scip, NULL, "\n");
@@ -410,7 +410,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics)
       SCIPdialogMessage(scip, NULL, "%8d ", SCIPheurGetPriority(heurs[i]));
       SCIPdialogMessage(scip, NULL, "%4d ", SCIPheurGetFreq(heurs[i]));
       SCIPdialogMessage(scip, NULL, "%3d  ", SCIPheurGetFreqofs(heurs[i]));
-      SCIPdialogMessage(scip, NULL, SCIPheurGetDesc(heurs[i]));
+      SCIPdialogMessage(scip, NULL, "%s", SCIPheurGetDesc(heurs[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
    SCIPdialogMessage(scip, NULL, "\n");
@@ -457,7 +457,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayNodeselectors)
          SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
       SCIPdialogMessage(scip, NULL, "%12d ", SCIPnodeselGetStdPriority(nodesels[i]));
       SCIPdialogMessage(scip, NULL, "%12d  ", SCIPnodeselGetMemsavePriority(nodesels[i]));
-      SCIPdialogMessage(scip, NULL, SCIPnodeselGetDesc(nodesels[i]));
+      SCIPdialogMessage(scip, NULL, "%s", SCIPnodeselGetDesc(nodesels[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
    SCIPdialogMessage(scip, NULL, "\n");
@@ -490,7 +490,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPresolvers)
          SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
       SCIPdialogMessage(scip, NULL, "%8d%c ", SCIPpresolGetPriority(presols[i]),
          SCIPpresolIsDelayed(presols[i]) ? 'd' : ' ');
-      SCIPdialogMessage(scip, NULL, SCIPpresolGetDesc(presols[i]));
+      SCIPdialogMessage(scip, NULL, "%s", SCIPpresolGetDesc(presols[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
    SCIPdialogMessage(scip, NULL, "\n");
@@ -537,7 +537,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPropagators)
          SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
       SCIPdialogMessage(scip, NULL, "%8d%c ", SCIPpropGetPriority(props[i]), SCIPpropIsDelayed(props[i]) ? 'd' : ' ');
       SCIPdialogMessage(scip, NULL, "%4d  ", SCIPpropGetFreq(props[i]));
-      SCIPdialogMessage(scip, NULL, SCIPpropGetDesc(props[i]));
+      SCIPdialogMessage(scip, NULL, "%s", SCIPpropGetDesc(props[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
    SCIPdialogMessage(scip, NULL, "\n");
@@ -569,7 +569,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayReaders)
       if( strlen(SCIPreaderGetName(readers[i])) > 20 )
          SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
       SCIPdialogMessage(scip, NULL, "%9s  ", SCIPreaderGetExtension(readers[i]));
-      SCIPdialogMessage(scip, NULL, SCIPreaderGetDesc(readers[i]));
+      SCIPdialogMessage(scip, NULL, "%s", SCIPreaderGetDesc(readers[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
    SCIPdialogMessage(scip, NULL, "\n");
@@ -603,7 +603,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySeparators)
       SCIPdialogMessage(scip, NULL, "%8d%c ", SCIPsepaGetPriority(sepas[i]), SCIPsepaIsDelayed(sepas[i]) ? 'd' : ' ');
       SCIPdialogMessage(scip, NULL, "%4d ", SCIPsepaGetFreq(sepas[i]));
       SCIPdialogMessage(scip, NULL, "%6.2f  ", SCIPsepaGetMaxbounddist(sepas[i]));
-      SCIPdialogMessage(scip, NULL, SCIPsepaGetDesc(sepas[i]));
+      SCIPdialogMessage(scip, NULL, "%s", SCIPsepaGetDesc(sepas[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
    SCIPdialogMessage(scip, NULL, "\n");
@@ -1254,7 +1254,7 @@ SCIP_DECL_DIALOGDESC(SCIPdialogDescSetParam)
    valuestr[SCIP_MAXSTRLEN-1] = '\0';
 
    /* display parameter's description */
-   SCIPdialogMessage(scip, NULL, SCIPparamGetDesc(param));
+   SCIPdialogMessage(scip, NULL, "%s", SCIPparamGetDesc(param));
 
    /* display parameter's current value */
    SCIPdialogMessage(scip, NULL, " [%s]", valuestr);

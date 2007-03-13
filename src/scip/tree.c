@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.193 2007/01/26 14:42:46 bzfberth Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.194 2007/03/13 18:33:29 bzfberth Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1200,7 +1200,7 @@ SCIP_RETCODE nodeRepropagate(
       || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_FORK
       || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_SUBROOT);
    assert(node->active);
-   assert(node->reprop || (node != NULL && node->repropsubtreemark != node->parent->repropsubtreemark));
+   assert(node->reprop || node->repropsubtreemark != node->parent->repropsubtreemark);
    assert(stat != NULL);
    assert(tree != NULL);
    assert(SCIPeventqueueIsDelayed(eventqueue));
@@ -2269,7 +2269,6 @@ void treeFindSwitchForks(
       if( subroot == NULL && SCIPnodeGetType(fork) == SCIP_NODETYPE_SUBROOT )
          subroot = fork;
    }
-   assert(fork != NULL);
    assert(lpfork == NULL || !lpfork->active || lpfork == fork);
    assert(lpstatefork == NULL || !lpstatefork->active || lpstatefork == fork);
    assert(subroot == NULL || !subroot->active || subroot == fork);
@@ -2932,8 +2931,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
    for( d = lpstateforkdepth; d < (int)(tree->focusnode->depth) && lp->primalfeasible; ++d )
    {
       assert(d < tree->pathlen);
-      lp->primalfeasible = lp->primalfeasible
-         && (tree->path[d]->domchg == NULL || tree->path[d]->domchg->domchgbound.nboundchgs == 0);
+      lp->primalfeasible = (tree->path[d]->domchg == NULL || tree->path[d]->domchg->domchgbound.nboundchgs == 0);
    }
 
    SCIPdebugMessage("-> primalfeasible=%d, dualfeasible=%d\n", lp->primalfeasible, lp->dualfeasible);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.47 2006/09/17 01:58:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.48 2007/03/13 18:33:29 bzfberth Exp $"
 
 /**@file   nodesel_bfs.c
  * @brief  node selector for best first search
@@ -151,31 +151,34 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
    else
    {
       SCIP_NODE* node;
-      SCIP_Real lowerbound;
-      SCIP_Real cutoffbound;
       SCIP_Real maxbound;
-
-      /* get global lower and cutoff bound */
-      lowerbound = SCIPgetLowerbound(scip);
-      cutoffbound = SCIPgetCutoffbound(scip);
-
-      /* if we didn't find a solution yet, the cutoff bound is usually very bad:
-       * use only 20% of the gap as cutoff bound
-       */
-      if( SCIPgetNSolsFound(scip) == 0 )
-         cutoffbound = lowerbound + 0.2 * (cutoffbound - lowerbound);
          
       /* check, if plunging is forced at the current depth */
       if( plungedepth < minplungedepth )
+      {
          maxbound = SCIPinfinity(scip);
+         SCIPdebugMessage("plungedepth: [%d,%d], cur: %d => maxbound: infinity\n",
+            minplungedepth, maxplungedepth, plungedepth);
+      }
       else
       {
+         SCIP_Real lowerbound;
+         SCIP_Real cutoffbound;
+         /* get global lower and cutoff bound */
+         lowerbound = SCIPgetLowerbound(scip);
+         cutoffbound = SCIPgetCutoffbound(scip);
+         
+         /* if we didn't find a solution yet, the cutoff bound is usually very bad:
+          * use only 20% of the gap as cutoff bound
+          */
+         if( SCIPgetNSolsFound(scip) == 0 )
+            cutoffbound = lowerbound + 0.2 * (cutoffbound - lowerbound);
          /* calculate maximal plunging bound */
          maxbound = lowerbound + maxplungequot * (cutoffbound - lowerbound);
-      }
 
-      SCIPdebugMessage("plungedepth: [%d,%d], cur: %d, bounds: [%g,%g], maxbound: %g\n",
-         minplungedepth, maxplungedepth, plungedepth, lowerbound, cutoffbound, maxbound);
+         SCIPdebugMessage("plungedepth: [%d,%d], cur: %d, bounds: [%g,%g], maxbound: %g\n",
+            minplungedepth, maxplungedepth, plungedepth, lowerbound, cutoffbound, maxbound);         
+      }
 
       /* we want to plunge again: prefer children over siblings, and siblings over leaves,
        * but only select a child or sibling, if its dual bound is small enough;

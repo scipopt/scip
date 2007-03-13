@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.52 2006/01/03 12:22:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.53 2007/03/13 18:33:29 bzfberth Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -650,7 +650,6 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    )
 {
    SCIP_NODE* node;
-   int nodedepth;
    int i;
 
    assert(sepastore != NULL);
@@ -666,7 +665,6 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
 
    node = SCIPtreeGetCurrentNode(tree);
    assert(node != NULL);
-   nodedepth = SCIPnodeGetDepth(node);
 
    /* apply cuts */
    for( i = 0; i < sepastore->ncuts && !(*cutoff); ++i )
@@ -691,6 +689,9 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
          }
          else
          {
+            int nodedepth;
+            nodedepth = SCIPnodeGetDepth(node);
+
             /* add cut to the LP and capture it */
             SCIP_CALL( SCIPlpAddRow(lp, set, cut, nodedepth) );
             if( !sepastore->initiallp )

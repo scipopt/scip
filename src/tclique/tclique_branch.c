@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.c,v 1.11 2006/12/07 19:35:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_branch.c,v 1.12 2007/03/13 18:33:29 bzfberth Exp $"
 
 /**@file   tclique_branch.c
  * @brief  branch and bound part of algorithm for maximum cliques
@@ -452,6 +452,7 @@ void newSolution(
    assert(maxcliqueweight != NULL);
    assert(curcliqueweight > *maxcliqueweight);
    assert(stopsolving != NULL);
+   assert(newsol == NULL || cliquehash != NULL);
 
    acceptsol = TRUE;
    *stopsolving = FALSE;
@@ -460,8 +461,6 @@ void newSolution(
 
    if( newsol != NULL )
    {
-      assert(cliquehash != NULL);
-
       /* check whether the clique is already stored in the table */
       if( cliquehash->ncliques > 0 )
       {
@@ -479,8 +478,6 @@ void newSolution(
 
       if( newsol != NULL )
       {
-         assert(cliquehash != NULL);
-
          /* call user callback method */
          newsol(tcliquedata, curcliquenodes, ncurcliquenodes, curcliqueweight, maxcliqueweight, &acceptsol, stopsolving);
 

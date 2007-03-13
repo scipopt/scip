@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.36 2007/03/07 16:07:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.37 2007/03/13 18:33:28 bzfberth Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -938,7 +938,7 @@ SCIP_RETCODE SCIPdialogDisplayMenuEntry(
       SCIP_CALL( dialog->dialogdesc(scip, dialog) );
    }
    else
-      SCIPmessagePrintDialog(dialog->desc);
+      SCIPmessagePrintDialog("%s",dialog->desc);
    SCIPmessagePrintDialog("\n");
 
    return SCIP_OKAY;

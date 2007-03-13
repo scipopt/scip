@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.72 2006/09/17 01:58:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.73 2007/03/13 18:33:27 bzfberth Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -566,7 +566,6 @@ void branchcandRemovePseudoCand(
    SCIP_VAR*             var                 /**< variable to remove */
    )
 {
-   SCIP_VARTYPE vartype;
    int branchpriority;
    int freepos;
 
@@ -576,11 +575,10 @@ void branchcandRemovePseudoCand(
    assert(branchcand->pseudocands[var->pseudocandindex] == var);
    assert(branchcand->pseudocands[branchcand->npseudocands-1] != NULL);
 
-   vartype = SCIPvarGetType(var);
    branchpriority = SCIPvarGetBranchPriority(var);
 
    SCIPdebugMessage("removing pseudo candidate <%s> of type %d and priority %d at %d from candidate set (maxprio: %d)\n",
-      SCIPvarGetName(var), vartype, branchpriority, var->pseudocandindex, branchcand->pseudomaxpriority);
+      SCIPvarGetName(var), SCIPvarGetType(var), branchpriority, var->pseudocandindex, branchcand->pseudomaxpriority);
 
    /* delete the variable from pseudocands, making sure, that the highest priority candidates are at the front
     * and ordered binaries, integers, implicit integers
@@ -592,7 +590,7 @@ void branchcandRemovePseudoCand(
    if( freepos < branchcand->npriopseudobins )
    {
       /* a binary candidate of maximal priority was removed */
-      assert(vartype == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
       assert(branchpriority == branchcand->pseudomaxpriority);
       if( freepos != branchcand->npriopseudobins - 1 )
       {
@@ -606,7 +604,7 @@ void branchcandRemovePseudoCand(
    if( freepos < branchcand->npriopseudobins + branchcand->npriopseudoints )
    {
       /* a binary or integer candidate of maximal priority was removed */
-      assert(vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER);
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
       assert(branchpriority == branchcand->pseudomaxpriority);
       if( freepos != branchcand->npriopseudobins + branchcand->npriopseudoints - 1 )
       {

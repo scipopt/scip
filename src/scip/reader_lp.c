@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.22 2007/01/25 18:27:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.23 2007/03/13 18:33:29 bzfberth Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -39,8 +39,6 @@
 #define READER_NAME             "lpreader"
 #define READER_DESC             "file reader for MIPs in ILOG's LP file format"
 #define READER_EXTENSION        "lp"
-
-
 
 
 /*
@@ -795,8 +793,8 @@ SCIP_RETCODE readCoefficients(
          if( strcmp(lpinput->token, ":") == 0 )
          {
             /* the second token was a colon: the first token is the line name */
-            strncpy(name, lpinput->tokenbuf, LP_MAX_LINELEN);
-            name[LP_MAX_LINELEN-1] = '\0';
+            strncpy(name, lpinput->tokenbuf, SCIP_MAXSTRLEN);
+            name[SCIP_MAXSTRLEN-1] = '\0';
             SCIPdebugMessage("(line %d) read constraint name: '%s'\n", lpinput->linenumber, name);
          }
          else

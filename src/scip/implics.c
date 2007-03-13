@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.21 2006/12/01 11:45:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.22 2007/03/13 18:33:28 bzfberth Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -391,9 +391,9 @@ SCIP_DECL_SORTPTRCOMP(compVars)
    }
    else
    {
-      if( var1type == SCIP_VARTYPE_BINARY && var2type != SCIP_VARTYPE_BINARY )
+      if( var1type == SCIP_VARTYPE_BINARY )
          return -1;
-      if( var1type != SCIP_VARTYPE_BINARY && var2type == SCIP_VARTYPE_BINARY )
+      if( var2type == SCIP_VARTYPE_BINARY )
          return +1;
       else if( var1idx < var2idx )
          return -1;
@@ -401,7 +401,7 @@ SCIP_DECL_SORTPTRCOMP(compVars)
          return +1;
       else
       {
-         assert(var1 == var2);
+         SCIPABORT();
          return 0;
       }
    }

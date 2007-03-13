@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.230 2007/02/01 13:58:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.231 2007/03/13 18:33:28 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2227,7 +2227,6 @@ SCIP_RETCODE delCoefPos(
    SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
    SCIP_Real val;
-   SCIP_Bool transformed;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -2237,14 +2236,11 @@ SCIP_RETCODE delCoefPos(
    val = consdata->vals[pos];
    assert(var != NULL);
 
-   /* are we in the transformed problem? */
-   transformed = SCIPconsIsTransformed(cons);
-
    /* remove rounding locks for deleted variable */
    SCIP_CALL( unlockRounding(scip, cons, var, val) );
 
    /* if we are in transformed problem, delete the event data of the variable */
-   if( transformed )
+   if( SCIPconsIsTransformed(cons) )
    {
       SCIP_CONSHDLR* conshdlr;
       SCIP_CONSHDLRDATA* conshdlrdata;
@@ -3961,9 +3957,8 @@ SCIP_RETCODE tightenSides(
       integral = TRUE;
       for( i = 0; i < consdata->nvars && integral; ++i )
       {
-         integral = integral
-            && SCIPisIntegral(scip, consdata->vals[i])
-            && (SCIPvarGetType(consdata->vars[i]) != SCIP_VARTYPE_CONTINUOUS);
+         integral = SCIPisIntegral(scip, consdata->vals[i])
+                    && (SCIPvarGetType(consdata->vars[i]) != SCIP_VARTYPE_CONTINUOUS);
       }
       if( integral )
       {

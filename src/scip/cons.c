@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.153 2007/01/15 20:11:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.154 2007/03/13 18:33:28 bzfberth Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -2318,10 +2318,10 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
+   assert(stat != NULL);
    assert(conshdlr->lastsepalpcount != stat->lpcount
       || (0 <= conshdlr->lastnusefulsepaconss && conshdlr->lastnusefulsepaconss <= conshdlr->nusefulsepaconss));
    assert(set != NULL);
-   assert(stat != NULL);
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
@@ -2586,12 +2586,12 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
+   assert(stat != NULL);
    assert(conshdlr->lastenfolplpcount != stat->lpcount
       || conshdlr->lastenfolpdomchgcount != stat->domchgcount
       || conshdlr->lastenfolpnode != stat->nnodes
       || (0 <= conshdlr->lastnusefulenfoconss && conshdlr->lastnusefulenfoconss <= conshdlr->nusefulenfoconss));
    assert(set != NULL);
-   assert(stat != NULL);
    assert(tree != NULL);
    assert(tree->nchildren == 0);
    assert(result != NULL);
@@ -2731,11 +2731,11 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
+   assert(stat != NULL);
    assert(conshdlr->lastenfopsdomchgcount != stat->domchgcount
       || conshdlr->lastenfopsnode != stat->nnodes
       || (0 <= conshdlr->lastnusefulenfoconss && conshdlr->lastnusefulenfoconss <= conshdlr->nusefulenfoconss));
    assert(set != NULL);
-   assert(stat != NULL);
    assert(tree != NULL);
    assert(tree->nchildren == 0);
    assert(result != NULL);
@@ -2924,10 +2924,10 @@ SCIP_RETCODE SCIPconshdlrPropagate(
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
+   assert(stat != NULL);
    assert(conshdlr->lastpropdomchgcount != stat->domchgcount
       || (0 <= conshdlr->lastnusefulpropconss && conshdlr->lastnusefulpropconss <= conshdlr->nusefulpropconss));
    assert(set != NULL);
-   assert(stat != NULL);
    assert(depth >= 0);
    assert(result != NULL);
 

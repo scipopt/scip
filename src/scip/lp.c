@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.235 2007/02/28 16:16:56 bzfberth Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.236 2007/03/13 18:33:28 bzfberth Exp $"
 /**@file   lp.c
  * @brief  LP management methods and datastructures
  * @author Tobias Achterberg
@@ -6900,12 +6900,12 @@ void cleanupMIRRow(
          if( mircoef[v] > 0.0 )
          {
             bd = cutislocal ? SCIPvarGetLbLocal(prob->vars[v]) : SCIPvarGetLbGlobal(prob->vars[v]);
-            rhsinf = rhsinf || SCIPsetIsInfinity(set, -bd);
+            rhsinf = SCIPsetIsInfinity(set, -bd);
          }
          else
          {
             bd = cutislocal ? SCIPvarGetUbLocal(prob->vars[v]) : SCIPvarGetUbGlobal(prob->vars[v]);
-            rhsinf = rhsinf || SCIPsetIsInfinity(set, bd);
+            rhsinf = SCIPsetIsInfinity(set, bd);
          }
          *mirrhs -= bd * mircoef[v];
          mircoef[v] = 0.0;
@@ -8174,13 +8174,11 @@ SCIP_RETCODE SCIPlpCalcMIR(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &varsign, prob->nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &boundtype, prob->nvars) );
 
-   *cutislocal = FALSE;
-
    /* calculate the row summation */
    sumMIRRow(set, prob, lp, weights, scale, allowlocal, 
       maxweightrange, mircoef, &rhs, slacksign, &emptyrow, &localrowsused);
    assert(allowlocal || !localrowsused);
-   *cutislocal = *cutislocal || localrowsused;
+   *cutislocal = localrowsused;
    if( emptyrow )
       goto TERMINATE;
    SCIPdebug(printMIR(prob, mircoef, rhs));
@@ -11515,12 +11513,12 @@ SCIP_RETCODE lpDelColset(
    for( c = 0; c < ncols; ++c )
    {
       col = lp->cols[c];
+      assert(col != NULL);
       assert(col == lp->lpicols[c]);
       assert(coldstat[c] <= c);
       col->lppos = coldstat[c];
       if( coldstat[c] == -1 )
       {
-         assert(col != NULL);
          assert(col->removable);
 
          /* mark column to be deleted from the LPI and update column arrays of all linked rows */

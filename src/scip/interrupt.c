@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: interrupt.c,v 1.22 2006/01/03 12:22:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: interrupt.c,v 1.23 2007/03/13 18:33:28 bzfberth Exp $"
 
 /**@file   interrupt.c
  * @brief  methods and datastructures for catching the user CTRL-C interrupt
@@ -132,18 +132,15 @@ void SCIPinterruptRelease(
 {
    assert(interrupt != NULL);
    assert(interrupt->nuses >= 1);
-
-   if( interrupt->nuses > 0 )
+   
+   interrupt->nuses--;
+   if( interrupt->nuses == 0 )
    {
-      interrupt->nuses--;
-      if( interrupt->nuses == 0 )
-      {
 #ifdef NO_SIGACTION
-         (void)signal(SIGINT, interrupt->oldsighdlr);
+      (void)signal(SIGINT, interrupt->oldsighdlr);
 #else
-         (void)sigaction(SIGINT, &interrupt->oldsigaction, NULL);
+      (void)sigaction(SIGINT, &interrupt->oldsigaction, NULL);
 #endif
-      }
    }
 }
 

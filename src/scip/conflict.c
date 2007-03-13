@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.128 2006/08/31 08:27:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.129 2007/03/13 18:33:27 bzfberth Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -4092,7 +4092,6 @@ SCIP_RETCODE conflictAnalyzeLP(
    int* ubchginfoposs;
    int nvars;
    int v;
-   int currentdepth;
    int* bdchginds;
    SCIP_Real* bdchgoldlbs;
    SCIP_Real* bdchgoldubs;
@@ -4209,11 +4208,9 @@ SCIP_RETCODE conflictAnalyzeLP(
          SCIPdebugMessage(" -> LP exceeds the cutoff bound: obj=%g, cutoff=%g\n", objval, lp->lpiuobjlim);
       }
    }
-
-   currentdepth = SCIPtreeGetCurrentDepth(tree);
-
+   
    SCIPdebugMessage("analyzing conflict on infeasible LP (infeasible: %d, objlimexc: %d, optimal:%d) in depth %d (diving: %d)\n",
-      SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsObjlimExc(lpi), SCIPlpiIsOptimal(lpi), currentdepth, diving);
+      SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsObjlimExc(lpi), SCIPlpiIsOptimal(lpi), SCIPtreeGetCurrentDepth(tree), diving);
 #ifdef SCIP_DEBUG
    {
       SCIP_Real uobjlim;
@@ -4306,6 +4303,8 @@ SCIP_RETCODE conflictAnalyzeLP(
    /* undo as many bound changes as possible with the current LP solution */
    if( valid )
    {
+      int currentdepth;
+      currentdepth = SCIPtreeGetCurrentDepth(tree);
       if( SCIPlpiIsPrimalInfeasible(lpi) )
       {
          SCIP_CALL( undoBdchgsDualfarkas(set, prob, lp, currentdepth, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
@@ -4449,6 +4448,8 @@ SCIP_RETCODE conflictAnalyzeLP(
 
          if( valid )
          {
+            int currentdepth;
+            currentdepth = SCIPtreeGetCurrentDepth(tree);            
             /* undo additional bound changes */
             if( SCIPlpiIsPrimalInfeasible(lpi) )
             {

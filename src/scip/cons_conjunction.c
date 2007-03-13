@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.27 2006/06/07 11:47:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.28 2007/03/13 18:33:28 bzfberth Exp $"
 
 /**@file   cons_conjunction.c
  * @brief  constraint handler for conjunction constraints
@@ -297,11 +297,12 @@ SCIP_DECL_CONSTRANS(consTransConjunction)
    SCIP_CONSDATA* targetdata;
    int c;
 
+   /* create constraint data for target constraint */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &targetdata) );
+
    /* get constraint data of source constraint */
    sourcedata = SCIPconsGetData(sourcecons);
 
-   /* create constraint data for target constraint */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &targetdata) );
    if( sourcedata->nconss > 0 )
    {
       targetdata->consssize = sourcedata->nconss;

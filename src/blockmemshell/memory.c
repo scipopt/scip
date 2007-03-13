@@ -14,7 +14,7 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.6 2006/08/08 15:17:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.7 2007/03/13 18:33:27 bzfberth Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -145,8 +145,8 @@ void removeMemlistEntry(
    int                   line                /**< line number in source file where the deallocation was performed */
    )
 {
-   MEMLIST* list = memlist;
-   MEMLIST** listptr = &memlist;
+   MEMLIST* list;
+   MEMLIST** listptr;
 
    assert(ptr != NULL);
 
