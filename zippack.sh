@@ -34,4 +34,4 @@ rm $NAME
 echo "check version numbers in src/scip/def.h, doc/xternal.c, Makefile and zippack.sh ($VERSION):"
 grep "VERSION" src/scip/def.h
 grep "@version" doc/xternal.c
-grep "VERSION" Makefile
+grep "^VERSION" Makefile
