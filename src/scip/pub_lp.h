@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.34 2006/06/07 08:21:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.35 2007/03/15 22:20:31 bzfpfend Exp $"
 
 /**@file   pub_lp.h
  * @brief  public methods for LP management
@@ -397,6 +397,12 @@ SCIP_Bool SCIProwIsRemovable(
    SCIP_ROW*             row                 /**< LP row */
    );
 
+/** returns TRUE iff row is member of the global cut pool */
+extern
+SCIP_Bool SCIProwIsInGlobalCutpool(
+   SCIP_ROW*             row                 /**< LP row */
+   );
+
 /** gets position of row in current LP, or -1 if it is not in LP */
 extern
 int SCIProwGetLPPos(
@@ -432,13 +438,14 @@ SCIP_Bool SCIProwIsInLP(
 #define SCIProwGetRhs(row)              (row)->rhs
 #define SCIProwGetDualsol(row)          ((row)->lppos >= 0 ? (row)->dualsol : 0.0)
 #define SCIProwGetDualfarkas(row)       ((row)->lppos >= 0 ? (row)->dualfarkas : 0.0)
-#define SCIProwGetBasisStatus(row)      ((row)->basisstatus)
+#define SCIProwGetBasisStatus(row)      (row)->basisstatus
 #define SCIProwGetName(row)             (row)->name
 #define SCIProwGetIndex(row)            (row)->index
 #define SCIProwIsIntegral(row)          (row)->integral
 #define SCIProwIsLocal(row)             (row)->local
 #define SCIProwIsModifiable(row)        (row)->modifiable
-#define SCIProwIsRemovable(row)        (row)->removable
+#define SCIProwIsRemovable(row)         (row)->removable
+#define SCIProwIsInGlobalCutpool(row)   (row)->inglobalcutpool
 #define SCIProwGetLPPos(row)            (row)->lppos
 #define SCIProwGetLPDepth(row)          (row)->lpdepth
 #define SCIProwIsInLP(row)              ((row)->lppos >= 0)

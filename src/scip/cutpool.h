@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.h,v 1.25 2006/01/03 12:22:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.h,v 1.26 2007/03/15 22:20:31 bzfpfend Exp $"
 
 /**@file   cutpool.h
  * @brief  internal methods for storing cuts in a cut pool
@@ -45,7 +45,8 @@ extern
 SCIP_RETCODE SCIPcutpoolCreate(
    SCIP_CUTPOOL**        cutpool,            /**< pointer to store cut pool */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   int                   agelimit            /**< maximum age a cut can reach before it is deleted from the pool */
+   int                   agelimit,           /**< maximum age a cut can reach before it is deleted from the pool */
+   SCIP_Bool             globalcutpool       /**< is this the global cut pool of SCIP? */
    );
 
 /** frees cut pool */

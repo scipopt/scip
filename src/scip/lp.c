@@ -14,7 +14,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.236 2007/03/13 18:33:28 bzfberth Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.237 2007/03/15 22:20:31 bzfpfend Exp $"
+
 /**@file   lp.c
  * @brief  LP management methods and datastructures
  * @author Tobias Achterberg
@@ -3684,6 +3685,7 @@ SCIP_RETCODE SCIProwCreate(
    (*row)->modifiable = modifiable;
    (*row)->nlocks = 0;
    (*row)->removable = removable;
+   (*row)->inglobalcutpool = FALSE;
 
    /* calculate row norms and min/maxidx, and check if row is sorted */
    rowCalcNorms(*row, set);
@@ -12862,6 +12864,7 @@ SCIP_RETCODE SCIPlpWriteMipOriginalNames(
 #undef SCIProwIsLocal
 #undef SCIProwIsModifiable
 #undef SCIProwIsRemovable
+#undef SCIProwIsInGlobalCutpool
 #undef SCIProwGetLPPos
 #undef SCIProwGetLPDepth
 #undef SCIProwIsInLP
@@ -13304,6 +13307,16 @@ SCIP_Bool SCIProwIsRemovable(
    assert(row != NULL);
 
    return row->removable;
+}
+
+/** returns TRUE iff row is member of the global cut pool */
+SCIP_Bool SCIProwIsInGlobalCutpool(
+   SCIP_ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->inglobalcutpool;
 }
 
 /** gets position of row in current LP, or -1 if it is not in LP */

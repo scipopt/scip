@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.56 2006/09/17 01:58:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.57 2007/03/15 22:20:32 bzfpfend Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -295,14 +295,14 @@ SCIP_RETCODE SCIPsepaExecLP(
       if( !sepa->delay || execdelayed )
       {
 	 SCIP_Longint oldndomchgs;
-	 int oldncutsstored;
+	 int oldncuts;
 	 int oldnactiveconss;
          int ncutsfound;
 
          SCIPdebugMessage("executing separator <%s> on LP solution\n", sepa->name);
 
 	 oldndomchgs = stat->nboundchgs + stat->nholechgs;
-	 oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
+	 oldncuts = SCIPsepastoreGetNCuts(sepastore);
 	 oldnactiveconss = stat->nactiveconss;
 
          /* reset the statistics for current node */
@@ -330,7 +330,7 @@ SCIP_RETCODE SCIPsepaExecLP(
          }
          if( *result == SCIP_CUTOFF )
             sepa->ncutoffs++;
-         ncutsfound = SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored;
+         ncutsfound = SCIPsepastoreGetNCuts(sepastore) - oldncuts;
          sepa->ncutsfound += ncutsfound;
          sepa->ncutsfoundatnode += ncutsfound;
 	 sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
@@ -391,14 +391,14 @@ SCIP_RETCODE SCIPsepaExecSol(
       if( !sepa->delay || execdelayed )
       {
 	 SCIP_Longint oldndomchgs;
-	 int oldncutsstored;
+	 int oldncuts;
 	 int oldnactiveconss;
          int ncutsfound;
 
          SCIPdebugMessage("executing separator <%s> on solution %p\n", sepa->name, sol);
 
 	 oldndomchgs = stat->nboundchgs + stat->nholechgs;
-	 oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
+	 oldncuts = SCIPsepastoreGetNCuts(sepastore);
 	 oldnactiveconss = stat->nactiveconss;
 
          /* reset the statistics for current node */
@@ -426,7 +426,7 @@ SCIP_RETCODE SCIPsepaExecSol(
          }
          if( *result == SCIP_CUTOFF )
             sepa->ncutoffs++;
-         ncutsfound = SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored;
+         ncutsfound = SCIPsepastoreGetNCuts(sepastore) - oldncuts;
          sepa->ncutsfound += ncutsfound;
          sepa->ncutsfoundatnode += ncutsfound;
 	 sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/

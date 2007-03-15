@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.398 2007/03/13 18:33:29 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.399 2007/03/15 22:20:32 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4466,7 +4466,7 @@ SCIP_RETCODE initSolve(
    /* init solution process data structures */
    SCIP_CALL( SCIPpricestoreCreate(&scip->pricestore) );
    SCIP_CALL( SCIPsepastoreCreate(&scip->sepastore) );
-   SCIP_CALL( SCIPcutpoolCreate(&scip->cutpool, scip->mem->solvemem, scip->set->sepa_cutagelimit) );
+   SCIP_CALL( SCIPcutpoolCreate(&scip->cutpool, scip->mem->solvemem, scip->set->sepa_cutagelimit, TRUE) );
    SCIP_CALL( SCIPtreeCreateRoot(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp) );
 
    /* switch stage to SOLVING */
@@ -9751,7 +9751,7 @@ SCIP_RETCODE SCIPcreateCutpool(
 {
    SCIP_CALL( checkStage(scip, "SCIPcreateCutpool", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPcutpoolCreate(cutpool, scip->mem->solvemem, agelimit) );
+   SCIP_CALL( SCIPcutpoolCreate(cutpool, scip->mem->solvemem, agelimit, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -9807,6 +9807,7 @@ SCIP_RETCODE SCIPdelRowCutpool(
    SCIP_CALL( checkStage(scip, "SCIPdelRowCutpool", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPcutpoolDelRow(cutpool, scip->mem->solvemem, scip->set, scip->stat, scip->lp, row) );
+
    return SCIP_OKAY;
 }
 

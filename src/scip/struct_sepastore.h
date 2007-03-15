@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sepastore.h,v 1.20 2006/01/03 12:22:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_sepastore.h,v 1.21 2007/03/15 22:20:32 bzfpfend Exp $"
 
 /**@file   struct_sepastore.h
  * @brief  datastructures for storing separated cuts
@@ -43,10 +43,9 @@ struct SCIP_SepaStore
    SCIP_Real*            scores;             /**< score for each separated cut: weighted sum of efficacy and orthogonality */
    int                   cutssize;           /**< size of cuts and score arrays */
    int                   ncuts;              /**< number of separated cuts (max. is set->sepa_maxcuts) */
-   int                   nforcedcuts;        /**< number of forced separated cuts */
+   int                   nforcedcuts;        /**< number of forced separated cuts (first positions in cuts array) */
    int                   ncutsfound;         /**< total number of cuts found so far */
    int                   ncutsfoundround;    /**< number of cuts found so far in this separation round */
-   int                   ncutsstored;        /**< total number of cuts stored (and possibly removed again) in this round */
    int                   ncutsapplied;       /**< total number of cuts applied to the LPs */
    SCIP_Bool             initiallp;          /**< is the separation storage currently being filled with the initial LP rows? */
    SCIP_Bool             forcecuts;          /**< should the cuts be used despite the number of cuts parameter limit? */

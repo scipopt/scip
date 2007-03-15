@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cutpool.h,v 1.14 2006/08/08 15:17:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cutpool.h,v 1.15 2007/03/15 22:20:32 bzfpfend Exp $"
 
 /**@file   struct_cutpool.h
  * @brief  datastructures for storing cuts in a cut pool
@@ -59,6 +59,7 @@ struct SCIP_Cutpool
    int                   processedlp;        /**< last LP that has been processed */
    int                   firstunprocessed;   /**< first cut that has not been processed in the last LP */
    int                   maxncuts;           /**< maximal number of cuts stored in the pool at the same time */
+   SCIP_Bool             globalcutpool;      /**< is this the global cut pool of SCIP? */
 };
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.50 2006/08/08 15:17:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.51 2007/03/15 22:20:31 bzfpfend Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -255,7 +255,8 @@ int SCIPcutGetAge(
 SCIP_RETCODE SCIPcutpoolCreate(
    SCIP_CUTPOOL**        cutpool,            /**< pointer to store cut pool */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   int                   agelimit            /**< maximum age a cut can reach before it is deleted from the pool */
+   int                   agelimit,           /**< maximum age a cut can reach before it is deleted from the pool */
+   SCIP_Bool             globalcutpool       /**< is this the global cut pool of SCIP? */
    )
 {
    assert(cutpool != NULL);
@@ -278,6 +279,7 @@ SCIP_RETCODE SCIPcutpoolCreate(
    (*cutpool)->maxncuts = 0;
    (*cutpool)->ncalls = 0;
    (*cutpool)->ncutsfound = 0;
+   (*cutpool)->globalcutpool = globalcutpool;
 
    return SCIP_OKAY;
 }
@@ -323,6 +325,8 @@ SCIP_RETCODE SCIPcutpoolClear(
    /* free cuts */
    for( i = 0; i < cutpool->ncuts; ++i )
    {
+      if( cutpool->globalcutpool )
+         cutpool->cuts[i]->row->inglobalcutpool = FALSE;
       SCIProwUnlock(cutpool->cuts[i]->row);
       SCIP_CALL( cutFree(&cutpool->cuts[i], blkmem, set, lp) );
    }
@@ -392,6 +396,10 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
    /* insert cut in the hash table */
    SCIP_CALL( SCIPhashtableInsert(cutpool->hashtable, (void*)cut) );
 
+   /* if this is the global cut pool of SCIP, mark the row to be member of the pool */
+   if( cutpool->globalcutpool )
+      row->inglobalcutpool = TRUE;
+
    /* lock the row */
    SCIProwLock(row);
 
@@ -428,6 +436,10 @@ SCIP_RETCODE cutpoolDelCut(
     */
    if( SCIProwIsRemovable(cut->row) && cutpool->nremovablecuts > 0 )
       cutpool->nremovablecuts--;
+
+   /* if this is the global cut pool of SCIP, mark the row to not be member anymore */
+   if( cutpool->globalcutpool )
+      cut->row->inglobalcutpool = FALSE;
 
    /* unlock the row */
    SCIProwUnlock(cut->row);
@@ -499,7 +511,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
 {
    SCIP_CUT* cut;
    SCIP_Bool found;
-   int oldncutsstored;
+   int oldncuts;
    int c;
 
    assert(cutpool != NULL);
@@ -530,7 +542,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    SCIPclockStart(cutpool->poolclock, set);
 
    /* remember the current total number of found cuts */
-   oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
+   oldncuts = SCIPsepastoreGetNCuts(sepastore);
 
    /* process all unprocessed cuts in the pool */
    for( c = cutpool->firstunprocessed; c < cutpool->ncuts; ++c )
@@ -556,6 +568,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
                   SCIProwGetName(row), SCIProwGetLPFeasibility(row, stat, lp));
                SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, lp, NULL, row, FALSE, root) );
                found = TRUE;
+               cut->age = 0;
             }
             else
             {
@@ -573,7 +586,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    cutpool->firstunprocessed = cutpool->ncuts;
 
    /* update the number of found cuts */
-   cutpool->ncutsfound += SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored; /*lint !e776*/
+   cutpool->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
 
    /* stop timing */
    SCIPclockStop(cutpool->poolclock, set);

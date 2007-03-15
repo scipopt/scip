@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.244 2007/02/02 12:23:50 bzfpfets Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.245 2007/03/15 22:20:32 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -608,7 +608,7 @@ SCIP_RETCODE initLP(
    {
       SCIP_CALL( SCIPconshdlrInitLP(set->conshdlrs[h], blkmem, set, stat) );
    }
-   SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, tree, lp, branchcand, eventqueue, cutoff) );
+   SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, tree, lp, branchcand, eventqueue, root, cutoff) );
 
    /* inform separation storage, that initial LP setup is now finished */
    SCIPsepastoreEndInitialLP(sepastore);
@@ -881,7 +881,7 @@ SCIP_RETCODE separationRoundLP(
 
    root = (actdepth == 0);
    *delayed = FALSE;
-   *enoughcuts = (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
+   *enoughcuts = (SCIPsepastoreGetNCuts(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
    *lperror = FALSE;
    consadded = FALSE;
 
@@ -907,7 +907,7 @@ SCIP_RETCODE separationRoundLP(
       SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, bounddist, onlydelayed, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
-      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
+      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
       *delayed = *delayed || (result == SCIP_DELAYED);
       if( *cutoff )
       {
@@ -941,7 +941,7 @@ SCIP_RETCODE separationRoundLP(
             &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
-      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
+      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
       *delayed = *delayed || (result == SCIP_DELAYED);
       if( *cutoff )
       {
@@ -979,7 +979,7 @@ SCIP_RETCODE separationRoundLP(
       SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, bounddist, onlydelayed, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
-      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
+      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
       *delayed = *delayed || (result == SCIP_DELAYED);
       if( *cutoff )
       {
@@ -1017,7 +1017,7 @@ SCIP_RETCODE separationRoundLP(
                &result) );
 	 *cutoff = *cutoff || (result == SCIP_CUTOFF);
 	 consadded = consadded || (result == SCIP_CONSADDED);
-	 *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
+	 *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
 	 *delayed = *delayed || (result == SCIP_DELAYED);
          if( *cutoff )
          {
@@ -1093,7 +1093,7 @@ SCIP_RETCODE separationRoundSol(
       SCIP_CALL( SCIPsepaExecSol(set->sepas[i], set, stat, sepastore, sol, actdepth, onlydelayed, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
-      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
+      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
       *delayed = *delayed || (result == SCIP_DELAYED);
       if( *cutoff )
       {
@@ -1118,7 +1118,7 @@ SCIP_RETCODE separationRoundSol(
             &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
-      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
+      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
       *delayed = *delayed || (result == SCIP_DELAYED);
       if( *cutoff )
       {
@@ -1146,7 +1146,7 @@ SCIP_RETCODE separationRoundSol(
       SCIP_CALL( SCIPsepaExecSol(set->sepas[i], set, stat, sepastore, sol, actdepth, onlydelayed, &result) );
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
-      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
+      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
       *delayed = *delayed || (result == SCIP_DELAYED);
       if( *cutoff )
       {
@@ -1175,7 +1175,7 @@ SCIP_RETCODE separationRoundSol(
 					    &result) );
 	 *cutoff = *cutoff || (result == SCIP_CUTOFF);
 	 consadded = consadded || (result == SCIP_CONSADDED);
-	 *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
+	 *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
 	 *delayed = *delayed || (result == SCIP_DELAYED);
          if( *cutoff )
          {
@@ -1566,7 +1566,7 @@ SCIP_RETCODE priceAndCutLoop(
                assert(SCIPsepastoreGetNCuts(sepastore) == 0);
                SCIP_CALL( SCIPcutpoolSeparate(cutpool, blkmem, set, stat, lp, sepastore, root, &result) );
                *cutoff = *cutoff || (result == SCIP_CUTOFF);
-               enoughcuts = enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
+               enoughcuts = enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
                if( *cutoff )
                {
                   SCIPdebugMessage(" -> global cut pool detected cutoff\n");
@@ -1613,7 +1613,8 @@ SCIP_RETCODE priceAndCutLoop(
          else
          {
             /* apply found cuts */
-            SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, tree, lp, branchcand, eventqueue, cutoff) );
+            SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, tree, lp, branchcand, eventqueue, root,
+                  cutoff) );
 
             if( !(*cutoff) )
             {
@@ -2097,6 +2098,7 @@ SCIP_RETCODE applyCuts(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Bool             root,               /**< is this the initial root LP? */
    SCIP_Bool*            cutoff,             /**< pointer to whether the node can be cut off */
    SCIP_Bool*            propagateagain,     /**< pointer to store TRUE, if domain propagation should be applied again */
    SCIP_Bool*            solvelpagain        /**< pointer to store TRUE, if the node's LP has to be solved again */
@@ -2117,7 +2119,7 @@ SCIP_RETCODE applyCuts(
       SCIP_Longint olddomchgcount;
 
       olddomchgcount = stat->domchgcount;
-      SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, tree, lp, branchcand, eventqueue, cutoff) );
+      SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, tree, lp, branchcand, eventqueue, root, cutoff) );
       *propagateagain = *propagateagain || (stat->domchgcount != olddomchgcount);
       *solvelpagain = TRUE;
    }
@@ -2379,7 +2381,7 @@ SCIP_RETCODE solveNode(
          *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);
 
          /* apply found cuts */
-         SCIP_CALL( applyCuts(blkmem, set, stat, tree, lp, sepastore, branchcand, eventqueue,
+         SCIP_CALL( applyCuts(blkmem, set, stat, tree, lp, sepastore, branchcand, eventqueue, (actdepth == 0),
                cutoff, &propagateagain, &solvelpagain) );
 
          /* update lower bound with the pseudo objective value, and cut off node by bounding */
@@ -2458,7 +2460,7 @@ SCIP_RETCODE solveNode(
          *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);
 
          /* apply found cuts */
-         SCIP_CALL( applyCuts(blkmem, set, stat, tree, lp, sepastore, branchcand, eventqueue,
+         SCIP_CALL( applyCuts(blkmem, set, stat, tree, lp, sepastore, branchcand, eventqueue, (actdepth == 0),
                cutoff, &propagateagain, &solvelpagain) );
 
          /* update lower bound with the pseudo objective value, and cut off node by bounding */
@@ -2542,7 +2544,7 @@ SCIP_RETCODE solveNode(
          assert(!solvelpagain || (!branched && !(*cutoff) && *infeasible));
 
          /* apply found cuts */
-         SCIP_CALL( applyCuts(blkmem, set, stat, tree, lp, sepastore, branchcand, eventqueue,
+         SCIP_CALL( applyCuts(blkmem, set, stat, tree, lp, sepastore, branchcand, eventqueue, (actdepth == 0),
                cutoff, &propagateagain, &solvelpagain) );
 
          /* update lower bound with the pseudo objective value, and cut off node by bounding */
@@ -2668,7 +2670,7 @@ SCIP_RETCODE solveNode(
          assert(branched == (tree->nchildren > 0));
 
          /* apply found cuts */
-         SCIP_CALL( applyCuts(blkmem, set, stat, tree, lp, sepastore, branchcand, eventqueue,
+         SCIP_CALL( applyCuts(blkmem, set, stat, tree, lp, sepastore, branchcand, eventqueue, (actdepth == 0),
                cutoff, &propagateagain, &solvelpagain) );
 
          /* update lower bound with the pseudo objective value, and cut off node by bounding */
@@ -2711,7 +2713,7 @@ SCIP_RETCODE solveNode(
          && (stat->nruns == 1 || prob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars));
 
    /* remember root LP solution */
-   if( actdepth == 0 && !(*cutoff) && !(*restart) && !(*unbounded) )
+   if( actdepth == 0 && !(*cutoff) && !(*unbounded) )
    {
       SCIPprobStoreRootSol(prob, set, stat, lp, SCIPtreeHasFocusNodeLP(tree));
    }

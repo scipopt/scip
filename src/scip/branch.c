@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.73 2007/03/13 18:33:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.74 2007/03/15 22:20:30 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -954,13 +954,13 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
       if( SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (cutoffbound - glblowerbound)) )
       {
          SCIP_Longint oldndomchgs;
-         int oldncutsstored;
+         int oldncuts;
          int oldnactiveconss;
 
          SCIPdebugMessage("executing LP branching rule <%s>\n", branchrule->name);
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
-         oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
+         oldncuts = SCIPsepastoreGetNCuts(sepastore);
          oldnactiveconss = stat->nactiveconss;
 
          /* start timing */
@@ -1000,7 +1000,7 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
          {
             assert(tree->nchildren == 0);
             branchrule->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
-            branchrule->ncutsfound += SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored; /*lint !e776*/
+            branchrule->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
             branchrule->nconssfound += stat->nactiveconss - oldnactiveconss; /*lint !e776*/
          }
          else

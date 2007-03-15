@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.h,v 1.28 2006/01/03 12:22:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.h,v 1.29 2007/03/15 22:20:32 bzfpfend Exp $"
 
 /**@file   sepastore.h
  * @brief  internal methods for storing separated cuts
@@ -103,6 +103,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Bool             root,               /**< are we at the root node? */
    SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
    );
 
@@ -136,12 +137,6 @@ int SCIPsepastoreGetNCutsFound(
 /** get number of cuts found so far in current separation round */
 extern
 int SCIPsepastoreGetNCutsFoundRound(
-   SCIP_SEPASTORE*            sepastore                /**< separation storage */
-   );
-
-/** get total number of cuts stored (and possibly removed again) in current separation round */
-extern
-int SCIPsepastoreGetNCutsStored(
    SCIP_SEPASTORE*            sepastore                /**< separation storage */
    );
 

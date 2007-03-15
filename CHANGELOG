@@ -23,6 +23,7 @@ interface:
 - new method SCIPisStopped()
 - SCIPgetVarStrongbranch() now also returns lperror == TRUE if the solving process should be stopped, e.g., because
   of a time limit
+- new method SCIProwIsInGlobalCutpool()
 
 plugins:
 - new improvement heuristic "oneopt"
@@ -60,6 +61,8 @@ features:
 - presolving, cut separation, primal heuristics, and strong branching now better respect time limit
 - time limit is now forwarded to lp solving algorithm
 - added option to write node LP and MIP relaxations to LP file from interactive shell
+- modified cut selection code
+- cut conversion into linear constraints after a restart now works better
 
 fixed bugs:
 - fixed bug with too long variable names
@@ -82,6 +85,7 @@ fixed bugs:
 - fixed bug with uninitialized in check.awk
 - fixed bug with primal heuristics reducing the cutoff bound such that the current node is cut off
 - now it is possible to add original solutions
+- fixed bug that cut age was not reset to zero for violated cuts
 
 
 SCIP version 0.90

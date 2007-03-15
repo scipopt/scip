@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.17 2006/06/07 11:47:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.18 2007/03/15 22:20:31 bzfpfend Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -64,7 +64,7 @@ static SCIP* scip_ = NULL;
 static SCIP_Bool issuedbranchpriowarning_ = FALSE;
 static SCIP_Bool readerror_ = FALSE;
 
-void xlp_alloc(const char* name)
+void xlp_alloc(const char* name, Bool need_startval)
 {
    /* create problem */
    SCIP_CALL_ABORT( SCIPcreateProb(scip_, name, NULL, NULL, NULL, NULL, NULL, NULL) );
@@ -85,7 +85,7 @@ void xlp_scale(void)
    /* nothing to be done here */
 }
 
-void xlp_write(FILE* fp, LpFormat format)
+void xlp_write(FILE* fp, LpFormat format, const char* title)
 {
    /* nothing to be done here */
 }
@@ -238,8 +238,8 @@ Var* xlp_addvar(const char* name, VarClass usevarclass, const Bound* lower, cons
    case VAR_INT:
       vartype = SCIP_VARTYPE_INTEGER;
       break;
-   case VAR_BIN:
-      vartype = SCIP_VARTYPE_BINARY;
+   case VAR_IMP:
+      vartype = SCIP_VARTYPE_IMPLINT;
       break;
    default:
       SCIPwarningMessage("invalid variable class <%d> in ZIMPL callback xlp_addvar()\n", usevarclass);
@@ -341,10 +341,10 @@ VarClass xlp_getclass(const Var* var)
    switch( SCIPvarGetType(scipvar) )
    {
    case SCIP_VARTYPE_BINARY:
-      return VAR_BIN;
    case SCIP_VARTYPE_INTEGER:
       return VAR_INT;
    case SCIP_VARTYPE_IMPLINT:
+      return VAR_IMP;
    case SCIP_VARTYPE_CONTINUOUS:
       return VAR_CON;
    default:
@@ -454,6 +454,10 @@ Bool xlp_hassos(void)
    return TRUE;
 }
 
+Bool xlp_concheck(const Con* con)
+{
+   return TRUE;
+}
 
 
 
