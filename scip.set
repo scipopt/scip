@@ -319,8 +319,8 @@ presolving/abortfac = 0.0001
 presolving/maxrestarts = -1
 
 # fraction of integer variables that were fixed in the root node triggering a restart with preprocessing after root node evaluation
-# [type: real, range: [0,1], default: 0]
-presolving/restartfac = 0
+# [type: real, range: [0,1], default: 0.05]
+presolving/restartfac = 0.05
 
 # fraction of integer variables that were fixed in the root node triggering an immediate restart with preprocessing
 # [type: real, range: [0,1], default: 0.2]
@@ -331,8 +331,8 @@ presolving/immrestartfac = 0.2
 presolving/subrestartfac = 1
 
 # minimal fraction of integer variables removed after restart to allow for an additional restart
-# [type: real, range: [0,1], default: 0.05]
-presolving/restartminred = 0.05
+# [type: real, range: [0,1], default: 0.1]
+presolving/restartminred = 0.1
 
 # maximal number of variables priced in per pricing round
 # [type: int, range: [1,2147483647], default: 100]
@@ -1843,8 +1843,8 @@ heuristics/octane/useavgnbray = TRUE
 heuristics/oneopt/priority = -20000
 
 # frequency for calling primal heuristic <oneopt> (-1: never, 0: only at depth freqofs)
-# [type: int, range: [-1,2147483647], default: -1]
-heuristics/oneopt/freq = -1
+# [type: int, range: [-1,2147483647], default: 1]
+heuristics/oneopt/freq = 1
 
 # frequency offset for calling primal heuristic <oneopt>
 # [type: int, range: [0,2147483647], default: 0]
@@ -1853,6 +1853,10 @@ heuristics/oneopt/freqofs = 0
 # maximal depth level to call primal heuristic <oneopt> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 heuristics/oneopt/maxdepth = -1
+
+# should the objective be weighted with the potential shifting value when sorting the shifting candidates?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/oneopt/weightedobj = TRUE
 
 # priority of heuristic <pscostdiving>
 # [type: int, range: [-536870912,536870911], default: -1002000]

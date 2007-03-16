@@ -56,6 +56,8 @@ parameters:
 - changed default values of "heuristics/*diving/backtrack to TRUE
 - changed default value of "nodeselection/restartdfs/stdpriority" to 10000
 - changed meaning of parameter setting "nodeselection/childsel = l"; old meaning is now called 'r'
+- changed default value of "presolving/restartfac" to 0.05
+- changed default value of "presolving/restartminred" to 0.10
 
 features:
 - presolving, cut separation, primal heuristics, and strong branching now better respect time limit

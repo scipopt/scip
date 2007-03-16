@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.188 2007/01/23 11:34:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.189 2007/03/16 10:27:24 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -188,13 +188,13 @@
                                                  *   in last presolve round */
 #define SCIP_DEFAULT_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds (-1: unlimited) */
 #define SCIP_DEFAULT_PRESOL_MAXRESTARTS      -1 /**< maximal number of restarts (-1: unlimited) */
-#define SCIP_DEFAULT_PRESOL_RESTARTFAC      0.0 /**< fraction of integer variables that were fixed in the root node
+#define SCIP_DEFAULT_PRESOL_RESTARTFAC     0.05 /**< fraction of integer variables that were fixed in the root node
                                                  *   triggering a restart with preprocessing after root node evaluation */
-#define SCIP_DEFAULT_PRESOL_IMMRESTARTFAC   0.2 /**< fraction of integer variables that were fixed in the root node triggereing an
+#define SCIP_DEFAULT_PRESOL_IMMRESTARTFAC  0.20 /**< fraction of integer variables that were fixed in the root node triggereing an
                                                  *   immediate restart with preprcessing */
-#define SCIP_DEFAULT_PRESOL_SUBRESTARTFAC   1.0 /**< fraction of integer variables that were globally fixed during the
+#define SCIP_DEFAULT_PRESOL_SUBRESTARTFAC  1.00 /**< fraction of integer variables that were globally fixed during the
                                                  *   solving process triggering a restart with preprocessing */
-#define SCIP_DEFAULT_PRESOL_RESTARTMINRED   0.05/**< minimal fraction of integer variables removed after restart to allow
+#define SCIP_DEFAULT_PRESOL_RESTARTMINRED  0.10 /**< minimal fraction of integer variables removed after restart to allow
                                                  *   for an additional restart */
 
 
