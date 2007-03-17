@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.231 2007/03/13 18:33:28 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.232 2007/03/17 18:09:11 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2438,8 +2438,8 @@ SCIP_RETCODE scaleCons(
  *      Try to identify a rational representation of the fractional coefficients, and multiply all coefficients
  *      by the smallest common multiple of all denominators to get integral coefficients.
  *      Forbid large denominators due to numerical stability.
- *  - multiplication by greatest common divisor
- *      If all coefficients are integral, multiply them by the greatest common divisor.
+ *  - division by greatest common divisor
+ *      If all coefficients are integral, divide them by the greatest common divisor.
  */
 static
 SCIP_RETCODE normalizeCons(
