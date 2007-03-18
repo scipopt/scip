@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.44 2006/08/24 17:06:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.45 2007/03/18 17:19:12 bzfpfets Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -714,7 +714,10 @@ public:
       FILE*              file                /**< the text file to store the information into */
       )
    {  /*lint --e{715}*/
-      fprintf(file, "constraint handler <%s> doesn't support printing constraints\n", SCIPconshdlrGetName(conshdlr));
+      if ( file == NULL )
+	 fprintf(stdout, "constraint handler <%s> doesn't support printing constraints\n", SCIPconshdlrGetName(conshdlr));
+      else
+	 fprintf(file, "constraint handler <%s> doesn't support printing constraints\n", SCIPconshdlrGetName(conshdlr));
       return SCIP_OKAY;
    }
 };
