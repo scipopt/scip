@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.38 2007/01/26 14:42:46 bzfberth Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.39 2007/03/23 21:49:37 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -243,7 +243,7 @@ SCIP_RETCODE sortVariables(
             + SCIPvarGetNImpls(var, FALSE) + SCIPvarGetNImpls(var, TRUE)
             + 5*(SCIPvarGetNCliques(var, FALSE) + SCIPvarGetNCliques(var, TRUE));
       else
-      scores[i] = -1;
+         scores[i] = -1;
    }
 
    quicksort(scores,vars,0,nvars-1);
