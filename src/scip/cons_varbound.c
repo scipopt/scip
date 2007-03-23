@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.57 2006/11/08 23:48:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.58 2007/03/23 19:45:36 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for variable bound constraints
@@ -1018,7 +1018,7 @@ SCIP_RETCODE tightenCoefs(
          consdata->vbdcoef = consdata->rhs - xub;
          (*nchgcoefs)++;
       }
-      else if( consdata->vbdcoef > 0.0 && SCIPisFeasLT(scip, xlb, consdata->rhs) )
+      else if( consdata->vbdcoef > 0.0 && SCIPisFeasLT(scip, xub, consdata->rhs) )
       {
          /* constraint has positive slack for the non-restricting case y = 0
           * -> modify coefficients such that constraint is tight in the non-restricting case y = 0 and equivalent in the restricting case y = 1
