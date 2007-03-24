@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.40 2007/03/23 21:50:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.41 2007/03/24 13:21:57 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -528,6 +528,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
                       "   (%.1fs) probing cycle finished: starting next cycle\n", SCIPgetSolvingTime(scip));
       presoldata->startidx = 0;
       presoldata->lastsortstartidx = -1;
+      presoldata->nuseless = 0;
+      presoldata->ntotaluseless = 0;
    }
    presoldata->called = TRUE;
 
@@ -536,8 +538,6 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
    {
       SCIP_CALL( sortVariables(scip, presoldata, presoldata->startidx) );
       presoldata->lastsortstartidx = presoldata->startidx;
-      presoldata->nuseless = 0;
-      presoldata->ntotaluseless = 0;
    }
 
    vars = presoldata->sortedvars;
