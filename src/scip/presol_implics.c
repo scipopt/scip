@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_implics.c,v 1.5 2006/04/10 16:15:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_implics.c,v 1.6 2007/03/24 16:20:52 bzfpfend Exp $"
 
 /**@file   presol_implics.c
  * @brief  implics presolver
@@ -75,7 +75,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
    SCIP_Real* aggrconsts;
    int nbdchgs;
    int naggregations;
-   int nvars;
+   int nbinvars;
    int v;
 
    assert(result != NULL);
@@ -93,19 +93,19 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
    aggrconsts = NULL;
    naggregations = 0;
 
-   /* get active problem variables */
+   /* get active binary problem variables */
    vars = SCIPgetVars(scip);
-   nvars = SCIPgetNVars(scip);
+   nbinvars = SCIPgetNBinVars(scip);
 
    /* look for variable implications in x == 0 and x == 1 with the same implied variable:
-    *  x = 0 -> y = 0, and x = 1 -> y = 0: fix y to 0
-    *  x = 0 -> y = 0, and x = 1 -> y = 1: aggregate x == y
-    *  x = 0 -> y = 1, and x = 1 -> y = 0: aggregate x == 1-y
-    *  x = 0 -> y = 1, and x = 1 -> y = 1: fix y to 1
+    *  x = 0 -> y = lb, and x = 1 -> y = lb: fix y to lb
+    *  x = 0 -> y = lb, and x = 1 -> y = ub: aggregate y == lb + (ub-lb)x
+    *  x = 0 -> y = ub, and x = 1 -> y = lb: aggregate y == ub - (ub-lb)x
+    *  x = 0 -> y = ub, and x = 1 -> y = ub: fix y to ub
     * the fixings and aggregations are stored in a buffer and applied afterwards, because fixing and aggregation
     * would modify the vars array and the implication arrays
     */
-   for( v = 0; v < nvars; ++v )
+   for( v = 0; v < nbinvars; ++v )
    {
       SCIP_VAR** implvars[2];
       SCIP_BOUNDTYPE* impltypes[2];
