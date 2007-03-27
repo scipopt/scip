@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.87 2007/02/26 14:36:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.88 2007/03/27 14:41:24 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -39,6 +39,10 @@
 #include "scip/branch.h"
 #include "scip/cons.h"
 
+
+#define OBJSCALE_MAXDNOM          1000000LL  /**< maximal denominator in objective integral scaling */
+#define OBJSCALE_MAXSCALE         1000000.0  /**< maximal scalar to reach objective integrality */
+#define OBJSCALE_MAXFINALSCALE       1000.0  /**< maximal final value to apply as scaling */
 
 
 
@@ -202,6 +206,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->startnconss = 0;
    (*prob)->objsense = SCIP_OBJSENSE_MINIMIZE;
    (*prob)->objoffset = 0.0;
+   (*prob)->objscale = 1.0;
    (*prob)->objlim = SCIP_INVALID;
    (*prob)->objisintegral = FALSE;
    (*prob)->transformed = transformed;
@@ -1066,6 +1071,123 @@ void SCIPprobCheckObjIntegral(
    prob->objisintegral = (v == prob->nvars);
 }
 
+/** if possible, scales objective function such that it is integral with gcd = 1 */
+SCIP_RETCODE SCIPprobScaleObj(
+   SCIP_PROB*            prob,               /**< problem data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   )
+{
+   int v;
+   int nints;
+
+   assert(prob != NULL);
+   assert(set != NULL);
+
+   /* do not change objective if there are pricers involved */
+   if( set->nactivepricers != 0 )
+      return SCIP_OKAY;
+
+   nints = prob->nvars - prob->ncontvars;
+   
+   /* scan through the continuous variables */
+   for( v = nints; v < prob->nvars; ++v )
+   {
+      SCIP_Real obj;
+
+      /* get objective value of variable; it it is non-zero, no scaling can be applied */
+      obj = SCIPvarGetObj(prob->vars[v]);
+      if( !SCIPsetIsZero(set, obj) )
+         break;
+   }
+
+   /* only continue if all continuous variables have obj = 0 */
+   if( v == prob->nvars )
+   {
+      SCIP_Real* objvals;
+      SCIP_Real intscalar;
+      SCIP_Bool success;
+
+      /* get temporary memory */
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &objvals, nints) );
+
+      /* get objective values of integer variables */
+      for( v = 0; v < nints; ++v )
+         objvals[v] = SCIPvarGetObj(prob->vars[v]);
+
+      /* calculate integral scalar */
+      SCIP_CALL( SCIPcalcIntegralScalar(objvals, nints, -SCIPsetEpsilon(set), +SCIPsetEpsilon(set), OBJSCALE_MAXDNOM, OBJSCALE_MAXSCALE,
+         &intscalar, &success) );
+
+      SCIPdebugMessage("integral objective scalar: success=%d, intscalar=%g\n", success, intscalar);
+
+      if( success )
+      {
+         SCIP_Longint gcd;
+
+         assert(intscalar > 0.0);
+
+         /* calculate gcd of resulting integral coefficients */
+         gcd = 0;
+         for( v = 0; v < nints && gcd != 1; ++v )
+         {
+            SCIP_Longint absobj;
+
+            absobj = (SCIP_Longint)(REALABS(objvals[v]) * intscalar + 0.5);
+            if( gcd == 0 )
+               gcd = absobj;
+            else if( absobj > 0 )
+               gcd = SCIPcalcGreComDiv(gcd, absobj);
+         }
+         if( gcd != 0 )
+            intscalar /= gcd;
+         SCIPdebugMessage("integral objective scalar: gcd=%"SCIP_LONGINT_FORMAT", intscalar=%g\n", gcd, intscalar);
+
+         /* only apply scaling if the final scalar is small enough */
+         if( intscalar <= OBJSCALE_MAXFINALSCALE )
+         {
+            /* apply scaling */
+            if( !SCIPsetIsEQ(set, intscalar, 1.0) )
+            {
+               /* calculate scaled objective values */
+               for( v = 0; v < nints; ++v )
+               {
+                  SCIP_Real newobj;
+                  
+                  /* check if new obj is really integral */
+                  newobj = intscalar * SCIPvarGetObj(prob->vars[v]);
+                  if( !SCIPsetIsFeasIntegral(set, newobj) )
+                     break;
+                  objvals[v] = SCIPsetFeasFloor(set, newobj);
+               }
+
+               /* change the variables' objective values and adjust objscale and objoffset */
+               if( v == nints )
+               {
+                  for( v = 0; v < nints; ++v )
+                  {
+                     SCIPdebugMessage(" -> var <%s>: newobj = %.6f\n", SCIPvarGetName(prob->vars[v]), objvals[v]);
+                     SCIP_CALL( SCIPvarChgObj(prob->vars[v], blkmem, set, primal, lp, eventqueue, objvals[v]) );
+                  }
+                  prob->objoffset *= intscalar;
+                  prob->objscale /= intscalar;
+                  prob->objisintegral = TRUE;
+                  SCIPdebugMessage("integral objective scalar: objscale=%g\n", prob->objscale);
+               }
+            }
+         }
+      }
+
+      /* free temporary memory */
+      SCIPsetFreeBufferArray(set, &objvals);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** remembers the current solution as root solution in the problem variables */
 void SCIPprobStoreRootSol(
    SCIP_PROB*            prob,               /**< problem data */
@@ -1204,13 +1326,14 @@ SCIP_Real SCIPprobExternObjval(
 {
    assert(prob != NULL);
    assert(prob->transformed);
+   assert(prob->objscale > 0.0);
 
    if( SCIPsetIsInfinity(set, objval) )
       return (SCIP_Real)prob->objsense * SCIPsetInfinity(set);
    else if( SCIPsetIsInfinity(set, -objval) )
       return -(SCIP_Real)prob->objsense * SCIPsetInfinity(set);
    else
-      return (SCIP_Real)prob->objsense * (objval + prob->objoffset);
+      return (SCIP_Real)prob->objsense * prob->objscale * (objval + prob->objoffset);
 }
 
 /** returns the internal value of the given external objective value */
@@ -1222,13 +1345,14 @@ SCIP_Real SCIPprobInternObjval(
 {
    assert(prob != NULL);
    assert(prob->transformed);
+   assert(prob->objscale > 0.0);
 
    if( SCIPsetIsInfinity(set, objval) )
       return (SCIP_Real)prob->objsense * SCIPsetInfinity(set);
    else if( SCIPsetIsInfinity(set, -objval) )
       return -(SCIP_Real)prob->objsense * SCIPsetInfinity(set);
    else
-      return (SCIP_Real)prob->objsense * objval - prob->objoffset;
+      return (SCIP_Real)prob->objsense * objval/prob->objscale - prob->objoffset;
 }
 
 /** gets limit on objective function in external space */
@@ -1345,6 +1469,10 @@ SCIP_RETCODE SCIPprobPrint(
    if( !SCIPsetIsZero(set, prob->objoffset) )
    {
       SCIPmessageFPrintInfo(file, "  Offset           : %+g\n", prob->objoffset);
+   }
+   if( !SCIPsetIsEQ(set, prob->objscale, 1.0) )
+   {
+      SCIPmessageFPrintInfo(file, "  Scale            : %g\n", prob->objscale);
    }
 
    if( prob->nvars > 0 )

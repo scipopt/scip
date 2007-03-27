@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.5 2007/03/15 15:27:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.6 2007/03/27 14:41:24 bzfpfend Exp $"
 
 /**@file   heur_oneopt.c
  * @brief  oneopt primal heuristic
@@ -100,7 +100,7 @@ SCIP_Real calcShiftVal(
    
    
    SCIPdebugMessage("Try to shift %s variable <%s> with\n", shiftdown ? "down" : "up", SCIPvarGetName(var) );
-   SCIPdebugMessage("    lb:<%g> <= val:<%g> <= ub:<%g> and obj:<%g> by at most: <%g>\n",lb,solval,ub,obj,shiftval);   
+   SCIPdebugMessage("    lb:<%g> <= val:<%g> <= ub:<%g> and obj:<%g> by at most: <%g>\n", lb, solval, ub, obj, shiftval);   
 
    /* get data of LP column */
    col = SCIPvarGetCol(var);
@@ -127,16 +127,16 @@ SCIP_Real calcShiftVal(
          assert(SCIProwIsInLP(row));
          
          if( shiftdown == (colvals[i] > 0) )  
-            shiftvalrow = SCIPfeasFloor( scip, (activities[rowpos] - SCIProwGetLhs(row)) / ABS(colvals[i]) );
+            shiftvalrow = SCIPfeasFloor(scip, (activities[rowpos] - SCIProwGetLhs(row)) / ABS(colvals[i]));
          else
-            shiftvalrow = SCIPfeasFloor( scip, (SCIProwGetRhs(row) -  activities[rowpos]) / ABS(colvals[i]) );
+            shiftvalrow = SCIPfeasFloor(scip, (SCIProwGetRhs(row) -  activities[rowpos]) / ABS(colvals[i]));
 #ifdef SCIP_DEBUG
          if( shiftvalrow < shiftval )
          {
             SCIPdebugMessage(" -> The shift value had to be reduced to <%g>, because of row <%s>.\n",
-               shiftvalrow,SCIProwGetName(row));
+               shiftvalrow, SCIProwGetName(row));
             SCIPdebugMessage("    lhs:<%g> <= act:<%g> <= rhs:<%g>, colval:<%g>\n",
-               SCIProwGetLhs(row),activities[rowpos],SCIProwGetRhs(row),colvals[i]);
+               SCIProwGetLhs(row), activities[rowpos], SCIProwGetRhs(row), colvals[i]);
          }
 #endif
          shiftval = MIN(shiftval, shiftvalrow);
@@ -345,10 +345,10 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       if( !SCIProwIsLocal(row) )
       {
          activities[i] = SCIPgetRowSolActivity(scip, row, bestsol);
-         assert(SCIPisFeasGE(scip, activities[i], SCIProwGetLhs(row)));
-         assert(SCIPisFeasLE(scip, activities[i], SCIProwGetRhs(row)));
+         assert(SCIPisFeasGE(scip, activities[i]/100.0, SCIProwGetLhs(row)/100.0));
+         assert(SCIPisFeasLE(scip, activities[i]/100.0, SCIProwGetRhs(row)/100.0));
       }
-      SCIPdebugMessage("Row <%s> has activity %g\n",SCIProwGetName(row),activities[i]);
+      SCIPdebugMessage("Row <%s> has activity %g\n", SCIProwGetName(row), activities[i]);
    }
 
    SCIPdebugMessage("Starting 1-opt heuristic\n");   
@@ -392,7 +392,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       {         
          var = shiftcands[0];
          assert(var != NULL);
-         solval = SCIPgetSolVal(scip,bestsol,var);
+         solval = SCIPgetSolVal(scip, bestsol, var);
          shiftval = shiftvals[0];
          assert(!SCIPisFeasZero(scip,shiftval));
          SCIPdebugMessage(" Only one shiftcand found, var <%s>, which is now shifted by<%1.1f> \n", 
@@ -428,9 +428,9 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
             solval = SCIPgetSolVal(scip,bestsol,var);
             shiftval = calcShiftVal(scip,var,solval,activities);
             SCIPdebugMessage(" -> Variable <%s> is now shifted by <%1.1f> \n", SCIPvarGetName(vars[i]), shiftval);
-            assert(i > 0 || !SCIPisFeasZero(scip,shiftval));
+            assert(i > 0 || !SCIPisFeasZero(scip, shiftval));
             SCIP_CALL( SCIPsetSolVal(scip, worksol, var, solval+shiftval) );
-            SCIP_CALL( updateRowActivities(scip,activities,var,shiftval) );
+            SCIP_CALL( updateRowActivities(scip, activities, var, shiftval) );
          }
          
          SCIPfreeBufferArray(scip, &objcoeffs);

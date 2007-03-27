@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.54 2006/02/23 12:40:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.55 2007/03/27 14:41:24 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -37,6 +37,7 @@
 #include "scip/type_var.h"
 #include "scip/type_implics.h"
 #include "scip/type_prob.h"
+#include "scip/type_primal.h"
 #include "scip/type_tree.h"
 #include "scip/type_branch.h"
 #include "scip/type_cons.h"
@@ -232,6 +233,17 @@ extern
 void SCIPprobCheckObjIntegral(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** if possible, scales objective function such that it is integral with gcd = 1 */
+extern
+SCIP_RETCODE SCIPprobScaleObj(
+   SCIP_PROB*            prob,               /**< problem data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
 /** remembers the current solution as root solution in the problem variables */

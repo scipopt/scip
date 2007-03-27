@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.400 2007/03/17 18:09:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.401 2007/03/27 14:41:24 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4010,6 +4010,9 @@ SCIP_RETCODE exitPresolve(
    SCIP_CALL( SCIPprobExitPresolve(scip->transprob, scip->set) );
    assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
 
+   /* if possible, scale objective function such that it becomes integral with gcd 1 */
+   SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->mem->solvemem, scip->set, scip->primal, scip->lp, scip->eventqueue) );
+
    /* free temporary presolving root node */
    SCIP_CALL( SCIPtreeFreePresolvingRoot(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
          scip->primal, scip->lp, scip->branchcand, scip->conflict, scip->eventfilter, scip->eventqueue) );
@@ -4729,7 +4732,7 @@ SCIP_RETCODE SCIPpresolve(
             if( SCIPprobIsObjIntegral(scip->transprob) )
             {
                SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-                  "objective value is always integral\n");
+                  "transformed objective value is always integral (scale: %g)\n", scip->transprob->objscale);
             }
          }
       }

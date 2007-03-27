@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.61 2006/06/07 08:21:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.62 2007/03/27 14:41:24 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -3293,7 +3293,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
    int s;
 
    assert(vals != NULL);
-   assert(nvals > 0);
+   assert(nvals >= 0);
    assert(maxdnom >= 1);
    assert(mindelta < 0.0);
    assert(maxdelta > 0.0);

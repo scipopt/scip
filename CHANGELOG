@@ -65,6 +65,7 @@ features:
 - added option to write node LP and MIP relaxations to LP file from interactive shell
 - modified cut selection code
 - cut conversion into linear constraints after a restart now works better
+- if possible, objective function is scaled to make objective value integral with gcd 1
 
 fixed bugs:
 - fixed bug with too long variable names

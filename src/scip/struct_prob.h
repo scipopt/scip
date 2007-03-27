@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_prob.h,v 1.18 2006/01/03 12:22:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_prob.h,v 1.19 2007/03/27 14:41:24 bzfpfend Exp $"
 
 /**@file   struct_prob.h
  * @brief  datastructures for storing and manipulating the main problem
@@ -38,6 +38,8 @@
 struct SCIP_Prob
 {
    SCIP_Real             objoffset;          /**< objective offset from bound shifting and fixing (fixed vars result) */
+   SCIP_Real             objscale;           /**< scalar applied to objective function; external objective value is
+                                              *   extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real             objlim;             /**< objective limit as external value */
    char*                 name;               /**< problem name */
    SCIP_DECL_PROBDELORIG ((*probdelorig));   /**< frees user data of original problem */
