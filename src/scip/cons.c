@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.155 2007/03/15 22:20:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.156 2007/03/27 11:25:36 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -50,6 +50,7 @@
                                          *   average reset age by this factor */
 
 
+/*#define CHECKCONSARRAYS*/
 
 
 /*
@@ -232,7 +233,10 @@ SCIP_RETCODE conshdlrEnsureUpdateconssMem(
  * Constraint handler methods
  */
 
+#define checkConssArrays(conshdlr) /**/
 #ifndef NDEBUG
+#ifdef CHECKCONSARRAYS
+#undef checkConssArrays
 /** sanity check for the constraint arrays of the constraint handler (only in debug mode) */
 static
 void checkConssArrays(
@@ -298,8 +302,7 @@ void checkConssArrays(
       assert(conshdlr->propconss[c]->obsolete == (c >= conshdlr->nusefulpropconss));
    }
 }
-#else
-#define checkConssArrays(conshdlr) /**/
+#endif
 #endif
 
 /** returns the exponentially decaying weighted age average for age resets */
