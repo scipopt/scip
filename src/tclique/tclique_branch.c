@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.c,v 1.12 2007/03/13 18:33:29 bzfberth Exp $"
+#pragma ident "@(#) $Id: tclique_branch.c,v 1.13 2007/03/29 20:32:00 bzfpfend Exp $"
 
 /**@file   tclique_branch.c
  * @brief  branch and bound part of algorithm for maximum cliques
@@ -1031,7 +1031,7 @@ void tcliqueMaxClique(
    TCLIQUE_WEIGHT curcliqueweight;
    int* tmpcliquenodes;
    int ntreenodes;
-   TCLIQUE_Bool userabort;
+   int backtracklevel;
 
    assert(maxcliquenodes != NULL);
    assert(nmaxcliquenodes != NULL);
@@ -1102,13 +1102,13 @@ void tcliqueMaxClique(
    mem = BMScreateChunkMemory(sizeof(LIST_ITV), CHUNK_SIZE, -1);
 
    /* branch to find maximum weight clique */
-   userabort = branch(getnnodes, getweights, isedge, selectadjnodes, tcliquegraph, newsol, tcliquedata, mem, cliquehash,
-      buffer, 0, V, nV, Vzero, nVzero, gsd, iscolored, K, 0,
+   backtracklevel = branch(getnnodes, getweights, isedge, selectadjnodes, tcliquegraph, newsol, tcliquedata, mem,
+      cliquehash, buffer, 0, V, nV, Vzero, nVzero, gsd, iscolored, K, 0,
       maxcliquenodes, nmaxcliquenodes, maxcliqueweight,
       curcliquenodes, &ncurcliquenodes, &curcliqueweight, tmpcliquenodes,
       maxfirstnodeweight, &ntreenodes, maxntreenodes, backtrackfreq, maxnzeroextensions, fixednode, status);
 
-   if( userabort )
+   if( backtracklevel != INT_MAX && *status == TCLIQUE_OPTIMAL )
       *status = TCLIQUE_USERABORT;
 
    /* delete own memory allocator for coloring */
