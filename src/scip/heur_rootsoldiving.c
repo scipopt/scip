@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.36 2006/12/07 20:36:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.37 2007/03/30 11:46:35 bzfpfend Exp $"
 
 /**@file   heur_rootsoldiving.c
  * @brief  LP diving heuristic that changes variable's objective values using root LP solution as guide
@@ -273,7 +273,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    lperror = FALSE;
    divedepth = 0;
    lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
-   alpha = 0.9; /**@todo make thís constant a parameter setting */
+   alpha = 0.9; /**@todo make this constant a parameter setting */
    ncycles = 0;
    startnlpcands = nlpcands;
    while( !SCIPisStopped(scip) && !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0 && ncycles < 10
