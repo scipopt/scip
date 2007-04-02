@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.50 2007/02/14 17:58:26 bzfpfend Exp $
+# $Id: check.awk,v 1.51 2007/04/02 18:56:31 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -40,6 +40,7 @@ BEGIN {
    nodegeomshift = 1000.0;
    sblpgeomshift = 0.0;
    onlyinsolufile = 0;  # should only instances be reported that are included in the .solu file?
+   onlyintestfile = 0;  # should only instances be reported that are included in the .test file?  TEMPORARY HACK!
    conflictstats = 0;   # should conflict analysis statistics be reported as well?
    onlypresolvereductions = 0;  # should only instances with presolve reductions be shown?
 
@@ -103,6 +104,9 @@ BEGIN {
    overheadtottime = 0.0;
    timelimit = 0.0;
 }
+/^IP\// { # TEMPORARY HACK to parse .test files
+   intestfile[$1] = 1;
+}
 /=opt=/  {  # get optimum
    if (NF >= 3 ) {
       solstatus[$2] = "opt";
@@ -115,6 +119,8 @@ BEGIN {
 /=best=/ { solstatus[$2] = "best"; sol[$2] = $3; } # get best known solution value
 /=unkn=/ { solstatus[$2] = "unkn"; }               # no feasible solution known
 /^@01/ { 
+   filename = $2;
+
    n  = split ($2, a, "/");
    m = split(a[n], b, ".");
    prob = b[1];
@@ -124,7 +130,7 @@ BEGIN {
       prob = prob "." b[i];
 
    if( length(prob) > 18 )
-      shortprob = sprintf("%s*%s", substr(prob, 1, 6), substr(prob, length(prob)-10, 11));
+      shortprob = substr(prob, length(prob)-17, 18);
    else
       shortprob = prob;
 
@@ -280,7 +286,8 @@ BEGIN {
 # Output
 #
 /^=ready=/ {
-   if( !onlyinsolufile || solstatus[prob] != "" )
+   if( (!onlyinsolufile || solstatus[prob] != "") &&
+      (!onlyintestfile || intestfile[filename]) )
    {
       nprobs++;
 

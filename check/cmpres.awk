@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.25 2007/02/12 16:47:25 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.26 2007/04/02 18:56:31 bzfpfend Exp $
 #
 #@file    compare.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -60,10 +60,15 @@ BEGIN {
    onlymarked = 0;
    onlyprocessed = 0;
    maxscore = 10.0;
+   consistency = 1;
+   onlyfeasible = 0;
+   onlyinfeasible = 0;
+   onlyfail = 0;
 
    problistlen = 0;
    nsolver = 0;
    nprobs[nsolver] = 0;
+   fulltotaltime = 0.0;
 }
 /^@01 / {
    solvername[nsolver] = $2;
@@ -96,7 +101,7 @@ BEGIN {
    }
    else if( $12 == "ok" || $12 == "timeout" || $12 == "unknown" || $12 == "abort" || $12 == "fail" || $12 == "readerror" )
    {
-      # collect data (line with with original and presolved problem size)
+      # collect data (line with original and presolved problem size)
       name[nsolver,nprobs[nsolver]] = $1;
       type[nsolver,nprobs[nsolver]] = $2;
       conss[nsolver,nprobs[nsolver]] = $5;
@@ -118,6 +123,12 @@ BEGIN {
    }
 }
 END {
+   if( nsolver == 0 )
+   {
+      printf("no instances found in log file\n");
+      exit 1;
+   }
+
    # initialize means
    for( s = 0; s < nsolver; ++s )
    {
@@ -201,12 +212,41 @@ END {
       timecomp = -1;
       besttime = +1e+100;
       bestnodes = +1e+100;
+      worsttime = -1e+100;
+      worstnodes = -1e+100;
       nthissolved = 0;
       nthistimeouts = 0;
       nthisfails = 0;
       ismini = 0;
       ismaxi = 0;
       mark = " ";
+
+      # find best and worst run
+      for( s = 0; s < nsolver; ++s )
+      {
+         pidx = probidx[p,s];
+         processed = (pidx != "");
+
+	 # make sure, nodes and time are non-zero for geometric means
+	 nodes[s,pidx] = max(nodes[s,pidx], 1);
+	 time[s,pidx] = max(time[s,pidx], mintime);
+         fulltotaltime += time[s,pidx];
+
+         # check if solver ran successfully (i.e., no abort nor fail)
+         if( processed && (status[s,pidx] == "ok" || status[s,pidx] == "unknown" || status[s,pidx] == "timeout") )
+         {
+            if( status[s,pidx] != "timeout" )
+            {
+               besttime = min(besttime, time[s,pidx]);
+               bestnodes = min(bestnodes, nodes[s,pidx]);
+            }
+            worsttime = max(worsttime, time[s,pidx]);
+	    worstnodes = max(worstnodes, nodes[s,pidx]);
+         }
+      }
+      worsttime = max(worsttime, mintime);
+      worstnodes = max(worstnodes, 1);
+
       for( o = 0; o < nsolver; ++o )
       {
          s = printorder[o];
@@ -214,10 +254,6 @@ END {
          processed = (pidx != "");
          if( processed && name[s,pidx] != p )
             printf("Error: solver %d, probidx %d, <%s> != <%s>\n", solvername[s], pidx, name[s,pidx], p);
-
-	 # make sure, nodes and time are non-zero for geometric means
-	 nodes[s,pidx] = max(nodes[s,pidx], 1);
-	 time[s,pidx] = max(time[s,pidx], mintime);
 
          # check if solver ran successfully (i.e., no abort nor fail)
          if( !processed )
@@ -229,16 +265,15 @@ END {
          {
             nsolved[s]++;
             marker = " ";
-            besttime = min(besttime, time[s,pidx]);
-	    bestnodes = min(bestnodes, nodes[s,pidx]);
 	    nthissolved++;
          }
          else if( status[s,pidx] == "timeout" )
          {
+            # replace time and nodes by worst time and worst nodes of all runs
+            nodes[s,pidx] = worstnodes;
+            time[s,pidx] = worsttime;
             ntimeouts[s]++;
             marker = ">";
-            besttime = min(besttime, time[s,pidx]);
-	    bestnodes = min(bestnodes, nodes[s,pidx]);
 	    nthistimeouts++;
          }
          else
@@ -320,10 +355,11 @@ END {
          line = sprintf("%s  fail", line);
 	 mark = " ";
       }
-      else if( (ismini && ismaxi) ||
-	       (ismini && maxdb - minpb > 1e-5 * max(max(abs(maxdb), abs(minpb)), 1.0)) ||
-	       (ismaxi && maxpb - mindb > 1e-5 * max(max(abs(maxpb), abs(mindb)), 1.0)) ||
-	       (!ismini && !ismaxi && abs(maxpb - minpb) > 1e-5 * max(abs(maxpb), 1.0)) )
+      else if( consistency &&
+         ((ismini && ismaxi) ||
+            (ismini && maxdb - minpb > 1e-5 * max(max(abs(maxdb), abs(minpb)), 1.0)) ||
+            (ismaxi && maxpb - mindb > 1e-5 * max(max(abs(maxpb), abs(mindb)), 1.0)) ||
+            (!ismini && !ismaxi && abs(maxpb - minpb) > 1e-5 * max(abs(maxpb), 1.0))) )
       {
          line = sprintf("%s  inconsistent", line);
          fail = 1;
@@ -336,11 +372,32 @@ END {
       }
       else
          line = sprintf("%s  ok", line);
-      if( (!onlymarked || mark == "*") && (!onlyprocessed || !unprocessed) )
+
+      # calculate number of instances for which feasible solution has been found
+      hasfeasible = 0;
+      if( !unprocessed )
+      {
+         nprocessedprobs++;
+         for( s = 0; s < nsolver; ++s )
+         {
+            pidx = probidx[p,s];
+	    if( primalbound[s,pidx] < 1e+20 ) {
+	       feasibles[s]++;
+	       hasfeasible = 1;
+	    }
+	 }
+	 if( hasfeasible )
+	   bestfeasibles++;
+      }
+
+      if( (!onlymarked || mark == "*") && (!onlyprocessed || !unprocessed) &&
+          (!onlyfeasible || hasfeasible) && (!onlyinfeasible || !hasfeasible) &&
+          (!onlyfail || fail) )
          printf("%s %s\n", mark, line);
 
       # calculate totals and means for instances where no solver failed
-      if( !fail && !unprocessed )
+      if( !fail && !unprocessed &&
+          (!onlyfeasible || hasfeasible) && (!onlyinfeasible || !hasfeasible) )
       {
          nevalprobs++;
 	 reftime = time[printorder[0],probidx[p,printorder[0]]];
@@ -386,22 +443,6 @@ END {
 	   bestbetter++;
 	 if( hasbetterobj )
 	   bestbetterobj++;
-      }
-      # calculate number of instances for which feasible solution has been found
-      if( !unprocessed )
-      {
-         nprocessedprobs++;
-	 hasfeasible = 0;
-         for( s = 0; s < nsolver; ++s )
-         {
-            pidx = probidx[p,s];
-	    if( primalbound[s,pidx] < 1e+20 ) {
-	       feasibles[s]++;
-	       hasfeasible = 1;
-	    }
-	 }
-	 if( hasfeasible )
-	   bestfeasibles++;
       }
    }
    printhline(nsolver);
@@ -475,4 +516,8 @@ END {
 	  bestnodegeom, bestnodeshiftedgeom, bestnodegeom/nodegeomcomp, bestnodeshiftedgeom/nodeshiftedgeomcomp,
 	  besttimegeom, besttimeshiftedgeom, besttimegeom/timegeomcomp, besttimeshiftedgeom/timeshiftedgeomcomp,
 	  "");
+
+   printf("total time over all settings: %.1f sec = %.1f hours = %.1f days = %.1f weeks = %.1f months\n",
+      fulltotaltime, fulltotaltime/3600.0, fulltotaltime/(3600.0*24), fulltotaltime/(3600.0*24*7),
+      fulltotaltime/(3600.0*24*30));
 }
