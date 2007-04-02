@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.140 2007/02/22 16:54:58 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.141 2007/04/02 08:18:30 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -3140,12 +3140,18 @@ SCIP_RETCODE tightenWeights(
       return SCIP_OKAY;
 
    /* apply rule (2) (don't apply, if the knapsack has too many items for applying this costly method) */
-   if( conshdlrdata->disaggregation && consdata->nvars <= MAX_USECLIQUES_SIZE )
+   if( consdata->nvars <= MAX_USECLIQUES_SIZE )
    {
       SCIP_Longint* maxcliqueweights;
+      SCIP_Longint* newweightvals;
+      int* newweightidxs;
       SCIP_Longint cliqueweightsum;
 
       SCIP_CALL( SCIPallocBufferArray(scip, &maxcliqueweights, consdata->nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &newweightvals, consdata->nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &newweightidxs, consdata->nvars) );
+
+      /* repeat as long as changes have been applied */
       do
       {
          int ncliques;
@@ -3193,17 +3199,18 @@ SCIP_RETCODE tightenWeights(
             delta = consdata->capacity - (cliqueweightsum - maxcliqueweights[i]);
             if( delta > 0 )
             {
+               SCIP_Longint newcapacity;
                SCIP_Longint newmincliqueweight;
                SCIP_Bool forceclique;
+               int nnewweights;
                int j;
 
                SCIPdebugMessage("knapsack constraint <%s>: weights of clique %d (maxweight: %"SCIP_LONGINT_FORMAT") can be tightened: cliqueweightsum=%"SCIP_LONGINT_FORMAT", capacity=%"SCIP_LONGINT_FORMAT" -> delta: %"SCIP_LONGINT_FORMAT"\n",
                   SCIPconsGetName(cons), i, maxcliqueweights[i], cliqueweightsum, consdata->capacity, delta);
-               consdata->capacity -= delta;
-               (*nchgsides)++;
-               SCIPdebugMessage(" -> changed capacity from %"SCIP_LONGINT_FORMAT" to %"SCIP_LONGINT_FORMAT"\n", consdata->capacity + delta, consdata->capacity);
-               newmincliqueweight = consdata->capacity + 1;
+               newcapacity = consdata->capacity - delta;
+               newmincliqueweight = newcapacity + 1;
                forceclique = FALSE;
+               nnewweights = 0;
 #ifndef NDEBUG
                for( j = 0; j < i; ++j )
                   assert(consdata->cliquepartition[j] < i); /* no element j < i can be in clique i */
@@ -3216,60 +3223,82 @@ SCIP_RETCODE tightenWeights(
                   
                      newweight = consdata->weights[j] - delta;
                      newweight = MAX(newweight, 0);
-                     zeroweights = zeroweights || (newweight == 0);
 
                      /* check if this new weight and the minimal new weight of already processed items both fit into the
                       * knapsack; if this is true, we have to add a clique constraint in order to enforce the clique
                       * (otherwise, the knapsack might have been one of the reasons for the clique, and the weight
                       * reduction might be infeasible, i.e., allows additional solutions)
                       */
-                     forceclique = forceclique || (newmincliqueweight + newweight <= consdata->capacity);
+                     if( newmincliqueweight + newweight <= consdata->capacity )
+                     {
+                        forceclique = TRUE;
+                        if( !conshdlrdata->disaggregation )
+                           break;
+                     }
+
+                     /* cache the new weight */
+                     assert(nnewweights < consdata->nvars);
+                     newweightvals[nnewweights] = newweight;
+                     newweightidxs[nnewweights] = j;
+                     nnewweights++;
+
                      assert(newweight <= newmincliqueweight); /* items are sorted by non-increasing weight! */
                      newmincliqueweight = newweight;
-
-                     /* apply the weight change */
-                     SCIPdebugMessage(" -> changed weight of <%s> from %"SCIP_LONGINT_FORMAT" to %"SCIP_LONGINT_FORMAT" (forceclique:%d)\n",
-                        SCIPvarGetName(consdata->vars[j]), consdata->weights[j], newweight, forceclique);
-                     consdataChgWeight(consdata, j, newweight);
-                     (*nchgcoefs)++;
-                     assert(!consdata->sorted);
                   }
                }
 
-               /* if before the weight update at least one pair of weights did not fit into the knapsack and now fits,
-                * we have to make sure, the clique is enforced - the clique might have been constructed partially from
-                * this constraint, and by reducing the weights, this clique information is not contained anymore in the
-                * knapsack constraint
-                */
-               if( forceclique )
+               /* check if we really want to apply the change */
+               if( conshdlrdata->disaggregation || !forceclique )
                {
-                  SCIP_CONS* cliquecons;
-                  char name[SCIP_MAXSTRLEN];
-                  SCIP_VAR** cliquevars;
-                  int ncliquevars;
+                  int k;
 
-                  zeroweights = TRUE;
-                  SCIP_CALL( SCIPallocBufferArray(scip, &cliquevars, consdata->nvars) );
-                  ncliquevars = 0;
-                  for( j = i; j < consdata->nvars; ++j )
+                  SCIPdebugMessage(" -> change capacity from %"SCIP_LONGINT_FORMAT" to %"SCIP_LONGINT_FORMAT" (forceclique:%d)\n",
+                     consdata->capacity, newcapacity, forceclique);
+                  consdata->capacity = newcapacity;
+                  (*nchgsides)++;
+
+                  for( k = 0; k < nnewweights; ++k )
                   {
-                     if( consdata->cliquepartition[j] == i )
-                     {
-                        cliquevars[ncliquevars] = consdata->vars[j];
-                        ncliquevars++;
-                     }
+                     j = newweightidxs[k];
+                     assert(0 <= j && j < consdata->nvars);
+                     assert(consdata->cliquepartition[j] == i);
+
+                     /* apply the weight change */
+                     SCIPdebugMessage(" -> change weight of <%s> from %"SCIP_LONGINT_FORMAT" to %"SCIP_LONGINT_FORMAT"\n",
+                        SCIPvarGetName(consdata->vars[j]), consdata->weights[j], newweightvals[k]);
+                     consdataChgWeight(consdata, j, newweightvals[k]);
+                     (*nchgcoefs)++;
+                     assert(!consdata->sorted);
+                     zeroweights = zeroweights || (newweightvals[k] == 0);
                   }
-                  sprintf(name, "%s_clq_%"SCIP_LONGINT_FORMAT"_%d", SCIPconsGetName(cons), consdata->capacity, i);
-                  SCIP_CALL( SCIPcreateConsSetpack(scip, &cliquecons, name, ncliquevars, cliquevars,
-                        SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-                        SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-                        SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-                        SCIPconsIsStickingAtNode(cons)) );
-                  SCIPdebugMessage(" -> adding clique constraint: ");
-                  SCIPdebug(SCIPprintCons(scip, cliquecons, NULL));
-                  SCIP_CALL( SCIPaddCons(scip, cliquecons) );
-                  SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
-                  SCIPfreeBufferArray(scip, &cliquevars);
+
+                  /* if before the weight update at least one pair of weights did not fit into the knapsack and now fits,
+                   * we have to make sure, the clique is enforced - the clique might have been constructed partially from
+                   * this constraint, and by reducing the weights, this clique information is not contained anymore in the
+                   * knapsack constraint
+                   */
+                  if( forceclique )
+                  {
+                     SCIP_CONS* cliquecons;
+                     char name[SCIP_MAXSTRLEN];
+                     SCIP_VAR** cliquevars;
+
+                     SCIP_CALL( SCIPallocBufferArray(scip, &cliquevars, nnewweights) );
+                     for( k = 0; k < nnewweights; ++k )
+                        cliquevars[k] = consdata->vars[newweightidxs[k]];
+
+                     sprintf(name, "%s_clq_%"SCIP_LONGINT_FORMAT"_%d", SCIPconsGetName(cons), consdata->capacity, i);
+                     SCIP_CALL( SCIPcreateConsSetpack(scip, &cliquecons, name, nnewweights, cliquevars,
+                           SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+                           SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+                           SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+                           SCIPconsIsStickingAtNode(cons)) );
+                     SCIPdebugMessage(" -> adding clique constraint: ");
+                     SCIPdebug(SCIPprintCons(scip, cliquecons, NULL));
+                     SCIP_CALL( SCIPaddCons(scip, cliquecons) );
+                     SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
+                     SCIPfreeBufferArray(scip, &cliquevars);
+                  }
                }
             }
          }
@@ -3279,6 +3308,10 @@ SCIP_RETCODE tightenWeights(
          }
       }
       while( !consdata->sorted && consdata->weightsum > consdata->capacity );
+
+      /* free temporary memory */
+      SCIPfreeBufferArray(scip, &newweightidxs);
+      SCIPfreeBufferArray(scip, &newweightvals);
       SCIPfreeBufferArray(scip, &maxcliqueweights);
 
       /* check for redundancy */
