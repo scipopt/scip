@@ -15,9 +15,9 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.26 2007/04/02 18:56:31 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.27 2007/04/02 18:56:56 bzfpfend Exp $
 #
-#@file    compare.awk
+#@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
 #@author  Tobias Achterberg
 #
