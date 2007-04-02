@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.21 2007/02/28 09:58:02 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.22 2007/04/02 15:15:28 bzfpfend Exp $"
 
 /**@file   heur_crossover.c
  * @brief  crossover primal heuristic
@@ -122,7 +122,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqSols)
    /* there should be two nonempty arrays of the same size */
    assert(indices1 != NULL);
    assert(indices2 != NULL);
-   assert( ((SOLTUPLE*)key1)->size == ((SOLTUPLE*)key2)->size );
+   assert(((SOLTUPLE*)key1)->size == ((SOLTUPLE*)key2)->size);
 
    size  = ((SOLTUPLE*)key1)->size;
 
@@ -238,7 +238,7 @@ SCIP_RETCODE selectSolsRandomized(
    /* initialization */
    nusedsols = heurdata->nusedsols;
    lastsol = SCIPgetNSols(scip);
-   assert( nusedsols < lastsol );
+   assert(nusedsols < lastsol);
 
    i = 0;
    *success = FALSE;
@@ -253,7 +253,7 @@ SCIP_RETCODE selectSolsRandomized(
       }
 
       /* creates an object ready to be inserted into the hashtable */
-      SCIP_CALL( createSolTuple(scip,&elem,selection,nusedsols,heurdata) );
+      SCIP_CALL( createSolTuple(scip, &elem, selection, nusedsols, heurdata) );
 
       /* check whether the randomized set is already in the hashtable, if not, insert it */
       if( !SCIPhashtableExists(heurdata->hashtable, elem) )
@@ -291,7 +291,7 @@ static SCIP_RETCODE createVariables(
    int fixingcounter;
   
    sols = SCIPgetSols(scip);   
-   assert( sols != NULL );
+   assert(sols != NULL);
 
    /* get required data of the original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );  
@@ -326,7 +326,7 @@ static SCIP_RETCODE createVariables(
       ub = SCIPvarGetUbGlobal(vars[i]);
 
       /* original solval can be outside transformed global bounds */
-      if( fixable && ( lb > solval || solval > ub ) )
+      if( fixable && (lb > solval || solval > ub) )
          fixable = FALSE;
 
       /* if solutions' values are equal, variable is fixed in the subproblem, otherwise it is just copied */
@@ -408,7 +408,7 @@ SCIP_RETCODE createRows(
       nnonz = SCIProwGetNNonz(rows[i]);
       cols = SCIProwGetCols(rows[i]);
       
-      assert( lhs <= rhs );
+      assert(lhs <= rhs);
       
       /* allocate memory array to be filled with the corresponding subproblem variables */
       SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nnonz) );
@@ -451,8 +451,8 @@ SCIP_RETCODE createSubproblem(
    sols = SCIPgetSols(scip);
    nusedsols = heurdata->nusedsols;
 
-   assert( nusedsols > 1);
-   assert( nsols >= nusedsols );
+   assert(nusedsols > 1);
+   assert(nsols >= nusedsols);
 
    /* use nusedsols best solutions if randomization is deactivated or there are only nusedsols solutions at hand
     * or a good new solution was found since last call */
@@ -462,7 +462,7 @@ SCIP_RETCODE createSubproblem(
       
       for( i = 0; i < nusedsols; i++ )
          selection[i] = i;
-      SCIP_CALL( createSolTuple(scip,&elem,selection,nusedsols,heurdata) );
+      SCIP_CALL( createSolTuple(scip, &elem, selection, nusedsols, heurdata) );
    
       /* check, whether solution tuple has already been tried */
       if( SCIPhashtableExists(heurdata->hashtable, elem) )
@@ -473,7 +473,7 @@ SCIP_RETCODE createSubproblem(
           * to randomize another tuple. E.g., this can happen if the last crossover solution was among the best ones */
          if( heurdata->randomization && nsols > nusedsols )
          {
-            SCIP_CALL( selectSolsRandomized( scip, selection, heurdata, success ) );
+            SCIP_CALL( selectSolsRandomized(scip, selection, heurdata, success) );
          }
       }
       else
@@ -485,7 +485,7 @@ SCIP_RETCODE createSubproblem(
    /* otherwise randomize the set of solutions */
    else
    {
-      SCIP_CALL( selectSolsRandomized( scip, selection, heurdata, success ) );
+      SCIP_CALL( selectSolsRandomized(scip, selection, heurdata, success) );
    }
    
    /* no acceptable solution tuple could be created */
@@ -506,6 +506,7 @@ SCIP_RETCODE createSubproblem(
    {
       SCIP_CALL( createRows(scip, subscip, subvars) );
    }
+
    return SCIP_OKAY;
 }
 
@@ -527,14 +528,14 @@ SCIP_RETCODE createNewSol(
    SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
    SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
         
-   assert( scip != NULL );
-   assert( subscip != NULL );
-   assert( subvars != NULL );
-   assert( subsol != NULL );
+   assert(scip != NULL);
+   assert(subscip != NULL);
+   assert(subvars != NULL);
+   assert(subsol != NULL);
 
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-   assert( nvars == SCIPgetNOrigVars(subscip) );  
+   assert(nvars == SCIPgetNOrigVars(subscip));
  
    SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
 
@@ -565,8 +566,9 @@ void updateFailureStatistic(
 
    /* increase number of failures, calculate next node at which crossover should be called and update actual solutions */
    heurdata->nfailures++;
-   heurdata->nextnodenumber = heurdata->nfailures <= 25 ? SCIPgetNNodes(scip) + 100*(2LL << heurdata->nfailures)
-      : SCIP_LONGINT_MAX;
+   heurdata->nextnodenumber = (heurdata->nfailures <= 25
+      ? SCIPgetNNodes(scip) + 100*(2LL << heurdata->nfailures)
+      : SCIP_LONGINT_MAX);
 }
 
 
@@ -580,16 +582,16 @@ SCIP_DECL_HEURFREE(heurFreeCrossover)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    
-   assert( heur != NULL );
-   assert( scip != NULL );
+   assert(heur != NULL);
+   assert(scip != NULL);
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
-   assert( heurdata != NULL );
+   assert(heurdata != NULL);
 
    /* free heuristic data */
    SCIPfreeMemory(scip, &heurdata);
-   SCIPheurSetData(heur, NULL);\
+   SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
 }
@@ -600,12 +602,12 @@ SCIP_DECL_HEURINIT(heurInitCrossover)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
-   assert( heur != NULL );
-   assert( scip != NULL );
+   assert(heur != NULL);
+   assert(scip != NULL);
 
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
-   assert( heurdata != NULL );
+   assert(heurdata != NULL);
 
    /* initialize data */
    heurdata->usednodes = 0;
@@ -632,12 +634,12 @@ SCIP_DECL_HEUREXIT(heurExitCrossover)
    SCIP_HEURDATA* heurdata;
    SOLTUPLE* soltuple;
    
-   assert( heur != NULL );
-   assert( scip != NULL );
+   assert(heur != NULL);
+   assert(scip != NULL);
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
-   assert( heurdata != NULL );
+   assert(heurdata != NULL);
    soltuple = heurdata->lasttuple;
 
    /* free all soltuples iteratively */
@@ -687,13 +689,13 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    int nusedsols;
    int i;   
   
-   assert( heur != NULL );
-   assert( scip != NULL );
-   assert( result != NULL );
+   assert(heur != NULL);
+   assert(scip != NULL);
+   assert(result != NULL);
  
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
-   assert( heurdata != NULL );
+   assert(heurdata != NULL);
    nusedsols = heurdata->nusedsols;
 
    *result = SCIP_DELAYED;
@@ -719,7 +721,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
       return SCIP_OKAY;
    
    /* only call heuristic, if enough nodes were processed since last incumbent */
-   if( SCIPgetNNodes(scip) - SCIPgetSolNodenum(scip,SCIPgetBestSol(scip))  < heurdata->nwaitingnodes)
+   if( SCIPgetNNodes(scip) - SCIPgetSolNodenum(scip,SCIPgetBestSol(scip))  < heurdata->nwaitingnodes )
       return SCIP_OKAY;
    
    *result = SCIP_DIDNOTRUN;
@@ -728,7 +730,8 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    nstallnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
    
    /* reward Crossover if it succeeded often */
-   nstallnodes = (SCIP_Longint)(nstallnodes * (1.0 + 2.0*(SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur)+1.0)));
+   nstallnodes = (SCIP_Longint)
+      (nstallnodes * (1.0 + 2.0*(SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur)+1.0)));
    
    /* count the setup costs for the sub-MIP as 100 nodes */
    nstallnodes -= 100 * SCIPheurGetNCalls(heur);  
@@ -755,7 +758,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    *result = SCIP_DIDNOTFIND;
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-   assert( nvars > 0 );
+   assert(nvars > 0);
 
    /* initializing the subproblem */  
    SCIP_CALL( SCIPcreate(&subscip) );
@@ -845,12 +848,12 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 
    /* add an objective cutoff */
    cutoff = SCIPinfinity(scip);
-   assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );   
+   assert(!SCIPisInfinity(scip,SCIPgetUpperbound(scip)));
       
    if( !SCIPgetLowerbound(scip) )
    {
       SCIP_Real upperbound;
-      cutoff = (1-heurdata->minimprove)*SCIPgetUpperbound(scip) - heurdata->minimprove*SCIPgetLowerbound(scip);
+      cutoff = (1.0 - heurdata->minimprove) * SCIPgetUpperbound(scip) - heurdata->minimprove * SCIPgetLowerbound(scip);
       upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
       cutoff = MIN(upperbound, cutoff );
    }
@@ -859,8 +862,8 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 
    SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
    
-   SCIPdebugMessage("Solve Crossover subMIP\n");
    /* solve the subproblem */
+   SCIPdebugMessage("Solve Crossover subMIP\n");
    SCIP_CALL( SCIPsolve(subscip) );
    
    heurdata->usednodes += SCIPgetNNodes(subscip);
@@ -888,7 +891,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
       {
          int tmp;
 
-         assert( solindex != -1 );
+         assert(solindex != -1);
 
          *result = SCIP_FOUNDSOL;
        
@@ -901,7 +904,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
             tmp = selection[i];
             selection[i] = solindex;
 
-            SCIP_CALL( createSolTuple(scip,&elem,selection,nusedsols,heurdata) );      
+            SCIP_CALL( createSolTuple(scip, &elem, selection, nusedsols, heurdata) );      
             SCIP_CALL( SCIPhashtableInsert(heurdata->hashtable, elem) );
             selection[i] = tmp;
          } 
@@ -915,7 +918,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
       }
       
       /* if solution is not better then incumbent or could not be added to problem => run is counted as a failure */
-      if( !success || solindex != SCIPsolGetIndex(SCIPgetBestSol(scip)))
+      if( !success || solindex != SCIPsolGetIndex(SCIPgetBestSol(scip)) )
          updateFailureStatistic(scip, heurdata);
    }
    else
