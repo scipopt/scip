@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.6 2007/03/27 14:41:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.7 2007/04/02 11:52:33 bzfpfend Exp $"
 
 /**@file   heur_oneopt.c
  * @brief  oneopt primal heuristic
@@ -88,11 +88,11 @@ SCIP_Real calcShiftVal(
    shiftdown = TRUE;
    
    /* determine shifting direction and maximal possible shifting wrt. corresponding bound */
-   if( SCIPisFeasGE(scip, solval-1, lb) && obj > 0 )
-      shiftval = SCIPfeasFloor(scip, solval-lb);
-   else if ( SCIPisFeasLE(scip, solval+1, ub) && obj < 0 )
+   if( obj > 0.0 && SCIPisFeasGE(scip, solval - 1.0, lb) )
+      shiftval = SCIPfeasFloor(scip, solval - lb);
+   else if ( obj < 0.0 && SCIPisFeasLE(scip, solval + 1.0, ub) )
    { 
-      shiftval = SCIPfeasFloor(scip, ub-solval);
+      shiftval = SCIPfeasFloor(scip, ub - solval);
       shiftdown = FALSE;
    }
    else 
@@ -143,7 +143,7 @@ SCIP_Real calcShiftVal(
       }
    }
    if( shiftdown )
-      shiftval *= -1;
+      shiftval *= -1.0;
 
    return shiftval;
 }   
@@ -425,8 +425,8 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          {
             var = shiftcands[i];
             assert(var != NULL);
-            solval = SCIPgetSolVal(scip,bestsol,var);
-            shiftval = calcShiftVal(scip,var,solval,activities);
+            solval = SCIPgetSolVal(scip, bestsol, var);
+            shiftval = calcShiftVal(scip, var, solval, activities);
             SCIPdebugMessage(" -> Variable <%s> is now shifted by <%1.1f> \n", SCIPvarGetName(vars[i]), shiftval);
             assert(i > 0 || !SCIPisFeasZero(scip, shiftval));
             SCIP_CALL( SCIPsetSolVal(scip, worksol, var, solval+shiftval) );
