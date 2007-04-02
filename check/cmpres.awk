@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.27 2007/04/02 18:56:56 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.28 2007/04/02 20:27:22 bzfpfend Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -160,17 +160,22 @@ END {
    # calculate the order in which the columns should be printed: CPLEX < SCIP, default < non-default
    for( s = 0; s < nsolver; ++s )
    {
-      for( i = 0; i < s; ++i )
+      for( o = 0; o < s; ++o )
       {
+         i = printorder[o];
          if( substr(solvername[s], 1, 5) == "CPLEX" && substr(solvername[i], 1, 5) != "CPLEX" )
             break;
          if( substr(solvername[s], 1, 5) == substr(solvername[i], 1, 5) &&
             match(solvername[s], "default") != 0 && match(solvername[i], "default") == 0 )
             break;
+         if( substr(solvername[s], 1, 5) == substr(solvername[i], 1, 5) &&
+            (match(solvername[s], "default") == 0) == (match(solvername[i], "default") == 0) &&
+            solvername[s] < solvername[i] )
+            break;
       }
-      for( j = s-1; j >= i; --j )
+      for( j = s-1; j >= o; --j )
          printorder[j+1] = printorder[j];
-      printorder[i] = s;
+      printorder[o] = s;
    }
 
    # print headers
