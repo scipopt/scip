@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.8 2007/04/02 15:43:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.9 2007/04/02 16:57:32 bzfpfend Exp $"
 
 /**@file   heur_oneopt.c
  * @brief  oneopt primal heuristic
@@ -309,6 +309,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    if( SCIPgetNLPRows(scip) == 0 )
       return SCIP_OKAY;
 
+   /* we only want to process each solution once */
    bestsol = SCIPgetBestSol(scip);
    if( heurdata->prevsol == bestsol || bestsol == NULL )
       return SCIP_OKAY;

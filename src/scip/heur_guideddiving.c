@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.37 2006/12/07 20:36:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.38 2007/04/02 16:57:31 bzfpfend Exp $"
 
 /**@file   heur_guideddiving.c
  * @brief  LP diving heuristic that chooses fixings in direction of incumbent solutions
@@ -230,7 +230,7 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
    *result = SCIP_DIDNOTRUN;
 
   /* don't dive, if no feasible solutions exist */
-   if( SCIPgetNSolsFound(scip) == 0 )
+   if( SCIPgetNSols(scip) == 0 )
       return SCIP_OKAY;
 
    /* get heuristic's data */
