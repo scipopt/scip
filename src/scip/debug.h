@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.h,v 1.23 2006/08/30 09:25:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.h,v 1.24 2007/04/02 18:27:30 bzfpfend Exp $"
 
 /**@file   debug.h
  * @brief  methods for debugging
@@ -27,7 +27,7 @@
 #define __SCIP_DEBUG_H__
 
 /** uncomment this define to activate debugging on given solution */
-/*#define SCIP_DEBUG_SOLUTION "neos-595904.sol"*/
+/*#define SCIP_DEBUG_SOLUTION "neos7.sol"*/
 
 
 #include "scip/def.h"
@@ -77,6 +77,7 @@ SCIP_RETCODE SCIPdebugCheckInference(
 /** informs solution debugger, that the given node will be freed */
 extern
 SCIP_RETCODE SCIPdebugRemoveNode(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NODE*            node                /**< node that will be freed */
    );
 
@@ -124,7 +125,7 @@ SCIP_RETCODE SCIPdebugIncludeProp(
 #define SCIPdebugCheckLbGlobal(set,var,lb) SCIP_OKAY
 #define SCIPdebugCheckUbGlobal(set,var,ub) SCIP_OKAY
 #define SCIPdebugCheckInference(blkmem,set,node,var,newbound,boundtype) SCIP_OKAY
-#define SCIPdebugRemoveNode(node) SCIP_OKAY
+#define SCIPdebugRemoveNode(set,node) SCIP_OKAY
 #define SCIPdebugCheckVbound(set,var,vbtype,vbvar,vbcoef,vbconstant) SCIP_OKAY
 #define SCIPdebugCheckImplic(set,var,varfixing,implvar,impltype,implbound) SCIP_OKAY
 #define SCIPdebugCheckConflict(blkmem,set,node,conflictset,nliterals) SCIP_OKAY

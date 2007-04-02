@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.194 2007/03/13 18:33:29 bzfberth Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.195 2007/04/02 18:27:30 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -981,7 +981,7 @@ SCIP_RETCODE SCIPnodeFree(
       SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), SCIPnodeGetType(*node));
 
    /* inform solution debugger, that the node has been freed */
-   SCIP_CALL( SCIPdebugRemoveNode(*node) ); /*lint !e506 !e774*/
+   SCIP_CALL( SCIPdebugRemoveNode(set, *node) ); /*lint !e506 !e774*/
 
    /* free nodetype specific data, and release no longer needed LPI states */
    switch( SCIPnodeGetType(*node) )

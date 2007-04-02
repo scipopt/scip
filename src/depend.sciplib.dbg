@@ -146,7 +146,9 @@ $(LIBOBJDIR)/scip/debug.o: src/scip/debug.c src/scip/def.h src/scip/type_retcode
   src/scip/pub_implics.h src/scip/pub_nodesel.h src/scip/pub_paramset.h \
   src/scip/pub_presol.h src/scip/pub_pricer.h src/scip/pub_reader.h \
   src/scip/pub_relax.h src/scip/pub_sepa.h src/scip/pub_prop.h \
-  src/scip/pub_sol.h src/scip/lpi.h src/scip/debug.h
+  src/scip/pub_sol.h src/scip/lpi.h src/scip/debug.h \
+  src/scip/struct_scip.h src/scip/type_interrupt.h src/scip/type_mem.h \
+  src/scip/type_pricestore.h src/scip/type_sepastore.h
 $(LIBOBJDIR)/scip/dialog.o: src/scip/dialog.c src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
   src/scip/pub_message.h src/blockmemshell/memory.h src/scip/set.h \
@@ -408,17 +410,17 @@ $(LIBOBJDIR)/scip/pricer.o: src/scip/pricer.c src/scip/def.h src/scip/type_retco
   src/scip/pub_paramset.h src/scip/lp.h src/scip/type_misc.h \
   src/scip/type_lp.h src/scip/type_prob.h src/scip/pub_lp.h \
   src/scip/type_lpi.h src/scip/struct_lp.h src/scip/prob.h \
-  src/scip/type_implics.h src/scip/struct_prob.h src/scip/pricestore.h \
-  src/scip/type_pricestore.h src/scip/scip.h src/scip/type_dialog.h \
-  src/scip/pub_branch.h src/scip/pub_conflict.h src/scip/pub_cons.h \
-  src/scip/pub_cutpool.h src/scip/type_cutpool.h src/scip/pub_dialog.h \
-  src/scip/pub_disp.h src/scip/pub_event.h src/scip/pub_fileio.h \
-  src/scip/pub_heur.h src/scip/pub_implics.h src/scip/pub_misc.h \
-  src/scip/pub_nodesel.h src/scip/pub_presol.h src/scip/pub_pricer.h \
-  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
-  src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
-  src/scip/pub_var.h src/scip/type_history.h src/scip/lpi.h \
-  src/scip/pricer.h src/scip/struct_pricer.h
+  src/scip/type_implics.h src/scip/type_primal.h src/scip/struct_prob.h \
+  src/scip/pricestore.h src/scip/type_pricestore.h src/scip/scip.h \
+  src/scip/type_dialog.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+  src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
+  src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
+  src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_implics.h \
+  src/scip/pub_misc.h src/scip/pub_nodesel.h src/scip/pub_presol.h \
+  src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
+  src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
+  src/scip/pub_tree.h src/scip/pub_var.h src/scip/type_history.h \
+  src/scip/lpi.h src/scip/pricer.h src/scip/struct_pricer.h
 $(LIBOBJDIR)/scip/primal.o: src/scip/primal.c src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
   src/scip/pub_message.h src/scip/set.h src/blockmemshell/memory.h \
