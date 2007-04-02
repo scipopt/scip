@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.82 2007/02/12 11:02:52 bzfpfets Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.83 2007/04/02 17:33:37 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -354,12 +354,6 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
       for( j = i; j > 0 && objval < SCIPsolGetObj(primal->sols[j-1], set, prob); --j )
          primal->sols[j] = primal->sols[j-1];
       primal->sols[j] = sol;
-   }
-
-   /* delete all solutions worse than the current objective limit */
-   for( ; primal->nsols > 0 && SCIPsolGetObj(primal->sols[primal->nsols-1], set, prob) > upperbound; primal->nsols-- )
-   {
-      SCIP_CALL( SCIPsolFree(&primal->sols[primal->nsols-1], blkmem, primal) );
    }
 
    /* compare objective limit to currently best solution */

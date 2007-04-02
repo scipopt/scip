@@ -89,6 +89,8 @@ fixed bugs:
 - fixed bug with primal heuristics reducing the cutoff bound such that the current node is cut off
 - now it is possible to add original solutions
 - fixed bug that cut age was not reset to zero for violated cuts
+- fixed bugs with SCIPgetBestsol() returning NULL after a restart with user objective limit
+- fixed wrong status code in presence of user objective limit and a feasible solution that is not better than the limit
 
 
 SCIP version 0.90

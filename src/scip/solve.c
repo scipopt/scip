@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.245 2007/03/15 22:20:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.246 2007/04/02 17:33:37 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -3106,14 +3106,16 @@ SCIP_RETCODE SCIPsolveCIP(
          /* switch status to UNBOUNDED */
          stat->status = SCIP_STATUS_UNBOUNDED;
       }
-      else if( primal->nsols == 0 )
+      else if( primal->nsols == 0
+         || SCIPsetIsGE(set, SCIPsolGetObj(primal->sols[0], set, prob), 
+            SCIPprobInternObjval(prob, set, SCIPprobGetObjlim(prob, set))) )
       {
          /* switch status to INFEASIBLE */
          stat->status = SCIP_STATUS_INFEASIBLE;
       }
       else
       {
-         /* switch status to INFEASIBLE */
+         /* switch status to OPTIMAL */
          stat->status = SCIP_STATUS_OPTIMAL;
       }
    }

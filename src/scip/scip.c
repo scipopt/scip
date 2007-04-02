@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.401 2007/03/27 14:41:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.402 2007/04/02 17:33:37 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4675,8 +4675,12 @@ SCIP_RETCODE SCIPpresolve(
                SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
                   "presolving detected infeasibility\n");
 
-               /* infeasibility in this round means, that the current best solution is optimal (if existing) */
-               if( scip->primal->nsols > 0 )
+               /* infeasibility in this round means, that the current best solution is optimal (if existing and not
+                * worse than user objective limit)
+                */
+               if( scip->primal->nsols > 0
+                  && SCIPsetIsLT(scip->set, SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob),
+                     SCIPprobInternObjval(scip->transprob, scip->set, SCIPprobGetObjlim(scip->transprob, scip->set))) )
                {
                   /* switch status to OPTIMAL */
                   scip->stat->status = SCIP_STATUS_OPTIMAL;
