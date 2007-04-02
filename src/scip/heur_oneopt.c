@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.7 2007/04/02 11:52:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.8 2007/04/02 15:43:40 bzfpfend Exp $"
 
 /**@file   heur_oneopt.c
  * @brief  oneopt primal heuristic
@@ -248,8 +248,14 @@ SCIP_DECL_HEURFREE(heurFreeOneopt)
 }
 
 /** initialization method of primal heuristic (called after problem was transformed) */
+#define heurInitOneopt NULL
+
+/** deinitialization method of primal heuristic (called before transformed problem is freed) */
+#define heurExitOneopt NULL
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 static
-SCIP_DECL_HEURINIT(heurInitOneopt)
+SCIP_DECL_HEURINITSOL(heurInitsolOneopt)
 { 
    SCIP_HEURDATA* heurdata;
 
@@ -262,12 +268,6 @@ SCIP_DECL_HEURINIT(heurInitOneopt)
    
    return SCIP_OKAY;
 }
-
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
-#define heurExitOneopt NULL
-
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#define heurInitsolOneopt NULL
 
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
 #define heurExitsolOneopt NULL
@@ -310,7 +310,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       return SCIP_OKAY;
 
    bestsol = SCIPgetBestSol(scip);
-   if( heurdata->prevsol == bestsol )
+   if( heurdata->prevsol == bestsol || bestsol == NULL )
       return SCIP_OKAY;
 
    /* we can only work on solutions valid in the transformed space */
