@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.29 2007/04/04 08:45:38 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.30 2007/04/04 08:52:25 bzfpfend Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -231,12 +231,16 @@ END {
       ismini = 0;
       ismaxi = 0;
       mark = " ";
+      countprob = 1;
 
       # check for exclusion
       if( excluded[p] )
+      {
          unprocessed = 1;
+         countprob = 0;
+      }
 
-      # find best and worst run
+      # find best and worst run and check whether this instance should be counted in overall statistics
       for( s = 0; s < nsolver; ++s )
       {
          pidx = probidx[p,s];
@@ -250,14 +254,13 @@ END {
          # check if solver ran successfully (i.e., no abort nor fail)
          if( processed && (status[s,pidx] == "ok" || status[s,pidx] == "unknown" || status[s,pidx] == "timeout") )
          {
-            if( status[s,pidx] != "timeout" )
-            {
-               besttime = min(besttime, time[s,pidx]);
-               bestnodes = min(bestnodes, nodes[s,pidx]);
-            }
+            besttime = min(besttime, time[s,pidx]);
+            bestnodes = min(bestnodes, nodes[s,pidx]);
             worsttime = max(worsttime, time[s,pidx]);
 	    worstnodes = max(worstnodes, nodes[s,pidx]);
          }
+         else
+            countprob = 0;
       }
       worsttime = max(worsttime, mintime);
       worstnodes = max(worstnodes, 1);
@@ -278,27 +281,30 @@ END {
 	 }
          else if( status[s,pidx] == "ok" || status[s,pidx] == "unknown" )
          {
-            nsolved[s]++;
             marker = " ";
-	    nthissolved++;
+            nsolved[s]++;
+            nthissolved++;
          }
          else if( status[s,pidx] == "timeout" )
          {
             # replace time and nodes by worst time and worst nodes of all runs
             nodes[s,pidx] = worstnodes;
             time[s,pidx] = worsttime;
-            ntimeouts[s]++;
             marker = ">";
-	    nthistimeouts++;
+            if( countprob )
+            {
+               ntimeouts[s]++;
+               nthistimeouts++;
+            }
          }
          else
          {
+            marker = "!";
             if( status[s,pidx] == "readerror" )
                readerror = 1;
-            nfails[s]++;
             fail = 1;
-            marker = "!";
-	    nthisfails++;
+            nfails[s]++;
+            nthisfails++;
          }
 
 	 if( primalbound[s,pidx] < 1e+20 )
