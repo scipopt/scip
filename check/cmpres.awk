@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.28 2007/04/02 20:27:22 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.29 2007/04/04 08:45:38 bzfpfend Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -64,6 +64,7 @@ BEGIN {
    onlyfeasible = 0;
    onlyinfeasible = 0;
    onlyfail = 0;
+   exclude = "";
 
    problistlen = 0;
    nsolver = 0;
@@ -128,6 +129,11 @@ END {
       printf("no instances found in log file\n");
       exit 1;
    }
+
+   # process exclude string
+   n = split(exclude, a, ",");
+   for( i = 1; i <= n; i++ )
+      excluded[a[i]] = 1;
 
    # initialize means
    for( s = 0; s < nsolver; ++s )
@@ -225,6 +231,10 @@ END {
       ismini = 0;
       ismaxi = 0;
       mark = " ";
+
+      # check for exclusion
+      if( excluded[p] )
+         unprocessed = 1;
 
       # find best and worst run
       for( s = 0; s < nsolver; ++s )
@@ -368,6 +378,11 @@ END {
       {
          line = sprintf("%s  inconsistent", line);
          fail = 1;
+	 mark = " ";
+      }
+      else if( excluded[p] )
+      {
+         line = sprintf("%s  excluded", line);
 	 mark = " ";
       }
       else if( unprocessed )

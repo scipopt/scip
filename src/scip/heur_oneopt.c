@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.9 2007/04/02 16:57:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.10 2007/04/04 08:45:38 bzfpfend Exp $"
 
 /**@file   heur_oneopt.c
  * @brief  oneopt primal heuristic
@@ -215,10 +215,11 @@ SCIP_RETCODE updateRowActivities(
 
       /* update row activity, only regard global rows in the LP */
       if( rowpos >= 0 && !SCIProwIsLocal(row) )         
+      {
          activities[rowpos] +=  shiftval * colvals[i];
-
-      assert(SCIPisFeasLE(scip, SCIProwGetLhs(row), activities[rowpos]));
-      assert(SCIPisFeasLE(scip, activities[rowpos], SCIProwGetRhs(row)));
+         assert(SCIPisFeasGE(scip, activities[rowpos]/100.0, SCIProwGetLhs(row)/100.0));
+         assert(SCIPisFeasLE(scip, activities[rowpos]/100.0, SCIProwGetRhs(row)/100.0));
+      }
    }
 
    return SCIP_OKAY;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.1 2007/02/22 16:55:00 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.2 2007/04/04 08:45:38 bzfpfend Exp $"
 
 /**@file   sepa_flowcover.c
  * @brief  flow cover cuts separator
@@ -61,7 +61,7 @@
 #define ALLOWLOCAL                 TRUE 
 #define DENSSCORE                 1e-04
 #define MAKECONTINTEGRAL          FALSE
-#define MINFRAC                    0.01 
+#define MINFRAC                    0.01
 #define MAXFRAC                    0.95
 #define FIXINTEGRALRHS            FALSE
 #define MAXDNOM                  1000LL 

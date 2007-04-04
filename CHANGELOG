@@ -39,6 +39,8 @@ plugins:
 - greatly improved performance of LP file reader by replacing string copies with pointer copies
 - changed sort algorithm in probing presolver
 - added flow cover separator
+- gomory cuts are now also separated for integral slack variables
+- less aggressive in Gomory cut separation
 
 parameters:
 - new parameter "separating/clique/backtrackfreq" to speed up clique cut separation in heuristic fashion

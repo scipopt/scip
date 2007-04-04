@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.60 2007/02/22 16:55:00 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.61 2007/04/04 08:45:38 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -70,7 +70,7 @@
 #define USEVBDS                    TRUE
 #define ALLOWLOCAL                 TRUE
 #define MINFRAC                    0.05
-#define MAXFRAC                    1.00
+#define MAXFRAC                    0.999
 #define MAKECONTINTEGRAL          FALSE
 
 
