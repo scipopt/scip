@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.214 2006/09/17 20:09:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.215 2007/04/04 19:42:59 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -3857,8 +3857,12 @@ SCIP_RETCODE SCIPvarChgLbOriginal(
    if( SCIPsetIsEQ(set, var->data.original.origdom.lb, newbound) )
       return SCIP_OKAY;
 
-   /* change the bound */
-   var->data.original.origdom.lb = newbound;
+   /* original domains are only stored for ORIGINAL variables, not for NEGATED */
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
+   {
+      /* change the bound */
+      var->data.original.origdom.lb = newbound;
+   }
 
    /* process parent variables */
    for( i = 0; i < var->nparentvars; ++i )
@@ -3901,8 +3905,12 @@ SCIP_RETCODE SCIPvarChgUbOriginal(
    if( SCIPsetIsEQ(set, var->data.original.origdom.ub, newbound) )
       return SCIP_OKAY;
 
-   /* change the bound */
-   var->data.original.origdom.ub = newbound;
+   /* original domains are only stored for ORIGINAL variables, not for NEGATED */
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
+   {
+      /* change the bound */
+      var->data.original.origdom.ub = newbound;
+   }
 
    /* process parent variables */
    for( i = 0; i < var->nparentvars; ++i )
@@ -4017,9 +4025,9 @@ SCIP_RETCODE varProcessChgUbGlobal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
    SCIP_Real             newbound            /**< new bound for variable */
    );
 
@@ -4030,9 +4038,9 @@ SCIP_RETCODE varProcessChgLbGlobal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
    SCIP_Real             newbound            /**< new bound for variable */
    )
 {
@@ -4044,11 +4052,12 @@ SCIP_RETCODE varProcessChgLbGlobal(
    assert(SCIPsetIsEQ(set, newbound, adjustedLb(set, SCIPvarGetType(var), newbound)));
    assert(var->glbdom.lb <= var->locdom.lb);
    assert(var->locdom.ub <= var->glbdom.ub);
+   assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));
    assert(set != NULL);
    assert(stat != NULL);
 
    SCIPdebugMessage("process changing global lower bound of <%s> from %f to %f\n", var->name, var->glbdom.lb, newbound);
-
+   
    if( SCIPsetIsEQ(set, newbound, var->glbdom.lb) )
       return SCIP_OKAY;
 
@@ -4179,9 +4188,9 @@ SCIP_RETCODE varProcessChgUbGlobal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
    SCIP_Real             newbound            /**< new bound for variable */
    )
 {
@@ -4193,11 +4202,12 @@ SCIP_RETCODE varProcessChgUbGlobal(
    assert(SCIPsetIsEQ(set, newbound, adjustedUb(set, SCIPvarGetType(var), newbound)));
    assert(var->glbdom.lb <= var->locdom.lb);
    assert(var->locdom.ub <= var->glbdom.ub);
+   assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));
    assert(set != NULL);
    assert(stat != NULL);
 
    SCIPdebugMessage("process changing global upper bound of <%s> from %f to %f\n", var->name, var->glbdom.ub, newbound);
-
+   
    if( SCIPsetIsEQ(set, newbound, var->glbdom.ub) )
       return SCIP_OKAY;
 
@@ -4328,9 +4338,9 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
    SCIP_Real             newbound            /**< new bound for variable */
    )
 {
@@ -4449,9 +4459,9 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
    SCIP_Real             newbound            /**< new bound for variable */
    )
 {
@@ -4570,9 +4580,9 @@ SCIP_RETCODE SCIPvarChgBdGlobal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
    SCIP_Real             newbound,           /**< new bound for variable */
    SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    )
@@ -4671,9 +4681,9 @@ SCIP_RETCODE varProcessChgUbLocal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
    SCIP_Real             newbound            /**< new bound for variable */
    );
 
@@ -4684,9 +4694,9 @@ SCIP_RETCODE varProcessChgLbLocal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
    SCIP_Real             newbound            /**< new bound for variable */
    )
 {
@@ -4696,7 +4706,8 @@ SCIP_RETCODE varProcessChgLbLocal(
 
    assert(var != NULL);
    assert(SCIPsetIsEQ(set, newbound, adjustedLb(set, SCIPvarGetType(var), newbound)));
-
+   assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));
+   
    SCIPdebugMessage("process changing lower bound of <%s> from %g to %g\n", var->name, var->locdom.lb, newbound);
 
    if( SCIPsetIsEQ(set, newbound, var->locdom.lb) )
@@ -4791,9 +4802,9 @@ SCIP_RETCODE varProcessChgUbLocal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
    SCIP_Real             newbound            /**< new bound for variable */
    )
 {
@@ -4803,7 +4814,8 @@ SCIP_RETCODE varProcessChgUbLocal(
 
    assert(var != NULL);
    assert(SCIPsetIsEQ(set, newbound, adjustedUb(set, SCIPvarGetType(var), newbound)));
-
+   assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));
+   
    SCIPdebugMessage("process changing upper bound of <%s> from %g to %g\n", var->name, var->locdom.ub, newbound);
 
    if( SCIPsetIsEQ(set, newbound, var->locdom.ub) )
@@ -4899,9 +4911,9 @@ SCIP_RETCODE SCIPvarChgLbLocal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
    SCIP_Real             newbound            /**< new bound for variable */
    )
 {
@@ -5015,9 +5027,9 @@ SCIP_RETCODE SCIPvarChgUbLocal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
    SCIP_Real             newbound            /**< new bound for variable */
    )
 {
@@ -5130,9 +5142,9 @@ SCIP_RETCODE SCIPvarChgBdLocal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
    SCIP_Real             newbound,           /**< new bound for variable */
    SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    )
@@ -5408,19 +5420,21 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
 SCIP_RETCODE SCIPvarResetBounds(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
    )
 {
    assert(var != NULL);
    assert(SCIPvarIsOriginal(var));
 
    /* copy the original bounds back to the global and local bounds */
-   var->glbdom.lb = var->data.original.origdom.lb;
-   var->glbdom.ub = var->data.original.origdom.ub;
-   var->locdom.lb = var->data.original.origdom.lb;
-   var->locdom.ub = var->data.original.origdom.ub;
+   SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, NULL, NULL, NULL, var->data.original.origdom.lb) );
+   SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, NULL, NULL, NULL, var->data.original.origdom.ub) );
+   SCIP_CALL( SCIPvarChgLbLocal(var, blkmem, set, stat, NULL, NULL, NULL, var->data.original.origdom.lb) );
+   SCIP_CALL( SCIPvarChgUbLocal(var, blkmem, set, stat, NULL, NULL, NULL, var->data.original.origdom.ub) );
 
    /* free the global and local holelists and duplicate the original ones */
+   /**@todo this has also to be called recursively with methods similar to SCIPvarChgLbGlobal() */
    holelistFree(&var->glbdom.holelist, blkmem);
    holelistFree(&var->locdom.holelist, blkmem);
    SCIP_CALL( holelistDuplicate(&var->glbdom.holelist, blkmem, set, var->data.original.origdom.holelist) );

@@ -93,6 +93,7 @@ fixed bugs:
 - fixed bug that cut age was not reset to zero for violated cuts
 - fixed bugs with SCIPgetBestsol() returning NULL after a restart with user objective limit
 - fixed wrong status code in presence of user objective limit and a feasible solution that is not better than the limit
+- fixed bug regarding modifying bounds in original problem if negated original variables exist
 
 
 SCIP version 0.90

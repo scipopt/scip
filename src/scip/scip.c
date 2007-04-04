@@ -1,4 +1,4 @@
- /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.402 2007/04/02 17:33:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.403 2007/04/04 19:42:59 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4622,7 +4622,7 @@ SCIP_RETCODE freeTransform(
    scip->set->stage = SCIP_STAGE_PROBLEM;
 
    /* reset original variable's local and global bounds to their original values */
-   SCIP_CALL( SCIPprobResetBounds(scip->origprob, scip->mem->probmem, scip->set) );
+   SCIP_CALL( SCIPprobResetBounds(scip->origprob, scip->mem->probmem, scip->set, scip->stat) );
 
    return SCIP_OKAY;
 }
@@ -7032,29 +7032,15 @@ SCIP_RETCODE SCIPfixVar(
        */
       if( fixedval <= SCIPvarGetLbLocal(var) )
       {
-         if( SCIPsetIsFeasGT(scip->set, fixedval, SCIPvarGetLbLocal(var)) )
-         {
-            SCIP_CALL( SCIPchgVarLb(scip, var, fixedval) );
-            *fixed = TRUE;
-         }
-         if( SCIPsetIsFeasLT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
-         {
-            SCIP_CALL( SCIPchgVarUb(scip, var, fixedval) );
-            *fixed = TRUE;
-         }
+         SCIP_CALL( SCIPchgVarLb(scip, var, fixedval) );
+         SCIP_CALL( SCIPchgVarUb(scip, var, fixedval) );
+         *fixed = TRUE;
       }
       else
       {
-         if( SCIPsetIsFeasGT(scip->set, fixedval, SCIPvarGetLbLocal(var)) )
-         {
-            SCIP_CALL( SCIPchgVarLb(scip, var, fixedval) );
-            *fixed = TRUE;
-         }
-         if( SCIPsetIsFeasLT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
-         {
-            SCIP_CALL( SCIPchgVarUb(scip, var, fixedval) );
-            *fixed = TRUE;
-         }
+         SCIP_CALL( SCIPchgVarUb(scip, var, fixedval) );
+         SCIP_CALL( SCIPchgVarLb(scip, var, fixedval) );
+         *fixed = TRUE;
       }
       return SCIP_OKAY;
 

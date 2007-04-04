@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_actconsdiving.c,v 1.4 2006/12/07 20:36:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_actconsdiving.c,v 1.5 2007/04/04 19:42:59 bzfheinz Exp $"
 
 /**@file   heur_actconsdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the active constraints the variable appear in
@@ -163,11 +163,9 @@ SCIP_Real getNActiveConsScore(
          }
       }
    }
-   //score = 1000.0*nactrows + (downcoefsum + upcoefsum)/nactrows;
    score = 1e-3*nactrows + (downcoefsum + 1e-6) * (upcoefsum + 1e-6);
    *downscore = -downcoefsum;
    *upscore = -upcoefsum;
-   //printf(" -> <%s>: %d active constraints - score: %g (down: %g, up: %g)\n", SCIPvarGetName(var), nactrows, score, *downscore, *upscore); /*?????????????????*/
 
    return score;
 }

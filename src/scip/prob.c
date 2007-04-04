@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.88 2007/03/27 14:41:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.89 2007/04/04 19:42:59 bzfheinz Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -384,7 +384,8 @@ SCIP_RETCODE SCIPprobTransform(
 SCIP_RETCODE SCIPprobResetBounds(
    SCIP_PROB*            prob,               /**< original problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
    )
 {
    int v;
@@ -395,7 +396,7 @@ SCIP_RETCODE SCIPprobResetBounds(
 
    for( v = 0; v < prob->nvars; ++v )
    {
-      SCIP_CALL( SCIPvarResetBounds(prob->vars[v], blkmem, set) );
+      SCIP_CALL( SCIPvarResetBounds(prob->vars[v], blkmem, set, stat) );
    }
 
    return SCIP_OKAY;
