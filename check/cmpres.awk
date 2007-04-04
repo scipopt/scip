@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.30 2007/04/04 08:52:25 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.31 2007/04/04 08:57:37 bzfpfend Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -225,6 +225,7 @@ END {
       bestnodes = +1e+100;
       worsttime = -1e+100;
       worstnodes = -1e+100;
+      nthisunprocessed = 0;
       nthissolved = 0;
       nthistimeouts = 0;
       nthisfails = 0;
@@ -278,6 +279,7 @@ END {
 	 {
             marker = "?";
 	    unprocessed = 1;
+            nthisunprocessed++;
 	 }
          else if( status[s,pidx] == "ok" || status[s,pidx] == "unknown" )
          {
@@ -362,7 +364,7 @@ END {
 	bestnsolved++;
       else if( nthistimeouts > 0 )
 	bestntimeouts++;
-      else if( nthisfails > 0 )
+      else if( nthisfails == nsolver - nthisunprocessed )
 	bestnfails++;
 
       # check for inconsistency in the primal and dual bounds
