@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.238 2007/04/06 09:39:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.239 2007/04/06 12:15:55 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -8218,12 +8218,14 @@ void transformStrongCGRow(
       }
 
       /* check, if variable is free variable 
-       * (for continuous variable use bound, so that coefficient will be nonnegative ) */
-      if( ( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS 
-            && SCIPsetIsInfinity(set, -bestlb) && SCIPsetIsInfinity(set, bestub) )
-         || ( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS 
-            && ( ( strongcgcoef[v] > 0.0 && SCIPsetIsInfinity(set, -bestlb) )
-               || ( strongcgcoef[v] < 0.0 && SCIPsetIsInfinity(set, bestub) ) ) ) )
+       * (for continuous variable use bound, so that coefficient will be nonnegative)
+       */
+      if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS
+            && SCIPsetIsInfinity(set, -bestlb)
+            && SCIPsetIsInfinity(set, bestub))
+         || (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS 
+            && ((strongcgcoef[v] > 0.0 && SCIPsetIsInfinity(set, -bestlb))
+               || (strongcgcoef[v] < 0.0 && SCIPsetIsInfinity(set, bestub)))) )
       {
          /* we found a free variable in the row with non-zero coefficient
           *  -> strong CG row can't be transformed in standard form
@@ -8233,12 +8235,13 @@ void transformStrongCGRow(
       }
 
       /* select transformation bound 
-       * (for continuous variable use bound, so that coefficient will be nonnegative ) */
+       * (for continuous variable use bound, so that coefficient will be nonnegative)
+       */
       varsol = SCIPvarGetLPSol(var);
 
-      if( ( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && strongcgcoef[v] > 0.0 ) 
-         || ( SCIPvarGetType(var)!= SCIP_VARTYPE_CONTINUOUS && 
-            varsol <= (1.0 - boundswitch) * bestlb + boundswitch * bestub ) )
+      if( (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && strongcgcoef[v] > 0.0)
+         || (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS
+            && varsol <= (1.0 - boundswitch) * bestlb + boundswitch * bestub) )
       {
          /* use lower bound as transformation bound: x'_j := x_j - lb_j */
          boundtype[v] = bestlbtype;
