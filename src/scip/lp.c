@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.239 2007/04/06 12:15:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.240 2007/04/09 09:58:41 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -3504,19 +3504,22 @@ SCIP_RETCODE rowScale(
       if( (integralcontvars || SCIPcolIsIntegral(col) || SCIPsetIsIntegral(set, newval))
          && isIntegralScalar(val, scaleval, minrounddelta, maxrounddelta, &intval) )
       {
-         if( intval < newval )
+         if( !SCIPsetIsEQ(set, intval, newval) )
          {
-            mindelta += (intval - newval)*ub;
-            maxdelta += (intval - newval)*lb;
-            mindeltainf = mindeltainf || SCIPsetIsInfinity(set, ub);
-            maxdeltainf = maxdeltainf || SCIPsetIsInfinity(set, -lb);
-         }
-         else
-         {
-            mindelta += (intval - newval)*lb;
-            maxdelta += (intval - newval)*ub;
-            mindeltainf = mindeltainf || SCIPsetIsInfinity(set, -lb);
-            maxdeltainf = maxdeltainf || SCIPsetIsInfinity(set, ub);
+            if( intval < newval )
+            {
+               mindelta += (intval - newval)*ub;
+               maxdelta += (intval - newval)*lb;
+               mindeltainf = mindeltainf || SCIPsetIsInfinity(set, ub);
+               maxdeltainf = maxdeltainf || SCIPsetIsInfinity(set, -lb);
+            }
+            else
+            {
+               mindelta += (intval - newval)*lb;
+               maxdelta += (intval - newval)*ub;
+               mindeltainf = mindeltainf || SCIPsetIsInfinity(set, -lb);
+               maxdeltainf = maxdeltainf || SCIPsetIsInfinity(set, ub);
+            }
          }
          newval = intval;
       }
@@ -7002,7 +7005,7 @@ SCIP_RETCODE transformMIRRow(
       if( SCIPsetIsZero(set, mircoef[v]) )
       {
          varsign[v] = +1;
-         boundtype[v] = -2;
+         boundtype[v] = -1;
          mircoef[v] = 0.0;
          continue;
       }
@@ -7201,10 +7204,23 @@ SCIP_RETCODE transformMIRRow(
 
          /* select transformation bound */
          varsol = SCIPvarGetLPSol(var);
-         if( varsol <= (1.0 - boundswitch) * bestlb + boundswitch * bestub )
+         if( SCIPsetIsLT(set, varsol, (1.0 - boundswitch) * bestlb + boundswitch * bestub) )
             uselb = TRUE;
-         else
+         else if( SCIPsetIsGT(set, varsol, (1.0 - boundswitch) * bestlb + boundswitch * bestub) )
             uselb = FALSE;
+         else
+         {
+            if( bestlbtype >= 0 )       /* prefer variable bounds */
+               uselb = TRUE;
+            else if( bestubtype >= 0 )  /* prefer variable bounds */
+               uselb = FALSE;
+            else if( bestlbtype >= -1 ) /* prefer global bounds over local bounds */
+               uselb = TRUE;
+            else if( bestubtype >= -1 ) /* prefer global bounds over local bounds */
+               uselb = FALSE;
+            else
+               uselb = TRUE;            /* no decision yet? just use lower bound */
+         }
       }
 
       /* remember given/best bounds and types */
@@ -7269,7 +7285,7 @@ SCIP_RETCODE transformMIRRow(
             assert(SCIPvarIsActive(vubvars[bestubtype]));
             zidx = SCIPvarGetProbindex(vubvars[bestubtype]);
             assert(zidx >= 0);
-               
+
             (*mirrhs) -= mircoef[v] * vubconsts[bestubtype];
             mircoef[zidx] += mircoef[v] * vubcoefs[bestubtype];
          }
@@ -8150,6 +8166,8 @@ void transformStrongCGRow(
     */
    for( v = prob->nvars-1; v >= 0; --v )
    {
+      SCIP_Bool uselb;
+
       var = prob->vars[v];
       assert(v == SCIPvarGetProbindex(var));
 
@@ -8157,7 +8175,7 @@ void transformStrongCGRow(
       if( SCIPsetIsZero(set, strongcgcoef[v]) )
       {
          varsign[v] = +1;
-         boundtype[v] = -2;
+         boundtype[v] = -1;
          continue;
       }
 
@@ -8238,10 +8256,27 @@ void transformStrongCGRow(
        * (for continuous variable use bound, so that coefficient will be nonnegative)
        */
       varsol = SCIPvarGetLPSol(var);
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         uselb = (strongcgcoef[v] > 0.0);
+      else if( SCIPsetIsLT(set, varsol, (1.0 - boundswitch) * bestlb + boundswitch * bestub) )
+         uselb = TRUE;
+      else if( SCIPsetIsGT(set, varsol, (1.0 - boundswitch) * bestlb + boundswitch * bestub) )
+         uselb = FALSE;
+      else
+      {
+         if( bestlbtype >= 0 )       /* prefer variable bounds */
+            uselb = TRUE;
+         else if( bestubtype >= 0 )  /* prefer variable bounds */
+            uselb = FALSE;
+         else if( bestlbtype >= -1 ) /* prefer global bounds over local bounds */
+            uselb = TRUE;
+         else if( bestubtype >= -1 ) /* prefer global bounds over local bounds */
+            uselb = FALSE;
+         else
+            uselb = TRUE;            /* no decision yet? just use lower bound */
+      }
 
-      if( (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && strongcgcoef[v] > 0.0)
-         || (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS
-            && varsol <= (1.0 - boundswitch) * bestlb + boundswitch * bestub) )
+      if( uselb )
       {
          /* use lower bound as transformation bound: x'_j := x_j - lb_j */
          boundtype[v] = bestlbtype;

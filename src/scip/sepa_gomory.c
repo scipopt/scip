@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.62 2007/04/04 08:45:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.63 2007/04/09 09:58:41 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -431,7 +431,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
             /* store the cut as sparse row, calculate activity and norm of cut */
             SCIP_CALL( storeCutInArrays(scip, nvars, vars, cutcoefs, varsolvals, normtype,
-                                        cutvars, cutvals, &cutlen, &cutact, &cutnorm) );
+                  cutvars, cutvals, &cutlen, &cutact, &cutnorm) );
 
             SCIPdebugMessage(" -> gomory cut for <%s>: act=%f, rhs=%f, norm=%f, eff=%f\n",
                c >= 0 ? SCIPvarGetName(SCIPcolGetVar(cols[c])) : SCIProwGetName(rows[-c-1]),

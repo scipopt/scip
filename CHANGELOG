@@ -41,6 +41,7 @@ plugins:
 - added flow cover separator
 - gomory cuts are now also separated for integral slack variables
 - less aggressive in Gomory cut separation
+- strong CG cuts are now also separated for integral slack variables
 
 parameters:
 - new parameter "separating/clique/backtrackfreq" to speed up clique cut separation in heuristic fashion
@@ -68,6 +69,8 @@ features:
 - modified cut selection code
 - cut conversion into linear constraints after a restart now works better
 - if possible, objective function is scaled to make objective value integral with gcd 1
+- slightly modified bound substitution heuristic in SCIPcalcMIR() and SCIPcalcStrongCG()
+- slightly less conservative in numerics for SCIPmakeRowIntegral()
 
 fixed bugs:
 - fixed bug with too long variable names
