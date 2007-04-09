@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.51 2007/04/02 18:56:31 bzfpfend Exp $
+# $Id: check.awk,v 1.52 2007/04/09 20:41:53 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -71,9 +71,9 @@ BEGIN {
       printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &     Nodes &     Time \\\\\n") > TEXFILE;
       printf("\\midrule\n")                                         >TEXFILE;
 
-      printf("------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+-------+-------+-------\n");
-      printf("Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap% | Nodes |  Time |       \n");
-      printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+-------+-------+-------\n");
+      printf("------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+-------\n");
+      printf("Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap% |  Iters | Nodes |  Time |       \n");
+      printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
    }
 
    nprobs = 0;
@@ -151,6 +151,7 @@ BEGIN {
    feasible = 1;
    pb = +1e20;
    db = -1e20;
+   simpiters = 0;
    bbnodes = 0;
    primlps = 0;
    primiter = 0;
@@ -274,6 +275,9 @@ BEGIN {
 #
 # iterations
 #
+/^  primal LP        :/ { simpiters += $6; }
+/^  dual LP          :/ { simpiters += $6; }
+/^  barrier LP       :/ { simpiters += $6; }
 /^  nodes \(total\)    :/ { bbnodes = $4 }
 /^  primal LP        :/ { primlps = $5; primiter = $6; }
 /^  dual LP          :/ { duallps = $5; dualiter = $6; }
@@ -483,9 +487,9 @@ BEGIN {
 	 if( !onlypresolvereductions || origcons > cons || origvars > vars )
 	 {
 	    printf("%-19s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f \\\\\n",
-		   pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
-	    printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %7d %7.1f %s\n",
-		   shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, bbnodes, tottime, status);
+               pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
+	    printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f %s\n",
+               shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime, status);
 	 }
       }
    }
@@ -528,7 +532,7 @@ END {
          "Geom. Mean", nodegeom, timegeom) >TEXFILE;
       printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
          "Shifted Geom.", shiftednodegeom, shiftedtimegeom) >TEXFILE;
-      printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+-------+-------+-------\n");
+      printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
       printf("\n");
       printf("------------------------------[Nodes]---------------[Time]------\n");
       printf("  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom. \n");
