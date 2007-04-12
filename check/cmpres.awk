@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.33 2007/04/09 21:12:05 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.34 2007/04/12 10:31:42 bzfpfend Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -25,18 +25,37 @@ function abs(x)
 {
    return x < 0 ? -x : x;
 }
+
 function min(x,y)
 {
    return (x) < (y) ? (x) : (y);
 }
+
 function max(x,y)
 {
    return (x) > (y) ? (x) : (y);
 }
+
 function ceil(x)
 {
-   return (10*x) == int(10*x) ? (x) : int(10*x+1.0)/10.0;
+   return (x == int(x) ? x : (x < 0 ? int(x) : int(x+1)));
 }
+
+function floor(x)
+{
+   return (x == int(x) ? x : (x < 0 ? int(x-1) : int(x)));
+}
+
+function fracceil(x,f)
+{
+   return ceil(x/f)*f;
+}
+
+function fracfloor(x,f)
+{
+   return floor(x/f)*f;
+}
+
 function printhline(nsolver)
 {
    for( s = 0; s < nsolver; ++s )
@@ -59,13 +78,56 @@ function isslower(t,reft,tol)
    return isfaster(reft, t, tol);
 }
 
+function texcompstr(val,refval, x,s,t)
+{
+   x = floor(100*(val/refval-1.0)+0.5);
+   s = "";
+   t = "";
+   if( x < 0 )
+   {
+      if( x <= -texcolorlimit )
+      {
+         s = "\\textcolor{red}{\\raisebox{0.25ex}{\\tiny $-$}";
+         t = "}";
+      }
+      else
+         s = "\\raisebox{0.25ex}{\\tiny $-$}";
+   }
+   else if( x > 0 )
+   {
+      if( x >= +texcolorlimit )
+      {
+         s = "\\textcolor{blue}{\\raisebox{0.25ex}{\\tiny $+$}";
+         t = "}";
+      }
+      else
+         s = "\\raisebox{0.25ex}{\\tiny $+$}";
+   }
+
+   return sprintf("%s%d%s", s, abs(x), t);
+}
+
+function texsolvername(s, sname)
+{
+   sname = solvername[s];
+   if( setname[sname] != "" )
+      sname = setname[sname];
+   else
+   {
+      sub(/.*:/, "", sname);
+      sub(/.*_/, "", sname);
+      if( length(sname) > 12 )
+         sname = substr(sname, length(sname)-11, 12);
+   }
+
+   return sname;
+}
+
 BEGIN {
    timegeomshift = 60.0;
    nodegeomshift = 1000.0;
-   mintime = 0.1;
-   nwintolerances = 2;
-   wintolerances[1] = 1.1;
-   wintolerances[2] = 2.0;
+   mintime = 0.5;
+   wintolerance = 1.1;
    markbettertime = 1.1;
    markworsetime  = 1.1;
    markbetternodes = 5.0;
@@ -79,15 +141,40 @@ BEGIN {
    onlyfail = 0;
    exclude = "";
    texfile = "";
+   texincfile = "";
+   texsummaryfile = "";
+   texsummaryheader = 0;
+   texcolorlimit = 5;
+   textestset = "";
+   thesisnames = 0;
+   nsetnames = 0;
+   onlygroup = 0;
+   group = "default";
 
    problistlen = 0;
    nsolver = 0;
    nprobs[nsolver] = 0;
    fulltotaltime = 0.0;
 }
+/^=group=/ {
+   group = $2;
+}
+/^=setname= / {
+   if( setorder[$2] == 0 )
+   {
+      nsetnames++;
+      setorder[$2] = nsetnames;
+      for( i = 3; i <= NF; i++ )
+         setname[$2] = setname[$2]" "$i;
+   }
+   setingroup[$2,group] = 1;
+}
 /^@01 / {
-   solvername[nsolver] = $2;
-   nsolver++;
+   if( onlygroup == 0 || setingroup[$2,onlygroup] )
+   {
+      solvername[nsolver] = $2;
+      nsolver++;
+   }
    nprobs[nsolver] = 0;
 }
 // {
@@ -104,7 +191,7 @@ BEGIN {
       gap[nsolver,nprobs[nsolver]] = $7;
       iters[nsolver,nprobs[nsolver]] = -nsolver; # different values for each solver -> category "diff"
       nodes[nsolver,nprobs[nsolver]] = max($8,1);
-      time[nsolver,nprobs[nsolver]] = ceil(max($9,mintime));
+      time[nsolver,nprobs[nsolver]] = fracceil(max($9,mintime),0.1);
       status[nsolver,nprobs[nsolver]] = $10;
       probidx[$1,nsolver] = nprobs[nsolver];
       probcnt[$1]++;
@@ -127,7 +214,7 @@ BEGIN {
       gap[nsolver,nprobs[nsolver]] = $9;
       iters[nsolver,nprobs[nsolver]] = -nsolver; # different values for each solver -> category "diff"
       nodes[nsolver,nprobs[nsolver]] = max($10,1);
-      time[nsolver,nprobs[nsolver]] = ceil(max($11,mintime));
+      time[nsolver,nprobs[nsolver]] = fracceil(max($11,mintime),0.1);
       status[nsolver,nprobs[nsolver]] = $12;
       probidx[$1,nsolver] = nprobs[nsolver];
       probcnt[$1]++;
@@ -150,7 +237,7 @@ BEGIN {
       gap[nsolver,nprobs[nsolver]] = $9;
       iters[nsolver,nprobs[nsolver]] = $10;
       nodes[nsolver,nprobs[nsolver]] = max($11,1);
-      time[nsolver,nprobs[nsolver]] = ceil(max($12,mintime));
+      time[nsolver,nprobs[nsolver]] = fracceil(max($12,mintime),0.1);
       status[nsolver,nprobs[nsolver]] = $13;
       probidx[$1,nsolver] = nprobs[nsolver];
       probcnt[$1]++;
@@ -163,6 +250,11 @@ BEGIN {
    }
 }
 END {
+   if( onlygroup > 0 && nsolver == 1 && solvername[1] == "SCIP:default" )
+   {
+      printf("only SCIP:default setting found\n");
+      exit 1;
+   }
    if( nsolver == 0 )
    {
       printf("no instances found in log file\n");
@@ -180,21 +272,26 @@ END {
       # cat: 0 - all, 1 - different path, 2 - equal path, 3 - all timeout
       for( cat = 0; cat <= 3; cat++ )
       {
+         nevalprobs[s,cat] = 0;
+         nprocessedprobs[s,cat] = 0;
          timetotal[s,cat] = 0.0;
          nodetotal[s,cat] = 0.0;
          timegeom[s,cat] = 1.0;
          nodegeom[s,cat] = 1.0;
          timeshiftedgeom[s,cat] = timegeomshift;
          nodeshiftedgeom[s,cat] = nodegeomshift;
+         reftimetotal[s,cat] = 0.0;
+         refnodetotal[s,cat] = 0.0;
+         reftimegeom[s,cat] = 1.0;
+         refnodegeom[s,cat] = 1.0;
+         reftimeshiftedgeom[s,cat] = timegeomshift;
+         refnodeshiftedgeom[s,cat] = nodegeomshift;
          wins[s,cat] = 0;
          nsolved[s,cat] = 0;
          ntimeouts[s,cat] = 0;
          nfails[s,cat] = 0;
-         for( wt = 1; wt <= nwintolerances; wt++ )
-         {
-            better[s,wt,cat] = 0;
-            worse[s,wt,cat] = 0;
-         }
+         better[s,cat] = 0;
+         worse[s,cat] = 0;
          betterobj[s,cat] = 0;
          worseobj[s,cat] = 0;
          feasibles[s,cat] = 0;
@@ -208,26 +305,37 @@ END {
    bestnsolved = 0;
    bestntimeouts = 0;
    bestnfails = 0;
-   for( wt = 1; wt <= nwintolerances; wt++ )
-      bestbetter[wt] = 0;
+   bestbetter = 0;
    bestbetterobj = 0;
    bestfeasibles = 0;
 
    # calculate the order in which the columns should be printed: CPLEX < SCIP, default < non-default
    for( s = 0; s < nsolver; ++s )
    {
+      sname = solvername[s];
       for( o = 0; o < s; ++o )
       {
          i = printorder[o];
-         if( substr(solvername[s], 1, 5) == "CPLEX" && substr(solvername[i], 1, 5) != "CPLEX" )
-            break;
-         if( substr(solvername[s], 1, 5) == substr(solvername[i], 1, 5) &&
-            match(solvername[s], "default") != 0 && match(solvername[i], "default") == 0 )
-            break;
-         if( substr(solvername[s], 1, 5) == substr(solvername[i], 1, 5) &&
-            (match(solvername[s], "default") == 0) == (match(solvername[i], "default") == 0) &&
-            solvername[s] < solvername[i] )
-            break;
+         iname = solvername[i];
+         if( nsetnames > 0 )
+         {
+            # use order given by =setname= entries
+            if( setorder[sname] < setorder[iname] )
+               break;
+         }
+         else
+         {
+            # use alphabetical order, but put CPLEX before SCIP and "default" before all others
+            if( substr(sname, 1, 5) == "CPLEX" && substr(iname, 1, 5) != "CPLEX" )
+               break;
+            if( substr(sname, 1, 5) == substr(iname, 1, 5) &&
+               match(sname, "default") != 0 && match(iname, "default") == 0 )
+               break;
+            if( substr(sname, 1, 5) == substr(iname, 1, 5) &&
+               (match(sname, "default") == 0) == (match(iname, "default") == 0) &&
+               sname < iname )
+               break;
+         }
       }
       for( j = s-1; j >= o; --j )
          printorder[j+1] = printorder[j];
@@ -256,11 +364,6 @@ END {
    printhline(nsolver);
    
    # display the problem results and calculate mean values
-   for( cat = 0; cat <= 3; cat++ )
-   {
-      nevalprobs[cat] = 0;
-      nprocessedprobs[cat] = 0;
-   }
    for( i = 0; i < problistlen; ++i )
    {
       p = problist[i];
@@ -279,14 +382,13 @@ END {
       bestnodes = +1e+100;
       worsttime = -1e+100;
       worstnodes = -1e+100;
+      worstiters = -1e+100;
       nthisunprocessed = 0;
       nthissolved = 0;
       nthistimeouts = 0;
       nthisfails = 0;
       ismini = 0;
       ismaxi = 0;
-      iseqpath = 1;
-      alltimeout = 1;
       mark = " ";
       countprob = 1;
 
@@ -322,40 +424,43 @@ END {
             bestnodes = min(bestnodes, nodes[s,pidx]);
             worsttime = max(worsttime, time[s,pidx]);
 	    worstnodes = max(worstnodes, nodes[s,pidx]);
+	    worstiters = max(worstiters, iters[s,pidx]);
          }
          else
             countprob = 0;
       }
       worsttime = max(worsttime, mintime);
       worstnodes = max(worstnodes, 1);
+      worstiters = max(worstiters, 0);
 
-      # check if all solvers have same path
+      # check for each solver if it has same path as reference solver -> category
       for( o = 0; o < nsolver; ++o )
       {
          s = printorder[o];
          pidx = probidx[p,s];
          processed = (pidx != "");
 
-         if( processed )
+         if( !processed )
+            continue;
+         
+         if( nodecomp == -1 )
          {
-            if( nodecomp == -1 )
-            {
-               itercomp = iters[s,pidx];
-               nodecomp = nodes[s,pidx];
-               timecomp = time[s,pidx];
-            }
-            iseqpath = (iseqpath && iters[s,pidx] == itercomp && nodes[s,pidx] == nodecomp);
-            alltimeout = alltimeout && (status[s,pidx] == "timeout");
+            itercomp = iters[s,pidx];
+            nodecomp = nodes[s,pidx];
+            timecomp = time[s,pidx];
+            timeoutcomp = (status[s,pidx] == "timeout");
          }
-      }
+         iseqpath = (iters[s,pidx] == itercomp && nodes[s,pidx] == nodecomp);
+         hastimeout = timeoutcomp || (status[s,pidx] == "timeout");
 
-      # which category?
-      if( alltimeout )
-         category = 3;
-      else if( iseqpath )
-         category = 2;
-      else
-         category = 1;
+         # which category?
+         if( hastimeout )
+            category[s] = 3;
+         else if( iseqpath )
+            category[s] = 2;
+         else
+            category[s] = 1;
+      }
 
       # evaluate instance for all solvers
       for( o = 0; o < nsolver; ++o )
@@ -375,7 +480,7 @@ END {
                if( !unprocessed )
                {
                   nsolved[s,0]++;
-                  nsolved[s,category]++;
+                  nsolved[s,category[s]]++;
                   nthissolved++;
                }
             }
@@ -384,16 +489,18 @@ END {
                marker = ">";
                if( !unprocessed )
                {
-                  # if memory limit was exceeded, replace time and nodes by worst time and worst nodes of all runs
-                  if( time[s,pidx] < 0.99*worsttime )
+                  # if memory limit was exceeded or we hit a hard time/memory limit,
+                  # replace time and nodes by worst time and worst nodes of all runs
+                  if( time[s,pidx] < 0.99*worsttime || nodes[s,pidx] <= 1 )
                   {
+                     iters[s,pidx] = worstiters+s; # make sure this is not treated as equal path
                      nodes[s,pidx] = worstnodes;
                      time[s,pidx] = worsttime;
                   }
                   if( countprob )
                   {
                      ntimeouts[s,0]++;
-                     ntimeouts[s,category]++;
+                     ntimeouts[s,category[s]]++;
                      nthistimeouts++;
                   }
                }
@@ -407,7 +514,7 @@ END {
                if( !unprocessed )
                {
                   nfails[s,0]++;
-                  nfails[s,category]++;
+                  nfails[s,category[s]]++;
                   nthisfails++;
                }
             }
@@ -502,13 +609,14 @@ END {
       hasfeasible = 0;
       if( !unprocessed )
       {
-         nprocessedprobs++;
          for( s = 0; s < nsolver; ++s )
          {
+            nprocessedprobs[s,0]++;
+            nprocessedprobs[s,category[s]]++;
             pidx = probidx[p,s];
 	    if( primalbound[s,pidx] < 1e+20 ) {
 	       feasibles[s,0]++;
-	       feasibles[s,category]++;
+	       feasibles[s,category[s]]++;
 	       hasfeasible = 1;
 	    }
 	 }
@@ -525,37 +633,39 @@ END {
       if( !fail && !unprocessed &&
           (!onlyfeasible || hasfeasible) && (!onlyinfeasible || !hasfeasible) )
       {
-         nevalprobs[0]++;
-         nevalprobs[category]++;
 	 reftime = time[printorder[0],probidx[p,printorder[0]]];
+         refnodes = nodes[printorder[0],probidx[p,printorder[0]]];
 	 refobj = primalbound[printorder[0],probidx[p,printorder[0]]];
-         for( wt = 1; wt <= nwintolerances; wt++ )
-            hasbetter[wt] = 0;
+         hasbetter = 0;
 	 hasbetterobj = 0;
          for( s = 0; s < nsolver; ++s )
          {
             pidx = probidx[p,s];
-            for( cat = 0; cat <= 3; cat = 3*cat + category )
+            for( cat = 0; cat <= 3; cat = 3*cat + category[s] )
             {
-               nep = nevalprobs[cat];
+               nevalprobs[s,cat]++;
+               nep = nevalprobs[s,cat];
                timetotal[s,cat] += time[s,pidx];
                nodetotal[s,cat] += nodes[s,pidx];
                timegeom[s,cat] = timegeom[s,cat]^((nep-1)/nep) * time[s,pidx]^(1.0/nep);
                nodegeom[s,cat] = nodegeom[s,cat]^((nep-1)/nep) * nodes[s,pidx]^(1.0/nep);
                timeshiftedgeom[s,cat] = timeshiftedgeom[s,cat]^((nep-1)/nep) * (time[s,pidx]+timegeomshift)^(1.0/nep);
                nodeshiftedgeom[s,cat] = nodeshiftedgeom[s,cat]^((nep-1)/nep) * (nodes[s,pidx]+nodegeomshift)^(1.0/nep);
-               if( time[s,pidx] <= wintolerances[1]*besttime )
+               reftimetotal[s,cat] += reftime;
+               refnodetotal[s,cat] += refnodes;
+               reftimegeom[s,cat] = reftimegeom[s,cat]^((nep-1)/nep) * reftime^(1.0/nep);
+               refnodegeom[s,cat] = refnodegeom[s,cat]^((nep-1)/nep) * refnodes^(1.0/nep);
+               reftimeshiftedgeom[s,cat] = reftimeshiftedgeom[s,cat]^((nep-1)/nep) * (reftime+timegeomshift)^(1.0/nep);
+               refnodeshiftedgeom[s,cat] = refnodeshiftedgeom[s,cat]^((nep-1)/nep) * (refnodes+nodegeomshift)^(1.0/nep);
+               if( time[s,pidx] <= wintolerance*besttime )
                   wins[s,cat]++;
-               for( wt = 1; wt <= nwintolerances; wt++ )
+               if( isfaster(time[s,pidx], reftime, wintolerance) )
                {
-                  if( isfaster(time[s,pidx], reftime, wintolerances[wt]) )
-                  {
-                     better[s,wt,cat]++;
-                     hasbetter[wt] = 1;
-                  }
-                  else if( isslower(time[s,pidx], reftime, wintolerances[wt]) )
-                     worse[s,wt,cat]++;
+                  better[s,cat]++;
+                  hasbetter = 1;
                }
+               else if( isslower(time[s,pidx], reftime, wintolerance) )
+                  worse[s,cat]++;
                pb = primalbound[s,pidx];
                if( (ismini && pb - refobj < -0.01 * max(max(abs(refobj), abs(pb)), 1.0)) ||
                    (ismaxi && pb - refobj > +0.01 * max(max(abs(refobj), abs(pb)), 1.0)) ) {
@@ -571,23 +681,33 @@ END {
                score[s,cat] = score[s,cat]^((nep-1)/nep) * thisscore^(1.0/nep);
             }
          }
-	 besttimegeom = besttimegeom^((nevalprobs[0]-1)/nevalprobs[0]) * besttime^(1.0/nevalprobs[0]);
-	 bestnodegeom = bestnodegeom^((nevalprobs[0]-1)/nevalprobs[0]) * bestnodes^(1.0/nevalprobs[0]);
-	 besttimeshiftedgeom = besttimeshiftedgeom^((nevalprobs[0]-1)/nevalprobs[0]) * (besttime+timegeomshift)^(1.0/nevalprobs[0]);
-	 bestnodeshiftedgeom = bestnodeshiftedgeom^((nevalprobs[0]-1)/nevalprobs[0]) * (bestnodes+nodegeomshift)^(1.0/nevalprobs[0]);
-         for( wt = 1; wt <= nwintolerances; wt++ )
-         {
-            if( hasbetter[wt] )
-               bestbetter[wt]++;
-         }
+         s = printorder[0];
+	 besttimegeom = besttimegeom^((nevalprobs[s,0]-1)/nevalprobs[s,0]) * besttime^(1.0/nevalprobs[s,0]);
+	 bestnodegeom = bestnodegeom^((nevalprobs[s,0]-1)/nevalprobs[s,0]) * bestnodes^(1.0/nevalprobs[s,0]);
+	 besttimeshiftedgeom = besttimeshiftedgeom^((nevalprobs[s,0]-1)/nevalprobs[s,0]) * (besttime+timegeomshift)^(1.0/nevalprobs[s,0]);
+	 bestnodeshiftedgeom = bestnodeshiftedgeom^((nevalprobs[s,0]-1)/nevalprobs[s,0]) * (bestnodes+nodegeomshift)^(1.0/nevalprobs[s,0]);
+         if( hasbetter )
+            bestbetter++;
 	 if( hasbetterobj )
 	   bestbetterobj++;
       }
    }
    printhline(nsolver);
 
+   # make sure total time and nodes it not zero
+   for( s = 0; s < nsolver; ++s )
+   {
+      for( cat = 0; cat <= 3; cat++ )
+      {
+         nodetotal[s,cat] = max(nodetotal[s,cat], 1);
+         refnodetotal[s,cat] = max(refnodetotal[s,cat], 1);
+         timetotal[s,cat] = max(timetotal[s,cat], mintime);
+         reftimetotal[s,cat] = max(reftimetotal[s,cat], mintime);
+      }
+   }
+
    # print solvers' overall statistics
-   probnumstr = "("nevalprobs[0]")";
+   probnumstr = "("nevalprobs[printorder[0],0]")";
    printf("%-14s %5s", "total", probnumstr);
    for( o = 0; o < nsolver; ++o )
    {
@@ -622,8 +742,12 @@ END {
       {
          nodeshiftedgeom[s,cat] -= nodegeomshift;
          timeshiftedgeom[s,cat] -= timegeomshift;
-         nodeshiftedgeom[s,cat] = max(nodeshiftedgeom[s,cat], 1.0);
-         timeshiftedgeom[s,cat] = max(timeshiftedgeom[s,cat], 1.0);
+         nodeshiftedgeom[s,cat] = max(nodeshiftedgeom[s,cat], mintime);
+         timeshiftedgeom[s,cat] = max(timeshiftedgeom[s,cat], mintime);
+         refnodeshiftedgeom[s,cat] -= nodegeomshift;
+         reftimeshiftedgeom[s,cat] -= timegeomshift;
+         refnodeshiftedgeom[s,cat] = max(refnodeshiftedgeom[s,cat], mintime);
+         reftimeshiftedgeom[s,cat] = max(reftimeshiftedgeom[s,cat], mintime);
       }
       if( o == 0 )
       {
@@ -645,20 +769,14 @@ END {
 
    for( cat = 0; cat <= 3; cat++ )
    {
-      if( nprocessedprobs[cat] == 0 )
-         continue;
+#      if( nprocessedprobs[cat] == 0 )
+#         continue;
 
       header = (cat == 0 ? "all" : (cat == 1 ? "diff" : (cat == 2 ? "equal" : "timeout")));
       printf("\n");
-      printf("%55s", "");
-      for( wt = 1; wt <= nwintolerances; wt++ )
-         printf("   %3d%%   ", 100.0*(wintolerances[wt]));
-      printf("    obj   \n");
-      printf("%-7s (%4d proc, %4d eval)      fail time solv wins", header, nprocessedprobs, nevalprobs);
-      for( wt = 1; wt <= nwintolerances; wt++ )
-         printf(" bett wors");
-      printf(" bett wors feas     nodes   shnodes    nodesQ  shnodesQ    time  shtime   timeQ shtimeQ   score\n");
-          
+      printf("%-7s                             proc eval fail time solv wins bett wors bobj wobj feas     nodes   shnodes    nodesQ  shnodesQ    time  shtime   timeQ shtimeQ   score\n",
+         header);
+
       for( o = 0; o < nsolver; ++o )
       {
          s = printorder[o];
@@ -669,20 +787,23 @@ END {
             nodeshiftedgeomcomp = nodeshiftedgeom[s,cat];
             timeshiftedgeomcomp = timeshiftedgeom[s,cat];
          }
-         printf("%-35s %4d %4d %4d %4d", solvername[s], nfails[s,cat], ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
-         for( wt = 1; wt <= nwintolerances; wt++ )
-            printf(" %4d %4d", better[s,wt,cat], worse[s,wt,cat]);
-         printf(" %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7.2f\n", 
-                betterobj[s,cat], worseobj[s,cat], feasibles[s,cat],
-                nodegeom[s,cat], nodeshiftedgeom[s,cat], nodegeom[s,cat]/nodegeomcomp, nodeshiftedgeom[s,cat]/nodeshiftedgeomcomp,
-                timegeom[s,cat], timeshiftedgeom[s,cat], timegeom[s,cat]/timegeomcomp, timeshiftedgeom[s,cat]/timeshiftedgeomcomp,
-                score[s,cat]);
+         if( (o > 0 || cat == 0) && nevalprobs[s,cat] > 0 )
+         {
+            printf("%-35s %4d %4d %4d %4d %4d %4d", solvername[s], nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+               ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
+            printf(" %4d %4d", better[s,cat], worse[s,cat]);
+            printf(" %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7.2f\n", 
+               betterobj[s,cat], worseobj[s,cat], feasibles[s,cat],
+               nodegeom[s,cat], nodeshiftedgeom[s,cat], nodegeom[s,cat]/refnodegeom[s,cat],
+               nodeshiftedgeom[s,cat]/refnodeshiftedgeom[s,cat],
+               timegeom[s,cat], timeshiftedgeom[s,cat], timegeom[s,cat]/reftimegeom[s,cat],
+               timeshiftedgeom[s,cat]/reftimeshiftedgeom[s,cat], score[s,cat]);
+         }
       }
       if( cat == 0 )
       {
-         printf("%-35s %4d %4d %4d %4s", "optimal auto settings", bestnfails, bestntimeouts, bestnsolved, "");
-         for( wt = 1; wt <= nwintolerances; wt++ )   
-            printf(" %4d %4s", bestbetter[wt], "");
+         printf("%-35s           %4d %4d %4d %4s", "optimal auto settings", bestnfails, bestntimeouts, bestnsolved, "");
+         printf(" %4d %4s", bestbetter, "");
          printf(" %4d %4s %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7s\n",
                 bestbetterobj, "", bestfeasibles,
                 bestnodegeom, bestnodeshiftedgeom, bestnodegeom/nodegeomcomp, bestnodeshiftedgeom/nodeshiftedgeomcomp,
@@ -691,49 +812,168 @@ END {
       }
    }
 
+   printf("\n");
    printf("total time over all settings: %.1f sec = %.1f hours = %.1f days = %.1f weeks = %.1f months\n",
       fulltotaltime, fulltotaltime/3600.0, fulltotaltime/(3600.0*24), fulltotaltime/(3600.0*24*7),
       fulltotaltime/(3600.0*24*30));
 
-   # generate tex summary file
+   # generate tex file
    if( texfile != "" )
    {
+      hasequalpath = 0;
+      for( o = 0; o < nsolver; ++o )
+      {
+         if( nevalprobs[s,2] > 0 )
+         {
+            hasequalpath = 1;
+            break;
+         }
+      }
+
       printf("generating tex file <%s>\n", texfile);
       printf("{\\sffamily\n") > texfile;
       printf("\\scriptsize\n") > texfile;
       printf("\\setlength{\\extrarowheight}{1pt}\n") > texfile;
       printf("\\setlength{\\tabcolsep}{2pt}\n") > texfile;
-      printf("\\newcommand{\\g}{\\raisebox{0.25ex}{\\tiny $>$}}\n") > texfile;
-      printf("\\newcommand{\\spc}{\\;\\;\\;\\;\\;\\;}\n") > texfile;
-      printf("\\begin{tabular*}{\\columnwidth}{@{\\extracolsep{\\fill}}l@{\\spc}rrr@{\\spc}rrrrrr@{\\spc}rrr@{\\spc}rrr@{}}\n") > texfile;
+      printf("\\newcommand{\\spc}{\\hspace{%dem}}\n", 2-hasequalpath) > texfile;
+
+      printf("\\begin{tabular*}{\\columnwidth}{@{\\extracolsep{\\fill}}lrrr@{\\spc}rrrrrr@{\\spc}rrrr") > texfile;
+      if( hasequalpath )
+         printf("@{\\spc}rrrr") > texfile;
+      printf("@{}}\n") > texfile;
+
       printf("\\toprule\n") > texfile;
-      printf("& & \\multicolumn{2}{c@{\\spc}}{fast/slow} & \\multicolumn{6}{c@{\\spc}}{all instances} & \\multicolumn{3}{c@{\\spc}}{different path} & \\multicolumn{3}{c}{equal path} \\\\\n") > texfile;
-      printf("setting & >T") > texfile;
-      for( wt = 1; wt <= nwintolerances; wt++ )
-         printf(" & %d\\%", 100.0*wintolerances[wt]) > texfile;
-      printf(" & $\\textit{n}_\\textit{gm}$ & $\\textit{n}_\\textit{sgm}$ & $\\textit{n}_\\textit{tot}$ & $\\textit{t}_\\textit{gm}$ & $\\textit{t}_\\textit{sgm}$ & $\\textit{t}_\\textit{tot}$ & $\\textit{t}_\\textit{gm}$ & $\\textit{t}_\\textit{sgm}$ & $\\textit{t}_\\textit{tot}$ & $\\textit{t}_\\textit{gm}$ & $\\textit{t}_\\textit{sgm}$ & $\\textit{t}_\\textit{tot}$ \\\\\n") > texfile;
+
+      printf("& & & & \\multicolumn{6}{c@{\\spc}}{all instances (%d)} & \\multicolumn{4}{c@{\\spc}}{different path}",
+         nevalprobs[printorder[0],0]) > texfile;
+      if( hasequalpath )
+         printf("& \\multicolumn{4}{c}{equal path}") > texfile;
+      printf("\\\\\n") > texfile;
+
+      printf("setting & T & fst & slw & $\\textit{n}_\\textit{gm}$ & $\\textit{n}_\\textit{sgm}$ & $\\textit{n}_\\textit{tot}$ & $\\textit{t}_\\textit{gm}$ & $\\textit{t}_\\textit{sgm}$ & $\\textit{t}_\\textit{tot}$ & \\# & $\\textit{t}_\\textit{gm}$ & $\\textit{t}_\\textit{sgm}$ & $\\textit{t}_\\textit{tot}$") > texfile;
+      if( hasequalpath )
+         printf("& \\# & $\\textit{t}_\\textit{gm}$ & $\\textit{t}_\\textit{sgm}$ & $\\textit{t}_\\textit{tot}$") > texfile;
+      printf("\\\\\n") > texfile;
+
       printf("\\midrule\n") > texfile;
 
       for( o = 0; o < nsolver; ++o )
       {
          s = printorder[o];
-         sname = solvername[s];
-         sub(/.*:/, "", sname);
-         sub(/.*_/, "", sname);
-         printf("%-35s & %4d", sname, ntimeouts[s]) > texfile;
-         for( wt = 1; wt <= nwintolerances; wt++ )
+         printf("%-35s & %4d & %3d & %3d", texsolvername(s), ntimeouts[s,0],  better[s,0], worse[s,0]) > texfile;
+         printf(" & %5s & %5s & %5s & %5s & %5s & %5s",
+            texcompstr(nodegeom[s,0], refnodegeom[s,0]),
+            texcompstr(nodeshiftedgeom[s,0], refnodeshiftedgeom[s,0]),
+            texcompstr(nodetotal[s,0], refnodetotal[s,0]),
+            texcompstr(timegeom[s,0], reftimegeom[s,0]),
+            texcompstr(timeshiftedgeom[s,0], reftimeshiftedgeom[s,0]),
+            texcompstr(timetotal[s,0], reftimetotal[s,0])) > texfile;
+         if( nevalprobs[s,1] > 0 )
          {
-            bws = sprintf("%d/%d", better[s,wt], worse[s,wt]);
-            printf(" & %5s", bws) > texfile;
+            printf(" & %2d & %5s & %5s & %5s",
+               nevalprobs[s,1],
+               texcompstr(timegeom[s,1], reftimegeom[s,1]),
+               texcompstr(timeshiftedgeom[s,1], reftimeshiftedgeom[s,1]),
+               texcompstr(timetotal[s,1], reftimetotal[s,1])) > texfile;
          }
-         printf(" & %9.2f & %9.2f & %9.2f & %7.2f & %7.2f & %7.2f \\\\\n", 
-            nodegeom[s]/nodegeomcomp, nodeshiftedgeom[s]/nodeshiftedgeomcomp, nodetotal[s]/nodetotalcomp,
-            timegeom[s]/timegeomcomp, timeshiftedgeom[s]/timeshiftedgeomcomp, timetotal[s]/timetotalcomp,
-            score[s]) > texfile;
+         else
+            printf(" &  0 &     --- &     --- &     ---") > texfile;
+         if( hasequalpath )
+         {
+            if( nevalprobs[s,2] > 0 )
+            {
+               printf(" & %2d & %5s & %5s & %5s",
+                  nevalprobs[s,2],
+                  texcompstr(timegeom[s,2], reftimegeom[s,2]),
+                  texcompstr(timeshiftedgeom[s,2], reftimeshiftedgeom[s,2]),
+                  texcompstr(timetotal[s,2], reftimetotal[s,2])) > texfile;
+            }
+            else
+               printf(" &  0 &     --- &     --- &     ---") > texfile;
+         }
+         printf(" \\\\\n") > texfile;
       }
 
       printf("\\bottomrule\n") > texfile;
       printf("\\end{tabular*}\n") > texfile;
       printf("}\n") > texfile;
+
+      # extend tex include file
+      if( texincfile != "" )
+      {
+         n = split(texfile, a, "/");
+         texpath = "";
+         for( i = 1; i < n; i++ )
+            texpath = texpath a[i] "/";
+         texbase = a[n];
+         sub(/\.tex/, "", texbase);
+         n = split(texbase, a, "_");
+         texsetname = a[2];
+         texgroupname = a[3];
+         textestname = a[4];
+
+         printf("\n") >> texincfile;
+         printf("\\begin{table}[hp]\n") > texincfile;
+         printf("\\input{Tables/mip/%s}\n", texbase) > texincfile;
+         printf("\\smalltabcaption{\\label{table_%s_%s_%s}\n", texsetname, texgroupname, textestname) > texincfile;
+         printf("Evaluation of \\setting%s%s on testset \\testset{%s}.}\n", texsetname, texgroupname, textestname) > texincfile;
+         printf("\\end{table}\n") > texincfile;
+         printf("\n") > texincfile;
+      }
+   }
+
+   # generate (or extend) tex summary file
+   if( texsummaryfile != "" )
+   {
+      n = split(texsummaryfile, a, "/");
+      texsummarypath = "";
+      for( i = 1; i < n; i++ )
+         texsummarypath = texsummarypath a[i] "/";
+      texsummarybase = a[n];
+      sub(/\.tex/, "", texsummarybase);
+      texsummaryfiletime = texsummarypath texsummarybase "_time.tex";
+      texsummaryfilenodes = texsummarypath texsummarybase "_nodes.tex";
+      if( texsummaryheader > 0 )
+      {
+         printf("{\\sffamily\n") > texsummaryfile;
+         printf("\\scriptsize\n") > texsummaryfile;
+         printf("\\setlength{\\extrarowheight}{1pt}\n") > texsummaryfile;
+         printf("\\setlength{\\tabcolsep}{2pt}\n") > texsummaryfile;
+         printf("\\newcommand{\\spc}{\\hspace{1em}}\n") > texsummaryfile;
+         printf("\\begin{tabular*}{\\columnwidth}{@{}ll@{\\extracolsep{\\fill}}") > texsummaryfile;
+         for( o = 1; o < nsolver; o++ )
+            printf("r") > texsummaryfile;
+         printf("@{}}\n") > texsummaryfile;
+         printf("\\toprule\n") > texsummaryfile;
+         printf("& test set") > texsummaryfile;
+         for( o = 1; o < nsolver; o++ )
+            printf(" & %s", texsolvername(printorder[o])) > texsummaryfile;
+         printf(" \\\\\n") > texsummaryfile;
+         printf("\\midrule\n") > texsummaryfile;
+         printf("\\input{Tables/mip/%s_time}\n", texsummarybase) > texsummaryfile;
+         printf("\\midrule\n") > texsummaryfile;
+         printf("\\input{Tables/mip/%s_nodes}\n", texsummarybase) > texsummaryfile;
+         printf("\\bottomrule\n") >> texsummaryfile;
+         printf("\\end{tabular*}\n") >> texsummaryfile;
+         printf("}\n") >> texsummaryfile;
+         printf("\\raisebox{-%.1fex}[0em][0em]{\\rotatebox{90}{\\makebox[3em]{time}}}",
+            1.5*texsummaryheader) > texsummaryfiletime;
+         printf("\\raisebox{-%.1fex}[0em][0em]{\\rotatebox{90}{\\makebox[3em]{nodes}}}",
+            1.5*texsummaryheader) > texsummaryfilenodes;
+      }
+      printf("& \\testset{%s}", textestset) >> texsummaryfiletime;
+      for( o = 1; o < nsolver; o++ )
+      {
+         s = printorder[o];
+         printf(" & %s", texcompstr(timegeom[s,0], reftimegeom[s,0])) > texsummaryfiletime;
+      }
+      printf("\\\\\n") > texsummaryfiletime;
+      printf("& \\testset{%s}", textestset) >> texsummaryfilenodes;
+      for( o = 1; o < nsolver; o++ )
+      {
+         s = printorder[o];
+         printf(" & %s", texcompstr(nodegeom[s,0], refnodegeom[s,0])) > texsummaryfilenodes;
+      }
+      printf("\\\\\n") > texsummaryfilenodes;
    }
 }

@@ -15,9 +15,21 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck.sh,v 1.1 2006/09/18 04:27:57 bzfpfend Exp $
+# $Id: evalcheck.sh,v 1.2 2007/04/12 10:31:42 bzfpfend Exp $
 
+AWKARGS=""
+FILES=""
 for i in $@
+do
+    if [ ! -e $i ]
+    then
+	AWKARGS="$AWKARGS $i"
+    else
+	FILES="$FILES $i"
+    fi
+done
+
+for i in $FILES
 do
     NAME=`basename $i .out`
     DIR=`dirname $i`
@@ -30,10 +42,19 @@ do
     TSTNAME=`sed 's/check.\([a-zA-Z0-9_]*\).*/\1/g' $TMPFILE`
     rm $TMPFILE
 
+    if [ -f $TSTNAME.test ]
+    then
+	TESTFILE=$TSTNAME.test
+    else
+	TESTFILE=""
+    fi
+
     if [ -f $TSTNAME.solu ]
     then
-	gawk -f check.awk -vTEXFILE=$TEXFILE $TSTNAME.solu $OUTFILE | tee $RESFILE
+	SOLUFILE=$TSTNAME.solu
     else
-	gawk -f check.awk -vTEXFILE=$TEXFILE $OUTFILE | tee $RESFILE
+	SOLUFILE=""
     fi
+
+    gawk -f check.awk -vTEXFILE=$TEXFILE $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
 done
