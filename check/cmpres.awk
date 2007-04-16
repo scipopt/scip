@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.34 2007/04/12 10:31:42 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.35 2007/04/16 13:43:41 bzfpfend Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -916,7 +916,7 @@ END {
          printf("\\begin{table}[hp]\n") > texincfile;
          printf("\\input{Tables/mip/%s}\n", texbase) > texincfile;
          printf("\\smalltabcaption{\\label{table_%s_%s_%s}\n", texsetname, texgroupname, textestname) > texincfile;
-         printf("Evaluation of \\setting%s%s on testset \\testset{%s}.}\n", texsetname, texgroupname, textestname) > texincfile;
+         printf("Evaluation of \\setting%s%s on test set \\testset{%s}.}\n", texsetname, texgroupname, textestname) > texincfile;
          printf("\\end{table}\n") > texincfile;
          printf("\n") > texincfile;
       }
@@ -940,22 +940,33 @@ END {
          printf("\\setlength{\\extrarowheight}{1pt}\n") > texsummaryfile;
          printf("\\setlength{\\tabcolsep}{2pt}\n") > texsummaryfile;
          printf("\\newcommand{\\spc}{\\hspace{1em}}\n") > texsummaryfile;
-         printf("\\begin{tabular*}{\\columnwidth}{@{}ll@{\\extracolsep{\\fill}}") > texsummaryfile;
-         for( o = 1; o < nsolver; o++ )
-            printf("r") > texsummaryfile;
-         printf("@{}}\n") > texsummaryfile;
-         printf("\\toprule\n") > texsummaryfile;
-         printf("& test set") > texsummaryfile;
-         for( o = 1; o < nsolver; o++ )
-            printf(" & %s", texsolvername(printorder[o])) > texsummaryfile;
-         printf(" \\\\\n") > texsummaryfile;
-         printf("\\midrule\n") > texsummaryfile;
-         printf("\\input{Tables/mip/%s_time}\n", texsummarybase) > texsummaryfile;
-         printf("\\midrule\n") > texsummaryfile;
-         printf("\\input{Tables/mip/%s_nodes}\n", texsummarybase) > texsummaryfile;
-         printf("\\bottomrule\n") >> texsummaryfile;
-         printf("\\end{tabular*}\n") >> texsummaryfile;
-         printf("}\n") >> texsummaryfile;
+         for( si = 0; si <= 2; si++ )
+         {
+            printf("\\ifthenelse{\\summaryinfo = %d}{\n", si) > texsummaryfile;
+            printf("\\begin{tabular*}{\\columnwidth}{@{}ll@{\\extracolsep{\\fill}}") > texsummaryfile;
+            for( o = 1; o < nsolver; o++ )
+               printf("r") > texsummaryfile;
+            printf("@{}}\n") > texsummaryfile;
+            printf("\\toprule\n") > texsummaryfile;
+            printf("& test set") > texsummaryfile;
+            for( o = 1; o < nsolver; o++ )
+               printf(" & %s", texsolvername(printorder[o])) > texsummaryfile;
+            printf(" \\\\\n") > texsummaryfile;
+            if( si == 0 || si == 1 )
+            {
+               printf("\\midrule\n") > texsummaryfile;
+               printf("\\input{Tables/mip/%s_time}\n", texsummarybase) > texsummaryfile;
+            }
+            if( si == 0 || si == 2 )
+            {
+               printf("\\midrule\n") > texsummaryfile;
+               printf("\\input{Tables/mip/%s_nodes}\n", texsummarybase) > texsummaryfile;
+            }
+            printf("\\bottomrule\n") >> texsummaryfile;
+            printf("\\end{tabular*}\n") >> texsummaryfile;
+            printf("}{}\n") >> texsummaryfile;
+         }
+         printf("}\n") > texsummaryfile;
          printf("\\raisebox{-%.1fex}[0em][0em]{\\rotatebox{90}{\\makebox[3em]{time}}}",
             1.5*texsummaryheader) > texsummaryfiletime;
          printf("\\raisebox{-%.1fex}[0em][0em]{\\rotatebox{90}{\\makebox[3em]{nodes}}}",
