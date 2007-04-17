@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.195 2007/04/02 18:27:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.196 2007/04/17 12:12:34 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4194,7 +4194,7 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
    }
    else if( targetvalue > varsol )
    {
-      /* the branch is directed downwards */
+      /* the branch is directed upwards */
       switch( SCIPvarGetBranchDirection(var) )
       {
       case SCIP_BRANCHDIR_DOWNWARDS:
@@ -4234,6 +4234,10 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
             prio = 0.0;
             break;
          }
+         /* since choosing the upwards direction is usually superior than the downwards direction (see results of
+          * Achterberg's thesis (2007)), we break ties towards upwards branching
+          */
+         prio += SCIPsetEpsilon(set);
          break;
 
       default:
