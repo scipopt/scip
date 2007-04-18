@@ -2,8 +2,7 @@
 
 TEXINCFILE="disstables/detailedtables.tex"
 
-#SETTINGS="mem/default branch/default brscore/default nodesel/default childsel/default prop/default sepa/default sepa/sepaonly sepa/sepalocal cutsel/default heur/default heur/heurrounding heur/heurdiving heur/heurobjdiving heur/heurimprovement presol/default conf/default"
-SETTINGS="childsel/default"
+SETTINGS="mem/default branch/default brscore/default nodesel/default childsel/default prop/default sepa/default sepa/sepaonly sepa/sepalocal cutsel/default heur/default heur/heurrounding heur/heurdiving heur/heurobjdiving heur/heurimprovement presol/default conf/default"
 TESTSETS="miplib/5 coral/5 milp/5 enlight/1 alu/1 fctp/1 acc/1 fc/1 arcset/1 mik/1 cls/1"
 
 rm -f gendisstables.out
