@@ -99,7 +99,7 @@ do
     then
 	if [ -f $setres ]
 	then
-	    disscmpres.sh onlygroup=$groupname texincfile=$TEXINCFILE texfile="disstables/Table_${setname}_${groupname}_${testset}.tex" texsummaryfile="$TEXSUMMARYFILE" texsummaryheader=$SUMMARYHEADER texsummaryweight=$weight textestset="$testset" results/check.diss_${testsetfile}*.*.default.res results/check.diss_${testsetfile}*.*.${setname}_*.res >> gendisstables.out
+	    disscmpres.sh texsummaryshifted=1 onlygroup=$groupname texincfile=$TEXINCFILE texfile="disstables/Table_${setname}_${groupname}_${testset}.tex" texsummaryfile="$TEXSUMMARYFILE" texsummaryheader=$SUMMARYHEADER texsummaryweight=$weight textestset="$testset" results/check.diss_${testsetfile}*.*.default.res results/check.diss_${testsetfile}*.*.${setname}_*.res >> gendisstables.out
 	fi
     fi
     echo "" >> $TEXINCFILE
@@ -147,7 +147,7 @@ function texcompstr(val, x,s,t)
    return sprintf("{\\bf%s%d%s}", s, abs(x), t);
 }
 BEGIN { nsolver = 0; }
-/^% =geom=/ {
+/^% =mean=/ {
   if( !counted[$3] ) {
     nsolver++;
     counted[$3] = 1;

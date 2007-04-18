@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.39 2007/04/18 17:52:51 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.40 2007/04/18 19:00:36 bzfpfend Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -145,6 +145,7 @@ BEGIN {
    texsummaryfile = "";
    texsummaryheader = 0;
    texsummaryweight = 0;
+   texsummaryshifted = 0;
    texcolorlimit = 5;
    textestset = "";
    thesisnames = 0;
@@ -998,14 +999,20 @@ END {
       for( o = 1; o < nsolver; o++ )
       {
          s = printorder[o];
-         printf(" & %s", texcompstr(timegeom[s,0], reftimegeom[s,0])) > texsummaryfiletime;
+         if( texsummaryshifted )
+            printf(" & %s", texcompstr(timeshiftedgeom[s,0], reftimeshiftedgeom[s,0])) > texsummaryfiletime;
+         else
+            printf(" & %s", texcompstr(timegeom[s,0], reftimegeom[s,0])) > texsummaryfiletime;
       }
       printf("\\\\\n") > texsummaryfiletime;
       printf("& \\testset{%s}", textestset) >> texsummaryfilenodes;
       for( o = 1; o < nsolver; o++ )
       {
          s = printorder[o];
-         printf(" & %s", texcompstr(nodegeom[s,0], refnodegeom[s,0])) > texsummaryfilenodes;
+         if( texsummaryshifted )
+            printf(" & %s", texcompstr(nodeshiftedgeom[s,0], refnodeshiftedgeom[s,0])) > texsummaryfilenodes;
+         else
+            printf(" & %s", texcompstr(nodegeom[s,0], refnodegeom[s,0])) > texsummaryfilenodes;
       }
       printf("\\\\\n") > texsummaryfilenodes;
 
@@ -1014,8 +1021,13 @@ END {
       {
          s = printorder[o];
          weight = (texsummaryweight == 0 ? nevalprobs[s,0] : texsummaryweight);
-         printf("%% =geom=  %s %.4f %.4f %g\n", solvername[s], 
-            timegeom[s,0]/reftimegeom[s,0], nodegeom[s,0]/refnodegeom[s,0], weight) >> texsummaryfile;
+         if( texsummaryshifted )
+            printf("%% =mean=  %s %.4f %.4f %g\n", solvername[s], 
+               timeshiftedgeom[s,0]/reftimeshiftedgeom[s,0], nodeshiftedgeom[s,0]/refnodeshiftedgeom[s,0],
+               weight) >> texsummaryfile;
+         else
+            printf("%% =mean=  %s %.4f %.4f %g\n", solvername[s], 
+               timegeom[s,0]/reftimegeom[s,0], nodegeom[s,0]/refnodegeom[s,0], weight) >> texsummaryfile;
       }
    }
 }
