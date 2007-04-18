@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.35 2007/04/16 13:43:41 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.36 2007/04/18 08:38:39 bzfpfend Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -164,7 +164,8 @@ BEGIN {
    {
       nsetnames++;
       setorder[$2] = nsetnames;
-      for( i = 3; i <= NF; i++ )
+      setname[$2] = $3;
+      for( i = 4; i <= NF; i++ )
          setname[$2] = setname[$2]" "$i;
    }
    setingroup[$2,group] = 1;
@@ -949,8 +950,16 @@ END {
             printf("@{}}\n") > texsummaryfile;
             printf("\\toprule\n") > texsummaryfile;
             printf("& test set") > texsummaryfile;
-            for( o = 1; o < nsolver; o++ )
-               printf(" & %s", texsolvername(printorder[o])) > texsummaryfile;
+            if( nsolver >= 9 )
+            {
+               for( o = 1; o < nsolver; o++ )
+                  printf(" & %s", texsolvername(printorder[o])) > texsummaryfile;
+            }
+            else
+            {
+               for( o = 1; o < nsolver; o++ )
+                  printf(" & \\makebox[0em][r]{%s}", texsolvername(printorder[o])) > texsummaryfile;
+            }
             printf(" \\\\\n") > texsummaryfile;
             if( si == 0 || si == 1 )
             {
