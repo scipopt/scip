@@ -22,10 +22,10 @@
 
 =group= default
 =setname= SCIP:default                        default
-=setname= SCIP:brscore_sum0000                minimum
-=setname= SCIP:brscore_sum0167                sum $\frac{1}{6}$
-=setname= SCIP:brscore_sum0500                sum $\frac{1}{2}$
-=setname= SCIP:brscore_sum1000                maximum
+=setname= SCIP:brscore_sum0000                min ($\scorefactor = 0$)
+=setname= SCIP:brscore_sum0167                weighted ($\scorefactor = \frac{1}{6}$)
+=setname= SCIP:brscore_sum0500                avg ($\scorefactor = \frac{1}{2}$)
+=setname= SCIP:brscore_sum1000                max ($\scorefactor = 1$)
 
 =group= default
 =setname= SCIP:default                        default
@@ -42,9 +42,9 @@
 =setname= SCIP:childsel_down                  down
 =setname= SCIP:childsel_up                    up
 =setname= SCIP:childsel_pseudocost            pseudocost
-=setname= SCIP:childsel_inference             inference
 =setname= SCIP:childsel_lpvalue               LP value
 =setname= SCIP:childsel_rootlpvalue           root LP value
+=setname= SCIP:childsel_inference             inference
 
 =group= default
 =setname= SCIP:default                        default

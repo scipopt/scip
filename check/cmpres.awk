@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.36 2007/04/18 08:38:39 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.37 2007/04/18 13:31:41 bzfpfend Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -144,6 +144,7 @@ BEGIN {
    texincfile = "";
    texsummaryfile = "";
    texsummaryheader = 0;
+   texsummaryprio = 1;
    texcolorlimit = 5;
    textestset = "";
    thesisnames = 0;
@@ -977,9 +978,9 @@ END {
          }
          printf("}\n") > texsummaryfile;
          printf("\\raisebox{-%.1fex}[0em][0em]{\\rotatebox{90}{\\makebox[3em]{time}}}",
-            1.5*texsummaryheader) > texsummaryfiletime;
+            1.5*(texsummaryheader+1)) > texsummaryfiletime;
          printf("\\raisebox{-%.1fex}[0em][0em]{\\rotatebox{90}{\\makebox[3em]{nodes}}}",
-            1.5*texsummaryheader) > texsummaryfilenodes;
+            1.5*(texsummaryheader+1)) > texsummaryfilenodes;
       }
       printf("& \\testset{%s}", textestset) >> texsummaryfiletime;
       for( o = 1; o < nsolver; o++ )
@@ -995,5 +996,13 @@ END {
          printf(" & %s", texcompstr(nodegeom[s,0], refnodegeom[s,0])) > texsummaryfilenodes;
       }
       printf("\\\\\n") > texsummaryfilenodes;
+
+      # add tex comment to summary file which is later be used to generate overall statistics
+      for( o = 1; o < nsolver; o++ )
+      {
+         s = printorder[o];
+         printf("%% =geom=  %s %.4f %.4f %g\n", solvername[s], 
+            timegeom[s,0]/reftimegeom[s,0], nodegeom[s,0]/refnodegeom[s,0], texsummaryprio) >> texsummaryfile;
+      }
    }
 }
