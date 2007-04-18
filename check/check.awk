@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.52 2007/04/09 20:41:53 bzfpfend Exp $
+# $Id: check.awk,v 1.53 2007/04/18 17:52:51 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -170,6 +170,7 @@ BEGIN {
    readerror = 0;
    gapreached = 0;
    sollimitreached = 0;
+   memlimitreached = 0;
    timelimit = 0.0;
    starttime = 0.0;
    endtime = 0.0;
@@ -256,6 +257,7 @@ BEGIN {
 /solving was interrupted/  { timeout = 1; }
 /gap limit reached/ { gapreached = 1; }
 /solution limit reached/ { sollimitreached = 1; }
+/memory limit reached/ { memlimitreached = 1; }
 /problem is solved/    { timeout = 0; }
 /^  Primal Bound     :/ {
    if( $4 == "infeasible" )
@@ -551,5 +553,6 @@ END {
    printf("\\end{table}\n")                                              >TEXFILE;
    printf("\\end{document}\n")                                           >TEXFILE;
 
+   printf("@02 timelimit: %g\n", timelimit);
    printf("@01 SCIP:%s\n", settings);
 }

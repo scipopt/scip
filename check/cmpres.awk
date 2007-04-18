@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.38 2007/04/18 15:26:21 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.39 2007/04/18 17:52:51 bzfpfend Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -170,6 +170,9 @@ BEGIN {
          setname[$2] = setname[$2]" "$i;
    }
    setingroup[$2,group] = 1;
+}
+/^@02 timelimit: / {
+   timelimit[nsolver] = $3;
 }
 /^@01 / {
    if( onlygroup == 0 || setingroup[$2,onlygroup] )
@@ -411,6 +414,15 @@ END {
 	 nodes[s,pidx] = max(nodes[s,pidx], 1);
 	 time[s,pidx] = max(time[s,pidx], mintime);
          fulltotaltime += time[s,pidx];
+
+         # If we got a timeout although the time limit has not been reached (e.g., due to a memory limit),
+         # we assume that the run would have been continued with the same nodes/sec.
+         # Set the time to the time limit and increase the nodes accordingly.
+         if( status[s,pidx] == "timeout" && time[s,pidx] < timelimit[s] )
+         {
+            nodes[s,pidx] *= timelimit[s]/time[s,pidx];
+            time[s,pidx] = timelimit[s];
+         }
 
          # check if all solvers processed the problem
          if( !processed )
