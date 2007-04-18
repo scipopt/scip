@@ -2,16 +2,19 @@
 
 TEXINCFILE="disstables/detailedtables.tex"
 
+# settings: (primary class)/subgroup
 SETTINGS="mem/default branch/default brscore/default nodesel/default childsel/default prop/default sepa/default sepa/sepaonly sepa/sepalocal cutsel/default heur/default heur/heurrounding heur/heurdiving heur/heurobjdiving heur/heurimprovement presol/default conf/default"
-TESTSETS="miplib/5 coral/5 milp/5 enlight/1 alu/1 fctp/1 acc/1 fc/1 arcset/1 mik/1 cls/1"
+
+# test sets: set/(weight in total score), weight=0 means weight=#instances
+TESTSETS="miplib/0 coral/0 milp/0 enlight/3 alu/3 fctp/3 acc/3 fc/3 arcset/3 mik/3 cls/3"
 
 rm -f gendisstables.out
 
 # count valid test sets
 NTESTSETS=0
-for testsetprio in $TESTSETS
+for testsetweight in $TESTSETS
 do
-  testset=`dirname $testsetprio`
+  testset=`dirname $testsetweight`
 
   for atamtuerkres in results/check.diss_atamtuerk_${testset}*.*.default.res
   do
@@ -58,10 +61,10 @@ do
   echo "\\header${setname}${groupname}" >> $TEXINCFILE
   echo "" >> $TEXINCFILE
 
-  for testsetprio in $TESTSETS
+  for testsetweight in $TESTSETS
   do
-    testset=`dirname $testsetprio`
-    prio=`basename $testsetprio`
+    testset=`dirname $testsetweight`
+    weight=`basename $testsetweight`
 
     for atamtuerkres in results/check.diss_atamtuerk_${testset}*.*.default.res
     do
@@ -96,7 +99,7 @@ do
     then
 	if [ -f $setres ]
 	then
-	    disscmpres.sh onlygroup=$groupname texincfile=$TEXINCFILE texfile="disstables/Table_${setname}_${groupname}_${testset}.tex" texsummaryfile="$TEXSUMMARYFILE" texsummaryheader=$SUMMARYHEADER texsummaryprio=$prio textestset="$testset" results/check.diss_${testsetfile}*.*.default.res results/check.diss_${testsetfile}*.*.${setname}_*.res >> gendisstables.out
+	    disscmpres.sh onlygroup=$groupname texincfile=$TEXINCFILE texfile="disstables/Table_${setname}_${groupname}_${testset}.tex" texsummaryfile="$TEXSUMMARYFILE" texsummaryheader=$SUMMARYHEADER texsummaryweight=$weight textestset="$testset" results/check.diss_${testsetfile}*.*.default.res results/check.diss_${testsetfile}*.*.${setname}_*.res >> gendisstables.out
 	fi
     fi
     echo "" >> $TEXINCFILE
@@ -153,7 +156,7 @@ BEGIN { nsolver = 0; }
   nvals[$3]++;
   timegeom[$3,nvals[$3]] = $4;
   nodesgeom[$3,nvals[$3]] = $5;
-  prio[$3,nvals[$3]] = $6;
+  weight[$3,nvals[$3]] = $6;
 }
 END {
   printf("\\addlinespace[0.4\\defaultaddspace]\n") >> texsummaryfiletime;
@@ -163,17 +166,17 @@ END {
   for( i = 1; i <= nsolver; i++ )
   {
     s = solver[i];
-    tottimeprod = 1.0;
-    totnodesprod = 1.0;
+    tottimelogsum = 0.0;
+    totnodeslogsum = 0.0;
     cnt = 0;
     for( j = 1; j <= nvals[s]; j++ )
     {
-      tottimeprod *= timegeom[s,j]^prio[s,j];
-      totnodesprod *= nodesgeom[s,j]^prio[s,j];
-      cnt += prio[s,j];
+      tottimelogsum += log(timegeom[s,j]) * weight[s,j];
+      totnodeslogsum += log(nodesgeom[s,j]) * weight[s,j];
+      cnt += weight[s,j];
     }
-    tottimegeom = tottimeprod^(1.0/cnt);
-    totnodesgeom = totnodesprod^(1.0/cnt);
+    tottimegeom = exp(tottimelogsum/cnt);
+    totnodesgeom = exp(totnodeslogsum/cnt);
     printf("& %s", texcompstr(tottimegeom)) >> texsummaryfiletime;
     printf("& %s", texcompstr(totnodesgeom)) >> texsummaryfilenodes;
   }

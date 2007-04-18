@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.37 2007/04/18 13:31:41 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.38 2007/04/18 15:26:21 bzfpfend Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -144,7 +144,7 @@ BEGIN {
    texincfile = "";
    texsummaryfile = "";
    texsummaryheader = 0;
-   texsummaryprio = 1;
+   texsummaryweight = 0;
    texcolorlimit = 5;
    textestset = "";
    thesisnames = 0;
@@ -1001,8 +1001,9 @@ END {
       for( o = 1; o < nsolver; o++ )
       {
          s = printorder[o];
+         weight = (texsummaryweight == 0 ? nevalprobs[s,0] : texsummaryweight);
          printf("%% =geom=  %s %.4f %.4f %g\n", solvername[s], 
-            timegeom[s,0]/reftimegeom[s,0], nodegeom[s,0]/refnodegeom[s,0], texsummaryprio) >> texsummaryfile;
+            timegeom[s,0]/reftimegeom[s,0], nodegeom[s,0]/refnodegeom[s,0], weight) >> texsummaryfile;
       }
    }
 }
