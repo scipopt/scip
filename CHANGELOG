@@ -87,6 +87,7 @@ features:
 - removed performance bottleneck with non-bfs based node selectors and large leaf queues at the cost of a small
   memory overhead (2 ints per node in the leaf queue); this improves performance quite a bit on instances that
   take a large number of branching nodes
+- slightly modified automatic constraint aging strategy
 
 fixed bugs:
 - fixed bug with too long variable names
