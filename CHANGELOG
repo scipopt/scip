@@ -62,6 +62,18 @@ parameters:
 - changed meaning of parameter setting "nodeselection/childsel = l"; old meaning is now called 'r'
 - changed default value of "presolving/restartfac" to 0.05
 - changed default value of "presolving/restartminred" to 0.10
+- changed default value of "constraints/linear/propfreq" to 1
+- changed default value of "separating/objparalfac" to 0.0001
+- changed default value of "conflict/maxvarsfac" to 0.1
+- changed default value of "conflict/useprop" to TRUE
+- changed default value of "conflict/useinflp" to TRUE
+- changed default value of "conflict/usepseudo" to TRUE
+- changed default value of "conflict/maxlploops" to 2
+- changed default value of "conflict/lpiterations" to 10
+- changed default value of "conflict/interconss" to -1
+- changed default value of "conflict/reconvlevels" to -1
+- changed default value of "conflict/settlelocal" to FALSE
+- new parameter "conflict/enable" to globally enable or disable conflict analysis
 
 features:
 - presolving, cut separation, primal heuristics, and strong branching now better respect time limit

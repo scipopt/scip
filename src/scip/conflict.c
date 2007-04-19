@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.129 2007/03/13 18:33:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.130 2007/04/19 19:00:34 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -2766,7 +2766,7 @@ SCIP_RETCODE SCIPconflictAnalyze(
       *success = FALSE;
 
    /* check, if propagation conflict analysis is enabled */
-   if( !set->conf_useprop )
+   if( !set->conf_enable || !set->conf_useprop )
       return SCIP_OKAY;
 
    /* check, if there are any conflict handlers to use a conflict set */
@@ -4555,7 +4555,7 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
       *success = FALSE;
 
    /* check, if infeasible LP conflict analysis is enabled */
-   if( !set->conf_useinflp )
+   if( !set->conf_enable || !set->conf_useinflp )
       return SCIP_OKAY;
 
    /* check, if there are any conflict handlers to use a conflict set */
@@ -4624,7 +4624,7 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
       *success = FALSE;
 
    /* check, if bound exceeding LP conflict analysis is enabled */
-   if( !set->conf_useboundlp )
+   if( !set->conf_enable || !set->conf_useboundlp )
       return SCIP_OKAY;
 
    /* check, if there are any conflict handlers to use a conflict set */
@@ -4903,7 +4903,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
       *upconflict = FALSE;
 
    /* check, if infeasible LP conflict analysis is enabled */
-   if( !set->conf_usesb )
+   if( !set->conf_enable || !set->conf_usesb )
       return SCIP_OKAY;
 
    /* check, if there are any conflict handlers to use a conflict set */
@@ -5187,7 +5187,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
       *success = FALSE;
 
    /* check, if pseudo solution conflict analysis is enabled */
-   if( !set->conf_usepseudo )
+   if( !set->conf_enable || !set->conf_usepseudo )
       return SCIP_OKAY;
 
    /* check, if there are any conflict handlers to use a conflict set */

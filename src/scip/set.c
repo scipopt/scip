@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.189 2007/03/16 10:27:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.190 2007/04/19 19:00:35 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -66,29 +66,30 @@
 
 /* Conflict Analysis */
 
-#define SCIP_DEFAULT_CONF_MAXVARSFAC       0.02 /**< maximal fraction of variables involved in a conflict constraint */
+#define SCIP_DEFAULT_CONF_MAXVARSFAC       0.10 /**< maximal fraction of variables involved in a conflict constraint */
 #define SCIP_DEFAULT_CONF_MINMAXVARS         30 /**< minimal absolute maximum of variables involved in a conflict constraint */
-#define SCIP_DEFAULT_CONF_MAXLPLOOPS          0 /**< maximal number of LP resolving loops during conflict analysis
+#define SCIP_DEFAULT_CONF_MAXLPLOOPS          2 /**< maximal number of LP resolving loops during conflict analysis
                                                  *   (-1: no limit) */
-#define SCIP_DEFAULT_CONF_LPITERATIONS        0 /**< maximal number of LP iterations in each LP resolving loop
+#define SCIP_DEFAULT_CONF_LPITERATIONS       10 /**< maximal number of LP iterations in each LP resolving loop
                                                  *   (-1: no limit) */
 #define SCIP_DEFAULT_CONF_FUIPLEVELS         -1 /**< number of depth levels up to which first UIP's are used in conflict
                                                  *   analysis (-1: use All-FirstUIP rule) */
-#define SCIP_DEFAULT_CONF_INTERCONSS          1 /**< maximal number of intermediate conflict constraints generated in
+#define SCIP_DEFAULT_CONF_INTERCONSS         -1 /**< maximal number of intermediate conflict constraints generated in
                                                  *   conflict graph (-1: use every intermediate constraint) */
 #define SCIP_DEFAULT_CONF_MAXCONSS           10 /**< maximal number of conflict constraints accepted at an infeasible node
                                                  *   (-1: use all generated conflict constraints) */
-#define SCIP_DEFAULT_CONF_RECONVLEVELS        1 /**< number of depth levels up to which UIP reconvergence constraints are
+#define SCIP_DEFAULT_CONF_RECONVLEVELS       -1 /**< number of depth levels up to which UIP reconvergence constraints are
                                                  *   generated (-1: generate reconvergence constraints in all depth levels) */
-#define SCIP_DEFAULT_CONF_USEPROP         FALSE /**< should propagation conflict analysis be used? */
-#define SCIP_DEFAULT_CONF_USEINFLP        FALSE /**< should infeasible LP conflict analysis be used? */
+#define SCIP_DEFAULT_CONF_ENABLE           TRUE /**< conflict analysis be enabled? */
+#define SCIP_DEFAULT_CONF_USEPROP          TRUE /**< should propagation conflict analysis be used? */
+#define SCIP_DEFAULT_CONF_USEINFLP         TRUE /**< should infeasible LP conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USEBOUNDLP      FALSE /**< should bound exceeding LP conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USESB           FALSE /**< should infeasible/bound exceeding strong branching conflict analysis
                                                  *   be used? */
-#define SCIP_DEFAULT_CONF_USEPSEUDO       FALSE /**< should pseudo solution conflict analysis be used? */
+#define SCIP_DEFAULT_CONF_USEPSEUDO        TRUE /**< should pseudo solution conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_PREFERBINARY    FALSE /**< should binary conflicts be preferred? */
 #define SCIP_DEFAULT_CONF_ALLOWLOCAL       TRUE /**< should conflict constraints be generated that are only valid locally? */
-#define SCIP_DEFAULT_CONF_SETTLELOCAL      TRUE /**< should conflict constraints be attached only to the local subtree
+#define SCIP_DEFAULT_CONF_SETTLELOCAL     FALSE /**< should conflict constraints be attached only to the local subtree
                                                  *   where they can be useful? */
 #define SCIP_DEFAULT_CONF_REPROPAGATE      TRUE /**< should earlier nodes be repropagated in order to replace branching
                                                  *   decisions by deductions? */
@@ -223,7 +224,7 @@
 #define SCIP_DEFAULT_SEPA_MINEFFICACYROOT  0.01 /**< minimal efficacy for a cut to enter the LP in the root node */
 #define SCIP_DEFAULT_SEPA_MINORTHO         0.50 /**< minimal orthogonality for a cut to enter the LP */
 #define SCIP_DEFAULT_SEPA_MINORTHOROOT     0.50 /**< minimal orthogonality for a cut to enter the LP in the root node */
-#define SCIP_DEFAULT_SEPA_OBJPARALFAC      0.01 /**< factor to scale objective parallelism of cut in score calculation */
+#define SCIP_DEFAULT_SEPA_OBJPARALFAC    0.0001 /**< factor to scale objective parallelism of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_ORTHOFAC         1.00 /**< factor to scale orthogonality of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_EFFICACYNORM      'e' /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum,
                                                  *   's'um, 'd'iscrete) */
@@ -426,6 +427,11 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
 
    /* conflict analysis parameters */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "conflict/enable",
+         "should conflict analysis be enabled?",
+         &(*set)->conf_enable, SCIP_DEFAULT_CONF_ENABLE,
+         NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/useprop",
          "should propagation conflict analysis be used?",

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.241 2007/04/19 15:04:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.242 2007/04/19 19:00:35 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -9898,7 +9898,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
    /* check whether we need a proof of unboundness or infeasibility by a primal or dual ray */
    needprimalray = TRUE;
-   needdualray = (!SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve || set->conf_useinflp);
+   needdualray = (!SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve
+      || (set->conf_enable && set->conf_useinflp));
 
    /* flush changes to the LP solver */
    SCIP_CALL( SCIPlpFlush(lp, blkmem, set) );

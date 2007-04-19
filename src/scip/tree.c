@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.196 2007/04/17 12:12:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.197 2007/04/19 19:00:35 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1352,7 +1352,7 @@ SCIP_RETCODE nodeActivate(
        * could be generated; if propagation conflict analysis is turned off, repropagating the node makes no
        * sense, since it is already cut off
        */
-      node->reprop = set->conf_useprop;
+      node->reprop = set->conf_enable && set->conf_useprop;
 
       /* mark the node to be cut off */
       SCIPnodeCutoff(node, set, stat, tree);

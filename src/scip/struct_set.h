@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.74 2007/01/23 11:34:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.75 2007/04/19 19:00:35 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -129,6 +129,7 @@ struct SCIP_Set
                                               *   (-1: use all generated conflict constraints) */
    int                   conf_reconvlevels;  /**< number of depth levels up to which UIP reconvergence constraints are
                                               *   generated (-1: generate reconvergence constraints in all depth levels) */
+   SCIP_Bool             conf_enable;        /**< should conflict analysis be enabled? */
    SCIP_Bool             conf_useprop;       /**< should propagation conflict analysis be used? */
    SCIP_Bool             conf_useinflp;      /**< should infeasible LP conflict analysis be used? */
    SCIP_Bool             conf_useboundlp;    /**< should bound exceeding LP conflict analysis be used? */
