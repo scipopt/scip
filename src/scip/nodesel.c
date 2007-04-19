@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.51 2006/09/17 01:58:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.52 2007/04/19 15:04:00 bzfpfend Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -63,75 +63,10 @@ SCIP_RETCODE nodepqResize(
 
    nodepq->size = SCIPsetCalcTreeGrowSize(set, minsize);
    SCIP_ALLOC( BMSreallocMemoryArray(&nodepq->slots, nodepq->size) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&nodepq->bfsposs, nodepq->size) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&nodepq->bfsqueue, nodepq->size) );
 
    return SCIP_OKAY;
-}
-
-/** updates the cached minimal lower bound of all nodes in the queue (used for node selection rules, that don't store
- *  the lowest bound node in the first slot of the queue)
- */
-static
-void nodepqUpdateLowerbound(
-   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NODE*            node                /**< node to be inserted */
-   )
-{
-   assert(nodepq != NULL);
-   assert(nodepq->nodesel != NULL);
-   assert(!nodepq->nodesel->lowestboundfirst);
-   assert(node != NULL);
-
-   assert(nodepq->nlowerbounds > 0 || nodepq->lowerboundnode == NULL);
-   SCIPdebugMessage("update queue's lower bound after adding node %p: nodebound=%g, queuebound=%g, nlowerbounds=%d, lowerboundnode=%p (bound=%g)\n",
-      node, SCIPnodeGetLowerbound(node), nodepq->lowerbound, nodepq->nlowerbounds,
-      nodepq->lowerboundnode, nodepq->lowerboundnode != NULL ? SCIPnodeGetLowerbound(nodepq->lowerboundnode) : 0.0);
-   if( nodepq->validlowerbound )
-   {
-      assert(nodepq->lowerbound < SCIP_INVALID);
-      if( SCIPsetIsLE(set, SCIPnodeGetLowerbound(node), nodepq->lowerbound) )
-      {
-         if( SCIPsetIsEQ(set, SCIPnodeGetLowerbound(node), nodepq->lowerbound) )
-         {
-            assert(nodepq->nlowerbounds >= 1);
-            nodepq->nlowerbounds++;
-         }
-         else
-         {
-            nodepq->lowerboundnode = node;
-            nodepq->lowerbound = SCIPnodeGetLowerbound(node);
-            nodepq->nlowerbounds = 1;
-         }
-      }
-   }
-   SCIPdebugMessage(" -> new queuebound=%g, nlowerbounds=%d, lowerboundnode=%p\n",
-      nodepq->lowerbound, nodepq->nlowerbounds, nodepq->lowerboundnode);
-
-   assert(nodepq->nlowerbounds > 0 || nodepq->lowerboundnode == NULL);
-}
-
-/** calculates the minimal lower bound of all nodes in the queue (used for node selection rules, that don't store
- *  the lowest bound node in the first slot of the queue)
- */
-static
-void nodepqCalcLowerbound(
-   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   int i;
-
-   assert(nodepq != NULL);
-   assert(nodepq->nodesel != NULL);
-   assert(!nodepq->nodesel->lowestboundfirst);
-
-   nodepq->validlowerbound = TRUE;
-   nodepq->lowerboundnode = NULL;
-   nodepq->lowerbound = SCIPsetInfinity(set);
-   nodepq->nlowerbounds = 0;
-
-   for( i = 0; i < nodepq->len; ++i )
-      nodepqUpdateLowerbound(nodepq, set, nodepq->slots[i]);
 }
 
 /** creates node priority queue */
@@ -146,13 +81,11 @@ SCIP_RETCODE SCIPnodepqCreate(
    SCIP_ALLOC( BMSallocMemory(nodepq) );
    (*nodepq)->nodesel = nodesel;
    (*nodepq)->slots = NULL;
+   (*nodepq)->bfsposs = NULL;
+   (*nodepq)->bfsqueue = NULL;
    (*nodepq)->len = 0;
    (*nodepq)->size = 0;
-   (*nodepq)->lowerboundnode = NULL;
    (*nodepq)->lowerboundsum = 0.0;
-   (*nodepq)->lowerbound = SCIPsetInfinity(set);
-   (*nodepq)->nlowerbounds = 0;
-   (*nodepq)->validlowerbound = TRUE;
 
    return SCIP_OKAY;
 }
@@ -166,6 +99,8 @@ void SCIPnodepqDestroy(
    assert(*nodepq != NULL);
 
    BMSfreeMemoryArrayNull(&(*nodepq)->slots);
+   BMSfreeMemoryArrayNull(&(*nodepq)->bfsposs);
+   BMSfreeMemoryArrayNull(&(*nodepq)->bfsqueue);
    BMSfreeMemory(nodepq);
 }
 
@@ -213,11 +148,7 @@ SCIP_RETCODE SCIPnodepqClear(
 
    /* reset data */
    nodepq->len = 0;
-   nodepq->lowerboundnode = NULL;
    nodepq->lowerboundsum = 0.0;
-   nodepq->lowerbound = SCIPsetInfinity(set);
-   nodepq->nlowerbounds = 0;
-   nodepq->validlowerbound = TRUE;
 
    return SCIP_OKAY;
 }
@@ -296,7 +227,12 @@ SCIP_RETCODE SCIPnodepqInsert(
    )
 {
    SCIP_NODESEL* nodesel;
+   SCIP_NODE** slots;
+   int* bfsposs;
+   int* bfsqueue;
+   SCIP_Real lowerbound;
    int pos;
+   int bfspos;
 
    assert(nodepq != NULL);
    assert(nodepq->len >= 0);
@@ -308,23 +244,36 @@ SCIP_RETCODE SCIPnodepqInsert(
    assert(nodesel->nodeselcomp != NULL);
 
    SCIP_CALL( nodepqResize(nodepq, set, nodepq->len+1) );
+   slots = nodepq->slots;
+   bfsposs = nodepq->bfsposs;
+   bfsqueue = nodepq->bfsqueue;
 
    /* insert node as leaf in the tree, move it towards the root as long it is better than its parent */
-   pos = nodepq->len;
    nodepq->len++;
    nodepq->lowerboundsum += SCIPnodeGetLowerbound(node);
-   while( pos > 0 && nodesel->nodeselcomp(set->scip, nodesel, node, nodepq->slots[PQ_PARENT(pos)]) < 0 )
+   pos = nodepq->len-1;
+   while( pos > 0 && nodesel->nodeselcomp(set->scip, nodesel, node, slots[PQ_PARENT(pos)]) < 0 )
    {
-      nodepq->slots[pos] = nodepq->slots[PQ_PARENT(pos)];
+      slots[pos] = slots[PQ_PARENT(pos)];
+      bfsposs[pos] = bfsposs[PQ_PARENT(pos)];
+      bfsqueue[bfsposs[pos]] = pos;
       pos = PQ_PARENT(pos);
    }
-   nodepq->slots[pos] = node;
-
-   if( !nodesel->lowestboundfirst )
+   slots[pos] = node;
+   
+   /* insert the final position into the bfs index queue */
+   lowerbound = SCIPnodeGetLowerbound(node);
+   bfspos = nodepq->len-1;
+   while( bfspos > 0 && lowerbound < SCIPnodeGetLowerbound(slots[bfsqueue[PQ_PARENT(bfspos)]]) )
    {
-      /* update the minimal lower bound */
-      nodepqUpdateLowerbound(nodepq, set, node);
+      bfsqueue[bfspos] = bfsqueue[PQ_PARENT(bfspos)];
+      bfsposs[bfsqueue[bfspos]] = bfspos;
+      bfspos = PQ_PARENT(bfspos);
    }
+   bfsqueue[bfspos] = pos;
+   bfsposs[pos] = bfspos;
+
+   SCIPdebugMessage("inserted node %p[%g] at pos %d and bfspos %d of node queue\n", node, lowerbound, pos, bfspos);
 
    return SCIP_OKAY;
 }
@@ -340,12 +289,16 @@ SCIP_Bool nodepqDelPos(
    )
 {
    SCIP_NODESEL* nodesel;
+   SCIP_NODE** slots;
+   int* bfsposs;
+   int* bfsqueue;
    SCIP_NODE* lastnode;
+   int lastbfspos;
+   int lastbfsqueueidx;
    int freepos;
-   int childpos;
-   int parentpos;
-   int brotherpos;
+   int freebfspos;
    SCIP_Bool parentfelldown;
+   SCIP_Bool bfsparentfelldown;
 
    assert(nodepq != NULL);
    assert(nodepq->len > 0);
@@ -356,37 +309,17 @@ SCIP_Bool nodepqDelPos(
    assert(nodesel != NULL);
    assert(nodesel->nodeselcomp != NULL);
 
-   if( !nodesel->lowestboundfirst )
-   {
-      assert(nodepq->nlowerbounds > 0 || nodepq->lowerboundnode == NULL);
+   slots = nodepq->slots;
+   bfsposs = nodepq->bfsposs;
+   bfsqueue = nodepq->bfsqueue;
 
-      /* update the minimal lower bound */
-      if( nodepq->nlowerbounds > 0 )
-      {
-         SCIP_NODE* node;
-         
-         node = nodepq->slots[rempos];
-         assert(SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), nodepq->lowerbound));
-         
-         SCIPdebugMessage("update queue's lower bound after removal of node %p: nodebound=%g, queuebound=%g, nlowerbounds=%d, lowerboundnode=%p (bound=%g)\n",
-            node, SCIPnodeGetLowerbound(node), nodepq->lowerbound, nodepq->nlowerbounds, 
-            nodepq->lowerboundnode, nodepq->lowerboundnode != NULL ? SCIPnodeGetLowerbound(nodepq->lowerboundnode) : 0.0);
-         if( SCIPsetIsEQ(set, SCIPnodeGetLowerbound(node), nodepq->lowerbound) )
-         {
-            nodepq->nlowerbounds--;
-            if( nodepq->nlowerbounds == 0 )
-            {
-               nodepq->validlowerbound = FALSE;
-               nodepq->lowerbound = SCIP_INVALID;
-            }
-         }
-         if( node == nodepq->lowerboundnode )
-            nodepq->lowerboundnode = NULL;
-         SCIPdebugMessage(" -> new queuebound=%g, nlowerbounds=%d, lowerboundnode=%p\n",
-            nodepq->lowerbound, nodepq->nlowerbounds, nodepq->lowerboundnode);
-      }
-      assert(nodepq->nlowerbounds > 0 || nodepq->lowerboundnode == NULL);
-   }
+   nodepq->lowerboundsum -= SCIPnodeGetLowerbound(slots[rempos]);
+   freepos = rempos;
+   freebfspos = bfsposs[rempos];
+   assert(0 <= freebfspos && freebfspos < nodepq->len);
+
+   SCIPdebugMessage("delete node %p[%g] at pos %d and bfspos %d of node queue\n", 
+      slots[freepos], SCIPnodeGetLowerbound(slots[freepos]), freepos, freebfspos);
 
    /* remove node of the tree and get a free slot,
     * if the removed node was the last node of the queue
@@ -396,48 +329,111 @@ SCIP_Bool nodepqDelPos(
     * if the last node of the queue is not better than the parent of the free slot:
     *  - move the better child to the free slot until the last node can be placed in the free slot
     */
-   nodepq->lowerboundsum -= SCIPnodeGetLowerbound(nodepq->slots[rempos]);
-   freepos = rempos;
-   lastnode = nodepq->slots[nodepq->len-1];
    nodepq->len--;
 
-   if( freepos == nodepq->len )
-      return FALSE;
-   assert(freepos < nodepq->len);
-
-   /* try to move parents downwards to insert last node */
+   /* process the slots queue ordered by the node selection comparator */
+   lastnode = slots[nodepq->len];
+   lastbfspos = bfsposs[nodepq->len];
    parentfelldown = FALSE;
-   parentpos = PQ_PARENT(freepos);
-   while( freepos > 0 && nodesel->nodeselcomp(set->scip, nodesel, lastnode, nodepq->slots[parentpos]) < 0 )
+   if( freepos < nodepq->len )
    {
-      nodepq->slots[freepos] = nodepq->slots[parentpos];
-      freepos = parentpos;
+      int parentpos;
+
+      /* try to move parents downwards to insert last node */
       parentpos = PQ_PARENT(freepos);
-      parentfelldown = TRUE;
-   }
-   if( !parentfelldown )
-   {
-      /* downward moving of parents was not successful -> move children upwards */
-      while( freepos <= PQ_PARENT(nodepq->len-1) ) /* as long as free slot has children... */
+      while( freepos > 0 && nodesel->nodeselcomp(set->scip, nodesel, lastnode, slots[parentpos]) < 0 )
       {
-         /* select the better child of free slot */
-         childpos = PQ_LEFTCHILD(freepos);
-         assert(childpos < nodepq->len);
-         brotherpos = PQ_RIGHTCHILD(freepos);
-         if( brotherpos < nodepq->len
-            && nodesel->nodeselcomp(set->scip, nodesel, nodepq->slots[brotherpos], nodepq->slots[childpos]) < 0 )
-            childpos = brotherpos;
-         /* exit search loop if better child is not better than last node */
-         if( nodesel->nodeselcomp(set->scip, nodesel, lastnode, nodepq->slots[childpos]) <= 0 )
-            break;
-         /* move better child upwards, free slot is now the better child's slot */
-         nodepq->slots[freepos] = nodepq->slots[childpos];
-         freepos = childpos;
+         slots[freepos] = slots[parentpos];
+         bfsposs[freepos] = bfsposs[parentpos];
+         bfsqueue[bfsposs[freepos]] = freepos;
+         freepos = parentpos;
+         parentpos = PQ_PARENT(freepos);
+         parentfelldown = TRUE;
       }
+      if( !parentfelldown )
+      {
+         /* downward moving of parents was not successful -> move children upwards */
+         while( freepos <= PQ_PARENT(nodepq->len-1) ) /* as long as free slot has children... */
+         {
+            int childpos;
+            int brotherpos;
+
+            /* select the better child of free slot */
+            childpos = PQ_LEFTCHILD(freepos);
+            assert(childpos < nodepq->len);
+            brotherpos = PQ_RIGHTCHILD(freepos);
+            if( brotherpos < nodepq->len
+               && nodesel->nodeselcomp(set->scip, nodesel, slots[brotherpos], slots[childpos]) < 0 )
+               childpos = brotherpos;
+
+            /* exit search loop if better child is not better than last node */
+            if( nodesel->nodeselcomp(set->scip, nodesel, lastnode, slots[childpos]) <= 0 )
+               break;
+
+            /* move better child upwards, free slot is now the better child's slot */
+            slots[freepos] = slots[childpos];
+            bfsposs[freepos] = bfsposs[childpos];
+            bfsqueue[bfsposs[freepos]] = freepos;
+            freepos = childpos;
+         }
+      }
+      assert(0 <= freepos && freepos < nodepq->len);
+      assert(!parentfelldown || PQ_LEFTCHILD(freepos) < nodepq->len);
+      slots[freepos] = lastnode;
+      bfsposs[freepos] = lastbfspos;
+      bfsqueue[lastbfspos] = freepos;
    }
-   assert(0 <= freepos && freepos < nodepq->len);
-   assert(!parentfelldown || PQ_LEFTCHILD(freepos) < nodepq->len);
-   nodepq->slots[freepos] = lastnode;
+
+   /* process the bfs queue ordered by the lower bound */
+   lastbfsqueueidx = bfsqueue[nodepq->len];
+   bfsparentfelldown = FALSE;
+   if( freebfspos < nodepq->len )
+   {
+      SCIP_Real lastlowerbound;
+      int parentpos;
+
+      /* try to move parents downwards to insert last queue index */
+      lastlowerbound = SCIPnodeGetLowerbound(slots[lastbfsqueueidx]);
+      parentpos = PQ_PARENT(freebfspos);
+      while( freebfspos > 0 && lastlowerbound < SCIPnodeGetLowerbound(slots[bfsqueue[parentpos]]) )
+      {
+         bfsqueue[freebfspos] = bfsqueue[parentpos];
+         bfsposs[bfsqueue[freebfspos]] = freebfspos;
+         freebfspos = parentpos;
+         parentpos = PQ_PARENT(freebfspos);
+         bfsparentfelldown = TRUE;
+      }
+      if( !bfsparentfelldown )
+      {
+         /* downward moving of parents was not successful -> move children upwards */
+         while( freebfspos <= PQ_PARENT(nodepq->len-1) ) /* as long as free slot has children... */
+         {
+            int childpos;
+            int brotherpos;
+
+            /* select the better child of free slot */
+            childpos = PQ_LEFTCHILD(freebfspos);
+            assert(childpos < nodepq->len);
+            brotherpos = PQ_RIGHTCHILD(freebfspos);
+            if( brotherpos < nodepq->len
+               && SCIPnodeGetLowerbound(slots[bfsqueue[brotherpos]]) < SCIPnodeGetLowerbound(slots[bfsqueue[childpos]]) )
+               childpos = brotherpos;
+
+            /* exit search loop if better child is not better than last node */
+            if( lastlowerbound <= SCIPnodeGetLowerbound(slots[bfsqueue[childpos]]) )
+               break;
+
+            /* move better child upwards, free slot is now the better child's slot */
+            bfsqueue[freebfspos] = bfsqueue[childpos];
+            bfsposs[bfsqueue[freebfspos]] = freebfspos;
+            freebfspos = childpos;
+         }
+      }
+      assert(0 <= freebfspos && freebfspos < nodepq->len);
+      assert(!bfsparentfelldown || PQ_LEFTCHILD(freebfspos) < nodepq->len);
+      bfsqueue[freebfspos] = lastbfsqueueidx;
+      bfsposs[lastbfsqueueidx] = freebfspos;
+   }
 
    return parentfelldown;
 }
@@ -535,30 +531,17 @@ SCIP_Real SCIPnodepqGetLowerbound(
    assert(nodepq->nodesel != NULL);
    assert(set != NULL);
 
-   if( nodepq->nodesel->lowestboundfirst )
+   if( nodepq->len > 0 )
    {
-      /* the node selector's compare method sorts the minimal lower bound to the front */
-      if( nodepq->len > 0 )
-      {
-         assert(nodepq->slots[0] != NULL);
-         return SCIPnodeGetLowerbound(nodepq->slots[0]);
-      }
-      else
-         return SCIPsetInfinity(set);
+      int bfspos;
+
+      bfspos = nodepq->bfsqueue[0];
+      assert(0 <= bfspos && bfspos < nodepq->len);
+      assert(nodepq->slots[bfspos] != NULL);
+      return SCIPnodeGetLowerbound(nodepq->slots[bfspos]);
    }
    else
-   {
-      /* we use bookkeeping to remember the lowest bound */
-
-      /* if the cached lower bound is invalid, calculate it */
-      if( !nodepq->validlowerbound )
-         nodepqCalcLowerbound(nodepq, set);
-
-      assert(nodepq->validlowerbound);
-      assert(nodepq->lowerbound < SCIP_INVALID);
-
-      return nodepq->lowerbound;
-   }
+      return SCIPsetInfinity(set);
 }
 
 /** gets the node with minimal lower bound of all nodes in the queue */
@@ -571,31 +554,18 @@ SCIP_NODE* SCIPnodepqGetLowerboundNode(
    assert(nodepq->nodesel != NULL);
    assert(set != NULL);
 
-   if( nodepq->nodesel->lowestboundfirst )
+   /* the node selector's compare method sorts the minimal lower bound to the front */
+   if( nodepq->len > 0 )
    {
-      /* the node selector's compare method sorts the minimal lower bound to the front */
-      if( nodepq->len > 0 )
-      {
-         assert(nodepq->slots[0] != NULL);
-         return nodepq->slots[0];
-      }
-      else
-         return NULL;
+      int bfspos;
+
+      bfspos = nodepq->bfsqueue[0];
+      assert(0 <= bfspos && bfspos < nodepq->len);
+      assert(nodepq->slots[bfspos] != NULL);
+      return nodepq->slots[bfspos];
    }
    else
-   {
-      /* we use bookkeeping to remember the lowest bound */
-
-      /* if the cached lower bound node is invalid, calculate it */
-      if( !nodepq->validlowerbound || nodepq->lowerboundnode == NULL )
-         nodepqCalcLowerbound(nodepq, set);
-      
-      assert(nodepq->validlowerbound);
-      assert(nodepq->lowerbound < SCIP_INVALID);
-      assert(nodepq->lowerbound == SCIPsetInfinity(set) || nodepq->lowerboundnode != NULL); /*lint !e777*/
-
-      return nodepq->lowerboundnode;
-   }
+      return NULL;
 }
 
 /** gets the sum of lower bounds of all nodes in the queue */
@@ -716,7 +686,6 @@ SCIP_RETCODE SCIPnodeselCreate(
    const char*           desc,               /**< description of node selector */
    int                   stdpriority,        /**< priority of the node selector in standard mode */
    int                   memsavepriority,    /**< priority of the node selector in memory saving mode */
-   SCIP_Bool             lowestboundfirst,   /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
    SCIP_DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
    SCIP_DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
    SCIP_DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */
@@ -749,7 +718,6 @@ SCIP_RETCODE SCIPnodeselCreate(
    (*nodesel)->nodeselselect = nodeselselect;
    (*nodesel)->nodeselcomp = nodeselcomp;
    (*nodesel)->nodeseldata = nodeseldata;
-   (*nodesel)->lowestboundfirst = lowestboundfirst;
    (*nodesel)->initialized = FALSE;
 
    /* add parameters */

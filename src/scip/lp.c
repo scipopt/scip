@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.240 2007/04/09 09:58:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.241 2007/04/19 15:04:00 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -12344,8 +12344,6 @@ SCIP_RETCODE SCIPlpWriteMipGenericNames(
 
    return SCIP_OKAY;
 }
-
-
 
 /** writes  MIP relaxation of the current B&B node  to a file using original variable and row names */
 SCIP_RETCODE SCIPlpWriteMipOriginalNames(

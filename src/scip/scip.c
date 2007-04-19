@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.403 2007/04/04 19:42:59 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.404 2007/04/19 15:04:00 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1948,7 +1948,6 @@ SCIP_RETCODE SCIPincludeNodesel(
    const char*           desc,               /**< description of node selector */
    int                   stdpriority,        /**< priority of the node selector in standard mode */
    int                   memsavepriority,    /**< priority of the node selector in memory saving mode */
-   SCIP_Bool             lowestboundfirst,   /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
    SCIP_DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
    SCIP_DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
    SCIP_DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */
@@ -1964,7 +1963,7 @@ SCIP_RETCODE SCIPincludeNodesel(
    SCIP_CALL( checkStage(scip, "SCIPincludeNodesel", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPnodeselCreate(&nodesel, scip->set, scip->mem->setmem, name, desc, stdpriority, memsavepriority,
-         lowestboundfirst, nodeselfree, nodeselinit, nodeselexit, nodeselinitsol, nodeselexitsol,
+         nodeselfree, nodeselinit, nodeselexit, nodeselinitsol, nodeselexitsol,
          nodeselselect, nodeselcomp, nodeseldata) );
    SCIP_CALL( SCIPsetIncludeNodesel(scip->set, nodesel) );
 

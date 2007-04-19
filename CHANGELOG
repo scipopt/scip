@@ -24,6 +24,7 @@ interface:
 - SCIPgetVarStrongbranch() now also returns lperror == TRUE if the solving process should be stopped, e.g., because
   of a time limit
 - new method SCIProwIsInGlobalCutpool()
+- removed parameter "lowestboundfirst" from SCIPincludeNodesel()
 
 plugins:
 - new improvement heuristic "oneopt"
@@ -71,6 +72,9 @@ features:
 - if possible, objective function is scaled to make objective value integral with gcd 1
 - slightly modified bound substitution heuristic in SCIPcalcMIR() and SCIPcalcStrongCG()
 - slightly less conservative in numerics for SCIPmakeRowIntegral()
+- removed performance bottleneck with non-bfs based node selectors and large leaf queues at the cost of a small
+  memory overhead (2 ints per node in the leaf queue); this improves performance quite a bit on instances that
+  take a large number of branching nodes
 
 fixed bugs:
 - fixed bug with too long variable names

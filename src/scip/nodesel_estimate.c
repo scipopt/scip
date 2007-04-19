@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_estimate.c,v 1.2 2006/09/26 12:54:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_estimate.c,v 1.3 2007/04/19 15:04:00 bzfpfend Exp $"
 
 /**@file   nodesel_estimate.c
  * @brief  node selector for best estimate search
@@ -33,7 +33,6 @@
 #define NODESEL_DESC             "best estimate search"
 #define NODESEL_STDPRIORITY      200000
 #define NODESEL_MEMSAVEPRIORITY     100
-#define NODESEL_LOWESTFIRST       FALSE   /**< are the nodes sorted such that the lowest bound node comes first? */
 
 
 
@@ -317,7 +316,6 @@ SCIP_RETCODE SCIPincludeNodeselEstimate(
 
    /* include node selector */
    SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
-         NODESEL_LOWESTFIRST,
          nodeselFreeEstimate, nodeselInitEstimate, nodeselExitEstimate, 
          nodeselInitsolEstimate, nodeselExitsolEstimate, nodeselSelectEstimate, nodeselCompEstimate,
          nodeseldata) );

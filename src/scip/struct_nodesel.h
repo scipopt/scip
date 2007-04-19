@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_nodesel.h,v 1.13 2006/01/03 12:22:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_nodesel.h,v 1.14 2007/04/19 15:04:01 bzfpfend Exp $"
 
 /**@file   struct_nodesel.h
  * @brief  datastructures for node selectors and node priority queues
@@ -40,14 +40,12 @@
 struct SCIP_NodePQ
 {
    SCIP_Real             lowerboundsum;      /**< sum of lower bounds of all nodes in the queue */
-   SCIP_Real             lowerbound;         /**< minimal lower bound value of all nodes in the queue */
    SCIP_NODESEL*         nodesel;            /**< node selector used for sorting the nodes in the queue */
    SCIP_NODE**           slots;              /**< array of element slots */
-   SCIP_NODE*            lowerboundnode;     /**< node with minimal lower bound, or NULL if not available */
+   int*                  bfsposs;            /**< position of the slot in the bfs ordered queue */
+   int*                  bfsqueue;           /**< queue of slots[] indices sorted by best lower bound */
    int                   len;                /**< number of used element slots */
    int                   size;               /**< total number of available element slots */
-   int                   nlowerbounds;       /**< number of nodes in the queue with minimal lower bound (0 if invalid) */
-   SCIP_Bool             validlowerbound;    /**< is lower bound value valid? */
 };
 
 /** node selector */
@@ -65,7 +63,6 @@ struct SCIP_Nodesel
    SCIP_NODESELDATA*     nodeseldata;        /**< node selector data */
    int                   stdpriority;        /**< priority of the node selector in standard mode */
    int                   memsavepriority;    /**< priority of the node selector in memory saving mode */
-   SCIP_Bool             lowestboundfirst;   /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
    SCIP_Bool             initialized;        /**< is node selector initialized? */
 };
 
