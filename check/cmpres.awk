@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.40 2007/04/18 19:00:36 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.41 2007/04/19 15:05:03 bzfpfend Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -124,8 +124,8 @@ function texsolvername(s, sname)
 }
 
 BEGIN {
-   timegeomshift = 60.0;
-   nodegeomshift = 1000.0;
+   timegeomshift = 10.0;
+   nodegeomshift = 100.0;
    mintime = 0.5;
    wintolerance = 1.1;
    markbettertime = 1.1;
