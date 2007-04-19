@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.405 2007/04/19 19:00:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.406 2007/04/19 19:04:11 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5438,7 +5438,7 @@ SCIP_RETCODE SCIPgetVarStrongbranch(
        * because the strong branching's bound change is necessary for infeasibility, it cannot be undone;
        * therefore, infeasible strong branchings on non-binary variables will not produce a valid conflict constraint
        */
-      if( set->conf_enable && scip->set->conf_usesb && scip->set->nconflicthdlrs > 0
+      if( scip->set->conf_enable && scip->set->conf_usesb && scip->set->nconflicthdlrs > 0
          && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
          && SCIPtreeGetCurrentDepth(scip->tree) > 0 )
       {
