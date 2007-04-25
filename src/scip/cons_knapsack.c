@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.141 2007/04/02 08:18:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.142 2007/04/25 13:51:37 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -63,6 +63,8 @@
 #define DEFAULT_MAXSEPACUTS          50 /**< maximal number of cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     200 /**< maximal number of cuts separated per separation round in the root node */
 #define DEFAULT_MAXNUMCARDLIFT       -1 /**< maximal number of cardinality inequalities lifted per sepa round (-1: unlimited) */
+#define DEFAULT_MAXCARDBOUNDDIST    0.0 /**< maximal relative distance from current node's dual bound to primal bound compared
+                                         *   to best node's dual bound for separating knapsack cardinality cuts */
 #define DEFAULT_DISAGGREGATION     TRUE /**< should disaggregation of knapsack constraints be allowed in preprocessing? */
 
 
@@ -76,6 +78,8 @@
 struct SCIP_ConshdlrData
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
+   SCIP_Real             maxcardbounddist;   /**< maximal relative distance from current node's dual bound to primal bound compared
+                                              *   to best node's dual bound for separating knapsack cardinality cuts */
    int                   sepacardfreq;       /**< multiplier on separation frequency, how often cardinality cuts are separated */
    int                   maxrounds;          /**< maximal number of separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
@@ -3616,6 +3620,21 @@ SCIP_DECL_CONSSEPALP(consSepalpKnapsack)
    sepacardinality = (conshdlrdata->sepacardfreq >= 0)
       && ((sepacardfreq == 0 && depth == 0) || (sepacardfreq >= 1 && (depth % sepacardfreq == 0)));
 
+   /* check dual bound to see if we want to produce knapsack cardinality cuts at this node */
+   if( sepacardinality )
+   {
+      SCIP_Real loclowerbound;
+      SCIP_Real glblowerbound;
+      SCIP_Real cutoffbound;
+      SCIP_Real maxbound;
+
+      loclowerbound = SCIPgetLocalLowerbound(scip);
+      glblowerbound = SCIPgetLowerbound(scip);
+      cutoffbound = SCIPgetCutoffbound(scip);
+      maxbound = glblowerbound + conshdlrdata->maxcardbounddist * (cutoffbound - glblowerbound);
+      sepacardinality = SCIPisLE(scip, loclowerbound, maxbound);
+   }
+
    /* get the maximal number of cuts allowed in a separation round */
    maxsepacuts = (depth == 0 ? conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts);
 
@@ -4244,6 +4263,10 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
          "constraints/knapsack/sepacardfreq",
          "multiplier on separation frequency, how often cardinality cuts are separated (-1: never, 0: only at root)",
          &conshdlrdata->sepacardfreq, DEFAULT_SEPACARDFREQ, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "constraints/knapsack/maxcardbounddist",
+         "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for separating knapsack cardinality cuts",
+         &conshdlrdata->maxcardbounddist, DEFAULT_MAXCARDBOUNDDIST, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/knapsack/maxrounds",
          "maximal number of separation rounds per node (-1: unlimited)",

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.233 2007/04/19 19:00:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.234 2007/04/25 13:51:37 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -82,7 +82,9 @@
                                          *   (-1: no limit) */
 #define DEFAULT_MAXAGGRNORMSCALE    0.0 /**< maximal allowed relative gain in maximum norm for constraint aggregation
                                          *   (0.0: disable constraint aggregation) */
-#define DEFAULT_SEPARATEALL       FALSE /**< should all constraints be subject to cover cut generation instead of only
+#define DEFAULT_MAXCARDBOUNDDIST    0.0 /**< maximal relative distance from current node's dual bound to primal bound compared
+                                         *   to best node's dual bound for separating knapsack cardinality cuts */
+#define DEFAULT_SEPARATEALL       FALSE /**< should all constraints be subject to cardinality cut generation instead of only
                                          *   the ones with non-zero dual value? */
 
 #define KNAPSACKRELAX_MAXDELTA      0.1 /**< maximal allowed rounding distance for scaling in knapsack relaxation */
@@ -155,6 +157,8 @@ struct SCIP_ConshdlrData
    SCIP_LINCONSUPGRADE** linconsupgrades;    /**< linear constraint upgrade methods for specializing linear constraints */
    SCIP_Real             maxaggrnormscale;   /**< maximal allowed relative gain in maximum norm for constraint aggregation
                                               *   (0.0: disable constraint aggregation) */
+   SCIP_Real             maxcardbounddist;   /**< maximal relative distance from current node's dual bound to primal bound compared
+                                              *   to best node's dual bound for separating knapsack cardinality cuts */
    int                   linconsupgradessize;/**< size of linconsupgrade array */
    int                   nlinconsupgrades;   /**< number of linear constraint upgrade methods */
    int                   tightenboundsfreq;  /**< multiplier on propagation frequency, how often the bounds are tightened */
@@ -164,7 +168,7 @@ struct SCIP_ConshdlrData
    int                   maxsepacutsroot;    /**< maximal number of cuts separated per separation round in root node */
    int                   maxpresolpairrounds;/**< maximal number of presolving rounds with pairwise constraint comparison
                                               *   (-1: no limit) */
-   SCIP_Bool             separateall;        /**< should all constraints be subject to cover cut generation instead of only
+   SCIP_Bool             separateall;        /**< should all constraints be subject to cardinality cut generation instead of only
                                               *   the ones with non-zero dual value? */
 };
 
@@ -3687,7 +3691,8 @@ SCIP_RETCODE separateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
-   SCIP_Bool             separateall,        /**< should all constraints be subject to cover cut generation instead of only
+   SCIP_Bool             separatecards,      /**< should knapsack cardinality cuts be generated? */
+   SCIP_Bool             separateall,        /**< should all constraints be subject to cardinality cut generation instead of only
                                               *   the ones with non-zero dual value? */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    )
@@ -3711,12 +3716,12 @@ SCIP_RETCODE separateCons(
       SCIP_CALL( addRelaxation(scip, cons, sol) );
       (*ncuts)++;
    }
-   else if( !SCIPconsIsModifiable(cons) )
+   else if( !SCIPconsIsModifiable(cons) && separatecards )
    {
       /* relax linear constraint into knapsack constraint and separate lifted cardinality cuts */
       if( !separateall && sol == NULL )
       {
-         /* we only want to call the knapsack cover separator for rows that have a non-zero dual solution */
+         /* we only want to call the knapsack cardinality cut separator for rows that have a non-zero dual solution */
          if( consdata->row != NULL && SCIProwIsInLP(consdata->row) )
          {
             SCIP_Real dualsol;
@@ -6211,6 +6216,11 @@ static
 SCIP_DECL_CONSSEPALP(consSepalpLinear)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Real loclowerbound;
+   SCIP_Real glblowerbound;
+   SCIP_Real cutoffbound;
+   SCIP_Real maxbound;
+   SCIP_Bool separatecards;
    int c;
    int depth;
    int nrounds;
@@ -6238,6 +6248,13 @@ SCIP_DECL_CONSSEPALP(consSepalpLinear)
    /* get the maximal number of cuts allowed in a separation round */
    maxsepacuts = (depth == 0 ? conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts);
 
+   /* check if we want to produce knapsack cardinality cuts at this node */
+   loclowerbound = SCIPgetLocalLowerbound(scip);
+   glblowerbound = SCIPgetLowerbound(scip);
+   cutoffbound = SCIPgetCutoffbound(scip);
+   maxbound = glblowerbound + conshdlrdata->maxcardbounddist * (cutoffbound - glblowerbound);
+   separatecards = SCIPisLE(scip, loclowerbound, maxbound);
+
    *result = SCIP_DIDNOTFIND;
    ncuts = 0;
 
@@ -6245,7 +6262,7 @@ SCIP_DECL_CONSSEPALP(consSepalpLinear)
    for( c = 0; c < nusefulconss && ncuts < maxsepacuts; ++c )
    {
       /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
-      SCIP_CALL( separateCons(scip, conss[c], NULL, conshdlrdata->separateall, &ncuts) );
+      SCIP_CALL( separateCons(scip, conss[c], NULL, separatecards, conshdlrdata->separateall, &ncuts) );
    }
 
    /* adjust return value */
@@ -6298,7 +6315,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinear)
    for( c = 0; c < nusefulconss && ncuts < maxsepacuts; ++c )
    {
       /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
-      SCIP_CALL( separateCons(scip, conss[c], sol, conshdlrdata->separateall, &ncuts) );
+      SCIP_CALL( separateCons(scip, conss[c], sol, TRUE, conshdlrdata->separateall, &ncuts) );
    }
 
    /* adjust return value */
@@ -7154,9 +7171,13 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          "constraints/linear/maxaggrnormscale",
          "maximal allowed relative gain in maximum norm for constraint aggregation (0.0: disable constraint aggregation)",
          &conshdlrdata->maxaggrnormscale, DEFAULT_MAXAGGRNORMSCALE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "constraints/linear/maxcardbounddist",
+         "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for separating knapsack cardinality cuts",
+         &conshdlrdata->maxcardbounddist, DEFAULT_MAXCARDBOUNDDIST, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/linear/separateall",
-         "should all constraints be subject to cover cut generation instead of only the ones with non-zero dual value?",
+         "should all constraints be subject to cardinality cut generation instead of only the ones with non-zero dual value?",
          &conshdlrdata->separateall, DEFAULT_SEPARATEALL, NULL, NULL) );
 
    return SCIP_OKAY;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.242 2007/04/19 19:00:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.243 2007/04/25 13:51:37 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6990,7 +6990,6 @@ SCIP_RETCODE transformMIRRow(
    for( v = prob->nvars-1; v >= 0; --v )
    {
       SCIP_VAR* var;
-      SCIP_Real varsol;
       SCIP_Real bestlb;
       SCIP_Real bestub;
       SCIP_Bool uselb;
@@ -7134,6 +7133,8 @@ SCIP_RETCODE transformMIRRow(
       }
       else
       { 
+         SCIP_Real varsol;
+
          /* bound selection should be done automatically */
 
          /* find closest lower bound in standard lower bound (and variable lower bounds for continuous variables) */
@@ -7210,6 +7211,7 @@ SCIP_RETCODE transformMIRRow(
             uselb = FALSE;
          else
          {
+#if 0 /*???????????????????*/
             if( bestlbtype >= 0 )       /* prefer variable bounds */
                uselb = TRUE;
             else if( bestubtype >= 0 )  /* prefer variable bounds */
@@ -7220,6 +7222,18 @@ SCIP_RETCODE transformMIRRow(
                uselb = FALSE;
             else
                uselb = TRUE;            /* no decision yet? just use lower bound */
+#else
+            if( bestlbtype == -1 )       /* prefer global standard bounds */
+               uselb = TRUE;
+            else if( bestubtype == -1 )  /* prefer global standard bounds */
+               uselb = FALSE;
+            else if( bestlbtype >= 0 )   /* prefer variable bounds over local bounds */
+               uselb = TRUE;
+            else if( bestubtype >= 0 )   /* prefer variable bounds over local bounds */
+               uselb = FALSE;
+            else
+               uselb = TRUE;             /* no decision yet? just use lower bound */
+#endif
          }
       }
 
@@ -7291,8 +7305,10 @@ SCIP_RETCODE transformMIRRow(
          }
       }
 
-      SCIPdebugMessage("MIR var <%s>: varsign=%d, boundtype=%d, mircoef=%g, lb=%g, ub=%g, vlb=%g<%s>%+g, vub=%g<%s>%+g -> rhs=%g\n", 
-         SCIPvarGetName(var), varsign[v], boundtype[v], mircoef[v], bestlb, bestub,
+      SCIPdebugMessage("MIR var <%s>: varsign=%d, boundtype=%d, mircoef=%g, base=%d, sol=%g, lb=%g, ub=%g, vlb=%g<%s>%+g, vub=%g<%s>%+g -> rhs=%g\n", 
+         SCIPvarGetName(var), varsign[v], boundtype[v], mircoef[v],
+         SCIPvarGetCol(var) != NULL ? SCIPcolGetBasisStatus(SCIPvarGetCol(var)) : SCIP_BASESTAT_ZERO,
+         SCIPvarGetLPSol(var), bestlb, bestub,
          bestlbtype >= 0 ? SCIPvarGetVlbCoefs(var)[bestlbtype] : 0.0,
          bestlbtype >= 0 ? SCIPvarGetName(SCIPvarGetVlbVars(var)[bestlbtype]) : "-",
          bestlbtype >= 0 ? SCIPvarGetVlbConstants(var)[bestlbtype] : bestlb,

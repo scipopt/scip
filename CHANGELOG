@@ -74,6 +74,7 @@ parameters:
 - changed default value of "conflict/reconvlevels" to -1
 - changed default value of "conflict/settlelocal" to FALSE
 - new parameter "conflict/enable" to globally enable or disable conflict analysis
+- new parameters "constraints/linear/maxcardbounddist" and "constraints/knapsack/maxcardbounddist"
 
 features:
 - presolving, cut separation, primal heuristics, and strong branching now better respect time limit

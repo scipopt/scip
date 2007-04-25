@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.193 2007/04/19 15:17:44 bzfpfend Exp $
+# $Id: Makefile,v 1.194 2007/04/25 13:51:36 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -39,7 +39,7 @@ HOSTNAME	:=	$(shell uname -n | tr '[:upper:]' '[:lower:]')
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		:=	0.90h
+VERSION		:=	0.90i
 
 TIME     	=  	3600
 NODES           =       2100000000
@@ -507,7 +507,7 @@ testpre:
 .PHONY: testcplex
 testcplex:		
 		cd check; \
-		/bin/sh ./check_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(CONTINUE);
+		/bin/sh ./check_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE);
 
 $(OBJDIR):	
 		@-mkdir -p $(OBJDIR)

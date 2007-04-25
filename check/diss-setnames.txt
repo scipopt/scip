@@ -24,6 +24,7 @@
 =setname= SCIP:default                        default
 =setname= SCIP:brscore_sum0000                min ($\scorefactor = 0$)
 =setname= SCIP:brscore_sum0167                weighted ($\scorefactor = \frac{1}{6}$)
+=setname= SCIP:brscore_sum0333                weighted ($\scorefactor = \frac{1}{3}$)
 =setname= SCIP:brscore_sum0500                avg ($\scorefactor = \frac{1}{2}$)
 =setname= SCIP:brscore_sum1000                max ($\scorefactor = 1$)
 
@@ -50,21 +51,21 @@
 =setname= SCIP:default                        default
 =setname= SCIP:prop_none                      none
 =setname= SCIP:prop_linear1                   aggr linear
-=setname= SCIP:prop_nopseudoobj               no pseudo obj
+=setname= SCIP:prop_nopseudoobj               no obj prop
 =setname= SCIP:prop_norootredcost             no root redcost
 
 =group= default
 =setname= SCIP:default                        default
 =setname= SCIP:sepa_none                      none
-=setname= SCIP:sepa_noknapsackcovers          no knapsack
+=setname= SCIP:sepa_noknapsackcovers          no knap
 =setname= SCIP:sepa_nocmir                    no c-MIR
-=setname= SCIP:sepa_nogomory                  no Gomory
-=setname= SCIP:sepa_nostrongcg                no strong CG
-=setname= SCIP:sepa_noflowcover               no flow cover
-=setname= SCIP:sepa_noimpliedbounds           no impl bds
-=setname= SCIP:sepa_noclique                  no clique
-=setname= SCIP:sepa_noredcost                 no redcost
-=setname= SCIP:sepa_newgomory                 cons Gomory
+=setname= SCIP:sepa_nogomory                  no Gom
+=setname= SCIP:sepa_nostrongcg                no SCG
+=setname= SCIP:sepa_noflowcover               no flow
+=setname= SCIP:sepa_noimpliedbounds           no impl
+=setname= SCIP:sepa_noclique                  no cliq
+=setname= SCIP:sepa_noredcost                 no rdcost
+=setname= SCIP:sepa_newgomory                 cons Gom
 
 =group= sepaonly
 =setname= SCIP:sepa_none                      none
@@ -76,12 +77,15 @@
 =setname= SCIP:sepa_onlyimpliedbounds         impl bds
 =setname= SCIP:sepa_onlyclique                clique
 =setname= SCIP:sepa_onlyredcost               redcost
+=setname= SCIP:sepa_onlynewgomory             cons Gom
 
 =group= sepalocal
 =setname= SCIP:default                        default
-=setname= SCIP:sepa_localall                  all local
-=setname= SCIP:sepa_localimpliedbounds        local impl bds
-=setname= SCIP:sepa_localknapsackcovers       local knapsack
+=setname= SCIP:sepa_localall1full             all ($1$)
+=setname= SCIP:sepa_localall1                 all ($1^\star$)
+=setname= SCIP:sepa_localall10                all ($10^\star$)
+=setname= SCIP:sepa_localimpliedbounds1       impl bds ($1^\star$)
+=setname= SCIP:sepa_localknapsackcovers1      knapsack ($1^\star$)
 
 =group= default
 =setname= SCIP:default                        default
