@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.18 2007/03/15 22:20:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.19 2007/04/26 10:36:16 bzfpfend Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -440,7 +440,7 @@ void xlp_addtocost(Var* var, const Numb* cost)
    scipvar = (SCIP_VAR*)var;
    scipval = numb_todbl(cost);
 
-   SCIP_CALL_ABORT( SCIPchgVarObj(scip_, scipvar, scipval) );
+   SCIP_CALL_ABORT( SCIPchgVarObj(scip_, scipvar, SCIPvarGetObj(scipvar) + scipval) );
 }
 
 Bool xlp_presolve(void)
