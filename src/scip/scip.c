@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.406 2007/04/19 19:04:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.407 2007/04/27 15:52:45 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6950,7 +6950,7 @@ SCIP_RETCODE SCIPchgVarType(
       assert(!SCIPvarIsTransformed(var));
       if( SCIPvarGetProbindex(var) >= 0 )
       {
-         SCIP_CALL( SCIPprobChgVarType(scip->origprob, scip->set, scip->branchcand, var, vartype) );
+         SCIP_CALL( SCIPprobChgVarType(scip->origprob, scip->mem->probmem, scip->set, scip->branchcand, var, vartype) );
       }
       else
       {
@@ -6967,7 +6967,7 @@ SCIP_RETCODE SCIPchgVarType(
       }
       if( SCIPvarGetProbindex(var) >= 0 )
       {
-         SCIP_CALL( SCIPprobChgVarType(scip->transprob, scip->set, scip->branchcand, var, vartype) );
+         SCIP_CALL( SCIPprobChgVarType(scip->transprob, scip->mem->solvemem, scip->set, scip->branchcand, var, vartype) );
       }
       else
       {

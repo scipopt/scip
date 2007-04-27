@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.56 2007/04/04 19:42:59 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.57 2007/04/27 15:52:44 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -153,6 +153,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
 extern
 SCIP_RETCODE SCIPprobChgVarType(
    SCIP_PROB*            prob,               /**< problem data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_VAR*             var,                /**< variable to add */
@@ -163,6 +164,7 @@ SCIP_RETCODE SCIPprobChgVarType(
 extern
 SCIP_RETCODE SCIPprobVarChangedStatus(
    SCIP_PROB*            prob,               /**< problem data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_VAR*             var                 /**< problem variable */

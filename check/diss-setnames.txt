@@ -135,6 +135,13 @@
 =setname= SCIP:heur_rins		      RINS
 =setname= SCIP:heur_mutation        	      mutation
 
+=group= heurgap
+=setname= SCIP:default                        default
+=setname= SCIP:heur_gap5_all                  all (5\,\%)
+=setname= SCIP:heur_gap5_none                 none (5\,\%)
+=setname= SCIP:heur_gap20_all                 all (20\,\%)
+=setname= SCIP:heur_gap20_none                none (20\,\%)
+
 =group= default
 =setname= SCIP:default                        default
 =setname= SCIP:presol_none                    none

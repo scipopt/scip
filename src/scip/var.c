@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.215 2007/04/04 19:42:59 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.216 2007/04/27 15:52:45 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1677,7 +1677,7 @@ SCIP_RETCODE varCreate(
    (*var)->eventfilter = NULL;
    (*var)->lbchginfos = NULL;
    (*var)->ubchginfos = NULL;
-   (*var)->index = stat->nvaridx++;
+   (*var)->index = stat->nvaridx;
    (*var)->probindex = -1;
    (*var)->pseudocandindex = -1;
    (*var)->eventqueueindexobj = -1;
@@ -1702,6 +1702,7 @@ SCIP_RETCODE varCreate(
    (*var)->vartype = vartype; /*lint !e641*/
    (*var)->pseudocostflag = FALSE;
    (*var)->eventqueueimpl = FALSE;
+   stat->nvaridx++;
 
    /* create branching and inference history entries */
    SCIP_CALL( SCIPhistoryCreate(&(*var)->history, blkmem) );
@@ -2533,7 +2534,7 @@ SCIP_RETCODE SCIPvarColumn(
    if( var->probindex != -1 )
    {
       /* inform problem about the variable's status change */
-      SCIP_CALL( SCIPprobVarChangedStatus(prob, set, NULL, var) );
+      SCIP_CALL( SCIPprobVarChangedStatus(prob, blkmem, set, NULL, var) );
       
       /* inform LP, that problem variable is now a column variable and no longer loose */
       SCIP_CALL( SCIPlpUpdateVarColumn(lp, set, var) );
@@ -2569,7 +2570,7 @@ SCIP_RETCODE SCIPvarLoose(
    if( var->probindex != -1 )
    {
       /* inform problem about the variable's status change */
-      SCIP_CALL( SCIPprobVarChangedStatus(prob, set, NULL, var) );
+      SCIP_CALL( SCIPprobVarChangedStatus(prob, blkmem, set, NULL, var) );
       
       /* inform LP, that problem variable is now a loose variable and no longer a column */
       SCIP_CALL( SCIPlpUpdateVarLoose(lp, set, var) );
@@ -2715,7 +2716,7 @@ SCIP_RETCODE SCIPvarFix(
       /* inform problem about the variable's status change */
       if( var->probindex != -1 )
       {
-         SCIP_CALL( SCIPprobVarChangedStatus(prob, set, branchcand, var) );
+         SCIP_CALL( SCIPprobVarChangedStatus(prob, blkmem, set, branchcand, var) );
       }
 
       /* reset the objective value of the fixed variable, thus adjusting the problem's objective offset */
@@ -3210,7 +3211,7 @@ SCIP_RETCODE SCIPvarAggregate(
    if( var->probindex != -1 )
    {
       /* inform problem about the variable's status change */
-      SCIP_CALL( SCIPprobVarChangedStatus(prob, set, branchcand, var) );
+      SCIP_CALL( SCIPprobVarChangedStatus(prob, blkmem, set, branchcand, var) );
    }
 
    /* reset the objective value of the aggregated variable, thus adjusting the objective value of the aggregation
@@ -3361,7 +3362,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       if( var->probindex != -1 )
       {
          /* inform problem about the variable's status change */
-         SCIP_CALL( SCIPprobVarChangedStatus(prob, set, branchcand, var) );
+         SCIP_CALL( SCIPprobVarChangedStatus(prob, blkmem, set, branchcand, var) );
       }
 
       /* issue VARFIXED event */
@@ -3503,12 +3504,16 @@ SCIP_RETCODE SCIPvarNegate(
 }
 
 /** informs variable that its position in problem's vars array changed */
-void SCIPvarSetProbindex(
+static
+void varSetProbindex(
    SCIP_VAR*             var,                /**< problem variable */
-   int                   probindex           /**< new problem index of variable */
+   int                   probindex           /**< new problem index of variable (-1 for removal) */
    )
 {
    assert(var != NULL);
+   assert(probindex >= 0 || var->vlbs == NULL);
+   assert(probindex >= 0 || var->vubs == NULL);
+   assert(probindex >= 0 || var->implics == NULL);
 
    var->probindex = probindex;
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
@@ -3516,6 +3521,58 @@ void SCIPvarSetProbindex(
       assert(var->data.col != NULL);
       var->data.col->var_probindex = probindex;
    }
+}
+
+/** informs variable that its position in problem's vars array changed */
+void SCIPvarSetProbindex(
+   SCIP_VAR*             var,                /**< problem variable */
+   int                   probindex           /**< new problem index of variable */
+   )
+{
+   assert(var != NULL);
+   assert(probindex >= 0);
+
+   varSetProbindex(var, probindex);
+}
+
+/** informs variable that it will be removed from the problem; adjusts probindex and removes variable from the
+ *  implication graph;
+ *  If 'final' is TRUE, the thorough implication graph removal is not performend. Instead, only the
+ *  variable bounds and implication data structures of the variable are freed. Since in the final removal
+ *  of all variables from the transformed problem, this deletes the implication graph completely and is faster
+ *  than removing the variables one by one, each time updating all lists of the other variables.
+ */
+SCIP_RETCODE SCIPvarRemove(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffer */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             final               /**< is this the final removal of all problem variables? */
+   )
+{
+   assert(SCIPvarGetProbindex(var) >= 0);
+
+   /* if the variable is active in the transformed problem, remove it from the implication graph */
+   if( SCIPvarIsTransformed(var)
+      && (SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN) )
+   {
+      if( final )
+      {
+         /* just destroy the data structures */
+         SCIPvboundsFree(&var->vlbs, blkmem);
+         SCIPvboundsFree(&var->vubs, blkmem);
+         SCIPimplicsFree(&var->implics, blkmem);
+      }
+      else
+      {
+         /* unlink the variable from all other variables' lists and free the data structures */
+         SCIP_CALL( varRemoveImplicsVbs(var, blkmem, set, FALSE, TRUE) );
+      }
+   }
+
+   /* mark the variable to be no longer a member of the problem */
+   varSetProbindex(var, -1);
+
+   return SCIP_OKAY;
 }
 
 /** marks the variable to be deleted from the problem */

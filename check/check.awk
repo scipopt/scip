@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.53 2007/04/18 17:52:51 bzfpfend Exp $
+# $Id: check.awk,v 1.54 2007/04/27 15:52:44 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -108,7 +108,7 @@ BEGIN {
    intestfile[$1] = 1;
 }
 /=opt=/  {  # get optimum
-   if (NF >= 3 ) {
+   if( NF >= 3 ) {
       solstatus[$2] = "opt";
       sol[$2] = $3;
    }
@@ -394,20 +394,26 @@ BEGIN {
       }
       else if( solstatus[prob] == "opt" )
       {
-         if (!sollimitreached && ((pb - db > 1e-4) || (abs(pb - sol[prob]) > 1e-5*max(abs(pb),1.0))))
+         if( !sollimitreached && !gapreached && !timeout )
+            wronganswer = (pb - db > 1e-4 || abs(pb - sol[prob]) > 1e-5*max(abs(pb),1.0));
+         else if( pb >= db )
+            wronganswer = (db > sol[prob] + 1e-5*max(abs(sol[prob]),1.0) ||
+               pb < sol[prob] - 1e-5*max(abs(sol[prob]),1.0));
+         else
+            wronganswer = (pb > sol[prob] + 1e-5*max(abs(sol[prob]),1.0) ||
+               db < sol[prob] - 1e-5*max(abs(sol[prob]),1.0));
+
+         if( wronganswer )
          {
-            if (timeout)
-            {
-               status = "timeout";
-               timeouttime += tottime;
-               timeouts++;
-            }
-            else
-            {
-               status = "fail";
-               failtime += tottime;
-               fail++;
-            }
+            status = "fail";
+            failtime += tottime;
+            fail++;
+         }
+         else if( timeout )
+         {
+            status = "timeout";
+            timeouttime += tottime;
+            timeouts++;
          }
          else
          {
@@ -417,20 +423,22 @@ BEGIN {
       }
       else if( solstatus[prob] == "feas" || solstatus[prob] == "inf" )
       {
-         if (feasible != (solstatus[prob] == "feas"))
+         if( !timeout )
+            wronganswer = (feasible && solstatus[prob] == "inf");
+         else
+            wronganswer = (feasible != (solstatus[prob] == "feas"));
+
+         if( wronganswer )
          {
-            if (timeout)
-            {
-               status = "timeout";
-               timeouttime += tottime;
-               timeouts++;
-            }
-            else
-            {
-               status = "fail";
-               failtime += tottime;
-               fail++;
-            }
+            status = "fail";
+            failtime += tottime;
+            fail++;
+         }
+         else if( timeout )
+         {
+            status = "timeout";
+            timeouttime += tottime;
+            timeouts++;
          }
          else
          {
@@ -446,23 +454,18 @@ BEGIN {
             failtime += tottime;
             fail++;
          }
-         else if (timeout)
+         else if( timeout )
          {
             status = "timeout";
             timeouttime += tottime;
             timeouts++;
-         }
-         else if (sollimitreached)
-         {
-            status = "ok";
-            pass++;
          }
          else
             status = "unknown";
       }
       else
       {
-         if (timeout)
+         if( timeout )
          {
             status = "timeout";
             timeouttime += tottime;

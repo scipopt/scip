@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.89 2007/04/04 19:42:59 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.90 2007/04/27 15:52:44 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -273,7 +273,7 @@ SCIP_RETCODE SCIPprobFree(
    for( v = 0; v < (*prob)->nvars; ++v )
    {
       assert(SCIPvarGetProbindex((*prob)->vars[v]) >= 0);
-      SCIPvarSetProbindex((*prob)->vars[v], -1);
+      SCIP_CALL( SCIPvarRemove((*prob)->vars[v], blkmem, set, TRUE) );
       SCIP_CALL( SCIPvarRelease(&(*prob)->vars[v], blkmem, set, lp) );
    }
    BMSfreeMemoryArrayNull(&(*prob)->vars);
@@ -508,8 +508,10 @@ void probInsertVar(
 
 /** removes variable from vars array */
 static
-void probRemoveVar(
+SCIP_RETCODE probRemoveVar(
    SCIP_PROB*            prob,               /**< problem data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< variable to remove */
    )
 {
@@ -584,14 +586,17 @@ void probRemoveVar(
    assert(freepos == prob->nvars-1);
 
    prob->nvars--;
-   SCIPvarSetProbindex(var, -1);
-
    assert(prob->nvars == prob->nbinvars + prob->nintvars + prob->nimplvars + prob->ncontvars);
 
    /* update number of column variables in problem */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
       prob->ncolvars--;
    assert(0 <= prob->ncolvars && prob->ncolvars <= prob->nvars);
+
+   /* inform the variable that it is no longer in the problem; if necessary, delete it from the implication graph */
+   SCIP_CALL( SCIPvarRemove(var, blkmem, set, FALSE) );
+
+   return SCIP_OKAY;
 }
 
 /** adds variable to the problem and captures it */
@@ -731,7 +736,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
          SCIP_CALL( SCIPhashtableRemove(prob->varnames, (void*)var) );
 
          /* remove variable from vars array and mark it to be not in problem */
-         probRemoveVar(prob, var);
+         SCIP_CALL( probRemoveVar(prob, blkmem, set, var) );
 
          /* release variable */
          SCIP_CALL( SCIPvarRelease(&prob->deletedvars[i], blkmem, set, lp) );
@@ -745,6 +750,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
 /** changes the type of a variable in the problem */
 SCIP_RETCODE SCIPprobChgVarType(
    SCIP_PROB*            prob,               /**< problem data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_VAR*             var,                /**< variable to add */
@@ -769,7 +775,7 @@ SCIP_RETCODE SCIPprobChgVarType(
    }
 
    /* temporarily remove variable from problem */
-   probRemoveVar(prob, var);
+   SCIP_CALL( probRemoveVar(prob, blkmem, set, var) );
 
    /* change the type of the variable */
    SCIP_CALL( SCIPvarChgType(var, vartype) );
@@ -789,6 +795,7 @@ SCIP_RETCODE SCIPprobChgVarType(
 /** informs problem, that the given loose problem variable changed its status */
 SCIP_RETCODE SCIPprobVarChangedStatus(
    SCIP_PROB*            prob,               /**< problem data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_VAR*             var                 /**< problem variable */
@@ -822,7 +829,7 @@ SCIP_RETCODE SCIPprobVarChangedStatus(
       /* variable switched from unfixed to fixed (if it was fixed before, probindex would have been -1) */
 
       /* remove variable from problem */
-      probRemoveVar(prob, var);
+      SCIP_CALL( probRemoveVar(prob, blkmem, set, var) );
       
       /* insert variable in fixedvars array */
       SCIP_CALL( probEnsureFixedvarsMem(prob, set, prob->nfixedvars+1) );

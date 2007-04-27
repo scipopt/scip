@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.112 2007/04/04 19:43:00 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.113 2007/04/27 15:52:45 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -381,6 +381,21 @@ extern
 void SCIPvarSetProbindex(
    SCIP_VAR*             var,                /**< problem variable */
    int                   probindex           /**< new problem index of variable */
+   );
+
+/** informs variable that it will be removed from the problem; adjusts probindex and removes variable from the
+ *  implication graph;
+ *  If 'final' is TRUE, the thorough implication graph removal is not performend. Instead, only the
+ *  variable bounds and implication data structures of the variable are freed. Since in the final removal
+ *  of all variables from the transformed problem, this deletes the implication graph completely and is faster
+ *  than removing the variables one by one, each time updating all lists of the other variables.
+ */
+extern
+SCIP_RETCODE SCIPvarRemove(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffer */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             final               /**< is this the final removal of all problem variables? */
    );
 
 /** marks the variable to be deleted from the problem */
