@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.41 2007/04/19 15:05:03 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.42 2007/04/30 20:17:57 bzfpfend Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -373,7 +373,12 @@ END {
    for( i = 0; i < problistlen; ++i )
    {
       p = problist[i];
-      line = sprintf("%-18s", p);
+      if( length(p) > 18 )
+         shortp = substr(p, length(p)-17, 18);
+      else
+         shortp = p;
+
+      line = sprintf("%-18s", shortp);
       fail = 0;
       readerror = 0;
       unprocessed = 0;
@@ -422,6 +427,13 @@ END {
          if( status[s,pidx] == "timeout" && time[s,pidx] < timelimit[s] )
          {
             nodes[s,pidx] *= timelimit[s]/time[s,pidx];
+            time[s,pidx] = timelimit[s];
+         }
+
+         # if the solver exceeded the timelimit, set status accordingly
+         if( (status[s,pidx] == "ok" || status[s,pidx] == "unknown") && timelimit[s] > 0.0 && time[s,pidx] > timelimit[s] )
+         {
+            status[s,pidx] = "timeout";
             time[s,pidx] = timelimit[s];
          }
 

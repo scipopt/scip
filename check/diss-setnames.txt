@@ -86,13 +86,14 @@
 =setname= SCIP:sepa_localall10                all ($10^\star$)
 =setname= SCIP:sepa_localimpliedbounds1       impl bds ($1^\star$)
 =setname= SCIP:sepa_localknapsackcovers1      knapsack ($1^\star$)
+=setname= SCIP:sepa_localimpliedboundsknapsack1      impl/knap ($1^\star$)
 
 =group= default
 =setname= SCIP:default                        default
-=setname= SCIP:cutsel_noobjparal              no obj paral
-=setname= SCIP:cutsel_noortho                 no ortho
 =setname= SCIP:cutsel_oneperround             one per round
 =setname= SCIP:cutsel_takeall                 take all
+=setname= SCIP:cutsel_noobjparal              no obj paral
+=setname= SCIP:cutsel_noortho                 no ortho
 
 =group= default
 =setname= SCIP:default                        default
@@ -105,7 +106,7 @@
 =group= heurrounding
 =setname= SCIP:default                        default
 =setname= SCIP:heur_norens                    no RENS
-=setname= SCIP:heur_nosimplerounding          no simple rounding
+=setname= SCIP:heur_nosimplerounding          no simple rnd
 =setname= SCIP:heur_norounding                no rounding
 =setname= SCIP:heur_noshifting                no shifting
 =setname= SCIP:heur_nointshifting             no int shifting
@@ -113,12 +114,12 @@
 
 =group= heurdiving
 =setname= SCIP:default                        default
-=setname= SCIP:heur_nocoefdiving              no coef diving
-=setname= SCIP:heur_nofracdiving              no frac diving
-=setname= SCIP:heur_noguideddiving            no guided diving
-=setname= SCIP:heur_nolinesearchdiving        no linesearch diving
-=setname= SCIP:heur_nopscostdiving            no pscost diving
-=setname= SCIP:heur_noveclendiving            no veclen diving
+=setname= SCIP:heur_nocoefdiving              no coef
+=setname= SCIP:heur_nofracdiving              no frac
+=setname= SCIP:heur_noguideddiving            no guided
+=setname= SCIP:heur_nolinesearchdiving        no linesearch
+=setname= SCIP:heur_nopscostdiving            no pscost
+=setname= SCIP:heur_noveclendiving            no veclen
 =setname= SCIP:heur_nobacktrack               no backtrack
 
 =group= heurobjdiving

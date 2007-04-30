@@ -110,6 +110,10 @@ do
 
   # generate "TOTAL" row in summary file
   gawk -v texsummaryfiletime="${TEXSUMMARYBASE}_time.tex" -v texsummaryfilenodes="${TEXSUMMARYBASE}_nodes.tex" -v texcolorlimit=5 '
+function max(x,y)
+{
+   return (x) > (y) ? (x) : (y);
+}
 function abs(x)
 {
    return x < 0 ? -x : x;
@@ -154,8 +158,8 @@ BEGIN { nsolver = 0; }
     solver[nsolver] = $3;
   }
   nvals[$3]++;
-  timegeom[$3,nvals[$3]] = $4;
-  nodesgeom[$3,nvals[$3]] = $5;
+  timegeom[$3,nvals[$3]] = max($4, 0.001);
+  nodesgeom[$3,nvals[$3]] = max($5, 0.001);
   weight[$3,nvals[$3]] = $6;
 }
 END {

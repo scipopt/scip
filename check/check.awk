@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.54 2007/04/27 15:52:44 bzfpfend Exp $
+# $Id: check.awk,v 1.55 2007/04/30 20:17:56 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -43,6 +43,7 @@ BEGIN {
    onlyintestfile = 0;  # should only instances be reported that are included in the .test file?  TEMPORARY HACK!
    conflictstats = 0;   # should conflict analysis statistics be reported as well?
    onlypresolvereductions = 0;  # should only instances with presolve reductions be shown?
+   useshortname = 1;    # should problem name be truncated to fit into column?
 
    printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
    printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
@@ -129,7 +130,7 @@ BEGIN {
    for( i = 2; i < m; ++i )
       prob = prob "." b[i];
 
-   if( length(prob) > 18 )
+   if( useshortname && length(prob) > 18 )
       shortprob = substr(prob, length(prob)-17, 18);
    else
       shortprob = prob;
