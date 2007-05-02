@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.55 2007/04/30 20:17:56 bzfpfend Exp $
+# $Id: check.awk,v 1.56 2007/05/02 10:26:58 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -43,7 +43,7 @@ BEGIN {
    onlyintestfile = 0;  # should only instances be reported that are included in the .test file?  TEMPORARY HACK!
    conflictstats = 0;   # should conflict analysis statistics be reported as well?
    onlypresolvereductions = 0;  # should only instances with presolve reductions be shown?
-   useshortname = 1;    # should problem name be truncated to fit into column?
+   useshortnames = 1;   # should problem name be truncated to fit into column?
 
    printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
    printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
@@ -130,7 +130,7 @@ BEGIN {
    for( i = 2; i < m; ++i )
       prob = prob "." b[i];
 
-   if( useshortname && length(prob) > 18 )
+   if( useshortnames && length(prob) > 18 )
       shortprob = substr(prob, length(prob)-17, 18);
    else
       shortprob = prob;
@@ -261,7 +261,7 @@ BEGIN {
 /memory limit reached/ { memlimitreached = 1; }
 /problem is solved/    { timeout = 0; }
 /^  Primal Bound     :/ {
-   if( $4 == "infeasible" )
+   if( $4 == "infeasible" || $4 == "-" )
    {
       pb = 1e+20;
       feasible = 0;
@@ -424,7 +424,7 @@ BEGIN {
       }
       else if( solstatus[prob] == "feas" || solstatus[prob] == "inf" )
       {
-         if( !timeout )
+         if( timeout )
             wronganswer = (feasible && solstatus[prob] == "inf");
          else
             wronganswer = (feasible != (solstatus[prob] == "feas"));
