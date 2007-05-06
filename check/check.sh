@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.38 2007/01/24 10:17:23 bzfpfend Exp $
+# $Id: check.sh,v 1.39 2007/05/06 15:00:44 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -154,13 +154,14 @@ do
 	    echo checksol                          >> $TMPFILE
 	    echo quit                              >> $TMPFILE
 
+#	    waitcplex.sh # ??????????????????
+
 	    echo -----------------------------
 	    date
 	    date >>$ERRFILE
 	    echo -----------------------------
 	    date +"@03 %s"
 	    tcsh -c "limit cputime $HARDTIMELIMIT s; limit memoryuse $HARDMEMLIMIT M; limit filesize 200 M; ../$2 < $TMPFILE" 2>>$ERRFILE
-#	    ../$2 < $TMPFILE 2>>$ERRFILE
 	    date +"@04 %s"
 	    echo -----------------------------
 	    date
@@ -188,12 +189,7 @@ date >>$ERRFILE
 
 if [ -e $DONEFILE ]
 then
-    if [ -f $TSTNAME.solu ]
-    then
-	gawk -f check.awk -vTEXFILE=$TEXFILE $TSTNAME.solu $OUTFILE | tee $RESFILE
-    else
-	gawk -f check.awk -vTEXFILE=$TEXFILE $OUTFILE | tee $RESFILE
-    fi
+    evalcheck.sh $OUTFILE
 
     if [ "$LOCK" == "true" ]
     then

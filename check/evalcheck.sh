@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck.sh,v 1.3 2007/04/30 20:17:57 bzfpfend Exp $
+# $Id: evalcheck.sh,v 1.4 2007/05/06 15:00:45 bzfpfend Exp $
 
 AWKARGS=""
 FILES=""
@@ -36,6 +36,7 @@ do
     OUTFILE=$DIR/$NAME.out
     RESFILE=$DIR/$NAME.res
     TEXFILE=$DIR/$NAME.tex
+    PAVFILE=$DIR/$NAME.pav
 
     TSTNAME=`echo $NAME | sed 's/check.\([a-zA-Z0-9_]*\).*/\1/g'`
 
@@ -53,5 +54,5 @@ do
 	SOLUFILE=""
     fi
 
-    gawk -f check.awk -vTEXFILE=$TEXFILE $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
+    gawk -f check.awk -vTEXFILE=$TEXFILE -vPAVFILE=$PAVFILE $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
 done

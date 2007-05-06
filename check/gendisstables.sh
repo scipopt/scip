@@ -3,7 +3,7 @@
 TEXINCFILE="disstables/detailedtables.tex"
 
 # settings: (primary class)/subgroup
-SETTINGS="mem/default branch/default brscore/default nodesel/default childsel/default prop/default sepa/default sepa/sepaonly sepa/sepalocal cutsel/default heur/default heur/heurrounding heur/heurdiving heur/heurobjdiving heur/heurimprovement heur/heurgap presol/default conf/default"
+SETTINGS="mem/default branch/default brscore/default nodesel/default childsel/default prop/default sepa/default sepa/sepaonly sepa/sepalocal cutsel/default heur/default heur/heurrounding heur/heurdiving heur/heurobjdiving heur/heurimprovement heur/heurgap presol/default presol/presolgeneric presol/presolrestart conf/default"
 
 # test sets: set/(weight in total score), weight=0 means weight=#instances
 TESTSETS="miplib/0 coral/0 milp/0 enlight/3 alu/3 fctp/3 acc/3 fc/3 arcset/3 mik/3"

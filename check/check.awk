@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.56 2007/05/02 10:26:58 bzfpfend Exp $
+# $Id: check.awk,v 1.57 2007/05/06 15:00:42 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -36,9 +36,10 @@ function max(x,y)
    return (x) > (y) ? (x) : (y);
 }
 BEGIN {
-   timegeomshift = 60.0;
-   nodegeomshift = 1000.0;
+   timegeomshift = 10.0;
+   nodegeomshift = 100.0;
    sblpgeomshift = 0.0;
+   pavshift = 1.0;
    onlyinsolufile = 0;  # should only instances be reported that are included in the .solu file?
    onlyintestfile = 0;  # should only instances be reported that are included in the .test file?  TEMPORARY HACK!
    conflictstats = 0;   # should conflict analysis statistics be reported as well?
@@ -179,7 +180,7 @@ BEGIN {
 }
 /@03/ { starttime = $2; }
 /@04/ { endtime = $2; }
-/^loaded parameter file/ { settings = $4; sub(/<settings\//, "", settings); sub(/\.set>/, "", settings);xb }
+/^loaded parameter file/ { settings = $4; sub(/<settings\//, "", settings); sub(/\.set>/, "", settings); }
 /^SCIP> loaded parameter file/ { settings = $5; sub(/<settings\//, "", settings); sub(/\.set>/, "", settings); }
 /^parameter <limits\/time> set to/ { timelimit = $5; }
 /^SCIP> parameter <limits\/time> set to/ { timelimit = $6; }
@@ -498,6 +499,26 @@ BEGIN {
                shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime, status);
 	 }
       }
+
+      # PAVER output: see http://www.gamsworld.org/performance/paver/pprocess_submit.htm
+      if( solstatus[prob] == "opt" || solstatus[prob] == "feas" )
+         modelstat = 1;
+      else if( solstatus[prob] == "inf" )
+         modelstat = 1;
+      else if( solstatus[prob] == "best" )
+         modelstat = 8;
+      else
+         modelstat = 1;
+      if( status == "ok" || status == "unknown" )
+         solverstat = 1;
+      else if( status == "timeout" )
+         solverstat = 3;
+      else
+         solverstat = 10;
+      pavprob = prob;
+      if( length(pavprob) > 25 )
+         pavprob = substr(pavprob, length(pavprob)-24,25);
+      printf("%s,MIP,SCIP_%s,0,%d,%d,%g,%g\n", pavprob, settings, modelstat, solverstat, pb, tottime+pavshift) > PAVFILE;
    }
 }
 END {

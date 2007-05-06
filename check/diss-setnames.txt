@@ -149,15 +149,21 @@
 =setname= SCIP:presol_nolinearpair            no linear pairs
 =setname= SCIP:presol_linearaggr              aggreg linear pairs
 =setname= SCIP:presol_noknapdisaggr           no knap disaggreg
-=setname= SCIP:presol_notrivial               no trivial
+
+=group= presolgeneric
+=setname= SCIP:default                        default
+#=setname= SCIP:presol_notrivial               no trivial
 =setname= SCIP:presol_nointtobinary           no int to binary
 =setname= SCIP:presol_noprobing               no probing
 =setname= SCIP:presol_fullprobing             full probing
 =setname= SCIP:presol_noimplics               no impl graph
 =setname= SCIP:presol_nodualfix               no dual fixing
+
+=group= presolrestart
+=setname= SCIP:default                        default
 =setname= SCIP:presol_norestart               no restart
-=setname= SCIP:presol_subrestart50            sub restart
-=setname= SCIP:presol_subrestart10            aggr subrestart
+=setname= SCIP:presol_subrestart10            sub restart
+=setname= SCIP:presol_subrestart5             aggr sub restart
 
 =group= default
 =setname= SCIP:default                        default
