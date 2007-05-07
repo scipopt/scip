@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.10 2007/04/04 08:45:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.11 2007/05/07 13:39:33 bzfberth Exp $"
 
 /**@file   heur_oneopt.c
  * @brief  oneopt primal heuristic
@@ -544,7 +544,7 @@ SCIP_RETCODE SCIPincludeHeurOneopt(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/oneopt/weightedobj",
          "should the objective be weighted with the potential shifting value when sorting the shifting candidates?",
-         &heurdata->weightedobj, DEFAULT_WEIGHTEDOBJ, NULL, NULL) );
+         &heurdata->weightedobj, TRUE, DEFAULT_WEIGHTEDOBJ, NULL, NULL) );
 
    return SCIP_OKAY;
 }

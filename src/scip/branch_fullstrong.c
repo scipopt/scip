@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.48 2006/09/17 01:58:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.49 2007/05/07 13:39:31 bzfberth Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -393,7 +393,7 @@ SCIP_RETCODE SCIPincludeBranchruleFullstrong(
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/fullstrong/reevalage", 
          "number of intermediate LPs solved to trigger reevaluation of strong branching value for a variable that was already evaluated at the current node",
-         &branchruledata->reevalage, DEFAULT_REEVALAGE, 0, INT_MAX, NULL, NULL) );
+         &branchruledata->reevalage, TRUE, DEFAULT_REEVALAGE, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

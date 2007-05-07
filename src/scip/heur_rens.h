@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.h,v 1.1 2006/05/31 11:53:55 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_rens.h,v 1.2 2007/05/07 13:39:33 bzfberth Exp $"
 
 /**@file   heur_rens.h
  * @brief  RENS primal heuristic
@@ -34,4 +34,17 @@ SCIP_RETCODE SCIPincludeHeurRens(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** main procedure of the RENS heuristic, creates and solves a subMIP */
+SCIP_RETCODE SCIPapplyRens(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
+   SCIP_RESULT*          result,             /**< result data structure                                          */
+   SCIP_Real             timelimit,          /**< timelimit for the subproblem                                   */        
+   SCIP_Real             memorylimit,        /**< memorylimit for the subproblem                                 */
+   SCIP_Real             minfixingrate,      /**< minimum percentage of integer variables that have to be fixed  */
+   SCIP_Real             minimprove,         /**< factor by which RENS should at least improve the incumbent     */
+   SCIP_Longint          maxnodes,           /**< maximum number of  nodes for the subproblem                    */
+   SCIP_Longint          nstallnodes,        /**< number of stalling nodes for the subproblem                    */
+   SCIP_Bool             binarybounds        /**< should general integers get binary bounds [floor(.),ceil(.)]?  */
+   );
 #endif

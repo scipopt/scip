@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.234 2007/04/25 13:51:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.235 2007/05/07 13:39:32 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -7146,39 +7146,40 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/linear/tightenboundsfreq",
          "multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)",
-         &conshdlrdata->tightenboundsfreq, DEFAULT_TIGHTENBOUNDSFREQ, -1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->tightenboundsfreq, TRUE, DEFAULT_TIGHTENBOUNDSFREQ, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/linear/maxrounds",
          "maximal number of separation rounds per node (-1: unlimited)",
-         &conshdlrdata->maxrounds, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/linear/maxroundsroot",
          "maximal number of separation rounds per node in the root node (-1: unlimited)",
-         &conshdlrdata->maxroundsroot, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/linear/maxsepacuts",
          "maximal number of cuts separated per separation round",
-         &conshdlrdata->maxsepacuts, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/linear/maxsepacutsroot",
          "maximal number of cuts separated per separation round in the root node",
-         &conshdlrdata->maxsepacutsroot, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/linear/maxpresolpairrounds",
          "maximal number of presolving rounds with pairwise constraint comparison (-1: no limit)",
-         &conshdlrdata->maxpresolpairrounds, DEFAULT_MAXPRESOLPAIRROUNDS, -1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maxpresolpairrounds, TRUE, DEFAULT_MAXPRESOLPAIRROUNDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "constraints/linear/maxaggrnormscale",
          "maximal allowed relative gain in maximum norm for constraint aggregation (0.0: disable constraint aggregation)",
-         &conshdlrdata->maxaggrnormscale, DEFAULT_MAXAGGRNORMSCALE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+         &conshdlrdata->maxaggrnormscale, TRUE, DEFAULT_MAXAGGRNORMSCALE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "constraints/linear/maxcardbounddist",
          "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for separating knapsack cardinality cuts",
-         &conshdlrdata->maxcardbounddist, DEFAULT_MAXCARDBOUNDDIST, 0.0, 1.0, NULL, NULL) );
+         &conshdlrdata->maxcardbounddist, TRUE, DEFAULT_MAXCARDBOUNDDIST, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/linear/separateall",
          "should all constraints be subject to cardinality cut generation instead of only the ones with non-zero dual value?",
-         &conshdlrdata->separateall, DEFAULT_SEPARATEALL, NULL, NULL) );
+         &conshdlrdata->separateall, FALSE, DEFAULT_SEPARATEALL, NULL, NULL) );
 
    return SCIP_OKAY;
 }

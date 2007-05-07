@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.50 2006/12/07 20:03:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.51 2007/05/07 13:39:32 bzfberth Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -2056,7 +2056,7 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/xor/maxpresolpairrounds",
          "maximal number of presolving rounds with pairwise constraint comparison (-1: no limit)",
-         &conshdlrdata->maxpresolpairrounds, DEFAULT_MAXPRESOLPAIRROUNDS, -1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maxpresolpairrounds, TRUE, DEFAULT_MAXPRESOLPAIRROUNDS, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

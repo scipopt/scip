@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.29 2007/03/06 13:24:14 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.30 2007/05/07 13:39:35 bzfberth Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -1327,31 +1327,31 @@ SCIP_RETCODE SCIPincludeSepaClique(
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/clique/scaleval",
          "factor for scaling weights",
-         &sepadata->scaleval, DEFAULT_SCALEVAL, 1.0, SCIP_REAL_MAX, NULL, NULL) );
+         &sepadata->scaleval, TRUE, DEFAULT_SCALEVAL, 1.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/clique/maxtreenodes",
          "maximal number of nodes in branch and bound tree (-1: no limit)",
-         &sepadata->maxtreenodes, DEFAULT_MAXTREENODES, -1, INT_MAX, NULL, NULL) );
+         &sepadata->maxtreenodes, TRUE, DEFAULT_MAXTREENODES, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/clique/backtrackfreq",
          "frequency for premature backtracking up to tree level 1 (0: no backtracking)",
-         &sepadata->backtrackfreq, DEFAULT_BACKTRACKFREQ, 0, INT_MAX, NULL, NULL) );
+         &sepadata->backtrackfreq, TRUE, DEFAULT_BACKTRACKFREQ, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/clique/maxsepacuts",
          "maximal number of clique cuts separated per separation round (-1: no limit)",
-         &sepadata->maxsepacuts, DEFAULT_MAXSEPACUTS, -1, INT_MAX, NULL, NULL) );
+         &sepadata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/clique/maxzeroextensions",
          "maximal number of zero-valued variables extending the clique (-1: no limit)",
-         &sepadata->maxzeroextensions, DEFAULT_MAXZEROEXTENSIONS, -1, INT_MAX, NULL, NULL) );
+         &sepadata->maxzeroextensions, TRUE, DEFAULT_MAXZEROEXTENSIONS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/clique/cliquetablemem",
          "maximal memory size of dense clique table (in kb)",
-         &sepadata->cliquetablemem, DEFAULT_CLIQUETABLEMEM, 0.0, (SCIP_Real)INT_MAX/1024.0, NULL, NULL) );
+         &sepadata->cliquetablemem, TRUE, DEFAULT_CLIQUETABLEMEM, 0.0, (SCIP_Real)INT_MAX/1024.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/clique/cliquedensity",
          "minimal density of cliques to use a dense clique table",
-         &sepadata->cliquedensity, DEFAULT_CLIQUEDENSITY, 0.0, 1.0, NULL, NULL) );
+         &sepadata->cliquedensity, TRUE, DEFAULT_CLIQUEDENSITY, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }

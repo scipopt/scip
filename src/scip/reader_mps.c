@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.69 2006/09/18 00:05:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.70 2007/05/07 13:39:34 bzfberth Exp $"
 
 /**@file   reader_mps.c
  * @brief  MPS file reader
@@ -1444,13 +1444,13 @@ SCIP_RETCODE SCIPincludeReaderMps(
    /* add mps reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/mpsreader/dynamicconss", "should model constraints be subject to aging?",
-         NULL, TRUE, NULL, NULL) );
+         NULL, FALSE, TRUE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/mpsreader/dynamiccols", "should columns be added and removed dynamically to the LP?",
-         NULL, FALSE, NULL, NULL) );
+         NULL, FALSE, FALSE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/mpsreader/dynamicrows", "should rows be added and removed dynamically to the LP?",
-         NULL, FALSE, NULL, NULL) );
+         NULL, FALSE, FALSE, NULL, NULL) );
    
    return SCIP_OKAY;
 }

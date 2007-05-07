@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.2 2007/04/04 08:45:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.3 2007/05/07 13:39:35 bzfberth Exp $"
 
 /**@file   sepa_flowcover.c
  * @brief  flow cover cuts separator
@@ -2796,62 +2796,62 @@ SCIP_RETCODE SCIPincludeSepaFlowcover(
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/flowcover/maxrounds",
          "maximal number of separation rounds per node (-1: unlimited)",
-         &sepadata->maxrounds, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
+         &sepadata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/flowcover/maxroundsroot",
          "maximal number of separation rounds in the root node (-1: unlimited)",
-         &sepadata->maxroundsroot, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
+         &sepadata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/flowcover/maxtries",
          "maximal number of rows to separate flow cover cuts for per separation round (-1: unlimited)",
-         &sepadata->maxtries, DEFAULT_MAXTRIES, -1, INT_MAX, NULL, NULL) );
+         &sepadata->maxtries, TRUE, DEFAULT_MAXTRIES, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/flowcover/maxtriesroot",
          "maximal number of rows to separate flow cover cuts for per separation round in the root (-1: unlimited)",
-         &sepadata->maxtriesroot, DEFAULT_MAXTRIESROOT, -1, INT_MAX, NULL, NULL) );
+         &sepadata->maxtriesroot, TRUE, DEFAULT_MAXTRIESROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/flowcover/maxfails",
          "maximal number of consecutive fails to generate a cut per separation round (-1: unlimited)",
-         &sepadata->maxfails, DEFAULT_MAXFAILS, -1, INT_MAX, NULL, NULL) );
+         &sepadata->maxfails, TRUE, DEFAULT_MAXFAILS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/flowcover/maxfailsroot",
          "maximal number of consecutive fails to generate a cut per separation round in the root (-1: unlimited)",
-         &sepadata->maxfailsroot, DEFAULT_MAXFAILSROOT, -1, INT_MAX, NULL, NULL) );
+         &sepadata->maxfailsroot, TRUE, DEFAULT_MAXFAILSROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/flowcover/maxsepacuts",
          "maximal number of flow cover cuts separated per separation round",
-         &sepadata->maxsepacuts, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
+         &sepadata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/flowcover/maxsepacutsroot",
          "maximal number of flow cover cuts separated per separation round in the root",
-         &sepadata->maxsepacutsroot, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
+         &sepadata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/flowcover/maxslack",
          "maximal slack of rows to separate flow cover cuts for",
-         &sepadata->maxslack, DEFAULT_MAXSLACK, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &sepadata->maxslack, TRUE, DEFAULT_MAXSLACK, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/flowcover/maxslackroot",
          "maximal slack of rows to separate flow cover cuts for in the root",
-         &sepadata->maxslackroot, DEFAULT_MAXSLACKROOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &sepadata->maxslackroot, TRUE, DEFAULT_MAXSLACKROOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/flowcover/slackscore",
          "weight of slack in the scoring of the rows",
-         &sepadata->slackscore, DEFAULT_SLACKSCORE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &sepadata->slackscore, TRUE, DEFAULT_SLACKSCORE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/flowcover/maxrowdensity",
          "maximal density of row to separate flow cover cuts for",
-         &sepadata->maxrowdensity, DEFAULT_MAXROWDENSITY, 0.0, 1.0, NULL, NULL) );
+         &sepadata->maxrowdensity, TRUE, DEFAULT_MAXROWDENSITY, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/flowcover/dynamiccuts",
          "should generated cuts be removed from the LP if they are no longer tight?",
-         &sepadata->dynamiccuts, DEFAULT_DYNAMICCUTS, NULL, NULL) );
+         &sepadata->dynamiccuts, FALSE, DEFAULT_DYNAMICCUTS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/flowcover/multbyminusone",
          "should flow cover cuts be separated for 0-1 single node flow set with reversed arcs in addition?",
-         &sepadata->multbyminusone, DEFAULT_MULTBYMINUSONE, NULL, NULL) );
+         &sepadata->multbyminusone, TRUE, DEFAULT_MULTBYMINUSONE, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/flowcover/maxtestdelta",
          "cut generation heuristic: maximal number of different deltas to try",
-         &sepadata->maxtestdelta, DEFAULT_MAXTESTDELTA, 0, INT_MAX, NULL, NULL) );
+         &sepadata->maxtestdelta, TRUE, DEFAULT_MAXTESTDELTA, 0, INT_MAX, NULL, NULL) );
    return SCIP_OKAY;
 }

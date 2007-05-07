@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.296 2007/04/19 15:04:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.297 2007/05/07 13:39:35 bzfberth Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -321,6 +321,7 @@ SCIP_RETCODE SCIPaddBoolParam(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    SCIP_Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    SCIP_Bool             defaultvalue,       /**< default value of the parameter */
    SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
    SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
@@ -333,6 +334,7 @@ SCIP_RETCODE SCIPaddIntParam(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    int*                  valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    int                   defaultvalue,       /**< default value of the parameter */
    int                   minvalue,           /**< minimum value for parameter */
    int                   maxvalue,           /**< maximum value for parameter */
@@ -347,6 +349,7 @@ SCIP_RETCODE SCIPaddLongintParam(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    SCIP_Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    SCIP_Longint          defaultvalue,       /**< default value of the parameter */
    SCIP_Longint          minvalue,           /**< minimum value for parameter */
    SCIP_Longint          maxvalue,           /**< maximum value for parameter */
@@ -361,6 +364,7 @@ SCIP_RETCODE SCIPaddRealParam(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    SCIP_Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    SCIP_Real             defaultvalue,       /**< default value of the parameter */
    SCIP_Real             minvalue,           /**< minimum value for parameter */
    SCIP_Real             maxvalue,           /**< maximum value for parameter */
@@ -375,6 +379,7 @@ SCIP_RETCODE SCIPaddCharParam(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    char*                 valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    char                  defaultvalue,       /**< default value of the parameter */
    const char*           allowedvalues,      /**< array with possible parameter values, or NULL if not restricted */
    SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
@@ -388,6 +393,7 @@ SCIP_RETCODE SCIPaddStringParam(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    char**                valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    const char*           defaultvalue,       /**< default value of the parameter */
    SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
    SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */

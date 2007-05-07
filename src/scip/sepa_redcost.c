@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_redcost.c,v 1.4 2006/09/17 01:58:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_redcost.c,v 1.5 2007/05/07 13:39:35 bzfberth Exp $"
 
 /**@file   sepa_redcost.c
  * @brief  reduced cost strengthening separator
@@ -283,7 +283,7 @@ SCIP_RETCODE SCIPincludeSepaRedcost(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/redcost/continuous",
          "should reduced cost fixing be also applied to continuous variables?",
-         &sepadata->continuous, DEFAULT_CONTINUOUS, NULL, NULL) );
+         &sepadata->continuous, FALSE, DEFAULT_CONTINUOUS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

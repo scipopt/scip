@@ -14,11 +14,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop.c,v 1.15 2006/09/17 01:58:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop.c,v 1.16 2007/05/07 13:39:34 bzfberth Exp $"
 
 /**@file   prop.c
  * @brief  methods and datastructures for propagators
  * @author Tobias Achterberg
+ * @author Timo Berthold
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -114,18 +115,18 @@ SCIP_RETCODE SCIPpropCreate(
    sprintf(paramname, "propagating/%s/priority", name);
    sprintf(paramdesc, "priority of propagator <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-         &(*prop)->priority, priority, INT_MIN/4, INT_MAX/4, 
+         &(*prop)->priority, FALSE, priority, INT_MIN/4, INT_MAX/4, 
          paramChgdPropPriority, (SCIP_PARAMDATA*)(*prop)) ); /*lint !e740*/
 
    sprintf(paramname, "propagating/%s/freq", name);
    sprintf(paramdesc, "frequency for calling propagator <%s> (-1: never, 0: only in root node)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-         &(*prop)->freq, freq, -1, INT_MAX, NULL, NULL) );
+         &(*prop)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
 
    sprintf(paramname, "propagating/%s/delay", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
          "should propagator be delayed, if other propagators found reductions?",
-         &(*prop)->delay, delay, NULL, NULL) ); /*lint !e740*/
+         &(*prop)->delay, TRUE, delay, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }

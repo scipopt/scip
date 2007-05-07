@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.27 2007/04/19 15:04:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.28 2007/05/07 13:39:34 bzfberth Exp $"
 
 /**@file   nodesel_restartdfs.c
  * @brief  node selector for depth first search with periodical selection of the best node
@@ -179,7 +179,7 @@ SCIP_RETCODE SCIPincludeNodeselRestartdfs(
    SCIP_CALL( SCIPaddIntParam(scip,
                   "nodeselection/restartdfs/selectbestfreq",
                   "frequency for selecting the best node instead of the deepest one (0: never)",
-                  &nodeseldata->selectbestfreq, SELECTBESTFREQ, 0, INT_MAX, NULL, NULL) );
+         &nodeseldata->selectbestfreq, FALSE, SELECTBESTFREQ, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

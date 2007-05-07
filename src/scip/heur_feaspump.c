@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.46 2007/03/12 18:24:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.47 2007/05/07 13:39:33 bzfberth Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -645,39 +645,39 @@ SCIP_RETCODE SCIPincludeHeurFeaspump(
    SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/feaspump/maxlpiterquot", 
          "maximal fraction of diving LP iterations compared to node LP iterations",
-         &heurdata->maxlpiterquot, DEFAULT_MAXLPITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &heurdata->maxlpiterquot, FALSE, DEFAULT_MAXLPITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/feaspump/maxlpiterofs", 
          "additional number of allowed LP iterations",
-         &heurdata->maxlpiterofs, DEFAULT_MAXLPITEROFS, 0, INT_MAX, NULL, NULL) );
+         &heurdata->maxlpiterofs, FALSE, DEFAULT_MAXLPITEROFS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/feaspump/maxsols", 
          "total number of feasible solutions found up to which heuristic is called (-1: no limit)",
-         &heurdata->maxsols, DEFAULT_MAXSOLS, -1, INT_MAX, NULL, NULL) );
+         &heurdata->maxsols, TRUE, DEFAULT_MAXSOLS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/feaspump/objfactor", 
          "factor by which the regard of the objective is decreased in each round, 1.0 for dynamic",
-         &heurdata->objfactor, DEFAULT_OBJFACTOR, 0.0, 1.0, NULL, NULL) );
+         &heurdata->objfactor, FALSE, DEFAULT_OBJFACTOR, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/feaspump/maxloops",
          "maximal number of pumping loops (-1: no limit)",
-         &heurdata->maxloops, DEFAULT_MAXLOOPS, -1, INT_MAX, NULL, NULL) );
+         &heurdata->maxloops, TRUE, DEFAULT_MAXLOOPS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/feaspump/maxstallloops",
          "maximal number of pumping rounds without fractionality improvement (-1: no limit)",
-         &heurdata->maxstallloops, DEFAULT_MAXSTALLLOOPS, -1, INT_MAX, NULL, NULL) );
+         &heurdata->maxstallloops, TRUE, DEFAULT_MAXSTALLLOOPS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/feaspump/minflips", 
          "minimum number of random variables to flip, if a 1-cycle is encountered",
-         &heurdata->minflips, DEFAULT_MINFLIPS, 1, INT_MAX, NULL, NULL) );
+         &heurdata->minflips, TRUE, DEFAULT_MINFLIPS, 1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/feaspump/cyclelength", 
          "maximum length of cycles to be checked explicitly in each round",
-         &heurdata->cyclelength, DEFAULT_CYCLELENGTH, 1, 100, NULL, NULL) );
+         &heurdata->cyclelength, TRUE, DEFAULT_CYCLELENGTH, 1, 100, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/feaspump/perturbfreq", 
          "number of iterations until a random perturbation is forced",
-         &heurdata->perturbfreq, DEFAULT_PERTURBFREQ, 1, INT_MAX, NULL, NULL) );
+         &heurdata->perturbfreq, TRUE, DEFAULT_PERTURBFREQ, 1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

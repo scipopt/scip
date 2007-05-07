@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_inference.c,v 1.20 2007/01/25 14:50:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_inference.c,v 1.21 2007/05/07 13:39:31 bzfberth Exp $"
 
 /**@file   branch_inference.c
  * @brief  inference history branching rule
@@ -217,15 +217,15 @@ SCIP_RETCODE SCIPincludeBranchruleInference(
    SCIP_CALL( SCIPaddRealParam(scip,
          "branching/inference/conflictweight", 
          "factor to weigh conflict score against inference score",
-         &branchruledata->conflictweight, DEFAULT_CONFLICTWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &branchruledata->conflictweight, TRUE, DEFAULT_CONFLICTWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "branching/inference/cutoffweight", 
          "factor to weigh average number of cutoffs in branching score",
-         &branchruledata->cutoffweight, DEFAULT_CUTOFFWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &branchruledata->cutoffweight, TRUE, DEFAULT_CUTOFFWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/inference/fractionals", 
          "should branching on LP solution be restricted to the fractional variables?",
-         &branchruledata->fractionals, DEFAULT_FRACTIONALS, NULL, NULL) );
+         &branchruledata->fractionals, TRUE, DEFAULT_FRACTIONALS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

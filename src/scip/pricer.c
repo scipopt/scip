@@ -14,11 +14,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.c,v 1.20 2006/09/17 01:58:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer.c,v 1.21 2007/05/07 13:39:34 bzfberth Exp $"
 
 /**@file   pricer.c
  * @brief  methods for variable pricers
  * @author Tobias Achterberg
+ * @author Timo Berthold
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -118,7 +119,7 @@ SCIP_RETCODE SCIPpricerCreate(
    sprintf(paramname, "pricers/%s/priority", name);
    sprintf(paramdesc, "priority of pricer <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-                  &(*pricer)->priority, priority, INT_MIN/4, INT_MAX/4, 
+                  &(*pricer)->priority, FALSE, priority, INT_MIN/4, INT_MAX/4, 
                   paramChgdPricerPriority, (SCIP_PARAMDATA*)(*pricer)) ); /*lint !e740*/
 
    return SCIP_OKAY;

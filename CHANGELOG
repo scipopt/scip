@@ -5,6 +5,7 @@ compiling:
 - added .exe extension to binaries of MinGW
 
 interface:
+- parameters are now separated into basic and advanced, the latter ones have been moved to extra submenus
 - new method SCIPwriteMIP()
 - calling SCIPwriteLP is now possible in Solved Stage
 - new parameter "maxbounddist" for SCIPincludeSepa() and constructor ObjSepa()

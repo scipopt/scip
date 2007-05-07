@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_paramset.h,v 1.11 2006/01/03 12:22:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_paramset.h,v 1.12 2007/05/07 13:39:34 bzfberth Exp $"
 
 /**@file   pub_paramset.h
  * @brief  public methods for handling parameter settings
@@ -54,6 +54,12 @@ const char* SCIPparamGetDesc(
 /** returns locally defined parameter specific data */
 extern
 SCIP_PARAMDATA* SCIPparamGetData(
+   SCIP_PARAM*           param               /**< parameter */
+   );
+
+/** returns locally defined parameter specific data */
+extern
+SCIP_Bool SCIPparamIsAdvanced(
    SCIP_PARAM*           param               /**< parameter */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.25 2006/09/15 03:14:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.26 2007/05/07 13:39:35 bzfberth Exp $"
 
 /**@file   sepa_intobj.c
  * @brief  integer objective value separator
@@ -420,9 +420,6 @@ SCIP_RETCODE SCIPincludeSepaIntobj(
          eventFreeIntobj, eventInitIntobj, eventExitIntobj, 
          eventInitsolIntobj, eventExitsolIntobj, eventDeleteIntobj, eventExecIntobj,
          eventhdlrdata) );
-
-   /* add intobj separator parameters */
-   /* TODO: (optional) add separator specific parameters with SCIPaddTypeParam() here */
 
    return SCIP_OKAY;
 }

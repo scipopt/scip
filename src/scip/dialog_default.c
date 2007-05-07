@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.67 2007/03/13 18:33:28 bzfberth Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.68 2007/05/07 13:39:32 bzfberth Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -2102,11 +2102,46 @@ SCIP_RETCODE addParamDialog(
       {
          SCIP_DIALOG* paramdialog;
 
-         /* create a parameter change dialog */
-         SCIP_CALL( SCIPcreateDialog(scip, &paramdialog, SCIPdialogExecSetParam, SCIPdialogDescSetParam, 
-               paramname, SCIPparamGetDesc(param), FALSE, (SCIP_DIALOGDATA*)param) );
-         SCIP_CALL( SCIPaddDialogEntry(scip, menu, paramdialog) );
-         SCIP_CALL( SCIPreleaseDialog(scip, &paramdialog) );
+         if( SCIPparamIsAdvanced(param) )
+         {
+            SCIP_DIALOG* advmenu;
+
+            if( !SCIPdialogHasEntry(menu, "advanced") )
+            {
+               /* if not yet existing, create an advanced sub menu */
+               char desc[SCIP_MAXSTRLEN];
+               
+               sprintf(desc, "advanced parameters");
+               SCIP_CALL( SCIPcreateDialog(scip, &advmenu, SCIPdialogExecMenu, NULL, "advanced", desc, TRUE, NULL) );
+               SCIP_CALL( SCIPaddDialogEntry(scip, menu, advmenu) );
+               SCIP_CALL( SCIPreleaseDialog(scip, &advmenu) );
+            }
+
+            /* find the corresponding sub menu */
+            (void)SCIPdialogFindEntry(menu, "advanced", &advmenu);
+            if( advmenu == NULL )
+            {
+               SCIPerrorMessage("dialog sub menu not found\n");
+               return SCIP_PLUGINNOTFOUND;
+            }
+            
+            if( !SCIPdialogHasEntry(advmenu, paramname) )
+            {
+               /* create a parameter change dialog */
+               SCIP_CALL( SCIPcreateDialog(scip, &paramdialog, SCIPdialogExecSetParam, SCIPdialogDescSetParam, 
+                     paramname, SCIPparamGetDesc(param), FALSE, (SCIP_DIALOGDATA*)param) );
+               SCIP_CALL( SCIPaddDialogEntry(scip, advmenu, paramdialog) );
+               SCIP_CALL( SCIPreleaseDialog(scip, &paramdialog) ); 
+            }
+         }
+         else
+         {
+            /* create a parameter change dialog */
+            SCIP_CALL( SCIPcreateDialog(scip, &paramdialog, SCIPdialogExecSetParam, SCIPdialogDescSetParam, 
+                  paramname, SCIPparamGetDesc(param), FALSE, (SCIP_DIALOGDATA*)param) );
+            SCIP_CALL( SCIPaddDialogEntry(scip, menu, paramdialog) );
+            SCIP_CALL( SCIPreleaseDialog(scip, &paramdialog) );
+         }
       }
    }
    else

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.142 2007/04/25 13:51:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.143 2007/05/07 13:39:32 bzfberth Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -4262,35 +4262,35 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/knapsack/sepacardfreq",
          "multiplier on separation frequency, how often cardinality cuts are separated (-1: never, 0: only at root)",
-         &conshdlrdata->sepacardfreq, DEFAULT_SEPACARDFREQ, -1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->sepacardfreq, FALSE, DEFAULT_SEPACARDFREQ, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "constraints/knapsack/maxcardbounddist",
          "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for separating knapsack cardinality cuts",
-         &conshdlrdata->maxcardbounddist, DEFAULT_MAXCARDBOUNDDIST, 0.0, 1.0, NULL, NULL) );
+         &conshdlrdata->maxcardbounddist, TRUE, DEFAULT_MAXCARDBOUNDDIST, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/knapsack/maxrounds",
          "maximal number of separation rounds per node (-1: unlimited)",
-         &conshdlrdata->maxrounds, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/knapsack/maxroundsroot",
          "maximal number of separation rounds per node in the root node (-1: unlimited)",
-         &conshdlrdata->maxroundsroot, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/knapsack/maxsepacuts",
          "maximal number of cuts separated per separation round",
-         &conshdlrdata->maxsepacuts, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/knapsack/maxsepacutsroot",
          "maximal number of cuts separated per separation round in the root node",
-         &conshdlrdata->maxsepacutsroot, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/knapsack/maxnumcardlift",
          "maximal number of cardinality inequalities lifted per separation round (-1: unlimited)",
-         &conshdlrdata->maxnumcardlift, DEFAULT_MAXNUMCARDLIFT, -1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maxnumcardlift, TRUE, DEFAULT_MAXNUMCARDLIFT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/knapsack/disaggregation",
          "should disaggregation of knapsack constraints be allowed in preprocessing?",
-         &conshdlrdata->disaggregation, DEFAULT_DISAGGREGATION, NULL, NULL) );
+         &conshdlrdata->disaggregation, TRUE, DEFAULT_DISAGGREGATION, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.18 2006/09/17 01:58:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.19 2007/05/07 13:39:33 bzfberth Exp $"
 
 /**@file   heur_localbranching.c
  * @brief  localbranching primal heuristic
@@ -601,31 +601,31 @@ SCIP_RETCODE SCIPincludeHeurLocalbranching(
    /* add localbranching primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/localbranching/nodesofs",
          "number of nodes added to the contingent of the total nodes",
-         &heurdata->nodesofs, DEFAULT_NODESOFS, 0, INT_MAX, NULL, NULL) );
+         &heurdata->nodesofs, FALSE, DEFAULT_NODESOFS, 0, INT_MAX, NULL, NULL) );
    
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/localbranching/neighborhoodsize",
          "radius (using Manhattan metric) of the incumbent's neighborhood to be searched",
-         &heurdata->neighborhoodsize, DEFAULT_NEIGHBORHOODSIZE, 1, INT_MAX, NULL, NULL) );
+         &heurdata->neighborhoodsize, FALSE, DEFAULT_NEIGHBORHOODSIZE, 1, INT_MAX, NULL, NULL) );
    
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/localbranching/nodesquot",
          "contingent of sub problem nodes in relation to the number of nodes of the original problem",
-         &heurdata->nodesquot, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
+         &heurdata->nodesquot, FALSE, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
    
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/localbranching/minnodes",
          "minimum number of nodes required to start the subproblem",
-         &heurdata->minnodes, DEFAULT_MINNODES, 0, INT_MAX, NULL, NULL) );
+         &heurdata->minnodes, TRUE, DEFAULT_MINNODES, 0, INT_MAX, NULL, NULL) );
    
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/localbranching/maxnodes",
          "maximum number of nodes to regard in the subproblem",
-         &heurdata->maxnodes, DEFAULT_MAXNODES, 0, INT_MAX, NULL, NULL) );
+         &heurdata->maxnodes, TRUE, DEFAULT_MAXNODES, 0, INT_MAX, NULL, NULL) );
    
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/localbranching/nwaitingnodes",
          "number of nodes without incumbent change that heuristic should wait",
-         &heurdata->nwaitingnodes, DEFAULT_NWAITINGNODES, 0, INT_MAX, NULL, NULL) );
+         &heurdata->nwaitingnodes, TRUE, DEFAULT_NWAITINGNODES, 0, INT_MAX, NULL, NULL) );
    
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/localbranching/minimprove",
          "factor by which localbranching should at least improve the incumbent  ",
-         &heurdata->minimprove, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
+         &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }

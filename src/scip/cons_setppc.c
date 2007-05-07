@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.111 2006/06/07 11:47:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.112 2007/05/07 13:39:32 bzfberth Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -3457,7 +3457,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/setppc/npseudobranches", 
          "number of children created in pseudo branching (0: disable pseudo branching)",
-         &conshdlrdata->npseudobranches, DEFAULT_NPSEUDOBRANCHES, 0, INT_MAX, NULL, NULL) );
+         &conshdlrdata->npseudobranches, TRUE, DEFAULT_NPSEUDOBRANCHES, 0, INT_MAX, NULL, NULL) );
    
    return SCIP_OKAY;
 }

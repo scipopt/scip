@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.35 2006/06/07 11:47:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.36 2007/05/07 13:39:31 bzfberth Exp $"
 
 /**@file   cons_eqknapsack.c
  * @brief  constraint handler for eqknapsack constraints
@@ -487,9 +487,6 @@ SCIP_RETCODE SCIPincludeConshdlrEqknapsack(
    /* include the linear constraint upgrade in the linear constraint handler */
    SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdEqknapsack, LINCONSUPGD_PRIORITY) );
 #endif
-
-   /* add eqknapsack constraint handler parameters */
-   /* TODO: (optional) add constraint handler specific parameters with SCIPaddTypeParam() here */
 
    return SCIP_OKAY;
 }

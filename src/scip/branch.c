@@ -13,11 +13,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.74 2007/03/15 22:20:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.75 2007/05/07 13:39:31 bzfberth Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
  * @author Tobias Achterberg
+ * @author Timo Berthold
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -788,17 +789,17 @@ SCIP_RETCODE SCIPbranchruleCreate(
    sprintf(paramname, "branching/%s/priority", name);
    sprintf(paramdesc, "priority of branching rule <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-         &(*branchrule)->priority, priority, INT_MIN/4, INT_MAX/4, 
+         &(*branchrule)->priority, FALSE, priority, INT_MIN/4, INT_MAX/4, 
          paramChgdBranchrulePriority, (SCIP_PARAMDATA*)(*branchrule)) ); /*lint !e740*/
    sprintf(paramname, "branching/%s/maxdepth", name);
    sprintf(paramdesc, "maximal depth level, up to which branching rule <%s> should be used (-1 for no limit)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-         &(*branchrule)->maxdepth, maxdepth, -1, INT_MAX, 
+         &(*branchrule)->maxdepth, TRUE, maxdepth, -1, INT_MAX, 
          NULL, NULL) ); /*lint !e740*/
    sprintf(paramname, "branching/%s/maxbounddist", name);
    sprintf(paramdesc, "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching rule (0.0: only on current best node, 1.0: on all nodes)");
    SCIP_CALL( SCIPsetAddRealParam(set, blkmem, paramname, paramdesc,
-         &(*branchrule)->maxbounddist, maxbounddist, 0.0, 1.0, 
+         &(*branchrule)->maxbounddist, TRUE, maxbounddist, 0.0, 1.0, 
          NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;

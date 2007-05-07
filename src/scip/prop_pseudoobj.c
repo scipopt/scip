@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.17 2007/03/12 14:50:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.18 2007/05/07 13:39:34 bzfberth Exp $"
 
 /**@file   prop_pseudoobj.c
  * @brief  pseudoobj propagator
@@ -301,7 +301,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/pseudoobj/maxcands", 
          "maximal number of variables to look at in a single propagation round (-1: process all variables)",
-         &propdata->maxcands, DEFAULT_MAXCANDS, -1, INT_MAX, NULL, NULL) );
+         &propdata->maxcands, TRUE, DEFAULT_MAXCANDS, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

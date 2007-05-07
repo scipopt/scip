@@ -14,11 +14,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_paramset.h,v 1.12 2006/01/03 12:22:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_paramset.h,v 1.13 2007/05/07 13:39:36 bzfberth Exp $"
 
 /**@file   struct_paramset.h
  * @brief  datastructures for handling parameter settings
  * @author Tobias Achterberg
+ * @author Timo Berthold
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -109,6 +110,7 @@ struct SCIP_Param
    char*                 desc;               /**< description of the parameter */
    SCIP_DECL_PARAMCHGD   ((*paramchgd));     /**< change information method of parameter */
    SCIP_PARAMDATA*       paramdata;          /**< locally defined parameter specific data */
+   SCIP_Bool             isadvanced;         /**< is this parameter an advanced parameter? */
    SCIP_PARAMTYPE        paramtype;          /**< type of this parameter */
 };
 

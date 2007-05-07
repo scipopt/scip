@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cnf.c,v 1.34 2006/06/07 11:47:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_cnf.c,v 1.35 2007/05/07 13:39:34 bzfberth Exp $"
 
 /**@file   reader_cnf.c
  * @brief  CNF file reader
@@ -378,13 +378,13 @@ SCIP_RETCODE SCIPincludeReaderCnf(
    /* add cnf reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/cnfreader/dynamicconss", "should model constraints be subject to aging?",
-         NULL, TRUE, NULL, NULL) );
+         NULL, FALSE, TRUE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/cnfreader/dynamiccols", "should columns be added and removed dynamically to the LP?",
-         NULL, FALSE, NULL, NULL) );
+         NULL, FALSE, FALSE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/cnfreader/dynamicrows", "should rows be added and removed dynamically to the LP?",
-         NULL, FALSE, NULL, NULL) );
+         NULL, FALSE, FALSE, NULL, NULL) );
    
    return SCIP_OKAY;
 }

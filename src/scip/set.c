@@ -14,11 +14,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.190 2007/04/19 19:00:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.191 2007/05/07 13:39:36 bzfberth Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
  * @author Tobias Achterberg
+ * @author Timo Berthold
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -413,156 +414,156 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "branching/scorefunc",
          "branching score function ('s'um, 'p'roduct)",
-         &(*set)->branch_scorefunc, SCIP_DEFAULT_BRANCH_SCOREFUNC, "sp",
+         &(*set)->branch_scorefunc, TRUE, SCIP_DEFAULT_BRANCH_SCOREFUNC, "sp",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "branching/scorefac",
          "branching score factor to weigh downward and upward gain prediction in sum score function",
-         &(*set)->branch_scorefac, SCIP_DEFAULT_BRANCH_SCOREFAC, 0.0, 1.0,
+         &(*set)->branch_scorefac, TRUE, SCIP_DEFAULT_BRANCH_SCOREFAC, 0.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "branching/preferbinary",
          "should branching on binary variables be preferred?",
-         &(*set)->branch_preferbinary, SCIP_DEFAULT_BRANCH_PREFERBINARY,
+         &(*set)->branch_preferbinary, FALSE, SCIP_DEFAULT_BRANCH_PREFERBINARY,
          NULL, NULL) );
 
    /* conflict analysis parameters */
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/enable",
          "should conflict analysis be enabled?",
-         &(*set)->conf_enable, SCIP_DEFAULT_CONF_ENABLE,
+         &(*set)->conf_enable, FALSE, SCIP_DEFAULT_CONF_ENABLE,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/useprop",
          "should propagation conflict analysis be used?",
-         &(*set)->conf_useprop, SCIP_DEFAULT_CONF_USEPROP,
+         &(*set)->conf_useprop, FALSE, SCIP_DEFAULT_CONF_USEPROP,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/useinflp",
          "should infeasible LP conflict analysis be used?",
-         &(*set)->conf_useinflp, SCIP_DEFAULT_CONF_USEINFLP,
+         &(*set)->conf_useinflp, FALSE, SCIP_DEFAULT_CONF_USEINFLP,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/useboundlp",
          "should bound exceeding LP conflict analysis be used?",
-         &(*set)->conf_useboundlp, SCIP_DEFAULT_CONF_USEBOUNDLP,
+         &(*set)->conf_useboundlp, FALSE, SCIP_DEFAULT_CONF_USEBOUNDLP,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/usesb",
          "should infeasible/bound exceeding strong branching conflict analysis be used?",
-         &(*set)->conf_usesb, SCIP_DEFAULT_CONF_USESB,
+         &(*set)->conf_usesb, FALSE, SCIP_DEFAULT_CONF_USESB,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/usepseudo",
          "should pseudo solution conflict analysis be used?",
-         &(*set)->conf_usepseudo, SCIP_DEFAULT_CONF_USEPSEUDO,
+         &(*set)->conf_usepseudo, FALSE, SCIP_DEFAULT_CONF_USEPSEUDO,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "conflict/maxvarsfac",
          "maximal fraction of variables involved in a conflict constraint",
-         &(*set)->conf_maxvarsfac, SCIP_DEFAULT_CONF_MAXVARSFAC, 0.0, SCIP_REAL_MAX,
+         &(*set)->conf_maxvarsfac, TRUE, SCIP_DEFAULT_CONF_MAXVARSFAC, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "conflict/minmaxvars",
          "minimal absolute maximum of variables involved in a conflict constraint",
-         &(*set)->conf_minmaxvars, SCIP_DEFAULT_CONF_MINMAXVARS, 0, INT_MAX,
+         &(*set)->conf_minmaxvars, TRUE, SCIP_DEFAULT_CONF_MINMAXVARS, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "conflict/maxlploops",
          "maximal number of LP resolving loops during conflict analysis (-1: no limit)",
-         &(*set)->conf_maxlploops, SCIP_DEFAULT_CONF_MAXLPLOOPS, -1, INT_MAX,
+         &(*set)->conf_maxlploops, TRUE, SCIP_DEFAULT_CONF_MAXLPLOOPS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "conflict/lpiterations",
          "maximal number of LP iterations in each LP resolving loop (-1: no limit)",
-         &(*set)->conf_lpiterations, SCIP_DEFAULT_CONF_LPITERATIONS, -1, INT_MAX,
+         &(*set)->conf_lpiterations, TRUE, SCIP_DEFAULT_CONF_LPITERATIONS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "conflict/fuiplevels",
          "number of depth levels up to which first UIP's are used in conflict analysis (-1: use All-FirstUIP rule)",
-         &(*set)->conf_fuiplevels, SCIP_DEFAULT_CONF_FUIPLEVELS, -1, INT_MAX,
+         &(*set)->conf_fuiplevels, TRUE, SCIP_DEFAULT_CONF_FUIPLEVELS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "conflict/interconss",
          "maximal number of intermediate conflict constraints generated in conflict graph (-1: use every intermediate constraint)",
-         &(*set)->conf_interconss, SCIP_DEFAULT_CONF_INTERCONSS, -1, INT_MAX,
+         &(*set)->conf_interconss, TRUE, SCIP_DEFAULT_CONF_INTERCONSS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "conflict/reconvlevels",
          "number of depth levels up to which UIP reconvergence constraints are generated (-1: generate reconvergence constraints in all depth levels)",
-         &(*set)->conf_reconvlevels, SCIP_DEFAULT_CONF_RECONVLEVELS, -1, INT_MAX,
+         &(*set)->conf_reconvlevels, TRUE, SCIP_DEFAULT_CONF_RECONVLEVELS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "conflict/maxconss",
          "maximal number of conflict constraints accepted at an infeasible node (-1: use all generated conflict constraints)",
-         &(*set)->conf_maxconss, SCIP_DEFAULT_CONF_MAXCONSS, -1, INT_MAX,
+         &(*set)->conf_maxconss, TRUE, SCIP_DEFAULT_CONF_MAXCONSS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/preferbinary",
          "should binary conflicts be preferred?",
-         &(*set)->conf_preferbinary, SCIP_DEFAULT_CONF_PREFERBINARY,
+         &(*set)->conf_preferbinary, FALSE, SCIP_DEFAULT_CONF_PREFERBINARY,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/allowlocal",
          "should conflict constraints be generated that are only valid locally?",
-         &(*set)->conf_allowlocal, SCIP_DEFAULT_CONF_ALLOWLOCAL,
+         &(*set)->conf_allowlocal, TRUE, SCIP_DEFAULT_CONF_ALLOWLOCAL,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/settlelocal",
          "should conflict constraints be attached only to the local subtree where they can be useful?",
-         &(*set)->conf_settlelocal, SCIP_DEFAULT_CONF_SETTLELOCAL,
+         &(*set)->conf_settlelocal, TRUE, SCIP_DEFAULT_CONF_SETTLELOCAL,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/repropagate",
          "should earlier nodes be repropagated in order to replace branching decisions by deductions?",
-         &(*set)->conf_repropagate, SCIP_DEFAULT_CONF_REPROPAGATE,
+         &(*set)->conf_repropagate, TRUE, SCIP_DEFAULT_CONF_REPROPAGATE,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/keepreprop",
          "should constraints be kept for repropagation even if they are too long?",
-         &(*set)->conf_keepreprop, SCIP_DEFAULT_CONF_KEEPREPROP,
+         &(*set)->conf_keepreprop, TRUE, SCIP_DEFAULT_CONF_KEEPREPROP,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/dynamic",
          "should the conflict constraints be subject to aging?",
-         &(*set)->conf_dynamic, SCIP_DEFAULT_CONF_DYNAMIC,
+         &(*set)->conf_dynamic, TRUE, SCIP_DEFAULT_CONF_DYNAMIC,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/removable",
          "should the conflict's relaxations be subject to LP aging and cleanup?",
-         &(*set)->conf_removable, SCIP_DEFAULT_CONF_REMOVEABLE,
+         &(*set)->conf_removable, TRUE, SCIP_DEFAULT_CONF_REMOVEABLE,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "conflict/depthscorefac",
          "score factor for depth level in bound relaxation heuristic of LP analysis",
-         &(*set)->conf_depthscorefac, SCIP_DEFAULT_CONF_DEPTHSCOREFAC, SCIP_REAL_MIN, SCIP_REAL_MAX,
+         &(*set)->conf_depthscorefac, TRUE, SCIP_DEFAULT_CONF_DEPTHSCOREFAC, SCIP_REAL_MIN, SCIP_REAL_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "conflict/scorefac",
          "factor to decrease importance of variables' earlier conflict scores",
-         &(*set)->conf_scorefac, SCIP_DEFAULT_CONF_SCOREFAC, 1e-6, 1.0,
+         &(*set)->conf_scorefac, TRUE, SCIP_DEFAULT_CONF_SCOREFAC, 1e-6, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "conflict/restartnum",
          "number of successful conflict analysis calls that trigger a restart (0: disable conflict restarts)",
-         &(*set)->conf_restartnum, SCIP_DEFAULT_CONF_RESTARTNUM, 0, INT_MAX,
+         &(*set)->conf_restartnum, FALSE, SCIP_DEFAULT_CONF_RESTARTNUM, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "conflict/restartfac",
          "factor to increase restartnum with after each restart",
-         &(*set)->conf_restartfac, SCIP_DEFAULT_CONF_RESTARTFAC, 0.0, SCIP_REAL_MAX,
+         &(*set)->conf_restartfac, FALSE, SCIP_DEFAULT_CONF_RESTARTFAC, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
 
    /* constraint parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "constraints/agelimit",
          "maximum age an unnecessary constraint can reach before it is deleted (0: dynamic, -1: keep all constraints)",
-         &(*set)->cons_agelimit, SCIP_DEFAULT_CONS_AGELIMIT, -1, INT_MAX,
+         &(*set)->cons_agelimit, TRUE, SCIP_DEFAULT_CONS_AGELIMIT, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "constraints/obsoleteage",
          "age of a constraint after which it is marked obsolete (0: dynamic, -1 do not mark constraints obsolete)",
-         &(*set)->cons_obsoleteage, SCIP_DEFAULT_CONS_OBSOLETEAGE, -1, INT_MAX,
+         &(*set)->cons_obsoleteage, TRUE, SCIP_DEFAULT_CONS_OBSOLETEAGE, -1, INT_MAX,
          NULL, NULL) );
 
    /* display parameters */
@@ -570,208 +571,208 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "display/verblevel",
          "verbosity level of output",
-         (int*)&(*set)->disp_verblevel, (int)SCIP_DEFAULT_DISP_VERBLEVEL,
+         (int*)&(*set)->disp_verblevel, FALSE, (int)SCIP_DEFAULT_DISP_VERBLEVEL,
          (int)SCIP_VERBLEVEL_NONE, (int)SCIP_VERBLEVEL_FULL,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "display/width",
          "maximal number of characters in a node information line",
-         &(*set)->disp_width, SCIP_DEFAULT_DISP_WIDTH, 0, INT_MAX,
+         &(*set)->disp_width, FALSE, SCIP_DEFAULT_DISP_WIDTH, 0, INT_MAX,
          SCIPparamChgdDispWidth, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "display/freq",
          "frequency for displaying node information lines",
-         &(*set)->disp_freq, SCIP_DEFAULT_DISP_FREQ, -1, INT_MAX,
+         &(*set)->disp_freq, FALSE, SCIP_DEFAULT_DISP_FREQ, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "display/headerfreq",
          "frequency for displaying header lines (every n'th node information line)",
-         &(*set)->disp_headerfreq, SCIP_DEFAULT_DISP_HEADERFREQ, -1, INT_MAX,
+         &(*set)->disp_headerfreq, FALSE, SCIP_DEFAULT_DISP_HEADERFREQ, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "display/lpinfo",
          "should the LP solver display status messages?",
-         &(*set)->disp_lpinfo, SCIP_DEFAULT_DISP_LPINFO,
+         &(*set)->disp_lpinfo, FALSE, SCIP_DEFAULT_DISP_LPINFO,
          NULL, NULL) );
 
    /* limit parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "limits/time",
          "maximal time in seconds to run",
-         &(*set)->limit_time, SCIP_DEFAULT_LIMIT_TIME, 0.0, SCIP_REAL_MAX,
+         &(*set)->limit_time, FALSE, SCIP_DEFAULT_LIMIT_TIME, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddLongintParam(*set, blkmem,
          "limits/nodes",
          "maximal number of nodes to process (-1: no limit)",
-         &(*set)->limit_nodes, SCIP_DEFAULT_LIMIT_NODES, -1LL, SCIP_LONGINT_MAX,
+         &(*set)->limit_nodes, FALSE, SCIP_DEFAULT_LIMIT_NODES, -1LL, SCIP_LONGINT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddLongintParam(*set, blkmem,
          "limits/stallnodes",
          "solving stops, if the given number of nodes was processed since the last improvement of the primal solution value (-1: no limit)",
-         &(*set)->limit_stallnodes, SCIP_DEFAULT_LIMIT_STALLNODES, -1LL, SCIP_LONGINT_MAX,
+         &(*set)->limit_stallnodes, FALSE, SCIP_DEFAULT_LIMIT_STALLNODES, -1LL, SCIP_LONGINT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "limits/memory",
          "maximal memory usage in MB; reported memory usage is lower than real memory usage!",
-         &(*set)->limit_memory, SCIP_DEFAULT_LIMIT_MEMORY, 0.0, SCIP_REAL_MAX,
+         &(*set)->limit_memory, FALSE, SCIP_DEFAULT_LIMIT_MEMORY, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "limits/gap",
          "solving stops, if the relative gap = |(primalbound - dualbound)/dualbound| is below the given value",
-         &(*set)->limit_gap, SCIP_DEFAULT_LIMIT_GAP, 0.0, SCIP_REAL_MAX,
+         &(*set)->limit_gap, FALSE, SCIP_DEFAULT_LIMIT_GAP, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "limits/absgap",
          "solving stops, if the absolute gap = |primalbound - dualbound| is below the given value",
-         &(*set)->limit_absgap, SCIP_DEFAULT_LIMIT_ABSGAP, 0.0, SCIP_REAL_MAX,
+         &(*set)->limit_absgap, FALSE, SCIP_DEFAULT_LIMIT_ABSGAP, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "limits/solutions",
          "solving stops, if the given number of solutions were found (-1: no limit)",
-         &(*set)->limit_solutions, SCIP_DEFAULT_LIMIT_SOLUTIONS, -1, INT_MAX,
+         &(*set)->limit_solutions, FALSE, SCIP_DEFAULT_LIMIT_SOLUTIONS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "limits/bestsol",
          "solving stops, if the given number of solution improvements were found (-1: no limit)",
-         &(*set)->limit_bestsol, SCIP_DEFAULT_LIMIT_BESTSOL, -1, INT_MAX,
+         &(*set)->limit_bestsol, FALSE, SCIP_DEFAULT_LIMIT_BESTSOL, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "limits/maxsol",
          "maximal number of solutions to store in the solution storage",
-         &(*set)->limit_maxsol, SCIP_DEFAULT_LIMIT_MAXSOL, 1, INT_MAX,
+         &(*set)->limit_maxsol, FALSE, SCIP_DEFAULT_LIMIT_MAXSOL, 1, INT_MAX,
          NULL, NULL) );
 
    /* LP parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "lp/solvefreq",
          "frequency for solving LP at the nodes (-1: never; 0: only root LP)",
-         &(*set)->lp_solvefreq, SCIP_DEFAULT_LP_SOLVEFREQ, -1, INT_MAX,
+         &(*set)->lp_solvefreq, FALSE, SCIP_DEFAULT_LP_SOLVEFREQ, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "lp/solvedepth",
          "maximal depth for solving LP at the nodes (-1: no depth limit)",
-         &(*set)->lp_solvedepth, SCIP_DEFAULT_LP_SOLVEDEPTH, -1, INT_MAX,
+         &(*set)->lp_solvedepth, FALSE, SCIP_DEFAULT_LP_SOLVEDEPTH, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "lp/initalgorithm",
          "LP algorithm for solving initial LP relaxations (automatic 's'implex, 'p'rimal simplex, 'd'ual simplex, 'b'arrier, barrier with 'c'rossover)",
-         &(*set)->lp_initalgorithm, SCIP_DEFAULT_LP_INITALGORITHM, "spdbc",
+         &(*set)->lp_initalgorithm, FALSE, SCIP_DEFAULT_LP_INITALGORITHM, "spdbc",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "lp/resolvealgorithm",
          "LP algorithm for resolving LP relaxations if a starting basis exists (automatic 's'implex, 'p'rimal simplex, 'd'ual simplex, 'b'arrier, barrier with 'c'rossover)",
-         &(*set)->lp_resolvealgorithm, SCIP_DEFAULT_LP_RESOLVEALGORITHM, "spdbc",
+         &(*set)->lp_resolvealgorithm, FALSE, SCIP_DEFAULT_LP_RESOLVEALGORITHM, "spdbc",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "lp/pricing",
          "LP pricing strategy ('a'uto, 'f'ull pricing, 'p'artial, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)",
-         &(*set)->lp_pricing, SCIP_DEFAULT_LP_PRICING, "afpsqd",
+         &(*set)->lp_pricing, FALSE, SCIP_DEFAULT_LP_PRICING, "afpsqd",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "lp/colagelimit",
          "maximum age a dynamic column can reach before it is deleted from the LP (-1: don't delete columns due to aging)",
-         &(*set)->lp_colagelimit, SCIP_DEFAULT_LP_COLAGELIMIT, -1, INT_MAX,
+         &(*set)->lp_colagelimit, TRUE, SCIP_DEFAULT_LP_COLAGELIMIT, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "lp/rowagelimit",
          "maximum age a dynamic row can reach before it is deleted from the LP (-1: don't delete rows due to aging)",
-         &(*set)->lp_rowagelimit, SCIP_DEFAULT_LP_ROWAGELIMIT, -1, INT_MAX,
+         &(*set)->lp_rowagelimit, TRUE, SCIP_DEFAULT_LP_ROWAGELIMIT, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/cleanupcols",
          "should new non-basic columns be removed after LP solving?",
-         &(*set)->lp_cleanupcols, SCIP_DEFAULT_LP_CLEANUPCOLS,
+         &(*set)->lp_cleanupcols, TRUE, SCIP_DEFAULT_LP_CLEANUPCOLS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/cleanupcolsroot",
          "should new non-basic columns be removed after root LP solving?",
-         &(*set)->lp_cleanupcolsroot, SCIP_DEFAULT_LP_CLEANUPCOLSROOT,
+         &(*set)->lp_cleanupcolsroot, TRUE, SCIP_DEFAULT_LP_CLEANUPCOLSROOT,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/cleanuprows",
          "should new basic rows be removed after LP solving?",
-         &(*set)->lp_cleanuprows, SCIP_DEFAULT_LP_CLEANUPROWS,
+         &(*set)->lp_cleanuprows, TRUE, SCIP_DEFAULT_LP_CLEANUPROWS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/cleanuprowsroot",
          "should new basic rows be removed after root LP solving?",
-         &(*set)->lp_cleanuprowsroot, SCIP_DEFAULT_LP_CLEANUPROWSROOT,
+         &(*set)->lp_cleanuprowsroot, TRUE, SCIP_DEFAULT_LP_CLEANUPROWSROOT,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/checkstability",
          "should LP solver's return status be checked for stability?",
-         &(*set)->lp_checkstability, SCIP_DEFAULT_LP_CHECKSTABILITY,
+         &(*set)->lp_checkstability, TRUE, SCIP_DEFAULT_LP_CHECKSTABILITY,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/checkfeas",
          "should LP solutions be checked, resolving LP when numerical troubles occur?",
-         &(*set)->lp_checkfeas, SCIP_DEFAULT_LP_CHECKFEAS,
+         &(*set)->lp_checkfeas, TRUE, SCIP_DEFAULT_LP_CHECKFEAS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/fastmip",
          "should FASTMIP setting of LP solver be used?",
-         &(*set)->lp_fastmip, SCIP_DEFAULT_LP_FASTMIP,
+         &(*set)->lp_fastmip, TRUE, SCIP_DEFAULT_LP_FASTMIP,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/scaling",
          "should scaling of LP solver be used?",
-         &(*set)->lp_scaling, SCIP_DEFAULT_LP_SCALING,
+         &(*set)->lp_scaling, TRUE, SCIP_DEFAULT_LP_SCALING,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "lp/presolving",
          "should presolving of LP solver be used?",
-         &(*set)->lp_presolving, SCIP_DEFAULT_LP_PRESOLVING,
+         &(*set)->lp_presolving, TRUE, SCIP_DEFAULT_LP_PRESOLVING,
          NULL, NULL) );
 
    /* memory parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "memory/savefac",
          "fraction of maximal memory usage resulting in switch to memory saving mode",
-         &(*set)->mem_savefac, SCIP_DEFAULT_MEM_SAVEFAC, 0.0, 1.0,
+         &(*set)->mem_savefac, FALSE, SCIP_DEFAULT_MEM_SAVEFAC, 0.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "memory/arraygrowfac",
          "memory growing factor for dynamically allocated arrays",
-         &(*set)->mem_arraygrowfac, SCIP_DEFAULT_MEM_ARRAYGROWFAC, 1.0, 10.0,
+         &(*set)->mem_arraygrowfac, TRUE, SCIP_DEFAULT_MEM_ARRAYGROWFAC, 1.0, 10.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "memory/arraygrowinit",
          "initial size of dynamically allocated arrays",
-         &(*set)->mem_arraygrowinit, SCIP_DEFAULT_MEM_ARRAYGROWINIT, 0, INT_MAX,
+         &(*set)->mem_arraygrowinit, TRUE, SCIP_DEFAULT_MEM_ARRAYGROWINIT, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "memory/treegrowfac",
          "memory growing factor for tree array",
-         &(*set)->mem_treegrowfac, SCIP_DEFAULT_MEM_TREEGROWFAC, 1.0, 10.0,
+         &(*set)->mem_treegrowfac, TRUE, SCIP_DEFAULT_MEM_TREEGROWFAC, 1.0, 10.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "memory/treegrowinit",
          "initial size of tree array",
-         &(*set)->mem_treegrowinit, SCIP_DEFAULT_MEM_TREEGROWINIT, 0, INT_MAX,
+         &(*set)->mem_treegrowinit, TRUE, SCIP_DEFAULT_MEM_TREEGROWINIT, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "memory/pathgrowfac",
          "memory growing factor for path array",
-         &(*set)->mem_pathgrowfac, SCIP_DEFAULT_MEM_PATHGROWFAC, 1.0, 10.0,
+         &(*set)->mem_pathgrowfac, TRUE, SCIP_DEFAULT_MEM_PATHGROWFAC, 1.0, 10.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "memory/pathgrowinit",
          "initial size of path array",
-         &(*set)->mem_pathgrowinit, SCIP_DEFAULT_MEM_PATHGROWINIT, 0, INT_MAX,
+         &(*set)->mem_pathgrowinit, TRUE, SCIP_DEFAULT_MEM_PATHGROWINIT, 0, INT_MAX,
          NULL, NULL) );
 
    /* miscellaneous parameters */
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "misc/catchctrlc",
          "should the CTRL-C interrupt be caught by SCIP?",
-         &(*set)->misc_catchctrlc, SCIP_DEFAULT_MISC_CATCHCTRLC,
+         &(*set)->misc_catchctrlc, FALSE, SCIP_DEFAULT_MISC_CATCHCTRLC,
          NULL, NULL) );
    /**@todo activate exactsolve parameter and finish implementation of solving MIPs exactly */
 #if 0
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "misc/exactsolve",
          "should the problem be solved exactly (with proven dual bounds)?",
-         &(*set)->misc_exactsolve, SCIP_DEFAULT_MISC_EXACTSOLVE,
+         &(*set)->misc_exactsolve, FALSE, SCIP_DEFAULT_MISC_EXACTSOLVE,
          NULL, NULL) );
 #else
    (*set)->misc_exactsolve = SCIP_DEFAULT_MISC_EXACTSOLVE;
@@ -781,217 +782,217 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "nodeselection/childsel",
          "child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value, 'r'oot LP value difference, 'h'brid inference/root LP value difference)",
-         &(*set)->nodesel_childsel, SCIP_DEFAULT_NODESEL_CHILDSEL, "dupilrh",
+         &(*set)->nodesel_childsel, FALSE, SCIP_DEFAULT_NODESEL_CHILDSEL, "dupilrh",
          NULL, NULL) );
 
    /* numerical parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/infinity",
          "values larger than this are considered infinity",
-         &(*set)->num_infinity, SCIP_DEFAULT_INFINITY, 1e+10, SCIP_INVALID/10.0,
+         &(*set)->num_infinity, FALSE, SCIP_DEFAULT_INFINITY, 1e+10, SCIP_INVALID/10.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/epsilon",
          "absolute values smaller than this are considered zero",
-         &(*set)->num_epsilon, SCIP_DEFAULT_EPSILON, SCIP_MINEPSILON, SCIP_MAXEPSILON,
+         &(*set)->num_epsilon, FALSE, SCIP_DEFAULT_EPSILON, SCIP_MINEPSILON, SCIP_MAXEPSILON,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/sumepsilon",
          "absolute values of sums smaller than this are considered zero",
-         &(*set)->num_sumepsilon, SCIP_DEFAULT_SUMEPSILON, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
+         &(*set)->num_sumepsilon, FALSE, SCIP_DEFAULT_SUMEPSILON, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/feastol",
          "LP feasibility tolerance for constraints",
-         &(*set)->num_feastol, SCIP_DEFAULT_FEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
+         &(*set)->num_feastol, FALSE, SCIP_DEFAULT_FEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
          paramChgdFeastol, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/dualfeastol",
          "LP feasibility tolerance for reduced costs",
-         &(*set)->num_dualfeastol, SCIP_DEFAULT_DUALFEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
+         &(*set)->num_dualfeastol, FALSE, SCIP_DEFAULT_DUALFEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
          paramChgdDualfeastol, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/barrierconvtol",
          "LP convergence tolerance used in barrier algorithm",
-         &(*set)->num_barrierconvtol, SCIP_DEFAULT_BARRIERCONVTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
+         &(*set)->num_barrierconvtol, TRUE, SCIP_DEFAULT_BARRIERCONVTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
          paramChgdBarrierconvtol, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/boundstreps",
          "minimal relative improve for strengthening bounds",
-         &(*set)->num_boundstreps, SCIP_DEFAULT_BOUNDSTREPS, SCIP_MINEPSILON*1e+03, SCIP_INVALID/10.0,
+         &(*set)->num_boundstreps, TRUE, SCIP_DEFAULT_BOUNDSTREPS, SCIP_MINEPSILON*1e+03, SCIP_INVALID/10.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/pseudocosteps",
          "minimal variable distance value to use for branching pseudo cost updates",
-         &(*set)->num_pseudocosteps, SCIP_DEFAULT_PSEUDOCOSTEPS, SCIP_MINEPSILON*1e+03, 1.0,
+         &(*set)->num_pseudocosteps, TRUE, SCIP_DEFAULT_PSEUDOCOSTEPS, SCIP_MINEPSILON*1e+03, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/pseudocostdelta",
          "minimal objective distance value to use for branching pseudo cost updates",
-         &(*set)->num_pseudocostdelta, SCIP_DEFAULT_PSEUDOCOSTDELTA, 0.0, SCIP_REAL_MAX,
+         &(*set)->num_pseudocostdelta, TRUE, SCIP_DEFAULT_PSEUDOCOSTDELTA, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
 
    /* presolving parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "presolving/maxrounds",
          "maximal number of presolving rounds (-1: unlimited)",
-         &(*set)->presol_maxrounds, SCIP_DEFAULT_PRESOL_MAXROUNDS, -1, INT_MAX,
+         &(*set)->presol_maxrounds, FALSE, SCIP_DEFAULT_PRESOL_MAXROUNDS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "presolving/abortfac",
          "abort presolve, if at most this fraction of the problem was changed in last presolve round",
-         &(*set)->presol_abortfac, SCIP_DEFAULT_PRESOL_ABORTFAC, 0.0, 1.0,
+         &(*set)->presol_abortfac, TRUE, SCIP_DEFAULT_PRESOL_ABORTFAC, 0.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "presolving/maxrestarts",
          "maximal number of restarts (-1: unlimited)",
-         &(*set)->presol_maxrestarts, SCIP_DEFAULT_PRESOL_MAXRESTARTS, -1, INT_MAX,
+         &(*set)->presol_maxrestarts, FALSE, SCIP_DEFAULT_PRESOL_MAXRESTARTS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "presolving/restartfac",
          "fraction of integer variables that were fixed in the root node triggering a restart with preprocessing after root node evaluation",
-         &(*set)->presol_restartfac, SCIP_DEFAULT_PRESOL_RESTARTFAC, 0.0, 1.0,
+         &(*set)->presol_restartfac, TRUE, SCIP_DEFAULT_PRESOL_RESTARTFAC, 0.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "presolving/immrestartfac",
          "fraction of integer variables that were fixed in the root node triggering an immediate restart with preprocessing",
-         &(*set)->presol_immrestartfac, SCIP_DEFAULT_PRESOL_IMMRESTARTFAC, 0.0, 1.0,
+         &(*set)->presol_immrestartfac, TRUE, SCIP_DEFAULT_PRESOL_IMMRESTARTFAC, 0.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "presolving/subrestartfac",
          "fraction of integer variables that were globally fixed during the solving process triggering a restart with preprocessing",
-         &(*set)->presol_subrestartfac, SCIP_DEFAULT_PRESOL_SUBRESTARTFAC, 0.0, 1.0,
+         &(*set)->presol_subrestartfac, TRUE, SCIP_DEFAULT_PRESOL_SUBRESTARTFAC, 0.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "presolving/restartminred",
          "minimal fraction of integer variables removed after restart to allow for an additional restart",
-         &(*set)->presol_restartminred, SCIP_DEFAULT_PRESOL_RESTARTMINRED, 0.0, 1.0,
+         &(*set)->presol_restartminred, TRUE, SCIP_DEFAULT_PRESOL_RESTARTMINRED, 0.0, 1.0,
          NULL, NULL) );
 
    /* pricing parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "pricing/maxvars",
          "maximal number of variables priced in per pricing round",
-         &(*set)->price_maxvars, SCIP_DEFAULT_PRICE_MAXVARS, 1, INT_MAX,
+         &(*set)->price_maxvars, FALSE, SCIP_DEFAULT_PRICE_MAXVARS, 1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "pricing/maxvarsroot",
          "maximal number of priced variables at the root node",
-         &(*set)->price_maxvarsroot, SCIP_DEFAULT_PRICE_MAXVARSROOT, 1, INT_MAX,
+         &(*set)->price_maxvarsroot, FALSE, SCIP_DEFAULT_PRICE_MAXVARSROOT, 1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "pricing/abortfac",
          "pricing is aborted, if fac * pricing/maxvars pricing candidates were found",
-         &(*set)->price_abortfac, SCIP_DEFAULT_PRICE_ABORTFAC, 1.0, SCIP_REAL_MAX,
+         &(*set)->price_abortfac, FALSE, SCIP_DEFAULT_PRICE_ABORTFAC, 1.0, SCIP_REAL_MAX,
          NULL, NULL) );
 
    /* propagation parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "propagating/maxrounds",
          "maximal number of propagation rounds per node (-1: unlimited)",
-         &(*set)->prop_maxrounds, SCIP_DEFAULT_PROP_MAXROUNDS, -1, INT_MAX,
+         &(*set)->prop_maxrounds, FALSE, SCIP_DEFAULT_PROP_MAXROUNDS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "propagating/maxroundsroot",
          "maximal number of propagation rounds in the root node (-1: unlimited)",
-         &(*set)->prop_maxroundsroot, SCIP_DEFAULT_PROP_MAXROUNDSROOT, -1, INT_MAX,
+         &(*set)->prop_maxroundsroot, FALSE, SCIP_DEFAULT_PROP_MAXROUNDSROOT, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "propagating/abortoncutoff",
          "should propagation be aborted immediately? setting this to FALSE could help conflict analysis to produce more conflict constraints",
-         &(*set)->prop_abortoncutoff, SCIP_DEFAULT_PROP_ABORTONCUTOFF,
+         &(*set)->prop_abortoncutoff, FALSE, SCIP_DEFAULT_PROP_ABORTONCUTOFF,
          NULL, NULL) );
 
    /* separation parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "separating/maxbounddist",
          "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separation (0.0: only on current best node, 1.0: on all nodes)",
-         &(*set)->sepa_maxbounddist, SCIP_DEFAULT_SEPA_MAXBOUNDDIST, 0.0, 1.0,
+         &(*set)->sepa_maxbounddist, FALSE, SCIP_DEFAULT_SEPA_MAXBOUNDDIST, 0.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "separating/minefficacy",
          "minimal efficacy for a cut to enter the LP",
-         &(*set)->sepa_minefficacy, SCIP_DEFAULT_SEPA_MINEFFICACY, 0.0, SCIP_INVALID/10.0,
+         &(*set)->sepa_minefficacy, FALSE, SCIP_DEFAULT_SEPA_MINEFFICACY, 0.0, SCIP_INVALID/10.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "separating/minefficacyroot",
          "minimal efficacy for a cut to enter the LP in the root node",
-         &(*set)->sepa_minefficacyroot, SCIP_DEFAULT_SEPA_MINEFFICACYROOT, 0.0, SCIP_INVALID/10.0,
+         &(*set)->sepa_minefficacyroot, FALSE, SCIP_DEFAULT_SEPA_MINEFFICACYROOT, 0.0, SCIP_INVALID/10.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "separating/minortho",
          "minimal orthogonality for a cut to enter the LP",
-         &(*set)->sepa_minortho, SCIP_DEFAULT_SEPA_MINORTHO, 0.0, 1.0,
+         &(*set)->sepa_minortho, FALSE, SCIP_DEFAULT_SEPA_MINORTHO, 0.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "separating/minorthoroot",
          "minimal orthogonality for a cut to enter the LP in the root node",
-         &(*set)->sepa_minorthoroot, SCIP_DEFAULT_SEPA_MINORTHOROOT, 0.0, 1.0,
+         &(*set)->sepa_minorthoroot, FALSE, SCIP_DEFAULT_SEPA_MINORTHOROOT, 0.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "separating/objparalfac",
          "factor to scale objective parallelism of cut in separation score calculation",
-         &(*set)->sepa_objparalfac, SCIP_DEFAULT_SEPA_OBJPARALFAC, 0.0, SCIP_INVALID/10.0,
+         &(*set)->sepa_objparalfac, TRUE, SCIP_DEFAULT_SEPA_OBJPARALFAC, 0.0, SCIP_INVALID/10.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "separating/orthofac",
          "factor to scale orthogonality of cut in separation score calculation (0.0 to disable orthogonality calculation)",
-         &(*set)->sepa_orthofac, SCIP_DEFAULT_SEPA_ORTHOFAC, 0.0, SCIP_INVALID/10.0,
+         &(*set)->sepa_orthofac, TRUE, SCIP_DEFAULT_SEPA_ORTHOFAC, 0.0, SCIP_INVALID/10.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "separating/efficacynorm",
          "row norm to use for efficacy calculation ('e'uclidean, 'm'aximum, 's'um, 'd'iscrete)",
-         &(*set)->sepa_efficacynorm, SCIP_DEFAULT_SEPA_EFFICACYNORM, "emsd",
+         &(*set)->sepa_efficacynorm, TRUE, SCIP_DEFAULT_SEPA_EFFICACYNORM, "emsd",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "separating/maxruns",
          "maximal number of runs for which separation is enabled (-1: unlimited)",
-         &(*set)->sepa_maxruns, SCIP_DEFAULT_SEPA_MAXRUNS, -1, INT_MAX,
+         &(*set)->sepa_maxruns, TRUE, SCIP_DEFAULT_SEPA_MAXRUNS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "separating/maxrounds",
          "maximal number of separation rounds per node (-1: unlimited)",
-         &(*set)->sepa_maxrounds, SCIP_DEFAULT_SEPA_MAXROUNDS, -1, INT_MAX,
+         &(*set)->sepa_maxrounds, FALSE, SCIP_DEFAULT_SEPA_MAXROUNDS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "separating/maxroundsroot",
          "maximal number of separation rounds in the root node (-1: unlimited)",
-         &(*set)->sepa_maxroundsroot, SCIP_DEFAULT_SEPA_MAXROUNDSROOT, -1, INT_MAX,
+         &(*set)->sepa_maxroundsroot, FALSE, SCIP_DEFAULT_SEPA_MAXROUNDSROOT, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "separating/maxroundsrootsubrun",
          "maximal number of separation rounds in the root node of a subsequent run (-1: unlimited)",
-         &(*set)->sepa_maxroundsrootsubrun, SCIP_DEFAULT_SEPA_MAXROUNDSROOTSUBRUN, -1, INT_MAX,
+         &(*set)->sepa_maxroundsrootsubrun, TRUE, SCIP_DEFAULT_SEPA_MAXROUNDSROOTSUBRUN, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "separating/maxaddrounds",
          "maximal additional number of separation rounds in subsequent price-and-cut loops (-1: no additional restriction)",
-         &(*set)->sepa_maxaddrounds, SCIP_DEFAULT_SEPA_MAXADDROUNDS, -1, INT_MAX,
+         &(*set)->sepa_maxaddrounds, TRUE, SCIP_DEFAULT_SEPA_MAXADDROUNDS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "separating/maxstallrounds",
          "maximal number of consecutive separation rounds without objective or integrality improvement (-1: no additional restriction)",
-         &(*set)->sepa_maxstallrounds, SCIP_DEFAULT_SEPA_MAXSTALLROUNDS, -1, INT_MAX,
+         &(*set)->sepa_maxstallrounds, FALSE, SCIP_DEFAULT_SEPA_MAXSTALLROUNDS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "separating/maxcuts",
          "maximal number of cuts separated per separation round (0: disable local separation)",
-         &(*set)->sepa_maxcuts, SCIP_DEFAULT_SEPA_MAXCUTS, 0, INT_MAX,
+         &(*set)->sepa_maxcuts, FALSE, SCIP_DEFAULT_SEPA_MAXCUTS, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "separating/maxcutsroot",
          "maximal number of separated cuts at the root node (0: disable root node separation)",
-         &(*set)->sepa_maxcutsroot, SCIP_DEFAULT_SEPA_MAXCUTSROOT, 0, INT_MAX,
+         &(*set)->sepa_maxcutsroot, FALSE, SCIP_DEFAULT_SEPA_MAXCUTSROOT, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "separating/cutagelimit",
          "maximum age a cut can reach before it is deleted from the global cut pool, or -1 to keep all cuts",
-         &(*set)->sepa_cutagelimit, SCIP_DEFAULT_SEPA_CUTAGELIMIT, -1, INT_MAX,
+         &(*set)->sepa_cutagelimit, TRUE, SCIP_DEFAULT_SEPA_CUTAGELIMIT, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "separating/poolfreq",
          "separation frequency for the global cut pool (-1: disable global cut pool, 0: only separate pool at the root)",
-         &(*set)->sepa_poolfreq, SCIP_DEFAULT_SEPA_POOLFREQ, -1, INT_MAX,
+         &(*set)->sepa_poolfreq, FALSE, SCIP_DEFAULT_SEPA_POOLFREQ, -1, INT_MAX,
          NULL, NULL) );
 
    /* timing parameters */
@@ -999,24 +1000,24 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "timing/clocktype",
          "default clock type (1: CPU user seconds, 2: wall clock time)",
-         (int*)&(*set)->time_clocktype, (int)SCIP_DEFAULT_TIME_CLOCKTYPE, 1, 2,
+         (int*)&(*set)->time_clocktype, FALSE, (int)SCIP_DEFAULT_TIME_CLOCKTYPE, 1, 2,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "timing/enabled",
          "is timing enabled?",
-         &(*set)->time_enabled, SCIP_DEFAULT_TIME_ENABLED,
+         &(*set)->time_enabled, FALSE, SCIP_DEFAULT_TIME_ENABLED,
          NULL, NULL) );
 
    /* VBC tool parameters */
    SCIP_CALL( SCIPsetAddStringParam(*set, blkmem,
          "vbc/filename",
          "name of the VBC Tool output file, or - if no VBC Tool output should be created",
-         &(*set)->vbc_filename, SCIP_DEFAULT_VBC_FILENAME,
+         &(*set)->vbc_filename, FALSE, SCIP_DEFAULT_VBC_FILENAME,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "vbc/realtime",
          "should the real solving time be used instead of a time step counter in VBC output?",
-         &(*set)->vbc_realtime, SCIP_DEFAULT_VBC_REALTIME,
+         &(*set)->vbc_realtime, FALSE, SCIP_DEFAULT_VBC_REALTIME,
          NULL, NULL) );
 
    return SCIP_OKAY;
@@ -1143,6 +1144,7 @@ SCIP_RETCODE SCIPsetAddBoolParam(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    SCIP_Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    SCIP_Bool             defaultvalue,       /**< default value of the parameter */
    SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
    SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
@@ -1150,7 +1152,8 @@ SCIP_RETCODE SCIPsetAddBoolParam(
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetAddBool(set->paramset, blkmem, name, desc, valueptr, defaultvalue, paramchgd, paramdata) );
+   SCIP_CALL( SCIPparamsetAddBool(set->paramset, blkmem, name, desc, valueptr, isadvanced, defaultvalue, 
+                   paramchgd, paramdata) );
 
    return SCIP_OKAY;
 }
@@ -1162,6 +1165,7 @@ SCIP_RETCODE SCIPsetAddIntParam(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    int*                  valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    int                   defaultvalue,       /**< default value of the parameter */
    int                   minvalue,           /**< minimum value for parameter */
    int                   maxvalue,           /**< maximum value for parameter */
@@ -1171,7 +1175,7 @@ SCIP_RETCODE SCIPsetAddIntParam(
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetAddInt(set->paramset, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue,
+   SCIP_CALL( SCIPparamsetAddInt(set->paramset, blkmem, name, desc, valueptr, isadvanced, defaultvalue, minvalue, maxvalue,
          paramchgd, paramdata) );
 
    return SCIP_OKAY;
@@ -1184,6 +1188,7 @@ SCIP_RETCODE SCIPsetAddLongintParam(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    SCIP_Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    SCIP_Longint          defaultvalue,       /**< default value of the parameter */
    SCIP_Longint          minvalue,           /**< minimum value for parameter */
    SCIP_Longint          maxvalue,           /**< maximum value for parameter */
@@ -1193,8 +1198,8 @@ SCIP_RETCODE SCIPsetAddLongintParam(
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetAddLongint(set->paramset, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue,
-         paramchgd, paramdata) );
+   SCIP_CALL( SCIPparamsetAddLongint(set->paramset, blkmem, name, desc, valueptr, isadvanced, defaultvalue, minvalue, 
+                   maxvalue, paramchgd, paramdata) );
 
    return SCIP_OKAY;
 }
@@ -1206,6 +1211,7 @@ SCIP_RETCODE SCIPsetAddRealParam(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    SCIP_Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    SCIP_Real             defaultvalue,       /**< default value of the parameter */
    SCIP_Real             minvalue,           /**< minimum value for parameter */
    SCIP_Real             maxvalue,           /**< maximum value for parameter */
@@ -1215,8 +1221,8 @@ SCIP_RETCODE SCIPsetAddRealParam(
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetAddReal(set->paramset, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue,
-         paramchgd, paramdata) );
+   SCIP_CALL( SCIPparamsetAddReal(set->paramset, blkmem, name, desc, valueptr, isadvanced, defaultvalue, minvalue, 
+                   maxvalue, paramchgd, paramdata) );
 
    return SCIP_OKAY;
 }
@@ -1228,6 +1234,7 @@ SCIP_RETCODE SCIPsetAddCharParam(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    char*                 valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    char                  defaultvalue,       /**< default value of the parameter */
    const char*           allowedvalues,      /**< array with possible parameter values, or NULL if not restricted */
    SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
@@ -1236,7 +1243,7 @@ SCIP_RETCODE SCIPsetAddCharParam(
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetAddChar(set->paramset, blkmem, name, desc, valueptr, defaultvalue, allowedvalues,
+   SCIP_CALL( SCIPparamsetAddChar(set->paramset, blkmem, name, desc, valueptr, isadvanced, defaultvalue, allowedvalues,
          paramchgd, paramdata) );
 
    return SCIP_OKAY;
@@ -1249,6 +1256,7 @@ SCIP_RETCODE SCIPsetAddStringParam(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    char**                valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    const char*           defaultvalue,       /**< default value of the parameter */
    SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
    SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
@@ -1256,7 +1264,8 @@ SCIP_RETCODE SCIPsetAddStringParam(
 {
    assert(set != NULL);
 
-   SCIP_CALL( SCIPparamsetAddString(set->paramset, blkmem, name, desc, valueptr, defaultvalue, paramchgd, paramdata) );
+   SCIP_CALL( SCIPparamsetAddString(set->paramset, blkmem, name, desc, valueptr, isadvanced, defaultvalue, 
+                   paramchgd, paramdata) );
 
    return SCIP_OKAY;
 }

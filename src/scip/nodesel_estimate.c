@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_estimate.c,v 1.3 2007/04/19 15:04:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_estimate.c,v 1.4 2007/05/07 13:39:34 bzfberth Exp $"
 
 /**@file   nodesel_estimate.c
  * @brief  node selector for best estimate search
@@ -324,19 +324,19 @@ SCIP_RETCODE SCIPincludeNodeselEstimate(
    SCIP_CALL( SCIPaddIntParam(scip,
          "nodeselection/estimate/minplungedepth",
          "minimal plunging depth, before new best node may be selected (-1 for dynamic setting)",
-         &nodeseldata->minplungedepth, MINPLUNGEDEPTH, -1, INT_MAX, NULL, NULL) );
+         &nodeseldata->minplungedepth, TRUE, MINPLUNGEDEPTH, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "nodeselection/estimate/maxplungedepth",
          "maximal plunging depth, before new best node is forced to be selected (-1 for dynamic setting)",
-         &nodeseldata->maxplungedepth, MAXPLUNGEDEPTH, -1, INT_MAX, NULL, NULL) );
+         &nodeseldata->maxplungedepth, TRUE, MAXPLUNGEDEPTH, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "nodeselection/estimate/maxplungequot",
          "maximal quotient (estimate - lowerbound)/(cutoffbound - lowerbound) where plunging is performed",
-         &nodeseldata->maxplungequot, MAXPLUNGEQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &nodeseldata->maxplungequot, TRUE, MAXPLUNGEQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "nodeselection/estimate/bestnodefreq",
          "frequency at which the best node instead of the best estimate is selected (0: never)",
-         &nodeseldata->bestnodefreq, BESTNODEFREQ, 0, INT_MAX, NULL, NULL) );
+         &nodeseldata->bestnodefreq, FALSE, BESTNODEFREQ, 0, INT_MAX, NULL, NULL) );
    
    return SCIP_OKAY;
 }

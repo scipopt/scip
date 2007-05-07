@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_veclendiving.c,v 1.6 2006/12/07 20:36:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_veclendiving.c,v 1.7 2007/05/07 13:39:34 bzfberth Exp $"
 
 /**@file   heur_veclendiving.c
  * @brief  LP diving heuristic that rounds variables with long column vectors
@@ -540,39 +540,39 @@ SCIP_RETCODE SCIPincludeHeurVeclendiving(
    SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/veclendiving/minreldepth", 
          "minimal relative depth to start diving",
-         &heurdata->minreldepth, DEFAULT_MINRELDEPTH, 0.0, 1.0, NULL, NULL) );
+         &heurdata->minreldepth, TRUE, DEFAULT_MINRELDEPTH, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/veclendiving/maxreldepth", 
          "maximal relative depth to start diving",
-         &heurdata->maxreldepth, DEFAULT_MAXRELDEPTH, 0.0, 1.0, NULL, NULL) );
+         &heurdata->maxreldepth, TRUE, DEFAULT_MAXRELDEPTH, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/veclendiving/maxlpiterquot", 
          "maximal fraction of diving LP iterations compared to node LP iterations",
-         &heurdata->maxlpiterquot, DEFAULT_MAXLPITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &heurdata->maxlpiterquot, FALSE, DEFAULT_MAXLPITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/veclendiving/maxlpiterofs", 
          "additional number of allowed LP iterations",
-         &heurdata->maxlpiterofs, DEFAULT_MAXLPITEROFS, 0, INT_MAX, NULL, NULL) );
+         &heurdata->maxlpiterofs, FALSE, DEFAULT_MAXLPITEROFS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/veclendiving/maxdiveubquot",
          "maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed (0.0: no limit)",
-         &heurdata->maxdiveubquot, DEFAULT_MAXDIVEUBQUOT, 0.0, 1.0, NULL, NULL) );
+         &heurdata->maxdiveubquot, TRUE, DEFAULT_MAXDIVEUBQUOT, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/veclendiving/maxdiveavgquot", 
          "maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)",
-         &heurdata->maxdiveavgquot, DEFAULT_MAXDIVEAVGQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &heurdata->maxdiveavgquot, TRUE, DEFAULT_MAXDIVEAVGQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/veclendiving/maxdiveubquotnosol", 
          "maximal UBQUOT when no solution was found yet (0.0: no limit)",
-         &heurdata->maxdiveubquotnosol, DEFAULT_MAXDIVEUBQUOTNOSOL, 0.0, 1.0, NULL, NULL) );
+         &heurdata->maxdiveubquotnosol, TRUE, DEFAULT_MAXDIVEUBQUOTNOSOL, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/veclendiving/maxdiveavgquotnosol", 
          "maximal AVGQUOT when no solution was found yet (0.0: no limit)",
-         &heurdata->maxdiveavgquotnosol, DEFAULT_MAXDIVEAVGQUOTNOSOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &heurdata->maxdiveavgquotnosol, TRUE, DEFAULT_MAXDIVEAVGQUOTNOSOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "heuristics/veclendiving/backtrack", 
          "use one level of backtracking if infeasibility is encountered?",
-         &heurdata->backtrack, DEFAULT_BACKTRACK, NULL, NULL) );
+         &heurdata->backtrack, FALSE, DEFAULT_BACKTRACK, NULL, NULL) );
    
    return SCIP_OKAY;
 }

@@ -14,11 +14,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.52 2007/04/19 15:04:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.53 2007/05/07 13:39:34 bzfberth Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
  * @author Tobias Achterberg
+ * @author Timo Berthold
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -722,15 +723,15 @@ SCIP_RETCODE SCIPnodeselCreate(
 
    /* add parameters */
    sprintf(paramname, "nodeselection/%s/stdpriority", name);
-   sprintf(paramdesc, "priority of branching rule <%s> in standard mode", name);
+   sprintf(paramdesc, "priority of node selection rule <%s> in standard mode", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-                  &(*nodesel)->stdpriority, stdpriority, INT_MIN/4, INT_MAX/4, 
+                  &(*nodesel)->stdpriority, FALSE, stdpriority, INT_MIN/4, INT_MAX/4, 
                   paramChgdNodeselStdPriority, (SCIP_PARAMDATA*)(*nodesel)) ); /*lint !e740*/
 
    sprintf(paramname, "nodeselection/%s/memsavepriority", name);
-   sprintf(paramdesc, "priority of branching rule <%s> in memory saving mode", name);
+   sprintf(paramdesc, "priority of node selection rule <%s> in memory saving mode", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-                  &(*nodesel)->memsavepriority, memsavepriority, INT_MIN/4, INT_MAX/4, 
+                  &(*nodesel)->memsavepriority, TRUE, memsavepriority, INT_MIN/4, INT_MAX/4, 
                   paramChgdNodeselMemsavePriority, (SCIP_PARAMDATA*)(*nodesel)) ); /*lint !e740*/
 
    return SCIP_OKAY;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.76 2006/12/07 20:03:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.77 2007/05/07 13:39:31 bzfberth Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -2140,7 +2140,7 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/and/maxpresolpairrounds",
          "maximal number of presolving rounds with pairwise constraint comparison (-1: no limit)",
-         &conshdlrdata->maxpresolpairrounds, DEFAULT_MAXPRESOLPAIRROUNDS, -1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->maxpresolpairrounds, TRUE, DEFAULT_MAXPRESOLPAIRROUNDS, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -14,11 +14,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.37 2006/09/17 01:58:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.38 2007/05/07 13:39:34 bzfberth Exp $"
 
 /**@file   presol.c
  * @brief  methods for presolvers
  * @author Tobias Achterberg
+ * @author Timo Berthold
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -107,18 +108,18 @@ SCIP_RETCODE SCIPpresolCreate(
    sprintf(paramname, "presolving/%s/priority", name);
    sprintf(paramdesc, "priority of presolver <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-         &(*presol)->priority, priority, INT_MIN/4, INT_MAX/4, 
+         &(*presol)->priority, FALSE, priority, INT_MIN/4, INT_MAX/4, 
          paramChgdPresolPriority, (SCIP_PARAMDATA*)(*presol)) ); /*lint !e740*/
 
    sprintf(paramname, "presolving/%s/maxrounds", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname,
          "maximal number of presolving rounds the presolver participates in (-1: no limit)",
-         &(*presol)->maxrounds, maxrounds, -1, INT_MAX, NULL, NULL) ); /*lint !e740*/
+         &(*presol)->maxrounds, FALSE, maxrounds, -1, INT_MAX, NULL, NULL) ); /*lint !e740*/
 
    sprintf(paramname, "presolving/%s/delay", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
          "should presolver be delayed, if other presolvers found reductions?",
-         &(*presol)->delay, delay, NULL, NULL) ); /*lint !e740*/
+         &(*presol)->delay, TRUE, delay, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }

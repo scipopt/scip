@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.23 2007/03/13 18:33:29 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.24 2007/05/07 13:39:34 bzfberth Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -1507,13 +1507,13 @@ SCIP_RETCODE SCIPincludeReaderLp(
    /* add lp reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/lpreader/dynamicconss", "should model constraints be subject to aging?",
-         NULL, TRUE, NULL, NULL) );
+         NULL, FALSE, TRUE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/lpreader/dynamiccols", "should columns be added and removed dynamically to the LP?",
-         NULL, FALSE, NULL, NULL) );
+         NULL, FALSE, FALSE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/lpreader/dynamicrows", "should rows be added and removed dynamically to the LP?",
-         NULL, FALSE, NULL, NULL) );
+         NULL, FALSE, FALSE, NULL, NULL) );
    
    return SCIP_OKAY;
 }

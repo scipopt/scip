@@ -14,11 +14,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.39 2007/03/07 10:08:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.40 2007/05/07 13:39:34 bzfberth Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
  * @author Tobias Achterberg
+ * @author Timo Berthold
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -239,6 +240,16 @@ SCIP_PARAMDATA* SCIPparamGetData(
    assert(param != NULL);
 
    return param->paramdata;
+}
+
+/** returns locally defined parameter specific data */
+SCIP_Bool SCIPparamIsAdvanced(
+   SCIP_PARAM*           param               /**< parameter */
+   )
+{
+   assert(param != NULL);
+
+   return param->isadvanced;
 }
 
 /** returns value of SCIP_Bool parameter */
@@ -737,6 +748,7 @@ SCIP_RETCODE paramCreateBool(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    SCIP_Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    SCIP_Bool             defaultvalue,       /**< default value of the parameter */
    SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
    SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
@@ -749,6 +761,7 @@ SCIP_RETCODE paramCreateBool(
 
    (*param)->paramtype = SCIP_PARAMTYPE_BOOL;
    (*param)->data.boolparam.valueptr = valueptr;
+   (*param)->isadvanced = isadvanced;
    (*param)->data.boolparam.defaultvalue = defaultvalue;
 
    SCIP_CALL( SCIPparamSetBool(*param, NULL, defaultvalue) );
@@ -764,6 +777,7 @@ SCIP_RETCODE paramCreateInt(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    int*                  valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    int                   defaultvalue,       /**< default value of the parameter */
    int                   minvalue,           /**< minimum value for parameter */
    int                   maxvalue,           /**< maximum value for parameter */
@@ -778,6 +792,7 @@ SCIP_RETCODE paramCreateInt(
 
    (*param)->paramtype = SCIP_PARAMTYPE_INT;
    (*param)->data.intparam.valueptr = valueptr;
+   (*param)->isadvanced = isadvanced;
    (*param)->data.intparam.defaultvalue = defaultvalue;
    (*param)->data.intparam.minvalue = minvalue;
    (*param)->data.intparam.maxvalue = maxvalue;
@@ -795,6 +810,7 @@ SCIP_RETCODE paramCreateLongint(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    SCIP_Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    SCIP_Longint          defaultvalue,       /**< default value of the parameter */
    SCIP_Longint          minvalue,           /**< minimum value for parameter */
    SCIP_Longint          maxvalue,           /**< maximum value for parameter */
@@ -809,6 +825,7 @@ SCIP_RETCODE paramCreateLongint(
 
    (*param)->paramtype = SCIP_PARAMTYPE_LONGINT;
    (*param)->data.longintparam.valueptr = valueptr;
+   (*param)->isadvanced = isadvanced;
    (*param)->data.longintparam.defaultvalue = defaultvalue;
    (*param)->data.longintparam.minvalue = minvalue;
    (*param)->data.longintparam.maxvalue = maxvalue;
@@ -826,6 +843,7 @@ SCIP_RETCODE paramCreateReal(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    SCIP_Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    SCIP_Real             defaultvalue,       /**< default value of the parameter */
    SCIP_Real             minvalue,           /**< minimum value for parameter */
    SCIP_Real             maxvalue,           /**< maximum value for parameter */
@@ -840,6 +858,7 @@ SCIP_RETCODE paramCreateReal(
 
    (*param)->paramtype = SCIP_PARAMTYPE_REAL;
    (*param)->data.realparam.valueptr = valueptr;
+   (*param)->isadvanced = isadvanced;
    (*param)->data.realparam.defaultvalue = defaultvalue;
    (*param)->data.realparam.minvalue = minvalue;
    (*param)->data.realparam.maxvalue = maxvalue;
@@ -857,6 +876,7 @@ SCIP_RETCODE paramCreateChar(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    char*                 valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    char                  defaultvalue,       /**< default value of the parameter */
    const char*           allowedvalues,      /**< array with possible parameter values, or NULL if not restricted */
    SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
@@ -870,6 +890,7 @@ SCIP_RETCODE paramCreateChar(
 
    (*param)->paramtype = SCIP_PARAMTYPE_CHAR;
    (*param)->data.charparam.valueptr = valueptr;
+   (*param)->isadvanced = isadvanced;
    (*param)->data.charparam.defaultvalue = defaultvalue;
    if( allowedvalues != NULL )
    {
@@ -891,6 +912,7 @@ SCIP_RETCODE paramCreateString(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    char**                valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    const char*           defaultvalue,       /**< default value of the parameter */
    SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
    SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
@@ -905,6 +927,7 @@ SCIP_RETCODE paramCreateString(
 
    (*param)->paramtype = SCIP_PARAMTYPE_STRING;
    (*param)->data.stringparam.valueptr = valueptr;
+   (*param)->isadvanced = isadvanced;
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*param)->data.stringparam.defaultvalue, defaultvalue, strlen(defaultvalue)+1) );
    (*param)->data.stringparam.curvalue = NULL;
 
@@ -1299,6 +1322,7 @@ SCIP_RETCODE SCIPparamsetAddBool(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    SCIP_Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    SCIP_Bool             defaultvalue,       /**< default value of the parameter */
    SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
    SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
@@ -1309,7 +1333,7 @@ SCIP_RETCODE SCIPparamsetAddBool(
    assert(paramset != NULL);
 
    /* create the parameter */
-   SCIP_CALL( paramCreateBool(&param, blkmem, name, desc, valueptr, defaultvalue, paramchgd, paramdata) );
+   SCIP_CALL( paramCreateBool(&param, blkmem, name, desc, valueptr, isadvanced, defaultvalue, paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
    SCIP_CALL( paramsetAdd(paramset, param) );
@@ -1324,6 +1348,7 @@ SCIP_RETCODE SCIPparamsetAddInt(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    int*                  valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    int                   defaultvalue,       /**< default value of the parameter */
    int                   minvalue,           /**< minimum value for parameter */
    int                   maxvalue,           /**< maximum value for parameter */
@@ -1336,7 +1361,7 @@ SCIP_RETCODE SCIPparamsetAddInt(
    assert(paramset != NULL);
 
    /* create the parameter */
-   SCIP_CALL( paramCreateInt(&param, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
+   SCIP_CALL( paramCreateInt(&param, blkmem, name, desc, valueptr, isadvanced, defaultvalue, minvalue, maxvalue, 
                   paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
@@ -1352,6 +1377,7 @@ SCIP_RETCODE SCIPparamsetAddLongint(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    SCIP_Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    SCIP_Longint          defaultvalue,       /**< default value of the parameter */
    SCIP_Longint          minvalue,           /**< minimum value for parameter */
    SCIP_Longint          maxvalue,           /**< maximum value for parameter */
@@ -1364,7 +1390,7 @@ SCIP_RETCODE SCIPparamsetAddLongint(
    assert(paramset != NULL);
 
    /* create the parameter */
-   SCIP_CALL( paramCreateLongint(&param, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
+   SCIP_CALL( paramCreateLongint(&param, blkmem, name, desc, valueptr, isadvanced, defaultvalue, minvalue, maxvalue, 
                   paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
@@ -1380,6 +1406,7 @@ SCIP_RETCODE SCIPparamsetAddReal(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    SCIP_Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    SCIP_Real             defaultvalue,       /**< default value of the parameter */
    SCIP_Real             minvalue,           /**< minimum value for parameter */
    SCIP_Real             maxvalue,           /**< maximum value for parameter */
@@ -1392,7 +1419,7 @@ SCIP_RETCODE SCIPparamsetAddReal(
    assert(paramset != NULL);
 
    /* create the parameter */
-   SCIP_CALL( paramCreateReal(&param, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
+   SCIP_CALL( paramCreateReal(&param, blkmem, name, desc, valueptr, isadvanced, defaultvalue, minvalue, maxvalue, 
                   paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
@@ -1408,6 +1435,7 @@ SCIP_RETCODE SCIPparamsetAddChar(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    char*                 valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    char                  defaultvalue,       /**< default value of the parameter */
    const char*           allowedvalues,      /**< array with possible parameter values, or NULL if not restricted */
    SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
@@ -1419,7 +1447,8 @@ SCIP_RETCODE SCIPparamsetAddChar(
    assert(paramset != NULL);
 
    /* create the parameter */
-   SCIP_CALL( paramCreateChar(&param, blkmem, name, desc, valueptr, defaultvalue, allowedvalues, paramchgd, paramdata) );
+   SCIP_CALL( paramCreateChar(&param, blkmem, name, desc, valueptr, isadvanced, defaultvalue, allowedvalues, 
+                  paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
    SCIP_CALL( paramsetAdd(paramset, param) );
@@ -1434,6 +1463,7 @@ SCIP_RETCODE SCIPparamsetAddString(
    const char*           name,               /**< name of the parameter */
    const char*           desc,               /**< description of the parameter */
    char**                valueptr,           /**< pointer to store the current parameter value, or NULL */
+   SCIP_Bool             isadvanced,         /**< is this parameter an advanced parameter? */
    const char*           defaultvalue,       /**< default value of the parameter */
    SCIP_DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
    SCIP_PARAMDATA*       paramdata           /**< locally defined parameter specific data */
@@ -1444,7 +1474,7 @@ SCIP_RETCODE SCIPparamsetAddString(
    assert(paramset != NULL);
 
    /* create the parameter */
-   SCIP_CALL( paramCreateString(&param, blkmem, name, desc, valueptr, defaultvalue, paramchgd, paramdata) );
+   SCIP_CALL( paramCreateString(&param, blkmem, name, desc, valueptr, isadvanced, defaultvalue, paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
    SCIP_CALL( paramsetAdd(paramset, param) );

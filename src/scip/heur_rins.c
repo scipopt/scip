@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rins.c,v 1.20 2006/09/17 01:58:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rins.c,v 1.21 2007/05/07 13:39:33 bzfberth Exp $"
 
 /**@file   heur_rins.c
  * @brief  RINS primal heuristic
@@ -521,31 +521,31 @@ SCIP_RETCODE SCIPincludeHeurRins(
    /* add RINS primal heuristic parameters */ 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/rins/nodesofs",
          "number of nodes added to the contingent of the total nodes",
-         &heurdata->nodesofs, DEFAULT_NODESOFS, 0, INT_MAX, NULL, NULL) );
+         &heurdata->nodesofs, FALSE, DEFAULT_NODESOFS, 0, INT_MAX, NULL, NULL) );
    
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/rins/maxnodes",
          "maximum number of nodes to regard in the subproblem",
-         &heurdata->maxnodes, DEFAULT_MAXNODES, 0, INT_MAX, NULL, NULL) );
+         &heurdata->maxnodes, TRUE, DEFAULT_MAXNODES, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/rins/minnodes",
          "minimum number of nodes required to start the subproblem",
-         &heurdata->minnodes, DEFAULT_MINNODES, 0, INT_MAX, NULL, NULL) );
+         &heurdata->minnodes, TRUE, DEFAULT_MINNODES, 0, INT_MAX, NULL, NULL) );
  
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/rins/nodesquot",
          "contingent of sub problem nodes in relation to the number of nodes of the original problem",
-         &heurdata->nodesquot, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
+         &heurdata->nodesquot, FALSE, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/rins/nwaitingnodes",
          "number of nodes without incumbent change that heuristic should wait",
-         &heurdata->nwaitingnodes, DEFAULT_NWAITINGNODES, 0, INT_MAX, NULL, NULL) );
+         &heurdata->nwaitingnodes, TRUE, DEFAULT_NWAITINGNODES, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/rins/minimprove",
          "factor by which RINS should at least improve the incumbent",
-         &heurdata->minimprove, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
+         &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
    
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/rins/minfixingrate",
          "minimum percentage of integer variables that have to be fixed ",
-         &heurdata->minfixingrate, DEFAULT_MINFIXINGRATE, 0.0, 1.0, NULL, NULL) );
+         &heurdata->minfixingrate, FALSE, DEFAULT_MINFIXINGRATE, 0.0, 1.0, NULL, NULL) );
    
    return SCIP_OKAY;
 }

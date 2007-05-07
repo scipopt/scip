@@ -14,11 +14,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.c,v 1.14 2007/01/25 14:48:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: relax.c,v 1.15 2007/05/07 13:39:35 bzfberth Exp $"
 
 /**@file   relax.c
  * @brief  methods and datastructures for relaxators
  * @author Tobias Achterberg
+ * @author Timo Berthold
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -108,12 +109,12 @@ SCIP_RETCODE SCIPrelaxCreate(
    sprintf(paramname, "relaxing/%s/priority", name);
    sprintf(paramdesc, "priority of relaxator <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-         &(*relax)->priority, priority, INT_MIN/4, INT_MAX/4, 
+         &(*relax)->priority, FALSE, priority, INT_MIN/4, INT_MAX/4, 
          paramChgdRelaxPriority, (SCIP_PARAMDATA*)(*relax)) ); /*lint !e740*/
    sprintf(paramname, "relaxing/%s/freq", name);
    sprintf(paramdesc, "frequency for calling relaxator <%s> (-1: never, 0: only in root node)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-         &(*relax)->freq, freq, -1, INT_MAX, NULL, NULL) );
+         &(*relax)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

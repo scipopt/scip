@@ -14,11 +14,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.60 2006/09/17 01:58:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.61 2007/05/07 13:39:32 bzfberth Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
  * @author Tobias Achterberg
+ * @author Timo Berthold
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -140,20 +141,20 @@ SCIP_RETCODE SCIPheurCreate(
    sprintf(paramname, "heuristics/%s/priority", name);
    sprintf(paramdesc, "priority of heuristic <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-                  &(*heur)->priority, priority, INT_MIN/4, INT_MAX/4, 
+                  &(*heur)->priority, TRUE, priority, INT_MIN/4, INT_MAX/4, 
                   paramChgdHeurPriority, (SCIP_PARAMDATA*)(*heur)) ); /*lint !e740*/
    sprintf(paramname, "heuristics/%s/freq", name);
    sprintf(paramdesc, "frequency for calling primal heuristic <%s> (-1: never, 0: only at depth freqofs)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-                  &(*heur)->freq, freq, -1, INT_MAX, NULL, NULL) );
+                  &(*heur)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
    sprintf(paramname, "heuristics/%s/freqofs", name);
    sprintf(paramdesc, "frequency offset for calling primal heuristic <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-                  &(*heur)->freqofs, freqofs, 0, INT_MAX, NULL, NULL) );
+                  &(*heur)->freqofs, FALSE, freqofs, 0, INT_MAX, NULL, NULL) );
    sprintf(paramname, "heuristics/%s/maxdepth", name);
    sprintf(paramdesc, "maximal depth level to call primal heuristic <%s> (-1: no limit)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-                  &(*heur)->maxdepth, maxdepth, -1, INT_MAX, NULL, NULL) );
+                  &(*heur)->maxdepth, TRUE, maxdepth, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

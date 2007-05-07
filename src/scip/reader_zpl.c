@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.19 2007/04/26 10:36:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.20 2007/05/07 13:39:35 bzfberth Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -682,13 +682,13 @@ SCIP_RETCODE SCIPincludeReaderZpl(
    /* add zpl reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/zplreader/dynamiccols", "should columns be added and removed dynamically to the LP?",
-         NULL, FALSE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
+         NULL, FALSE, FALSE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, 
          "reading/zplreader/changedir", "should the current directory be changed to that of the ZIMPL file before parsing?",
-         NULL, TRUE, NULL, NULL) );
+         NULL, FALSE, TRUE, NULL, NULL) );
    SCIP_CALL( SCIPaddStringParam(scip,
          "reading/zplreader/parameters", "additional parameter string passed to the ZIMPL parser (or - for no additional parameters)",
-         NULL, "-", NULL, NULL) );
+         NULL, FALSE, "-", NULL, NULL) );
 #endif
 
    return SCIP_OKAY;

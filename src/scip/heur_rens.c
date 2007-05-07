@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.9 2006/12/08 11:18:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.10 2007/05/07 13:39:33 bzfberth Exp $"
 
 /**@file   heur_rens.c
  * @brief  RENS primal heuristic
@@ -110,10 +110,10 @@ SCIP_RETCODE createSubproblem(
    {
       SCIP_Real lpsolval;
 
-      /* get the current LP solution and the incumbent solution for each variable */
+      /* get the current LP solution for each variable */
       lpsolval = SCIPvarGetLPSol(vars[i]);
       
-      /* iff both solutions are equal, variable is fixed to that value in the subproblem, otherwise it is just copied */
+      /* iff variable is integer, it is fixed in the subproblem, otherwise it is just copied */
       if( SCIPisFeasIntegral(scip, lpsolval) )
       {
          SCIP_CALL( SCIPcreateVar(subscip, &subvars[i], SCIPvarGetName(vars[i]), lpsolval,
@@ -259,6 +259,183 @@ SCIP_RETCODE createNewSol(
    return SCIP_OKAY;
 }
 
+/** main procedure of the RENS heuristic, creates and sovles a subMIP */
+SCIP_RETCODE SCIPapplyRens(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
+   SCIP_RESULT*          result,             /**< result data structure                                          */
+   SCIP_Real             timelimit,          /**< timelimit for the subproblem                                   */        
+   SCIP_Real             memorylimit,        /**< memorylimit for the subproblem                                 */
+   SCIP_Real             minfixingrate,      /**< minimum percentage of integer variables that have to be fixed  */
+   SCIP_Real             minimprove,         /**< factor by which RENS should at least improve the incumbent     */
+   SCIP_Longint          maxnodes,           /**< maximum number of  nodes for the subproblem                    */
+   SCIP_Longint          nstallnodes,        /**< number of stalling nodes for the subproblem                    */
+   SCIP_Bool             binarybounds        /**< should general integers get binary bounds [floor(.),ceil(.)]?  */
+   )
+{
+   SCIP* subscip;                            /* the subproblem created by RENS      */
+   SCIP_VAR** vars;                          /* original problem's variables        */
+   SCIP_VAR** subvars;                       /* subproblem's variables              */
+  
+   SCIP_Real cutoff;                         /* objective cutoff for the subproblem */
+   
+   SCIP_Bool success;
+
+   int nvars;                     
+   int i;   
+
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+   /* initializing the subproblem */  
+   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
+   SCIP_CALL( SCIPcreate(&subscip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
+
+   /* do not abort subproblem on CTRL-C */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
+ 
+   /* disable output to console */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+ 
+   /* set limits for the subproblem */
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) ); 
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", maxnodes) ); 
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
+
+   /* forbid recursive call of heuristics solving subMIPs */
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1) );
+#if 1
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/oneopt/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) ); 
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
+
+   /* use best estimate node selection */
+   SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) ); 
+
+   /* disable cut separation in sub problem */
+   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxrounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxroundsroot", 0) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcuts", 0) ); 
+   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcutsroot", 0) );
+
+   /* use inference branching */
+   SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
+
+   /* disable expensive presolving */
+   SCIP_CALL( SCIPsetIntParam(subscip, "presolving/probing/maxrounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "constraints/linear/maxpresolpairrounds", 0) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "constraints/linear/maxaggrnormscale", 0.0) );
+
+   /* disable conflict analysis */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
+#endif
+
+#ifdef SCIP_DEBUG
+   /* for debugging RENS, enable MIP output */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#endif
+
+   success = FALSE;
+
+   /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
+   SCIP_CALL( createSubproblem(scip, subscip, subvars, minfixingrate, binarybounds, &success) );
+   SCIPdebugMessage("RENS subproblem: %d vars, %d cons, success=%d\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), success);
+
+   /* if the subproblem could not be created, free memory and return */
+   if( !success )
+   {
+      int nbinvars;
+      int nintvars;
+
+      *result = SCIP_DIDNOTRUN;
+      SCIP_CALL( SCIPfreeTransform(subscip) );
+      SCIP_CALL( SCIPgetVarsData(subscip, NULL, NULL, &nbinvars, &nintvars, NULL, NULL) );
+      for( i = 0; i < nbinvars + nintvars; i++ )
+      {
+         SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
+      }
+      SCIPfreeBufferArray(scip, &subvars);
+      SCIP_CALL( SCIPfree(&subscip) );
+      return SCIP_OKAY;
+   } 
+
+   /* if there is already a solution, add an objective cutoff */
+   if( SCIPgetNSols(scip) > 0 )
+   {
+      cutoff = SCIPinfinity(scip);
+      assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );   
+      
+      if( !SCIPisInfinity(scip,SCIPgetLowerbound(scip)) )
+      {
+         SCIP_Real upperbound;
+         cutoff = (1-minimprove)*SCIPgetUpperbound(scip) - minimprove*SCIPgetLowerbound(scip);
+         upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
+         cutoff = MIN(upperbound, cutoff );
+      }
+      else
+         cutoff = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
+      SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
+   }
+
+   /* solve the subproblem */
+   SCIP_CALL( SCIPpresolve(subscip) );
+   SCIPdebugMessage("RENS presolved subproblem: %d vars, %d cons, success=%d\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), success);
+
+#if 0
+   {
+   char fname[SCIP_MAXSTRLEN];
+   sprintf(fname, "test/%s.lp",SCIPgetProbName(scip));
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1) );
+   SCIP_CALL( SCIPsolve(subscip) );
+   SCIP_CALL( SCIPwriteMIP(subscip,fname,TRUE,TRUE) );
+   SCIPmessagePrintInfo("wrote RENS-subMIP to file <%s>\n",fname);
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", maxnodes ) );
+   }
+#endif
+
+   /* after presolving, we should have at least reached a certain fixing rate over ALL variables (including continuous)
+    * to ensure that not only the MIP but also the LP relaxation is easy enough
+    */
+   if( ( nvars - SCIPgetNVars(subscip) ) / (SCIP_Real)nvars >= minfixingrate / 2.0 )
+   {
+      SCIP_SOL** subsols;
+      int nsubsols;
+
+      SCIPdebugMessage("solving subproblem: nstallnodes=%"SCIP_LONGINT_FORMAT", maxnodes=%"SCIP_LONGINT_FORMAT"\n", nstallnodes, maxnodes);
+      SCIP_CALL( SCIPsolve(subscip) );
+
+      /* check, whether a solution was found;
+       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
+       */
+      nsubsols = SCIPgetNSols(subscip);
+      subsols = SCIPgetSols(subscip);
+      success = FALSE;
+      for( i = 0; i < nsubsols && !success; ++i )
+      {
+         SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &success) );
+      }
+      if( success )
+         *result = SCIP_FOUNDSOL;
+   }
+
+   /* free subproblem */
+   SCIP_CALL( SCIPfreeTransform(subscip) );
+   for( i = 0; i < nvars; i++ )
+   {
+      SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
+   }
+   SCIPfreeBufferArray(scip, &subvars);
+   SCIP_CALL( SCIPfree(&subscip) );
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of primal heuristic
@@ -319,19 +496,9 @@ SCIP_DECL_HEUREXEC(heurExecRens)
 {  /*lint --e{715}*/
 
    SCIP_HEURDATA* heurdata;                  /* heuristic's data                    */
-   SCIP* subscip;                            /* the subproblem created by RENS      */
-   SCIP_VAR** vars;                          /* original problem's variables        */
-   SCIP_VAR** subvars;                       /* subproblem's variables              */
-  
    SCIP_Real timelimit;                      /* timelimit for the subproblem        */
    SCIP_Real memorylimit;
-   SCIP_Real cutoff;                         /* objective cutoff for the subproblem */
-   
-   SCIP_Bool success;
    SCIP_Longint nstallnodes;                 /* number of stalling nodes for the subproblem */
-
-   int nvars;                     
-   int i;   
 
    assert( heur != NULL );
    assert( scip != NULL );
@@ -381,140 +548,8 @@ SCIP_DECL_HEUREXEC(heurExecRens)
 
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
-   /* initializing the subproblem */  
-   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
-   SCIP_CALL( SCIPcreate(&subscip) );
-   SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
-
-   /* do not abort subproblem on CTRL-C */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
- 
-   /* disable output to console */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
- 
-   /* set limits for the subproblem */
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) ); 
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", heurdata->maxnodes) ); 
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
-
-   /* forbid recursive call of heuristics solving subMIPs */
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) ); 
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
-
-   /* use best estimate node selection */
-   SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) ); 
-
-   /* disable cut separation in sub problem */
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxrounds", 0) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxroundsroot", 0) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcuts", 0) ); 
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxcutsroot", 0) );
-
-   /* use inference branching */
-   SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
-
-   /* disable expensive presolving */
-   SCIP_CALL( SCIPsetIntParam(subscip, "presolving/probing/maxrounds", 0) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "constraints/linear/maxpresolpairrounds", 0) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "constraints/linear/maxaggrnormscale", 0.0) );
-
-   /* disable conflict analysis */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
-
-#ifdef SCIP_DEBUG
-   /* for debugging RENS, enable MIP output */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1) );
-#endif
-
-   success = FALSE;
-
-   /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
-   SCIP_CALL( createSubproblem(scip, subscip, subvars, heurdata->minfixingrate, heurdata->binarybounds, &success) );
-   SCIPdebugMessage("RENS subproblem: %d vars, %d cons, success=%d\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), success);
-
-   /* if the subproblem could not be created, free memory and return */
-   if( !success )
-   {
-      int nbinvars;
-      int nintvars;
-
-      *result = SCIP_DIDNOTRUN;
-      SCIP_CALL( SCIPfreeTransform(subscip) );
-      SCIP_CALL( SCIPgetVarsData(subscip, NULL, NULL, &nbinvars, &nintvars, NULL, NULL) );
-      for( i = 0; i < nbinvars + nintvars; i++ )
-      {
-         SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
-      }
-      SCIPfreeBufferArray(scip, &subvars);
-      SCIP_CALL( SCIPfree(&subscip) );
-      return SCIP_OKAY;
-   } 
-
-   /* if there is already a solution, add an objective cutoff */
-   if( SCIPgetNSols(scip) > 0 )
-   {
-      cutoff = SCIPinfinity(scip);
-      assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );   
-      
-      if( !SCIPisInfinity(scip,SCIPgetLowerbound(scip)) )
-      {
-         SCIP_Real upperbound;
-         cutoff = (1-heurdata->minimprove)*SCIPgetUpperbound(scip) - heurdata->minimprove*SCIPgetLowerbound(scip);
-         upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
-         cutoff = MIN(upperbound, cutoff );
-      }
-      else
-         cutoff = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
-      SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
-   }
-
-   /* solve the subproblem */
-   SCIP_CALL( SCIPpresolve(subscip) );
-   SCIPdebugMessage("RENS presolved subproblem: %d vars, %d cons, success=%d\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), success);
-
-   /* after presolving, we should have at least reached a certain fixing rate over ALL variables (including continuous)
-    * to ensure that not only the MIP but also the LP relaxation is easy enough
-    */
-   if( ( nvars - SCIPgetNVars(subscip) ) / (SCIP_Real)nvars >= heurdata->minfixingrate / 2.0 )
-   {
-      SCIP_SOL** subsols;
-      int nsubsols;
-
-      SCIPdebugMessage("solving subproblem: nstallnodes=%"SCIP_LONGINT_FORMAT", maxnodes=%"SCIP_LONGINT_FORMAT"\n", nstallnodes, heurdata->maxnodes);
-      SCIP_CALL( SCIPsolve(subscip) );
-
-      /* check, whether a solution was found;
-       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
-       */
-      nsubsols = SCIPgetNSols(subscip);
-      subsols = SCIPgetSols(subscip);
-      success = FALSE;
-      for( i = 0; i < nsubsols && !success; ++i )
-      {
-         SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &success) );
-      }
-      if( success )
-         *result = SCIP_FOUNDSOL;
-   }
-
-   /* free subproblem */
-   SCIP_CALL( SCIPfreeTransform(subscip) );
-   for( i = 0; i < nvars; i++ )
-   {
-      SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
-   }
-   SCIPfreeBufferArray(scip, &subvars);
-   SCIP_CALL( SCIPfree(&subscip) );
+   SCIP_CALL( SCIPapplyRens(scip, heur, result, timelimit, memorylimit, heurdata->minfixingrate, heurdata-> minimprove,
+         heurdata->maxnodes, nstallnodes, heurdata->binarybounds) );   
 
    return SCIP_OKAY;
 }
@@ -545,32 +580,32 @@ SCIP_RETCODE SCIPincludeHeurRens(
    /* add rens primal heuristic parameters */
  
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/rens/minfixingrate",
-         "minimum percentage of integer variables that have to be fixed ",
-         &heurdata->minfixingrate, DEFAULT_MINFIXINGRATE, 0.0, 1.0, NULL, NULL) );
+         "minimum percentage of integer variables that have to be fixable ",
+         &heurdata->minfixingrate, FALSE, DEFAULT_MINFIXINGRATE, 0.0, 1.0, NULL, NULL) );
    
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/rens/maxnodes",
          "maximum number of nodes to regard in the subproblem",
-         &heurdata->maxnodes, DEFAULT_MAXNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
+         &heurdata->maxnodes,  TRUE,DEFAULT_MAXNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
  
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/rens/binarybounds",
          "should general integers get binary bounds [floor(.),ceil(.)] ?",
-         &heurdata->binarybounds, DEFAULT_BINARYBOUNDS, NULL, NULL) );
+         &heurdata->binarybounds, TRUE, DEFAULT_BINARYBOUNDS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/rens/nodesofs",
          "number of nodes added to the contingent of the total nodes",
-         &heurdata->nodesofs, DEFAULT_NODESOFS, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
+         &heurdata->nodesofs, FALSE, DEFAULT_NODESOFS, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
    
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/rens/minnodes",
          "minimum number of nodes required to start the subproblem",
-         &heurdata->minnodes, DEFAULT_MINNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
+         &heurdata->minnodes, TRUE, DEFAULT_MINNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
  
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/rens/nodesquot",
          "contingent of sub problem nodes in relation to the number of nodes of the original problem",
-         &heurdata->nodesquot, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
+         &heurdata->nodesquot, FALSE, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/rens/minimprove",
          "factor by which RENS should at least improve the incumbent  ",
-         &heurdata->minimprove, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
+         &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
    
    return SCIP_OKAY;
 }

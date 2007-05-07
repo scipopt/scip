@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.21 2006/12/07 20:36:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.22 2007/05/07 13:39:33 bzfberth Exp $"
 
 /**@file   heur_fixandinfer.c
  * @brief  fix-and-infer primal heuristic
@@ -284,11 +284,11 @@ SCIP_RETCODE SCIPincludeHeurFixandinfer(
    SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/fixandinfer/proprounds", 
          "maximal number of propagation rounds in probing subproblems (-1: no limit, 0: auto)",
-         &heurdata->proprounds, DEFAULT_PROPROUNDS, -1, INT_MAX, NULL, NULL) );
+         &heurdata->proprounds, TRUE, DEFAULT_PROPROUNDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/fixandinfer/minfixings", 
          "minimal number of fixings to apply before dive may be aborted",
-         &heurdata->minfixings, DEFAULT_MINFIXINGS, 0, INT_MAX, NULL, NULL) );
+         &heurdata->minfixings, TRUE, DEFAULT_MINFIXINGS, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

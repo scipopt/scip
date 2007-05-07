@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.63 2007/04/09 09:58:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.64 2007/05/07 13:39:35 bzfberth Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -563,27 +563,27 @@ SCIP_RETCODE SCIPincludeSepaGomory(
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/gomory/maxrounds",
          "maximal number of gomory separation rounds per node (-1: unlimited)",
-         &sepadata->maxrounds, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
+         &sepadata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/gomory/maxroundsroot",
          "maximal number of gomory separation rounds in the root node (-1: unlimited)",
-         &sepadata->maxroundsroot, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
+         &sepadata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/gomory/maxsepacuts",
          "maximal number of gomory cuts separated per separation round",
-         &sepadata->maxsepacuts, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
+         &sepadata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/gomory/maxsepacutsroot",
          "maximal number of gomory cuts separated per separation round in the root node",
-         &sepadata->maxsepacutsroot, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
+         &sepadata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/gomory/maxweightrange",
          "maximal valid range max(|weights|)/min(|weights|) of row weights",
-         &sepadata->maxweightrange, DEFAULT_MAXWEIGHTRANGE, 1.0, SCIP_REAL_MAX, NULL, NULL) );
+         &sepadata->maxweightrange, TRUE, DEFAULT_MAXWEIGHTRANGE, 1.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/gomory/dynamiccuts",
          "should generated cuts be removed from the LP if they are no longer tight?",
-         &sepadata->dynamiccuts, DEFAULT_DYNAMICCUTS, NULL, NULL) );
+         &sepadata->dynamiccuts, FALSE, DEFAULT_DYNAMICCUTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

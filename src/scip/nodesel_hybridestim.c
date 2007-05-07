@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_hybridestim.c,v 1.2 2007/04/19 15:04:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_hybridestim.c,v 1.3 2007/05/07 13:39:34 bzfberth Exp $"
 
 /**@file   nodesel_hybridestim.c
  * @brief  node selector for hybrid best estimate / best bound search
@@ -338,23 +338,23 @@ SCIP_RETCODE SCIPincludeNodeselHybridestim(
    SCIP_CALL( SCIPaddIntParam(scip,
          "nodeselection/hybridestim/minplungedepth",
          "minimal plunging depth, before new best node may be selected (-1 for dynamic setting)",
-         &nodeseldata->minplungedepth, MINPLUNGEDEPTH, -1, INT_MAX, NULL, NULL) );
+         &nodeseldata->minplungedepth, TRUE, MINPLUNGEDEPTH, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "nodeselection/hybridestim/maxplungedepth",
          "maximal plunging depth, before new best node is forced to be selected (-1 for dynamic setting)",
-         &nodeseldata->maxplungedepth, MAXPLUNGEDEPTH, -1, INT_MAX, NULL, NULL) );
+         &nodeseldata->maxplungedepth, TRUE, MAXPLUNGEDEPTH, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "nodeselection/hybridestim/maxplungequot",
          "maximal quotient (estimate - lowerbound)/(cutoffbound - lowerbound) where plunging is performed",
-         &nodeseldata->maxplungequot, MAXPLUNGEQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &nodeseldata->maxplungequot, TRUE, MAXPLUNGEQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "nodeselection/hybridestim/bestnodefreq",
          "frequency at which the best node instead of the hybrid best estimate / best bound is selected (0: never)",
-         &nodeseldata->bestnodefreq, BESTNODEFREQ, 0, INT_MAX, NULL, NULL) );
+         &nodeseldata->bestnodefreq, FALSE, BESTNODEFREQ, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "nodeselection/hybridestim/estimweight",
          "weight of estimate value in node selection score (0: pure best bound search, 1: pure best estimate search)",
-         &nodeseldata->estimweight, ESTIMWEIGHT, 0.0, 1.0, NULL, NULL) );
+         &nodeseldata->estimweight, TRUE, ESTIMWEIGHT, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }

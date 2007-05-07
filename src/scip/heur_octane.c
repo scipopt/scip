@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.16 2007/01/26 14:42:45 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.17 2007/05/07 13:39:33 bzfberth Exp $"
 
 /**@file   heur_octane.c
  * @brief  octane primal heuristic based on Balas, Ceria, Dawande, Margot, and Pataki
@@ -1100,42 +1100,42 @@ SCIP_RETCODE SCIPincludeHeurOctane(
    SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/octane/fmax", 
          "number of 0-1-points to be tested as possible solutions by OCTANE",
-         &heurdata->f_max, DEFAULT_FMAX, 1, INT_MAX, NULL, NULL) );
+         &heurdata->f_max, TRUE, DEFAULT_FMAX, 1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/octane/ffirst", 
          "number of 0-1-points to be tested at first whether they violate a common row",
-         &heurdata->f_first, DEFAULT_FFIRST, 1, INT_MAX, NULL, NULL) );
+         &heurdata->f_first, TRUE, DEFAULT_FFIRST, 1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "heuristics/octane/usefracspace", 
          "execute OCTANE only in the space of fractional variables (TRUE) or in the full space? ",
-         &heurdata->usefracspace, DEFAULT_USEFRACSPACE, NULL, NULL) );
+         &heurdata->usefracspace, TRUE, DEFAULT_USEFRACSPACE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, 
          "heuristics/octane/useobjray",
          "should the inner normal of the objective be used as one ray direction?",
-         &heurdata->useobjray, TRUE, NULL, NULL) );
+         &heurdata->useobjray, TRUE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, 
          "heuristics/octane/useavgray",
          "should the average of the basic cone be used as one ray direction?",
-         &heurdata->useavgray, TRUE, NULL, NULL) );
+         &heurdata->useavgray, TRUE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, 
          "heuristics/octane/usediffray",
          "should the difference between the root solution and the current LP solution be used as one ray direction?",
-         &heurdata->usediffray, FALSE, NULL, NULL) );
+         &heurdata->usediffray, TRUE, FALSE, NULL, NULL) );
  
    SCIP_CALL( SCIPaddBoolParam(scip, 
          "heuristics/octane/useavgwgtray",
          "should the weighted average of the basic cone be used as one ray direction?",
-         &heurdata->useavgwgtray, TRUE, NULL, NULL) );
+         &heurdata->useavgwgtray, TRUE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, 
          "heuristics/octane/useavgnbray",
          "should the weighted average of the nonbasic cone be used as one ray direction?",
-         &heurdata->useavgnbray, TRUE, NULL, NULL) );
+         &heurdata->useavgnbray, TRUE, TRUE, NULL, NULL) );
    
    return SCIP_OKAY;
 }

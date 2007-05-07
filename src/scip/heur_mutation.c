@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.9 2006/09/17 01:58:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_mutation.c,v 1.10 2007/05/07 13:39:33 bzfberth Exp $"
 
 /**@file   heur_mutation.c
  * @brief  mutation primal heuristic
@@ -41,7 +41,7 @@
 #define DEFAULT_NODESOFS      500       /* number of nodes added to the contingent of the total nodes    */
 #define DEFAULT_MAXNODES      5000      /* maximum number of nodes to regard in the subproblem           */
 #define DEFAULT_MINNODES      500       /* minimum number of nodes to regard in the subproblem           */
-#define DEFAULT_FIXINGRATE    0.8       /* minimum percentage of integer variables that have to be fixed */
+#define DEFAULT_MINFIXINGRATE    0.8       /* minimum percentage of integer variables that have to be fixed */
 #define DEFAULT_NODESQUOT     0.1       /* subproblem nodes in relation to nodes of the original problem */
 #define DEFAULT_NWAITINGNODES 200       /* number of nodes without incumbent change that heuristic should wait */
 #define DEFAULT_RANDOMIZATION FALSE     /* should the choice which sols to take be randomized? */ 
@@ -58,7 +58,7 @@ struct SCIP_HeurData
    int                   nodesofs;          /**< number of nodes added to the contingent of the total nodes          */
    int                   maxnodes;          /**< maximum number of nodes to regard in the subproblem                 */
    int                   minnodes;          /**< minimum number of nodes to regard in the subproblem                 */
-   SCIP_Real             fixingrate;        /**< minimum percentage of integer variables that have to be fixed       */
+   SCIP_Real             minfixingrate;        /**< minimum percentage of integer variables that have to be fixed       */
    int                   nwaitingnodes;     /**< number of nodes without incumbent change that heuristic should wait */
    SCIP_Real             minimprove;        /**< factor by which Mutation should at least improve the incumbent          */
    SCIP_Longint          usednodes;         /**< nodes already used by Mutation in earlier calls                         */
@@ -79,7 +79,7 @@ SCIP_RETCODE createSubproblem(
    SCIP*                 scip,               /**< original SCIP data structure                                  */
    SCIP*                 subscip,            /**< SCIP data structure for the subproblem                        */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem                               */
-   SCIP_Real             fixingrate,         /**< percentage of integer variables that have to be fixed         */
+   SCIP_Real             minfixingrate,         /**< percentage of integer variables that have to be fixed         */
    unsigned int*         randseed
    )
 {
@@ -113,14 +113,14 @@ SCIP_RETCODE createSubproblem(
    /* create the subproblem */
    SCIP_CALL( SCIPcreateProb(subscip, consname, NULL, NULL, NULL, NULL, NULL, NULL) );
 
-   if( fixingrate > 0.5 )
+   if( minfixingrate > 0.5 )
    {
-      nmarkers = nbinvars+nintvars - SCIPfloor(scip,fixingrate*(nbinvars+nintvars));
+      nmarkers = nbinvars+nintvars - SCIPfloor(scip,minfixingrate*(nbinvars+nintvars));
       fixingmarker = FALSE;
    }
    else
    {
-      nmarkers = SCIPceil(scip,fixingrate*(nbinvars+nintvars));
+      nmarkers = SCIPceil(scip,minfixingrate*(nbinvars+nintvars));
       fixingmarker = TRUE;
    }
    assert( 0 <= nmarkers && nmarkers <=  SCIPceil(scip,(nbinvars+nintvars)/2.0 ) );
@@ -396,7 +396,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
  
    success = FALSE;
    /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
-   createSubproblem(scip, subscip, subvars, heurdata->fixingrate, &heurdata->randseed);
+   createSubproblem(scip, subscip, subvars, heurdata->minfixingrate, &heurdata->randseed);
    
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
@@ -504,27 +504,27 @@ SCIP_RETCODE SCIPincludeHeurMutation(
    /* add mutation primal heuristic parameters */ 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/mutation/nodesofs",
          "number of nodes added to the contingent of the total nodes",
-         &heurdata->nodesofs, DEFAULT_NODESOFS, 0, INT_MAX, NULL, NULL) );
+         &heurdata->nodesofs, FALSE, DEFAULT_NODESOFS, 0, INT_MAX, NULL, NULL) );
    
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/mutation/maxnodes",
          "maximum number of nodes to regard in the subproblem",
-         &heurdata->maxnodes, DEFAULT_MAXNODES, 0, INT_MAX, NULL, NULL) );
+         &heurdata->maxnodes, TRUE, DEFAULT_MAXNODES, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/mutation/minnodes",
          "minimum number of nodes required to start the subproblem",
-         &heurdata->minnodes, DEFAULT_MINNODES, 0, INT_MAX, NULL, NULL) );
+         &heurdata->minnodes, TRUE, DEFAULT_MINNODES, 0, INT_MAX, NULL, NULL) );
    
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/mutation/nwaitingnodes",
          "number of nodes without incumbent change that heuristic should wait",
-         &heurdata->nwaitingnodes, DEFAULT_NWAITINGNODES, 0, INT_MAX, NULL, NULL) );
+         &heurdata->nwaitingnodes, TRUE, DEFAULT_NWAITINGNODES, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/mutation/nodesquot",
          "contingent of sub problem nodes in relation to the number of nodes of the original problem",
-         &heurdata->nodesquot, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
+         &heurdata->nodesquot, FALSE, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
    
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/mutation/fixingrate",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/mutation/minfixingrate",
          "percentage of integer variables that have to be fixed ",
-         &heurdata->fixingrate, DEFAULT_FIXINGRATE, 0.0+SCIPsumepsilon(scip), 1.0-SCIPsumepsilon(scip), NULL, NULL) );
+         &heurdata->minfixingrate, FALSE, DEFAULT_MINFIXINGRATE, 0.0+SCIPsumepsilon(scip), 1.0-SCIPsumepsilon(scip), NULL, NULL) );
    
    return SCIP_OKAY;
 }

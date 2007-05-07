@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.23 2007/04/09 09:58:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.24 2007/05/07 13:39:36 bzfberth Exp $"
 
 /**@file   sepa_strongcg.c
  * @brief  Strong CG Cuts (Letchford & Lodi)
@@ -558,27 +558,27 @@ SCIP_RETCODE SCIPincludeSepaStrongcg(
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/strongcg/maxrounds",
          "maximal number of strong CG separation rounds per node (-1: unlimited)",
-         &sepadata->maxrounds, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
+         &sepadata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/strongcg/maxroundsroot",
          "maximal number of strong CG separation rounds in the root node (-1: unlimited)",
-         &sepadata->maxroundsroot, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
+         &sepadata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/strongcg/maxsepacuts",
          "maximal number of strong CG cuts separated per separation round",
-         &sepadata->maxsepacuts, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
+         &sepadata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/strongcg/maxsepacutsroot",
          "maximal number of strong CG cuts separated per separation round in the root node",
-         &sepadata->maxsepacutsroot, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
+         &sepadata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/strongcg/maxweightrange",
          "maximal valid range max(|weights|)/min(|weights|) of row weights",
-         &sepadata->maxweightrange, DEFAULT_MAXWEIGHTRANGE, 1.0, SCIP_REAL_MAX, NULL, NULL) );
+         &sepadata->maxweightrange, TRUE, DEFAULT_MAXWEIGHTRANGE, 1.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/strongcg/dynamiccuts",
          "should generated cuts be removed from the LP if they are no longer tight?",
-         &sepadata->dynamiccuts, DEFAULT_DYNAMICCUTS, NULL, NULL) );
+         &sepadata->dynamiccuts, FALSE, DEFAULT_DYNAMICCUTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

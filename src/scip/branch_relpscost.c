@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.48 2006/12/07 20:36:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.49 2007/05/07 13:39:31 bzfberth Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -806,51 +806,51 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP_CALL( SCIPaddRealParam(scip,
          "branching/relpscost/conflictweight", 
          "weight in score calculations for conflict score",
-         &branchruledata->conflictweight, DEFAULT_CONFLICTWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
+         &branchruledata->conflictweight, TRUE, DEFAULT_CONFLICTWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "branching/relpscost/inferenceweight", 
          "weight in score calculations for inference score",
-         &branchruledata->inferenceweight, DEFAULT_INFERENCEWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
+         &branchruledata->inferenceweight, TRUE, DEFAULT_INFERENCEWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "branching/relpscost/cutoffweight", 
          "weight in score calculations for cutoff score",
-         &branchruledata->cutoffweight, DEFAULT_CUTOFFWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
+         &branchruledata->cutoffweight, TRUE, DEFAULT_CUTOFFWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "branching/relpscost/pscostweight", 
          "weight in score calculations for pseudo cost score",
-         &branchruledata->pscostweight, DEFAULT_PSCOSTWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
+         &branchruledata->pscostweight, TRUE, DEFAULT_PSCOSTWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "branching/relpscost/minreliable", 
          "minimal value for minimum pseudo cost size to regard pseudo cost value as reliable",
-         &branchruledata->minreliable, DEFAULT_MINRELIABLE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &branchruledata->minreliable, TRUE, DEFAULT_MINRELIABLE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "branching/relpscost/maxreliable", 
          "maximal value for minimum pseudo cost size to regard pseudo cost value as reliable",
-         &branchruledata->maxreliable, DEFAULT_MAXRELIABLE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &branchruledata->maxreliable, TRUE, DEFAULT_MAXRELIABLE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "branching/relpscost/sbiterquot", 
          "maximal fraction of strong branching LP iterations compared to node relaxation LP iterations",
-         &branchruledata->sbiterquot, DEFAULT_SBITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &branchruledata->sbiterquot, FALSE, DEFAULT_SBITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/relpscost/sbiterofs", 
          "additional number of allowed strong branching LP iterations",
-         &branchruledata->sbiterofs, DEFAULT_SBITEROFS, 0, INT_MAX, NULL, NULL) );
+         &branchruledata->sbiterofs, FALSE, DEFAULT_SBITEROFS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/relpscost/maxlookahead", 
          "maximal number of further variables evaluated without better score",
-         &branchruledata->maxlookahead, DEFAULT_MAXLOOKAHEAD, 1, INT_MAX, NULL, NULL) );
+         &branchruledata->maxlookahead, TRUE, DEFAULT_MAXLOOKAHEAD, 1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/relpscost/initcand", 
          "maximal number of candidates initialized with strong branching per node",
-         &branchruledata->initcand, DEFAULT_INITCAND, 0, INT_MAX, NULL, NULL) );
+         &branchruledata->initcand, FALSE, DEFAULT_INITCAND, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/relpscost/inititer", 
          "iteration limit for strong branching initializations of pseudo cost entries (0: auto)",
-         &branchruledata->inititer, DEFAULT_INITITER, 0, INT_MAX, NULL, NULL) );
+         &branchruledata->inititer, FALSE, DEFAULT_INITITER, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/relpscost/maxbdchgs", 
          "maximal number of bound tightenings before the node is reevaluated (-1: unlimited)",
-         &branchruledata->maxbdchgs, DEFAULT_MAXBDCHGS, -1, INT_MAX, NULL, NULL) );
+         &branchruledata->maxbdchgs, TRUE, DEFAULT_MAXBDCHGS, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
