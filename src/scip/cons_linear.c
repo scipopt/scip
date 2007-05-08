@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.235 2007/05/07 13:39:32 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.236 2007/05/08 13:46:32 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -657,17 +657,27 @@ SCIP_RETCODE consdataCreate(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
 
+   (*consdata)->varssize = nvars;
+   (*consdata)->nvars = nvars;
    if( nvars > 0 )
    {
+      int k;
+      int v;
+
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vals, vals, nvars) );
-#ifndef NDEBUG
+      k = 0;
+      for( v = 0; v < nvars; ++v )
       {
-         int v;
-         for( v = 0; v < nvars; ++v )
-            assert(vars[v] != NULL);
+         assert(vars[v] != NULL);
+         if( !SCIPisZero(scip, vals[v]) )
+         {
+            vars[k] = vars[v];
+            vals[k] = vals[v];
+            k++;
+         }
       }
-#endif
+      (*consdata)->nvars = k;
    }
    else
    {
@@ -695,8 +705,6 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->glbmaxactivityposinf = -1;
    (*consdata)->possignature = 0;
    (*consdata)->negsignature = 0;
-   (*consdata)->varssize = nvars;
-   (*consdata)->nvars = nvars;
    (*consdata)->validmaxabsval = FALSE;
    (*consdata)->validactivities = FALSE;
    (*consdata)->propagated = FALSE;
@@ -7224,7 +7232,7 @@ SCIP_RETCODE SCIPcreateConsLinear(
    const char*           name,               /**< name of constraint */
    int                   nvars,              /**< number of nonzeros in the constraint */
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Real*            vals,               /**< array with coefficients of constraint entries; coefs must not be zero! */
+   SCIP_Real*            vals,               /**< array with coefficients of constraint entries */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs,                /**< right hand side of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
