@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.408 2007/05/07 13:39:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.409 2007/05/10 10:57:08 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4792,6 +4792,10 @@ SCIP_RETCODE SCIPsolve(
    /* start solving timer */
    SCIPclockStart(scip->stat->solvingtime, scip->set);
 
+   /* capture the CTRL-C interrupt */
+   if( scip->set->misc_catchctrlc )
+      SCIPinterruptCapture(scip->interrupt);
+
    /* automatic restarting loop */
    restart = FALSE;
    do
@@ -4833,18 +4837,10 @@ SCIP_RETCODE SCIPsolve(
          /* reset display */
          SCIPstatResetDisplay(scip->stat);
 
-         /* capture the CTRL-C interrupt */
-         if( scip->set->misc_catchctrlc )
-            SCIPinterruptCapture(scip->interrupt);
-
          /* continue solution process */
          SCIP_CALL( SCIPsolveCIP(scip->mem->solvemem, scip->set, scip->stat, scip->mem, scip->transprob,
                scip->primal, scip->tree, scip->lp, scip->pricestore, scip->sepastore, scip->cutpool,
                scip->branchcand, scip->conflict, scip->eventfilter, scip->eventqueue, &restart) );
-
-         /* release the CTRL-C interrupt */
-         if( scip->set->misc_catchctrlc )
-            SCIPinterruptRelease(scip->interrupt);
 
          /* detect, whether problem is solved */
          if( SCIPtreeGetNNodes(scip->tree) == 0 && SCIPtreeGetCurrentNode(scip->tree) == NULL )
@@ -4873,6 +4869,10 @@ SCIP_RETCODE SCIPsolve(
       }  /*lint !e788*/
    }
    while( restart && !SCIPsolveIsStopped(scip->set, scip->stat, TRUE) );
+
+   /* release the CTRL-C interrupt */
+   if( scip->set->misc_catchctrlc )
+      SCIPinterruptRelease(scip->interrupt);
 
    /* stop solving timer */
    SCIPclockStop(scip->stat->solvingtime, scip->set);
