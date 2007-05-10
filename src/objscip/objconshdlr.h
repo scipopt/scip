@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.45 2007/03/18 17:19:12 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.46 2007/05/10 16:47:08 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -250,6 +250,7 @@ public:
    virtual SCIP_RETCODE scip_delete(
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS*         cons,               /**< the constraint belonging to the constraint data */
       SCIP_CONSDATA**    consdata            /**< pointer to the constraint data to free */
       )
    {  /*lint --e{715}*/

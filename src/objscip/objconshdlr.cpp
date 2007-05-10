@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.31 2006/08/24 17:04:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.32 2007/05/10 16:47:08 bzfpfend Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -186,7 +186,7 @@ SCIP_DECL_CONSDELETE(consDeleteObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   SCIP_CALL( conshdlrdata->objconshdlr->scip_delete(scip, conshdlr, consdata) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_delete(scip, conshdlr, cons, consdata) );
 
    return SCIP_OKAY;
 }
