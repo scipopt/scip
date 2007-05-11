@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.236 2007/05/08 13:46:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.237 2007/05/11 16:28:22 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -669,11 +669,11 @@ SCIP_RETCODE consdataCreate(
       k = 0;
       for( v = 0; v < nvars; ++v )
       {
-         assert(vars[v] != NULL);
-         if( !SCIPisZero(scip, vals[v]) )
+         assert((*consdata)->vars[v] != NULL);
+         if( !SCIPisZero(scip, (*consdata)->vals[v]) )
          {
-            vars[k] = vars[v];
-            vals[k] = vals[v];
+            (*consdata)->vars[k] = (*consdata)->vars[v];
+            (*consdata)->vals[k] = (*consdata)->vals[v];
             k++;
          }
       }
