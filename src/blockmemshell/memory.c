@@ -14,7 +14,7 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.8 2007/05/15 15:09:45 bzforlow Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.9 2007/05/15 15:15:38 bzforlow Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -1249,7 +1249,7 @@ BMS_CHKMEM* BMScreateChunkMemory_call(
       printErrorHeader(filename, line);
       printError("Insufficient memory for chunk block\n");
    }
-   debugMessage("created chunk memory %p [elemsize: %d]\n", chkmem, size);
+   debugMessage("created chunk memory %p [elemsize: %d]\n", chkmem, (int)size);
 
    return chkmem;
 }
