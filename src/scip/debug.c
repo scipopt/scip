@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.23 2007/04/02 18:27:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.24 2007/05/15 15:10:35 bzforlow Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -757,6 +757,15 @@ SCIP_RETCODE SCIPdebugIncludeProp(
          NULL, NULL, NULL, NULL, NULL, propExecDebug, NULL, NULL) );
 
    return SCIP_OKAY;
+}
+
+#else
+
+/** this is a dummy method to make the SunOS gcc linker happy */
+extern void SCIPdummyDebugMethodForSun(void);
+void SCIPdummyDebugMethodForSun(void)
+{
+      return;
 }
 
 #endif
