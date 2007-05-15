@@ -14,7 +14,7 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.h,v 1.2 2006/01/03 12:22:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.h,v 1.3 2007/05/15 15:09:45 bzforlow Exp $"
 
 /**@file   memory.h
  * @brief  memory allocation routines
@@ -222,7 +222,7 @@ int BMSisAligned(
 /** creates a new chunk block data structure */
 extern
 BMS_CHKMEM* BMScreateChunkMemory_call(
-   int                   size,               /**< element size of the chunk block */
+   size_t                size,               /**< element size of the chunk block */
    int                   initchunksize,      /**< number of elements in the first chunk of the chunk block */
    int                   garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
                                               *   elements are free (-1: disable garbage collection) */

@@ -14,7 +14,7 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.7 2007/03/13 18:33:27 bzfberth Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.8 2007/05/15 15:09:45 bzforlow Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -1232,7 +1232,7 @@ void freeChkmemElement(
 
 /** creates a new chunk block data structure */
 BMS_CHKMEM* BMScreateChunkMemory_call(
-   int                   size,               /**< element size of the chunk block */
+   size_t                size,               /**< element size of the chunk block */
    int                   initchunksize,      /**< number of elements in the first chunk of the chunk block */
    int                   garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
                                               *   elements are free (-1: disable garbage collection) */
@@ -1242,6 +1242,7 @@ BMS_CHKMEM* BMScreateChunkMemory_call(
 {
    BMS_CHKMEM* chkmem;
 
+   alignSize(&size);
    chkmem = createChkmem(size, initchunksize, garbagefactor);
    if( chkmem == NULL )
    {
