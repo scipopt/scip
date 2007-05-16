@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.57 2007/05/06 15:00:42 bzfpfend Exp $
+# $Id: check.awk,v 1.58 2007/05/16 12:56:11 bzforlow Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -59,22 +59,22 @@ BEGIN {
    {
       printf("\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrrrrrrr@{}}\n") >TEXFILE;
       printf("\\toprule\n")                                         >TEXFILE;
-      printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &    Confs &    Lits &     Nodes &     Time &   BTime &   OTime &   CTime \\\\\n") > TEXFILE;
+      printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\%% &    Confs &    Lits &     Nodes &     Time &   BTime &   OTime &   CTime \\\\\n") > TEXFILE;
       printf("\\midrule\n")                                         >TEXFILE;
 
       printf("------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+-------+-------+-------+-------+------+------+------+-------\n");
-      printf("Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap% | Confs |  Lits | Nodes |  Time | BTim | OTim | CTim |       \n");
+      printf("Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% | Confs |  Lits | Nodes |  Time | BTim | OTim | CTim |       \n");
       printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+-------+-------+-------+-------+------+------+------+-------\n");
    }
    else
    {
       printf("\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrr@{}}\n") >TEXFILE;
       printf("\\toprule\n")                                         >TEXFILE;
-      printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &     Nodes &     Time \\\\\n") > TEXFILE;
+      printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\%% &     Nodes &     Time \\\\\n") > TEXFILE;
       printf("\\midrule\n")                                         >TEXFILE;
 
       printf("------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+-------\n");
-      printf("Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap% |  Iters | Nodes |  Time |       \n");
+      printf("Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters | Nodes |  Time |       \n");
       printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
    }
 
