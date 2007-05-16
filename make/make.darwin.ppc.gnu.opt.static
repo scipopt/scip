@@ -1,6 +1,6 @@
-#--- $Id: make.darwin.ppc.gnu.opt.static,v 1.8 2006/05/23 10:54:44 bzfpfend Exp $
+#--- $Id: make.darwin.ppc.gnu.opt.static,v 1.9 2007/05/16 11:25:37 bzforlow Exp $
 FLAGS		+=	-DNDEBUG -DNO_REMOVE_HISTORY # -DROUNDING_FE
-OFLAGS		+=	-O3 -fomit-frame-pointer
+OFLAGS		+=	-O2 -fomit-frame-pointer
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
 ARFLAGS		=	crs
