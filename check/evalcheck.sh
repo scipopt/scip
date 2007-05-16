@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck.sh,v 1.4 2007/05/06 15:00:45 bzfpfend Exp $
+# $Id: evalcheck.sh,v 1.5 2007/05/16 12:57:33 bzforlow Exp $
 
 AWKARGS=""
 FILES=""
@@ -54,5 +54,5 @@ do
 	SOLUFILE=""
     fi
 
-    gawk -f check.awk -vTEXFILE=$TEXFILE -vPAVFILE=$PAVFILE $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
+    gawk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
 done
