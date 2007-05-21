@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ReaderTSP.h,v 1.5 2006/08/30 09:46:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: ReaderTSP.h,v 1.6 2007/05/21 17:55:34 bzfberth Exp $"
 
 /**@file   ReaderTSP.h
  * @brief  C++ file reader for TSP data files
@@ -49,7 +49,7 @@ public:
       /* add TSP reader parameters */
     SCIPaddBoolParam(scip,
                   "reading/tspreader/round_lengths", "should lenghts of edges be rounded to nearest integer?", 
-                  &round_lengths_, TRUE, NULL, NULL);
+       &round_lengths_, FALSE, TRUE, NULL, NULL);
    }
 
    /** destructor */
