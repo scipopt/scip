@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.131 2007/05/07 13:39:31 bzfberth Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.132 2007/06/05 15:15:46 bzfberth Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -407,7 +407,7 @@ SCIP_RETCODE SCIPconflicthdlrCreate(
    sprintf(paramname, "conflict/%s/priority", name);
    sprintf(paramdesc, "priority of conflict handler <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-         &(*conflicthdlr)->priority, FALSE, priority, INT_MIN, INT_MAX,
+         &(*conflicthdlr)->priority, TRUE, priority, INT_MIN, INT_MAX,
          paramChgdConflicthdlrPriority, (SCIP_PARAMDATA*)(*conflicthdlr)) ); /*lint !e740*/
 
    return SCIP_OKAY;

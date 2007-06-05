@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.143 2007/05/07 13:39:32 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.144 2007/06/05 15:15:46 bzfberth Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -365,8 +365,24 @@ SCIP_RETCODE consdataCreate(
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
    if( nvars > 0 )
    {
+      int k;
+      int v;
+
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->weights, weights, nvars) );
+      
+      k = 0;
+      for( v = 0; v < nvars; ++v )
+      {
+         assert(vars[v] != NULL);
+         if( !SCIPisZero(scip, weights[v]) )
+         {
+            vars[k] = vars[v];
+            weights[k] = weights[v];
+            k++;
+         }
+      }
+      (*consdata)->nvars = k;
    }
    else
    {
@@ -4262,7 +4278,7 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/knapsack/sepacardfreq",
          "multiplier on separation frequency, how often cardinality cuts are separated (-1: never, 0: only at root)",
-         &conshdlrdata->sepacardfreq, FALSE, DEFAULT_SEPACARDFREQ, -1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->sepacardfreq, TRUE, DEFAULT_SEPACARDFREQ, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "constraints/knapsack/maxcardbounddist",
          "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for separating knapsack cardinality cuts",

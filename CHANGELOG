@@ -5,6 +5,7 @@ compiling:
 - added .exe extension to binaries of MinGW
 
 interface:
+- linear and knapsack constraint handler may now deal with coefficients of value zero
 - parameters are now separated into basic and advanced, the latter ones have been moved to extra submenus
 - new method SCIPwriteMIP()
 - calling SCIPwriteLP is now possible in Solved Stage
@@ -78,6 +79,7 @@ parameters:
 - new parameters "constraints/linear/maxcardbounddist" and "constraints/knapsack/maxcardbounddist"
 
 features:
+- SCIP is now compatible to the Exception branch of SoPlex
 - presolving, cut separation, primal heuristics, and strong branching now better respect time limit
 - time limit is now forwarded to lp solving algorithm
 - added option to write node LP and MIP relaxations to LP file from interactive shell
@@ -92,6 +94,14 @@ features:
 - slightly modified automatic constraint aging strategy
 
 fixed bugs:
+- fixed bug in cmir and flowcover separator with variables which are currently not in the LP
+- weakened assert in primal.c in order to avoid numerical troubles
+- changed wrong assert in SCIPnodeAddBoundinfer()
+- fixed bug in intshifting and oneopt heuristic with variables which are currently not in the LP
+- fixed bug in integer objective seperator with restarts
+- fixed bug in integer objective seperator with dynamic columns
+- fixed numerical bug in propagator of varbound constraint handler
+- fixed numerical bug in rowScaling of lp.c, which possibly cut off feasible solutions
 - fixed bug with too long variable names
 - fixed bug with strange user descriptions of plugins
 - changed position of some asserts to prevent segmentation faults

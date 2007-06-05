@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.243 2007/04/25 13:51:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.244 2007/06/05 15:15:47 bzfberth Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -3552,7 +3552,7 @@ SCIP_RETCODE rowScale(
       {
          newval = (row->lhs - row->constant) * scaleval + mindelta;
          if( SCIPsetIsIntegral(set, newval) || (row->integral && !row->modifiable) )
-            newval = SCIPsetCeil(set, newval);
+            newval = SCIPsetSumCeil(set, newval);
       }
       SCIP_CALL( SCIProwChgLhs(row, set, lp, newval) );
    }
@@ -3564,7 +3564,7 @@ SCIP_RETCODE rowScale(
       {
          newval = (row->rhs - row->constant) * scaleval + maxdelta;
          if( SCIPsetIsIntegral(set, newval) || (row->integral && !row->modifiable) )
-            newval = SCIPsetFloor(set, newval);
+            newval = SCIPsetSumFloor(set, newval);
       }
       SCIP_CALL( SCIProwChgRhs(row, set, lp, newval) );
    }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.3 2007/05/07 13:39:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.4 2007/06/05 15:15:48 bzfberth Exp $"
 
 /**@file   sepa_flowcover.c
  * @brief  flow cover cuts separator
@@ -453,6 +453,7 @@ SCIP_RETCODE constructSNFRelaxation(
    nonzcols =  SCIProwGetCols(row);
    nnonzcols = SCIProwGetNLPNonz(row);
    nonzcoefs = SCIProwGetVals(row);
+   SCIPdebugMessage("nnonzcols = %d\n",nnonzcols);
 
    /* get data structures */
    SCIP_CALL( SCIPallocBufferArray(scip, &nonzcolsbinary, nnonzcols) );
@@ -2526,7 +2527,7 @@ SCIP_RETCODE separateCuts(
 
       assert(SCIProwGetLPPos(rows[r]) == r);
 
-      nnonz = SCIProwGetNNonz(rows[r]);
+      nnonz = SCIProwGetNLPNonz(rows[r]);
       if( nnonz == 0 )
       {
          /* ignore empty rows */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.38 2007/05/07 13:39:34 bzfberth Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.39 2007/06/05 15:15:48 bzfberth Exp $"
 
 /**@file   presol.c
  * @brief  methods for presolvers
@@ -108,7 +108,7 @@ SCIP_RETCODE SCIPpresolCreate(
    sprintf(paramname, "presolving/%s/priority", name);
    sprintf(paramdesc, "priority of presolver <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-         &(*presol)->priority, FALSE, priority, INT_MIN/4, INT_MAX/4, 
+         &(*presol)->priority, TRUE, priority, INT_MIN/4, INT_MAX/4, 
          paramChgdPresolPriority, (SCIP_PARAMDATA*)(*presol)) ); /*lint !e740*/
 
    sprintf(paramname, "presolving/%s/maxrounds", name);

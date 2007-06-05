@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.158 2007/05/07 13:39:31 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.159 2007/06/05 15:15:46 bzfberth Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1893,7 +1893,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    sprintf(paramname, "constraints/%s/eagerfreq", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, 
          "frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)",
-         &(*conshdlr)->eagerfreq, FALSE, eagerfreq, -1, INT_MAX, NULL, NULL) );
+         &(*conshdlr)->eagerfreq, TRUE, eagerfreq, -1, INT_MAX, NULL, NULL) );
 
    sprintf(paramname, "constraints/%s/maxprerounds", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, 

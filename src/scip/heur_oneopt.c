@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.11 2007/05/07 13:39:33 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.12 2007/06/05 15:15:47 bzfberth Exp $"
 
 /**@file   heur_oneopt.c
  * @brief  oneopt primal heuristic
@@ -215,11 +215,8 @@ SCIP_RETCODE updateRowActivities(
 
       /* update row activity, only regard global rows in the LP */
       if( rowpos >= 0 && !SCIProwIsLocal(row) )         
-      {
          activities[rowpos] +=  shiftval * colvals[i];
-         assert(SCIPisFeasGE(scip, activities[rowpos]/100.0, SCIProwGetLhs(row)/100.0));
-         assert(SCIPisFeasLE(scip, activities[rowpos]/100.0, SCIProwGetRhs(row)/100.0));
-      }
+      
    }
 
    return SCIP_OKAY;
@@ -347,10 +344,8 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       if( !SCIProwIsLocal(row) )
       {
          activities[i] = SCIPgetRowSolActivity(scip, row, bestsol);
-         assert(SCIPisFeasGE(scip, activities[i]/100.0, SCIProwGetLhs(row)/100.0));
-         assert(SCIPisFeasLE(scip, activities[i]/100.0, SCIProwGetRhs(row)/100.0));
+         SCIPdebugMessage("Row <%s> has activity %g\n", SCIProwGetName(row), activities[i]);
       }
-      SCIPdebugMessage("Row <%s> has activity %g\n", SCIProwGetName(row), activities[i]);
    }
 
    SCIPdebugMessage("Starting 1-opt heuristic\n");   
@@ -358,27 +353,30 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    /* enumerate all integer variables and find out which of them are shiftable */
    for( i = 0; i < nintvars; i++ )
    { 
-      SCIP_Real shiftval;
-      SCIP_Real solval;
-
-      /* find out whether the variable can be shifted */
-      solval = SCIPgetSolVal(scip, bestsol,vars[i]);
-      shiftval = calcShiftVal(scip, vars[i], solval, activities);
-
-      /* insert the variable into the list of shifting candidates */
-      if( !SCIPisFeasZero(scip, shiftval) )
-      {
-         SCIPdebugMessage(" -> Variable <%s> can be shifted by <%1.1f> \n", SCIPvarGetName(vars[i]), shiftval);
+      if( SCIPvarGetStatus(vars[i]) == SCIP_VARSTATUS_COLUMN )
+      {         
+         SCIP_Real shiftval;
+         SCIP_Real solval;
          
-         if( nshiftcands == shiftcandssize)
+         /* find out whether the variable can be shifted */
+         solval = SCIPgetSolVal(scip, bestsol,vars[i]);
+         shiftval = calcShiftVal(scip, vars[i], solval, activities);
+         
+         /* insert the variable into the list of shifting candidates */
+         if( !SCIPisFeasZero(scip, shiftval) )
          {
-            shiftcandssize *= 8;
-            SCIP_CALL( SCIPreallocBufferArray(scip, &shiftcands, shiftcandssize) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, &shiftvals, shiftcandssize) );
+            SCIPdebugMessage(" -> Variable <%s> can be shifted by <%1.1f> \n", SCIPvarGetName(vars[i]), shiftval);
+            
+            if( nshiftcands == shiftcandssize)
+            {
+               shiftcandssize *= 8;
+               SCIP_CALL( SCIPreallocBufferArray(scip, &shiftcands, shiftcandssize) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, &shiftvals, shiftcandssize) );
+            }
+            shiftcands[nshiftcands] = vars[i];
+            shiftvals[nshiftcands] = shiftval;
+            nshiftcands++;
          }
-         shiftcands[nshiftcands] = vars[i];
-         shiftvals[nshiftcands] = shiftval;
-         nshiftcands++;
       }
    }
    
@@ -465,15 +463,21 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          /* set the bounds of the variables: fixed for integers, global bounds for continuous */
          for( i = 0; i < nvars; ++i )
          {
-            SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPvarGetLbGlobal(vars[i])) );
-            SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPvarGetUbGlobal(vars[i])) );
+            if( SCIPvarGetStatus(vars[i]) == SCIP_VARSTATUS_COLUMN )
+            {
+               SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPvarGetLbGlobal(vars[i])) );
+               SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPvarGetUbGlobal(vars[i])) );
+            }
          }
          /* apply this after global bounds to not cause an error with intermediate empty domains */
          for( i = 0; i < nintvars; ++i )
          {
-            solval = SCIPgetSolVal(scip, worksol, vars[i]);
-            SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], solval) );
-            SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], solval) );
+            if( SCIPvarGetStatus(vars[i]) == SCIP_VARSTATUS_COLUMN )
+            {
+               solval = SCIPgetSolVal(scip, worksol, vars[i]);
+               SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], solval) );
+               SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], solval) );
+            }
          }
 
          /* solve LP */

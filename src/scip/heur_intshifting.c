@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intshifting.c,v 1.3 2006/12/07 20:36:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_intshifting.c,v 1.4 2007/06/05 15:15:47 bzfberth Exp $"
 
 /**@file   heur_intshifting.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities, shifts integer variables, and
@@ -908,19 +908,24 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
       vars = SCIPgetVars(scip);
       nintvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
       for( v = 0; v < nvars; ++v )
-      {
-         SCIP_CALL( SCIPchgVarLbDive(scip, vars[v], SCIPvarGetLbGlobal(vars[v])) );
-         SCIP_CALL( SCIPchgVarUbDive(scip, vars[v], SCIPvarGetUbGlobal(vars[v])) );
+      { 
+         if( SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN )
+         {
+            SCIP_CALL( SCIPchgVarLbDive(scip, vars[v], SCIPvarGetLbGlobal(vars[v])) );
+            SCIP_CALL( SCIPchgVarUbDive(scip, vars[v], SCIPvarGetUbGlobal(vars[v])) );
+         }
       }
       for( v = 0; v < nintvars; ++v ) /* apply this after global bounds to not cause an error with intermediate empty domains */
       {
-         SCIP_Real solval;
-
-         solval = SCIPgetSolVal(scip, sol, vars[v]);
-         SCIP_CALL( SCIPchgVarLbDive(scip, vars[v], solval) );
-         SCIP_CALL( SCIPchgVarUbDive(scip, vars[v], solval) );
+         if( SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN )
+         {
+            SCIP_Real solval;
+            solval = SCIPgetSolVal(scip, sol, vars[v]);
+            SCIP_CALL( SCIPchgVarLbDive(scip, vars[v], solval) );
+            SCIP_CALL( SCIPchgVarUbDive(scip, vars[v], solval) );
+         }
       }
-
+      
       /* solve LP */
       SCIPdebugMessage(" -> old LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
       SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror) );

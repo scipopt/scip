@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.246 2007/04/02 17:33:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.247 2007/06/05 15:15:48 bzfberth Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -3094,7 +3094,7 @@ SCIP_RETCODE SCIPsolveCIP(
             eventfilter, eventqueue, &cutoff) );
    }
 
-   /* check if we finised solving */
+   /* check whether we finished solving */
    if( SCIPtreeGetNNodes(tree) == 0 && SCIPtreeGetCurrentNode(tree) == NULL )
    {
       /* no restart necessary */

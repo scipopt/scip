@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.62 2007/05/07 13:39:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.63 2007/06/05 15:15:48 bzfberth Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -1215,7 +1215,7 @@ SCIP_RETCODE separateCuts(
 
       assert(SCIProwGetLPPos(rows[r]) == r);
 
-      nnonz = SCIProwGetNNonz(rows[r]);
+      nnonz = SCIProwGetNLPNonz(rows[r]);
       if( nnonz == 0 )
       {
          /* ignore empty rows */

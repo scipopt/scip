@@ -14,11 +14,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.58 2007/03/23 19:45:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.59 2007/06/05 15:15:47 bzfberth Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for variable bound constraints
  * @author Tobias Achterberg
+ * @author Timo Berthold
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -408,7 +409,7 @@ SCIP_RETCODE propagateCons(
                   tightenedround = TRUE;
                   (*nchgbds)++;
                }
-               xlb = newlb;
+               xlb = SCIPvarGetLbLocal(consdata->var);
             }
          }
 
@@ -432,7 +433,7 @@ SCIP_RETCODE propagateCons(
                      tightenedround = TRUE;
                      (*nchgbds)++;
                   }
-                  ylb = newlb;
+                  ylb = SCIPvarGetLbLocal(consdata->vbdvar);
                }
             }
             else
@@ -450,7 +451,7 @@ SCIP_RETCODE propagateCons(
                      tightenedround = TRUE;
                      (*nchgbds)++;
                   }
-                  yub = newub;
+                  yub = SCIPvarGetUbLocal(consdata->vbdvar);
                }
             }
          }
@@ -479,7 +480,7 @@ SCIP_RETCODE propagateCons(
                   tightenedround = TRUE;
                   (*nchgbds)++;
                }
-               xub = newub;
+               xub = SCIPvarGetUbLocal(consdata->var);
              }
          }
 
@@ -503,7 +504,7 @@ SCIP_RETCODE propagateCons(
                      tightenedround = TRUE;
                      (*nchgbds)++;
                   }
-                  yub = newub;
+                  yub = SCIPvarGetUbLocal(consdata->vbdvar);
                }
             }
             else
@@ -521,7 +522,7 @@ SCIP_RETCODE propagateCons(
                      tightenedround = TRUE;
                      (*nchgbds)++;
                   }
-                  ylb = newlb;
+                  ylb = SCIPvarGetLbLocal(consdata->vbdvar);
                }
             }
          }

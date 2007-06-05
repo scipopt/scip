@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.42 2007/05/07 13:39:34 bzfberth Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.43 2007/06/05 15:15:48 bzfberth Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -974,11 +974,11 @@ SCIP_RETCODE SCIPincludePresolProbing(
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/probing/maxuseless",
          "maximal number of successive probings without fixings, until probing is aborted (0: don't abort)",
-         &presoldata->maxuseless, FALSE, DEFAULT_MAXUSELESS, 0, INT_MAX, NULL, NULL) );
+         &presoldata->maxuseless, TRUE, DEFAULT_MAXUSELESS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/probing/maxtotaluseless",
          "maximal number of successive probings without fixings, bound changes, and implications, until probing is aborted (0: don't abort)",
-         &presoldata->maxtotaluseless, FALSE, DEFAULT_MAXTOTALUSELESS, 0, INT_MAX, NULL, NULL) );
+         &presoldata->maxtotaluseless, TRUE, DEFAULT_MAXTOTALUSELESS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/probing/maxsumuseless",
          "maximal number of probings without fixings, until probing is aborted (0: don't abort)",

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.83 2007/04/02 17:33:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.84 2007/06/05 15:15:48 bzfberth Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -568,7 +568,7 @@ SCIP_Bool primalExistsSol(
       SCIP_Real solobj;
 
       solobj = SCIPsolGetObj(primal->sols[i], set, prob);
-      assert(solobj <= obj);
+      assert( SCIPsetIsLE(set, solobj, obj) );
       if( SCIPsetIsLT(set, solobj, obj) )
          break;
       if( SCIPsolGetOrigin(primal->sols[i]) != SCIP_SOLORIGIN_ORIGINAL
@@ -582,7 +582,7 @@ SCIP_Bool primalExistsSol(
       SCIP_Real solobj;
 
       solobj = SCIPsolGetObj(primal->sols[i], set, prob);
-      assert(solobj > obj);
+      assert( SCIPsetIsGE(set, solobj, obj) );
       if( SCIPsetIsGT(set, solobj, obj) )
          break;
       if( SCIPsolGetOrigin(primal->sols[i]) != SCIP_SOLORIGIN_ORIGINAL

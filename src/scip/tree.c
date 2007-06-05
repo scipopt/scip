@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.197 2007/04/19 19:00:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.198 2007/06/05 15:15:49 bzfberth Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1559,7 +1559,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
    {
-      SCIPerrorMessage("cannot change bounds of multi-aggregated variale <%s>\n", SCIPvarGetName(var));
+      SCIPerrorMessage("cannot change bounds of multi-aggregated variable <%s>\n", SCIPvarGetName(var));
       return SCIP_INVALIDDATA;
    }
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
@@ -1636,7 +1636,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    /* if the node is the root node: change local and global bound immediately */
    if( SCIPnodeGetDepth(node) <= tree->effectiverootdepth )
    {
-      assert(node->active);
+      assert(node->active || tree->focusnode == NULL );
       assert(SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE);
       assert(!probingchange);
 

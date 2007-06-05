@@ -14,11 +14,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.61 2006/06/21 11:53:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.62 2007/06/05 15:15:47 bzfberth Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.3.0
  * @author Tobias Achterberg
+ * @author Timo Berthold
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -50,7 +51,10 @@
 
 #include <cassert>
 
-
+extern "C" 
+{
+#include "scip/message.h"
+}
 /********************************************************************/
 /*----------------------------- C++ --------------------------------*/
 /********************************************************************/
@@ -59,6 +63,8 @@
 #undef NULL
 #define NULL 0
 
+
+#include <iostream>
 using namespace soplex;
 
 
@@ -164,20 +170,34 @@ public:
 
    virtual Status solve()
    {
-      if( getFromScratch() )
-         SPxSolver::reLoad();
-      m_stat = SPxSolver::solve();
-
-      assert(rep() == COLUMN);
-
-      if( m_stat == OPTIMAL )
+      try
       {
-         Real objval = value();
-
-         if( (objval > m_objUpLimit) || (objval < m_objLoLimit) )
-            m_stat = ABORT_VALUE;
+         if( getFromScratch() )
+            SPxSolver::reLoad();
+         m_stat = SPxSolver::solve();
+     
       }
-      return m_stat;
+      catch(SPxException x)
+      {
+         std::string s = x.what();      
+         SCIPwarningMessage("SoPlex threw an exception: %s\n",s.c_str());
+      }
+      catch(...)
+      {
+         SCIPwarningMessage("SoPlex threw an unknown exception\n");
+      }
+
+         assert(rep() == COLUMN);
+
+         if( m_stat == OPTIMAL )
+         {
+            Real objval = value();
+
+            if( (objval > m_objUpLimit) || (objval < m_objLoLimit) )
+               m_stat = ABORT_VALUE;
+         }
+         return m_stat;
+      
    }
 
    Status getStatus() const
@@ -187,35 +207,99 @@ public:
 
    virtual void clear()
    {
-      SPxSolver::clear();
+      try
+      {
+         SPxSolver::clear();
+         
+         m_stat = NO_PROBLEM;
+      }
+      catch(SPxException x)
+      {
+         std::string s = x.what();      
+         SCIPwarningMessage("SoPlex threw an exception: %s\n",s.c_str());
+      }
+      catch(...)
+      {
+         SCIPwarningMessage("SoPlex threw an unknown exception\n");
+      }
 
-      m_stat = NO_PROBLEM;
    }
 
    /* the following methods have to be reimplemented to install a workaround for a SOPLEX bug */
    virtual void addCol(const LPCol& col)
    {
-      SPxSolver::addCol(col);
-      if( matrixIsSetup )
-         SPxBasis::loadMatrixVecs(); /* bug workaround */
+      try
+      {
+         SPxSolver::addCol(col);
+         if( matrixIsSetup )
+            SPxBasis::loadMatrixVecs(); /* bug workaround */
+      }
+      catch(SPxException x)
+      {
+         std::string s = x.what();      
+         SCIPwarningMessage("SoPlex threw an exception: %s\n",s.c_str());
+      }
+      catch(...)
+      {
+         SCIPwarningMessage("SoPlex threw an unknown exception\n");
+      }
+
    }
    virtual void addCol(SPxColId& theid, const LPCol& col)
    {
-      SPxSolver::addCol(theid, col);
-      if( matrixIsSetup )
-         SPxBasis::loadMatrixVecs(); /* bug workaround */
+      try
+      {
+         SPxSolver::addCol(theid, col);
+         if( matrixIsSetup )
+            SPxBasis::loadMatrixVecs(); /* bug workaround */
+
+      }
+      catch(SPxException x)
+      {
+         std::string s = x.what();      
+         SCIPwarningMessage("SoPlex threw an exception: %s\n",s.c_str());
+      }
+      catch(...)
+      {
+         SCIPwarningMessage("SoPlex threw an unknown exception\n");
+      }
    }
    virtual void addCols(const LPColSet& pset)
    {
-      SPxSolver::addCols(pset);
-      if( matrixIsSetup )
-         SPxBasis::loadMatrixVecs(); /* bug workaround */
+      try
+      {
+         SPxSolver::addCols(pset);
+         if( matrixIsSetup )
+            SPxBasis::loadMatrixVecs(); /* bug workaround */
+      }
+      catch(SPxException x)
+      {
+         std::string s = x.what();      
+         SCIPwarningMessage("SoPlex threw an exception: %s\n",s.c_str());
+      }
+      catch(...)
+      {
+         SCIPwarningMessage("SoPlex threw an unknown exception\n");
+      }
    }
    virtual void addCols(SPxColId theid[], const LPColSet& theset)
    {
-      SPxSolver::addCols(theid, theset);
-      if( matrixIsSetup )
-         SPxBasis::loadMatrixVecs(); /* bug workaround */
+      try
+      {
+         SPxSolver::addCols(theid, theset);
+         if( matrixIsSetup )
+            SPxBasis::loadMatrixVecs(); /* bug workaround */
+
+      }
+      catch(SPxException x)
+      {
+         std::string s = x.what();      
+         SCIPwarningMessage("SoPlex threw an exception: %s\n",s.c_str());
+      }
+      catch(...)
+      {
+         SCIPwarningMessage("SoPlex threw an unknown exception\n");
+      }
    }
 }; /*lint !e1748*/
 
@@ -230,7 +314,6 @@ extern "C"
 {
 #include "scip/lpi.h"
 #include "scip/bitencode.h"
-#include "scip/message.h"
 }
 
 
