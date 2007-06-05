@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.62 2007/06/05 15:15:47 bzfberth Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.63 2007/06/05 16:00:15 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.3.0
@@ -177,27 +177,28 @@ public:
          m_stat = SPxSolver::solve();
      
       }
+#if SOPLEX_VERSION >= 132
       catch(SPxException x)
       {
          std::string s = x.what();      
          SCIPwarningMessage("SoPlex threw an exception: %s\n",s.c_str());
       }
+#endif
       catch(...)
       {
          SCIPwarningMessage("SoPlex threw an unknown exception\n");
       }
 
-         assert(rep() == COLUMN);
-
-         if( m_stat == OPTIMAL )
-         {
-            Real objval = value();
-
-            if( (objval > m_objUpLimit) || (objval < m_objLoLimit) )
-               m_stat = ABORT_VALUE;
-         }
-         return m_stat;
+      assert(rep() == COLUMN);
       
+      if( m_stat == OPTIMAL )
+      {
+         Real objval = value();
+         
+         if( (objval > m_objUpLimit) || (objval < m_objLoLimit) )
+            m_stat = ABORT_VALUE;
+      }
+      return m_stat;
    }
 
    Status getStatus() const
@@ -213,11 +214,13 @@ public:
          
          m_stat = NO_PROBLEM;
       }
+#if SOPLEX_VERSION >= 132
       catch(SPxException x)
       {
          std::string s = x.what();      
          SCIPwarningMessage("SoPlex threw an exception: %s\n",s.c_str());
       }
+#endif
       catch(...)
       {
          SCIPwarningMessage("SoPlex threw an unknown exception\n");
@@ -234,11 +237,13 @@ public:
          if( matrixIsSetup )
             SPxBasis::loadMatrixVecs(); /* bug workaround */
       }
+#if SOPLEX_VERSION >= 132
       catch(SPxException x)
       {
          std::string s = x.what();      
          SCIPwarningMessage("SoPlex threw an exception: %s\n",s.c_str());
       }
+#endif
       catch(...)
       {
          SCIPwarningMessage("SoPlex threw an unknown exception\n");
@@ -254,11 +259,13 @@ public:
             SPxBasis::loadMatrixVecs(); /* bug workaround */
 
       }
+#if SOPLEX_VERSION >= 132
       catch(SPxException x)
       {
          std::string s = x.what();      
          SCIPwarningMessage("SoPlex threw an exception: %s\n",s.c_str());
       }
+#endif
       catch(...)
       {
          SCIPwarningMessage("SoPlex threw an unknown exception\n");
@@ -272,11 +279,13 @@ public:
          if( matrixIsSetup )
             SPxBasis::loadMatrixVecs(); /* bug workaround */
       }
+#if SOPLEX_VERSION >= 132
       catch(SPxException x)
       {
          std::string s = x.what();      
          SCIPwarningMessage("SoPlex threw an exception: %s\n",s.c_str());
       }
+#endif
       catch(...)
       {
          SCIPwarningMessage("SoPlex threw an unknown exception\n");
@@ -291,11 +300,13 @@ public:
             SPxBasis::loadMatrixVecs(); /* bug workaround */
 
       }
+#if SOPLEX_VERSION >= 132
       catch(SPxException x)
       {
          std::string s = x.what();      
          SCIPwarningMessage("SoPlex threw an exception: %s\n",s.c_str());
       }
+#endif
       catch(...)
       {
          SCIPwarningMessage("SoPlex threw an unknown exception\n");
