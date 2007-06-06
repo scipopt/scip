@@ -3,9 +3,9 @@
 /*                  This file is part of the library                         */
 /*          BMS --- Block Memory Shell                                       */
 /*                                                                           */
-/*    Copyright (C) 2002-2006 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
 /*                                                                           */
-/*                  2002-2006 Konrad-Zuse-Zentrum                            */
+/*                  2002-2007 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  BMS is distributed under the terms of the ZIB Academic License.          */
@@ -14,7 +14,7 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.h,v 1.3 2007/05/15 15:09:45 bzforlow Exp $"
+#pragma ident "@(#) $Id: memory.h,v 1.4 2007/06/06 11:25:10 bzfpfend Exp $"
 
 /**@file   memory.h
  * @brief  memory allocation routines

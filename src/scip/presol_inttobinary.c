@@ -3,9 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2006 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
 /*                                                                           */
-/*                  2002-2006 Konrad-Zuse-Zentrum                            */
+/*                  2002-2007 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_inttobinary.c,v 1.2 2006/06/07 08:21:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_inttobinary.c,v 1.3 2007/06/06 11:25:21 bzfpfend Exp $"
 
 /**@file   presol_inttobinary.c
  * @brief  presolver that converts integer variables with domain [a,a+1] to binaries

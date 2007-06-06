@@ -3,9 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2006 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
 /*                                                                           */
-/*                  2002-2006 Konrad-Zuse-Zentrum                            */
+/*                  2002-2007 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipshell.h,v 1.1 2006/03/16 14:43:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipshell.h,v 1.2 2007/06/06 11:25:25 bzfpfend Exp $"
 
 /**@file   scipshell.h
  * @brief  SCIP command line interface
