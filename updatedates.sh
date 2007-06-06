@@ -1,6 +1,5 @@
 #!/bin/sh
-#for i in Makefile INSTALL check/*.sh check/*.awk doc/*.c src/*.c src/*.cpp src/*.h src/blockmemshell/*.c src/blockmemshell/*.h src/objscip/*.cpp src/objscip/*.h src/scip/*.c src/scip/*.h src/tclique/*.c src/tclique/*.h
-for i in check/*.sh check/*.awk doc/*.c
+for i in Makefile INSTALL check/*.sh check/*.awk doc/*.c src/*.c src/*.cpp src/*.h src/blockmemshell/*.c src/blockmemshell/*.h src/objscip/*.cpp src/objscip/*.h src/scip/*.c src/scip/*.cpp src/scip/*.h src/tclique/*.c src/tclique/*.h
 do
 echo $i
 mv $i $i.olddate
