@@ -15,7 +15,9 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck.sh,v 1.6 2007/06/06 11:28:07 bzfpfend Exp $
+# $Id: evalcheck.sh,v 1.7 2007/06/06 16:31:04 bzfberth Exp $
+
+export LANG=C
 
 AWKARGS=""
 FILES=""
