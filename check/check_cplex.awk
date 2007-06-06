@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.29 2007/02/12 16:47:25 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.30 2007/06/06 11:04:15 bzfpfend Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -35,6 +35,7 @@ BEGIN {
    nodegeomshift = 1000.0;
    onlyinsolufile = 0;  # should only instances be reported that are included in the .solu file?
    conflictstats = 0;   # should output format match that of SCIP's statistics including conflicts?
+   useshortnames = 1;   # should problem name be truncated to fit into column?
 
    printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
    printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
@@ -95,11 +96,11 @@ BEGIN {
    for( i = 2; i < m; ++i )
       prob = prob "." b[i];
 
-   if( length(prob) > 18 )
-      shortprob = sprintf("%s*%s", substr(prob, 1, 6), substr(prob, length(prob)-10, 11));
+   if( useshortnames && length(prob) > 18 )
+      shortprob = substr(prob, length(prob)-17, 18);
    else
       shortprob = prob;
-   
+
    # Escape _ for TeX
    n = split(prob, a, "_");
    pprob = a[1];

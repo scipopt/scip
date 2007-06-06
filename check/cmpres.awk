@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.42 2007/04/30 20:17:57 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.43 2007/06/06 11:04:15 bzfpfend Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -54,6 +54,11 @@ function fracceil(x,f)
 function fracfloor(x,f)
 {
    return floor(x/f)*f;
+}
+
+function mod(x,m)
+{
+   return (x - m*floor(x/m));
 }
 
 function printhline(nsolver)
@@ -107,6 +112,30 @@ function texcompstr(val,refval, x,s,t)
    return sprintf("%s%d%s", s, abs(x), t);
 }
 
+function texstring(s, ts)
+{
+   ts = s;
+   gsub(/_/, "\\_", ts);
+
+   return ts;
+}
+
+function texint(x, ts,r)
+{
+   ts = "";
+   x = floor(x);
+   while( x != 0 )
+   {
+      r = mod(x, 1000);
+      x = floor(x/1000);
+      if( ts != "" )
+         ts = "\\," ts;
+      ts = r "" ts;
+   }
+
+   return ts;
+}
+
 function texsolvername(s, sname)
 {
    sname = solvername[s];
@@ -148,6 +177,9 @@ BEGIN {
    texsummaryshifted = 0;
    texcolorlimit = 5;
    textestset = "";
+   texcmpfile = "";
+   texcmpfiledir = "";
+   texcmpfilename = "";
    thesisnames = 0;
    nsetnames = 0;
    onlygroup = 0;
@@ -267,6 +299,10 @@ END {
       exit 1;
    }
 
+   # tex comparison file: either directly as 'texcmpfile' or as pair 'texcmpfiledir/texcmpfilename'
+   if( texcmpfile == "" && texcmpfiledir != "" && texcmpfilename != "" )
+      texcmpfile = texcmpfiledir "/" texcmpfilename;
+
    # process exclude string
    n = split(exclude, a, ",");
    for( i = 1; i <= n; i++ )
@@ -359,16 +395,45 @@ END {
    }
    printf("\n");
    printhline(nsolver);
+   printf("  Name              |");
    for( s = 0; s < nsolver; ++s )
    {
       if( s == 0 )
-         printf("  Name              |F|   Nodes |   Time |");
+         printf("F|   Nodes |   Time |");
       else
          printf("F|   Nodes |   Time | NodQ | TimQ |");
    }
    printf(" bounds check\n");
    printhline(nsolver);
-   
+
+   # tex comparison headers
+   if( texcmpfile != "" )
+   {
+      printf("{\\sffamily\n") > texcmpfile;
+      printf("\\scriptsize\n") > texcmpfile;
+      printf("\\setlength{\\extrarowheight}{1pt}\n") > texcmpfile;
+      printf("\\setlength{\\tabcolsep}{2pt}\n") > texcmpfile;
+      printf("\\newcommand{\\g}{\\raisebox{0.25ex}{\\tiny $>$}}\n") > texcmpfile;
+      printf("\\newcommand{\\spc}{\\hspace{2em}}\n") > texcmpfile;
+      printf("\\begin{tabular*}{\\columnwidth}{@{\\extracolsep{\\fill}}l") > texcmpfile;
+      for( s = 0; s < nsolver; ++s )
+         printf("@{\\spc}rr") > texcmpfile;
+      printf("@{}}\n") > texcmpfile;
+      printf("\\toprule\n") > texcmpfile;
+      solverextension = "";
+      for( o = 0; o < nsolver; ++o )
+      {
+         s = printorder[o];
+         solverextension = solverextension "i";
+         printf("& \\multicolumn{2}{@{\\spc}c%s}{\\solvername%s} ", o < nsolver-1 ? "@{\\spc}" : "", solverextension) > texcmpfile;
+      }
+      printf("\\\\\n") > texcmpfile;
+      for( o = 0; o < nsolver; ++o )
+         printf("& Nodes & Time ") > texcmpfile;
+      printf("\\\\\n") > texcmpfile;
+      printf("\\midrule\n") > texcmpfile;
+   }
+
    # display the problem results and calculate mean values
    for( i = 0; i < problistlen; ++i )
    {
@@ -654,7 +719,54 @@ END {
       if( (!onlymarked || mark == "*") && (!onlyprocessed || !unprocessed) &&
           (!onlyfeasible || hasfeasible) && (!onlyinfeasible || !hasfeasible) &&
           (!onlyfail || fail) )
+      {
          printf("%s %s\n", mark, line);
+
+         # tex comparison file
+         if( texcmpfile != "" )
+         {
+            printf("%s ", texstring(p)) > texcmpfile;
+            ref = printorder[0];
+            refnodes = nodes[ref,probidx[p,ref]];
+            reftime = time[ref,probidx[p,ref]];
+            refstatus = status[ref,probidx[p,ref]];
+            for( o = 0; o < nsolver; ++o )
+            {
+               s = printorder[o];
+               pidx = probidx[p,s];
+
+               if( status[s,pidx] == "timeout" )
+                  timeoutmarker = "\\g";
+               else
+                  timeoutmarker = "  ";
+
+               if( nodes[s,pidx] <= 0.5*refnodes && status[s,pidx] != "timeout" )
+                  nodecolor = "red";
+               else if( nodes[s,pidx] >= 2.0*refnodes && refstatus != "timeout" )
+                  nodecolor = "blue";
+               else
+                  nodecolor = "black";
+
+               if( (time[s,pidx] <= 0.5*reftime && status[s,pidx] != "timeout") ||
+                  (status[s,pidx] != "timeout" && refstatus == "timeout") )
+                  timecolor = "red";
+               else if( (time[s,pidx] >= 2.0*reftime && refstatus != "timeout") ||
+                  (status[s,pidx] == "timeout" && refstatus != "timeout") )
+                  timecolor = "blue";
+               else
+                  timecolor = "black";
+
+               if( status[s,pidx] == "ok" || status[s,pidx] == "unknown" || status[s,pidx] == "timeout" )
+                  printf("&\\textcolor{%s}{%s %8s} &\\textcolor{%s}{%s %8.1f} ",
+                     nodecolor, timeoutmarker, texint(nodes[s,pidx]), timecolor, timeoutmarker, time[s,pidx]) > texcmpfile;
+               else
+                  printf("&        --- &        --- ") > texcmpfile;
+            }
+            printf("\\\\\n") > texcmpfile;
+
+
+         }
+      }
 
       # calculate totals and means for instances where no solver failed
       if( !fail && !unprocessed &&
@@ -793,6 +905,37 @@ END {
    
    printf("\n");
    printhline(nsolver);
+
+   # tex comparison footer
+   if( texcmpfile != "" )
+   {
+      printf("\\midrule\n") > texcmpfile;
+      printf("geom. mean     ") > texcmpfile;
+      for( o = 0; o < nsolver; ++o )
+      {
+         s = printorder[o];
+         printf("& %8s & %8.1f", texint(nodegeom[s,0]), timegeom[s,0]) > texcmpfile;
+      }
+      printf("\\\\\n") > texcmpfile;
+      printf("sh. geom. mean ") > texcmpfile;
+      for( o = 0; o < nsolver; ++o )
+      {
+         s = printorder[o];
+         printf("& %8s & %8.1f", texint(nodeshiftedgeom[s,0]), timeshiftedgeom[s,0]) > texcmpfile;
+      }
+      printf("\\\\\n") > texcmpfile;
+      printf("arithm. mean   ") > texcmpfile;
+      for( o = 0; o < nsolver; ++o )
+      {
+         s = printorder[o];
+         printf("& %8s & %8.1f", texint(nodetotal[s,0]/nevalprobs[s,0]), timetotal[s,0]/nevalprobs[s,0]) > texcmpfile;
+      }
+      printf("\\\\\n") > texcmpfile;
+      printf("\\bottomrule\n") > texcmpfile;
+      printf("\\end{tabular*}\n") > texcmpfile;
+      printf("}\n") > texcmpfile;
+   }
+
 
    for( cat = 0; cat <= 3; cat++ )
    {
@@ -941,7 +1084,7 @@ END {
 
          printf("\n") >> texincfile;
          printf("\\begin{table}[hp]\n") > texincfile;
-         printf("\\input{Tables/mip/%s}\n", texbase) > texincfile;
+         printf("\\input{Tables/mip/auto/%s}\n", texbase) > texincfile;
          printf("\\smalltabcaption{\\label{table_%s_%s_%s}\n", texsetname, texgroupname, textestname) > texincfile;
          printf("Evaluation of \\setting%s%s on test set \\testset{%s}.}\n", texsetname, texgroupname, textestname) > texincfile;
          printf("\\end{table}\n") > texincfile;
@@ -990,12 +1133,12 @@ END {
             if( si == 0 || si == 1 )
             {
                printf("\\midrule\n") > texsummaryfile;
-               printf("\\input{Tables/mip/%s_time}\n", texsummarybase) > texsummaryfile;
+               printf("\\input{Tables/mip/auto/%s_time}\n", texsummarybase) > texsummaryfile;
             }
             if( si == 0 || si == 2 )
             {
                printf("\\midrule\n") > texsummaryfile;
-               printf("\\input{Tables/mip/%s_nodes}\n", texsummarybase) > texsummaryfile;
+               printf("\\input{Tables/mip/auto/%s_nodes}\n", texsummarybase) > texsummaryfile;
             }
             printf("\\bottomrule\n") >> texsummaryfile;
             printf("\\end{tabular*}\n") >> texsummaryfile;

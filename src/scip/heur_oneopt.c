@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.12 2007/06/05 15:15:47 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.13 2007/06/06 11:04:15 bzfpfend Exp $"
 
 /**@file   heur_oneopt.c
  * @brief  oneopt primal heuristic
@@ -316,6 +316,16 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    if( SCIPsolGetOrigin(bestsol) == SCIP_SOLORIGIN_ORIGINAL )
       return SCIP_OKAY;
 
+   /* get problem variables */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );  
+   nintvars = nbinvars + nintvars;
+
+   /* we need to be able to start diving from current node in order to resolve the LP
+    * with continuous or implicit integer variables
+    */
+   if( nvars > nintvars && !SCIPhasCurrentNodeLP(scip) )
+      return SCIP_OKAY;
+
    *result = SCIP_DIDNOTFIND;
 
    /* initialize data */
@@ -330,8 +340,6 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    SCIP_CALL( SCIPallocBufferArray(scip, &activities, nlprows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &shiftcands, shiftcandssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &shiftvals, shiftcandssize) );
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );  
-   nintvars = nbinvars + nintvars;
 
    /* initialize activities */
    for( i = 0; i < nlprows; ++i )

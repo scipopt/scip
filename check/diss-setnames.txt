@@ -1,8 +1,5 @@
 =group= default
 =setname= SCIP:default                        default
-
-=group= default
-=setname= SCIP:default                        default
 =setname= SCIP:mem_noblk                      no block
 =setname= SCIP:mem_nobuf                      no buffer
 =setname= SCIP:mem_noblkbuf                   none
@@ -173,3 +170,8 @@
 =setname= SCIP:conf_proplp                    prop/lp
 =setname= SCIP:conf_all                       all
 =setname= SCIP:conf_full                      full
+
+=group= cplex
+=setname= CPLEX:default                       \CPLEX~10.0.1
+=setname= SCIP:oldversion                     \SCIP~0.90f
+=setname= SCIP:newversion2                    \SCIP~0.90i

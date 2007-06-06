@@ -128,6 +128,7 @@ fixed bugs:
 - fixed bug regarding modifying bounds in original problem if negated original variables exist
 - fixed bug in ZIMPL file reader for multiple occurrences of a single variable in the objective function
 - fixed bug with deleting variables from the transformed problem that are contained in the implication graph
+- fixed bug in oneopt heuristic: must not be called on pseudo nodes if continuous variables are present
 
 
 SCIP version 0.90
