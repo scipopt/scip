@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.51 2007/06/06 11:25:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.52 2007/06/12 10:48:48 bzfpfend Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -109,7 +109,7 @@ SCIP_RETCODE SCIPdispCreate(
    sprintf(paramname, "display/%s/active", name);
    sprintf(paramdesc, "display activation status of display column <%s> (0: off, 1: auto, 2:on)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
-                  (int*)(&(*disp)->dispstatus), TRUE, (int)dispstatus, 0, 2, SCIPparamChgdDispActive, NULL) );
+         (int*)(&(*disp)->dispstatus), FALSE, (int)dispstatus, 0, 2, SCIPparamChgdDispActive, NULL) );
 
    return SCIP_OKAY;
 }
