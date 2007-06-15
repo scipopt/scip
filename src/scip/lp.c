@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.245 2007/06/06 11:25:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.246 2007/06/15 10:06:40 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6938,6 +6938,7 @@ void cleanupMIRRow(
 static
 SCIP_RETCODE transformMIRRow(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
@@ -7061,7 +7062,7 @@ SCIP_RETCODE transformMIRRow(
                   SCIP_Real bestvub;
                   int bestvubidx;
 
-                  SCIPvarGetClosestVub(var, &bestvub, &bestvubidx);
+                  SCIPvarGetClosestVub(var, stat, &bestvub, &bestvubidx);
                   if( bestvubidx >= 0
                      && (bestvub < bestub || (bestubtype < 0 && SCIPsetIsLE(set, bestvub, bestub))) )
                   {
@@ -7120,7 +7121,7 @@ SCIP_RETCODE transformMIRRow(
                   SCIP_Real bestvlb;
                   int bestvlbidx;
 
-                  SCIPvarGetClosestVlb(var, &bestvlb, &bestvlbidx);
+                  SCIPvarGetClosestVlb(var, stat, &bestvlb, &bestvlbidx);
                   if( bestvlbidx >= 0
                      && (bestvlb > bestlb || (bestlbtype < 0 && SCIPsetIsGE(set, bestvlb, bestlb))) )
                   {
@@ -7156,7 +7157,7 @@ SCIP_RETCODE transformMIRRow(
             SCIP_Real bestvlb;
             int bestvlbidx;
 
-            SCIPvarGetClosestVlb(var, &bestvlb, &bestvlbidx);
+            SCIPvarGetClosestVlb(var, stat, &bestvlb, &bestvlbidx);
             if( bestvlbidx >= 0
                && (bestvlb > bestlb || (bestlbtype < 0 && SCIPsetIsGE(set, bestvlb, bestlb))) )
             {
@@ -7184,7 +7185,7 @@ SCIP_RETCODE transformMIRRow(
             SCIP_Real bestvub;
             int bestvubidx;
 
-            SCIPvarGetClosestVub(var, &bestvub, &bestvubidx);
+            SCIPvarGetClosestVub(var, stat, &bestvub, &bestvubidx);
             if( bestvubidx >= 0
                && (bestvub < bestub || (bestubtype < 0 && SCIPsetIsLE(set, bestvub, bestub))) )
             {
@@ -7902,7 +7903,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
     *   a_{zl_j} := a_{zl_j} + a_j * bl_j, or
     *   a_{zu_j} := a_{zu_j} + a_j * bu_j
     */
-   SCIP_CALL( transformMIRRow(set, prob, boundswitch, usevbds, allowlocal, fixintegralrhs, boundsfortrans, 
+   SCIP_CALL( transformMIRRow(set, stat, prob, boundswitch, usevbds, allowlocal, fixintegralrhs, boundsfortrans, 
          boundtypesfortrans, minfrac, maxfrac, mircoef, &rhs, varsign, boundtype, &freevariable, &localbdsused) );
    assert(allowlocal || !localbdsused);
    *cutislocal = *cutislocal || localbdsused;
@@ -8143,6 +8144,7 @@ void sumStrongCGRow(
 static
 void transformStrongCGRow(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
@@ -8214,7 +8216,7 @@ void transformStrongCGRow(
          SCIP_Real bestvlb;
          int bestvlbidx;
 
-         SCIPvarGetClosestVlb(var, &bestvlb, &bestvlbidx);
+         SCIPvarGetClosestVlb(var, stat, &bestvlb, &bestvlbidx);
          if( bestvlbidx >= 0
             && (bestvlb > bestlb || (bestlbtype < 0 && SCIPsetIsGE(set, bestvlb, bestlb))) )
          {
@@ -8242,7 +8244,7 @@ void transformStrongCGRow(
          SCIP_Real bestvub;
          int bestvubidx;
 
-         SCIPvarGetClosestVub(var, &bestvub, &bestvubidx);
+         SCIPvarGetClosestVub(var, stat, &bestvub, &bestvubidx);
          if( bestvubidx >= 0
             && (bestvub < bestub || (bestubtype < 0 && SCIPsetIsLE(set, bestvub, bestub))) )
          {
@@ -8747,7 +8749,7 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
     *   a_{zl_j} := a_{zl_j} + a_j * bl_j, or
     *   a_{zu_j} := a_{zu_j} + a_j * bu_j
     */
-   transformStrongCGRow(set, prob, boundswitch, usevbds, allowlocal, 
+   transformStrongCGRow(set, stat, prob, boundswitch, usevbds, allowlocal, 
       strongcgcoef, &rhs, varsign, boundtype, &freevariable, &localbdsused);
    assert(allowlocal || !localbdsused);
    *cutislocal = *cutislocal || localbdsused;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.64 2007/06/06 11:25:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.65 2007/06/15 10:06:41 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -1172,8 +1172,8 @@ SCIP_RETCODE separateCuts(
          bestlb = SCIPvarGetLbGlobal(vars[v]);
          bestub = SCIPvarGetUbGlobal(vars[v]);
       }
-      SCIPvarGetClosestVlb(vars[v], &bestvlb, &bestvlbidx);
-      SCIPvarGetClosestVub(vars[v], &bestvub, &bestvubidx);
+      SCIP_CALL( SCIPgetVarClosestVlb(scip, vars[v], &bestvlb, &bestvlbidx) );
+      SCIP_CALL( SCIPgetVarClosestVub(scip, vars[v], &bestvub, &bestvubidx) );
       if( bestvlbidx >= 0 )
          bestlb = MAX(bestlb, bestvlb);
       if( bestvubidx >= 0 )

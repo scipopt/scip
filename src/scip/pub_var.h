@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.65 2007/06/06 11:25:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.66 2007/06/15 10:06:40 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -757,26 +757,6 @@ SCIP_Real SCIPvarGetRootRedcost(
 extern
 SCIP_Real SCIPvarGetAvgSol(
    SCIP_VAR*             var                 /**< problem variable */
-   );
-
-/** returns LP solution value and index of variable lower bound that is closest to variable's current LP solution value;
- *  returns an index of -1 if no variable lower bound is available
- */
-extern
-void SCIPvarGetClosestVlb(
-   SCIP_VAR*             var,                /**< active problem variable */
-   SCIP_Real*            closestvlb,         /**< pointer to store the value of the closest variable lower bound */
-   int*                  closestvlbidx       /**< pointer to store the index of the closest variable lower bound */
-   );
-
-/** returns LP solution value and index of variable upper bound that is closest to variable's current LP solution value;
- *  returns an index of -1 if no variable upper bound is available
- */
-extern
-void SCIPvarGetClosestVub(
-   SCIP_VAR*             var,                /**< active problem variable */
-   SCIP_Real*            closestvub,         /**< pointer to store the value of the closest variable upper bound */
-   int*                  closestvubidx       /**< pointer to store the index of the closest variable upper bound */
    );
 
 /** returns the bound change information for the last lower bound change on given active problem variable before or

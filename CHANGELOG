@@ -27,6 +27,8 @@ interface:
   of a time limit
 - new method SCIProwIsInGlobalCutpool()
 - removed parameter "lowestboundfirst" from SCIPincludeNodesel()
+- replaced methods SCIPvarGetClosestVlb() and SCIPvarGetClosestVub() from pub_var.h by new methods
+  SCIPgetVarClosestVlb() and SCIPgetVarClosestVlb() in scip.h
 
 plugins:
 - new improvement heuristic "oneopt"
@@ -129,6 +131,7 @@ fixed bugs:
 - fixed bug in ZIMPL file reader for multiple occurrences of a single variable in the objective function
 - fixed bug with deleting variables from the transformed problem that are contained in the implication graph
 - fixed bug in oneopt heuristic: must not be called on pseudo nodes if continuous variables are present
+- significantly improved performance of c-MIR and Gomory cuts by caching closest VLB and VUB info
 
 
 SCIP version 0.90

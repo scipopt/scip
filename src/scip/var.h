@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.114 2007/06/06 11:25:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.115 2007/06/15 10:06:41 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -818,6 +818,28 @@ SCIP_Real SCIPvarGetLbLP(
 extern
 SCIP_Real SCIPvarGetUbLP(
    SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns LP solution value and index of variable lower bound that is closest to variable's current LP solution value;
+ *  returns an index of -1 if no variable lower bound is available
+ */
+extern
+void SCIPvarGetClosestVlb(
+   SCIP_VAR*             var,                /**< active problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real*            closestvlb,         /**< pointer to store the value of the closest variable lower bound */
+   int*                  closestvlbidx       /**< pointer to store the index of the closest variable lower bound */
+   );
+
+/** returns LP solution value and index of variable upper bound that is closest to variable's current LP solution value;
+ *  returns an index of -1 if no variable upper bound is available
+ */
+extern
+void SCIPvarGetClosestVub(
+   SCIP_VAR*             var,                /**< active problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real*            closestvub,         /**< pointer to store the value of the closest variable upper bound */
+   int*                  closestvubidx       /**< pointer to store the index of the closest variable upper bound */
    );
 
 /** remembers the current solution as root solution in the problem variables */

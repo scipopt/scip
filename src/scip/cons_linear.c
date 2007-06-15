@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.238 2007/06/06 11:25:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.239 2007/06/15 10:06:40 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2649,7 +2649,7 @@ SCIP_RETCODE mergeMultiples(
    SCIP_CALL( consdataSort(scip, consdata) );
 
    /* go backwards through the constraint looking for multiple occurrences of the same variable;
-    * backward direction is necessary, since consdataDelCoefPos() modifies the given position and
+    * backward direction is necessary, since delCoefPos() modifies the given position and
     * the subsequent ones
     */
    for( v = consdata->nvars-1; v >= 1; --v )

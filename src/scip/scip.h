@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.298 2007/06/06 11:25:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.299 2007/06/15 10:06:40 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2239,6 +2239,28 @@ SCIP_RETCODE SCIPinferBinvarProp(
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
    SCIP_Bool*            tightened           /**< pointer to store whether the fixing tightened the local bounds, or NULL */
+   );
+
+/** returns LP solution value and index of variable lower bound that is closest to variable's current LP solution value;
+ *  returns an index of -1 if no variable lower bound is available
+ */
+extern
+SCIP_RETCODE SCIPgetVarClosestVlb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< active problem variable */
+   SCIP_Real*            closestvlb,         /**< pointer to store the value of the closest variable lower bound */
+   int*                  closestvlbidx       /**< pointer to store the index of the closest variable lower bound */
+   );
+
+/** returns LP solution value and index of variable upper bound that is closest to variable's current LP solution value;
+ *  returns an index of -1 if no variable upper bound is available
+ */
+extern
+SCIP_RETCODE SCIPgetVarClosestVub(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< active problem variable */
+   SCIP_Real*            closestvub,         /**< pointer to store the value of the closest variable lower bound */
+   int*                  closestvubidx       /**< pointer to store the index of the closest variable lower bound */
    );
 
 /** informs variable x about a globally valid variable lower bound x >= b*z + d with integer variable z;

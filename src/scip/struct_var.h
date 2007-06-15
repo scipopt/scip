@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.44 2007/06/06 11:25:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.45 2007/06/15 10:06:41 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -245,8 +245,11 @@ struct SCIP_Var
    int                   nubchginfos;        /**< number of upper bound changes from root node to current node */
    int                   conflictlbcount;    /**< number of last conflict, the lower bound was member of */
    int                   conflictubcount;    /**< number of last conflict, the upper bound was member of */
+   int                   closestvlbidx;      /**< index of closest VLB variable in current LP solution, or -1 */
+   int                   closestvubidx;      /**< index of closest VUB variable in current LP solution, or -1 */
+   int                   closestvblpcount;   /**< LP count for which the closestvlbidx/closestvubidx entries are valid */
    unsigned int          initial:1;          /**< TRUE iff var's column should be present in the initial root LP */
-   unsigned int          removable:1;       /**< TRUE iff var's column is removable from the LP (due to aging or cleanup) */
+   unsigned int          removable:1;        /**< TRUE iff var's column is removable from the LP (due to aging or cleanup) */
    unsigned int          deleted:1;          /**< TRUE iff variable was deleted from the problem */
    unsigned int          vartype:2;          /**< type of variable: binary, integer, implicit integer, continuous */
    unsigned int          varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */

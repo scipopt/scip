@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.410 2007/06/06 11:25:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.411 2007/06/15 10:06:40 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6583,6 +6583,40 @@ SCIP_RETCODE SCIPinferBinvarProp(
 
    if( tightened != NULL )
       *tightened = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** returns LP solution value and index of variable lower bound that is closest to variable's current LP solution value;
+ *  returns an index of -1 if no variable lower bound is available
+ */
+SCIP_RETCODE SCIPgetVarClosestVlb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< active problem variable */
+   SCIP_Real*            closestvlb,         /**< pointer to store the value of the closest variable lower bound */
+   int*                  closestvlbidx       /**< pointer to store the index of the closest variable lower bound */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPgetVarClosestVlb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPvarGetClosestVlb(var, scip->stat, closestvlb, closestvlbidx);
+
+   return SCIP_OKAY;
+}
+
+/** returns LP solution value and index of variable upper bound that is closest to variable's current LP solution value;
+ *  returns an index of -1 if no variable upper bound is available
+ */
+SCIP_RETCODE SCIPgetVarClosestVub(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< active problem variable */
+   SCIP_Real*            closestvub,         /**< pointer to store the value of the closest variable lower bound */
+   int*                  closestvubidx       /**< pointer to store the index of the closest variable lower bound */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPgetVarClosestVub", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPvarGetClosestVub(var, scip->stat, closestvub, closestvubidx);
 
    return SCIP_OKAY;
 }

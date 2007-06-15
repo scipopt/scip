@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.217 2007/06/06 11:25:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.218 2007/06/15 10:06:41 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1435,6 +1435,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
                      SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), 
                      SCIPimplicsGetBounds(var->implics, varfixing)[i]);
                   SCIP_CALL( SCIPvboundsDel(&implvar->vubs, blkmem, var, varfixing) );
+                  var->closestvblpcount = -1;
                }
             }
             else
@@ -1445,6 +1446,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
                      SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), 
                      SCIPimplicsGetBounds(var->implics, varfixing)[i]);
                   SCIP_CALL( SCIPvboundsDel(&implvar->vlbs, blkmem, var, !varfixing) );
+                  var->closestvblpcount = -1;
                }
             }
          }
@@ -1523,6 +1525,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
       {
          /* update the number of variable bounds */
          SCIPvboundsShrink(&var->vlbs, blkmem, newnvbds);
+         var->closestvblpcount = -1;
       }
    }
 
@@ -1590,6 +1593,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
       {
          /* update the number of variable bounds */
          SCIPvboundsShrink(&var->vubs, blkmem, newnvbds);
+         var->closestvblpcount = -1;
       }
    }
 
@@ -1696,6 +1700,9 @@ SCIP_RETCODE varCreate(
    (*var)->nubchginfos = 0;
    (*var)->conflictlbcount = 0;
    (*var)->conflictubcount = 0;
+   (*var)->closestvlbidx = -1;
+   (*var)->closestvubidx = -1;
+   (*var)->closestvblpcount = -1;
    (*var)->initial = initial;
    (*var)->removable = removable;
    (*var)->deleted = FALSE;
@@ -5550,6 +5557,7 @@ SCIP_RETCODE varAddVbound(
    {
       SCIP_CALL( SCIPvboundsAdd(&var->vubs, blkmem, set, vbtype, vbvar, vbcoef, vbconstant, &added) );
    }
+   var->closestvblpcount = -1;
 
    if( added )
    {
@@ -5940,6 +5948,7 @@ SCIP_RETCODE varAddTransitiveImplic(
          vlbvars = SCIPvboundsGetVars(implvar->vlbs);
          vlbcoefs = SCIPvboundsGetCoefs(implvar->vlbs);
          vlbconstants = SCIPvboundsGetConstants(implvar->vlbs);
+
          /* we have to iterate from back to front, because in varAddImplic() it may happen that a conflict is detected and
           * vlbvars[i] is fixed, s.t. the variable bound is deleted; this affects the array over which we currently
           * iterate; the only thing that can happen, is that elements of the array are deleted; in this case, the
@@ -5991,6 +6000,7 @@ SCIP_RETCODE varAddTransitiveImplic(
          vubvars = SCIPvboundsGetVars(implvar->vubs);
          vubcoefs = SCIPvboundsGetCoefs(implvar->vubs);
          vubconstants = SCIPvboundsGetConstants(implvar->vubs);
+
          /* we have to iterate from back to front, because in varAddImplic() it may happen that a conflict is detected and
           * vubvars[i] is fixed, s.t. the variable bound is deleted; this affects the array over which we currently
           * iterate; the only thing that can happen, is that elements of the array are deleted; in this case, the
@@ -8085,12 +8095,15 @@ SCIP_Real SCIPvarGetAvgSol(
  */
 void SCIPvarGetClosestVlb(
    SCIP_VAR*             var,                /**< active problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Real*            closestvlb,         /**< pointer to store the value of the closest variable lower bound */
    int*                  closestvlbidx       /**< pointer to store the index of the closest variable lower bound */
    )
 {
    int nvlbs;
 
+   assert(var != NULL);
+   assert(stat != NULL);
    assert(closestvlb != NULL);
    assert(closestvlbidx != NULL);
 
@@ -8109,19 +8122,38 @@ void SCIPvarGetClosestVlb(
       vlbcoefs = SCIPvarGetVlbCoefs(var);
       vlbconsts = SCIPvarGetVlbConstants(var);
       
-      for( i = 0; i < nvlbs; i++ )
+      /* check for cached values */
+      if( var->closestvblpcount == stat->lpcount && var->closestvlbidx != -1 )
       {
-         if( SCIPvarIsActive(vlbvars[i]) )
+         i = var->closestvlbidx;
+         assert(0 <= i && i < nvlbs);
+         assert(SCIPvarIsActive(vlbvars[i]));
+         *closestvlbidx = i;
+         *closestvlb = vlbcoefs[i] * SCIPvarGetLPSol(vlbvars[i]) + vlbconsts[i];
+      }
+      else
+      {
+         /* search best VUB */
+         for( i = 0; i < nvlbs; i++ )
          {
-            SCIP_Real vlbsol;
-            
-            vlbsol = vlbcoefs[i] * SCIPvarGetLPSol(vlbvars[i]) + vlbconsts[i];
-            if( vlbsol > *closestvlb )
+            if( SCIPvarIsActive(vlbvars[i]) )
             {
-               *closestvlb = vlbsol;
-               *closestvlbidx = i;
+               SCIP_Real vlbsol;
+               
+               vlbsol = vlbcoefs[i] * SCIPvarGetLPSol(vlbvars[i]) + vlbconsts[i];
+               if( vlbsol > *closestvlb )
+               {
+                  *closestvlb = vlbsol;
+                  *closestvlbidx = i;
+               }
             }
          }
+
+         /* update cached value */
+         if( var->closestvblpcount != stat->lpcount )
+            var->closestvubidx = -1;
+         var->closestvlbidx = *closestvlbidx;
+         var->closestvblpcount = stat->lpcount;
       }
    }
 }
@@ -8131,6 +8163,7 @@ void SCIPvarGetClosestVlb(
  */
 void SCIPvarGetClosestVub(
    SCIP_VAR*             var,                /**< active problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Real*            closestvub,         /**< pointer to store the value of the closest variable upper bound */
    int*                  closestvubidx       /**< pointer to store the index of the closest variable upper bound */
    )
@@ -8155,19 +8188,38 @@ void SCIPvarGetClosestVub(
       vubcoefs = SCIPvarGetVubCoefs(var);
       vubconsts = SCIPvarGetVubConstants(var);
       
-      for( i = 0; i < nvubs; i++ )
+      /* check for cached values */
+      if( var->closestvblpcount == stat->lpcount && var->closestvubidx != -1 )
       {
-         if( SCIPvarIsActive(vubvars[i]) )
+         i = var->closestvubidx;
+         assert(0 <= i && i < nvubs);
+         assert(SCIPvarIsActive(vubvars[i]));
+         *closestvubidx = i;
+         *closestvub = vubcoefs[i] * SCIPvarGetLPSol(vubvars[i]) + vubconsts[i];
+      }
+      else
+      {
+         /* search best VUB */
+         for( i = 0; i < nvubs; i++ )
          {
-            SCIP_Real vubsol;
-            
-            vubsol = vubcoefs[i] * SCIPvarGetLPSol(vubvars[i]) + vubconsts[i];
-            if( vubsol < *closestvub )
+            if( SCIPvarIsActive(vubvars[i]) )
             {
-               *closestvub = vubsol;
-               *closestvubidx = i;
+               SCIP_Real vubsol;
+               
+               vubsol = vubcoefs[i] * SCIPvarGetLPSol(vubvars[i]) + vubconsts[i];
+               if( vubsol < *closestvub )
+               {
+                  *closestvub = vubsol;
+                  *closestvubidx = i;
+               }
             }
          }
+
+         /* update cached value */
+         if( var->closestvblpcount != stat->lpcount )
+            var->closestvlbidx = -1;
+         var->closestvubidx = *closestvubidx;
+         var->closestvblpcount = stat->lpcount;
       }
    }
 }
