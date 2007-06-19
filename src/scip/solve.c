@@ -14,8 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.248 2007/06/06 11:25:26 bzfpfend Exp $"
-
+#pragma ident "@(#) $Id: solve.c,v 1.249 2007/06/19 13:59:59 bzfberth Exp $"
 /**@file   solve.c
  * @brief  main solving loop and node processing
  * @author Tobias Achterberg
@@ -467,31 +466,6 @@ SCIP_RETCODE updatePseudocost(
       /* free the buffer for the collected bound changes */
       SCIPsetFreeBufferArray(set, &updates);
    }
-
-   return SCIP_OKAY;
-}
-
-/** updates lower bound of node using lower bound of LP */
-static
-SCIP_RETCODE nodeUpdateLowerboundLP(
-   SCIP_NODE*            node,               /**< node to set lower bound for */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_LP*              lp                  /**< LP data */
-   )
-{
-   SCIP_Real lpobjval;
-
-   assert(set != NULL);
-
-   if( set->misc_exactsolve )
-   {
-      SCIP_CALL( SCIPlpGetProvedLowerbound(lp, set, &lpobjval) );
-   }
-   else
-      lpobjval = SCIPlpGetObjval(lp, set);
-
-   SCIPnodeUpdateLowerbound(node, stat, lpobjval);
 
    return SCIP_OKAY;
 }
@@ -1494,7 +1468,7 @@ SCIP_RETCODE priceAndCutLoop(
       /* update lower bound w.r.t. the the LP solution */
       if( !(*lperror) )
       {
-         SCIP_CALL( nodeUpdateLowerboundLP(focusnode, set, stat, lp) );
+         SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, lp) );
          SCIPdebugMessage(" -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
             SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set));
 
@@ -1693,7 +1667,7 @@ SCIP_RETCODE priceAndCutLoop(
       assert(lp->flushed);
       assert(lp->solved);
 
-      SCIP_CALL( nodeUpdateLowerboundLP(focusnode, set, stat, lp) );
+      SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, lp) );
 
       /* update node estimate */
       SCIP_CALL( updateEstimate(set, stat, tree, lp, branchcand) );
@@ -1720,6 +1694,7 @@ SCIP_RETCODE priceAndCutLoop(
          *unbounded = TRUE;
       }
    }
+
    SCIPdebugMessage(" -> final lower bound: %g (LP status: %d, LP obj: %g)\n",
       SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp),
       *cutoff ? SCIPsetInfinity(set) : *lperror ? -SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set));
@@ -1788,6 +1763,7 @@ SCIP_RETCODE solveNodeLP(
       SCIP_CALL( priceAndCutLoop(blkmem, set, stat, prob, primal, tree, lp, pricestore, sepastore, cutpool,
             branchcand, conflict, eventfilter, eventqueue, initiallpsolved, cutoff, unbounded, lperror) );
    }
+
    assert(*cutoff || *lperror || (lp->flushed && lp->solved));
 
    /* update node's LP iteration counter */
@@ -2445,6 +2421,7 @@ SCIP_RETCODE solveNode(
                   stat->nnodes, stat->nlps, SCIPbranchcandGetNPseudoCands(branchcand));
             }
          }
+
          /* update lower bound with the pseudo objective value, and cut off node by bounding */
          SCIP_CALL( applyBounding(blkmem, set, stat, prob, primal, tree, lp, conflict, cutoff) );
       }
@@ -2455,14 +2432,14 @@ SCIP_RETCODE solveNode(
       if( solverelax && !(*cutoff) )
       {
          SCIP_CALL( solveNodeRelax(set, stat, actdepth, FALSE, cutoff, &propagateagain, &solvelpagain, &solverelaxagain) );
-
+        
          /* check, if the path was cutoff */
          *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);
 
          /* apply found cuts */
          SCIP_CALL( applyCuts(blkmem, set, stat, tree, lp, sepastore, branchcand, eventqueue, (actdepth == 0),
                cutoff, &propagateagain, &solvelpagain) );
-
+         
          /* update lower bound with the pseudo objective value, and cut off node by bounding */
          SCIP_CALL( applyBounding(blkmem, set, stat, prob, primal, tree, lp, conflict, cutoff) );
       }
@@ -2488,7 +2465,7 @@ SCIP_RETCODE solveNode(
          {
             SCIP_CALL( primalHeuristics(set, stat, primal, tree, lp, NULL, SCIP_HEURTIMING_AFTERLPLOOP, &foundsol) );
          }
-
+         
 	 /* heuristics might have found a solution or set the cutoff bound such that the current node is cut off */
 	 SCIP_CALL( applyBounding(blkmem, set, stat, prob, primal, tree, lp, conflict, cutoff) );
       }
@@ -2508,7 +2485,7 @@ SCIP_RETCODE solveNode(
             "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %d -- using pseudo solution instead (loop %d)\n",
             stat->nnodes, stat->nlps, nlperrors);
       }
-
+    
       /* if an improved solution was found, propagate and solve the relaxations again */
       if( foundsol )
       {
@@ -2516,7 +2493,7 @@ SCIP_RETCODE solveNode(
          solvelpagain = TRUE;
          solverelaxagain = TRUE;
       }
-
+    
       /* enforce constraints */
       branched = FALSE;
       if( !(*cutoff) && !solverelaxagain && !solvelpagain && !propagateagain )
@@ -2532,7 +2509,7 @@ SCIP_RETCODE solveNode(
             lastlpcount = stat->lpcount;
             *infeasible = FALSE;
          }
-
+        
          /* call constraint enforcement */
          SCIP_CALL( enforceConstraints(blkmem, set, stat, tree, lp, sepastore,
                &branched, cutoff, infeasible, &propagateagain, &solvelpagain, &solverelaxagain) );

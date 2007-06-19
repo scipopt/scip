@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.299 2007/06/15 10:06:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.300 2007/06/19 13:59:59 bzfberth Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1896,6 +1896,16 @@ SCIP_RETCODE SCIPgetBinvarRepresentative(
    SCIP_VAR*             var,                /**< binary variable to get binary representative for */
    SCIP_VAR**            repvar,             /**< pointer to store the binary representative */
    SCIP_Bool*            negated             /**< pointer to store whether the negation of an active variable was returned */
+   );
+
+/** returns the reduced costs of the variable in the current node's LP relaxation, 
+ *  if the variable is not in the current LP, SCIP_INVALID will be returned,
+ *  the current node has to have an LP
+ */
+extern
+SCIP_Real SCIPgetVarRedcost(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to get reduced costs, should be a column in current node LP */
    );
 
 /** gets solution value for variable in current node */

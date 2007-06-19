@@ -14,11 +14,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.93 2007/06/06 11:25:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.94 2007/06/19 14:00:00 bzfberth Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
  * @author Tobias Achterberg
+ * @author Timo Berthold
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -219,6 +220,15 @@ void SCIPnodeUpdateLowerbound(
    SCIP_NODE*            node,               /**< node to update lower bound for */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
+   );
+
+/** updates lower bound of node using lower bound of LP */
+extern
+SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
+   SCIP_NODE*            node,               /**< node to set lower bound for */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp                  /**< LP data */
    );
 
 /** sets the node's estimated bound to the new value */

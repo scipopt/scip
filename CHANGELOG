@@ -5,6 +5,8 @@ compiling:
 - added .exe extension to binaries of MinGW
 
 interface:
+- new method SCIPgetVarRedcost()
+- new method SCIPnodeUpdateLowerboundLP()
 - linear and knapsack constraint handler may now deal with coefficients of value zero
 - parameters are now separated into basic and advanced, the latter ones have been moved to extra submenus
 - new method SCIPwriteMIP()
@@ -96,6 +98,7 @@ features:
 - slightly modified automatic constraint aging strategy
 
 fixed bugs:
+- fixed numerical buf with slightly different LP optimum after resolving due to probing/diving
 - fixed bug in cmir and flowcover separator with variables which are currently not in the LP
 - weakened assert in primal.c in order to avoid numerical troubles
 - changed wrong assert in SCIPnodeAddBoundinfer()

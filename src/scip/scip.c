@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.411 2007/06/15 10:06:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.412 2007/06/19 13:59:59 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5318,6 +5318,43 @@ SCIP_RETCODE SCIPgetBinvarRepresentative(
    return SCIP_OKAY;
 }
 
+
+/** returns the reduced costs of the variable in the current node's LP relaxation, 
+ *  if the variable is not in the current LP, SCIP_INVALID will be returned,
+ *  the current node has to have an LP
+ */
+SCIP_Real SCIPgetVarRedcost(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to get reduced costs, should be a column in current node LP */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar == NULL )
+         return SCIP_INVALID;
+      return SCIPgetVarRedcost(var->data.original.transvar);
+
+   case SCIP_VARSTATUS_COLUMN:
+      return SCIPgetColRedcost(scip,SCIPvarGetCol(var));
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_FIXED:
+   case SCIP_VARSTATUS_AGGREGATED:
+   case SCIP_VARSTATUS_MULTAGGR:
+   case SCIP_VARSTATUS_NEGATED:
+      return SCIP_INVALID;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      return SCIP_INVALID; /*lint !e527*/
+   }
+}
+
 /** gets solution value for variable in current node */
 SCIP_Real SCIPgetVarSol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10015,6 +10052,11 @@ SCIP_RETCODE SCIPendDive(
    SCIP_CALL( SCIPlpEndDive(scip->lp, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
          scip->transprob->vars, scip->transprob->nvars) );
 
+   /* the lower bound may have changed slightly due to LP resolve in SCIPlpEndDive() */
+   if( !scip->lp->resolvelperror && scip->tree->focusnode != NULL )
+   {
+      SCIPnodeUpdateLowerboundLP(scip->tree->focusnode, scip->set, scip->stat, scip->lp);
+   }
    /* reset the probably changed LP's cutoff bound */
    SCIP_CALL( SCIPlpSetCutoffbound(scip->lp, scip->set, scip->primal->cutoffbound) );
    assert(scip->lp->cutoffbound == scip->primal->cutoffbound); /*lint !e777*/

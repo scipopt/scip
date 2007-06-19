@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.199 2007/06/06 11:25:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.200 2007/06/19 13:59:59 bzfberth Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1840,6 +1840,30 @@ void SCIPnodeUpdateLowerbound(
       if( node->depth == 0 )
          stat->rootlowerbound = newbound;
    }
+}
+
+/** updates lower bound of node using lower bound of LP */
+SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
+   SCIP_NODE*            node,               /**< node to set lower bound for */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp                  /**< LP data */
+   )
+{
+   SCIP_Real lpobjval;
+
+   assert(set != NULL);
+
+   if( set->misc_exactsolve )
+   {
+      SCIP_CALL( SCIPlpGetProvedLowerbound(lp, set, &lpobjval) );
+   }
+   else
+      lpobjval = SCIPlpGetObjval(lp, set);
+
+   SCIPnodeUpdateLowerbound(node, stat, lpobjval);
+
+   return SCIP_OKAY;
 }
 
 /** sets the node's estimated bound to the new value */
@@ -4853,6 +4877,10 @@ SCIP_RETCODE SCIPtreeEndProbing(
             SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                "LP was not resolved to a sufficient status after diving\n");
             lp->resolvelperror = TRUE;      
+         }
+         else
+         {
+            SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, lp);
          }
       }
    }
