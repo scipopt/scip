@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.412 2007/06/19 13:59:59 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.413 2007/06/19 14:02:58 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5336,7 +5336,7 @@ SCIP_Real SCIPgetVarRedcost(
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
          return SCIP_INVALID;
-      return SCIPgetVarRedcost(var->data.original.transvar);
+      return SCIPgetVarRedcost(scip,var->data.original.transvar);
 
    case SCIP_VARSTATUS_COLUMN:
       return SCIPgetColRedcost(scip,SCIPvarGetCol(var));
