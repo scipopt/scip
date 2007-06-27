@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.53 2007/06/27 10:17:10 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.54 2007/06/27 14:34:49 bzfberth Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -1919,7 +1919,7 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
    /* return the correct result code */
    if( cutoff )
       *result = SCIP_CUTOFF;
-   else if( delay || SCIPisStopped(scip) )
+   else if( delay )
       *result = SCIP_DELAYED;
    else if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars || *ndelconss > oldndelconss
       || *nchgcoefs > oldnchgcoefs )

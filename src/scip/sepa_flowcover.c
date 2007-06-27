@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.4 2007/06/05 15:15:48 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.5 2007/06/27 14:34:49 bzfberth Exp $"
 
 /**@file   sepa_flowcover.c
  * @brief  flow cover cuts separator
@@ -2598,7 +2598,8 @@ SCIP_RETCODE separateCuts(
       maxfails += maxfails - 2*SCIPgetNSepaRounds(scip); /* allow up to double as many fails in early separounds of root node */
    ntries = 0;
    nfails = 0;
-   for( r = 0; r < nrows && ntries < maxtries && ncuts < maxsepacuts && rowscores[roworder[r]] > 0.0; r++ )
+   for( r = 0; r < nrows && ntries < maxtries && ncuts < maxsepacuts && rowscores[roworder[r]] > 0.0
+           && !SCIPisStopped(scip); r++ )
    {
       SCIP_Bool wastried;
       int oldncuts;

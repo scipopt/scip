@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.240 2007/06/27 10:17:06 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.241 2007/06/27 14:34:49 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -6749,7 +6749,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
     */
    if( !cutoff
       && *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars && *nchgbds == oldnchgbds && *ndelconss == oldndelconss
-      && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides && !SCIPisStopped(scip)
+      && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides
        )
    {
       for( c = firstupgradetry; c < nconss; ++c )

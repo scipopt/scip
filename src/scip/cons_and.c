@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.79 2007/06/27 10:17:05 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.80 2007/06/27 14:34:49 bzfberth Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -2002,7 +2002,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    /* return the correct result code */
    if( cutoff )
       *result = SCIP_CUTOFF;
-   else if( delay || SCIPisStopped(scip) )
+   else if( delay )
       *result = SCIP_DELAYED;
    else if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars || *nchgbds > oldnchgbds
       || *ndelconss > oldndelconss )

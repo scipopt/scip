@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.65 2007/06/06 11:25:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.66 2007/06/27 14:34:49 bzfberth Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -344,7 +344,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
    /* for all basic columns belonging to integer variables, try to generate a gomory cut */
    ncuts = 0;
-   for( i = 0; i < nrows && ncuts < maxsepacuts; ++i )
+   for( i = 0; i < nrows && ncuts < maxsepacuts && !SCIPisStopped(scip); ++i )
    {
       SCIP_Bool tryrow;
 
