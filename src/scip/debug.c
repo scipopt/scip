@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.25 2007/06/06 11:25:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.26 2007/06/27 10:17:10 bzfberth Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -164,11 +164,11 @@ SCIP_RETCODE getSolutionValue(
    int right;
    int middle;
    int cmp;
-
    assert(val != NULL);
 
    SCIP_CALL( readSolution(set) );
-
+   SCIPdebugMessage("Now handling variable <%s>, which has status %d, is of type %d, and was deleted: %d, negated: %d, transformed: %d\n",
+      SCIPvarGetName(var), SCIPvarGetStatus(var), SCIPvarGetType(var), SCIPvarIsDeleted(var), SCIPvarIsNegated(var),SCIPvarIsTransformedOrigvar(var));
    /* ignore deleted variables */
    if( SCIPvarIsDeleted(var) )
    {
@@ -176,7 +176,6 @@ SCIP_RETCODE getSolutionValue(
       *val = SCIP_UNKNOWN;
       return SCIP_OKAY;
    }
-
    /* retransform variable onto orginal variable space */
    solvar = var;
    scalar = 1.0;
@@ -187,7 +186,7 @@ SCIP_RETCODE getSolutionValue(
       constant = SCIPvarGetNegationConstant(solvar);
       solvar = SCIPvarGetNegationVar(solvar);
    }
-   if( SCIPvarIsTransformedOrigvar(solvar) )
+   if( SCIPvarIsTransformed(solvar) )
    {
       SCIP_CALL( SCIPvarGetOrigvarSum(&solvar, &scalar, &constant) );
       if( solvar == NULL )
@@ -197,7 +196,6 @@ SCIP_RETCODE getSolutionValue(
          return SCIP_OKAY;
       }
    }
-
    /* perform a binary search for the variable */
    name = SCIPvarGetName(solvar);
    left = 0;

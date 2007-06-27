@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.113 2007/06/06 11:25:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.114 2007/06/27 10:17:08 bzfberth Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -2575,7 +2575,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
    firstchange = INT_MAX;
    firstclique = INT_MAX;
    lastclique = -1;
-   for( c = 0; c < nconss; ++c )
+   for( c = 0; c < nconss && !SCIPisStopped(scip); ++c )
    {
       SCIP_CONS* cons;
       SCIP_CONSDATA* consdata;
@@ -2845,7 +2845,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
    }
 
    /* check constraints for redundancy */
-   for( c = firstchange; c < nconss; ++c )
+   for( c = firstchange; c < nconss && !SCIPisStopped(scip); ++c )
    {
       assert(*result != SCIP_CUTOFF);
       if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
@@ -2862,7 +2862,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
    }
 
    /* add clique and implication information */
-   for( c = firstclique; c < lastclique; ++c )
+   for( c = firstclique; c < lastclique && !SCIPisStopped(scip); ++c )
    {
       SCIP_CONS* cons;
       SCIP_CONSDATA* consdata;

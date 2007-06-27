@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.52 2007/06/06 11:25:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.53 2007/06/27 10:17:10 bzfberth Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -1251,7 +1251,8 @@ SCIP_RETCODE preprocessConstraintPairs(
    /* check constraint against all prior constraints */
    cons0changed = consdata0->changed;
    consdata0->changed = FALSE;
-   for( c = (cons0changed ? 0 : firstchange); c < chkind && !(*cutoff) && SCIPconsIsActive(cons0); ++c )
+   for( c = (cons0changed ? 0 : firstchange); c < chkind && !(*cutoff) && SCIPconsIsActive(cons0) && !SCIPisStopped(scip);
+        ++c )
    {
       SCIP_CONS* cons1;
       SCIP_CONSDATA* consdata1;
@@ -1828,7 +1829,7 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
    cutoff = FALSE;
    delay = FALSE;
    firstchange = INT_MAX;
-   for( c = 0; c < nconss && !cutoff; ++c )
+   for( c = 0; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
    {
       cons = conss[c];
       assert(cons != NULL);
@@ -1918,7 +1919,7 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
    /* return the correct result code */
    if( cutoff )
       *result = SCIP_CUTOFF;
-   else if( delay )
+   else if( delay || SCIPisStopped(scip) )
       *result = SCIP_DELAYED;
    else if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars || *ndelconss > oldndelconss
       || *nchgcoefs > oldnchgcoefs )

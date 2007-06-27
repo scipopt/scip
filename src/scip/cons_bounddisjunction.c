@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.8 2007/06/06 11:25:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.9 2007/06/27 10:17:06 bzfberth Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @brief  constraint handler for bound disjunction constraints
@@ -1187,7 +1187,7 @@ SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
    assert(conshdlrdata != NULL);
 
    /* process constraints */
-   for( c = 0; c < nconss && *result != SCIP_CUTOFF; ++c )
+   for( c = 0; c < nconss && *result != SCIP_CUTOFF && !SCIPisStopped(scip); ++c )
    {
       cons = conss[c];
       assert(cons != NULL);

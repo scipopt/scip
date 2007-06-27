@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.239 2007/06/15 10:06:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.240 2007/06/27 10:17:06 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -5248,7 +5248,8 @@ SCIP_RETCODE preprocessConstraintPairs(
    /* check constraint against all prior constraints */
    cons0changed = consdata0->changed;
    consdata0->changed = FALSE;
-   for( c = (cons0changed ? 0 : firstchange); c < chkind && !(*cutoff) && SCIPconsIsActive(cons0); ++c )
+   for( c = (cons0changed ? 0 : firstchange); c < chkind && !(*cutoff) && SCIPconsIsActive(cons0) && !SCIPisStopped(scip);
+        ++c )
    {
       SCIP_CONS* cons1;
       SCIP_CONSDATA* consdata1;
@@ -5896,6 +5897,7 @@ SCIP_RETCODE fullDualPresolve(
                redlb[v - nbinvars]);
             SCIP_CALL( SCIPtightenVarUb(scip, var, redlb[v - nbinvars], &infeasible, &tightened) );
             assert(!infeasible);
+            redub[v - nbinvars] = MIN(redub[v - nbinvars],SCIPvarGetUbGlobal(var));
             if( tightened )
                (*nchgbds)++;
          }
@@ -5915,6 +5917,7 @@ SCIP_RETCODE fullDualPresolve(
                redub[v - nbinvars]);
             SCIP_CALL( SCIPtightenVarLb(scip, var, redub[v - nbinvars], &infeasible, &tightened) );
             assert(!infeasible);
+            redlb[v - nbinvars] = MAX(redlb[v - nbinvars],SCIPvarGetLbGlobal(var));
             if( tightened )
                (*nchgbds)++;
          }
@@ -6599,7 +6602,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
        * to avoid nearly infinite cycling due to very small bound changes)
        */
       npresolrounds = 0;
-      while( !consdata->presolved && npresolrounds < MAXCONSPRESOLROUNDS )
+      while( !consdata->presolved && npresolrounds < MAXCONSPRESOLROUNDS && !SCIPisStopped(scip) )
       {
          assert(!cutoff);
 
@@ -6746,7 +6749,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
     */
    if( !cutoff
       && *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars && *nchgbds == oldnchgbds && *ndelconss == oldndelconss
-      && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides
+      && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides && !SCIPisStopped(scip)
        )
    {
       for( c = firstupgradetry; c < nconss; ++c )

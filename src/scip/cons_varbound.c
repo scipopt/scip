@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.60 2007/06/06 11:25:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.61 2007/06/27 10:17:09 bzfberth Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for variable bound constraints
@@ -1314,7 +1314,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
    oldnchgcoefs = *nchgcoefs;
    oldnchgsides = *nchgsides;
 
-   for( i = 0; i < nconss && !cutoff; i++ )
+   for( i = 0; i < nconss && !cutoff && !SCIPisStopped(scip); i++ )
    {
       assert(!SCIPconsIsModifiable(conss[i]));
 

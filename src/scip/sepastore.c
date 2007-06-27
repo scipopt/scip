@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.55 2007/06/06 11:25:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.56 2007/06/27 10:17:10 bzfberth Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -719,7 +719,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    /* If a cut is not member of the cut pool, we slightly decrease its score to prefer identical cuts which are
     * in the cut pool.
     * This is because the conversion of cuts into linear constraints after a restart looks at the cut pool
-    * and can not find tight non-pool cuts.
+    * and cannot find tight non-pool cuts.
     */
    for( pos = sepastore->nforcedcuts; pos < sepastore->ncuts; pos++ )
    {

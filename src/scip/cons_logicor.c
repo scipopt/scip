@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.106 2007/06/06 11:25:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.107 2007/06/27 10:17:07 bzfberth Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -1341,7 +1341,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
    assert(conshdlrdata != NULL);
 
    /* process constraints */
-   for( c = 0; c < nconss && *result != SCIP_CUTOFF; ++c )
+   for( c = 0; c < nconss && *result != SCIP_CUTOFF && !SCIPisStopped(scip); ++c )
    {
       cons = conss[c];
       assert(cons != NULL);

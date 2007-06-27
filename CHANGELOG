@@ -98,6 +98,8 @@ features:
 - slightly modified automatic constraint aging strategy
 
 fixed bugs:
+- fixed bug with wrong bound changes of loose variables
+- fixed bug with aggregated variables in debug solution test
 - fixed numerical buf with slightly different LP optimum after resolving due to probing/diving
 - fixed bug in cmir and flowcover separator with variables which are currently not in the LP
 - weakened assert in primal.c in order to avoid numerical troubles

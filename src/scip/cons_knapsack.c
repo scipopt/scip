@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.145 2007/06/06 11:25:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.146 2007/06/27 10:17:06 bzfberth Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -3872,7 +3872,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
    oldnchgcoefs = *nchgcoefs;
    oldnchgsides = *nchgsides;
 
-   for( i = 0; i < nconss; i++ )
+   for( i = 0; i < nconss && !SCIPisStopped(scip); i++ )
    {
       SCIP_CONS* cons;
       int thisnfixedvars;
