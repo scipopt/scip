@@ -14,11 +14,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.242 2007/06/28 12:17:31 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.243 2007/06/28 12:18:34 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
  * @author Tobias Achterberg
+ * @author Timo Berthold
  *
  *  Linear constraints are separated with a high priority, because they are easy
  *  to separate. Instead of using the global cut pool, the same effect can be
