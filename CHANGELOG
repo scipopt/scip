@@ -5,6 +5,7 @@ compiling:
 - added .exe extension to binaries of MinGW
 
 interface:
+- new method SCIPreadSol()
 - new method SCIPgetVarRedcost()
 - new method SCIPnodeUpdateLowerboundLP()
 - linear and knapsack constraint handler may now deal with coefficients of value zero

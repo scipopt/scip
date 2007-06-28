@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.300 2007/06/19 13:59:59 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.301 2007/06/28 14:56:35 bzfberth Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3327,6 +3327,13 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP_Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
    SCIP_Bool*            success,            /**< pointer to store whether the returned coefficients are a valid strong CG cut */
    SCIP_Bool*            cutislocal          /**< pointer to store whether the returned cut is only valid locally */
+   );
+
+/** reads a given solution file, problem has to be transformed in advance */
+extern
+SCIP_RETCODE SCIPreadSol(
+   SCIP*                 scip,              /**< SCIP data structure */   
+   const char*           fname              /**< name of the input file */
    );
 
 /** writes current LP to a file */
