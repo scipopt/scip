@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.31 2007/06/06 11:25:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.32 2007/06/28 12:17:31 bzfberth Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -342,7 +342,7 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
     * we don't have to check triples with x == y, x == z, or y == z, because cliques with the same variable occuring
     * twice lead to fixings of this or all other variables which should already have been detected in presolving
     */
-   for( xi = 0; xi < nvars-2; ++xi ) /* at least two variables must be left over for y and z */
+   for( xi = 0; xi < nvars-2 && !SCIPisStopped(scip); ++xi ) /* at least two variables must be left over for y and z */
    {
       SCIP_VAR* x;
       int xindex;
@@ -368,7 +368,7 @@ SCIP_RETCODE tcliquegraphAddImplicsVars(
          {}
 
          /* loop over all y > x */
-         for( ; i < xnbinimpls-1; ++i ) /* at least one variable must be left over for z */
+         for( ; i < xnbinimpls-1 && !SCIPisStopped(scip); ++i ) /* at least one variable must be left over for z */
          {
             SCIP_VAR* y;
             int yindex;
@@ -501,7 +501,7 @@ SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
     * tclique graph due to tcliquegraphAddCliqueVars(); therefore, we only have to process pairs x == xvalue
     * that are currently not member of the tclique graph
     */
-   for( xi = 0; xi < nvars; ++xi )
+   for( xi = 0; xi < nvars && !SCIPisStopped(scip); ++xi )
    {
       SCIP_VAR* x;
       SCIP_Bool xvalue;
@@ -523,8 +523,8 @@ SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
          ximplvars = SCIPvarGetImplVars(x, (SCIP_Bool)xvalue);
          ximpltypes = SCIPvarGetImplTypes(x, (SCIP_Bool)xvalue);
 
-         /* loop over all y */
-         for( yk = 0; yk < xnbinimpls-1; ++yk ) /* at least one variable must be left over for z */
+         /* loop over all y, at least one variable must be left over for z */
+         for( yk = 0; yk < xnbinimpls-1 && !SCIPisStopped(scip); ++yk ) 
          {
             SCIP_VAR* y;
             SCIP_Bool yvalue;
@@ -718,7 +718,7 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
    SCIP_CALL( SCIPallocBufferArray(scip, &varids, tcliquegraph->nnodes) );
    cliquetable = tcliquegraph->cliquetable;
    tablewidth = tcliquegraph->tablewidth;
-   for( i = 0; i < ncliques; ++i )
+   for( i = 0; i < ncliques && !SCIPisStopped(scip); ++i )
    {
       SCIP_VAR** vars;
       SCIP_Bool* vals;
@@ -732,7 +732,7 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
       assert(nvars <= tcliquegraph->nnodes);
 
       /* get the node numbers of the variables */
-      for( u = 0; u < nvars; ++u )
+      for( u = 0; u < nvars && !SCIPisStopped(scip); ++u )
       {
          SCIP_VAR* var;
 
@@ -745,7 +745,7 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
       }
 
       /* flag the edges in the indicence matrix (excluding diagonal entries) */
-      for( u = 0; u < nvars-1; ++u )
+      for( u = 0; u < nvars-1 && !SCIPisStopped(scip); ++u )
       {
          int nu;
          int rowstart;
@@ -823,7 +823,8 @@ SCIP_RETCODE loadTcliquegraph(
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &cliquegraphidx[1]);
    SCIPfreeBufferArray(scip, &cliquegraphidx[0]);
-
+   if( SCIPisStopped(scip) && sepadata->tcliquegraph != NULL )
+      tcliquegraphFree(scip,&sepadata->tcliquegraph);      
    return SCIP_OKAY;
 }
 
@@ -1170,10 +1171,14 @@ SCIP_RETCODE separateCuts(
 
       if( sepadata->tcliquegraph == NULL )
       {
+         if( SCIPisStopped(scip) )
+            sepadata->tcliquegraphloaded = FALSE;
          /* we did not find any variables that are contained in a clique with at least 3 variables in the
           * implication graph or in the clique table -> nothing has to be done
           */
-         SCIPdebugMessage("no 3-cliques found in implication graph\n");
+         else
+            SCIPdebugMessage("no 3-cliques found in implication graph\n");
+         
          return SCIP_OKAY;
       }
    }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.241 2007/06/27 14:34:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.242 2007/06/28 12:17:31 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -6605,7 +6605,6 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       while( !consdata->presolved && npresolrounds < MAXCONSPRESOLROUNDS && !SCIPisStopped(scip) )
       {
          assert(!cutoff);
-
          npresolrounds++;
 
          /* mark constraint being presolved and propagated */
@@ -6699,7 +6698,6 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          SCIP_CALL( dualPresolve(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
       }
 
-
       /* remember the first changed constraint to begin the next aggregation round with */
       if( firstchange == INT_MAX && consdata->changed )
          firstchange = c;
@@ -6752,7 +6750,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides
        )
    {
-      for( c = firstupgradetry; c < nconss; ++c )
+      for( c = firstupgradetry; c < nconss && !SCIPisStopped(scip); ++c )
       {
          cons = conss[c];
 
