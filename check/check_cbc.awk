@@ -15,10 +15,10 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.32 2007/07/02 10:28:22 bzfpfend Exp $
+# $Id: check_cbc.awk,v 1.1 2007/07/02 10:28:22 bzfpfend Exp $
 #
-#@file    check_cplex.awk
-#@brief   CPLEX Check Report Generator
+#@file    check_cbc.awk
+#@brief   CBC Check Report Generator
 #@author  Thorsten Koch
 #@author  Tobias Achterberg
 #
@@ -74,6 +74,7 @@ BEGIN {
 /=inf=/  { solstatus[$2] = "inf"; sol[$2] = 0.0; } # problem infeasible
 /=best=/ { solstatus[$2] = "best"; sol[$2] = $3; } # get best known solution value
 /=unkn=/ { solstatus[$2] = "unkn"; }               # no feasible solution known
+
 #
 # problem name
 #
@@ -115,152 +116,108 @@ BEGIN {
    sbiter     = 0;
    tottime    = 0.0;
    aborted    = 1;
+   timelimit  = 0.0;
 }
-/^CPLEX> Parameter file / {
-   settings = $4;
-   settings = substr(settings, 2, length(settings)-2);
-   sub(/settings\//, "", settings);
-   sub(/\.prm/, "", settings);
+
+#
+# remove Coin:
+#
+/^Coin:/ {
+   $0 = substr($0, 6, length($0)-5);
 }
-/^Parameter file / {
+#
+# settings
+#
+/^@03 SETTINGS:/ {
    settings = $3;
-   settings = substr(settings, 2, length(settings)-2);
-   sub(/settings\//, "", settings);
-   sub(/\.prm/, "", settings);
 }
-/^CPLEX> CPLEX> Non-default parameters written to file / {
-   n = split ($8, a, ".");
-   settings = a[n-2];
+/^ratioGap has value/ {
+   mipgap = $4;
 }
-/^CPLEX> Non-default parameters written to file / {
-   n = split ($7, a, ".");
-   settings = a[n-2];
+/^allowableGap has value/ {
+   absmipgap = $4;
 }
-/^Non-default parameters written to file / {
-   n = split ($6, a, ".");
-   settings = a[n-2];
+/^seconds has value/ {
+   timelimit = $4;
 }
-/^CPLEX> New value for mixed integer optimality gap tolerance: / {
-   mipgap = $10;
-}
-/^New value for mixed integer optimality gap tolerance: / {
-   mipgap = $9;
-}
-/^CPLEX> New value for absolute mixed integer optimality gap tolerance: / {
-   absmipgap = $11;
-}
-/^New value for absolute mixed integer optimality gap tolerance: / {
-   absmipgap = $10;
-}
+
 #
 # problem size
 #
-/^Reduced MIP has/ { cons = $4; vars = $6; }
+/^Problem has/ {
+   cons = $3;
+   vars = $5;
+}
+
+#
+# node log (dual bound)
+#
+#/^Cbc0010I After [0-9]* nodes, [0-9]* on tree, [-+.0-9eE]* best solution, best possible [-+.0-9eE]* ([-+.0-9eE]* seconds)/ {
+/^Cbc0010I After .* nodes, .* on tree, .* best solution, best possible .* (.* seconds)/ {
+   bbnodes = $3;
+   pb = $8;
+   db = $13;
+   tottime = substr($14, 2, length($14)-1);
+}
+
 #
 # solution
 #
-/^Integer /  {
-   if ($2 == "infeasible." || $2 == "infeasible")
-   {
-      db = 1e+20;
-      pb = 1e+20;
-      absgap = 0.0;
-      feasible = 0;
-   }
-   else
-   {
-      db = $NF;
-      pb = $NF;
-      absgap = 0.0;
-      feasible = 1;
-   }
-   opti = ($2 == "optimal") ? 1 : 0;
+/^Result - Finished objective/ {
+   pb       = $5;
+   db       = pb;
+   bbnodes  = $7;
+   dualiter = $10;
+   tottime  = $14;
+   feasible = (pb < 1e+20);
+   opti     = 1;
+   aborted  = 0;
 }
-/^MIP - Integer /  { # since CPLEX 10.0
-   if ($4 == "infeasible." || $4 == "infeasible")
-   {
-      db = 1e+20;
-      pb = 1e+20;
-      absgap = 0.0;
-      feasible = 0;
-   }
-   else
-   {
-      db = $NF;
-      pb = $NF;
-      absgap = 0.0;
-      feasible = 1;
-   }
-   opti = ($4 == "optimal") ? 1 : 0;
+/^Result - Finishedgap objective/ {
+   pb       = $5;
+   db       = pb;
+   bbnodes  = $7;
+   dualiter = $10;
+   tottime  = $14;
+   feasible = (pb < 1e+20);
+   opti     = 1;
+   aborted  = 0;
 }
-/^Solution limit exceeded, integer feasible:/ {
-   pb = $8;
-   timeout = 1;
+/^Result - Stopped on time objective/ {
+   pb       = $7;
+   bbnodes  = $9;
+   dualiter = $12;
+   tottime  = $16;
+   feasible = (pb < 1e+20);
+   opti     = 0;
+   timeout  = 1;
+   aborted  = 0;
 }
-/^MIP - Solution limit exceeded, integer feasible:/ { # since CPLEX 10.0
-   pb = $10;
-   timeout = 1;
+/^Result - Stopped on nodes objective/ {
+   pb       = $7;
+   bbnodes  = $9;
+   dualiter = $12;
+   tottime  = $16;
+   feasible = (pb < 1e+20);
+   opti     = 0;
+   timeout  = 1;
+   aborted  = 0;
 }
-/^Time /  {
-   pb = ($4 == "no") ? 1e+75 : $8;
-   timeout = 1;
+/^Cputime limit exceeded/ {
+   feasible = (pb < 1e+20);
+   opti     = 0;
+   timeout  = 1;
+   aborted  = 0;
+   tottime  = max(tottime, timelimit);
 }
-/^MIP - Time /  { # since CPLEX 10.0
-   pb = ($6 == "no") ? 1e+75 : $10;
-   timeout = 1;
-}
-/^Memory limit exceeded, integer feasible:/ {
-   pb = $8;
-   timeout = 1;
-}
-/^MIP - Memory limit exceeded, integer feasible:/ {
-   pb = $10;
-   timeout = 1;
-}
-/^Node / {
-   pb = ($4 == "no") ? 1e+75 : $8;
-   timeout = 1;
-}
-/^MIP - Node / { # since CPLEX 10.0
-   pb = ($6 == "no") ? 1e+75 : $10;
-   timeout = 1;
-}
-/^Tree /  {
-   pb = ($4 == "no") ? 1e+75 : $8;
-   timeout = 1;
-}
-/^MIP - Tree /  { # since CPLEX 10.0
-   pb = ($6 == "no") ? 1e+75 : $10;
-   timeout = 1;
-}
-/^Error /  {
-   pb = ($3 == "no") ? 1e+75 : $7;
-}
-/^MIP - Error /  { # since CPLEX 10.0
-   pb = ($5 == "no") ? 1e+75 : $9;
-}
-/^MIP - Unknown status / {
-   pb = ($6 == "Objective") ? $8 : 1e+75;
-}
-/cuts applied/ { 
-   cuts += $NF;
-}
-/^Current MIP best bound =/ {
-   db = $6;
-   split ($9, a, ",");
-   absgap = a[1];
-   if (opti == 1) 
-      absgap = 0.0;
-}
-/^Solution time/ {
-   tottime   = $4;
-   bbnodes   = $11;
-   aborted   = 0;
-}
+
+#
+# evaluation
+#
 /^=ready=/ {
    if( !onlyinsolufile || solstatus[prob] != "" )
    {
-      bbnodes = max(bbnodes, 1); # CPLEX reports 0 nodes if the primal heuristics find the optimal solution in the root node
+      bbnodes = max(bbnodes, 1);
 
       nprobs++;
     
@@ -401,5 +358,5 @@ END {
       nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
    printf("----------------------------------------------------------------\n");
 
-   printf("@01 CPLEX:%s\n", settings);
+   printf("@01 CBC:%s\n", settings);
 }

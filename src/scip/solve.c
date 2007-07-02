@@ -14,7 +14,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.249 2007/06/19 13:59:59 bzfberth Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.250 2007/07/02 10:28:22 bzfpfend Exp $"
+
 /**@file   solve.c
  * @brief  main solving loop and node processing
  * @author Tobias Achterberg
@@ -769,6 +770,8 @@ SCIP_RETCODE primalHeuristics(
    depth = SCIPtreeGetFocusDepth(tree);
    lpstateforkdepth = (tree->focuslpstatefork != NULL ? SCIPnodeGetDepth(tree->focuslpstatefork) : -1);
 
+   SCIPdebugMessage("calling primal heuristics in depth %d (timing: %d)\n", depth, heurtiming);
+
    /* call heuristics: it might happen that a diving heuristic renders the previously solved node LP invalid
     * such that additional calls to LP heuristics will fail; better abort the loop in this case
     */
@@ -776,6 +779,8 @@ SCIP_RETCODE primalHeuristics(
    oldnbestsolsfound = primal->nbestsolsfound;
    for( h = 0; h < set->nheurs && !lp->resolvelperror; ++h )
    {
+      SCIPdebugMessage(" -> executing heuristic <%s> with priority %d\n",
+         SCIPheurGetName(set->heurs[h]), SCIPheurGetPriority(set->heurs[h]));
       SCIP_CALL( SCIPheurExec(set->heurs[h], set, primal, depth, lpstateforkdepth, heurtiming, &ndelayedheurs, &result) );
    }
    assert(0 <= ndelayedheurs && ndelayedheurs <= set->nheurs);
