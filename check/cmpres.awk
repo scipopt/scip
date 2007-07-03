@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.44 2007/06/06 11:28:06 bzfpfend Exp $
+# $Id: cmpres.awk,v 1.45 2007/07/03 11:21:54 bzfpfend Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -153,6 +153,7 @@ function texsolvername(s, sname)
 }
 
 BEGIN {
+   infinity = 1e+20;
    timegeomshift = 10.0;
    nodegeomshift = 100.0;
    mintime = 0.5;
@@ -217,17 +218,17 @@ BEGIN {
 }
 // {
    # check if this is a useable line
-   if( $10 == "ok" || $10 == "timeout" || $10 == "unknown" || $10 == "abort" || $10 == "fail" || $10 == "readerror" )
+   if( $10 == "ok" || $10 == "timeout" || $10 == "unknown" || $10 == "abort" || $10 == "fail" || $10 == "readerror" ) # CPLEX, CBC
    {
       # collect data
       name[nsolver,nprobs[nsolver]] = $1;
-      type[nsolver,nprobs[nsolver]] = $2;
-      conss[nsolver,nprobs[nsolver]] = $3;
-      vars[nsolver,nprobs[nsolver]] = $4;
-      dualbound[nsolver,nprobs[nsolver]] = $5;
-      primalbound[nsolver,nprobs[nsolver]] = $6;
-      gap[nsolver,nprobs[nsolver]] = $7;
-      iters[nsolver,nprobs[nsolver]] = -nsolver; # different values for each solver -> category "diff"
+      type[nsolver,nprobs[nsolver]] = "?";
+      conss[nsolver,nprobs[nsolver]] = $2;
+      vars[nsolver,nprobs[nsolver]] = $3;
+      dualbound[nsolver,nprobs[nsolver]] = max(min($4, +infinity), -infinity);
+      primalbound[nsolver,nprobs[nsolver]] = max(min($5, +infinity), -infinity);
+      gap[nsolver,nprobs[nsolver]] = $6;
+      iters[nsolver,nprobs[nsolver]] = $7;
       nodes[nsolver,nprobs[nsolver]] = max($8,1);
       time[nsolver,nprobs[nsolver]] = fracceil(max($9,mintime),0.1);
       status[nsolver,nprobs[nsolver]] = $10;
@@ -240,38 +241,15 @@ BEGIN {
          problistlen++;
       }
    }
-   else if( $12 == "ok" || $12 == "timeout" || $12 == "unknown" || $12 == "abort" || $12 == "fail" || $12 == "readerror" )
-   {
-      # collect data (line with original and presolved problem size)
-      name[nsolver,nprobs[nsolver]] = $1;
-      type[nsolver,nprobs[nsolver]] = $2;
-      conss[nsolver,nprobs[nsolver]] = $5;
-      vars[nsolver,nprobs[nsolver]] = $6;
-      dualbound[nsolver,nprobs[nsolver]] = $7;
-      primalbound[nsolver,nprobs[nsolver]] = $8;
-      gap[nsolver,nprobs[nsolver]] = $9;
-      iters[nsolver,nprobs[nsolver]] = -nsolver; # different values for each solver -> category "diff"
-      nodes[nsolver,nprobs[nsolver]] = max($10,1);
-      time[nsolver,nprobs[nsolver]] = fracceil(max($11,mintime),0.1);
-      status[nsolver,nprobs[nsolver]] = $12;
-      probidx[$1,nsolver] = nprobs[nsolver];
-      probcnt[$1]++;
-      nprobs[nsolver]++;
-      if( probcnt[$1] == 1 )
-      {
-         problist[problistlen] = $1;
-         problistlen++;
-      }
-   }
-   else if( $13 == "ok" || $13 == "timeout" || $13 == "unknown" || $13 == "abort" || $13 == "fail" || $13 == "readerror" )
+   else if( $13 == "ok" || $13 == "timeout" || $13 == "unknown" || $13 == "abort" || $13 == "fail" || $13 == "readerror" ) # SCIP
    {
       # collect data (line with original and presolved problem size and simplex iterations)
       name[nsolver,nprobs[nsolver]] = $1;
       type[nsolver,nprobs[nsolver]] = $2;
       conss[nsolver,nprobs[nsolver]] = $5;
       vars[nsolver,nprobs[nsolver]] = $6;
-      dualbound[nsolver,nprobs[nsolver]] = $7;
-      primalbound[nsolver,nprobs[nsolver]] = $8;
+      dualbound[nsolver,nprobs[nsolver]] = max(min($7, +infinity), -infinity);
+      primalbound[nsolver,nprobs[nsolver]] = max(min($8, +infinity), -infinity);
       gap[nsolver,nprobs[nsolver]] = $9;
       iters[nsolver,nprobs[nsolver]] = $10;
       nodes[nsolver,nprobs[nsolver]] = max($11,1);
@@ -447,18 +425,18 @@ END {
       fail = 0;
       readerror = 0;
       unprocessed = 0;
-      mindb = +1e+100;
-      maxdb = -1e+100;
-      minpb = +1e+100;
-      maxpb = -1e+100;
+      mindb = +infinity;
+      maxdb = -infinity;
+      minpb = +infinity;
+      maxpb = -infinity;
       itercomp = -1;
       nodecomp = -1;
       timecomp = -1;
-      besttime = +1e+100;
-      bestnodes = +1e+100;
-      worsttime = -1e+100;
-      worstnodes = -1e+100;
-      worstiters = -1e+100;
+      besttime = +infinity;
+      bestnodes = +infinity;
+      worsttime = -infinity;
+      worstnodes = -infinity;
+      worstiters = -infinity;
       nthisunprocessed = 0;
       nthissolved = 0;
       nthistimeouts = 0;
@@ -612,7 +590,7 @@ END {
             }
          }
 
-	 if( primalbound[s,pidx] < 1e+20 )
+	 if( primalbound[s,pidx] < infinity )
 	    feasmark = " ";
 	 else
 	    feasmark = "#";
@@ -706,7 +684,7 @@ END {
             nprocessedprobs[s,0]++;
             nprocessedprobs[s,category[s]]++;
             pidx = probidx[p,s];
-	    if( primalbound[s,pidx] < 1e+20 ) {
+	    if( primalbound[s,pidx] < infinity ) {
 	       feasibles[s,0]++;
 	       feasibles[s,category[s]]++;
 	       hasfeasible = 1;

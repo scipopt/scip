@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.32 2007/07/02 10:28:22 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.33 2007/07/03 11:21:54 bzfpfend Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -50,9 +50,9 @@ BEGIN {
    printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &     Nodes &     Time \\\\\n") > TEXFILE;
    printf("\\midrule\n")                                            >TEXFILE;
 
-   printf("------------------+------+-------+------+----------------+----------------+------+-------+------+-------\n");
-   printf("Name              | Type | Conss | Vars |   Dual Bound   |  Primal Bound  | Gap% | Nodes | Time |       \n");
-   printf("------------------+------+-------+------+----------------+----------------+------+-------+------+-------\n");
+   printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
+   printf("Name              | Conss | Vars |   Dual Bound   |  Primal Bound  | Gap% |   Iters |  Nodes |  Time |       \n");
+   printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
 
    nprobs   = 0;
    sbab     = 0;
@@ -107,6 +107,7 @@ BEGIN {
    mipgap     = 1e-4;
    absmipgap  = 1e-6;
    bbnodes    = 0;
+   iters      = 0;
    primlps    = 0;
    primiter   = 0;
    duallps    = 0;
@@ -254,6 +255,7 @@ BEGIN {
 }
 /^Solution time/ {
    tottime   = $4;
+   iters     = $8;
    bbnodes   = $11;
    aborted   = 0;
 }
@@ -292,8 +294,8 @@ BEGIN {
       printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
          pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
 
-      printf("%-19s --     %6d %6d %16.9g %16.9g %6s %7d %6.1f ",
-         shortprob, cons, vars, db, pb, gapstr, bbnodes, tottime);
+      printf("%-19s %6d %6d %16.9g %16.9g %6s %9d %8d %7.1f ",
+             shortprob, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
 
       if( aborted )
       {

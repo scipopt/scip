@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.59 2007/06/06 11:28:06 bzfpfend Exp $
+# $Id: check.awk,v 1.60 2007/07/03 11:21:54 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -42,7 +42,6 @@ BEGIN {
    pavshift = 1.0;
    onlyinsolufile = 0;  # should only instances be reported that are included in the .solu file?
    onlyintestfile = 0;  # should only instances be reported that are included in the .test file?  TEMPORARY HACK!
-   conflictstats = 0;   # should conflict analysis statistics be reported as well?
    onlypresolvereductions = 0;  # should only instances with presolve reductions be shown?
    useshortnames = 1;   # should problem name be truncated to fit into column?
 
@@ -55,28 +54,14 @@ BEGIN {
    printf("\\begin{center}\n")                                      >TEXFILE;
    printf("\\setlength{\\tabcolsep}{2pt}\n")                        >TEXFILE;
    printf("\\newcommand{\\g}{\\raisebox{0.25ex}{\\tiny $>$}}\n")    >TEXFILE;
-   if( conflictstats )
-   {
-      printf("\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrrrrrrr@{}}\n") >TEXFILE;
-      printf("\\toprule\n")                                         >TEXFILE;
-      printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\%% &    Confs &    Lits &     Nodes &     Time &   BTime &   OTime &   CTime \\\\\n") > TEXFILE;
-      printf("\\midrule\n")                                         >TEXFILE;
-
-      printf("------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+-------+-------+-------+-------+------+------+------+-------\n");
-      printf("Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% | Confs |  Lits | Nodes |  Time | BTim | OTim | CTim |       \n");
-      printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+-------+-------+-------+-------+------+------+------+-------\n");
-   }
-   else
-   {
-      printf("\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrr@{}}\n") >TEXFILE;
-      printf("\\toprule\n")                                         >TEXFILE;
-      printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\%% &     Nodes &     Time \\\\\n") > TEXFILE;
-      printf("\\midrule\n")                                         >TEXFILE;
-
-      printf("------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+-------\n");
-      printf("Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters | Nodes |  Time |       \n");
-      printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
-   }
+   printf("\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrr@{}}\n") >TEXFILE;
+   printf("\\toprule\n")                                         >TEXFILE;
+   printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\%% &     Nodes &     Time \\\\\n") > TEXFILE;
+   printf("\\midrule\n")                                         >TEXFILE;
+   
+   printf("------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+-------\n");
+   printf("Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters | Nodes |  Time |       \n");
+   printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
 
    nprobs = 0;
    sbab = 0;
@@ -265,15 +250,14 @@ BEGIN {
    if( $4 == "infeasible" || $4 == "-" )
    {
       pb = 1e+20;
+      db = 1e+20;
       feasible = 0;
    }
    else if( $4 != "-" )
       pb = $4;
 }
 /^  Dual Bound       :/ { 
-   if( $4 == "-" ) 
-      db = -1e+20;
-   else
+   if( $4 != "-" ) 
       db = $4;
 }
 #
@@ -477,27 +461,12 @@ BEGIN {
             status = "unknown";
       }
 
-      if( conflictstats )
+      if( !onlypresolvereductions || origcons > cons || origvars > vars )
       {
-	 if( !onlypresolvereductions || origcons > cons || origvars > vars )
-	 {
-            printf("%-19s & %6d & %6d & %16.9g & %16.9g & %6s & %8d & %7.1f &%s%8d &%s%7.1f & %7.1f & %7.1f & %7.1f \\\\\n",
-		   pprob, cons, vars, db, pb, gapstr, confclauses, (confclauses > 0 ? confliterals / confclauses : 0.0), 
-		   markersym, bbnodes, markersym, tottime, tottime - conftime - overheadtime, overheadtime, conftime) >TEXFILE;
-	    printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %7d %7.1f %7d %7.1f %6.1f %6.1f %6.1f %s\n",
-		   shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, confclauses, (confclauses > 0 ? confliterals / confclauses : 0.0), 
-		   bbnodes, tottime, tottime - conftime - overheadtime, overheadtime, conftime, status);
-	 }
-      }
-      else
-      {
-	 if( !onlypresolvereductions || origcons > cons || origvars > vars )
-	 {
-	    printf("%-19s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f \\\\\n",
-               pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
-	    printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f %s\n",
-               shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime, status);
-	 }
+         printf("%-19s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f \\\\\n",
+                pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
+         printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f %s\n",
+                shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime, status);
       }
 
       # PAVER output: see http://www.gamsworld.org/performance/paver/pprocess_submit.htm
@@ -530,46 +499,22 @@ END {
    shiftedbasictimegeom -= timegeomshift;
 
    printf("\\midrule\n")                                                 >TEXFILE;
-   if( conflictstats )
-   {
-      printf("%-14s (%2d) &        &        &                &                &        &          &         & %9d & %8.1f & %7.1f & %7.1f & %7.1f \\\\\n",
-         "Total", nprobs, sbab, stottime, stottime - conftottime - overheadtottime, overheadtottime, conftottime) >TEXFILE;
-      printf("%-14s      &        &        &                &                &        &          &         & %9d & %8.1f & %7.1f & %7.1f & %7.1f \\\\\n",
-         "Geom. Mean", nodegeom, timegeom, basictimegeom, overheadtimegeom, conftimegeom) >TEXFILE;
-      printf("%-14s      &        &        &                &                &        &          &         & %9d & %8.1f & %7.1f & %7.1f & %7.1f \\\\\n",
-         "Shifted Geom.", shiftednodegeom, shiftedtimegeom, shiftedbasictimegeom, shiftedoverheadtimegeom, shiftedconftimegeom) >TEXFILE;
-      printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+-------+-------+-------+-------+------+------+------+-------\n");
-      printf("\n");
-      printf("------------------------------[Nodes]---------------[Time]-----------[Basic Time]-------[Overhead Time]-----[Conflict Time]-\n");
-      printf("  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom.     total     geom.     total     geom.     total     geom. \n");
-      printf("----------------------------------------------------------------------------------------------------------------------------\n");
-      printf("%5d %5d %5d %5d %9d %9.1f %9.1f %9.1f %9.1f %9.1f %9.1f %9.1f %9.1f %9.1f\n",
-         nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom, 
-         stottime - conftottime - overheadtottime, basictimegeom,
-         overheadtottime, overheadtimegeom, conftottime, conftimegeom);
-      printf(" shifted geom. [%5d/%5.1f]      %9.1f           %9.1f           %9.1f           %9.1f           %9.1f\n",
-         nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom, shiftedbasictimegeom, shiftedoverheadtimegeom, shiftedconftimegeom);
-      printf("----------------------------------------------------------------------------------------------------------------------------\n");
-   }
-   else
-   {
-      printf("%-14s (%2d) &        &        &                &                &        & %9d & %8.1f \\\\\n",
-         "Total", nprobs, sbab, stottime) >TEXFILE;
-      printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
-         "Geom. Mean", nodegeom, timegeom) >TEXFILE;
-      printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
-         "Shifted Geom.", shiftednodegeom, shiftedtimegeom) >TEXFILE;
-      printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
-      printf("\n");
-      printf("------------------------------[Nodes]---------------[Time]------\n");
-      printf("  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom. \n");
-      printf("----------------------------------------------------------------\n");
-      printf("%5d %5d %5d %5d %9d %9.1f %9.1f %9.1f \n",
-         nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom);
-      printf(" shifted geom. [%5d/%5.1f]      %9.1f           %9.1f \n",
-         nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
-      printf("----------------------------------------------------------------\n");
-   }
+   printf("%-14s (%2d) &        &        &                &                &        & %9d & %8.1f \\\\\n",
+          "Total", nprobs, sbab, stottime) >TEXFILE;
+   printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
+          "Geom. Mean", nodegeom, timegeom) >TEXFILE;
+   printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
+          "Shifted Geom.", shiftednodegeom, shiftedtimegeom) >TEXFILE;
+   printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
+   printf("\n");
+   printf("------------------------------[Nodes]---------------[Time]------\n");
+   printf("  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom. \n");
+   printf("----------------------------------------------------------------\n");
+   printf("%5d %5d %5d %5d %9d %9.1f %9.1f %9.1f \n",
+          nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom);
+   printf(" shifted geom. [%5d/%5.1f]      %9.1f           %9.1f \n",
+          nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
+   printf("----------------------------------------------------------------\n");
    printf("\\bottomrule\n")                                              >TEXFILE;
    printf("\\noalign{\\vspace{6pt}}\n")                                  >TEXFILE;
    printf("\\end{tabular*}\n")                                           >TEXFILE;
