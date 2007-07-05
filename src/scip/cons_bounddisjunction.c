@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.9 2007/06/27 10:17:06 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.10 2007/07/05 17:23:35 bzfheinz Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @brief  constraint handler for bound disjunction constraints
@@ -840,7 +840,7 @@ SCIP_RETCODE checkCons(
    return SCIP_OKAY;
 }
 
-/** enforces the pseudo solution on the given constraint */
+/** enforces the pseudo or LP solution on the given constraint */
 static
 SCIP_RETCODE enforceCurrentSol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -853,7 +853,6 @@ SCIP_RETCODE enforceCurrentSol(
 {
    SCIP_Bool mustcheck;
 
-   assert(!SCIPhasCurrentNodeLP(scip));
    assert(cons != NULL);
    assert(SCIPconsGetHdlr(cons) != NULL);
    assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);

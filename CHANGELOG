@@ -99,6 +99,7 @@ features:
 - slightly modified automatic constraint aging strategy
 
 fixed bugs:
+- removed wrong assert in bounddisjunction constraint enforcement
 - fixed bug with wrong bound changes of loose variables
 - fixed bug with aggregated variables in debug solution test
 - fixed numerical buf with slightly different LP optimum after resolving due to probing/diving
