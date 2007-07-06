@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck.sh,v 1.7 2007/06/06 16:31:04 bzfberth Exp $
+# $Id: evalcheck.sh,v 1.8 2007/07/06 17:30:49 bzfberth Exp $
 
 export LANG=C
 
@@ -52,8 +52,12 @@ do
     if [ -f $TSTNAME.solu ]
     then
 	SOLUFILE=$TSTNAME.solu
+    else if [ -f mmm.solu ] 
+    then
+	SOLUFILE=mmm.solu
     else
-	SOLUFILE=""
+        SOLUFILE=""
+    fi
     fi
 
     gawk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE

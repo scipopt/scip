@@ -15,14 +15,14 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.60 2007/07/03 11:21:54 bzfpfend Exp $
+# $Id: check.awk,v 1.61 2007/07/06 17:30:49 bzfberth Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
 #@author  Thorsten Koch
 #@author  Tobias Achterberg
 #@author  Alexander Martin
-#
+#@author  Timo Berthold
 function abs(x)
 {
    return x < 0 ? -x : x;
@@ -322,7 +322,7 @@ BEGIN {
       else
       {
          if( intvars == 0 )
-            probtype = "01MIP";
+            probtype = "MBP";
          else
             probtype = "MIP";
       }
