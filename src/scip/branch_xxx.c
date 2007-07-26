@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_xxx.c,v 1.18 2007/06/06 11:25:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_xxx.c,v 1.19 2007/07/26 14:15:57 bzfpfets Exp $"
 
 /**@file   branch_xxx.c
  * @brief  xxx branching rule
@@ -31,7 +31,8 @@
 #define BRANCHRULE_NAME            "xxx"
 #define BRANCHRULE_DESC            "branching rule template"
 #define BRANCHRULE_PRIORITY        0
-#define BRANCHRULE_MAXDEPTH      -1
+#define BRANCHRULE_MAXDEPTH        -1
+#define BRANCHRULE_MAXBOUNDDIST    1.0
 
 
 
@@ -43,7 +44,7 @@
 /* TODO: fill in the necessary branching rule data */
 
 /** branching rule data */
-struct BranchruleData
+struct SCIP_BranchruleData
 {
 };
 
@@ -189,7 +190,8 @@ SCIP_RETCODE SCIPincludeBranchruleXxx(
    /* TODO: (optional) create branching rule specific data here */
 
    /* include branching rule */
-   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
+   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH, 
+	 BRANCHRULE_MAXBOUNDDIST,
          branchFreeXxx, branchInitXxx, branchExitXxx,
          branchInitsolXxx, branchExitsolXxx,
          branchExeclpXxx, branchExecpsXxx,
