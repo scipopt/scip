@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.246 2007/06/15 10:06:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.247 2007/07/27 12:22:34 bzfwolte Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -30,6 +30,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 
 #include <assert.h>
 #include <math.h>
@@ -3460,6 +3461,7 @@ SCIP_RETCODE rowScale(
    SCIP_Real ub;
    SCIP_Bool mindeltainf;
    SCIP_Bool maxdeltainf;
+   int oldlen; 
    int c;
 
    assert(row != NULL);
@@ -3475,6 +3477,7 @@ SCIP_RETCODE rowScale(
    maxdelta = 0.0;
    mindeltainf = FALSE;
    maxdeltainf = FALSE;
+   oldlen = row->len;
 
    /* scale the row coefficients, thereby recalculating whether the row's activity is always integral;
     * if the row coefficients are rounded to the nearest integer value, calculate the maximal activity difference,
@@ -3536,6 +3539,15 @@ SCIP_RETCODE rowScale(
             
          /* change the coefficient in the row, and update the norms and integrality status */
          SCIP_CALL( rowChgCoefPos(row, set, lp, c, newval) );
+
+         /* current coefficient has been deleted from the row because it was almost zero */
+         if( oldlen != row->len ) 
+         {  
+            assert(row->len == oldlen - 1);
+            c--;
+            oldlen = row->len;
+         }
+
       }
       else
          row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
@@ -4858,6 +4870,38 @@ SCIP_Real SCIProwGetMinval(
    assert(row->minval >= 0.0);
 
    return row->minval;
+}
+
+/** gets maximal column index of row entries */
+int SCIProwGetMaxidx(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(row != NULL);
+   
+   if( row->validminmaxidx == 0 )
+      rowCalcNorms(row, set);
+   assert(row->maxidx >= 0);
+   assert(row->validminmaxidx);
+
+   return row->maxidx;
+}
+
+/** gets minimal column index of row entries */
+int SCIProwGetMinidx(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(row != NULL);
+   
+   if( row->validminmaxidx == 0 )
+      rowCalcNorms(row, set);
+   assert(row->minidx >= 0);
+   assert(row->validminmaxidx);
+
+   return row->minidx;
 }
 
 /** returns row's efficacy with respect to the current LP solution: e = -feasibility/norm */

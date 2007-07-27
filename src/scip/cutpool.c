@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.52 2007/06/06 11:25:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.53 2007/07/27 12:22:34 bzfwolte Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -365,6 +365,7 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
    )
 {
    SCIP_CUT* cut;
+   int maxidx;
 
    assert(cutpool != NULL);
    assert(row != NULL);
@@ -380,6 +381,10 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
       SCIPerrorMessage("cannot store locally valid row <%s> in a cut pool\n", SCIProwGetName(row));
       return SCIP_INVALIDDATA;
    }
+
+   /* only called to ensure that minidx and maxidx are up-to-date */
+   maxidx = SCIProwGetMaxidx(row, set);    
+   assert(row->validminmaxidx);   
 
    /* create the cut */
    SCIP_CALL( cutCreate(&cut, blkmem, row) );

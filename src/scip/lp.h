@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.124 2007/06/06 11:25:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.125 2007/07/27 12:22:34 bzfwolte Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -525,6 +525,18 @@ SCIP_Real SCIProwGetMaxval(
 /** gets minimal absolute value of row vector's non-zero coefficients */
 extern
 SCIP_Real SCIProwGetMinval(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** gets maximal column index of row entries */
+int SCIProwGetMaxidx(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** gets minimal column index of row entries */
+int SCIProwGetMinidx(
    SCIP_ROW*             row,                /**< LP row */
    SCIP_SET*             set                 /**< global SCIP settings */
    );

@@ -99,6 +99,8 @@ features:
 - slightly modified automatic constraint aging strategy
 
 fixed bugs:
+- fixed bug in rowScale() concerning deletion of almost zero coefficients
+- fixed bug in SCIPcutpoolAddNewRow() concerning update of minidx and maxidx of added row
 - removed wrong assert in bounddisjunction constraint enforcement
 - fixed bug with wrong bound changes of loose variables
 - fixed bug with aggregated variables in debug solution test
