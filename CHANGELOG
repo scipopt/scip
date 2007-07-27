@@ -84,6 +84,7 @@ parameters:
 - new parameters "constraints/linear/maxcardbounddist" and "constraints/knapsack/maxcardbounddist"
 
 features:
+- SCIP now has a couple of specialized settings, all called scip_*.set
 - SCIP is now compatible to the Exception branch of SoPlex
 - presolving, cut separation, primal heuristics, and strong branching now better respect time limit
 - time limit is now forwarded to lp solving algorithm
