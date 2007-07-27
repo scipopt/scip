@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.32 2007/06/28 12:17:31 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.33 2007/07/27 16:21:30 bzfpfend Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -1109,10 +1109,13 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          /* if we found more than half the cuts we are allowed to generate, we accept the clique as new incumbent,
           * such that only more violated cuts are generated afterwards
           */
-         if( sepadata->ncuts > sepadata->maxsepacuts/2 )
-            *acceptsol = TRUE;
-         if( sepadata->ncuts >= sepadata->maxsepacuts )
-            *stopsolving = TRUE;
+         if( sepadata->maxsepacuts >= 0 )
+         {
+            if( sepadata->ncuts > sepadata->maxsepacuts/2 )
+               *acceptsol = TRUE;
+            if( sepadata->ncuts >= sepadata->maxsepacuts )
+               *stopsolving = TRUE;
+         }
       }
    }
 }
