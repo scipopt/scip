@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.h,v 1.8 2006/08/30 09:46:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.h,v 1.9 2007/07/27 16:25:48 bzfpfend Exp $"
 
 /**@file   ConshdlrSubtour.h
  * @brief  C++ constraint handler for TSP subtour elimination constraints
@@ -60,6 +60,7 @@ public:
    virtual SCIP_RETCODE scip_delete(
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      SCIP_CONS*         cons,               /**< the constraint belonging to the constraint data */
       SCIP_CONSDATA**    consdata            /**< pointer to the constraint data to free */
       );
 

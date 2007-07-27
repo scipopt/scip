@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.10 2006/09/03 19:03:25 bzforlow Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.11 2007/07/27 16:25:48 bzfpfend Exp $"
 
 /**@file   ConshdlrSubtour.cpp
  * @brief  C++ file reader for TSP data files
@@ -237,6 +237,7 @@ SCIP_RETCODE sepaSubtour(
 SCIP_RETCODE ConshdlrSubtour::scip_delete(
    SCIP*              scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+   SCIP_CONS*         cons,               /**< the constraint belonging to the constraint data */
    SCIP_CONSDATA**    consdata            /**< pointer to the constraint data to free */
    )
 {
