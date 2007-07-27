@@ -1,0 +1,39 @@
+# maximal number of presolving rounds (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/maxrounds = -1
+
+# abort presolve, if at most this fraction of the problem was changed in last presolve round
+# [type: real, range: [0,1], default: 0.0001]
+presolving/abortfac = 0.0001
+
+# maximal number of restarts (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/maxrestarts = -1
+
+# fraction of integer variables that were fixed in the root node triggering a restart with preprocessing after root node evaluation
+# [type: real, range: [0,1], default: 0.05]
+presolving/restartfac = 0.05
+
+# fraction of integer variables that were fixed in the root node triggering an immediate restart with preprocessing
+# [type: real, range: [0,1], default: 0.2]
+presolving/immrestartfac = 0.2
+
+# fraction of integer variables that were globally fixed during the solving process triggering a restart with preprocessing
+# [type: real, range: [0,1], default: 1]
+presolving/subrestartfac = 1
+
+# minimal fraction of integer variables removed after restart to allow for an additional restart
+# [type: real, range: [0,1], default: 0.1]
+presolving/restartminred = 0.1
+
+# maximal number of presolving rounds with pairwise constraint comparison (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/linear/maxpresolpairrounds = 0
+
+# maximal number of presolving rounds with pairwise constraint comparison (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/and/maxpresolpairrounds = 0
+
+# maximal number of presolving rounds with pairwise constraint comparison (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/xor/maxpresolpairrounds = 0
