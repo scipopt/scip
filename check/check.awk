@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.61 2007/07/06 17:30:49 bzfberth Exp $
+# $Id: check.awk,v 1.62 2007/07/30 13:29:18 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -247,13 +247,18 @@ BEGIN {
 /memory limit reached/ { memlimitreached = 1; }
 /problem is solved/    { timeout = 0; }
 /^  Primal Bound     :/ {
-   if( $4 == "infeasible" || $4 == "-" )
+   if( $4 == "infeasible" )
    {
       pb = 1e+20;
       db = 1e+20;
       feasible = 0;
    }
-   else if( $4 != "-" )
+   else if( $4 == "-" )
+   {
+      pb = 1e+20;
+      feasible = 0;
+   }
+   else
       pb = $4;
 }
 /^  Dual Bound       :/ { 
