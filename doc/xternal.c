@@ -119,14 +119,14 @@
  *    and "cons_nosubtour.h".
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "nosubtour".
- * -# Adjust the properties of the constraint handler (see \ref PROPERTIES).
- * -# Define the constraint data and the constraint handler data (see \ref CONSTRAINTDATA).
- * -# Implement the interface methods (see \ref INTERFACE).
- * -# Implement the fundamental callback methods (see \ref FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref ADDITIONALCALLBACKS).
+ * -# Adjust the properties of the constraint handler (see \ref CONS_PROPERTIES).
+ * -# Define the constraint data and the constraint handler data (see \ref CONS_DATA).
+ * -# Implement the interface methods (see \ref CONS_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref CONS_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref CONS_ADDITIONALCALLBACKS).
  *
  * 
- * @section PROPERTIES Properties of a Constraint Handler
+ * @section CONS_PROPERTIES Properties of a Constraint Handler
  *
  * At the top of the new file "cons_subtour.c" you can find the constraint handler properties.
  * These are given as compiler defines.
@@ -137,7 +137,7 @@
  * \par CONSHDLR_NAME: the name of the constraint handler.
  * This name is used in the interactive shell to address the constraint handler.
  * Additionally, if you are searching a constraint handler with SCIPfindConshdlr(), this name is looked up.
- * Names have to be unique - no two constraint handlers may have the same name.
+ * Names have to be unique: no two constraint handlers may have the same name.
  *
  * \par CONSHDLR_DESC: the description of the constraint handler.
  * This string is printed as description of the constraint handler in the interactive shell.
@@ -195,7 +195,7 @@
  * If you do not want to execute the method, set the result code to SCIP_DIDNOTRUN.
  *
  * \par CONSHDLR_PROPFREQ: the default frequency for propagating domains.
- * This default frequency has the same meaning as the \ref CONSHDLR_SEPAFREQ with respect to the domain propagation
+ * This default frequency has the same meaning as the CONSHDLR_SEPAFREQ with respect to the domain propagation
  * callback of the consrtaint handler.
  * A propagation frequency of 0 means that propagation is only applied in preprocessing and at the root node.
  *
@@ -243,7 +243,7 @@
  * all variables that are marked to be integer for integral values.
  *
  *
- * @section CONSTRAINTDATA Constraint Data and Constraint Handler Data
+ * @section CONS_DATA Constraint Data and Constraint Handler Data
  *
  * Below the header "Data Structures" you can find two structs called "struct SCIP_ConsData" and
  * "struct SCIP_ConshdlrData".
@@ -264,7 +264,7 @@
  * You can leave the struct empty.
  *
  *
- * @section INTERFACE Interface Methods
+ * @section CONS_INTERFACE Interface Methods
  *
  * At the bottom of "cons_subtour.c" you can find two interface methods, that also appear in "cons_subtour.h".
  * These are SCIPincludeConshdlrSubtour() and SCIPcreateConsSubtour().
@@ -338,7 +338,7 @@
  * data with the given vars array.
  *
  * 
- * @section FUNDAMENTALCALLBACKS Fundamental Callback Methods
+ * @section CONS_FUNDAMENTALCALLBACKS Fundamental Callback Methods
  *
  * By implementing the fundamental callbacks, you define the semantics of the constraint class the constraint handler
  * deals with.
@@ -460,7 +460,7 @@
  *  "3x -5y +2z < 2  or  3x -5y +2z > 7".
  * 
  *
- * @section ADDITIONALCALLBACKS Additional Callback Methods
+ * @section CONS_ADDITIONALCALLBACKS Additional Callback Methods
  *
  * The additional callback methods need not to be implemented in every case.
  * However, some of them have to be implemented for most applications.
@@ -716,7 +716,229 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page PRICER How to add variable pricers
  *
- * This page is not yet written. Here we will explain how to add variable pricers to SCIP.
+ * A pricer performs the dynamic generation of new variables in a column generation algorithm.
+ * It is an algorithmic representation of a (usually exponential) number of variables.
+ * The \ref PRICERREDCOST and \ref PRICERFARKAS methods are called after each LP solve to generate additional
+ * variables which may improve the objective value or decrease the LP infeasibility, respectively.
+ *
+ * If the pricer finds one or more variables with negative reduced costs or negative farkas value, it should
+ * call SCIPcreateVar() and SCIPaddPricedVar() to create and add the variable to the problem. Additionally,
+ * the pricer has to add the variable to all constraints in which it appears. Therefore, a pricer needs to
+ * know the constraints of the model and their meaning. Note that all constraints for which additional variables
+ * are generated by a pricer have to be flagged as "modifiable" in the SCIPcreateCons() call.
+ *
+ * In the following, we explain how the user can add an own pricer.
+ * For example, look into the distance pricer for the p-median problem (examples/SamplePricer/src/pricer_distance.h) of the
+ * SamplePricer example project.
+ * The example is written in C++ and uses the C++ wrapper classes.
+ * However, we will explain the implementation of a pricer using the C interface.
+ * It is very easy to transfer the C explanation to C++: whenever a method should be implemented using the
+ * SCIP_DECL_PRICER... notion, reimplement the corresponding virtual member function of the abstract ObjPricer
+ * base class.
+ *
+ * Additional documentation for the callback methods of a pricer can be found in the file
+ * "type_pricer.h".
+ *
+ * Here is what you have to do to implement a pricer:
+ * -# Copy the template files "src/scip/pricer_xxx.c" and "src/scip/pricer_xxx.h" into files names "cons_mypricer.c"
+ *    and "cons_mypricer.h".
+ *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mypricer".
+ * -# Adjust the properties of the pricer (see \ref PRICER_PROPERTIES).
+ * -# Define the pricer data (see \ref PRICER_DATA).
+ * -# Implement the interface methods (see \ref PRICER_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref PRICER_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref PRICER_ADDITIONALCALLBACKS).
+ *
+ * 
+ * @section PRICER_PROPERTIES Properties of a Pricer
+ *
+ * At the top of the new file "pricer_mypricer.c" you can find the pricer properties.
+ * These are given as compiler defines.
+ * In the C++ wrapper class, you have to provide the pricer properties by calling the constructor
+ * of the abstract base class ObjPricer from within your constructor (see the SamplePricer example).
+ * The properties you have to set have the following meaning:
+ *
+ * \par PRICER_NAME: the name of the pricer.
+ * This name is used in the interactive shell to address the pricer.
+ * Additionally, if you are searching a pricer with SCIPfindPricer(), this name is looked up.
+ * Names have to be unique: no two pricers may have the same name.
+ *
+ * \par PRICER_DESC: the description of the pricer.
+ * This string is printed as description of the pricer in the interactive shell.
+ *
+ * \par PRICER_PRIORITY: the priority of the pricer.
+ * In each pricing round during the price-and-cut loop of the subproblem processing, the included pricers are
+ * called in a predefined order, which is given by the priorities of the pricers.
+ * The higher the priority, the earlier the pricer is called.
+ * Usually, you will have only one pricer in your application and the priority is therefore irrelevant.
+ *
+ * \par PRICER_DELAY: the default for whether the pricer should be delayed, if other variables with negative reduced costs have already been found in the current pricing round.
+ * Variables may be declared to be "removable" in the SCIPcreateVar() call. This means that SCIP may remove the variable
+ * from the LP if it was inactive (i.e., sitting at zero) for a number of LP solves. Nevertheless, after the removal of the
+ * column from the LP, the variable still exists, and SCIP can calculate reduced costs and add it to the LP again if
+ * necessary.
+ * \n
+ * If the PRICER_DELAY flag is set to TRUE (which is the common setting), all those existing variables with negative reduced costs
+ * are added to the LP, and the LP is resolved before the pricer is called. Thus, the pricer can assume that all existing variables
+ * have non-negative reduced costs if the \ref PRICERREDCOST or \ref PRICERFARKAS methods are called.
+ * \n
+ * In some applications, this inner pricing loop on the already existing variables can significantly slow down the solving process,
+ * since it may lead to the addition of only very few variables in each pricing round. If this is an issue in your application,
+ * you should consider to set the PRICER_DELAY flag to FALSE. You must, however, be aware of the fact that there may be already
+ * existing variables with negative reduced costs. For example, this may lead to the issue that your pricer generates the same
+ * variable twice. In some models, this is not critical because an optimal solution would choose only one of the two identical
+ * variables anyway, but for other models this can lead to wrong results because the duplication of a variable essentially doubles
+ * the upper bound of the variable.
+ *
+ *
+ * @section PRICER_DATA Pricer Data
+ *
+ * Below the header "Data Structures" you can a struct which is called "struct SCIP_PricerData".
+ * In this data structure, you can store the data of your pricer. For example, it may be convenient to store pointers to the
+ * constraints of the problem instance here, because the pricer has to add variables to those constraints.
+ * If you are using C++, you can add pricer data as usual as object variables to your class.
+ * \n
+ * Defining pricer data is optional. You can leave the struct empty.
+ *
+ *
+ * @section PRICER_INTERFACE Interface Methods
+ *
+ * At the bottom of "pricer_mypricer.c" you can find the interface method SCIPincludePricerMypricer(), which also appears in "pricer_mypricer.h".
+ * \n
+ * This method has only to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the pricer by calling the method
+ * SCIPincludePricer().
+ * It is called by the user, if he wants to include the pricer, i.e. if he wants to solve a model for which variables should
+ * be generated by this pricer.
+ *
+ * If you are using pricer data, you have to allocate the memory for the data at this point.
+ * You can do this by calling
+ * \code
+ * SCIP_CALL( SCIPallocMemory(scip, &pricerdata) );
+ * \endcode
+ * You also have to initialize the fields in struct SCIP_PricerData afterwards.
+ *
+ * You may also add user parameters for your pricer, see the method \b SCIPincludeConshdlrKnapsack() in src/scip/cons_knapsack.c
+ * for an example.
+ *
+ * 
+ * @section PRICER_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Pricer
+ *
+ * The fundamental callback methods have to be implemented in order to obtain an operational algorithm.
+ * In the case of a pricer, the fundamental callbacks are the two variable pricing callbacks which search and add
+ * new variables to the problem.
+ * In the C++ wrapper class ObjConshdlr, the scip_redcost() method (which corresponds to the PRICERREDCOST callback) is a virtual
+ * abstract member function.
+ * You have to implement it in order to be able to construct an object of your pricer class.
+ * The other fundamental method scip_farkas() has an empty default implementation, but if it may happen in your application
+ * that infeasible LP relaxations are encountered, you have to overwrite this method as well.
+ *
+ * Additional documentation to the callback methods can be found in "type_pricer.h".
+ *
+ * @subsection PRICERREDCOST
+ *
+ * The PRICERREDCOST callback is called inside the price-and-cut loop of the subproblem solving process if the current LP relaxation
+ * is feasible.
+ * It should search for additional variables that can contribute to improve the current LP's solution value.
+ * In standard branch-and-price, these are variables with negative dual feasibility, that is negative
+ * reduced costs for non-negative variables, positive reduced costs for non-positive variables,
+ * and non-zero reduced costs for variables that can be negative and positive.
+ *
+ * Whenever the pricer finds a variable with negative dual feasibility, it should call SCIPcreateVar()
+ * and SCIPaddPricedVar() to add the variable to the problem. Furthermore, it should call the appropriate
+ * methods of the constraint handlers to add the necessary variable entries to the constraints.
+ *
+ * Pricers usually need the dual LP solution as input for the pricing algorithm.
+ * Since SCIP does not know the semantics of the individual constranits in the problem, the dual solution
+ * has to be provided by the constraint handlers.
+ * For example, the setppc constraint handler that deals with set partitioning, packing, and covering constraints provides
+ * the method SCIPgetDualsolSetppc() (defined in cons_setppc.h) to access the dual solution value for a single constraint.
+ * Similarly, the dual solution of a linear constraint can be queried with the method SCIPgetDualsolLinear() of cons_linear.h.
+ * The reduced costs of the existing variables can be accessed with the method SCIPgetVarRedcost().
+ *
+ * @subsection PRICERFARKAS
+ *
+ * If the current LP relaxation is infeasible, it is the task of the pricer to generate additional variables that can
+ * potentially render the LP feasible again. In standard branch-and-price, these are variables with positive farkas values,
+ * and the PRICERFARKAS method should identify those variables.
+ *
+ * If the LP was proven to be infeasible, we have an infeasibility proof by the dual farkas multipliers \f$y\f$.
+ * With the values of y, an implicit inequality \f$y^T A x \ge y^T b\f$ is associated, with \f$b\f$ given
+ * by the sides of the LP rows and the sign of \f$y\f$:
+ *  - if \f$y_i\f$ is positive, \f$b_i\f$ is the left hand side of the row,
+ *  - if \f$y_i\f$ is negative, \f$b_i\f$ is the right hand side of the row.
+ *
+ * \f$y\f$ is chosen in a way, such that the valid inequality  \f$y^T A x \ge y^T b\f$  is violated by all \f$x\f$,
+ * especially by the (for this inequality least infeasible solution) \f$x'\f$ defined by 
+ *  - \f$x'_i := ub_i\f$, if \f$y^T A_i \ge 0\f$
+ *  - \f$x'_i := lb_i\f$, if \f$y^T A_i < 0\f$.
+ * Pricing in this case means to add variables \f$i\f$ with positive farkas value, i.e. \f$y^T A_i x'_i > 0\f$.
+ *
+ * To apply farkas pricing, the pricer needs to know the farkas values of the constraints. Like the dual solution values for
+ * feasible LP solutions, the dual farkas values for infeasible solutions can be obtained by constraint handler interface
+ * methods like, for example, the SCIPgetDualfarkasLinear() method of the linear constraint handler.
+ * The farkas values for the bounds of the variables are just the regular reduced costs and can be accessed with SCIPgetVarRedcost().
+ *
+ * It is useful to note that farkas pricing is the same as the regular pricing with a zero objective function.
+ * Therefore, a typical implementation of a pricer would consist of a generic pricing algorithm that gets a dual solution and an
+ * objective function vector as input and generates variables by calling SCIPcreateVar() and SCIPaddPricedVar().
+ * The PRICERREDCOST callback would call this function with the regular objective function and the regular dual solution vector,
+ * while the PRICERFARKAS callback would call this function with a zero objective function and the farkas vector.
+ * From a practical point of view, it is usually the simplest approach to provide just one Boolean flag to the generic pricing
+ * algorithm in order to identify whether it is reduced cost or farkas pricing. Then, the algorithm would just call the appropriate
+ * methods to access the dual solution or objective function, depending on the Boolean flag.
+ *
+ *
+ * @section PRICER_ADDITIONALCALLBACKS Additional Callback Methods of a Pricer
+ *
+ * The additional callback methods need not to be implemented in every case.
+ * However, some of them have to be implemented for most applications.
+ *
+ * @subsection PRICERFREE
+ *
+ * If you are using pricer data, you have to implement this method in order to free the pricer data.
+ * This can be done by the following procedure:
+ * \code
+ * static
+ * SCIP_DECL_PRICERFREE(consFreeMypricer)
+ * {
+ *    SCIP_PRICERDATA* pricerdata;
+ *  
+ *    pricerdata = SCIPpricerGetData(pricer);
+ *    assert(pricerdata != NULL);
+ *
+ *    SCIPfreeMemory(scip, &pricerdata);
+ *
+ *    SCIPpricerSetData(pricer, NULL);
+ *
+ *    return SCIP_OKAY;
+ * }
+ * \endcode
+ * If you are using the C++ wrapper class, this method is not available.
+ * Instead, just use the destructor of your class to free the member variables of your class.
+ *
+ * @subsection PRICERINIT
+ *
+ * The PRICERINIT callback is executed after the problem was transformed.
+ * The pricer may, e.g., use this call to replace the original constraints stored in its pricer data by transformed
+ * constraints, or to initialize other elements of his pricer data.
+ *
+ * @subsection PRICEREXIT
+ *
+ * The PRICEREXIT callback is executed before the transformed problem is freed.
+ * In this method, the pricer should free all resources that have been allocated for the solving process in PRICERINIT.
+ *
+ * @subsection PRICERINITSOL
+ *
+ * The PRICERINITSOL callback is executed when the presolving was finished and the branch and bound process is about to begin.
+ * The pricer may use this call to initialize its branch and bound specific data.
+ *
+ * @subsection PRICEREXITSOL
+ *
+ * The PRICEREXITSOL callback is executed before the branch and bound process is freed.
+ * The pricer should use this call to clean up its branch and bound data, which was allocated in PRICERINITSOL.
+ *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
