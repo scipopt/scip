@@ -88,7 +88,7 @@ conflict/keepreprop = TRUE
 
 # should the conflict constraints be subject to aging?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
-conflict/dynamic = TRUE
+conflict/dynamic = FALSE
 
 # should the conflict's relaxations be subject to LP aging and cleanup?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
