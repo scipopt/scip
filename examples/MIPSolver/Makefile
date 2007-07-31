@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.11 2006/05/12 09:21:15 bzfpfend Exp $
+# $Id: Makefile,v 1.12 2007/07/31 09:20:55 bzfwolte Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ example project using SCIP as a callable library
@@ -211,7 +211,7 @@ MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
 #-----------------------------------------------------------------------------
 
 .PHONY: all
-all:            $(MAINFILE)
+all:            $(LIBDIR) $(LIBDIR)/scip $(MAINFILE)
 
 .PHONY: lint
 lint:		$(MAINSRC)
@@ -275,6 +275,22 @@ ifeq ($(VERBOSE), true)
 else
 		@$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< -o $@
 endif
+
+$(LIBDIR)/scip:
+		@$(SHELL) -ec 'if [ ! -e $@ ] ; \
+                        then \
+                                echo "** missing soft-link \"$@\"" ; \
+                                echo -n "** enter full path of SCIP installation: " ; \
+                                read TARGET ; \
+                                if [ "$$TARGET" != "" ] ; \
+                                then \
+                                        echo "-> creating softlink \"$@\" -> \"$$TARGET\"" ; \
+                                        ln -s $$TARGET $@ ; \
+                                else \
+                                        echo "-> skipped creation of softlink \"$@\"." ; \
+                                fi ; \
+                                echo ; \
+                        fi'
 
 
 # --- EOF ---------------------------------------------------------------------
