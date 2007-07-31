@@ -26,6 +26,10 @@ presolving/subrestartfac = 1
 # [type: real, range: [0,1], default: 0.1]
 presolving/restartminred = 0.1
 
+# maximal number of presolving rounds the presolver participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/probing/maxrounds = 0
+
 # maximal number of presolving rounds with pairwise constraint comparison (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/linear/maxpresolpairrounds = 0

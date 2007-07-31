@@ -44,11 +44,11 @@ separating/maxroundsroot = -1
 
 # maximal number of separation rounds in the root node of a subsequent run (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: 1]
-separating/maxroundsrootsubrun = 1
+separating/maxroundsrootsubrun = 5
 
 # maximal additional number of separation rounds in subsequent price-and-cut loops (-1: no additional restriction)
 # [type: int, range: [-1,2147483647], default: 1]
-separating/maxaddrounds = 1
+separating/maxaddrounds = 5
 
 # maximal number of consecutive separation rounds without objective or integrality improvement (-1: no additional restriction)
 # [type: int, range: [-1,2147483647], default: 5]
@@ -68,39 +68,15 @@ separating/cutagelimit = 100
 
 # separation frequency for the global cut pool (-1: disable global cut pool, 0: only separate pool at the root)
 # [type: int, range: [-1,2147483647], default: 0]
-separating/poolfreq = 0
+separating/poolfreq = 10
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
 constraints/linear/sepafreq = 10
 
-# frequency for propagating domains (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 1]
-constraints/linear/propfreq = 1
-
-# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
-# [type: int, range: [-1,2147483647], default: 100]
-constraints/linear/eagerfreq = 100
-
-# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/linear/maxprerounds = -1
-
 # should separation method be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/linear/delaysepa = FALSE
-
-# should propagation method be delayed, if other propagators found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/linear/delayprop = FALSE
-
-# should presolving method be delayed, if other presolvers found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/linear/delaypresol = FALSE
-
-# multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)
-# [type: int, range: [-1,2147483647], default: 1]
-constraints/linear/tightenboundsfreq = 1
 
 # maximal number of separation rounds per node (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: 5]
@@ -118,169 +94,53 @@ constraints/linear/maxsepacuts = 50
 # [type: int, range: [0,2147483647], default: 200]
 constraints/linear/maxsepacutsroot = 500
 
-# maximal number of presolving rounds with pairwise constraint comparison (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/linear/maxpresolpairrounds = -1
-
-# maximal allowed relative gain in maximum norm for constraint aggregation (0.0: disable constraint aggregation)
-# [type: real, range: [0,1.79769313486232e+308], default: 0]
-constraints/linear/maxaggrnormscale = 0
-
 # maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for separating knapsack cardinality cuts
 # [type: real, range: [0,1], default: 0]
 constraints/linear/maxcardbounddist = 0
 
 # should all constraints be subject to cardinality cut generation instead of only the ones with non-zero dual value?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/linear/separateall = FALSE
+constraints/linear/separateall = TRUE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
 constraints/and/sepafreq = 0
 
-# frequency for propagating domains (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 1]
-constraints/and/propfreq = 1
-
-# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
-# [type: int, range: [-1,2147483647], default: 100]
-constraints/and/eagerfreq = 100
-
-# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/and/maxprerounds = -1
-
 # should separation method be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/and/delaysepa = FALSE
-
-# should propagation method be delayed, if other propagators found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/and/delayprop = FALSE
-
-# should presolving method be delayed, if other presolvers found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/and/delaypresol = FALSE
-
-# maximal number of presolving rounds with pairwise constraint comparison (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/and/maxpresolpairrounds = -1
-
-# priority of conflict handler <bounddisjunction>
-# [type: int, range: [-2147483648,2147483647], default: -3000000]
-conflict/bounddisjunction/priority = -3000000
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/bounddisjunction/sepafreq = -1
 
-# frequency for propagating domains (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 1]
-constraints/bounddisjunction/propfreq = 1
-
-# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
-# [type: int, range: [-1,2147483647], default: 100]
-constraints/bounddisjunction/eagerfreq = 100
-
-# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/bounddisjunction/maxprerounds = -1
-
 # should separation method be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/bounddisjunction/delaysepa = FALSE
-
-# should propagation method be delayed, if other propagators found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/bounddisjunction/delayprop = FALSE
-
-# should presolving method be delayed, if other presolvers found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/bounddisjunction/delaypresol = FALSE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/conjunction/sepafreq = -1
 
-# frequency for propagating domains (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/conjunction/propfreq = -1
-
-# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
-# [type: int, range: [-1,2147483647], default: 100]
-constraints/conjunction/eagerfreq = 100
-
-# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/conjunction/maxprerounds = -1
-
 # should separation method be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/conjunction/delaysepa = FALSE
-
-# should propagation method be delayed, if other propagators found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/conjunction/delayprop = FALSE
-
-# should presolving method be delayed, if other presolvers found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/conjunction/delaypresol = FALSE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/integral/sepafreq = -1
 
-# frequency for propagating domains (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/integral/propfreq = -1
-
-# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/integral/eagerfreq = -1
-
-# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/integral/maxprerounds = -1
-
 # should separation method be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/integral/delaysepa = FALSE
-
-# should propagation method be delayed, if other propagators found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/integral/delayprop = FALSE
-
-# should presolving method be delayed, if other presolvers found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/integral/delaypresol = FALSE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
 constraints/knapsack/sepafreq = 10
 
-# frequency for propagating domains (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 1]
-constraints/knapsack/propfreq = 1
-
-# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
-# [type: int, range: [-1,2147483647], default: 100]
-constraints/knapsack/eagerfreq = 100
-
-# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/knapsack/maxprerounds = -1
-
 # should separation method be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/knapsack/delaysepa = FALSE
-
-# should propagation method be delayed, if other propagators found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/knapsack/delayprop = FALSE
-
-# should presolving method be delayed, if other presolvers found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/knapsack/delaypresol = FALSE
 
 # multiplier on separation frequency, how often cardinality cuts are separated (-1: never, 0: only at root)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -310,169 +170,45 @@ constraints/knapsack/maxsepacutsroot = 500
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/knapsack/maxnumcardlift = -1
 
-# should disaggregation of knapsack constraints be allowed in preprocessing?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-constraints/knapsack/disaggregation = TRUE
-
-# priority of conflict handler <logicor>
-# [type: int, range: [-2147483648,2147483647], default: 800000]
-conflict/logicor/priority = 800000
-
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
-constraints/logicor/sepafreq = 0
-
-# frequency for propagating domains (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 1]
-constraints/logicor/propfreq = 1
-
-# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
-# [type: int, range: [-1,2147483647], default: 100]
-constraints/logicor/eagerfreq = 100
-
-# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/logicor/maxprerounds = -1
+constraints/logicor/sepafreq = 10
 
 # should separation method be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/logicor/delaysepa = FALSE
 
-# should propagation method be delayed, if other propagators found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/logicor/delayprop = FALSE
-
-# should presolving method be delayed, if other presolvers found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/logicor/delaypresol = FALSE
-
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
 constraints/or/sepafreq = 0
-
-# frequency for propagating domains (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 1]
-constraints/or/propfreq = 1
-
-# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
-# [type: int, range: [-1,2147483647], default: 100]
-constraints/or/eagerfreq = 100
-
-# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/or/maxprerounds = -1
 
 # should separation method be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/or/delaysepa = FALSE
 
-# should propagation method be delayed, if other propagators found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/or/delayprop = FALSE
-
-# should presolving method be delayed, if other presolvers found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/or/delaypresol = FALSE
-
-# priority of conflict handler <setppc>
-# [type: int, range: [-2147483648,2147483647], default: 700000]
-conflict/setppc/priority = 700000
-
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
 constraints/setppc/sepafreq = 0
-
-# frequency for propagating domains (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 1]
-constraints/setppc/propfreq = 1
-
-# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
-# [type: int, range: [-1,2147483647], default: 100]
-constraints/setppc/eagerfreq = 100
-
-# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/setppc/maxprerounds = -1
 
 # should separation method be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/setppc/delaysepa = FALSE
 
-# should propagation method be delayed, if other propagators found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/setppc/delayprop = FALSE
-
-# should presolving method be delayed, if other presolvers found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/setppc/delaypresol = FALSE
-
-# number of children created in pseudo branching (0: disable pseudo branching)
-# [type: int, range: [0,2147483647], default: 2]
-constraints/setppc/npseudobranches = 2
-
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
 constraints/varbound/sepafreq = 0
-
-# frequency for propagating domains (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 1]
-constraints/varbound/propfreq = 1
-
-# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
-# [type: int, range: [-1,2147483647], default: 100]
-constraints/varbound/eagerfreq = 100
-
-# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/varbound/maxprerounds = -1
 
 # should separation method be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/varbound/delaysepa = FALSE
 
-# should propagation method be delayed, if other propagators found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/varbound/delayprop = FALSE
-
-# should presolving method be delayed, if other presolvers found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/varbound/delaypresol = FALSE
-
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
 constraints/xor/sepafreq = 0
 
-# frequency for propagating domains (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 1]
-constraints/xor/propfreq = 1
-
-# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
-# [type: int, range: [-1,2147483647], default: 100]
-constraints/xor/eagerfreq = 100
-
-# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/xor/maxprerounds = -1
-
 # should separation method be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/xor/delaysepa = FALSE
-
-# should propagation method be delayed, if other propagators found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/xor/delayprop = FALSE
-
-# should presolving method be delayed, if other presolvers found reductions?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/xor/delaypresol = FALSE
-
-# maximal number of presolving rounds with pairwise constraint comparison (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/xor/maxpresolpairrounds = -1
-
-# priority of separator <clique>
-# [type: int, range: [-536870912,536870911], default: -5000]
-separating/clique/priority = -5000
 
 # frequency for calling separator <clique> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
@@ -514,13 +250,9 @@ separating/clique/cliquetablemem = 20000
 # [type: real, range: [0,1], default: 0.05]
 separating/clique/cliquedensity = 0.05
 
-# priority of separator <cmir>
-# [type: int, range: [-536870912,536870911], default: -3000]
-separating/cmir/priority = -3000
-
 # frequency for calling separator <cmir> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
-separating/cmir/freq = 0
+separating/cmir/freq = 20
 
 # maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <cmir> (0.0: only on current best node, 1.0: on all nodes)
 # [type: real, range: [0,1], default: 0]
@@ -630,10 +362,6 @@ separating/cmir/fixintegralrhs = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/cmir/dynamiccuts = TRUE
 
-# priority of separator <flowcover>
-# [type: int, range: [-536870912,536870911], default: -4000]
-separating/flowcover/priority = -4000
-
 # frequency for calling separator <flowcover> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
 separating/flowcover/freq = 0
@@ -706,13 +434,9 @@ separating/flowcover/multbyminusone = TRUE
 # [type: int, range: [0,2147483647], default: 10]
 separating/flowcover/maxtestdelta = 10
 
-# priority of separator <gomory>
-# [type: int, range: [-536870912,536870911], default: -1000]
-separating/gomory/priority = -1000
-
 # frequency for calling separator <gomory> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
-separating/gomory/freq = 0
+separating/gomory/freq = 20
 
 # maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <gomory> (0.0: only on current best node, 1.0: on all nodes)
 # [type: real, range: [0,1], default: 0]
@@ -746,13 +470,9 @@ separating/gomory/maxweightrange = 10000
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/gomory/dynamiccuts = TRUE
 
-# priority of separator <impliedbounds>
-# [type: int, range: [-536870912,536870911], default: -50]
-separating/impliedbounds/priority = -50
-
 # frequency for calling separator <impliedbounds> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
-separating/impliedbounds/freq = 10
+separating/impliedbounds/freq = 1
 
 # maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <impliedbounds> (0.0: only on current best node, 1.0: on all nodes)
 # [type: real, range: [0,1], default: 0]
@@ -761,10 +481,6 @@ separating/impliedbounds/maxbounddist = 0
 # should separator be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/impliedbounds/delay = FALSE
-
-# priority of separator <intobj>
-# [type: int, range: [-536870912,536870911], default: -100]
-separating/intobj/priority = -100
 
 # frequency for calling separator <intobj> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -777,10 +493,6 @@ separating/intobj/maxbounddist = 0
 # should separator be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/intobj/delay = FALSE
-
-# priority of separator <redcost>
-# [type: int, range: [-536870912,536870911], default: 10000000]
-separating/redcost/priority = 10000000
 
 # frequency for calling separator <redcost> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -798,13 +510,9 @@ separating/redcost/delay = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/redcost/continuous = FALSE
 
-# priority of separator <strongcg>
-# [type: int, range: [-536870912,536870911], default: -2000]
-separating/strongcg/priority = -2000
-
 # frequency for calling separator <strongcg> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
-separating/strongcg/freq = 10
+separating/strongcg/freq = 20
 
 # maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <strongcg> (0.0: only on current best node, 1.0: on all nodes)
 # [type: real, range: [0,1], default: 0]
