@@ -115,7 +115,7 @@
  * "type_cons.h".
  *
  * Here is what you have to do (assuming your constraint handler should be named "nosubtour"):
- * -# Copy the template files "src/scip/cons_xxx.c" and "src/scip/cons_xxx.h" into files names "cons_nosubtour.c"
+ * -# Copy the template files "src/scip/cons_xxx.c" and "src/scip/cons_xxx.h" into files "cons_nosubtour.c"
  *    and "cons_nosubtour.h".
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "nosubtour".
@@ -740,8 +740,8 @@
  * "type_pricer.h".
  *
  * Here is what you have to do to implement a pricer:
- * -# Copy the template files "src/scip/pricer_xxx.c" and "src/scip/pricer_xxx.h" into files names "cons_mypricer.c"
- *    and "cons_mypricer.h".
+ * -# Copy the template files "src/scip/pricer_xxx.c" and "src/scip/pricer_xxx.h" into files "pricer_mypricer.c"
+ *    and "pricer_mypricer.h".
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mypricer".
  * -# Adjust the properties of the pricer (see \ref PRICER_PROPERTIES).
@@ -794,7 +794,7 @@
  *
  * @section PRICER_DATA Pricer Data
  *
- * Below the header "Data Structures" you can a struct which is called "struct SCIP_PricerData".
+ * Below the header "Data Structures" you can find a struct which is called "struct SCIP_PricerData".
  * In this data structure, you can store the data of your pricer. For example, it may be convenient to store pointers to the
  * constraints of the problem instance here, because the pricer has to add variables to those constraints.
  * If you are using C++, you can add pricer data as usual as object variables to your class.
@@ -944,7 +944,171 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page PRESOL How to add presolvers
  *
- * This page is not yet written. Here we will explain how to add presolver routines to SCIP.
+ * Presolvers are used to simplify the problem instance and to extract useful information in the presolving step.
+ * Constraint based presolving is done in the CONSPRESOL callback methods of the constraint handlers, see \ref CONSPRESOL.
+ * The presolver plugins complement the constraint based presolving by additional, usually optimality based, presolving
+ * reductions.
+ *
+ * In the following, we explain how the user can add an own presolver.
+ * Take the dual fixing presolver (src/scip/presol_dualfix.c) as an example.
+ * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjPresol wrapper
+ * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_PRESOL_... callback methods.
+ *
+ * Additional documentation for the callback methods of a presolver can be found in the file "type_presol.h".
+ *
+ * Here is what you have to do to implement a presolver:
+ * -# Copy the template files "src/scip/presol_xxx.c" and "src/scip/presol_xxx.h" into files names "presol_mypresolver.c"
+ *    and "presol_mypresolver.h".
+ *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mypresolver".
+ * -# Adjust the properties of the presolver (see \ref PRESOL_PROPERTIES).
+ * -# Define the presolver data (see \ref PRESOL_DATA).
+ * -# Implement the interface methods (see \ref PRESOL_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref PRESOL_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref PRESOL_ADDITIONALCALLBACKS).
+ *
+ * 
+ * @section PRESOL_PROPERTIES Properties of a Presolver
+ *
+ * At the top of the new file "presol_mypresolver.c" you can find the presolver properties.
+ * These are given as compiler defines.
+ * In the C++ wrapper class, you have to provide the presolver properties by calling the constructor
+ * of the abstract base class ObjPresol from within your constructor.
+ * The properties you have to set have the following meaning:
+ *
+ * \par PRESOL_NAME: the name of the presolver.
+ * This name is used in the interactive shell to address the presolver.
+ * Additionally, if you are searching a presolver with SCIPfindPresol(), this name is looked up.
+ * Names have to be unique: no two presolvers may have the same name.
+ *
+ * \par PRESOL_DESC: the description of the presolver.
+ * This string is printed as description of the presolver in the interactive shell.
+ *
+ * \par PRESOL_PRIORITY: the priority of the presolver.
+ * In each presolving round, the presolvers and presolving methods of the constraint handlers are called in
+ * a predefined order, which is given by the priorities of the presolvers and the check priorities of the
+ * constraint handlers.
+ * First, the presolvers with non-negative priority are called in the order of decreasing priority.
+ * Next, the presolving methods of the different constraint handlers are called in the order of decreasing check
+ * priority.
+ * Finally, the presolvers with negative priority are called in the order of decreasing priority.
+ * \n
+ * The priority of the presolver should be set according to the complexity of the presolving algorithm and the impact of the reduction:
+ * presolvers that provide fast algorithms that usually have a high impact (i.e., remove lots of variables or tighten many bounds)
+ * should have a high priority.
+ *
+ * \par PRESOL_MAXROUNDS: the default maximal number of rounds the presolver participates in.
+ * The presolving is conducted in rounds: the presolvers and presolving methods of the constraint handlers
+ * are called iteratively until no more reductions have been found or some other abort criterion applies.
+ * The "maxrounds" parameter of a presolver imposes a limit on the number of presolving rounds in which the
+ * presolver is called. The PRESOL_MAXROUNDS property specifies the default value for this parameter.
+ * A value of -1 represents an unlimited number of rounds.
+ *
+ * \par PRESOL_DELAYPRESOL: the default for whether the presolver should be delayed, if other presolvers found reductions.
+ * If the presolver is marked to be delayed, it is only executed if no other presolvers found a reduction during the current
+ * presolving round.
+ * If the presolver is very expensive, you may want to mark it to be delayed after all cheap presolving methods have been executed.
+ * 
+ *
+ * @section PRESOL_DATA Presolver Data
+ *
+ * Below the header "Data Structures" you can find a struct which is called "struct SCIP_PresolData".
+ * In this data structure, you can store the data of your presolver. For example, you should store the adjustable parameters
+ * of the presolver in this data structure.
+ * If you are using C++, you can add presolver data as usual as object variables to your class.
+ * \n
+ * Defining presolver data is optional. You can leave the struct empty.
+ *
+ *
+ * @section PRESOL_INTERFACE Interface Methods
+ *
+ * At the bottom of "presol_mypresolver.c" you can find the interface method SCIPincludePresolMypresolver(), which also appears in "presol_mypresolver.h".
+ * \n
+ * This method has only to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the presolver by calling the method
+ * SCIPincludePresol().
+ * It is called by the user, if he wants to include the presolver, i.e. if he wants to use your presolver in his application.
+ *
+ * If you are using presolver data, you have to allocate the memory for the data at this point.
+ * You can do this by calling
+ * \code
+ * SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
+ * \endcode
+ * You also have to initialize the fields in struct SCIP_PresolData afterwards.
+ *
+ * You may also add user parameters for your presolver, see the method \b SCIPincludeConshdlrKnapsack() in src/scip/cons_knapsack.c
+ * for an example.
+ *
+ * 
+ * @section PRESOL_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Presolver
+ *
+ * Presolver plugins have only one fundamental callback method, namely the PRESOLEXEC method.
+ * This method has to be implemented for every presolver; the other callback methods are optional.
+ * In the C++ wrapper class ObjConshdlr, the scip_exec() method (which corresponds to the PRESOLEXEC callback) is a virtual
+ * abstract member function.
+ * You have to implement it in order to be able to construct an object of your presolver class.
+ *
+ * Additional documentation to the callback methods can be found in "type_presol.h".
+ *
+ * @subsection PRESOLEXEC
+ *
+ * The PRESOLEXEC callback is called inside the presolving loop and should perform the actual presolving reductions.
+ * It should inspect the problem instance at hand and simplify it by tightening bounds of variables, aggregating or fixing
+ * variables, changing the type of variables, modifying the graph that represents the instance of your application, and
+ * the like.
+ *
+ * Typical methods called by a presolver are, for example, SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVars(), SCIPtightenVarLb(),
+ * and SCIPtightenVarUb().
+ *
+ *
+ * @section PRESOL_ADDITIONALCALLBACKS Additional Callback Methods of a Presolver
+ *
+ * The additional callback methods need not to be implemented in every case.
+ * They can be used, for example, to initialize and free private data.
+ *
+ * @subsection PRESOLFREE
+ *
+ * If you are using presolver data, you have to implement this method in order to free the presolver data.
+ * This can be done by the following procedure:
+ * \code
+ * static
+ * SCIP_DECL_PRESOLFREE(consFreeMypresolver)
+ * {
+ *    SCIP_PRESOLDATA* presoldata;
+ *  
+ *    presoldata = SCIPpresolGetData(presol);
+ *    assert(presoldata != NULL);
+ *
+ *    SCIPfreeMemory(scip, &presoldata);
+ *
+ *    SCIPpresolSetData(presol, NULL);
+ *
+ *    return SCIP_OKAY;
+ * }
+ * \endcode
+ * If you are using the C++ wrapper class, this method is not available.
+ * Instead, just use the destructor of your class to free the member variables of your class.
+ *
+ * @subsection PRESOLINIT
+ *
+ * The PRESOLINIT callback is executed after the problem was transformed.
+ * The presolver may, e.g., use this call to initialize his presolver data.
+ *
+ * @subsection PRESOLEXIT
+ *
+ * The PRESOLEXIT callback is executed before the transformed problem is freed.
+ * In this method, the presolver should free all resources that have been allocated for the solving process in PRESOLINIT.
+ *
+ * @subsection PRESOLINITPRE
+ *
+ * The PRESOLINITPRE callback is executed when the presolving is about to begin.
+ * The presolver may use this call to initialize its presolving data which only need to exist during the presolving stage.
+ *
+ * @subsection PRESOLEXITPRE
+ *
+ * The PRESOLEXITPRE callback is executed after presolving has been finished and before the branch and bound process begins.
+ * The presolver should use this call to clean up its presolving data, which was allocated in PRESOLINITPRE.
+ *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
