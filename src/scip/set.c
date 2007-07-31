@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.192 2007/06/06 11:25:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.193 2007/07/31 09:24:03 bzfwolte Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -110,6 +110,7 @@
                                                  *   (0: dynamic adjustment, -1: constraints are never deleted) */
 #define SCIP_DEFAULT_CONS_OBSOLETEAGE        -1 /**< age of a constraint after which it is marked obsolete
                                                  *   (0: dynamic adjustment, -1: constraints are never marked obsolete) */
+#define SCIP_DEFAULT_CONS_DISABLEENFOPS   FALSE /**< should enforcement of pseudo solution be disabled? */
 
 
 /* Display */
@@ -564,6 +565,11 @@ SCIP_RETCODE SCIPsetCreate(
          "constraints/obsoleteage",
          "age of a constraint after which it is marked obsolete (0: dynamic, -1 do not mark constraints obsolete)",
          &(*set)->cons_obsoleteage, TRUE, SCIP_DEFAULT_CONS_OBSOLETEAGE, -1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "constraints/disableenfops",
+         "should enforcement of pseudo solution be disabled?",
+         &(*set)->cons_disableenfops, TRUE, SCIP_DEFAULT_CONS_DISABLEENFOPS,
          NULL, NULL) );
 
    /* display parameters */

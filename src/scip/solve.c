@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.250 2007/07/02 10:28:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.251 2007/07/31 09:24:03 bzfwolte Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1870,6 +1870,7 @@ SCIP_RETCODE enforceConstraints(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_Bool*            branched,           /**< pointer to store whether a branching was created */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
    SCIP_Bool*            infeasible,         /**< pointer to store TRUE, if the LP/pseudo solution is infeasible */
@@ -1942,7 +1943,7 @@ SCIP_RETCODE enforceConstraints(
       }
       else
       {
-         SCIP_CALL( SCIPconshdlrEnforcePseudoSol(set->conshdlrs_enfo[h], blkmem, set, stat, tree, *infeasible,
+         SCIP_CALL( SCIPconshdlrEnforcePseudoSol(set->conshdlrs_enfo[h], blkmem, set, stat, tree, branchcand, *infeasible,
                objinfeasible, &result) );
          if( SCIPsepastoreGetNCuts(sepastore) != 0 )
          {
@@ -2516,7 +2517,7 @@ SCIP_RETCODE solveNode(
          }
         
          /* call constraint enforcement */
-         SCIP_CALL( enforceConstraints(blkmem, set, stat, tree, lp, sepastore,
+         SCIP_CALL( enforceConstraints(blkmem, set, stat, tree, lp, sepastore, branchcand,
                &branched, cutoff, infeasible, &propagateagain, &solvelpagain, &solverelaxagain) );
          assert(branched == (tree->nchildren > 0));
          assert(!branched || (!(*cutoff) && *infeasible && !propagateagain && !solvelpagain));

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.160 2007/06/06 11:25:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.161 2007/07/31 09:24:03 bzfwolte Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -36,6 +36,7 @@
 #include "scip/tree.h"
 #include "scip/sepastore.h"
 #include "scip/cons.h"
+#include "scip/branch.h"
 
 #ifndef NDEBUG
 #include "scip/struct_cons.h"
@@ -2725,6 +2726,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_Bool             solinfeasible,      /**< was the solution already found out to be infeasible? */
    SCIP_Bool             objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
@@ -2744,8 +2746,14 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
    assert(tree->nchildren == 0);
    assert(result != NULL);
 
-   *result = SCIP_FEASIBLE;
+   /* no enforcing of pseudo solution */ 
+   if( set->cons_disableenfops && SCIPbranchcandGetNPseudoCands(branchcand) > 0 ) 
+   {
+      *result = SCIP_INFEASIBLE;
+      return SCIP_OKAY;
+   }
 
+   *result = SCIP_FEASIBLE;
    if( conshdlr->consenfops != NULL )
    {
       int nconss;

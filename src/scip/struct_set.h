@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.76 2007/06/06 11:25:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.77 2007/07/31 09:24:03 bzfwolte Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -156,6 +156,7 @@ struct SCIP_Set
                                               *   (0: dynamic, -1: disable aging) */
    int                   cons_obsoleteage;   /**< age of a constraint after which it is marked obsolete
                                               *   (0: dynamic, -1: disable obsoletion) */
+   SCIP_Bool             cons_disableenfops; /**< should enforcement of pseudo solution be disabled? */
 
    /* display settings */
    SCIP_VERBLEVEL        disp_verblevel;     /**< verbosity level of output */
