@@ -118,6 +118,10 @@ constraints/agelimit = 0
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/obsoleteage = -1
 
+# should enforcement of pseudo solution be disabled?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/disableenfops = FALSE
+
 # verbosity level of output
 # [type: int, range: [0,5], default: 4]
 display/verblevel = 4
