@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.243 2007/06/28 12:18:34 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.244 2007/07/31 09:22:49 bzfwolte Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -50,7 +50,6 @@
 
 #include "scip/cons_linear.h"
 #include "scip/cons_knapsack.h"
-
 
 #define CONSHDLR_NAME          "linear"
 #define CONSHDLR_DESC          "linear constraints of the form  lhs <= a^T x <= rhs"
@@ -2149,7 +2148,10 @@ SCIP_RETCODE addCoef(
    SCIP_Bool transformed;
 
    assert(var != NULL);
-   assert(!SCIPisZero(scip, val));
+
+   /* ignore coefficient if it is nearly zero */
+   if( SCIPisZero(scip, val) )
+      return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7294,10 +7296,7 @@ SCIP_RETCODE SCIPaddCoefLinear(
       return SCIP_INVALIDDATA;
    }
 
-   if( !SCIPisZero(scip, val) )
-   {
-      SCIP_CALL( addCoef(scip, cons, var, val) );
-   }
+   SCIP_CALL( addCoef(scip, cons, var, val) );
 
    return SCIP_OKAY;
 }
