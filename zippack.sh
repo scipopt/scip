@@ -5,7 +5,8 @@ ln -s . $NAME
 zip release/$NAME.zip $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile $NAME/doc/* $NAME/lib \
 $NAME/make/make.* $NAME/scip.set \
 $NAME/check/check.sh $NAME/check/check.awk $NAME/check/check_cplex.sh $NAME/check/check_cplex.awk \
-$NAME/check/miplib3.test $NAME/check/miplib3.solu $NAME/check/settings/default.set \
+$NAME/check/miplib3.test $NAME/check/miplib3.solu \
+$NAME/settings/cuts/*.set $NAME/settings/emphasis/*.set $NAME/settings/heuristics/*.set $NAME/settings/presolving/*.set \
 $NAME/src/depend.* \
 $NAME/src/*.c $NAME/src/*.cpp $NAME/src/*.h \
 $NAME/src/scip/*.c $NAME/src/scip/*.cpp $NAME/src/scip/*.h \
