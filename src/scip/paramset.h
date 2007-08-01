@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.h,v 1.23 2007/06/06 11:25:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.h,v 1.24 2007/08/01 13:34:29 bzfpfend Exp $"
 
 /**@file   paramset.h
  * @brief  internal methods for handling parameter settings
@@ -256,6 +256,13 @@ SCIP_RETCODE SCIPparamsetWrite(
    const char*           filename,           /**< file name, or NULL for stdout */
    SCIP_Bool             comments,           /**< should parameter descriptions be written as comments? */
    SCIP_Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
+   );
+
+/** installs default values for all parameters */
+extern
+SCIP_RETCODE SCIPparamsetSetToDefault(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip                /**< SCIP data structure, or NULL if paramchgd method should not be called */   
    );
 
 /** returns the array of parameters */

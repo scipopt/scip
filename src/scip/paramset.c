@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.41 2007/06/06 11:25:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.42 2007/08/01 13:34:28 bzfpfend Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -2096,6 +2096,23 @@ SCIP_RETCODE SCIPparamsetWrite(
    {
       assert(file != NULL);
       fclose(file);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** installs default values for all parameters */
+SCIP_RETCODE SCIPparamsetSetToDefault(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip                /**< SCIP data structure, or NULL if paramchgd method should not be called */   
+   )
+{
+   int i;
+
+   /* set all parameters to their default values */
+   for( i = 0; i < paramset->nparams; ++i )
+   {
+      SCIP_CALL( SCIPparamSetToDefault(paramset->params[i], scip) );
    }
 
    return SCIP_OKAY;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.301 2007/06/28 14:56:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.302 2007/08/01 13:34:29 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -509,6 +509,12 @@ SCIP_RETCODE SCIPwriteParams(
    const char*           filename,           /**< file name, or NULL for stdout */
    SCIP_Bool             comments,           /**< should parameter descriptions be written as comments? */
    SCIP_Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
+   );
+
+/** resets all parameters to their default values */
+extern
+SCIP_RETCODE SCIPresetParams(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the array of all available SCIP parameters */

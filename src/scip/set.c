@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.193 2007/07/31 09:24:03 bzfwolte Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.194 2007/08/01 13:34:29 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -1468,6 +1468,16 @@ SCIP_RETCODE SCIPsetWriteParams(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetWrite(set->paramset, filename, comments, onlychanged) );
+
+   return SCIP_OKAY;
+}
+
+/** resets all parameters to their default values */
+SCIP_RETCODE SCIPsetResetParams(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_CALL( SCIPparamsetSetToDefault(set->paramset, set->scip) );
 
    return SCIP_OKAY;
 }

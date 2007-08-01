@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.39 2007/06/06 11:25:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.40 2007/08/01 13:34:29 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -313,7 +313,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - SCIP_CONSADDED  : an additional constraint was generated
  *  - SCIP_REDUCEDDOM : a variable's domain was reduced
  *  - SCIP_BRANCHED   : no changes were made to the problem, but a branching was applied to resolve an infeasibility
- *  - SCIP_SOLVELP    : at least one constraint is infeasible, and this can only be resolved by solving the SCIP_LP
+ *  - SCIP_SOLVELP    : at least one constraint is infeasible, and this can only be resolved by solving the LP
  *  - SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
  *  - SCIP_DIDNOTRUN  : the enforcement was skipped (only possible, if objinfeasible is true)

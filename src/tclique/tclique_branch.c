@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.c,v 1.14 2007/06/06 11:25:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_branch.c,v 1.15 2007/08/01 13:34:29 bzfpfend Exp $"
 
 /**@file   tclique_branch.c
  * @brief  branch and bound part of algorithm for maximum cliques
@@ -970,7 +970,10 @@ int branch(
             maxcliquenodes, nmaxcliquenodes, maxcliqueweight, &stopsolving);
 
          if( stopsolving )
+         {
+            debugMessage(" -> solving terminated by callback method\n");
             backtracklevel = 0;
+         }
       }
 
       /* discard the current clique */

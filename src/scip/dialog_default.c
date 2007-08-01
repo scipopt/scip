@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.69 2007/06/06 11:25:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.70 2007/08/01 13:34:28 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -460,6 +460,21 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayNodeselectors)
       SCIPdialogMessage(scip, NULL, "%s", SCIPnodeselGetDesc(nodesels[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display parameters command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayParameters)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, "non-default parameter settings:\n");
+   SCIP_CALL( SCIPwriteParams(scip, NULL, FALSE, TRUE) );
    SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -919,6 +934,19 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecRead)
          SCIPdialoghdlrClearBuffer(dialoghdlr);
       }
    }
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the set default command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetDefault)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+   
+   SCIP_CALL( SCIPresetParams(scip) );
+   SCIPdialogMessage(scip, NULL, "reset parameters to their default values\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -1840,6 +1868,15 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
    
+   /* display parameters */
+   if( !SCIPdialogHasEntry(submenu, "parameters") )
+   {
+      SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayParameters, NULL,
+            "parameters", "display non-default parameter settings", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
    /* display presolvers */
    if( !SCIPdialogHasEntry(submenu, "presolvers") )
    {
@@ -2214,6 +2251,15 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
    {
       SCIPerrorMessage("set sub menu not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* set default */
+   if( !SCIPdialogHasEntry(setmenu, "default") )
+   {
+      SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecSetDefault, NULL,
+            "default", "reset parameter settings to their default values", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
    /* set load */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_pricer.h,v 1.16 2007/06/06 11:25:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_pricer.h,v 1.17 2007/08/01 13:34:29 bzfpfend Exp $"
 
 /**@file   type_pricer.h
  * @brief  type definitions for variable pricers
@@ -80,13 +80,13 @@ typedef struct SCIP_PricerData SCIP_PRICERDATA;   /**< locally defined variable 
 /** reduced cost pricing method of variable pricer for feasible LPs
  *
  *  Searches for variables that can contribute to improve the current LP's solution value.
- *  In standard branch-and-price, these are variables with negative feasibility, that is negative
+ *  In standard branch-and-price, these are variables with negative dual feasibility, that is negative
  *  reduced costs for non-negative variables, positive reduced costs for non-positive variables,
  *  and non-zero reduced costs for variables that can be negative and positive.
  *
  *  The method is called in the LP solving loop after an LP was proven to be feasible.
  *
- *  Whenever the pricer finds a variable with negative feasibility, it should call SCIPcreateVar()
+ *  Whenever the pricer finds a variable with negative dual feasibility, it should call SCIPcreateVar()
  *  and SCIPaddPricedVar() to add the variable to the problem. Furthermore, it should call the appropriate
  *  methods of the constraint handlers to add the necessary variable entries to the constraints.
  *

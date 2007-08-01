@@ -32,6 +32,7 @@ interface:
 - removed parameter "lowestboundfirst" from SCIPincludeNodesel()
 - replaced methods SCIPvarGetClosestVlb() and SCIPvarGetClosestVub() from pub_var.h by new methods
   SCIPgetVarClosestVlb() and SCIPgetVarClosestVlb() in scip.h
+- new method SCIPresetParams()
 
 plugins:
 - new improvement heuristic "oneopt"
@@ -50,6 +51,7 @@ plugins:
 - gomory cuts are now also separated for integral slack variables
 - less aggressive in Gomory cut separation
 - strong CG cuts are now also separated for integral slack variables
+- default dialog menu now includes the commands "set default" and "display parameters"
 
 parameters:
 - new parameter "separating/clique/backtrackfreq" to speed up clique cut separation in heuristic fashion
