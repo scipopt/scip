@@ -14,7 +14,7 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.10 2007/06/06 11:25:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.11 2007/08/01 19:57:30 bzfpfets Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -43,9 +43,9 @@
 #define errorMessage SCIPerrorMessage
 #define warningMessage SCIPwarningMessage
 #else
-#define SCIPdebugMessage while( FALSE ) printf
-#define SCIPerrorMessage printf
-#define SCIPwarningMessage printf
+#define debugMessage while( FALSE ) printf
+#define errorMessage printf
+#define warningMessage printf
 #define printErrorHeader(f,l) printf("[%s:%d] ERROR: ", f, l)
 #define printError printf
 #define printInfo printf
