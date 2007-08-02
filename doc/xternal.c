@@ -901,7 +901,7 @@
  * This can be done by the following procedure:
  * \code
  * static
- * SCIP_DECL_PRICERFREE(consFreeMypricer)
+ * SCIP_DECL_PRICERFREE(pricerFreeMypricer)
  * {
  *    SCIP_PRICERDATA* pricerdata;
  *  
@@ -1072,7 +1072,7 @@
  * This can be done by the following procedure:
  * \code
  * static
- * SCIP_DECL_PRESOLFREE(consFreeMypresolver)
+ * SCIP_DECL_PRESOLFREE(presolFreeMypresolver)
  * {
  *    SCIP_PRESOLDATA* presoldata;
  *  
@@ -1114,7 +1114,213 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page SEPA How to add separators
  *
- * This page is not yet written. Here we will explain how to add separation routines to SCIP.
+ * Separators are used to generate general purpose cutting planes. 
+ * Constraint based cutting planes, the second type of cutting planes in SCIP, are separated in the CONSSEPALP and 
+ * CONSSEPASOL callback methods of the constraint handlers, see \ref CONSSEPALP and \ref CONSSEPASOL. These cuts are 
+ * valid inequalities or even facets of the polyhedron described by a single constraint or a subset of the constraints of
+ * a single constraint class. In contrast, general purpose cuts do not require or exploit any knowledge about the 
+ * underlying problem structure but use only the current LP relaxation and the integrality conditions. 
+ *
+ * In the following, we explain how the user can add an own separator.
+ * Take the separator for the class of Gomory mixed inter inequalities (src/scip/sepa_gomory.c) as an example.
+ * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjSepa wrapper
+ * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_SEPA... callback methods.
+ *
+ * Additional documentation for the callback methods of a separator can be found in the file "type_sepa.h".
+ *
+ * Here is what you have to do to implement a separator:
+ * -# Copy the template files "src/scip/sepa_xxx.c" and "src/scip/sepa_xxx.h" into files "sepa_myseparator.c"
+ *    and "sepa_myseparator.h".
+ *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Open the new files with a text editor and replace all occurrences of "xxx" by "myseparator".
+ * -# Adjust the properties of the separator (see \ref SEPA_PROPERTIES).
+ * -# Define the separator data (see \ref SEPA_DATA).
+ * -# Implement the interface methods (see \ref SEPA_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref SEPA_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref SEPA_ADDITIONALCALLBACKS).
+ *
+ *
+ * @section SEPA_PROPERTIES Properties of a Separator
+ *
+ * At the top of the new file "sepa_myseparator.c" you can find the separator properties.
+ * These are given as compiler defines.
+ * In the C++ wrapper class, you have to provide the separator properties by calling the constructor
+ * of the abstract base class ObjSepa from within your constructor.
+ * The properties you have to set have the following meaning:
+ *
+ * \par SEPA_NAME: the name of the separator.
+ * This name is used in the interactive shell to address the separator.
+ * Additionally, if you are searching a separator with SCIPfindSepa(), this name is looked up.
+ * Names have to be unique: no two separators may have the same name.
+ *
+ * \par SEPA_DESC: the description of the separator.
+ * This string is printed as description of the separator in the interactive shell.
+ *
+ * \par SEPA_PRIORITY: the priority of the separator.
+ * In each separation round during the price-and-cut loop of the subproblem processing or the separation loop
+ * of the primal solution separation, the separators and separation methods of the constraint handlers are called in
+ * a predefined order, which is given by the priorities of the separators and the separation priorities of the
+ * constraint handlers.
+ * First, the separators with non-negative priority are called in the order of decreasing priority.
+ * Next, the separation methods of the different constraint handlers are called in the order of decreasing separation
+ * priority.
+ * Finally, the separators with negative priority are called in the order of decreasing priority.
+ * \n
+ * The priority of the separator should be set according to the complexity of the cut separation algorithm and the 
+ * impact of the resulting cuts: separators that provide fast algorithms that usually have a high impact (i.e., cut off 
+ * a large portion of the LP relaxation) should have a high priority.
+ * See \ref SEPAEXECLP and \ref SEPAEXECSOL for further details of the separation callbacks.
+ *
+ * \par SEPA_FREQ: the default frequency for separating cuts.
+ * The frequency defines the depth levels at which the separation methods \ref SEPAEXECLP and \ref SEPAEXECSOL are called.
+ * For example, a frequency of 7 means, that the separation callback is executed for subproblems that are in depth 
+ * 0, 7, 14, ... of the branching tree. A frequency of 0 means, that the separation method is only called at the root node.
+ * \n
+ * The frequency can be adjusted by the user. The property of the separator only defines the default value of the frequency.
+ * If you want to have a more flexible control of when to execute the separation algorithm, you have to assign
+ * a frequency of 1 and implement a check at the beginning of your separation algorithm whether you really 
+ * want to execute the separation or not. If you do not want to execute it, set the result code to SCIP_DIDNOTRUN.
+ *
+ * \par SEPA_MAXBOUNDDIST: the default maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separation.
+ * At the current branch-and-bound node, the relative distance from its dual bound (local dual bound) 
+ * to the primal bound compared to the best node's dual bound (global dual bound) is considered. The separation method 
+ * of the separator will only be applied at the node if this relative distance does not exceed SEPA_MAXBOUNDDIST. 
+ * \n
+ * For example, if the global dual bound is 0 and the primal bound is 10, SEPA_MAXBOUNDDIST = 0.25 means that separation 
+ * is only applied if the current node's dual bound is in the first quater of the interval [0,10], i.e., if it is less 
+ * than or equal to 2.5. 
+ * \n
+ * In particular, the extremal values 0.0 and 1.0 mean that separtion is only applied at the current best node and at all 
+ * nodes, respectively. Since separation seems to be most effective when applied at nodes that contribute to the global 
+ * dual bound, 0.0 is probably a good choice for SEPA_MAXBOUNDDIST.
+ *
+ * \par SEPA_DELAY: the default for whether the separation method should be delayed, if other separators or constraint handlers found cuts.
+ * If the separator's separation method is marked to be delayed, it is only executed after no other separator
+ * or constraint handler found a cut during the price-and-cut loop. 
+ * If the separation method of the separator is very expensive, you may want to mark it to be delayed after all cheap 
+ * separation methods have been executed.
+ *
+ * @section SEPA_DATA Separator Data
+ *
+ * Below the header "Data structures" you can find a struct which is called "struct SCIP_SepaData".
+ * In this data structure, you can store the data of your separator. For example, you should store the adjustable parameters
+ * of the separator in this data structure.
+ * If you are using C++, you can add separator data as usual as object variables to your class.
+ * \n
+ * Defining separator data is optional. You can leave the struct empty.
+ *
+ * @section SEPA_INTERFACE Interface Methods
+ *
+ * At the bottom of "sepa_myseparator.c" you can find the interface method SCIPincludeSepaMyseparator(), which also 
+ * appears in "sepa_myseparator.h".
+ * \n
+ * This method has only to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the separator by calling the method SCIPincludeSepa().
+ * It is called by the user, if he wants to include the separator, i.e. if he wants to use the separator in his application.
+ *
+ * If you are using separator data, you have to allocate the memory for the data at this point.
+ * You can do this by calling
+ * \code
+ * SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+ * \endcode
+ * You also have to initialize the fields in struct SCIP_SepaData afterwards.
+ *
+ * You may also add user parameters for your separator, see the method \b SCIPincludeConshdlrKnapsack() 
+ * in src/scip/cons_knapsack.c for an example.
+ *
+ * 
+ * @section SEPA_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Separator
+ *
+ * Separator plugins do not have any fundamental callback methods. All callback methods are optional.
+ *
+ *
+ * @section SEPA_ADDITIONALCALLBACKS Additional Callback Methods of a Separator
+ *
+ * The additional callback methods need not to be implemented in every case.
+ * They can be used, for example, to initialize and free private data.
+ *
+ * @subsection SEPAFREE
+ *
+ * If you are using separator data, you have to implement this method in order to free the separator data.
+ * This can be done by the following procedure:
+ * \code
+ * static
+ * SCIP_DECL_SEPAFREE(sepaFreeMyseparator)
+ * {
+ *    SCIP_SEPADATA* sepadata;
+ *  
+ *    sepadata = SCIPsepaGetData(sepa);
+ *    assert(sepadata != NULL);
+ *
+ *    SCIPfreeMemory(scip, &sepadata);
+ *
+ *    SCIPsepaSetData(sepa, NULL);
+ *
+ *    return SCIP_OKAY;
+ * }
+ * \endcode
+ * If you are using the C++ wrapper class, this method is not available.
+ * Instead, just use the destructor of your class to free the member variables of your class.
+ *
+ * @subsection SEPAINIT
+ *
+ * The SEPAINIT callback is executed after the problem was transformed.
+ * The separator may, e.g., use this call to initialize his separator data.
+ *
+ * @subsection SEPAEXIT
+ *
+ * The SEPAEXIT callback is executed before the transformed problem is freed.
+ * In this method, the separator should free all resources that have been allocated for the solving process in SEPAINIT.
+ *
+ * @subsection SEPAINITSOL
+ *
+ * The SEPAINITSOL callback is executed when the presolving was finished and the branch and bound process is about to 
+ * begin. The separator may use this call to initialize its branch and bound specific data.
+ *
+ * @subsection SEPAEXITSOL
+ *
+ * The SEPAEXITSOL callback is executed before the branch and bound process is freed. The separator should use this call 
+ * to clean up its branch and bound data, in particular to release all LP rows that he has created or captured.
+ *
+ * @subsection SEPAEXECLP
+ *
+ * The SEPAEXECLP callback is executed during the price-and-cut loop of the subproblem processing.
+ * It should try to generate general purpose cutting planes in order to separate the current LP solution.
+ * The method is called in the LP solution loop, which means that a valid LP solution exists.
+ *
+ * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
+ * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
+ * However, it may also produce domain reductions or add other constraints.
+ *
+ * The SEPAEXECLP callback has the following options:
+ *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
+ *  - adding an additional constraint (result SCIP_CONSADDED)
+ *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
+ *  - adding a cutting plane to the LP (result SCIP_SEPARATED)
+ *  - stating that the separator searched, but did not find domain reductions, cutting planes, or cut constraints
+ *    (result SCIP_DIDNOTFIND)
+ *  - stating that the separator was skipped (result SCIP_DIDNOTRUN)
+ *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
+ *
+ * @subsection SEPAEXECSOL
+ *
+ * The SEPAEXECSOL callback is executed during separation loop on arbitrary primal solutions.
+ * It should try to generate general purpose cutting planes in order to separate the given primal solution.
+ * The method is not called in the LP solution loop, which means that there is no valid LP solution.
+ *
+ * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
+ * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
+ * However, it may also produce domain reductions or add other constraints.
+ *
+ * The SEPAEXECSOL callback has the following options:
+ *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
+ *  - adding an additional constraint (result SCIP_CONSADDED)
+ *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
+ *  - adding a cutting plane to the LP (result SCIP_SEPARATED)
+ *  - stating that the separator searched, but did not find domain reductions, cutting planes, or cut constraints
+ *    (result SCIP_DIDNOTFIND)
+ *  - stating that the separator was skipped (result SCIP_DIDNOTRUN)
+ *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
