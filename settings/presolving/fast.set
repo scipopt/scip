@@ -41,3 +41,12 @@ constraints/and/maxpresolpairrounds = 0
 # maximal number of presolving rounds with pairwise constraint comparison (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/xor/maxpresolpairrounds = 0
+
+# maximal number of cardinality inequalities lifted per separation round (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/knapsack/maxnumcardlift = 0
+
+# should disaggregation of knapsack constraints be allowed in preprocessing?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/knapsack/disaggregation = FALSE
+
