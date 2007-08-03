@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.415 2007/08/01 13:34:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.416 2007/08/03 12:05:49 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -368,15 +368,12 @@ SCIP_Real SCIPversion(
    return (SCIP_Real)(SCIP_VERSION)/100.0;
 }
 
-/** sub version string */
-static const char subversionstring[] = SCIP_SUBVERSION;
-
-/** returns SCIP sub version string */
-const char* SCIPsubversion(
+/** returns SCIP sub version number */
+int SCIPsubversion(
    void
    )
 {
-   return subversionstring;
+   return SCIP_SUBVERSION;
 }
 
 /** prints a version information line to a file stream */
@@ -384,8 +381,13 @@ void SCIPprintVersion(
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
-   SCIPmessageFPrintInfo(file, "SCIP version %.2f%s [precision: %d byte]",
+#if SCIP_SUBVERSION > 0
+   SCIPmessageFPrintInfo(file, "SCIP version %.2f.%d [precision: %d byte]",
       SCIPversion(), SCIPsubversion(), (int)sizeof(SCIP_Real));
+#else
+   SCIPmessageFPrintInfo(file, "SCIP version %.2f [precision: %d byte]",
+      SCIPversion(), (int)sizeof(SCIP_Real));
+#endif
 #ifndef BMS_NOBLOCKMEM
    SCIPmessageFPrintInfo(file, " [memory: block]");
 #else

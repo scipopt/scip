@@ -33,6 +33,8 @@ interface:
 - replaced methods SCIPvarGetClosestVlb() and SCIPvarGetClosestVub() from pub_var.h by new methods
   SCIPgetVarClosestVlb() and SCIPgetVarClosestVlb() in scip.h
 - new method SCIPresetParams()
+- modified SCIP_SUBVERSION to be a number instead of a string (to be able to use #if SCIP_SUBVERSION >= ...)
+- SCIPsubversion() now returns an int instead of a const char*
 
 plugins:
 - new improvement heuristic "oneopt"

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.302 2007/08/01 13:34:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.303 2007/08/03 12:05:49 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -119,9 +119,9 @@ SCIP_Real SCIPversion(
    void
    );
 
-/** returns SCIP sub version string */
+/** returns SCIP sub version number */
 extern
-const char* SCIPsubversion(
+int SCIPsubversion(
    void
    );
 
