@@ -196,7 +196,7 @@
  *
  * \par CONSHDLR_PROPFREQ: the default frequency for propagating domains.
  * This default frequency has the same meaning as the CONSHDLR_SEPAFREQ with respect to the domain propagation
- * callback of the consrtaint handler.
+ * callback of the constraint handler.
  * A propagation frequency of 0 means that propagation is only applied in preprocessing and at the root node.
  *
  * \par CONSHDLR_EAGERFREQ: the default frequency for using all instead of only the useful constraints in separation, propagation and enforcement.
@@ -245,7 +245,7 @@
  *
  * @section CONS_DATA Constraint Data and Constraint Handler Data
  *
- * Below the header "Data Structures" you can find two structs called "struct SCIP_ConsData" and
+ * Below the header "Data structures" you can find two structs called "struct SCIP_ConsData" and
  * "struct SCIP_ConshdlrData".
  * If you are using C++, you only need to define the "struct SCIP_ConsData".
  * The constraint handler data must be implemented as member variables of your constraint handler class.
@@ -704,7 +704,7 @@
  *
  * @subsection CONSPRINT
  *
- * The CONSPRINT callback method is called, when the user asks SCIP to display the problem to the screen or same
+ * The CONSPRINT callback method is called, when the user asks SCIP to display the problem to the screen or save
  * the problem into a file.
  * The constraint handler should display the data of the constraint in an appropriate form.
  * The output format that is defined by the CONSPRINT callbacks is called CIP format.
@@ -794,7 +794,7 @@
  *
  * @section PRICER_DATA Pricer Data
  *
- * Below the header "Data Structures" you can find a struct which is called "struct SCIP_PricerData".
+ * Below the header "Data structures" you can find a struct which is called "struct SCIP_PricerData".
  * In this data structure, you can store the data of your pricer. For example, it may be convenient to store pointers to the
  * constraints of the problem instance here, because the pricer has to add variables to those constraints.
  * If you are using C++, you can add pricer data as usual as object variables to your class.
@@ -828,7 +828,7 @@
  * The fundamental callback methods have to be implemented in order to obtain an operational algorithm.
  * In the case of a pricer, the fundamental callbacks are the two variable pricing callbacks which search and add
  * new variables to the problem.
- * In the C++ wrapper class ObjConshdlr, the scip_redcost() method (which corresponds to the PRICERREDCOST callback) is a virtual
+ * In the C++ wrapper class ObjPricer, the scip_redcost() method (which corresponds to the PRICERREDCOST callback) is a virtual
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your pricer class.
  * The other fundamental method scip_farkas() has an empty default implementation, but if it may happen in your application
@@ -952,7 +952,7 @@
  * In the following, we explain how the user can add an own presolver.
  * Take the dual fixing presolver (src/scip/presol_dualfix.c) as an example.
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjPresol wrapper
- * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_PRESOL_... callback methods.
+ * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_PRESOL... callback methods.
  *
  * Additional documentation for the callback methods of a presolver can be found in the file "type_presol.h".
  *
@@ -1012,7 +1012,7 @@
  *
  * @section PRESOL_DATA Presolver Data
  *
- * Below the header "Data Structures" you can find a struct which is called "struct SCIP_PresolData".
+ * Below the header "Data structures" you can find a struct which is called "struct SCIP_PresolData".
  * In this data structure, you can store the data of your presolver. For example, you should store the adjustable parameters
  * of the presolver in this data structure.
  * If you are using C++, you can add presolver data as usual as object variables to your class.
@@ -1027,7 +1027,7 @@
  * This method has only to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the presolver by calling the method
  * SCIPincludePresol().
- * It is called by the user, if he wants to include the presolver, i.e. if he wants to use your presolver in his application.
+ * It is called by the user, if he wants to include the presolver, i.e. if he wants to use the presolver in his application.
  *
  * If you are using presolver data, you have to allocate the memory for the data at this point.
  * You can do this by calling
@@ -1044,7 +1044,7 @@
  *
  * Presolver plugins have only one fundamental callback method, namely the PRESOLEXEC method.
  * This method has to be implemented for every presolver; the other callback methods are optional.
- * In the C++ wrapper class ObjConshdlr, the scip_exec() method (which corresponds to the PRESOLEXEC callback) is a virtual
+ * In the C++ wrapper class ObjPresol, the scip_exec() method (which corresponds to the PRESOLEXEC callback) is a virtual
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your presolver class.
  *
@@ -1326,7 +1326,200 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page PROP How to add propagators
  *
- * This page is not yet written. Here we will explain how to add propagation routines to SCIP.
+ * Propagators are used to tighten the variable's domains. Like for cutting planes, there are two different types of 
+ * domain propagations. Constraint based (primal) domain propagation algorithms are part of the corresponding constraint
+ * handlers, see \ref CONSPROP. In contrast, domain propagators provide dual propagations, i.e., propagations that can be
+ * applied due to the objective function and the current best known primal solution.
+ *
+ * In the following, we explain how the user can add an own propagator.
+ * Take the pseudo objective function propagator (src/scip/prop_pseudoobj.c) as an example.
+ * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjProp wrapper
+ * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_PROP... callback methods.
+ *
+ * Additional documentation for the callback methods of a propagator can be found in the file "type_prop.h".
+ *
+ * Here is what you have to do to implement a propagator:
+ * -# Copy the template files "src/scip/prop_xxx.c" and "src/scip/prop_xxx.h" into files names "prop_mypropagator.c"
+ *    and "prop_mypropagator.h".
+ *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mypropagator".
+ * -# Adjust the properties of the propagator (see \ref PROP_PROPERTIES).
+ * -# Define the propagator data (see \ref PROP_DATA).
+ * -# Implement the interface methods (see \ref PROP_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref PROP_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref PROP_ADDITIONALCALLBACKS).
+ *
+ * @section PROP_PROPERTIES Properties of a Propagator
+ *
+ * At the top of the new file "prop_mypropagator.c" you can find the propagator properties.
+ * These are given as compiler defines.
+ * In the C++ wrapper class, you have to provide the propagator properties by calling the constructor
+ * of the abstract base class ObjProp from within your constructor.
+ * The properties you have to set have the following meaning:
+ *
+ * \par PROP_NAME: the name of the propagator.
+ * This name is used in the interactive shell to address the propagator.
+ * Additionally, if you are searching a propagator with SCIPfindProp(), this name is looked up.
+ * Names have to be unique: no two propagators may have the same name.
+ *
+ * \par PROP_DESC: the description of the propagator.
+ * This string is printed as description of the propagator in the interactive shell.
+ *
+ * \par PROP_PRIORITY: the priority of the propagator.
+ * In each propagation round, the propagators and propagation methods of the constraint handlers are called in
+ * a predefined order, which is given by the priorities of the propagators and the check priorities of the
+ * constraint handlers.
+ * First, the propagators with non-negative priority are called in the order of decreasing priority.
+ * Next, the propagation methods of the different constraint handlers are called in the order of decreasing check
+ * priority.
+ * Finally, the propagators with negative priority are called in the order of decreasing priority.
+ * \n
+ * The priority of the propagators should be set according to the complexity of the propagation algorithm and the impact 
+ * of the domain propagations: propagators that provide fast algorithms that usually have a high impact (i.e., tighten 
+ * many bounds) should have a high priority.
+ *
+ * \par PROP_FREQ: the default frequency for propagating domains.
+ * The frequency defines the depth levels at which the propagation method \ref PROPEXEC is called.
+ * For example, a frequency of 7 means, that the propagation callback is executed for subproblems that are in depth 
+ * 0, 7, 14, ... of the branching tree. A frequency of 0 means that propagation is only applied in preprocessing and 
+ * at the root node.
+ * \n
+ * The frequency can be adjusted by the user. The property of the propagator only defines the default value of the 
+ * frequency. If you want to have a more flexible control of when to execute the propagation algorithm, you have to assign
+ * a frequency of 1 and implement a check at the beginning of your propagation algorithm whether you really 
+ * want to execute the domain propagation or not. If you do not want to execute it, set the result code to SCIP_DIDNOTRUN.
+ *
+ * \par PROP_DELAY: the default for whether the propagation method should be delayed, if other propagators or constraint handlers found domain reductions?
+ * If the propagator's propagation method is marked to be delayed, it is only executed after no other propagator or 
+ * constraint handler found a domain reduction during the price-and-cut loop and the current probing step if we are 
+ * in the solving stage and presolving stage, respectively.
+ * If the propagation method of the propagator is very expensive, you may want to mark it to be delayed after all cheap 
+ * propagation methods have been executed.
+ *
+ *
+ * @section PROP_DATA Propagator Data
+ *
+ * Below the header "Data structures" you can find a struct which is called "struct SCIP_PropData".
+ * In this data structure, you can store the data of your propagator. For example, you should store the adjustable 
+ * parameters of the propagator in this data structure.
+ * If you are using C++, you can add propagator data as usual as object variables to your class.
+ * \n
+ * Defining propagator data is optional. You can leave the struct empty.
+ * 
+ *
+ * @section PROP_INTERFACE Interface Methods
+ *
+ * At the bottom of "prop_mypropagator.c" you can find the interface method SCIPincludePropMypropagator(), which also 
+ * appears in "prop_mypropagator.h".
+ * \n
+ * This method has only to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the propagator by calling the method
+ * SCIPincludeProp().
+ * It is called by the user, if he wants to include the propagator, i.e. if he wants to use the propagator in his 
+ * application.
+ *
+ * If you are using propagator data, you have to allocate the memory for the data at this point.
+ * You can do this by calling
+ * \code
+ * SCIP_CALL( SCIPallocMemory(scip, &propdata) );
+ * \endcode
+ * You also have to initialize the fields in struct SCIP_PropData afterwards.
+ *
+ * You may also add user parameters for your propagator, see the method \b SCIPincludeConshdlrKnapsack() in 
+ * src/scip/cons_knapsack.c for an example.
+ *
+ *
+ * @section PROP_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Propagator
+ *
+ * Propagator plugins have two fundamental callback methods, namely the PROPEXEC method and the PROPRESPROP method.
+ * These methods have to be implemented for every propagator; the other callback methods are optional.
+ * In the C++ wrapper class ObjProp, the scip_exec() method and the scip_resprop() method (which correspond to the 
+ * PRESOLEXEC callback and PROPRESPROP callback, respectively) are virtual abstract member functions.
+ * You have to implement them in order to be able to construct an object of your propagator class.
+ *
+ * Additional documentation to the callback methods can be found in "type_prop.h".
+ *
+ * @subsection PROPEXEC
+ *
+ * The PROPEXEC callback is called during presolving and during the subproblem processing. 
+ * It should perform the actual domain propagation, which means that it should tighten the variables' bounds.
+ * This technique, which is the main workhorse of constraint programming, is called "node preprocessing" in the
+ * Integer Programming community.
+ *
+ * The PROPEXEC callback has the following options:
+ *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
+ *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
+ *  - stating that the propagator searched, but did not find domain reductions, cutting planes, or cut constraints
+ *    (result SCIP_DIDNOTFIND)
+ *  - stating that the propagator was skipped (result SCIP_DIDNOTRUN)
+ *  - stating that the propagator was skipped, but should be called again (result SCIP_DELAYED)
+ * 
+ * @subsection PROPRESPROP
+ *
+ * If the propagator should support conflict analysis, it has to supply the PROPRESPROP method.
+ * It also should call SCIPinferVarLbProp() or SCIPinferVarUbProp() in the domain propagation instead of SCIPchgVarLb() 
+ * or SCIPchgVarUb() in order to deduce bound changes on variables.
+ * In the SCIPinferVarLbProp() and SCIPinferVarUbProp() calls, the propagator provides a pointer to itself and an integer 
+ * value "inferinfo" that can be arbitrarily chosen.
+ *  
+ * The propagation conflict resolving method PROPRESPROP must then be implemented, to provide the "reasons" for the bound
+ * changes, i.e. the bounds of variables at the time of the propagation, that forced the propagator to set the
+ * conflict variable's bound to its current value. It can use the "inferinfo" tag to identify its own propagation
+ * rule and thus identify the "reason" bounds. The bounds that form the reason of the assignment must then be provided
+ * by calls to SCIPaddConflictLb() and SCIPaddConflictUb() in the propagation conflict resolving method.
+ *
+ * See the description of the propagation conflict resolving method \ref CONSRESPROP of constraint handlers for 
+ * further details.
+ *
+ *
+ * @section PROP_ADDITIONALCALLBACKS Additional Callback Methods of a Propagator
+ *
+ * The additional callback methods need not to be implemented in every case.
+ * They can be used, for example, to initialize and free private data.
+ *
+ * @subsection PROPFREE
+ *
+ * If you are using propagator data, you have to implement this method in order to free the propagator data.
+ * This can be done by the following procedure:
+ * \code
+ * static
+ * SCIP_DECL_PROPFREE(propFreeMypropagator)
+ * { 
+ *    SCIP_PROPDATA* propdata;
+ * 
+ *    propdata = SCIPpropGetData(prop);
+ *    assert(propdata != NULL);
+ *
+ *   SCIPfreeMemory(scip, &propdata);
+ *
+ *   SCIPpropSetData(prop, NULL);
+ *
+ *   return SCIP_OKAY;
+ * }
+ * \endcode
+ * If you are using the C++ wrapper class, this method is not available.
+ * Instead, just use the destructor of your class to free the member variables of your class.
+ *
+ * @subsection PROPINIT
+ *
+ * The PROPINIT callback is executed after the problem was transformed.
+ * The propagator may, e.g., use this call to initialize his propagator data.
+ *
+ * @subsection PROPEXIT
+ *
+ * The PROPEXIT callback is executed before the transformed problem is freed.
+ * In this method, the propagator should free all resources that have been allocated for the solving process in PROPINIT.
+ *
+ * @subsection PROPINITSOL
+ *
+ * The PROPINITSOL callback is executed when the presolving was finished and the branch and bound process is about to
+ * begin.
+ * The propagator may use this call to initialize its branch and bound specific data.
+ * 
+ * @subsection PROPEXITSOL
+ *
+ * The PROPEXITSOL callback is executed before the branch and bound process is freed.
+ * The propagator should use this call to clean up its branch and bound data.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
