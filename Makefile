@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.198 2007/08/03 12:05:49 bzfpfend Exp $
+# $Id: Makefile,v 1.199 2007/08/06 12:57:03 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -247,6 +247,11 @@ SOFTLINKS	+=	$(LIBDIR)/libclpdbg.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).a
 SOFTLINKS	+=	$(LIBDIR)/libclpdbg.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
 SOFTLINKS	+=	$(LIBDIR)/libcoinutilsdbg.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).a
 SOFTLINKS	+=	$(LIBDIR)/libcoinutilsdbg.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
+endif
+
+ifeq ($(LPS),non)
+LPILIBOBJ	=	scip/lpi_non.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 endif
 
 LPILIB		=	$(LPILIBNAME).$(BASE)

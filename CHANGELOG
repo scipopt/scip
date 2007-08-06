@@ -2,6 +2,7 @@ current version
 ===============
 
 compiling:
+- added "LPS=non" for compliling SCIP without a LP solver
 - added .exe extension to binaries of MinGW
 
 interface:
@@ -37,6 +38,7 @@ interface:
 - SCIPsubversion() now returns an int instead of a const char*
 
 plugins:
+- new dummy LP interface "lpi_non.c"; usefull for running SCIP without a LP solver
 - new improvement heuristic "oneopt"
 - improved performance of linear constraint propagation by delaying some floor/ceil calculations
 - new node selection rule "estimate" (best estimate search)
