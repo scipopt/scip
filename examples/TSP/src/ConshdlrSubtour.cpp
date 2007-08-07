@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.11 2007/07/27 16:25:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.12 2007/08/07 08:56:24 bzfberth Exp $"
 
 /**@file   ConshdlrSubtour.cpp
  * @brief  C++ file reader for TSP data files
@@ -717,7 +717,7 @@ SCIP_RETCODE tsp::SCIPcreateConsSubtour(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
 
-   /* find the knapsack constraint handler */
+   /* find the subtour constraint handler */
    conshdlr = SCIPfindConshdlr(scip, "subtour");
    if( conshdlr == NULL )
    {
