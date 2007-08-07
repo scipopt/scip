@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.199 2007/08/06 12:57:03 bzfheinz Exp $
+# $Id: Makefile,v 1.200 2007/08/07 07:41:03 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -249,8 +249,8 @@ SOFTLINKS	+=	$(LIBDIR)/libcoinutilsdbg.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
 SOFTLINKS	+=	$(LIBDIR)/libcoinutilsdbg.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
 endif
 
-ifeq ($(LPS),non)
-LPILIBOBJ	=	scip/lpi_non.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+ifeq ($(LPS),none)
+LPILIBOBJ	=	scip/lpi_none.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 endif
 
@@ -405,6 +405,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/presol_trivial.o \
 			scip/prop_pseudoobj.o \
 			scip/prop_rootredcost.o \
+			scip/reader_cdd.o \
 			scip/reader_cnf.o \
 			scip/reader_fix.o \
 			scip/reader_lp.o \

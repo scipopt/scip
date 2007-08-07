@@ -14,9 +14,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_non.c,v 1.1 2007/08/06 12:57:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lpi_none.c,v 1.1 2007/08/07 07:41:03 bzfheinz Exp $"
 
-/**@file   lpi_non.c
+/**@file   lpi_none.c
  * @brief  dummy interface for the case no LP solver is needed
  * @author Stefan Heinz
  */
@@ -40,7 +40,7 @@ void errorMessage(
    void
    )
 {
-   SCIPerrorMessage("there is no LP solver linked to the binary (LPS=non); you should set the parameter <lp/solvefreq> to <-1> to avoid solving LPs\n");
+   SCIPerrorMessage("there is no LP solver linked to the binary (LPS=none); you should set the parameter <lp/solvefreq> to <-1> to avoid solving LPs\n");
    SCIPABORT();
 }
 
@@ -61,7 +61,7 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-   return "NON";
+   return "NONE";
 }
 
 /**@} */
