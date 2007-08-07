@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.30 2007/06/06 11:25:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.31 2007/08/07 12:22:40 bzfpfend Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog
@@ -74,6 +74,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayMemory);
 /** dialog execution method for the display nodeselectors command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayNodeselectors);
+
+/** dialog execution method for the display parameters command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayParameters);
 
 /** dialog execution method for the display presolvers command */
 extern
@@ -146,6 +150,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecQuit);
 /** dialog execution method for the read command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecRead);
+
+/** dialog execution method for the set default command */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetDefault);
 
 /** dialog execution method for the set load command */
 extern
