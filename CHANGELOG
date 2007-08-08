@@ -3,8 +3,8 @@ current version
 
 compiling:
 - added .exe extension to binaries of MinGW
-- added "LPS=non" for compliling SCIP without a LP solver
-- changed "LPS=non" to "LPS=none" for compliling SCIP without a LP solver
+- added "LPS=none" for compliling SCIP without a LP solver
+- modified the default LP solver to be SoPlex instead of CPLEX
 
 interface:
 - new method SCIPreadSol()

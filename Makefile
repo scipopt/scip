@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.202 2007/08/08 15:07:17 bzfpfend Exp $
+# $Id: Makefile,v 1.203 2007/08/08 15:08:48 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -53,7 +53,7 @@ LOCK		=	false
 
 VERBOSE		=	false
 OPT		=	opt
-LPS		=	cpx
+LPS		=	spx
 COMP		=	gnu
 LINK		=	static
 LIBEXT		=	a
