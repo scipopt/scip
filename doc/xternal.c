@@ -1531,7 +1531,169 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page NODESEL How to add node selectors
  *
- * This page is not yet written. Here we will explain how to add node selection rules to SCIP.
+ * Node selectors are used to decide which of the leaves in the current branching tree is selected as next subproblem 
+ * to be processed. The ordering relation of the tree's leaves is also defined by the node selectors.    
+ *
+ * In the following, we explain how the user can add an own node selector.
+ * Take the node selector for depth first search (src/scip/nodesel_dfs.c) as an example.
+ * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjNodesel wrapper
+ * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_NODESEL... callback methods.
+ *
+ * Additional documentation for the callback methods of a node selector can be found in the file "type_nodesel.h".
+ *
+ * Here is what you have to do to implement a node selector:
+ * -# Copy the template files "src/scip/nodesel_xxx.c" and "src/scip/nodesel_xxx.h" into files names "nodesel_mynodeselector.c"
+ *    and "nodesel_mynodeselector.h".
+ *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mynodeselector".
+ * -# Adjust the properties of the node selector (see \ref NODESEL_PROPERTIES).
+ * -# Define the node selector data (see \ref NODESEL_DATA).
+ * -# Implement the interface methods (see \ref NODESEL_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref NODESEL_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref NODESEL_ADDITIONALCALLBACKS).
+ *
+ *
+ * @section NODESEL_PROPERTIES Properties of a Node Selector
+ *
+ * At the top of the new file "nodesel_mynodeselector.c" you can find the node selector properties.
+ * These are given as compiler defines.
+ * In the C++ wrapper class, you have to provide the node selector properties by calling the constructor
+ * of the abstract base class ObjNodesel from within your constructor.
+ * The properties you have to set have the following meaning:
+ *
+ * \par NODESEL_NAME: the name of the node selector.
+ * This name is used in the interactive shell to address the node selector.
+ * Additionally, if you are searching a node selector with SCIPfindNodesel(), this name is looked up.
+ * Names have to be unique: no two node selectors may have the same name.
+ * 
+ * \par NODESEL_DESC: the description of the node selector.
+ * This string is printed as description of the node selector in the interactive shell.
+ *
+ * \par NODESEL_STDPRIORITY: the priority of the node selector in the standard mode.
+ *
+ * The first step of each iteration of the main solving loop is the selection of the next subproblem to be processed. 
+ * The node selector of highest priority (the active node selector) is called to do this selection. 
+ * Note that SCIP has two different operation modes: the standard mode and the memory saving mode. If the memory 
+ * limit - given as a parameter by the user - is nearly reached, SCIP switches from the standard mode to the memory saving 
+ * mode in which different priorities for the node selectors are applied. NODESEL_STDPRIORITY is the priority of the 
+ * node selector used in the standard mode.
+ *
+ * \par NODESEL_MEMSAVEPRIORITY: the priority of the node selector in the memory saving mode.
+ *
+ * The priority NODESEL_MEMSAVEPRIORITY of the node selector has the same meaning as the priority NODESEL_STDPRIORITY, but 
+ * is used in the memory saving mode.
+ *
+ *
+ * @section NODESEL_DATA Node Selector Data
+ *
+ * Below the header "Data structures" you can find a struct which is called "struct SCIP_NodeselData".
+ * In this data structure, you can store the data of your node selector. For example, you should store the adjustable 
+ * parameters of the node selector in this data structure.
+ * If you are using C++, you can add node selector data as usual as object variables to your class.
+ * \n
+ * Defining node selector data is optional. You can leave the struct empty.
+ *
+ *
+ * @section NODESEL_INTERFACE Interface Methods
+ *
+ * At the bottom of "nodesel_mynodeselector.c" you can find the interface method SCIPincludeNodeselMynodeselector(), 
+ * which also appears in "nodesel_mynodeselector.h".
+ * \n
+ * This method has only to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the node selector by calling the method
+ * SCIPincludeNodesel().
+ * It is called by the user, if he wants to include the node selector, i.e. if he wants to use the node selector in 
+ * his application.
+ *
+ * If you are using node selector data, you have to allocate the memory for the data at this point.
+ * You can do this by calling
+ * \code
+ * SCIP_CALL( SCIPallocMemory(scip, &nodeseldata) );
+ * \endcode
+ * You also have to initialize the fields in struct SCIP_NodeselData afterwards.
+ *
+ * You may also add user parameters for your node selector, see the method \b SCIPincludeConshdlrKnapsack() in 
+ * src/scip/cons_knapsack.c for an example.
+ *
+ * 
+ * @section NODESEL_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Node Selector
+ *
+ * Node selector plugins have two fundamental callback methods, namely the NODESELSELECT method and the NODESELCOMP method.
+ * These methods have to be implemented for every node selector; the other callback methods are optional.
+ * In the C++ wrapper class ObjNodesel, the scip_select() method and the scip_comp() method (which correspond to the 
+ * NODESELSELECT callback and the NODESELCOMP callback, respectively) are virtual abstract member functions.
+ * You have to implement them in order to be able to construct an object of your node selector class.
+ *
+ * Additional documentation to the callback methods can be found in "type_nodesel.h".
+ *
+ * @subsection NODESELSELECT
+ *
+ * The NODESELSELECT callback is the first method called in each iteration in the main solving loop. It should decide 
+ * which of the leaves in the current branching tree is selected as next subproblem to be processed. It can decide between 
+ * the current node's children and siblings, and the "best" of the remaining leaves stored in the tree. This choice can 
+ * have a large impact on the solver's performance, because it influences the finding of feasible solutions and the 
+ * development of the global dual bound. 
+ *
+ * @subsection NODESELCOMP
+ *
+ * The NODESELCOMP callback is called to compare two leaves of the current branching tree (say node 1 and node 2) 
+ * regarding their ordering relation.
+ *
+ * The NODESELCOMP should return the following values:
+ *  - value < 0, if node 1 comes before (is better than) node 2
+ *  - value = 0, if both nodes are equally good
+ *  - value > 0, if node 2 comes after (is worse than) node 2.
+ *
+ * @section NODESEL_ADDITIONALCALLBACKS Additional Callback Methods of a Node Selector
+ *
+ * The additional callback methods need not to be implemented in every case.
+ * They can be used, for example, to initialize and free private data.
+ *
+ * @subsection NODESELFREE
+ *
+ * If you are using node selector data, you have to implement this method in order to free the node selector data.
+ * This can be done by the following procedure:
+ * \code
+ * static
+ * SCIP_DECL_NODESELFREE(nodeselFreeMynodeselector)
+ * { 
+ *    SCIP_NODESELDATA* nodeseldata;
+ *
+ *    nodeseldata = SCIPnodeselGetData(nodesel);
+ *    assert(nodeseldata != NULL);
+ *
+ *    SCIPfreeMemory(scip, &nodeseldata);
+ *
+ *    SCIPnodeselSetData(nodesel, NULL);
+ * 
+ *    return SCIP_OKAY;
+ * }
+ * \endcode
+ * If you are using the C++ wrapper class, this method is not available.
+ * Instead, just use the destructor of your class to free the member variables of your class.
+ *
+ * @subsection NODESELINIT
+ *
+ * The NODESELINIT callback is executed after the problem was transformed.
+ * The node selector may, e.g., use this call to initialize his node selector data.
+ *
+ * @subsection NODESELEXIT
+ *
+ * The NODESELEXIT callback is executed before the transformed problem is freed.
+ * In this method, the node selector should free all resources that have been allocated for the solving process 
+ * in NODESELINIT.
+ *
+ * @subsection NODESELINITSOL
+ *
+ * The NODESELINITSOL callback is executed when the presolving was finished and the branch and bound process is about to
+ * begin.
+ * The node selector may use this call to initialize its branch and bound specific data.
+ *
+ * @subsection NODESELEXITSOL
+ *
+ * The NODESELEXITSOL callback is executed before the branch and bound process is freed.
+ * The node selector should use this call to clean up its branch and bound data.
+ *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
