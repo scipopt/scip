@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.201 2007/08/07 09:18:34 bzfpfend Exp $
+# $Id: Makefile,v 1.202 2007/08/08 15:07:17 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -149,7 +149,10 @@ DFLAGS		+=	$(USRDFLAGS)
 #-----------------------------------------------------------------------------
 
 LPILIBNAME	=	lpi$(LPS)
+LPILIBOBJ	=
+LPSOPTIONS	=
 
+LPSOPTIONS	+=	cpx
 ifeq ($(LPS),cpx)
 FLAGS		+=	-I$(LIBDIR)/cpxinc
 LPSLDFLAGS	=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
@@ -160,6 +163,7 @@ SOFTLINKS	+=	$(LIBDIR)/libcplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).a
 SOFTLINKS	+=	$(LIBDIR)/libcplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
 endif
 
+LPSOPTIONS	+=	cpx903
 ifeq ($(LPS),cpx903)
 FLAGS		+=	-I$(LIBDIR)/cpx903inc
 LPSLDFLAGS	=	$(LINKCC_l)cplex903.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
@@ -170,6 +174,7 @@ SOFTLINKS	+=	$(LIBDIR)/libcplex903.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).a
 SOFTLINKS	+=	$(LIBDIR)/libcplex903.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
 endif
 
+LPSOPTIONS	+=	xprs
 ifeq ($(LPS),xprs)
 FLAGS		+=	-I$(LIBDIR)/xprsinc
 LPSLDFLAGS	=	$(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
@@ -180,6 +185,7 @@ SOFTLINKS	+=	$(LIBDIR)/libxpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).a
 SOFTLINKS	+=	$(LIBDIR)/libxpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
 endif
 
+LPSOPTIONS	+=	msk
 ifeq ($(LPS),msk)
 FLAGS		+=	-I$(LIBDIR)/mskinc
 LPSLDFLAGS	=	$(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
@@ -190,6 +196,7 @@ SOFTLINKS	+=	$(LIBDIR)/libmosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).a
 SOFTLINKS	+=	$(LIBDIR)/libmosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
 endif
 
+LPSOPTIONS	+=	spx
 ifeq ($(LPS),spx)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc 
@@ -201,6 +208,7 @@ SOFTLINKS	+=	$(LIBDIR)/libsoplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).a
 SOFTLINKS	+=	$(LIBDIR)/libsoplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
 endif
 
+LPSOPTIONS	+=	spxdbg
 ifeq ($(LPS),spxdbg)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc 
@@ -212,6 +220,7 @@ SOFTLINKS	+=	$(LIBDIR)/libsoplexdbg.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).a
 SOFTLINKS	+=	$(LIBDIR)/libsoplexdbg.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
 endif
 
+LPSOPTIONS	+=	spx121
 ifeq ($(LPS),spx121)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spx121inc 
@@ -223,6 +232,7 @@ SOFTLINKS	+=	$(LIBDIR)/libsoplex121.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).a
 SOFTLINKS	+=	$(LIBDIR)/libsoplex121.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
 endif
 
+LPSOPTIONS	+=	clp
 ifeq ($(LPS),clp)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/clpinc
@@ -236,6 +246,7 @@ SOFTLINKS	+=	$(LIBDIR)/libcoinutils.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).a
 SOFTLINKS	+=	$(LIBDIR)/libcoinutils.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
 endif
 
+LPSOPTIONS	+=	clpdbg
 ifeq ($(LPS),clpdbg)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/clpinc
@@ -249,6 +260,7 @@ SOFTLINKS	+=	$(LIBDIR)/libcoinutilsdbg.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
 SOFTLINKS	+=	$(LIBDIR)/libcoinutilsdbg.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).so
 endif
 
+LPSOPTIONS	+=	none
 ifeq ($(LPS),none)
 LPILIBOBJ	=	scip/lpi_none.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
@@ -484,7 +496,7 @@ MAINOBJFILES	=	$(addprefix $(BINOBJDIR)/,$(MAINOBJ))
 #-----------------------------------------------------------------------------
 
 .PHONY: all
-all:            $(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE)
+all:            checklpsdefine $(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE)
 
 .PHONY: lint
 lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(MAINSRC)
@@ -610,7 +622,7 @@ else
 endif
 endif
 
-$(SCIPLIBFILE):	$(LIBOBJSUBDIRS) $(LIBDIR) touchexternal $(SCIPLIBOBJFILES) 
+$(SCIPLIBFILE):	checklpsdefine $(LIBOBJSUBDIRS) $(LIBDIR) touchexternal $(SCIPLIBOBJFILES) 
 		@echo "-> generating library $@"
 ifeq ($(VERBOSE), true)
 		-rm -f $@
@@ -754,6 +766,12 @@ $(SOFTLINKS):
 				fi ; \
 				echo ; \
 			fi'
+
+.PHONY: checklpsdefine
+checklpsdefine:
+ifeq ($(LPILIBOBJ),)
+		$(error invalid LP solver selected: LPS=$(LPS). Possible options are: $(LPSOPTIONS))
+endif
 
 
 # --- EOF ---------------------------------------------------------------------
