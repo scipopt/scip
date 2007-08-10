@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.14 2007/06/06 11:25:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.15 2007/08/10 10:43:53 bzfberth Exp $"
 
 /**@file   heur_oneopt.c
  * @brief  oneopt primal heuristic
@@ -508,7 +508,6 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
             {
                SCIPdebugMessage("found feasible shifted solution:\n");
                SCIPdebug(SCIPprintSol(scip, worksol, NULL, FALSE));
-               SCIPsolSetWasImproved(bestsol, TRUE);
                *result = SCIP_FOUNDSOL;
             }
          }

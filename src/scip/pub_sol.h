@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_sol.h,v 1.16 2007/06/06 11:25:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_sol.h,v 1.17 2007/08/10 10:43:53 bzfberth Exp $"
 
 /**@file   pub_sol.h
  * @brief  public methods for primal CIP solutions
@@ -92,20 +92,6 @@ int SCIPsolGetIndex(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
-/**  Returns, whether the solution is marked as the starting point of some successful improvement heuristic */
-extern
-SCIP_Bool SCIPsolGetWasImproved(
-   SCIP_SOL*             sol                 /**< primal CIP solution */
-   );
-
-/** informs the solution whether it was the starting point of some successful improvement heuristic */
-extern
-void SCIPsolSetWasImproved(
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool             wasimproved         /**< TRUE, if solution has been improved, FALSE otherwise */
-   );
-
-
 
 #else
 
@@ -120,9 +106,7 @@ void SCIPsolSetWasImproved(
 #define SCIPsolGetDepth(sol)            (sol)->depth
 #define SCIPsolGetHeur(sol)             (sol)->heur
 #define SCIPsolGetIndex(sol)            (sol)->index
-#define SCIPsolGetWasImproved(sol)      (sol)->wasimproved
 #define SCIPsolSetHeur(sol,heur)        { (sol)->heur = heur; }
-#define SCIPsolSetWasImproved(sol,imp)  { (sol)->wasimproved = imp; }
 #endif
 
 #endif

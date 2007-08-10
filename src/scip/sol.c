@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.80 2007/06/06 11:25:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.81 2007/08/10 10:43:53 bzfberth Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -252,7 +252,6 @@ SCIP_RETCODE SCIPsolCreate(
    (*sol)->obj = 0.0;
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
-   (*sol)->wasimproved = FALSE;
    stat->solindex++;
    solStamp(*sol, stat, tree);
 
@@ -1300,8 +1299,6 @@ SCIP_RETCODE SCIPsolPrint(
 #undef SCIPsolSetPrimalIndex
 #undef SCIPsolGetIndex
 #undef SCIPsolSetHeur
-#undef SCIPsolGetWasImproved
-#undef SCIPsolSetWasImproved
 
 /** gets origin of solution */
 SCIP_SOLORIGIN SCIPsolGetOrigin(
@@ -1406,23 +1403,3 @@ void SCIPsolSetHeur(
    sol->heur = heur;
 }
 
-/**  Returns, whether the solution is marked as the starting point of some successful improvement heuristic */
-SCIP_Bool SCIPsolGetWasImproved(
-   SCIP_SOL*             sol                 /**< primal CIP solution */
-   )
-{
-   assert(sol != NULL);
-
-   return sol->wasimproved;
-}
-
-/** informs the solution whether it was the starting point of some successful improvement heuristic */
-void SCIPsolSetWasImproved(
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool             wasimproved         /**< TRUE, if solution has been improved, FALSE otherwise */
-   )
-{
-   assert(sol != NULL);
- 
-   sol->wasimproved = wasimproved;
-}
