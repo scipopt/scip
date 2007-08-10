@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipshell.c,v 1.6 2007/06/06 11:25:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipshell.c,v 1.7 2007/08/10 09:12:27 bzfpfend Exp $"
 
 /**@file   scipshell.c
  * @brief  SCIP command line interface
@@ -105,11 +105,11 @@ SCIP_RETCODE readParams(
 {
    if( SCIPfileExists(filename) )
    {
-      SCIPinfoMessage(scip, NULL, "reading parameter file <%s>\n", filename);
+      SCIPinfoMessage(scip, NULL, "reading user parameter file <%s>\n", filename);
       SCIP_CALL( SCIPreadParams(scip, filename) );
    }
    else
-      SCIPinfoMessage(scip, NULL, "parameter file <%s> not found - using default parameters\n", filename);
+      SCIPinfoMessage(scip, NULL, "user parameter file <%s> not found - using default parameters\n", filename);
 
    return SCIP_OKAY;
 }
