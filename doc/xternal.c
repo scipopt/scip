@@ -41,7 +41,7 @@
  * - \ref PROP    "How to add propagators"
  * - \ref BRANCH  "How to add branching rules"
  * - \ref NODESEL "How to add node selectors"
- * - \ref HEUR    "How to add heuristics"
+ * - \ref HEUR    "How to add primal heuristics"
  * - \ref RELAX   "How to add additional relaxations"
  * - \ref READER  "How to add file readers"
  * - \ref DIALOG  "How to add dialog options"
@@ -114,11 +114,11 @@
  * Additional documentation for the callback methods of a constraint handler can be found in the file
  * "type_cons.h".
  *
- * Here is what you have to do (assuming your constraint handler should be named "nosubtour"):
- * -# Copy the template files "src/scip/cons_xxx.c" and "src/scip/cons_xxx.h" into files "cons_nosubtour.c"
- *    and "cons_nosubtour.h".
+ * Here is what you have to do (assuming your constraint handler should be named "subtour"):
+ * -# Copy the template files "src/scip/cons_xxx.c" and "src/scip/cons_xxx.h" into files "cons_subtour.c"
+ *    and "cons_subtour.h".
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Open the new files with a text editor and replace all occurrences of "xxx" by "nosubtour".
+ * -# Open the new files with a text editor and replace all occurrences of "xxx" by "subtour".
  * -# Adjust the properties of the constraint handler (see \ref CONS_PROPERTIES).
  * -# Define the constraint data and the constraint handler data (see \ref CONS_DATA).
  * -# Implement the interface methods (see \ref CONS_INTERFACE).
@@ -254,7 +254,7 @@
  * constraint class.
  * For example, the data of a knapsack constraint would consist of a list of variables, a list of weights, and
  * the capacity of the knapsack.
- * The data of a nosubtour constraint consists of the graph on which the problem is defined.
+ * The data of a subtour constraint consists of the graph on which the problem is defined.
  * In the graph, each edge should be linked to the corresponding binary problem variable.
  * \n
  * The constraint handler data are additional variables, that belong to the constraint handler itself and which are
@@ -710,7 +710,6 @@
  * The output format that is defined by the CONSPRINT callbacks is called CIP format.
  * In later versions of SCIP, the constraint handlers should also be able to parse (i.e., read) constraints
  * which are given in CIP format.
- *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -938,7 +937,6 @@
  *
  * The PRICEREXITSOL callback is executed before the branch and bound process is freed.
  * The pricer should use this call to clean up its branch and bound data, which was allocated in PRICERINITSOL.
- *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -957,7 +955,7 @@
  * Additional documentation for the callback methods of a presolver can be found in the file "type_presol.h".
  *
  * Here is what you have to do to implement a presolver:
- * -# Copy the template files "src/scip/presol_xxx.c" and "src/scip/presol_xxx.h" into files names "presol_mypresolver.c"
+ * -# Copy the template files "src/scip/presol_xxx.c" and "src/scip/presol_xxx.h" into files named "presol_mypresolver.c"
  *    and "presol_mypresolver.h".
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mypresolver".
@@ -1108,7 +1106,6 @@
  *
  * The PRESOLEXITPRE callback is executed after presolving has been finished and before the branch and bound process begins.
  * The presolver should use this call to clean up its presolving data, which was allocated in PRESOLINITPRE.
- *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1187,10 +1184,10 @@
  * of the separator will only be applied at the node if this relative distance does not exceed SEPA_MAXBOUNDDIST. 
  * \n
  * For example, if the global dual bound is 0 and the primal bound is 10, SEPA_MAXBOUNDDIST = 0.25 means that separation 
- * is only applied if the current node's dual bound is in the first quater of the interval [0,10], i.e., if it is less 
+ * is only applied if the current node's dual bound is in the first quarter of the interval [0,10], i.e., if it is less 
  * than or equal to 2.5. 
  * \n
- * In particular, the extremal values 0.0 and 1.0 mean that separtion is only applied at the current best node and at all 
+ * In particular, the extremal values 0.0 and 1.0 mean that separation is only applied at the current best node and at all 
  * nodes, respectively. Since separation seems to be most effective when applied at nodes that contribute to the global 
  * dual bound, 0.0 is probably a good choice for SEPA_MAXBOUNDDIST.
  *
@@ -1339,7 +1336,7 @@
  * Additional documentation for the callback methods of a propagator can be found in the file "type_prop.h".
  *
  * Here is what you have to do to implement a propagator:
- * -# Copy the template files "src/scip/prop_xxx.c" and "src/scip/prop_xxx.h" into files names "prop_mypropagator.c"
+ * -# Copy the template files "src/scip/prop_xxx.c" and "src/scip/prop_xxx.h" into files named "prop_mypropagator.c"
  *    and "prop_mypropagator.h".
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mypropagator".
@@ -1526,7 +1523,7 @@
 /**@page BRANCH How to add branching rules
  *
  * Branching rules are used to split the current problem into subproblems. If the LP solution of the current problem is 
- * fractional, the integrality constraint handler calles the branching rules. Additionaly, branching rules are called 
+ * fractional, the integrality constraint handler calls the branching rules. Additionally, branching rules are called 
  * as a last resort on integral solutions that violate one or more constraints for which the associated constraint handlers
  * were not able to resolve the infeasibility in a more sophisticated way, see the constraint handlers' callback methods 
  * \ref CONSENFOLP and \ref CONSENFOPS. Note that in these resolving methods the constraint handlers may also apply 
@@ -1545,7 +1542,7 @@
  * Additional documentation for the callback methods of a branching rule can be found in the file "type_branch.h".
  *
  * Here is what you have to do to implement a branching rule:
- * -# Copy the template files "src/scip/branch_xxx.c" and "src/scip/branch_xxx.h" into files names 
+ * -# Copy the template files "src/scip/branch_xxx.c" and "src/scip/branch_xxx.h" into files named 
  *    "branch_mybranchingrule.c" and "branch_mybranchingrule.h".
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mybranchingrule".
@@ -1578,7 +1575,7 @@
  *
  * \par BRANCHRULE_MAXDEPTH: the maximal depth level of the branching rule.
  * This parameter denotes the maximal depth level in the branch-and-bound tree up to which the branching method of the 
- * branching rule will be applied.
+ * branching rule will be applied. Use -1 for no limit.
  *
  * \par BRANCHRULE_MAXBOUNDDIST: the default maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching.
  * At the current branch-and-bound node, the relative distance from its dual bound (local dual bound) 
@@ -1586,7 +1583,7 @@
  * the branching rule will only be applied at the node if this relative distance does not exceed BRANCHRULE_MAXBOUNDDIST. 
  * \n
  * For example, if the global dual bound is 0 and the primal bound is 10, BRANCHRULE_MAXBOUNDDIST = 0.25 means that 
- * branching is only applied if the current node's dual bound is in the first quater of the interval [0,10], i.e., if it 
+ * branching is only applied if the current node's dual bound is in the first quarter of the interval [0,10], i.e., if it 
  * is less than or equal to 2.5. In particular, the extremal values 0.0 and 1.0 mean that branching is only applied at the 
  * current best node and at all nodes, respectively. 
  * 
@@ -1763,7 +1760,7 @@
  * Additional documentation for the callback methods of a node selector can be found in the file "type_nodesel.h".
  *
  * Here is what you have to do to implement a node selector:
- * -# Copy the template files "src/scip/nodesel_xxx.c" and "src/scip/nodesel_xxx.h" into files names "nodesel_mynodeselector.c"
+ * -# Copy the template files "src/scip/nodesel_xxx.c" and "src/scip/nodesel_xxx.h" into files named "nodesel_mynodeselector.c"
  *    and "nodesel_mynodeselector.h".
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mynodeselector".
@@ -1914,13 +1911,233 @@
  *
  * The NODESELEXITSOL callback is executed before the branch and bound process is freed.
  * The node selector should use this call to clean up its branch and bound data.
- *
  */
 
+
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page HEUR How to add heuristics
+/**@page HEUR How to add primal heuristics
  *
- * This page is not yet written. Here we will explain how to add primal heuristics to SCIP.
+ * Feasible solutions can be found in two different ways during the traversal of the branch-and-bound tree. On the one 
+ * hand, the solution of a node's relaxation may be feasible with respect to the constraints. On the other hand, feasible
+ * solutions can be discovered by primal heuristics.  
+ *
+ * In the following, we explain how the user can add an own primal heuristic.
+ * Take the simple and fast LP rounding heuristic (src/scip/heur_simplerounding.c) as an example.
+ * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjHeur wrapper
+ * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_HEUR... callback methods.
+ *
+ * Additional documentation for the callback methods of a primal heuristic can be found in the file "type_heur.h".
+ *
+ * Here is what you have to do to implement a primal heuristic:
+ * -# Copy the template files "src/scip/heur_xxx.c" and "src/scip/heur_xxx.h" into files named "heur_myheuristic.c"
+ *    and "heur_myheuristic.h".
+ *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Open the new files with a text editor and replace all occurrences of "xxx" by "myheuristic".
+ * -# Adjust the properties of the primal heuristic (see \ref HEUR_PROPERTIES).
+ * -# Define the primal heuristic data (see \ref HEUR_DATA).
+ * -# Implement the interface methods (see \ref HEUR_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref HEUR_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref HEUR_ADDITIONALCALLBACKS).
+ *
+ *
+ * @section HEUR_PROPERTIES Properties of a Primal Heuristic
+ *
+ * At the top of the new file "heur_myheuristic.c" you can find the primal heuristic properties.
+ * These are given as compiler defines.
+ * In the C++ wrapper class, you have to provide the primal heuristic properties by calling the constructor
+ * of the abstract base class ObjHeur from within your constructor.
+ * The properties you have to set have the following meaning:
+ *
+ * \par HEUR_NAME: the name of the primal heuristic.
+ * This name is used in the interactive shell to address the primal heuristic.
+ * Additionally, if you are searching a primal heuristic with SCIPfindHeur(), this name is looked up.
+ * Names have to be unique: no two primal heuristics may have the same name.
+ *
+ * \par HEUR_DESC: the description of the primal heuristic.
+ * This string is printed as description of the primal heuristic in the interactive shell.
+ *
+ * \par HEUR_DISPCHAR: the display character of the primal heuristic.
+ * In the interactive shell, this character is printed in the first column of a status information row, if the primal 
+ * heuristic found the feasible solution belonging to the primal bound. Note that a star stands for an integral 
+ * LP-relaxation.
+ * Display characters have to be unique: no two primal heuristics may have the same display character.
+ *
+ * \par HEUR_PRIORITY: the priority of the primal heuristic.
+ * At each of the different entry points of the primal heuristics during the solving process (see HEUR_TIMING), they are 
+ * called in decreasing order of their priority. 
+ * \n
+ * The priority of a primal heuristic should be set according to the complexity of the heuristic and the impact of the 
+ * feasible solution found: primal heuristics that provide fast algorithms that usually have a high impact (i.e., severely 
+ * reduce the primal bound) should have a high priority. In addition, the interaction between different types of primal
+ * heuristics should be taken into account. For example, improvement heuristics, which try to generate improved solutions 
+ * by inspecting one or more of the feasible solutions that have already been found, should have a small priority.
+ *
+ * \par HEUR_FREQ: the default frequency for executing the primal heuristic.
+ * The frequency together with the frequency offset (see HEUR_FREQOFS) defines the depth levels at which the execution
+ * method of the primal heuristic \ref HEUREXEC is called. For example, a frequency of 7 together with a frequence offset 
+ * of 0 means, that the callback is executed for subproblems that are in depth 0, 7, 14, ... of the branching tree. A 
+ * frequency of 0 together with an frequence offset of 0 means, that the execution method is only called at the root node. 
+ * \n
+ * The frequency can be adjusted by the user. The property of the primal heuristic only defines the default value of the 
+ * frequency. If you want to have a more flexible control of when to execute the primal heuristic, you have to assign
+ * a frequency of 1 together with a frequency offset of 0 and implement a check at the beginning of your execution method 
+ * whether you really want to search for feasible solutions or not. If you do not want to execute the method, set the 
+ * result code to SCIP_DIDNOTRUN.
+ *
+ * \par HEUR_FREQOFS: the frequency offset for executing the primal heuristic.
+ * The frequency offset defines the depth of the branching tree at which the primal heuristic is executed for the first 
+ * time. For example, a frequency of 7 (see HEUR_FREQ) together with an frequency offset of 10 means, that the 
+ * callback is executed for subproblems that are in depth 10, 17, 24, ... of the branching tree. In particular, assigning 
+ * different offset values to heuristics of the same type, like diving heuristics, can be useful for evenly spreading the 
+ * application of these heuristics across the branch-and-bound tree.
+ * 
+ * \par HEUR_MAXDEPTH: the maximal depth level for executing the primal heuristic.
+ * This parameter denotes the maximal depth level in the branching tree up to which the execution method of the primal 
+ * heuristic is called. Use -1 for no limit. 
+ *
+ * \par HEUR_TIMING: the execution timing of the primal heuristic.
+ * Primal heuristics have different entry points during the solving process and the execution timing parameter defines the
+ * entry point at which the primal heuristic is executed first. 
+ * \n
+ * The primal heuristic can be called first:
+ * \par
+ * - before the processing of the node starts (SCIP_HEURTIMING_BEFORENODE)
+ * - after each LP solving during the cut-and-price loop (SCIP_HEURTIMING_DURINGLPLOOP) 
+ * - after the cut-and-price loop was finished (SCIP_HEURTIMING_AFTERLPLOOP) 
+ * - after the processing of a node was finished (SCIP_HEURTIMING_AFTERNODE)
+ * - after the processing of a node <em>with solved LP</em>  was finished (SCIP_HEURTIMING_AFTERLPNODE)
+ * - after the processing of a node <em>without solved LP</em> was finished (SCIP_HEURTIMING_AFTERPSEUDONODE)
+ * - after the processing of the last node in the current plunge was finished (SCIP_HEURTIMING_AFTERPLUNGE)
+ * - after the processing of the last node in the current plunge was finished, <em>and only if the LP was solved for 
+ *   this node</em> (SCIP_HEURTIMING_AFTERLPPLUNGE) 
+ * - after the processing of the last node in the current plunge was finished, <em>and only if the LP was not solved 
+ *   for this node</em> (SCIP_HEURTIMING_AFTERPSEUDOPLUNGE).
+ * \par
+ * Calling a primal heuristic "before the processing of the node starts" is particularly useful for heuristics 
+ * that do not need to access the LP solution of the current node. If such a heuristic finds a feasible solution, the 
+ * leaves of the branching tree exceeding the new primal bound are pruned. It may happen that even the current node can 
+ * be cut off without solving the LP relaxation. Combinatorial heuristics, like the farthest insert heuristic for the TSP 
+ * (see examples/TSP/src/HeurFarthestInsert.cpp), are often applicable at this point.
+ * \n
+ * Very fast primal heuristics that require an LP solution can also be called "after each LP solving during the 
+ * cut-and-price loop". Rounding heuristics, like the simple and fast LP rounding heuristic 
+ * (src/scip/heur_simplerounding.c), may belong to this group of primal heuristics. 
+ * \n
+ * Most heuristics, however, are called either "after the cut-and-price loop was finished" or at one of the last six points
+ * mentioned above. These points correspond to the situation where a node was completely processed, but differ by the 
+ * type of node and by whether an LP solution is needed. For example, diving heuristics, like the LP diving heuristic 
+ * (src/scip/heur_fracdiving.c), are often executed after the last node in the current plunge has been processed. 
+ *
+ * Computational experiments seem to indicate that for the overall performance of a MIP solver, it is important to evenly 
+ * spread the application of the heuristics across the branch-and-bound tree. Thus, the assignment of the parameters 
+ * HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS, and HEUR_TIMING should contribute to this aim. Note that experiment have also 
+ * shown that the parameter HEUR_FREQ is the least important one out of these four parameters with respect to an even 
+ * spread.
+ *  
+ *
+ * @section HEUR_DATA Primal Heuristic Data
+ *
+ * Below the header "Data structures" you can find a struct which is called "struct SCIP_HeurData".
+ * In this data structure, you can store the data of your primal heuristic. For example, you should store the adjustable 
+ * parameters of the primal heuristic in this data structure. 
+ * If you are using C++, you can add primal heuristic data as usual as object variables to your class.
+ * \n
+ * Defining primal heuristic data is optional. You can leave the struct empty.
+ *
+ *
+ * @section HEUR_INTERFACE Interface Methods
+ *
+ * At the bottom of "heur_myheuristic.c" you can find the interface method SCIPincludeHeurMyheuristic(), which also 
+ * appears in "heur_myheuristic.h".
+ * \n
+ * This method has only to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the primal heuristic by calling the method SCIPincludeHeur().
+ * It is called by the user, if he wants to include the primal heuristic, i.e., if he wants to use the primal heuristic
+ * in his application.
+ *
+ * If you are using primal heuristic data, you have to allocate the memory for the data at this point.
+ * You can do this by calling
+ * \code
+ * SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+ * \endcode
+ * You also have to initialize the fields in struct SCIP_HeurData afterwards.
+ *
+ * You may also add user parameters for your primal heuristic, see the method \b SCIPincludeConshdlrKnapsack() in 
+ * src/scip/cons_knapsack.c for an example.
+ *
+ * 
+ * @section HEUR_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Primal Heuristic
+ *
+ * Primal heuristic plugins have only one fundamental callback method, namely the HEUREXEC method.
+ * This method has to be implemented for every primal heuristic; the other callback methods are optional.
+ * In the C++ wrapper class ObjHeur, the scip_exec() method (which corresponds to the HEUREXEC callback) is a virtual
+ * abstract member function. You have to implement it in order to be able to construct an object of your primal heuristic 
+ * class.
+ *
+ * Additional documentation to the callback methods can be found in "type_heur.h".
+ *
+ * @subsection HEUREXEC
+ *
+ * The HEUREXEC callback is called at different positions during the node processing loop, see HEUR_TIMING. It should
+ * search for feasible solutions and add them to the solution pool. For creating a new feasible solution, the 
+ * methods SCIPcreateSol() and SCIPsetSolVal() can be used. Afterwards, the solution can be added to the storage by 
+ * calling the method SCIPtrySolFree() (or SCIPtrySol() and SCIPfreeSol()).
+ *
+ * The HEUREXEC callback has the following options:
+ *  - finding at least one feasible solution (result SCIP_FOUNDSOL)
+ *  - stating that the primal heuristic searched, but did not find a feasible solution (result SCIP_DIDNOTFIND)
+ *  - stating that the primal heuristic was skipped (result SCIP_DIDNOTRUN)
+ *  - stating that the primal heuristic was skipped, but should be called again (result SCIP_DELAYED).
+ *
+ *
+ * @section HEUR_ADDITIONALCALLBACKS Additional Callback Methods of a Primal Heuristic
+ *
+ * The additional callback methods need not to be implemented in every case.
+ * They can be used, for example, to initialize and free private data.
+ *
+ * @subsection HEURFREE
+ *
+ * If you are using primal heuristic data, you have to implement this method in order to free the primal heuristic data.
+ * This can be done by the following procedure:
+ * \code
+ * static
+ * SCIP_DECL_HEURFREE(heurFreeMyheuristic)
+ * {
+ *    SCIP_HEURDATA* heurdata;
+ *  
+ *    heurdata = SCIPheurGetData(heur);
+ *    assert(heurdata != NULL);
+ *
+ *    SCIPfreeMemory(scip, &heurdata);
+ *
+ *    SCIPheurSetData(heur, NULL);
+ *
+ *    return SCIP_OKAY;
+ * }
+ * \endcode
+ * If you are using the C++ wrapper class, this method is not available.
+ * Instead, just use the destructor of your class to free the member variables of your class.
+ *
+ * @subsection HEURINIT
+ *
+ * The HEURINIT callback is executed after the problem was transformed.
+ * The primal heuristic may, e.g., use this call to initialize his primal heuristic data.
+ *
+ * @subsection HEUREXIT
+ *
+ * The HEUREXIT callback is executed before the transformed problem is freed.
+ * In this method, the primal heuristic should free all resources that have been allocated for the solving process in 
+ * HEURINIT.
+ *
+ * @subsection HEURINITSOL
+ *
+ * The HEURINITSOL callback is executed when the presolving was finished and the branch and bound process is about to 
+ * begin. The primal heuristic may use this call to initialize its branch and bound specific data.
+ *
+ * @subsection HEUREXITSOL
+ *
+ * The HEUREXITSOL callback is executed before the branch and bound process is freed. The primal heuristic should use this
+ * call to clean up its branch and bound data, which was allocated in HEURINITSOL.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
