@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.251 2007/07/31 09:24:03 bzfwolte Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.252 2007/08/15 12:22:24 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1801,6 +1801,9 @@ SCIP_RETCODE solveNodeRelax(
    assert(propagateagain != NULL);
    assert(solverelaxagain != NULL);
    assert(!(*cutoff));
+
+   /* sort by priority */
+   SCIPsetSortRelaxs(set);
 
    for( r = 0; r < set->nrelaxs && !(*cutoff); ++r )
    {
