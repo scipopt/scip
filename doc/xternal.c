@@ -18,6 +18,7 @@
 /**@file   xternal.c
  * @brief  main document page
  * @author Tobias Achterberg
+ * @author Kati Wolter
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1230,6 +1231,7 @@
  *
  * Separator plugins do not have any fundamental callback methods. All callback methods are optional.
  *
+ * Additional documentation to the callback methods can be found in "type_sepa.h".
  *
  * @section SEPA_ADDITIONALCALLBACKS Additional Callback Methods of a Separator
  *
@@ -1431,7 +1433,7 @@
  * Propagator plugins have two fundamental callback methods, namely the PROPEXEC method and the PROPRESPROP method.
  * These methods have to be implemented for every propagator; the other callback methods are optional.
  * In the C++ wrapper class ObjProp, the scip_exec() method and the scip_resprop() method (which correspond to the 
- * PRESOLEXEC callback and PROPRESPROP callback, respectively) are virtual abstract member functions.
+ * PROPEXEC callback and PROPRESPROP callback, respectively) are virtual abstract member functions.
  * You have to implement them in order to be able to construct an object of your propagator class.
  *
  * Additional documentation to the callback methods can be found in "type_prop.h".
@@ -2150,7 +2152,140 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page READER How to add file readers
  *
- * This page is not yet written. Here we will explain how to add input file readers to SCIP.
+ * Mainly, file readers are called to parse an input file and generate a constraint integer programming model. They create 
+ * constraints and variables and activate variable pricers if necessary. However, they can also be called to parse an 
+ * input file containing information about a primal solution or fixing of variables. 
+ *
+ * In the following, we explain how the user can add an own file reader.
+ * Take the file reader for MIPs in IBM's Mathematical Programming System format (src/scip/reader_mps.c) as an example.
+ * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjReader wrapper
+ * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_READER... callback methods.
+ *
+ * Additional documentation for the callback methods of a file reader can be found in the file "type_reader.h".
+ *
+ * Here is what you have to do to implement a file reader:
+ * -# Copy the template files "src/scip/reader_xxx.c" and "src/scip/reader_xxx.h" into files named "reader_myreader.c"
+ *    and "reader_myreader.h".
+ *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Open the new files with a text editor and replace all occurrences of "xxx" by "myreader".
+ * -# Adjust the properties of the file reader (see \ref READER_PROPERTIES).
+ * -# Define the file reader data (see \ref READER_DATA).
+ * -# Implement the interface methods (see \ref READER_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref READER_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref READER_ADDITIONALCALLBACKS).
+ *
+ * 
+ * @section READER_PROPERTIES Properties of a File Reader
+ *
+ * At the top of the new file "reader_myreader.c" you can find the file reader properties.
+ * These are given as compiler defines.
+ * In the C++ wrapper class, you have to provide the file reader properties by calling the constructor
+ * of the abstract base class ObjReader from within your constructor.
+ * The properties you have to set have the following meaning:
+ *
+ * \par READER_NAME: the name of the file reader.
+ * This name is used in the interactive shell to address the file reader.
+ * Additionally, if you are searching a file reader with SCIPfindReader(), this name is looked up.
+ * Names have to be unique: no two file readers may have the same name.
+ * 
+ * \par READER_DESC: the description of the file reader.
+ * This string is printed as description of the file reader in the interactive shell.
+ *
+ * \par READER_EXTENSION: the file name extension of the file reader. 
+ * Each file reader is hooked to a single file name extension. It is automatically called if the user wants to read in a 
+ * file of corresponding name.
+ *
+ *
+ * @section READER_DATA File Reader Data
+ *
+ * Below the header "Data structures" you can find a struct which is called "struct SCIP_ReaderData".
+ * In this data structure, you can store the data of your file reader. For example, you should store the adjustable 
+ * parameters of the file reader in this data structure.
+ * If you are using C++, you can add file reader data as usual as object variables to your class.
+ * \n
+ * Defining file reader data is optional. You can leave the struct empty.
+ *
+ *
+ * @section READER_INTERFACE Interface Methods
+ *
+ * At the bottom of "reader_myreader.c" you can find the interface method SCIPincludeReaderMyreader(), which also 
+ * appears in "reader_myreader.h".
+ * It is responsible for notifying SCIP of the presence of the file reader by calling the method
+ * SCIPincludeReader().
+ * It is called by the user, if he wants to include the file reader, i.e., if he wants to use the file reader in his 
+ * application.
+ *
+ * If you are using file reader data, you have to allocate the memory for the data at this point.
+ * You can do this by calling
+ * \code
+ * SCIP_CALL( SCIPallocMemory(scip, &readerdata) );
+ * \endcode
+ * You also have to initialize the fields in struct SCIP_ReaderData afterwards.
+ *
+ * You may also add user parameters for your file reader, see the method \b SCIPincludeConshdlrKnapsack() in 
+ * src/scip/cons_knapsack.c for an example.
+ *
+ *
+ * @section READER_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a File Reader
+ *
+ * File reader plugins have only one fundamental callback method, namely the READERREAD method.
+ * This method has to be implemented for every file reader; the other callback method is optional.
+ * In the C++ wrapper class ObjReader, the scip_read() method (which corresponds to the READERREAD callback) is a virtual
+ * abstract member function.
+ * You have to implement it in order to be able to construct an object of your file reader class.
+ *
+ * Additional documentation to the callback methods can be found in "type_reader.h".
+ *
+ * @subsection READERREAD
+ *
+ * The READERREAD callback is called when the user invokes SCIP to read in a file with file name extension 
+ * corresponing to the file reader by calling the method SCIPreadProb() or by an interactive shell command. It should 
+ * parse the input file and generate a constraint integer programming model, add a primal solution, or fix variables. 
+ * \n
+ * Typical methods called by a file reader which is used to generate constraint integer programming models are, 
+ * for example, 
+ *
+ * - creating an empty problem: SCIPcreateProb() 
+ * - creating the constraints: SCIPcreateConsLinear(), SCIPaddCoefLinear(), SCIPchgLhsLinear(), SCIPchgRhsLinear(), 
+ *   SCIPaddCons(), and SCIPreleaseCons()
+ * - creating the variables: SCIPcreateVar(), SCIPchgVarType(), SCIPchgVarLb(), SCIPchgVarUb(), SCIPaddVar(), and 
+ *   SCIPreleaseVar()      
+ * - creating the objective function: SCIPchgVarObj() and SCIPsetObjsense().
+ *
+ * Primal solutions can only be created for the transformed problem. Therefore, the user has to call SCIPtransformProb()
+ * before he reads in the file containing the solution and adds it to the solution pool via the method SCIPreadSol(). 
+ * \n
+ * Fixings can only be applied to variables in the original problem. Therefore, the user has to call SCIPfreeTransform() 
+ * before he fixes original variables by calling the method SCIPfixVar().
+ *
+ * 
+ * @section READER_ADDITIONALCALLBACKS Additional Callback Methods of a File Reader
+ *
+ * File reader plugins have only one additional callback method, namely the READERFREE method. It need not to be 
+ * implemented in every case.
+ * 
+ * @subsection READERFREE
+ *
+ * If you are using file reader data, you have to implement this method in order to free the file reader data.
+ * This can be done by the following procedure:
+ * \code
+ * static
+ * SCIP_DECL_READERFREE(readerFreeMyreader)
+ * {
+ *    SCIP_READERDATA* readerdata;
+ *  
+ *    readerdata = SCIPreaderGetData(reader);
+ *    assert(readerdata != NULL);
+ *
+ *    SCIPfreeMemory(scip, &readerdata);
+ *
+ *    SCIPreaderSetData(reader, NULL);
+ *
+ *    return SCIP_OKAY;
+ * }
+ * \endcode
+ * If you are using the C++ wrapper class, this method is not available.
+ * Instead, just use the destructor of your class to free the member variables of your class.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
