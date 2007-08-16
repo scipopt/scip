@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.205 2007/08/16 13:45:15 bzfpfend Exp $
+# $Id: Makefile,v 1.206 2007/08/16 14:29:22 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -501,7 +501,7 @@ MAINLINK	=	$(BINDIR)/$(MAINLINKNAME).$(BASE).$(LPS)$(EXEEXTENSION)
 #-----------------------------------------------------------------------------
 
 .PHONY: all
-all:            checklpsdefine $(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE) $(LPILIBLINK) $(SCIPLIBLINK) $(OBJSCIPLINK) $(MAINLINK)
+all:            checklpsdefine $(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE) $(LPILIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(MAINLINK)
 
 .PHONY: lint
 lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(MAINSRC)
@@ -782,6 +782,7 @@ ifeq ($(MAKESOFTLINKS), true)
 				if [ "$$TARGET" != "" ] ; \
 				then \
 					echo "-> creating softlink \"$@\" -> \"$$TARGET\"" ; \
+					rm -f $@ ; \
 					ln -s $$TARGET $@ ; \
 				else \
 					echo "-> skipped creation of softlink \"$@\". Call \"make links\" if needed later." ; \

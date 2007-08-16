@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.5 2007/08/16 14:08:55 bzfpfend Exp $
+# $Id: Makefile,v 1.6 2007/08/16 14:29:22 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ example project featuring a very simple pricer
@@ -46,7 +46,7 @@ SETTINGS        =       default
 
 VERBOSE		=	false
 OPT		=	opt
-LPS		=	cpx
+LPS		=	spx
 COMP		=	gnu
 LIBEXT		=	a
 
@@ -240,7 +240,7 @@ clean:
 		-rm -rf $(OBJDIR)/* $(MAINFILE)
 
 .PHONY: depend
-depend:
+depend:		$(LIBDIR)/scip
 		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(MAINSRC) \
 		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-z_/]*\).c|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(MAINDEP)'
@@ -284,6 +284,7 @@ $(LIBDIR)/scip:
                                 if [ "$$TARGET" != "" ] ; \
                                 then \
                                         echo "-> creating softlink \"$@\" -> \"$$TARGET\"" ; \
+					rm -f $@ ; \
                                         ln -s $$TARGET $@ ; \
                                 else \
                                         echo "-> skipped creation of softlink \"$@\"." ; \
