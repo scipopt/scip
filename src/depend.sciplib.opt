@@ -113,7 +113,8 @@ $(LIBOBJDIR)/scip/cons.o: src/scip/cons.c src/scip/def.h src/scip/type_retcode.h
   src/scip/prob.h src/scip/struct_prob.h src/scip/tree.h \
   src/scip/pub_tree.h src/scip/struct_tree.h src/scip/type_lpi.h \
   src/scip/sepastore.h src/scip/type_sepastore.h src/scip/cons.h \
-  src/scip/pub_cons.h src/scip/struct_cons.h
+  src/scip/pub_cons.h src/scip/struct_cons.h src/scip/branch.h \
+  src/scip/pub_branch.h
 $(LIBOBJDIR)/scip/cutpool.o: src/scip/cutpool.c src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
   src/scip/pub_message.h src/scip/set.h src/blockmemshell/memory.h \
