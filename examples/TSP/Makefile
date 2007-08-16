@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.10 2007/07/27 16:38:03 bzfpfend Exp $
+# $Id: Makefile,v 1.11 2007/08/16 14:08:56 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ TSP example using SCIP as a callable library
@@ -48,7 +48,6 @@ VERBOSE		=	false
 OPT		=	opt
 LPS		=	cpx
 COMP		=	gnu
-LINK		=	static
 LIBEXT		=	a
 
 READLINE	=	true
@@ -86,7 +85,7 @@ GXXWARN		=	-Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
 			-Woverloaded-virtual -Wsign-promo -Wsynth \
 			-Wcast-qual -Wno-unused-parameter # -Wold-style-cast -Wshadow -Wundef
 
-BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LINK)
+BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
 OBJDIR		=	obj/O.$(BASE)
 SRCDIR		=	src
 BINDIR		=	bin
