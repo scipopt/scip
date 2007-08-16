@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.247 2007/07/27 12:22:34 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.248 2007/08/16 10:20:31 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6930,7 +6930,6 @@ void cleanupMIRRow(
    SCIP_Bool             cutislocal          /**< is the cut only valid locally? */
    )
 {
-   SCIP_Real bd;
    SCIP_Bool rhsinf;
    int v;
 
@@ -6943,19 +6942,23 @@ void cleanupMIRRow(
    {
       if( mircoef[v] != 0.0 && SCIPsetIsSumZero(set, mircoef[v]) )
       {
+         SCIP_Real bd;
+
          SCIPdebugMessage("coefficient of <%s> in transformed MIR row is too small: %.12f\n",
             SCIPvarGetName(prob->vars[v]), mircoef[v]);
 
-         if( mircoef[v] > 0.0 )
+         if( SCIPsetIsPositive(set, mircoef[v]) )
          {
             bd = cutislocal ? SCIPvarGetLbLocal(prob->vars[v]) : SCIPvarGetLbGlobal(prob->vars[v]);
             rhsinf = SCIPsetIsInfinity(set, -bd);
          }
-         else
+         else if( SCIPsetIsNegative(set, mircoef[v]) )
          {
             bd = cutislocal ? SCIPvarGetUbLocal(prob->vars[v]) : SCIPvarGetUbGlobal(prob->vars[v]);
             rhsinf = SCIPsetIsInfinity(set, bd);
          }
+         else
+            bd = 0.0;
          *mirrhs -= bd * mircoef[v];
          mircoef[v] = 0.0;
       }
