@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_healthcare.c,v 1.3 2006/05/05 13:55:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer_healthcare.c,v 1.4 2007/08/16 10:24:24 bzfpfend Exp $"
 
 /**@file   pricer_healthcare.c
  * @brief  healthcare variable pricer
@@ -158,7 +158,10 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostHealthcare)
    njobs = HCPgetNJobs(scip);
    nworkers = HCPgetNWorkers(scip);
 
-   /* Arne: Hier pricen, um Variablen zu generieren */
+   /* search for variables with negative reduced costs */
+   /* ... */
+
+   /* if we found new variables, add it to the problem */
    if( found )
    {
       SCIP_VAR* var;
@@ -168,9 +171,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostHealthcare)
       SCIP_CALL( SCIPcreateVar(scip, &var, "varname", 0.0, 1.0, obj, SCIP_VARTYPE_BINARY, FALSE, FALSE,
             NULL, NULL, NULL, NULL) );
 
-      /* Arne: hier die Variable in die Constraints eintragen (natuerlich nur in die Constraints, wo die Variable
-       * hingehoert!)
-       */
+      /* add new variable to the corresponding constraints */
       for( i = 0; i < njobs; ++i )
       {
          SCIP_Bool tourbelongstojob = TRUE;
