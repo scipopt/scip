@@ -43,7 +43,7 @@
  * - \ref BRANCH  "How to add branching rules"
  * - \ref NODESEL "How to add node selectors"
  * - \ref HEUR    "How to add primal heuristics"
- * - \ref RELAX   "How to add additional relaxations"
+ * - \ref RELAX   "How to add relaxation handlers"
  * - \ref READER  "How to add file readers"
  * - \ref DIALOG  "How to add dialog options"
  * - \ref DISP    "How to add display columns"
@@ -2143,10 +2143,187 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page RELAX How to add additional relaxations
+/**@page RELAX How to add relaxation handlers
  *
- * This page is not yet written. Here we will explain how to add additional relaxations (apart from the LP relaxation)
- * to SCIP.
+ * SCIP provides specific support for LP relaxations of constraint integer programs. In addition, relaxation handlers, 
+ * also called relaxators, can be used to include other relaxations, e.g., Lagrange relaxations or semidefinite 
+ * relaxations. The relaxation handler manages the necessary structures and calls the relaxation solver to generate dual 
+ * bounds and primal solution candidates.
+ * \n
+ * However, the data to define a single relaxation must either be extracted by the relaxation handler itself (e.g., from
+ * the user defined problem data, the LP information, or the integrality conditions), or be provided by the constraint
+ * handlers. In the latter case, the constraint handlers have to be extended to support this specific relaxation. 
+ *
+ * In the following, we explain how the user can add an own relaxation handler using the C interface. It is very easy to 
+ * transfer the C explanation to C++: whenever a method should be implemented using the SCIP_DECL_RELAX... notion, 
+ * reimplement the corresponding virtual member function of the abstract ObjRelax wrapper base class.
+ * Unfortunately, SCIP does not contain a default relaxation handler plugin, which could be used as an example.
+ *
+ * Additional documentation for the callback methods of a relaxation handler can be found in the file "type_relax.h".
+ *
+ * Here is what you have to do to implement a relaxation handler:
+ * -# Copy the template files "src/scip/relax_xxx.c" and "src/scip/relax_xxx.h" into files named "relax_myrelaxator.c"
+ *    and "relax_myrelaxator.h".
+ *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Open the new files with a text editor and replace all occurrences of "xxx" by "myrelaxator".
+ * -# Adjust the properties of the relaxation handler (see \ref RELAX_PROPERTIES).
+ * -# Define the relaxation handler data (see \ref RELAX_DATA).
+ * -# Implement the interface methods (see \ref RELAX_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref RELAX_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref RELAX_ADDITIONALCALLBACKS).
+ *
+ * 
+ * @section RELAX_PROPERTIES Properties of a Relaxation Handler
+ *
+ * At the top of the new file "relax_myrelaxator.c" you can find the relaxation handler properties.
+ * These are given as compiler defines.
+ * In the C++ wrapper class, you have to provide the relaxation handler properties by calling the constructor
+ * of the abstract base class ObjRelax from within your constructor.
+ * The properties you have to set have the following meaning:
+ *
+ * \par RELAX_NAME: the name of the relaxation handler.
+ * This name is used in the interactive shell to address the relaxation handler.
+ * Additionally, if you are searching a relaxation handler with SCIPfindRelax(), this name is looked up.
+ * Names have to be unique: no two relaxation handlers may have the same name.
+ *
+ * \par RELAX_DESC: the description of the relaxation handler.
+ * This string is printed as description of the relaxation handler in the interactive shell.
+ *
+ * \par RELAX_PRIORITY: the priority of the relaxation handler.
+ * In each relaxation solving round during the subproblem processing, the included relaxation handlers and the 
+ * price-and-cut loop for solving the LP relaxation are called in a predefined order, which is given by the priorities 
+ * of the relaxation handlers. 
+ * First, the relaxation handlers with non-negative priority are called in the order of decreasing priority.
+ * Next, the price-and-cut loop for solving the LP relaxation is executed. 
+ * Finally, the relaxation handlers with negative priority are called in the order of decreasing priority.
+ * \n
+ * Usually, you will have only one relaxation handler in your application and thus only have to decide whether it should 
+ * be called before or after solving the LP relaxation. For this decision you should consider the complexity of 
+ * the relaxation solving algorithm and the impact of the resulting solution: if your relaxation handler provides a fast 
+ * algorithm that usually has a high impact (i.e., the relaxation is a good approximation of the convex hull of the 
+ * feasible region of the subproblem and the solution severely reduces the primal-dual gap), it should have a non-negative 
+ * priority.
+ *
+ * \par RELAX_FREQ: the default frequency for solving the relaxation.
+ * The frequency defines the depth levels at which the relaxation solving method \ref RELAXEXEC is called.
+ * For example, a frequency of 7 means, that the relaxation solving callback is executed for subproblems that are in depth 
+ * 0, 7, 14, ... of the branching tree. A frequency of 0 means that the callback is only executed at the root node, i.e., 
+ * only the relaxation of the root problem is solved. 
+ *
+ *
+ * @section RELAX_DATA Relaxation Handler Data
+ *
+ * Below the header "Data structures" you can find a struct which is called "struct SCIP_RelaxData".
+ * In this data structure, you can store the data of your relaxation handler. For example, you should store the adjustable
+ * parameters of the relaxation handler in this data structure.
+ * If you are using C++, you can add relaxation handler data as usual as object variables to your class.
+ * \n
+ * Defining relaxation handler data is optional. You can leave the struct empty.
+ *
+ *
+ * @section RELAX_INTERFACE Interface Methods
+ *
+ * At the bottom of "relax_myrelaxator.c" you can find the interface method SCIPincludeRelaxMyrelaxator(), which also 
+ * appears in "relax_myrelaxator.h".
+ * \n
+ * This method has only to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the relaxation handler by calling the method SCIPincludeRelax().
+ * It is called by the user, if he wants to include the relaxation handler, i.e., if he wants to use the relaxation 
+ * handler in his application.
+ *
+ * If you are using relaxation handler data, you have to allocate the memory for the data at this point.
+ * You can do this by calling
+ * \code
+ * SCIP_CALL( SCIPallocMemory(scip, &relaxdata) );
+ * \endcode
+ * You also have to initialize the fields in struct SCIP_RelaxData afterwards.
+ *
+ * You may also add user parameters for your relaxation handler, see the method \b SCIPincludeConshdlrKnapsack() in 
+ * src/scip/cons_knapsack.c for an example.
+ *
+ *
+ * @section RELAX_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Relaxation Handler
+ *
+ * Relaxation handler plugins have only one fundamental callback method, namely the RELAXEXEC method.
+ * This method has to be implemented for every relaxation handler; the other callback methods are optional.
+ * In the C++ wrapper class ObjRelax, the scip_exec() method (which corresponds to the RELAXEXEC callback) is a virtual
+ * abstract member function.
+ * You have to implement it in order to be able to construct an object of your relaxation handler class.
+ *
+ * Additional documentation to the callback methods can be found in "type_relax.h".
+ *
+ * @subsection RELAXEXEC
+ * The RELAXEXEC is called in each relaxation solving round during node processing. It should solve the current 
+ * subproblem's relaxation.  
+ *
+ * Note that, like the LP relaxation, the relaxation handler should only operate on variables for which the corresponding 
+ * column does exist in the transformed problem. Typical methods called by a relaxation handler are, for example, 
+ * SCIPtreeGetFocusNode() for getting the currently processed subproblem and SCIPnodeUpdateLowerbound() for updating the 
+ * node's dual bound after solving the relaxation. 
+ *
+ * Usually, the callback only solves the relaxation. However, it may also produce domain reductions, add additional 
+ * constraints or generate cutting planes. It has the following options:
+ *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
+ *  - adding an additional constraint and stating that the relaxation handler should not be called again on the same 
+ *    relaxation (result SCIP_CONSADDED)
+ *  - reducing a variable's domain and stating that the relaxation handler should not be called again on the same 
+ *    relaxation (result SCIP_REDUCEDDOM)
+ *  - adding a cutting plane to the LP and stating that the relaxation handler should not be called again on the same 
+ *    relaxation (result SCIP_SEPARATED)
+ *  - stating that the relaxation handler solved the relaxation and should not be called again on the same relaxation 
+ *    (result SCIP_SUCCESS)
+ *  - interrupting the solving process to wait for additional input, e.g., cutting planes (SCIP_SUSPENDED) 
+ *  - stating that the separator was skipped (result SCIP_DIDNOTRUN).
+ * 
+ *
+ * @section RELAX_ADDITIONALCALLBACKS Additional Callback Methods of a Relaxation Handler
+ *
+ * The additional callback methods need not to be implemented in every case.
+ * They can be used, for example, to initialize and free private data.
+ *
+ * @subsection RELAXFREE
+ *
+ * If you are using relaxation handler data, you have to implement this method in order to free the relaxation handler 
+ * data. This can be done by the following procedure:
+ * \code
+ * static
+ * SCIP_DECL_RELAXFREE(relaxFreeMyrelaxator)
+ * {
+ *    SCIP_RELAXDATA* relaxdata;
+ *  
+ *    relaxdata = SCIPrelaxGetData(relax);
+ *    assert(relaxdata != NULL);
+ *
+ *    SCIPfreeMemory(scip, &relaxdata);
+ *
+ *    SCIPrelaxSetData(relax, NULL);
+ *
+ *    return SCIP_OKAY;
+ * }
+ * \endcode
+ * If you are using the C++ wrapper class, this method is not available.
+ * Instead, just use the destructor of your class to free the member variables of your class.
+ *
+ * @subsection RELAXINIT
+ *
+ * The RELAXINIT callback is executed after the problem was transformed.
+ * The relaxation handler may, e.g., use this call to initialize his relaxation handler data.
+ *
+ * @subsection RELAXEXIT
+ *
+ * The RELAXEXIT callback is executed before the transformed problem is freed.
+ * In this method, the relaxation handler should free all resources that have been allocated for the solving process in 
+ * RELAXINIT.
+ *
+ * @subsection RELAXINITSOL
+ *
+ * The RELAXINITSOL callback is executed when the presolving was finished and the branch and bound process is about to
+ * begin. The relaxation handler may use this call to initialize its branch and bound specific data.
+ *
+ * @subsection REALXEXITSOL
+ *
+ * The RELAXEXITSOL callback is executed before the branch and bound process is freed.
+ * The relaxation handler should use this call to clean up its branch and bound data.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -2239,7 +2416,7 @@
  * @subsection READERREAD
  *
  * The READERREAD callback is called when the user invokes SCIP to read in a file with file name extension 
- * corresponing to the file reader by calling the method SCIPreadProb() or by an interactive shell command. It should 
+ * corresponding to the file reader by calling the method SCIPreadProb() or by an interactive shell command. It should 
  * parse the input file and generate a constraint integer programming model, add a primal solution, or fix variables. 
  * \n
  * Typical methods called by a file reader which is used to generate constraint integer programming models are, 
@@ -2298,7 +2475,7 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page DISP How to add display columns
  *
- * This page is not yet written. Here we will explain how to add additional display columns to SCIP.
+ * This page is not yet written. Here we will explain how to add additional display columns.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

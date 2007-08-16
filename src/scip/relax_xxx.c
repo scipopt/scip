@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax_xxx.c,v 1.8 2007/06/06 11:25:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: relax_xxx.c,v 1.9 2007/08/16 08:38:52 bzfwolte Exp $"
 
 /**@file   relax_xxx.c
  * @brief  xxx relaxator
@@ -170,11 +170,8 @@ SCIP_RETCODE SCIPincludeRelaxXxx(
    /* TODO: (optional) create relaxator specific data here */
 
    /* include relaxator */
-   SCIP_CALL( SCIPincludeRelax(scip, RELAX_NAME, RELAX_DESC, RELAX_DISPCHAR, RELAX_PRIORITY, RELAX_FREQ, RELAX_FREQOFS,
-         RELAX_MAXDEPTH, RELAX_PSEUDONODES, RELAX_DURINGPLUNGING,
-         relaxFreeXxx, relaxInitXxx, relaxExitXxx, 
-         relaxInitsolXxx, relaxExitsolXxx, relaxExecXxx,
-         relaxdata) );
+   SCIP_CALL( SCIPincludeRelax(scip, RELAX_NAME, RELAX_DESC, RELAX_PRIORITY, RELAX_FREQ, relaxFreeXxx, relaxInitXxx, 
+         relaxExitXxx, relaxInitsolXxx, relaxExitsolXxx, relaxExecXxx, relaxdata) );
 
    /* add xxx relaxator parameters */
    /* TODO: (optional) add relaxator specific parameters with SCIPaddTypeParam() here */
