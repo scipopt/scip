@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.204 2007/08/16 10:16:45 bzfpfend Exp $
+# $Id: Makefile,v 1.205 2007/08/16 13:45:15 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -48,7 +48,6 @@ LOCK		=	false
 VERBOSE		=	false
 OPT		=	opt
 COMP		=	gnu
-LINK		=	static
 LPS		=	spx
 LIBEXT		=	a
 SHAREDLIBEXT	=	so
@@ -106,7 +105,7 @@ GXXWARN		=	-Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
 			-Woverloaded-virtual -Wsign-promo -Wsynth \
 			-Wcast-qual -Wno-unused-parameter # -Wold-style-cast -Wshadow -Wundef
 
-BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LINK)
+BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
 OBJDIR		=	obj/O.$(BASE)
 BINOBJDIR	=	$(OBJDIR)/bin
 LIBOBJDIR	=	$(OBJDIR)/lib
@@ -144,7 +143,8 @@ DFLAGS		+=	$(USRDFLAGS)
 # LP Solver Interface
 #-----------------------------------------------------------------------------
 
-LPILIBNAME	=	lpi$(LPS)
+LPILIBLINKNAME	=	lpi$(LPS)
+LPILIBNAME	=	$(LPILIBLINKNAME)-$(VERSION)
 LPILIBOBJ	=
 LPSOPTIONS	=
 
@@ -263,10 +263,11 @@ LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 endif
 
 LPILIB		=	$(LPILIBNAME).$(BASE)
-LPILIBFILE	=	$(LIBDIR)/lib$(LPILIB).$(LIBEXT)
+LPILIBFILENAME	=	lib$(LPILIB).$(LIBEXT)
+LPILIBFILE	=	$(LIBDIR)/$(LPILIBFILENAME)
 LPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(LPILIBOBJ))
 LPILIBDEP	=	$(SRCDIR)/depend.lpilib.$(LPS).$(OPT)
-
+LPILIBLINK	=	$(LIBDIR)/lib$(LPILIBLINKNAME).$(BASE).$(LIBEXT)
 
 #-----------------------------------------------------------------------------
 # External Libraries
@@ -311,7 +312,8 @@ endif
 # SCIP Library
 #-----------------------------------------------------------------------------
 
-SCIPLIBNAME	=	scip
+SCIPLIBLINKNAME	=	scip
+SCIPLIBNAME	=	$(SCIPLIBLINKNAME)-$(VERSION)
 SCIPLIBOBJ	=	scip/branch.o \
 			scip/buffer.o \
 			scip/clock.o \
@@ -432,17 +434,20 @@ SCIPLIBOBJ	=	scip/branch.o \
 			tclique/tclique_graph.o
 
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
-SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).$(LIBEXT)
+SCIPLIBFILENAME	=	lib$(SCIPLIB).$(LIBEXT)
+SCIPLIBFILE	=	$(LIBDIR)/$(SCIPLIBFILENAME)
 SCIPLIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SCIPLIBOBJ))
 SCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(SCIPLIBOBJ:.o=.c))
 SCIPLIBDEP	=	$(SRCDIR)/depend.sciplib.$(OPT)
+SCIPLIBLINK	=	$(LIBDIR)/lib$(SCIPLIBLINKNAME).$(BASE).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
 # Objective SCIP Library
 #-----------------------------------------------------------------------------
 
-OBJSCIPLIBNAME	=	objscip
+OBJSCIPLIBLINKNAME=	objscip
+OBJSCIPLIBNAME	=	$(OBJSCIPLIBLINKNAME)-$(VERSION)
 OBJSCIPLIBOBJ	=	objscip/objbranchrule.o \
 			objscip/objconshdlr.o \
 			objscip/objeventhdlr.o \
@@ -459,17 +464,20 @@ OBJSCIPLIBOBJ	=	objscip/objbranchrule.o \
 			objscip/objvardata.o
 
 OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
-OBJSCIPLIBFILE	=	$(LIBDIR)/lib$(OBJSCIPLIB).$(LIBEXT)
+OBJSCIPLIBFILENAME=	lib$(OBJSCIPLIB).$(LIBEXT)
+OBJSCIPLIBFILE	=	$(LIBDIR)/$(OBJSCIPLIBFILENAME)
 OBJSCIPLIBOBJFILES=	$(addprefix $(LIBOBJDIR)/,$(OBJSCIPLIBOBJ))
 OBJSCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(OBJSCIPLIBOBJ:.o=.cpp))
 OBJSCIPLIBDEP	=	$(SRCDIR)/depend.objsciplib.$(OPT)
+OBJSCIPLIBLINK	=	$(LIBDIR)/lib$(OBJSCIPLIBLINKNAME).$(BASE).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
 # Main Program
 #-----------------------------------------------------------------------------
 
-MAINNAME	=	scip
+MAINLINKNAME	=	scip
+MAINNAME	=	$(MAINLINKNAME)-$(VERSION)
 
 ifeq ($(LINKER),C)
 MAINOBJ		=	cmain.o
@@ -482,9 +490,10 @@ MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.cpp))
 MAINDEP		=	$(SRCDIR)/depend.cppmain.$(OPT)
 endif
 
-MAIN		=	$(MAINNAME)-$(VERSION).$(BASE).$(LPS)$(EXEEXTENSION)
-MAINFILE	=	$(BINDIR)/$(MAIN)
+MAINFILENAME	=	$(MAINNAME).$(BASE).$(LPS)$(EXEEXTENSION)
+MAINFILE	=	$(BINDIR)/$(MAINFILENAME)
 MAINOBJFILES	=	$(addprefix $(BINOBJDIR)/,$(MAINOBJ))
+MAINLINK	=	$(BINDIR)/$(MAINLINKNAME).$(BASE).$(LPS)$(EXEEXTENSION)
 
 
 #-----------------------------------------------------------------------------
@@ -492,7 +501,7 @@ MAINOBJFILES	=	$(addprefix $(BINOBJDIR)/,$(MAINOBJ))
 #-----------------------------------------------------------------------------
 
 .PHONY: all
-all:            checklpsdefine $(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE)
+all:            checklpsdefine $(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE) $(LPILIBLINK) $(SCIPLIBLINK) $(OBJSCIPLINK) $(MAINLINK)
 
 .PHONY: lint
 lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(MAINSRC)
@@ -511,12 +520,12 @@ doc:
 .PHONY: test
 test:		
 		cd check; \
-		/bin/sh ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(MAIN).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION);
+		/bin/sh ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(MAINFILENAME).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION);
 
 .PHONY: testpre
 testpre:		
 		cd check; \
-		/bin/sh ./checkpre.sh $(TEST) $(MAINFILE) $(SETTINGS) $(MAIN).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
+		/bin/sh ./checkpre.sh $(TEST) $(MAINFILE) $(SETTINGS) $(MAINFILENAME).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
 
 .PHONY: testcplex
 testcplex:		
@@ -527,6 +536,22 @@ testcplex:
 testcbc:		
 		cd check; \
 		/bin/sh ./check_cbc.sh $(TEST) $(CBC) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE);
+
+$(LPILIBLINK):	$(LPILIBFILE)
+		@rm -f $@
+		@ln -s $(LPILIBFILENAME) $@
+
+$(SCIPLIBLINK):	$(SCIPLIBFILE)
+		@rm -f $@
+		@ln -s $(SCIPLIBFILENAME) $@
+
+$(OBJSCIPLIBLINK):	$(OBJSCIPLIBFILE)
+		@rm -f $@
+		@ln -s $(OBJSCIPLIBFILENAME) $@
+
+$(MAINLINK):	$(MAINFILE)
+		@rm -f $@
+		@ln -s $(MAINFILENAME) $@
 
 $(OBJDIR):	
 		@-mkdir -p $(OBJDIR)
@@ -666,7 +691,7 @@ ifneq ($(RANLIB),)
 endif
 endif
 
-$(BINOBJDIR)/%.o:	$(SRCDIR)/%.c
+$(BINOBJDIR)/%.o:	$(SRCDIR)/%.c $(BINOBJDIR)
 		@echo "-> compiling $@"
 ifeq ($(VERBOSE), true)
 		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) $(CC_c)$< $(CC_o)$@
@@ -674,7 +699,7 @@ else
 		@$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) $(CC_c)$< $(CC_o)$@
 endif
 
-$(BINOBJDIR)/%.o:	$(SRCDIR)/%.cpp
+$(BINOBJDIR)/%.o:	$(SRCDIR)/%.cpp $(BINOBJDIR)
 		@echo "-> compiling $@"
 ifeq ($(VERBOSE), true)
 		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(CXX_c)$< $(CXX_o)$@
@@ -682,7 +707,7 @@ else
 		@$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(CXX_c)$< $(CXX_o)$@
 endif
 
-$(LIBOBJDIR)/%.o:	$(SRCDIR)/%.c
+$(LIBOBJDIR)/%.o:	$(SRCDIR)/%.c $(LIBOBJDIR)
 		@echo "-> compiling $@"
 ifeq ($(VERBOSE), true)
 		$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) $(CC_c)$< $(CC_o)$@
@@ -690,7 +715,7 @@ else
 		@$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) $(CC_c)$< $(CC_o)$@
 endif
 
-$(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp
+$(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp $(LIBOBJDIR)
 		@echo "-> compiling $@"
 ifeq ($(VERBOSE), true)
 		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(CXX_c)$< $(CXX_o)$@

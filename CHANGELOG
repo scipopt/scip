@@ -5,6 +5,12 @@ compiling:
 - added .exe extension to binaries of MinGW
 - added "LPS=none" for compliling SCIP without a LP solver
 - modified the default LP solver to be SoPlex instead of CPLEX
+- removed the ".static" extension associated to the LINK variable from the Makefile system
+  (If you want to build makefiles for shared library generation, use the OPT variable. For example,
+  you could create a makefile "make/make.linux.x86.gnu.opt-shared" and compile it with "make OPT=opt-shared".)
+- added version numbers to library files
+  (There will be a softlink generated in the lib/ and bin/ directories without version number that
+  point to the latest compiled version.)
 
 interface:
 - new method SCIPreadSol()
