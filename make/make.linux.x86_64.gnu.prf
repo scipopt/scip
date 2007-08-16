@@ -1,0 +1,11 @@
+#--- $Id: make.linux.x86_64.gnu.prf,v 1.1 2007/08/16 13:47:38 bzfpfend Exp $
+FLAGS		+=	-DNDEBUG # -DROUNDING_FE
+OFLAGS		+=	-O2 -m64 -march=nocona -g -pg -fno-inline
+CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
+CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
+ARFLAGS		=	crs
+LDFLAGS		+=	-pg
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline -lncurses

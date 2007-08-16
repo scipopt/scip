@@ -1,0 +1,11 @@
+#--- $Id: make.darwin.ppc.gnu.dbg,v 1.1 2007/08/16 13:47:36 bzfpfend Exp $
+FLAGS		+=	-DNO_REMOVE_HISTORY # -DROUNDING_FE
+OFLAGS		+=	-O0 -g
+CFLAGS		+=	$(GCCWARN)
+CXXFLAGS	+=	$(GXXWARN)
+ARFLAGS		=	crs
+LDFLAGS		+=
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline -lncurses

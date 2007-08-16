@@ -1,0 +1,15 @@
+#--- $Id: make.linux.x86.intel.dbg,v 1.7 2007/08/16 13:47:38 bzfpfend Exp $
+CC		=	icc
+CXX		=	icc -Kc++
+LINKCC		=	icc
+LINKCXX		=	icc -Kc++
+FLAGS		+=	# -DROUNDING_FE
+OFLAGS		+=	-g -mp -w2 -fp_port -fpstkch -wd279,383,444,810,981 #-Xc
+CFLAGS		+=
+CXXFLAGS	+=	
+ARFLAGS		=	crs
+LDFLAGS		+=	-lm -lstdc++
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline -lncurses

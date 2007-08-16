@@ -1,0 +1,16 @@
+#--- $Id: make.sunos.sparc.sun.dbg,v 1.8 2007/08/16 13:47:39 bzfpfend Exp $
+CC		=	cc
+CXX		=	CC
+LINKCC		=	cc
+LINKCXX		=	CC
+FLAGS		+=	-I/client/include # -DROUNDING_FE
+OFLAGS		+=	-g
+CFLAGS		+=	-Xa
+CXXFLAGS	+=	
+AR		=	CC
+ARFLAGS		=	$(FLAGS) $(CXXFLAGS) -xar -o
+LDFLAGS		+=	-L/client/lib -lsocket -lnsl
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline -lncurses
