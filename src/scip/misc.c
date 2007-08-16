@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.63 2007/06/06 11:25:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.64 2007/08/16 10:16:45 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -806,7 +806,7 @@ SCIP_RETCODE SCIPhashmapInsert(
    assert(origin != NULL);
 
    /* get the hash value */
-   hashval = (unsigned int)origin % (unsigned int)hashmap->nlists;
+   hashval = (unsigned int)((size_t)origin % (unsigned int)hashmap->nlists);
 
    /* append origin->image pair to the list at the hash position */
    SCIP_CALL( hashmaplistAppend(&hashmap->lists[hashval], hashmap->blkmem, origin, image) );
@@ -828,7 +828,7 @@ void* SCIPhashmapGetImage(
    assert(origin != NULL);
 
    /* get the hash value */
-   hashval = (unsigned int)origin % (unsigned int)hashmap->nlists;
+   hashval = (unsigned int)((size_t)origin % (unsigned int)hashmap->nlists);
 
    /* get image for origin from hash list */
    return hashmaplistGetImage(hashmap->lists[hashval], origin);
@@ -851,7 +851,7 @@ SCIP_RETCODE SCIPhashmapSetImage(
    assert(origin != NULL);
 
    /* get the hash value */
-   hashval = (unsigned int)origin % (unsigned int)hashmap->nlists;
+   hashval = (unsigned int)((size_t)origin % (unsigned int)hashmap->nlists);
 
    /* set image for origin in hash list */
    SCIP_CALL( hashmaplistSetImage(&hashmap->lists[hashval], hashmap->blkmem, origin, image) );
@@ -873,7 +873,7 @@ SCIP_Bool SCIPhashmapExists(
    assert(origin != NULL);
 
    /* get the hash value */
-   hashval = (unsigned int)origin % (unsigned int)hashmap->nlists;
+   hashval = (unsigned int)((size_t)origin % (unsigned int)hashmap->nlists);
 
    return (hashmaplistFind(hashmap->lists[hashval], origin) != NULL);
 }
@@ -892,7 +892,7 @@ SCIP_RETCODE SCIPhashmapRemove(
    assert(origin != NULL);
 
    /* get the hash value */
-   hashval = (unsigned int)origin % (unsigned int)hashmap->nlists;
+   hashval = (unsigned int)((size_t)origin % (unsigned int)hashmap->nlists);
 
    /* remove element from the list at the hash position */
    SCIP_CALL( hashmaplistRemove(&hashmap->lists[hashval], hashmap->blkmem, origin) );

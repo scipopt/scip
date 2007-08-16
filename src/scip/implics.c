@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.23 2007/06/06 11:25:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.24 2007/08/16 10:16:45 bzfpfend Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -1730,7 +1730,7 @@ SCIP_DECL_HASHKEYVAL(hashkeyvalClique)
    for( i = 0; i < clique->nvars; ++i )
    {
       hashval *= 31;
-      hashval += (((unsigned int)clique->vars[i]) >> 1) + (unsigned int)clique->values[i];
+      hashval += (unsigned int)(((size_t)clique->vars[i]) >> 1) + (unsigned int)clique->values[i];
    }
 
    return hashval;

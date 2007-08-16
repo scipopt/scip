@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.24 2007/06/06 11:25:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.25 2007/08/16 10:16:45 bzfpfend Exp $"
 
 /**@file   vbc.c
  * @brief  methods for VBC Tool output
@@ -193,8 +193,8 @@ SCIP_RETCODE SCIPvbcNewChild(
    )
 {
    SCIP_VAR* branchvar;
-   int parentnodenum;
-   int nodenum;
+   size_t parentnodenum;
+   size_t nodenum;
 
    assert(vbc != NULL);
    assert(stat != NULL);
@@ -211,22 +211,22 @@ SCIP_RETCODE SCIPvbcNewChild(
       return SCIP_INVALIDDATA;
    }
 
-   nodenum = (int)stat->ncreatednodesrun;
+   nodenum = (size_t)stat->ncreatednodesrun;
    assert(nodenum > 0);
    SCIP_CALL( SCIPhashmapInsert(vbc->nodenum, node, (void*)nodenum) );
 
    /* get nodenum of parent node from hash map */
-   parentnodenum = node->parent != NULL ? (int)SCIPhashmapGetImage(vbc->nodenum, node->parent) : 0;
+   parentnodenum = (node->parent != NULL ? (size_t)SCIPhashmapGetImage(vbc->nodenum, node->parent) : 0);
    assert(node->parent == NULL || parentnodenum > 0);
 
    /* get branching variable */
    branchvar = getBranchVar(node);
 
    printTime(vbc, stat);
-   SCIPmessageFPrintInfo(vbc->file, "N %d %d %d\n", parentnodenum, nodenum, SCIP_VBCCOLOR_UNSOLVED);
+   SCIPmessageFPrintInfo(vbc->file, "N %d %d %d\n", (int)parentnodenum, (int)nodenum, SCIP_VBCCOLOR_UNSOLVED);
    printTime(vbc, stat);
    SCIPmessageFPrintInfo(vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s\\nbound:\\t%f\n",
-      nodenum, nodenum, node, SCIPnodeGetDepth(node),
+      (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
       branchvar == NULL ? "-" : SCIPvarGetName(branchvar), SCIPnodeGetLowerbound(node));
 
    return SCIP_OKAY;
@@ -246,12 +246,12 @@ void vbcSetColor(
 
    if( vbc->file != NULL && color != SCIP_VBCCOLOR_NONE && (node != vbc->lastnode || color != vbc->lastcolor) )
    {
-      int nodenum;
+      size_t nodenum;
 
-      nodenum = (int)SCIPhashmapGetImage(vbc->nodenum, node);
+      nodenum = (size_t)SCIPhashmapGetImage(vbc->nodenum, node);
       assert(nodenum > 0);
       printTime(vbc, stat);
-      SCIPmessageFPrintInfo(vbc->file, "P %d %d\n", nodenum, color);
+      SCIPmessageFPrintInfo(vbc->file, "P %d %d\n", (int)nodenum, color);
       vbc->lastnode = node;
       vbc->lastcolor = color;
    }
@@ -265,7 +265,7 @@ void SCIPvbcSolvedNode(
    )
 {
    SCIP_VAR* branchvar;
-   int nodenum;
+   size_t nodenum;
 
    assert(vbc != NULL);
    assert(stat != NULL);
@@ -276,7 +276,7 @@ void SCIPvbcSolvedNode(
       return;
 
    /* get node num from hash map */
-   nodenum = (int)SCIPhashmapGetImage(vbc->nodenum, node);
+   nodenum = (size_t)SCIPhashmapGetImage(vbc->nodenum, node);
    assert(nodenum > 0);
 
    /* get branching variable */
@@ -284,7 +284,7 @@ void SCIPvbcSolvedNode(
 
    printTime(vbc, stat);
    SCIPmessageFPrintInfo(vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n", 
-      nodenum, nodenum, node, SCIPnodeGetDepth(node),
+      (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
       branchvar == NULL ? "-" : SCIPvarGetName(branchvar), SCIPnodeGetLowerbound(node), stat->nnodes);
 
    vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_SOLVED);
