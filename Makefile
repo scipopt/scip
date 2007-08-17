@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.211 2007/08/17 14:40:18 bzfpfend Exp $
+# $Id: Makefile,v 1.212 2007/08/17 15:47:51 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -301,7 +301,7 @@ ZIMPLDEP	:=	$(SRCDIR)/depend.zimpl
 ZIMPLSRC	:=	$(shell cat $(ZIMPLDEP))
 ifeq ($(ZIMPL),true)
 ifeq ($(ZLIB),false)
-$(error ZIMPL requires the ZLIB to be linked. Use either ZIMPL=false or ZLIB=true.)
+$(error ZIMPL requires the ZLIB to be linked. Use either ZIMPL=false or ZLIB=true)
 endif
 FLAGS		+=	-DWITH_ZIMPL -I$(LIBDIR)/zimplinc
 ifeq ($(GMP),true)
