@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.209 2007/08/17 09:58:49 bzfpfend Exp $
+# $Id: Makefile,v 1.210 2007/08/17 14:02:41 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -40,7 +40,7 @@ NODES           =       2100000000
 MEM		=	1536
 DISPFREQ	=	10000
 FEASTOL		=	default
-TEST		=	miplib3
+TEST		=	shortmiplib
 SETTINGS        =       default
 CONTINUE	=	false
 LOCK		=	false
@@ -114,6 +114,7 @@ SRCDIR		=	src
 BINDIR		=	bin
 LIBDIR		=	lib
 EXEEXTENSION	=
+ALLSRC		=
 
 LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)
 LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
@@ -143,8 +144,8 @@ DFLAGS		+=	$(USRDFLAGS)
 # LP Solver Interface
 #-----------------------------------------------------------------------------
 
-LPILIBLINKNAME	=	lpi$(LPS)
-LPILIBNAME	=	$(LPILIBLINKNAME)-$(VERSION)
+LPILIBSHORTNAME	=	lpi$(LPS)
+LPILIBNAME	=	$(LPILIBSHORTNAME)-$(VERSION)
 LPILIBOBJ	=
 LPSOPTIONS	=
 
@@ -267,7 +268,9 @@ LPILIBFILENAME	=	lib$(LPILIB).$(LIBEXT)
 LPILIBFILE	=	$(LIBDIR)/$(LPILIBFILENAME)
 LPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(LPILIBOBJ))
 LPILIBDEP	=	$(SRCDIR)/depend.lpilib.$(LPS).$(OPT)
-LPILIBLINK	=	$(LIBDIR)/lib$(LPILIBLINKNAME).$(BASE).$(LIBEXT)
+LPILIBLINK	=	$(LIBDIR)/lib$(LPILIBSHORTNAME).$(BASE).$(LIBEXT)
+ALLSRC		+=	$(LPILIBSRC)
+
 
 #-----------------------------------------------------------------------------
 # External Libraries
@@ -275,7 +278,6 @@ LPILIBLINK	=	$(LIBDIR)/lib$(LPILIBLINKNAME).$(BASE).$(LIBEXT)
 
 ZLIBDEP		:=	$(SRCDIR)/depend.zlib
 ZLIBSRC		:=	$(shell cat $(ZLIBDEP))
-ZLIBOBJ		:=	$(addprefix $(LIBOBJDIR)/,$(ZLIBSRC:.c=.o))
 ifeq ($(ZLIB_LDFLAGS),)
 ZLIB		=	false
 endif
@@ -286,7 +288,6 @@ endif
 
 READLINEDEP	:=	$(SRCDIR)/depend.readline
 READLINESRC	:=	$(shell cat $(READLINEDEP))
-READLINEOBJ	:=	$(addprefix $(LIBOBJDIR)/,$(READLINESRC:.c=.o))
 ifeq ($(READLINE_LDFLAGS),)
 READLINE	=	false
 endif
@@ -297,7 +298,6 @@ endif
 
 ZIMPLDEP	:=	$(SRCDIR)/depend.zimpl
 ZIMPLSRC	:=	$(shell cat $(ZIMPLDEP))
-ZIMPLOBJ	:=	$(addprefix $(LIBOBJDIR)/,$(ZIMPLSRC:.c=.o))
 ifeq ($(ZIMPL),true)
 FLAGS		+=	-DWITH_ZIMPL -I$(LIBDIR)/zimplinc
 LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)gmp$(LINKLIBSUFFIX) $(LINKCC_l)z$(LINKLIBSUFFIX) $(LINKCC_l)m$(LINKLIBSUFFIX)
@@ -312,8 +312,8 @@ endif
 # SCIP Library
 #-----------------------------------------------------------------------------
 
-SCIPLIBLINKNAME	=	scip
-SCIPLIBNAME	=	$(SCIPLIBLINKNAME)-$(VERSION)
+SCIPLIBSHORTNAME=	scip
+SCIPLIBNAME	=	$(SCIPLIBSHORTNAME)-$(VERSION)
 SCIPLIBOBJ	=	scip/branch.o \
 			scip/buffer.o \
 			scip/clock.o \
@@ -439,15 +439,16 @@ SCIPLIBFILE	=	$(LIBDIR)/$(SCIPLIBFILENAME)
 SCIPLIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SCIPLIBOBJ))
 SCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(SCIPLIBOBJ:.o=.c))
 SCIPLIBDEP	=	$(SRCDIR)/depend.sciplib.$(OPT)
-SCIPLIBLINK	=	$(LIBDIR)/lib$(SCIPLIBLINKNAME).$(BASE).$(LIBEXT)
+SCIPLIBLINK	=	$(LIBDIR)/lib$(SCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
+ALLSRC		+=	$(SCIPLIBSRC)
 
 
 #-----------------------------------------------------------------------------
 # Objective SCIP Library
 #-----------------------------------------------------------------------------
 
-OBJSCIPLIBLINKNAME=	objscip
-OBJSCIPLIBNAME	=	$(OBJSCIPLIBLINKNAME)-$(VERSION)
+OBJSCIPLIBSHORTNAME=	objscip
+OBJSCIPLIBNAME	=	$(OBJSCIPLIBSHORTNAME)-$(VERSION)
 OBJSCIPLIBOBJ	=	objscip/objbranchrule.o \
 			objscip/objconshdlr.o \
 			objscip/objdisp.o \
@@ -470,15 +471,16 @@ OBJSCIPLIBFILE	=	$(LIBDIR)/$(OBJSCIPLIBFILENAME)
 OBJSCIPLIBOBJFILES=	$(addprefix $(LIBOBJDIR)/,$(OBJSCIPLIBOBJ))
 OBJSCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(OBJSCIPLIBOBJ:.o=.cpp))
 OBJSCIPLIBDEP	=	$(SRCDIR)/depend.objsciplib.$(OPT)
-OBJSCIPLIBLINK	=	$(LIBDIR)/lib$(OBJSCIPLIBLINKNAME).$(BASE).$(LIBEXT)
+OBJSCIPLIBLINK	=	$(LIBDIR)/lib$(OBJSCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
+ALLSRC		+=	$(OBJSCIPLIBSRC)
 
 
 #-----------------------------------------------------------------------------
 # Main Program
 #-----------------------------------------------------------------------------
 
-MAINLINKNAME	=	scip
-MAINNAME	=	$(MAINLINKNAME)-$(VERSION)
+MAINSHORTNAME	=	scip
+MAINNAME	=	$(MAINSHORTNAME)-$(VERSION)
 
 ifeq ($(LINKER),C)
 MAINOBJ		=	cmain.o
@@ -494,8 +496,10 @@ endif
 MAINFILENAME	=	$(MAINNAME).$(BASE).$(LPS)$(EXEEXTENSION)
 MAINFILE	=	$(BINDIR)/$(MAINFILENAME)
 MAINOBJFILES	=	$(addprefix $(BINOBJDIR)/,$(MAINOBJ))
-MAINLINK	=	$(BINDIR)/$(MAINLINKNAME).$(BASE).$(LPS)$(EXEEXTENSION)
-MAINSHORTLINK	=	$(BINDIR)/$(MAINLINKNAME)$(EXEEXTENSION)
+MAINLINK	=	$(BINDIR)/$(MAINSHORTNAME).$(BASE).$(LPS)$(EXEEXTENSION)
+MAINSHORTLINK	=	$(BINDIR)/$(MAINSHORTNAME)$(EXEEXTENSION)
+ALLSRC		+=	$(MAINSRC)
+
 
 
 #-----------------------------------------------------------------------------
@@ -511,13 +515,13 @@ lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(MAINSRC)
 		$(SHELL) -ec 'for i in $^; \
 			do \
 			echo $$i; \
-			$(LINT) lint/$(MAINNAME).lnt +os\(lint.out\) -u -zero \
+			$(LINT) lint/$(MAINSHORTNAME).lnt +os\(lint.out\) -u -zero \
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
 
 .PHONY: doc
 doc:		
-		cd doc; $(DOXY) $(MAINNAME).dxy
+		cd doc; $(DOXY) $(MAINSHORTNAME).dxy
 
 .PHONY: test
 test:		
@@ -611,9 +615,9 @@ depend:		lpidepend maindepend
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(OBJSCIPLIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(OBJSCIPLIBDEP)'
-		@echo `cd $(SRCDIR); find . -name "*.c" -exec grep -l "WITH_ZLIB" '{}' ';'` >$(ZLIBDEP)
-		@echo `cd $(SRCDIR); find . -name "*.c" -exec grep -l "WITH_READLINE" '{}' ';'` >$(READLINEDEP)
-		@echo `cd $(SRCDIR); find . -name "*.c" -exec grep -l "WITH_ZIMPL" '{}' ';'` >$(ZIMPLDEP)
+		@echo `grep -l "WITH_ZLIB" $(ALLSRC)` >$(ZLIBDEP)
+		@echo `grep -l "WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
+		@echo `grep -l "WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
 
 -include	$(MAINDEP)
 -include	$(SCIPLIBDEP)
@@ -731,13 +735,13 @@ endif
 .PHONY: touchexternal
 touchexternal:	$(ZLIBDEP) $(READLINEDEP) $(ZIMPLDEP)
 ifneq ($(ZLIB),$(LAST_ZLIB))
-		@-rm -f $(ZLIBOBJ)
+		@-touch $(ZLIBSRC)
 endif
 ifneq ($(READLINE),$(LAST_READLINE))
-		@-rm -f $(READLINEOBJ)
+		@-touch $(READLINESRC)
 endif
 ifneq ($(ZIMPL),$(LAST_ZIMPL))
-		@-rm -f $(ZIMPLOBJ)
+		@-touch $(ZIMPLSRC)
 endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_ZLIB=$(ZLIB)" >> $(LASTSETTINGS)
