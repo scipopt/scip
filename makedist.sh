@@ -33,7 +33,7 @@ $NAME/examples/SamplePricer_C/src/depend.* \
 $NAME/examples/SamplePricer_C/src/*.c $NAME/examples/SamplePricer_C/src/*.cpp $NAME/examples/SamplePricer_C/src/*.h \
 -x ".*" -x "*~" -x "*/CVS/*"
 rm $NAME
-echo "check version numbers in src/scip/def.h, doc/xternal.c, Makefile and zippack.sh ($VERSION):"
+echo "check version numbers in src/scip/def.h, doc/xternal.c, Makefile and makedist.sh ($VERSION):"
 grep "VERSION" src/scip/def.h
 grep "@version" doc/xternal.c
 grep "^VERSION" Makefile
