@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.206 2007/08/16 14:29:22 bzfpfend Exp $
+# $Id: Makefile,v 1.207 2007/08/17 08:46:08 bzfwolte Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -450,6 +450,7 @@ OBJSCIPLIBLINKNAME=	objscip
 OBJSCIPLIBNAME	=	$(OBJSCIPLIBLINKNAME)-$(VERSION)
 OBJSCIPLIBOBJ	=	objscip/objbranchrule.o \
 			objscip/objconshdlr.o \
+			objscip/objdisp.o \
 			objscip/objeventhdlr.o \
 			objscip/objheur.o \
 			objscip/objmessagehdlr.o \

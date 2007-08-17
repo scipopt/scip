@@ -2475,7 +2475,174 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page DISP How to add display columns
  *
- * This page is not yet written. Here we will explain how to add additional display columns.
+ * While solving a constraint integer program, SCIP displays status information in a column-like fashion. The current 
+ * number of processed branching tree nodes, the solving time, and the relative gap between primal and dual bound are 
+ * examples of such display columns. There already exists a wide variety of display columns which can be activated or 
+ * deactivated on demand, see "src/scip/disp_default.c". Additionally, the user can implement his own display columns
+ * in order to track problem or algorithm specific values.  
+ *
+ * In the following, we explain how the user can add an own display column. 
+ * We give the explanation for writting an own plugin for each additional display column. Of course, you can collect 
+ * different additional display columns in one plugin. 
+ * Take "src/scip/disp_default.c", where all default display columns are collected, as an example.
+ * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjDisp wrapper
+ * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_DISP... callback methods.
+ * 
+ *
+ * Additional documentation for the callback methods of a display column can be found in the file "type_disp.h".
+ *
+ * Here is what you have to do to implement a display column:
+ * -# Copy the template files "src/scip/disp_xxx.c" and "src/scip/disp_xxx.h" into files named "disp_mydisplaycolumn.c"
+ *    and "disp_mydisplaycolumn.h".
+ *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mydisplaycolumn".
+ * -# Adjust the properties of the display column (see \ref DISP_PROPERTIES).
+ * -# Define the display column data (see \ref DISP_DATA).
+ * -# Implement the interface methods (see \ref DISP_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref DISP_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref DISP_ADDITIONALCALLBACKS).
+ *
+ *
+ * @section DISP_PROPERTIES Properties of a Display Column
+ *
+ * At the top of the new file "disp_mydisplaycolumn.c" you can find the display column properties.
+ * These are given as compiler defines.
+ * In the C++ wrapper class, you have to provide the display column properties by calling the constructor
+ * of the abstract base class ObjDisp from within your constructor.
+ * The properties you have to set have the following meaning:
+ *
+ * \par DISP_NAME: the name of the display column.
+ * This name is used in the interactive shell to address the display column.
+ * Additionally, if you are searching a display column with SCIPfindDisp(), this name is looked up.
+ * Names have to be unique: no two display columns may have the same name.
+ *
+ * \par DISP_DESC: the description of the display column.
+ * This string is printed as description of the display column in the interactive shell.
+ *
+ * \par DISP_HEADER: the header of the display column.
+ * This string is printed as header of the display column in the status information display.
+ *
+ * \par DISP_WIDTH: the width of the display column.
+ * This parameter defines the width (number of characters) of the display column. The value of the parameter has to be
+ * greater than or equal to the number of characters in the header string. 
+ *
+ * \par DISP_PRIORITY: the priority of the display column.
+ * The width of status information lines is bounded by the parameter "display width". The display columns actually contained
+ * in the status information display are selected in decreasing order of their priority. Furthermore, the user can force 
+ * columns to be displayed or not to be displayed in the status information display. For that, he has to switch the value 
+ * of the display column's parameter "active" from "auto" (its default value) to "on" and "off", respectively. 
+ *
+ * \par DISP_POSITION: the relative position of the display column.
+ * In the status information display, the display columns are arranged from left to right in increasing order of their 
+ * relative position.  
+ *
+ * \par DISP_STRIPLINE: the default for whether the display column should be separated with a line from its right neighbor.
+ * This parameter states whether the display column should be separated with the string "|" from its right neighbor. In so 
+ * doing, the clearness of the status information display may improve.  
+ * 
+ * @section DISP_DATA Display Column Data
+ *
+ * Below the header "Data structures" you can find a struct which is called "struct SCIP_DispData".
+ * In this data structure, you can store the data of your display column. For example, you should store the adjustable 
+ * parameters of the display column in this data structure.
+ * If you are using C++, you can add display column data as usual as object variables to your class.
+ * \n
+ * Defining display column data is optional. You can leave the struct empty.
+ *
+ *
+ * @section DISP_INTERFACE Interface Methods
+ *
+ * At the bottom of "disp_mydisplaycolumn.c" you can find the interface method SCIPincludeDispMydisplaycolumn(), which also
+ * appears in "disp_mydisplaycolumn.h".
+ * \n
+ * This method has only to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the display column by calling the method
+ * SCIPincludeDisp().
+ * It is called by the user, if he wants to include the display column, i.e., if he wants to use the display column in his 
+ * application. 
+ * \n
+ * Note that additional display column plugins have to be included <b>before the default display columns plugin</b>, i.e.,
+ * the SCIPincludeDispMydisplaycolumn() call has to occure before the SCIPincludeDispDefault() call.  
+ *
+ * If you are using display column data, you have to allocate the memory for the data at this point.
+ * You can do this by calling
+ * \code
+ * SCIP_CALL( SCIPallocMemory(scip, &dispdata) );
+ * \endcode
+ * You also have to initialize the fields in struct SCIP_DispData afterwards.
+ *
+ * You may also add user parameters for your display column, see the method \b SCIPincludeConshdlrKnapsack() in 
+ * src/scip/cons_knapsack.c for an example.
+ *
+ * 
+ * @section DISP_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Display Column
+ *
+ * Display column plugins have only one fundamental callback method, namely the DISPOUTPUT method.
+ * This method has to be implemented for every display column; the other callback methods are optional.
+ * In the C++ wrapper class ObjDisp, the scip_output() method (which corresponds to the DISPOUTPUT callback) is a virtual
+ * abstract member function.
+ * You have to implement it in order to be able to construct an object of your display column class.
+ *
+ * Additional documentation to the callback methods can be found in "type_disp.h".
+ *
+ * @subsection DISPOUTPUT
+ *
+ * The DISPOUTPUT callback is called after each pricing loop during node processing and after a node has been processed. 
+ * In addition, at the root node, the callback is executed after each iteration of the price-and-cut loop. 
+ * It should write the display column information for the current node to a given output file stream. 
+ *
+ * Typical methods called by a display column are, for example, SCIPdispLongint(), SCIPdispInt(), SCIPdispTime(), and 
+ * SCIPinfoMessage().
+ *
+ *
+ * @section DISP_ADDITIONALCALLBACKS Additional Callback Methods of a Display Column
+ *
+ * The additional callback methods need not to be implemented in every case.
+ * They can be used, for example, to initialize and free private data.
+ *
+ * @subsection DISPFREE
+ *
+ * If you are using display column data, you have to implement this method in order to free the display column data.
+ * This can be done by the following procedure:
+ * \code
+ * static
+ * SCIP_DECL_DISPFREE(dispFreeMydisplaycolumn)
+ * {
+ *    SCIP_DISPDATA* dispdata;
+ *  
+ *    dispdata = SCIPdispGetData(disp);
+ *    assert(dispdata != NULL);
+ *
+ *    SCIPfreeMemory(scip, &dispdata);
+ *
+ *    SCIPdispSetData(disp, NULL);
+ *
+ *    return SCIP_OKAY;
+ * }
+ * \endcode
+ * If you are using the C++ wrapper class, this method is not available.
+ * Instead, just use the destructor of your class to free the member variables of your class.
+ *
+ * @subsection DISPINIT
+ *
+ * The DISPINIT callback is executed after the problem was transformed.
+ * The display column may, e.g., use this call to initialize its display column data.
+ *
+ * @subsection DISPEXIT
+ *
+ * The DISPEXIT callback is executed before the transformed problem is freed.
+ * In this method, the display column should free all resources that have been allocated for the solving process in 
+ * DISPINIT.
+ *
+ * @subsection DISPINITSOL
+ *
+ * The DISPINITSOL callback is executed when the presolving was finished and the branch and bound process is about to 
+ * begin. The display column may use this call to initialize its branch and bound specific data.
+ *
+ * @subsection DISPEXITSOL
+ *
+ * The DISPEXITSOL callback is executed before the branch and bound process is freed. The display column should use this 
+ * call to clean up its branch and bound data specific data.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
