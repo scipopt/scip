@@ -1,6 +1,7 @@
 #!/bin/sh
 VERSION="0.90.11"
 NAME="scip-$VERSION"
+rm -f $NAME
 ln -s . $NAME
 rm -f release/$NAME.zip
 zip release/$NAME.zip $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile $NAME/doc/* $NAME/lib \
@@ -32,7 +33,7 @@ $NAME/examples/SamplePricer_C/make/make.* \
 $NAME/examples/SamplePricer_C/src/depend.* \
 $NAME/examples/SamplePricer_C/src/*.c $NAME/examples/SamplePricer_C/src/*.cpp $NAME/examples/SamplePricer_C/src/*.h \
 -x ".*" -x "*~" -x "*/CVS/*"
-rm $NAME
+rm -f $NAME
 echo "check version numbers in src/scip/def.h, doc/xternal.c, Makefile and makedist.sh ($VERSION):"
 grep "VERSION" src/scip/def.h
 grep "@version" doc/xternal.c
