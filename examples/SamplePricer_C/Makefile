@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.6 2007/08/16 14:29:22 bzfpfend Exp $
+# $Id: Makefile,v 1.7 2007/08/17 09:34:40 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ example project featuring a very simple pricer
@@ -52,7 +52,7 @@ LIBEXT		=	a
 
 READLINE	=	true
 ZLIB		=	true
-ZIMPL		=	false
+ZIMPL		=	true
 
 CC		=	gcc
 CXX		=	g++

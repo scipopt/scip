@@ -11,6 +11,7 @@ compiling:
 - added version numbers to library files
   (There will be a softlink generated in the lib/ and bin/ directories without version number that
   point to the latest compiled version.)
+- made ZIMPL=true the default; if you do not want to include ZIMPL support, call "make ZIMPL=false"
 
 interface:
 - new method SCIPreadSol()

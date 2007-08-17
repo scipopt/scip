@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.12 2007/08/16 14:29:22 bzfpfend Exp $
+# $Id: Makefile,v 1.13 2007/08/17 09:34:40 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ TSP example using SCIP as a callable library
@@ -52,7 +52,7 @@ LIBEXT		=	a
 
 READLINE	=	true
 ZLIB		=	true
-ZIMPL		=	false
+ZIMPL		=	true
 
 CC		=	gcc
 CXX		=	g++

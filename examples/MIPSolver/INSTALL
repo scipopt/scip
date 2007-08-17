@@ -3,9 +3,9 @@
 *                  This file is part of the program and library             *
 *         SCIP --- Solving Constraint Integer Programs                      *
 *                                                                           *
-*    Copyright (C) 2002-2004 Tobias Achterberg                              *
+*    Copyright (C) 2002-2007 Tobias Achterberg                              *
 *                                                                           *
-*                  2002-2004 Konrad-Zuse-Zentrum                            *
+*                  2002-2007 Konrad-Zuse-Zentrum                            *
 *                            fuer Informationstechnik Berlin                *
 *                                                                           *
 *  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -37,20 +37,16 @@ compilation settings:
 - $(OPT):    the optimization level of compilation
              "dbg", "opt", or "prf"
 
-- $(LINK):   the library linking type
-             "static", "shared"
-
 - $(LPS):    the LP solver to use
              "spx", "spx121", "clp", "cpx"
 
-For example, if you want to compile the example on a Linux system with a x86 processor
-using the gnu compiler in debug mode with static linking, and using Soplex version >= 1.2.2
+For example, if you want to compile the TSP example on a Linux system with a x86 processor
+using the gnu compiler in debug mode, and using Soplex version >= 1.3.0
 as LP solver, you would have the following names:
 - $(OSTYPE) = linux
 - $(ARCH)   = x86
 - $(COMP)   = gnu
 - $(OPT)    = dbg
-- $(LINK)   = static
 - $(LPS)    = spx
 
 -----------------------------------------------------------------------------
@@ -62,28 +58,36 @@ running:
    directory, and make sure to create the necessary softlinks in SCIP's lib 
    directory
 
-2. Create necessary softlink to SCIP's main directory in lib/ directory:
+2. Compile the example project:
+   In the example's main directory, enter "make OPT=<...> LPS=<...> COMP=<...>"
+   with the following options:
+   - "OPT=opt"       to use optimized compilation mode (default)
+   - "OPT=dbg"       to use debug compilation mode
+   - "OPT=prf"       to use performance analysis compilation mode
+   - "LPS=spx"       to use SOPLEX Version >= 1.3.0 as LP solver (default)
+   - "LPS=spx121"    to use SOPLEX Version <= 1.2.1 as LP solver
+   - "LPS=cpx"       to use CPLEX as LP solver
+   - "LPS=clp"       to use CLP as LP solver
+   - "COMP=gnu"      to use GNU c/c++ compiler (default)
+   - other compilers are available (see make/ directory)
+
+   On the first call with a specific set of options, you will be asked to provide the
+   path to the SCIP installation. Here is an example output:
+
+---
+** missing soft-link "lib/scip"
+** enter full path of SCIP installation: /sw/scip
+-> creating softlink "lib/scip" -> "/sw/scip"
+---
+
+   If this soft-link creation failed, you have to create the necessary softlink to SCIP's main
+   directory in example's lib/ subdirectory manually:
    - mkdir lib
    - ln -s <path to SCIP> lib/scip
      (e.g. "ln -s /scip lib/scip")
 
-3. Compile the example project:
-   In the example's main directory, enter "make OPT=<...> LPS=<...> COMP=<...> LINK=<...>" with
-   the following options:
-   - "OPT=opt"       to use optimized compilation mode (default)
-   - "OPT=dbg"       to use debug compilation mode
-   - "OPT=prf"       to use performance analysis compilation mode
-   - "LPS=cpx"       to use CPLEX as LP solver (default)
-   - "LPS=spx"       to use SOPLEX Version >= 1.2.2 as LP solver
-   - "LPS=spx121"    to use SOPLEX Version <= 1.2.1 as LP solver
-   - "LPS=clp"       to use CLP as LP solver
-   - "COMP=gnu"      to use GNU c/c++ compiler (default)
-   - other compilers are available (see make/ directory)
-   - "LINK=static"   to use static libraries (default)
-   - "LINK=dynamic"  to use dynamic libraries
-
-3. To run the program enter "bin/scipmip.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LINK).$(LPS)"
-   (e.g. "bin/scipmip.linux.x86.gnu.dbg.static.cpx")
+3. To run the program enter "bin/pmedian.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
+   (e.g. "bin/pmedian.linux.x86.gnu.opt.spx")
 
 4. To generate the documentation, you need to have doxygen installed, and
    enter "make doc"

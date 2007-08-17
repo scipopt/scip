@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.207 2007/08/17 08:46:08 bzfwolte Exp $
+# $Id: Makefile,v 1.208 2007/08/17 09:34:40 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -57,7 +57,7 @@ SOFTLINKS	=
 MAKESOFTLINKS	=	true
 READLINE	=	true
 ZLIB		=	true
-ZIMPL		=	false
+ZIMPL		=	true
 
 CC		=	gcc
 CC_c		=	-c # the trailing space is important

@@ -41,20 +41,16 @@ compilation settings:
 - $(OPT):    the optimization level of compilation
              "dbg", "opt", or "prf"
 
-- $(LINK):   the library linking type
-             "static", "shared"
-
 - $(LPS):    the LP solver to use
              "spx", "spx121", "clp", "cpx", "xprs", "msk"
 
 For example, if you want to install SCIP on a Linux system with a x86 processor
-using the gnu compiler in debug mode with static linking, and using Soplex version >= 1.3.0
+using the gnu compiler in debug mode, and using Soplex version >= 1.3.0
 as LP solver, you would have the following names:
 - $(OSTYPE) = linux
 - $(ARCH)   = x86
 - $(COMP)   = gnu
 - $(OPT)    = dbg
-- $(LINK)   = static
 - $(LPS)    = spx
 
 -----------------------------------------------------------------------------
@@ -67,18 +63,15 @@ Here is what you have to do to get SCIP running:
    - "OPT=dbg"         to use debug compilation mode
    - "OPT=prf"         to use performance analysis compilation mode
 
-   - "LPS=cpx"         to use CPLEX as LP solver (default)
+   - "LPS=spx"         to use SOPLEX Version >= 1.3.0 as LP solver (default)
+   - "LPS=spx121"      to use SOPLEX Version <= 1.2.1 as LP solver
+   - "LPS=cpx"         to use CPLEX as LP solver
    - "LPS=xprs"        to use XPRESS as LP solver
    - "LPS=msk"         to use MOSEK as LP solver
-   - "LPS=spx"         to use SOPLEX Version >= 1.3.0 as LP solver
-   - "LPS=spx121"      to use SOPLEX Version <= 1.2.1 as LP solver
    - "LPS=clp"         to use CLP as LP solver
 
    - "COMP=gnu"        to use GNU c/c++ compiler (default)
    - other compilers are available (see make/ directory)
-
-   - "LINK=static"     to use static libraries (default)
-   - "LINK=dynamic"    to use dynamic libraries
 
    - "ZLIB=true"       to use zlib and enable reading of compressed files (default)
    - "ZLIB=false"      disable zlib usage
@@ -86,8 +79,8 @@ Here is what you have to do to get SCIP running:
    - "READLINE=true"   to enable readline library for interactive shell (default)
    - "READLINE=false"  to disable readline library
 
-   - "ZIMPL=false"     to disable ZIMPL file reader (default)
-   - "ZIMPL=true"      to enable ZIMPL file reader (needs ZIMPL to be installed, see 1. (e))
+   - "ZIMPL=true"      to enable ZIMPL file reader (default; needs ZIMPL to be installed, see 2. (g))
+   - "ZIMPL=false"     to disable ZIMPL file reader
 
    - "VERBOSE=false"   to suppress display of compiler and linker invocations (default)
    - "VERBOSE=true"    to display compiler and linker invocations
@@ -100,10 +93,51 @@ Here is what you have to do to get SCIP running:
      (b) the library file(s) "lib*.a" or/and "lib*.so"
    You will need either the .a or the .so files and can skip the others by just pressing return.
 
-   Example 1 (CPLEX):
-   ==================
+   Example 1 (defaults: SoPlex, with ZIMPL support):
+   =================================================
 
-   Typing "make" uses CPLEX as LP solver. You will be asked the following questions on
+   Typing "make" uses SoPlex as LP solver and includes support for the modeling language ZIMPL.
+   You will be asked the following questions on the first call to "make" (example answers are already given):
+
+---
+make[1]: Entering directory `/sw/scip'
+
+** creating softlinks: LPS=spx OSTYPE=linux ARCH=x86 COMP=gnu SUFFIX= ZIMPL=true
+
+** creating directory "lib/zimplinc"
+** missing soft-link "lib/spxinc"
+** enter soft-link target file or directory for "lib/spxinc" (return if not needed): /sw/soplex/src
+-> creating softlink "lib/spxinc" -> "/sw/soplex/src"
+
+** missing soft-link "lib/libsoplex.linux.x86.gnu.a"
+** enter soft-link target file or directory for "lib/libsoplex.linux.x86.gnu.a" (return if not needed): /sw/soplex/lib/libsoplex.linux.x86.gnu.opt.a
+-> creating softlink "lib/libsoplex.linux.x86.gnu.a" -> "/sw/soplex/lib/libsoplex.linux.x86.gnu.opt.a"
+
+** missing soft-link "lib/libsoplex.linux.x86.gnu.so"
+** this soft-link is not necessarily needed since "lib/libsoplex.linux.x86.gnu.a" already exists - press return to skip
+** enter soft-link target file or directory for "lib/libsoplex.linux.x86.gnu.so" (return if not needed):
+-> skipped creation of softlink "lib/libsoplex.linux.x86.gnu.so". Call "make links" if needed later.
+
+** missing soft-link "lib/zimplinc/zimpl"
+** enter soft-link target file or directory for "lib/zimplinc/zimpl" (return if not needed): /sw/zimpl/src
+-> creating softlink "lib/zimplinc/zimpl" -> "/sw/zimpl/src"
+
+** missing soft-link "lib/libzimpl.linux.x86.gnu.a"
+** enter soft-link target file or directory for "lib/libzimpl.linux.x86.gnu.a" (return if not needed): /sw/zimpl/lib/libzimpl.linux.x86.gnu.opt.a
+-> creating softlink "lib/libzimpl.linux.x86.gnu.a" -> "/sw/zimpl/lib/libzimpl.linux.x86.gnu.opt.a"
+
+** missing soft-link "lib/libzimpl.linux.x86.gnu.so"
+** this soft-link is not necessarily needed since "lib/libzimpl.linux.x86.gnu.a" already exists - press return to skip
+** enter soft-link target file or directory for "lib/libzimpl.linux.x86.gnu.so" (return if not needed):
+-> skipped creation of softlink "lib/libzimpl.linux.x86.gnu.so". Call "make links" if needed later.
+
+make[1]: Leaving directory `/sw/scip'
+---
+
+   Example 2 (CPLEX, no ZIMPL):
+   ============================
+
+   Typing "make LPS=cpx ZIMPL=false" uses CPLEX as LP solver. You will be asked the following questions on
    the first call to "make" (example answers are already given):
 ---
 make[1]: Entering directory `/sw/scip'
@@ -125,32 +159,6 @@ make[1]: Entering directory `/sw/scip'
 make[1]: Leaving directory `/sw/scip'
 ---
 
-   Example 2 (SoPlex):
-   ==================
-
-   Typing "make LPS=spx" uses SoPlex as LP solver. You will be asked the following questions on
-   the first call to "make" (example answers are already given):
-
----
-make[1]: Entering directory `/sw/scip'
-
-** creating softlinks: LPS=spx OSTYPE=linux ARCH=x86 COMP=gnu SUFFIX= ZIMPL=false
-
-** missing soft-link "lib/spxinc"
-** enter soft-link target file or directory for "lib/spxinc" (return to skip): /sw/soplex/src
--> creating softlink "lib/spxinc" -> "/sw/soplex/src"
-
-** missing soft-link "lib/libsoplex.linux.x86.gnu.a"
-** enter soft-link target file or directory for "lib/libsoplex.linux.x86.gnu.a" (return to skip): /sw/soplex/lib/libsoplex.linux.x86.gnu.opt.static.a
--> creating softlink "lib/libsoplex.linux.x86.gnu.a" -> "/sw/soplex/lib/libsoplex.linux.x86.gnu.opt.static.a"
-
-** missing soft-link "lib/libsoplex.linux.x86.gnu.so"
-** enter soft-link target file or directory for "lib/libsoplex.linux.x86.gnu.so" (return to skip):
--> skipped creation of softlink "lib/libsoplex.linux.x86.gnu.so". Call "make links" if needed later.
-
-make[1]: Leaving directory `/sw/scip'
----
-
    If you ever need to modify the soft-link targets, delete the soft-links in the "lib/" subdirectory
    and enter "make links" to generate them again.
 
@@ -164,7 +172,7 @@ make[1]: Leaving directory `/sw/scip'
    creating the soft-links.
 
    If you get an error message of the type
-   "make: *** No rule to make target `lib/???', needed by `obj/O.linux.x86.gnu.opt.static/lib/scip/???.o'.  Stop."
+   "make: *** No rule to make target `lib/???', needed by `obj/O.linux.x86.gnu.opt/lib/scip/???.o'.  Stop."
    the corresponding soft-link was not created or points to a wrong location.
    Check the soft-link targets in the "lib/" subdirectory. Try to delete all soft-links from the "lib/" directory
    and call "make links" to generate them again. If this still fails, read step 2 for instructions on manually
@@ -174,7 +182,7 @@ make[1]: Leaving directory `/sw/scip'
    "make: *** No rule to make target `make/make.?.?.?.?.?'.  Stop.",
    the corresponding machine dependent makefile for your architecture and compiler is missing.
    Create one of the given name in the "make/" subdirectory. You may take
-   "make/make.linux.x86.gnu.opt.static" or any other file in the make subdirectory as example.
+   "make/make.linux.x86.gnu.opt" or any other file in the make subdirectory as example.
 
    The readline library seems to differ sligtly on different OS distributions. Some versions
    do not support the remove_history() call.
@@ -206,41 +214,41 @@ make[1]: Leaving directory `/sw/scip'
 
    Create necessary soft-links in the "lib/" subdirectory of SCIP:
 
-   (a) to use CPLEX (Version >= 8.0)
+   (a) to use SOPLEX (Version >= 1.3.0)
+       - ln -s <path to SOPLEX' *.h files> <path to SCIP>/lib/spxinc
+       - ln -s <file libsoplex.[...].a> <path to SCIP>/lib/libsoplex.$(OSTYPE).$(ARCH).$(COMP).a
+         for each operating system and architecture to use
+         (e.g. "cd scip; ln -s /soplex/lib/libsoplex.linux.x86.gnu.opt.a lib/libsoplex.linux.x86.gnu.a")
+         Warning! The ".opt" in the name of the SOPLEX library does not appear in the name of the soft-link.
+
+   (b) to use SOPLEX (Version <= 1.2.1)
+       - ln -s <path to SOPLEX' *.h files> <path to SCIP>/lib/spx121inc
+       - ln -s <file libsoplex.[...].a> <path to SCIP>/lib/libsoplex121.$(OSTYPE).$(ARCH).$(COMP).a
+         for each operating system and architecture to use
+         (e.g. "cd scip; ln -s /soplex121/lib/libsoplex.linux.x86.gnu.opt.a lib/libsoplex121.linux.x86.gnu.a")
+         Warning! The ".opt" in the name of the SOPLEX library does not appear in the name of the soft-link.
+
+   (c) to use CPLEX (Version >= 8.0)
        - ln -s <path to directory of cplex.h> <path to SCIP>/lib/cpxinc
          (e.g. "cd scip; ln -s /cplex90/include/ilcplex lib/cpxinc")
        - ln -s <file libcplex.a> <path to SCIP>/lib/libcplex.$(OSTYPE).$(ARCH).$(COMP).a
          for each operation system and architecture to use
          (e.g. "cd scip; ln -s /cplex90/lib/i86_linux2_glibc2.3_gcc3.2/static_pic/libcplex.a lib/libcplex.linux.x86.gnu.a")
 
-   (b) to use XPRESS
+   (d) to use XPRESS
        - ln -s <path to directory of xprs.h> <path to SCIP>/lib/xprsinc
          (e.g. "cd scip; ln -s /xpressmp/include lib/xprsinc")
        - ln -s <file libxprs.a> <path to SCIP>/lib/libxprs.$(OSTYPE).$(ARCH).$(COMP).a
          for each operation system and architecture to use
          (e.g. "cd scip; ln -s /xpressmp/lib/libxprs.a lib/libxprs.linux.x86.gnu.a")
 
-   (c) to use MOSEK
+   (e) to use MOSEK
        - ln -s <path to directory of mosek.h> <path to SCIP>/lib/mskinc
          (e.g. "cd scip; ln -s /mosek/4/tools/platform/linux32x86/h lib/mskinc")
        - ln -s <file libmosek.so> <path to SCIP>/lib/libmosek.$(OSTYPE).$(ARCH).$(COMP).so
          for each operation system and architecture to use
          (e.g. "cd scip; ln -s /mosek/4/tools/platform/linux32x86/bin/libmosek.so lib/libmosek.linux.x86.gnu.so")
        - since MOSEK is a shared library, make sure your LD_LIBRARY_PATH contains <path to SCIP>/lib
-
-   (d) to use SOPLEX (Version >= 1.3.0)
-       - ln -s <path to SOPLEX' *.h files> <path to SCIP>/lib/spxinc
-       - ln -s <file libsoplex.[...].a> <path to SCIP>/lib/libsoplex.$(OSTYPE).$(ARCH).$(COMP).a
-         for each operating system and architecture to use
-         (e.g. "cd scip; ln -s /soplex/lib/libsoplex.linux.x86.gnu.opt.a lib/libsoplex.linux.x86.gnu.a")
-         Warning! The ".opt.static" in the name of the SOPLEX library does not appear in the name of the soft-link.
-
-   (e) to use SOPLEX (Version <= 1.2.1)
-       - ln -s <path to SOPLEX' *.h files> <path to SCIP>/lib/spx121inc
-       - ln -s <file libsoplex.[...].a> <path to SCIP>/lib/libsoplex121.$(OSTYPE).$(ARCH).$(COMP).a
-         for each operating system and architecture to use
-         (e.g. "cd scip; ln -s /soplex121/lib/libsoplex.linux.x86.gnu.opt.a lib/libsoplex121.linux.x86.gnu.a")
-         Warning! The ".opt" in the name of the SOPLEX library does not appear in the name of the soft-link.
 
    (f) to use CLP
        - ln -s <path to CLP's and COIN's *.h files> <path to SCIP>/lib/clpinc
@@ -257,8 +265,8 @@ make[1]: Leaving directory `/sw/scip'
        - ln -s <path to ZIMPL's *.h files> <path to SCIP>/lib/zimplinc/zimpl
        - ln -s <file libzimpl-<version>.<options>.a> <path to SCIP>/lib/libzimpl.$(OSTYPE).$(ARCH).$(COMP).a
 
-3. To run the program enter "bin/scip.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LINK).$(LPS)"
-   (e.g. "bin/scip.linux.x86.gnu.opt.static.cpx")
+3. To run the program enter "bin/scip.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
+   (e.g. "bin/scip.linux.x86.gnu.opt.spx")
 
 4. To generate the documentation, you need to have doxygen installed, and
    enter "make doc"
