@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.208 2007/08/17 09:34:40 bzfpfend Exp $
+# $Id: Makefile,v 1.209 2007/08/17 09:58:49 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -495,6 +495,7 @@ MAINFILENAME	=	$(MAINNAME).$(BASE).$(LPS)$(EXEEXTENSION)
 MAINFILE	=	$(BINDIR)/$(MAINFILENAME)
 MAINOBJFILES	=	$(addprefix $(BINOBJDIR)/,$(MAINOBJ))
 MAINLINK	=	$(BINDIR)/$(MAINLINKNAME).$(BASE).$(LPS)$(EXEEXTENSION)
+MAINSHORTLINK	=	$(BINDIR)/$(MAINLINKNAME)$(EXEEXTENSION)
 
 
 #-----------------------------------------------------------------------------
@@ -502,7 +503,7 @@ MAINLINK	=	$(BINDIR)/$(MAINLINKNAME).$(BASE).$(LPS)$(EXEEXTENSION)
 #-----------------------------------------------------------------------------
 
 .PHONY: all
-all:            checklpsdefine $(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE) $(LPILIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(MAINLINK)
+all:            checklpsdefine $(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE) $(LPILIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(MAINLINK) $(MAINSHORTLINK)
 
 .PHONY: lint
 lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(MAINSRC)
@@ -550,7 +551,7 @@ $(OBJSCIPLIBLINK):	$(OBJSCIPLIBFILE)
 		@rm -f $@
 		@ln -s $(OBJSCIPLIBFILENAME) $@
 
-$(MAINLINK):	$(MAINFILE)
+$(MAINLINK) $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
 		@ln -s $(MAINFILENAME) $@
 

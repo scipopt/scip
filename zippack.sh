@@ -2,6 +2,7 @@
 VERSION="0.90.11"
 NAME="scip-$VERSION"
 ln -s . $NAME
+rm -f release/$NAME.zip
 zip release/$NAME.zip $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile $NAME/doc/* $NAME/lib \
 $NAME/make/make.* $NAME/scip.set \
 $NAME/check/check.sh $NAME/check/check.awk $NAME/check/check_cplex.sh $NAME/check/check_cplex.awk \

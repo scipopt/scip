@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.13 2007/08/17 09:34:40 bzfpfend Exp $
+# $Id: Makefile,v 1.14 2007/08/17 09:58:49 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ TSP example using SCIP as a callable library
@@ -209,15 +209,15 @@ MAINDEP		=	$(SRCDIR)/depend.cppmain.$(OPT)
 
 MAIN		=	$(MAINNAME).$(BASE).$(LPS)$(EXEEXTENSION)
 MAINFILE	=	$(BINDIR)/$(MAIN)
+MAINSHORTLINK	=	$(BINDIR)/$(MAINNAME)
 MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
-
 
 #-----------------------------------------------------------------------------
 # Rules
 #-----------------------------------------------------------------------------
 
 .PHONY: all
-all:            $(LIBDIR) $(LIBDIR)/scip $(MAINFILE)
+all:            $(LIBDIR) $(LIBDIR)/scip $(MAINFILE) $(MAINSHORTLINK)
 
 .PHONY: lint
 lint:		$(MAINSRC)
@@ -232,6 +232,10 @@ lint:		$(MAINSRC)
 .PHONY: doc
 doc:		
 		cd doc; $(DOXY) $(MAINNAME).dxy
+
+$(MAINSHORTLINK):	$(MAINFILE)
+		@rm -f $@
+		@ln -s $(MAIN) $@
 
 $(OBJDIR):	
 		@-mkdir -p $(OBJDIR)
