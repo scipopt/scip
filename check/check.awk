@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.62 2007/07/30 13:29:18 bzfpfend Exp $
+# $Id: check.awk,v 1.63 2007/08/17 14:40:18 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -165,10 +165,10 @@ BEGIN {
 }
 /@03/ { starttime = $2; }
 /@04/ { endtime = $2; }
-/^loaded parameter file/ { settings = $4; sub(/<settings\//, "", settings); sub(/\.set>/, "", settings); }
-/^SCIP> loaded parameter file/ { settings = $5; sub(/<settings\//, "", settings); sub(/\.set>/, "", settings); }
+/^SCIP> SCIP> / { $0 = substr($0, 13, length($0)-12); }
+/^SCIP> / { $0 = substr($0, 7, length($0)-6); }
+/^loaded parameter file/ { settings = $4; sub(/<.*settings\//, "", settings); sub(/\.set>/, "", settings); }
 /^parameter <limits\/time> set to/ { timelimit = $5; }
-/^SCIP> parameter <limits\/time> set to/ { timelimit = $6; }
 #
 # conflict analysis
 #

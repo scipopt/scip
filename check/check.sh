@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.42 2007/06/06 11:28:06 bzfpfend Exp $
+# $Id: check.sh,v 1.43 2007/08/17 14:40:19 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -29,13 +29,11 @@ CONTINUE=${10}
 LOCK=${11}
 VERSION=${12}
 
+SETDIR=../settings
+
 if [ ! -e results ]
 then
     mkdir results
-fi
-if [ ! -e settings ]
-then
-    mkdir settings
 fi
 if [ ! -e locks ]
 then
@@ -53,7 +51,7 @@ TEXFILE=results/check.$TSTNAME.$BINID.$SETNAME.tex
 TMPFILE=results/check.$TSTNAME.$BINID.$SETNAME.tmp
 SETFILE=results/check.$TSTNAME.$BINID.$SETNAME.set
 
-SETTINGS=settings/$SETNAME.set
+SETTINGS=$SETDIR/$SETNAME.set
 
 if [ "$LOCK" == "true" ]
 then
