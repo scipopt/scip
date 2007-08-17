@@ -3,9 +3,14 @@ VERSION="0.90.11"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
-rm -f release/$NAME.zip
-zip release/$NAME.zip $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile $NAME/doc/* $NAME/lib \
-$NAME/make/make.* $NAME/scip.set \
+rm -f release/$NAME.tgz
+tar --no-recursion -cvzhf release/$NAME.tgz \
+--exclude="*CVS*" \
+--exclude="*cvs*" \
+--exclude="*~" \
+--exclude=".*" \
+$NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile $NAME/doc/* $NAME/lib \
+$NAME/make/make.* \
 $NAME/check/check.sh $NAME/check/check.awk $NAME/check/check_cplex.sh $NAME/check/check_cplex.awk \
 $NAME/check/miplib3.test $NAME/check/miplib3.solu \
 $NAME/settings/cuts/*.set $NAME/settings/emphasis/*.set $NAME/settings/heuristics/*.set $NAME/settings/presolving/*.set \
@@ -31,9 +36,9 @@ $NAME/examples/SamplePricer/src/*.c $NAME/examples/SamplePricer/src/*.cpp $NAME/
 $NAME/examples/SamplePricer_C/* $NAME/examples/SamplePricer_C/doc/* $NAME/examples/SamplePricer_C/lib \
 $NAME/examples/SamplePricer_C/make/make.* \
 $NAME/examples/SamplePricer_C/src/depend.* \
-$NAME/examples/SamplePricer_C/src/*.c $NAME/examples/SamplePricer_C/src/*.cpp $NAME/examples/SamplePricer_C/src/*.h \
--x ".*" -x "*~" -x "*/CVS/*"
+$NAME/examples/SamplePricer_C/src/*.c $NAME/examples/SamplePricer_C/src/*.cpp $NAME/examples/SamplePricer_C/src/*.h
 rm -f $NAME
+echo ""
 echo "check version numbers in src/scip/def.h, doc/xternal.c, Makefile and makedist.sh ($VERSION):"
 grep "VERSION" src/scip/def.h
 grep "@version" doc/xternal.c
