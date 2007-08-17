@@ -81,6 +81,8 @@ Here is what you have to do to get SCIP running:
 
    - "ZIMPL=true"      to enable ZIMPL file reader (default; needs ZIMPL to be installed, see 2. (g))
    - "ZIMPL=false"     to disable ZIMPL file reader
+   - "GMP=true"        to enable GMP support in ZIMPL (default)
+   - "GMP=false"       to disable GMP support in ZIMPL
 
    - "VERBOSE=false"   to suppress display of compiler and linker invocations (default)
    - "VERBOSE=true"    to display compiler and linker invocations

@@ -1,1 +1,1 @@
-./scip/old/fileio.c ./scip/old/misc.c ./scip/fileio.c ./scip/ILOG_solpools/fileio.c ./scip/ILOG_solpools/misc.c ./scip/misc.c
+src/scip/fileio.c src/scip/misc.c

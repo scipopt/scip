@@ -31,10 +31,11 @@ $(OBJDIR)/cppmain.o: src/cppmain.cpp lib/scip/src/objscip/objscip.h \
   lib/scip/src/scip/pub_sol.h lib/scip/src/scip/pub_tree.h \
   lib/scip/src/scip/pub_var.h lib/scip/src/scip/type_history.h \
   lib/scip/src/scip/lpi.h lib/scip/src/objscip/objconshdlr.h \
-  lib/scip/src/objscip/objeventhdlr.h lib/scip/src/objscip/objheur.h \
-  lib/scip/src/objscip/objmessagehdlr.h lib/scip/src/objscip/objnodesel.h \
-  lib/scip/src/objscip/objpresol.h lib/scip/src/objscip/objpricer.h \
-  lib/scip/src/objscip/objprobdata.h lib/scip/src/objscip/objprop.h \
-  lib/scip/src/objscip/objreader.h lib/scip/src/objscip/objrelax.h \
-  lib/scip/src/objscip/objsepa.h lib/scip/src/objscip/objvardata.h \
-  lib/scip/src/scip/scipdefplugins.h lib/scip/src/scip/scip.h
+  lib/scip/src/objscip/objdisp.h lib/scip/src/objscip/objeventhdlr.h \
+  lib/scip/src/objscip/objheur.h lib/scip/src/objscip/objmessagehdlr.h \
+  lib/scip/src/objscip/objnodesel.h lib/scip/src/objscip/objpresol.h \
+  lib/scip/src/objscip/objpricer.h lib/scip/src/objscip/objprobdata.h \
+  lib/scip/src/objscip/objprop.h lib/scip/src/objscip/objreader.h \
+  lib/scip/src/objscip/objrelax.h lib/scip/src/objscip/objsepa.h \
+  lib/scip/src/objscip/objvardata.h lib/scip/src/scip/scipdefplugins.h \
+  lib/scip/src/scip/scip.h

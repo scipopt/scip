@@ -1,1 +1,1 @@
-./scip/old/dialog.c ./scip/dialog.c ./scip/ILOG_solpools/dialog.c
+src/scip/dialog.c

@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.14 2007/08/17 09:58:49 bzfpfend Exp $
+# $Id: Makefile,v 1.15 2007/08/17 14:56:30 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ TSP example using SCIP as a callable library
@@ -53,6 +53,7 @@ LIBEXT		=	a
 READLINE	=	true
 ZLIB		=	true
 ZIMPL		=	true
+GMP		=	true
 
 CC		=	gcc
 CXX		=	g++
@@ -168,8 +169,15 @@ LDFLAGS		+=	$(READLINE_LDFLAGS)
 endif
 
 ifeq ($(ZIMPL),true)
-FLAGS		+=	-DWITH_ZIMPL -Ilib/zimplinc
-LDFLAGS		+=	-lzimpl.$(OSTYPE).$(ARCH).$(COMP) -lgmp -lz
+ifeq ($(ZLIB),false)
+$(error ZIMPL requires the ZLIB to be linked. Use either ZIMPL=false or ZLIB=true.)
+endif
+FLAGS		+=	-DWITH_ZIMPL -I$(LIBDIR)/scip/lib/zimplinc
+ifeq ($(GMP),true)
+LDFLAGS		+=	-lzimpl.$(OSTYPE).$(ARCH).$(COMP) -lgmp
+else
+LDFLAGS		+=	-lzimpl.$(OSTYPE).$(ARCH).$(COMP).dbl
+endif
 endif
 
 
