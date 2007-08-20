@@ -45,7 +45,7 @@
  * - \ref HEUR    "How to add primal heuristics"
  * - \ref RELAX   "How to add relaxation handlers"
  * - \ref READER  "How to add file readers"
- * - \ref DIALOG  "How to add dialog options"
+ * - \ref DIALOG  "How to add dialogs"
  * - \ref DISP    "How to add display columns"
  * - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
  * - \ref PARAM   "Adding additional user parameters"
@@ -2438,7 +2438,7 @@
  * 
  * @section READER_ADDITIONALCALLBACKS Additional Callback Methods of a File Reader
  *
- * File reader plugins have only one additional callback method, namely the READERFREE method. It need not to be 
+ * File reader plugins have only one additional callback method, namely the READERFREE method. It needs not to be 
  * implemented in every case.
  * 
  * @subsection READERFREE
@@ -2466,10 +2466,161 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page DIALOG How to add dialog options
+/**@page DIALOG How to add dialogs
  *
- * This page is not yet written. Here we will explain how to extend the interactive shell by adding new dialog options
- * to SCIP.
+ * SCIP comes with a command line shell which allows the user to read in problem instances, modify the solver's 
+ * parameters, initiate the optimization, and display certain statistics and solution information. This shell consists 
+ * of dialogs, which are organized as a tree in SCIP. A node of this tree which is not a leaf represents a menu in 
+ * the shell and the children of this node correspond to the entries of this menu (which can again be menus). All 
+ * different dialogs are managed by a dialog handler, which, in particular, is responsible for executing the dialog 
+ * corresponding to the user's command in the shell. That is, the concept of a dialog handler is different to that 
+ * of a constraint handler, which is used to manage objects of the same structure, see \ref CONS. In particular, SCIP 
+ * features only one dialog handler, whereas there may exist different constraint handlers. 
+ *
+ * In the following, we explain how the user can extend the interactive shell by adding an own dialog.
+ * We give the explanation for writting an own plugin for each additional dialog. Of course, you can collect 
+ * different dialogs in one plugin. Take "src/scip/dialog_default.c", where all default dialogs are collected, as an 
+ * example.
+ * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjDialog wrapper
+ * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_DIALOG... callback methods.
+ *
+ * Additional documentation for the callback methods of a dialog can be found in the file "type_dialog.h".
+ *
+ * Here is what you have to do to add a dialog:
+ * -# Copy the template files "src/scip/dialog_xxx.c" and "src/scip/dialog_xxx.h" into files named "dialog_mydialog.c"
+ *    and "dialog_mydialog.h".
+ *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mydialog".
+ * -# Adjust the properties of the dialog (see \ref DIALOG_PROPERTIES).
+ * -# Define the dialog data (see \ref DIALOG_DATA).
+ * -# Implement the interface methods (see \ref DIALOG_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref DIALOG_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref DIALOG_ADDITIONALCALLBACKS).
+ *
+ *
+ * @section DIALOG_PROPERTIES Properties of a Dialog
+ *
+ * At the top of the new file "dialog_mydialog.c" you can find the dialog properties.
+ * These are given as compiler defines.
+ * In the C++ wrapper class, you have to provide the dialog properties by calling the constructor
+ * of the abstract base class ObjDialog from within your constructor.
+ * The properties you have to set have the following meaning:
+ *
+ * \par DIALOG_NAME: the name of the dialog.
+ * In the interactive shell, this name appears as command name of the dialog in the parent dialog. 
+ * Additionally, if you are searching an entry in a menu with SCIPdialogFindEntry(), this name is looked up.
+ * Names have to be unique: no two dialogs may have the same name.
+ *
+ * \par DIALOG_DESC: the description of the dialog.
+ * This string is printed as description of the dialog in the interactive shell if the DIALOGDESC callback
+ * is not implemented.
+ *
+ * \par DIALOG_ISSUBMENU: the default for whether the dialog is a menu.
+ * This parameter states whether the dialog is a menu in the interactive shell, i.e., is the parent of further 
+ * dialogs.
+ * 
+ *
+ * @section DIALOG_DATA Dialog Data
+ *
+ * Below the header "Data structures" you can find a struct which is called "struct SCIP_DialogData".
+ * In this data structure, you can store the data of your dialog. 
+ * If you are using C++, you can add dialog data as usual as object variables to your class.
+ * \n
+ * Defining dialog data is optional. You can leave the struct empty.
+ *
+ *
+ * @section DIALOG_INTERFACE Interface Methods
+ *
+ * At the bottom of "dialog_mydialog.c" you can find the interface method SCIPincludeDialogMydialog(), which also appears
+ * in "dialog_mydialog.h".
+ * \n
+ * This method has only to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the dialog, which can be done by the following lines of code:
+ * \code
+ * if( !SCIPdialogHasEntry(parentdialog, DIALOG_NAME) )
+ * {
+ *    SCIP_CALL( SCIPcreateDialog(scip, &dialog, dialogExecXxx, dialogDescXxx, dialogFreeXxx,
+ *          DIALOG_NAME, DIALOG_DESC, DIALOG_ISSUBMENU, dialogdata) );
+ *
+ *    SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );
+ * 
+ *    SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+ * }
+ * \endcode
+ * Here "parentdialog" has to be an existing dialog which is defined to be a menu (see DIALOG_ISSUBMENU), e.g., 
+ * the default root dialog.   
+ *
+ * The interface method is called by the user, if he wants to include the dialog, i.e., if he wants to use the dialog in 
+ * his application. 
+ * Note that in order to be able to link the new dialog to an existing one it has to be included <b>after the 
+ * default dialogs plugin</b>, i.e., the SCIPincludeDialogMydialog() call has to occure after the 
+ * SCIPincludeDialogDefault() call.
+ *
+ * If you are using dialog data, you have to allocate the memory for the data at this point.
+ * You can do this by calling
+ * \code
+ * SCIP_CALL( SCIPallocMemory(scip, &dialogdata) );
+ * \endcode
+ * You also have to initialize the fields in struct SCIP_DialogData afterwards.
+ *
+ * 
+ * @section DIALOG_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Dialog
+ *
+ * Dialogs have only one fundamental callback method, namely the DIALOGEXEC method.
+ * This method has to be implemented for every dialog; the other callback methods are optional.
+ * In the C++ wrapper class ObjDialog, the scip_exec() method (which corresponds to the DIALOGEXEC callback) is a virtual
+ * abstract member function.
+ * You have to implement it in order to be able to construct an object of your dialog class.
+ * 
+ * Additional documentation to the callback methods can be found in "type_dialog.h".
+ *
+ * @subsection DIALOGEXEC
+ *
+ * The DIALOGEXEC method is invoked, if the user selected the dialog's command name in the parent's menu. It should 
+ * execute what is stated in DIALOG_DESC, e.g., the display constraint handlers dialog should display information about 
+ * the constraint handlers included in SCIP, see "src/scip/dialog_default.c". 
+ *
+ * For typical methods called by the execution method, have a look at "src/scip/dialog_default.c".
+ * 
+ * The callback has to return which dialog should be processed next. This can be, for example, the root dialog 
+ * (SCIPdialoghdlrGetRoot()), the parent dialog (SCIPdialogGetParent()) or NULL, which stands for closing the interactive 
+ * shell.
+ *
+ *
+ * @section DIALOG_ADDITIONALCALLBACKS Additional Callback Methods of a Dialog
+ *
+ * The additional callback methods need not to be implemented in every case.
+ * They can be used, for example, to free private data.
+ *
+ * @subsection DIALOGPFREE
+ *
+ * If you are using dialog data, you have to implement this method in order to free the dialog data.
+ * This can be done by the following procedure:
+ * \code
+ * static
+ * SCIP_DECL_DIALOGFREE(dialogFreeMydialog)
+ * {
+ *    SCIP_DIALOGDATA* dialogdata;
+ *  
+ *    dialogdata = SCIPdialogGetData(dialog);
+ *    assert(dialogdata != NULL);
+ *
+ *    SCIPfreeMemory(scip, &dialogdata);
+ *
+ *    SCIPdialogSetData(dialog, NULL);
+ *
+ *    return SCIP_OKAY;
+ * }
+ * \endcode
+ * If you are using the C++ wrapper class, this method is not available.
+ * Instead, just use the destructor of your class to free the member variables of your class.
+ *
+ * @subsection DIALOGDESC
+ *
+ * The method is called, when the help menu of the parent is displayed. It should output (usually a single line of) 
+ * information describing the meaning of the dialog. 
+ * \n
+ * If this callback is not implemented, the description string of the dialog (DIALOG_DESC) is displayed instead.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -2558,9 +2709,9 @@
  * This method has only to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the display column by calling the method
  * SCIPincludeDisp().
- * It is called by the user, if he wants to include the display column, i.e., if he wants to use the display column in his 
+ *
+ * The interface method is called by the user, if he wants to include the display column, i.e., if he wants to use the display column in his 
  * application. 
- * \n
  * Note that additional display column plugins have to be included <b>before the default display columns plugin</b>, i.e.,
  * the SCIPincludeDispMydisplaycolumn() call has to occure before the SCIPincludeDispDefault() call.  
  *

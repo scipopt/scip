@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.h,v 1.18 2007/06/06 11:25:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.h,v 1.19 2007/08/20 12:42:55 bzfwolte Exp $"
 
 /**@file   dialog.h
  * @brief  internal methods for user interface dialog
@@ -49,6 +49,7 @@ SCIP_RETCODE SCIPdialoghdlrCreate(
 /** frees a dialog handler and it's dialog tree */
 extern
 SCIP_RETCODE SCIPdialoghdlrFree(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOGHDLR**     dialoghdlr          /**< pointer to dialog handler */
    );
 
@@ -62,6 +63,7 @@ SCIP_RETCODE SCIPdialoghdlrExec(
 /** makes given dialog the root dialog of dialog handler; captures dialog and releases former root dialog */
 extern
 SCIP_RETCODE SCIPdialoghdlrSetRoot(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
    SCIP_DIALOG*          dialog              /**< dialog to be the root */
    );
@@ -79,6 +81,7 @@ SCIP_RETCODE SCIPdialogCreate(
    SCIP_DIALOG**         dialog,             /**< pointer to store the dialog */
    SCIP_DECL_DIALOGEXEC  ((*dialogexec)),    /**< execution method of dialog */
    SCIP_DECL_DIALOGDESC  ((*dialogdesc)),    /**< description output method of dialog, or NULL */
+   SCIP_DECL_DIALOGFREE  ((*dialogfree)),    /**< destructor of dialog to free user data, or NULL */
    const char*           name,               /**< name of dialog: command name appearing in parent's dialog menu */
    const char*           desc,               /**< description of dialog used if description output method is NULL */
    SCIP_Bool             issubmenu,          /**< is the dialog a submenu? */
@@ -94,6 +97,7 @@ void SCIPdialogCapture(
 /** releases a dialog */
 extern
 SCIP_RETCODE SCIPdialogRelease(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOG**         dialog              /**< pointer to dialog */
    );
 

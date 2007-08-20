@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_dialog.h,v 1.12 2007/06/06 11:25:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_dialog.h,v 1.13 2007/08/20 12:42:56 bzfwolte Exp $"
 
 /**@file   type_dialog.h
  * @brief  type definitions for user interface dialog
@@ -33,6 +33,26 @@ typedef struct SCIP_Dialoghdlr SCIP_DIALOGHDLR;   /**< dialog handler */
 typedef struct SCIP_Linelist SCIP_LINELIST;       /**< linked list of single input lines */
 
 
+/** destructor of dialog to free user data (called when the dialog is not captured anymore)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - dialog          : the dialog itself
+ */
+#define SCIP_DECL_DIALOGFREE(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIALOG* dialog)
+
+/** description output method of dialog
+ *
+ *  This method should output (usually a single line of) information describing the meaning of the dialog.
+ *  The method is called, when the help menu of the parent's dialog is displayed.
+ *  If no description output method is given, the description string of the dialog is displayed instead.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - *dialog         : the dialog itself
+ */
+#define SCIP_DECL_DIALOGDESC(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIALOG* dialog)
+
 /** execution method of dialog
  *
  *  This method is invoked, if the user selected the dialog's command name in the parent's dialog menu.
@@ -47,17 +67,6 @@ typedef struct SCIP_Linelist SCIP_LINELIST;       /**< linked list of single inp
  */
 #define SCIP_DECL_DIALOGEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIALOG* dialog, SCIP_DIALOGHDLR* dialoghdlr, SCIP_DIALOG** nextdialog)
 
-/** description output method of dialog
- *
- *  This method should output (usually a single line of) information describing the meaning of the dialog.
- *  The method is called, when the help menu of the parent's dialog is displayed.
- *  If no description output method is given, the description string of the dialog is displayed instead.
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - *dialog         : the dialog itself
- */
-#define SCIP_DECL_DIALOGDESC(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIALOG* dialog)
 
 
 

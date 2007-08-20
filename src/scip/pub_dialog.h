@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_dialog.h,v 1.14 2007/06/06 11:25:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_dialog.h,v 1.15 2007/08/20 12:42:56 bzfwolte Exp $"
 
 /**@file   pub_dialog.h
  * @brief  public methods for user interface dialog
@@ -187,5 +187,11 @@ SCIP_DIALOGDATA* SCIPdialogGetData(
    SCIP_DIALOG*          dialog              /**< dialog */
    );
 
+/** sets user data of dialog; user has to free old data in advance! */
+extern
+void SCIPdialogSetData(
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   SCIP_DIALOGDATA*      dialogdata          /**< new dialog user data */
+   );
 
 #endif

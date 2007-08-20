@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.38 2007/06/06 11:25:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.39 2007/08/20 12:42:55 bzfwolte Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -288,12 +288,13 @@ SCIP_RETCODE SCIPdialoghdlrCreate(
 
 /** frees a dialog handler and it's dialog tree */
 SCIP_RETCODE SCIPdialoghdlrFree(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOGHDLR**     dialoghdlr          /**< pointer to dialog handler */
    )
 {
    assert(dialoghdlr != NULL);
    
-   SCIP_CALL( SCIPdialoghdlrSetRoot(*dialoghdlr, NULL) );
+   SCIP_CALL( SCIPdialoghdlrSetRoot(scip, *dialoghdlr, NULL) );
    linelistFreeAll(&(*dialoghdlr)->inputlist);
    BMSfreeMemoryArray(&(*dialoghdlr)->buffer);
    BMSfreeMemory(dialoghdlr);
@@ -331,6 +332,7 @@ SCIP_RETCODE SCIPdialoghdlrExec(
 
 /** makes given dialog the root dialog of dialog handler; captures dialog and releases former root dialog */
 SCIP_RETCODE SCIPdialoghdlrSetRoot(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
    SCIP_DIALOG*          dialog              /**< dialog to be the root */
    )
@@ -339,7 +341,7 @@ SCIP_RETCODE SCIPdialoghdlrSetRoot(
 
    if( dialoghdlr->rootdialog != NULL )
    {
-      SCIP_CALL( SCIPdialogRelease(&dialoghdlr->rootdialog) );
+      SCIP_CALL( SCIPdialogRelease(scip, &dialoghdlr->rootdialog) );
    }
    assert(dialoghdlr->rootdialog == NULL);
 
@@ -662,6 +664,7 @@ SCIP_RETCODE SCIPdialogCreate(
    SCIP_DIALOG**         dialog,             /**< pointer to store the dialog */
    SCIP_DECL_DIALOGEXEC  ((*dialogexec)),    /**< execution method of dialog */
    SCIP_DECL_DIALOGDESC  ((*dialogdesc)),    /**< description output method of dialog, or NULL */
+   SCIP_DECL_DIALOGFREE  ((*dialogfree)),    /**< destructor of dialog to free user data, or NULL */
    const char*           name,               /**< name of dialog: command name appearing in parent's dialog menu */
    const char*           desc,               /**< description of dialog used if description output method is NULL */
    SCIP_Bool             issubmenu,          /**< is the dialog a submenu? */
@@ -674,6 +677,7 @@ SCIP_RETCODE SCIPdialogCreate(
    SCIP_ALLOC( BMSallocMemory(dialog) );
    (*dialog)->dialogexec = dialogexec;
    (*dialog)->dialogdesc = dialogdesc;
+   (*dialog)->dialogfree = dialogfree;
 
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*dialog)->name, name, strlen(name)+1) );
    if( desc != NULL )
@@ -700,6 +704,7 @@ SCIP_RETCODE SCIPdialogCreate(
 /** frees dialog and all of its sub dialogs */
 static
 SCIP_RETCODE dialogFree(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOG**         dialog              /**< pointer to dialog */
    )
 {
@@ -709,10 +714,16 @@ SCIP_RETCODE dialogFree(
    assert(*dialog != NULL);
    assert((*dialog)->nuses == 0);
 
-   /** release sub dialogs */
+   /* call destructor of dialog */
+   if( (*dialog)->dialogfree != NULL )
+   {
+      SCIP_CALL( (*dialog)->dialogfree(scip, *dialog) );
+   }
+
+   /* release sub dialogs */
    for( i = 0; i < (*dialog)->nsubdialogs; ++i )
    {
-      SCIP_CALL( SCIPdialogRelease(&(*dialog)->subdialogs[i]) );
+      SCIP_CALL( SCIPdialogRelease(scip, &(*dialog)->subdialogs[i]) );
    }
    BMSfreeMemoryArrayNull(&(*dialog)->subdialogs);
 
@@ -735,6 +746,7 @@ void SCIPdialogCapture(
 
 /** releases a dialog */
 SCIP_RETCODE SCIPdialogRelease(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOG**         dialog              /**< pointer to dialog */
    )
 {
@@ -743,7 +755,7 @@ SCIP_RETCODE SCIPdialogRelease(
    (*dialog)->nuses--;
    if( (*dialog)->nuses == 0 )
    {
-      SCIP_CALL( dialogFree(dialog) );
+      SCIP_CALL( dialogFree(scip, dialog) );
    }
    
    return SCIP_OKAY;
@@ -1065,4 +1077,15 @@ SCIP_DIALOGDATA* SCIPdialogGetData(
    assert(dialog != NULL);
 
    return dialog->dialogdata;
+}
+
+/** sets user data of dialog; user has to free old data in advance! */
+void SCIPdialogSetData(
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   SCIP_DIALOGDATA*      dialogdata          /**< new dialog user data */
+   )
+{
+   assert(dialog != NULL);
+
+   dialog->dialogdata = dialogdata;
 }

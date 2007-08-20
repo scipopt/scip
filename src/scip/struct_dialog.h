@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_dialog.h,v 1.14 2007/06/06 11:25:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_dialog.h,v 1.15 2007/08/20 12:42:56 bzfwolte Exp $"
 
 /**@file   struct_dialog.h
  * @brief  datastructures for user interface dialog
@@ -37,6 +37,7 @@ struct SCIP_Dialog
 {
    SCIP_DECL_DIALOGEXEC  ((*dialogexec));    /**< execution method of dialog */
    SCIP_DECL_DIALOGDESC  ((*dialogdesc));    /**< description output method of dialog, or NULL */
+   SCIP_DECL_DIALOGFREE  ((*dialogfree));    /**< destructor of dialog to free user data, or NULL */
    char*                 name;               /**< name of dialog: command name appearing in parent's dialog menu */
    char*                 desc;               /**< description of dialog used if description output method is NULL */
    SCIP_DIALOG*          parent;             /**< parent dialog of dialog */

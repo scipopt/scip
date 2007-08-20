@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.303 2007/08/03 12:05:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.304 2007/08/20 12:42:56 bzfwolte Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1204,6 +1204,7 @@ SCIP_RETCODE SCIPcreateDialog(
    SCIP_DIALOG**         dialog,             /**< pointer to store the dialog */
    SCIP_DECL_DIALOGEXEC  ((*dialogexec)),    /**< execution method of dialog */
    SCIP_DECL_DIALOGDESC  ((*dialogdesc)),    /**< description output method of dialog, or NULL */
+   SCIP_DECL_DIALOGFREE  ((*dialogfree)),    /**< destructor of dialog to free user data, or NULL */
    const char*           name,               /**< name of dialog: command name appearing in parent's dialog menu */
    const char*           desc,               /**< description of dialog used if description output method is NULL */
    SCIP_Bool             issubmenu,          /**< is the dialog a submenu? */

@@ -10,39 +10,29 @@
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License.             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objscip.h,v 1.16 2007/08/20 12:42:55 bzfwolte Exp $"
+#pragma ident "@(#) $Id: dialog_xxx.h,v 1.1 2007/08/20 12:42:55 bzfwolte Exp $"
 
-/**@file   objscip.h
- * @brief  C++ wrapper classes for SCIP
- * @author Tobias Achterberg
+/**@file   dialog_xxx.h
+ * @brief  xxx user interface dialog
+ * @author Kati Wolter
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_OBJSCIP_H__
-#define __SCIP_OBJSCIP_H__
+#ifndef __SCIP_DIALOG_XXX_H__
+#define __SCIP_DIALOG_XXX_H__
 
 
-#include "objscip/objbranchrule.h"
-#include "objscip/objconshdlr.h"
-#include "objscip/objdialog.h"
-#include "objscip/objdisp.h"
-#include "objscip/objeventhdlr.h"
-#include "objscip/objheur.h"
-#include "objscip/objmessagehdlr.h"
-#include "objscip/objnodesel.h"
-#include "objscip/objpresol.h"
-#include "objscip/objpricer.h"
-#include "objscip/objprobdata.h"
-#include "objscip/objprop.h"
-#include "objscip/objreader.h"
-#include "objscip/objrelax.h"
-#include "objscip/objsepa.h"
-#include "objscip/objvardata.h"
+#include "scip/scip.h"
 
+
+/** creates the xxx dialog and includes it in SCIP */
+SCIP_RETCODE SCIPincludeDialogXxx(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 #endif
