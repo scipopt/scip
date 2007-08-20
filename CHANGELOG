@@ -14,6 +14,7 @@ compiling:
 - made ZIMPL=true the default; if you do not want to include ZIMPL support, call "make ZIMPL=false"
 
 interface:
+- new callback method SCIPdialogFree()
 - new method SCIPreadSol()
 - new method SCIPgetVarRedcost()
 - new method SCIPnodeUpdateLowerboundLP()
@@ -46,6 +47,7 @@ interface:
 - SCIPsubversion() now returns an int instead of a const char*
 
 plugins:
+- new C templates disp_xxx.h and dialog_xxx.h, and C++ wrapper classes objdisp.h and objdialog.h, respectively
 - new improvement heuristic "oneopt"
 - improved performance of linear constraint propagation by delaying some floor/ceil calculations
 - new node selection rule "estimate" (best estimate search)
@@ -99,6 +101,7 @@ parameters:
 - new parameters "constraints/linear/maxcardbounddist" and "constraints/knapsack/maxcardbounddist"
 
 features:
+- the doxygen documentation now has HowTo's for all plugin types
 - the doxygen documentation now contains a FAQ
 - SCIP now has a couple of specialized settings, all called scip_*.set
 - SCIP is now compatible to the Exception branch of SoPlex
