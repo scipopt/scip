@@ -3,7 +3,7 @@ current version
 
 compiling:
 - added .exe extension to binaries of MinGW
-- added "LPS=none" for compliling SCIP without a LP solver
+- added "LPS=none" for compiling SCIP without a LP solver
 - modified the default LP solver to be SoPlex instead of CPLEX
 - removed the ".static" extension associated to the LINK variable from the Makefile system
   (If you want to build makefiles for shared library generation, use the OPT variable. For example,
@@ -99,6 +99,7 @@ parameters:
 - new parameters "constraints/linear/maxcardbounddist" and "constraints/knapsack/maxcardbounddist"
 
 features:
+- the doxygen documentation now contains a FAQ
 - SCIP now has a couple of specialized settings, all called scip_*.set
 - SCIP is now compatible to the Exception branch of SoPlex
 - presolving, cut separation, primal heuristics, and strong branching now better respect time limit

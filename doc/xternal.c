@@ -49,6 +49,7 @@
  * - \ref DISP    "How to add display columns"
  * - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
  * - \ref PARAM   "Adding additional user parameters"
+ * - \ref FAQ     "Frequently asked questions"
 */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -2835,3 +2836,6 @@
  *     involve reallocating memory for the string.
  */
 
+/**@page FAQ Frequently Asked Questions
+ * \htmlinclude faq.inc  
+ */
