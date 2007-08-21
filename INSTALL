@@ -79,10 +79,8 @@ Here is what you have to do to get SCIP running:
    - "READLINE=true"   to enable readline library for interactive shell (default)
    - "READLINE=false"  to disable readline library
 
-   - "ZIMPL=true"      to enable ZIMPL file reader (default; needs ZIMPL to be installed, see 2. (g))
+   - "ZIMPL=true"      to enable ZIMPL file reader (default; needs ZIMPL, ZLIB, and GMP to be installed, see 2. (g))
    - "ZIMPL=false"     to disable ZIMPL file reader
-   - "GMP=true"        to enable GMP support in ZIMPL (default)
-   - "GMP=false"       to disable GMP support in ZIMPL
 
    - "VERBOSE=false"   to suppress display of compiler and linker invocations (default)
    - "VERBOSE=true"    to display compiler and linker invocations
@@ -266,6 +264,8 @@ make[1]: Leaving directory `/sw/scip'
        - mkdir <path to SCIP>/lib/zimplinc
        - ln -s <path to ZIMPL's *.h files> <path to SCIP>/lib/zimplinc/zimpl
        - ln -s <file libzimpl-<version>.<options>.a> <path to SCIP>/lib/libzimpl.$(OSTYPE).$(ARCH).$(COMP).a
+       Note that ZIMPL needs the GNU multiprecision library (GMP) and the Z compression library (ZLIB) to be
+       installed on your system.
 
 3. To run the program enter "bin/scip.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
    (e.g. "bin/scip.linux.x86.gnu.opt.spx")

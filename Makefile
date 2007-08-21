@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.215 2007/08/21 11:48:01 bzfpfend Exp $
+# $Id: Makefile,v 1.216 2007/08/21 12:01:55 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -58,7 +58,6 @@ MAKESOFTLINKS	=	true
 READLINE	=	true
 ZLIB		=	true
 ZIMPL		=	true
-GMP		=	true
 
 CC		=	gcc
 CC_c		=	-c # the trailing space is important
@@ -307,17 +306,11 @@ ifeq ($(ZLIB),false)
 $(error ZIMPL requires the ZLIB to be linked. Use either ZIMPL=false or ZLIB=true)
 endif
 FLAGS		+=	-DWITH_ZIMPL -I$(LIBDIR)/zimplinc
-ifeq ($(GMP),true)
 LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)gmp$(LINKLIBSUFFIX)
-else
-LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP).dbl$(LINKLIBSUFFIX) $(LINKCC_l)gmp$(LINKLIBSUFFIX)
-endif
 DIRECTORIES	+=	$(LIBDIR)/zimplinc
 SOFTLINKS	+=	$(LIBDIR)/zimplinc/zimpl
 SOFTLINKS	+=	$(LIBDIR)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXT)
 SOFTLINKS	+=	$(LIBDIR)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).dbl.$(LIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).dbl.$(SHAREDLIBEXT)
 endif
 
 
