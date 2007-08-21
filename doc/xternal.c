@@ -138,7 +138,7 @@
  *
  * \par CONSHDLR_NAME: the name of the constraint handler.
  * This name is used in the interactive shell to address the constraint handler.
- * Additionally, if you are searching a constraint handler with SCIPfindConshdlr(), this name is looked up.
+ * Additionally, if you are searching for a constraint handler with SCIPfindConshdlr(), this name is looked up.
  * Names have to be unique: no two constraint handlers may have the same name.
  *
  * \par CONSHDLR_DESC: the description of the constraint handler.
@@ -188,6 +188,7 @@
  * For example, a separation frequency of 7 means, that the separation callback is executed for subproblems that are
  * in depth 0, 7, 14, ... of the branching tree.
  * A separation frequency of 0 means, that the separation method is only called at the root node.
+ * A separation frequency of -1 disables the separation method of the constraint handler.
  * \n
  * The separation frequency can be adjusted by the user.
  * The property of the constraint handler only defines the default value of the frequency.
@@ -200,6 +201,7 @@
  * This default frequency has the same meaning as the CONSHDLR_SEPAFREQ with respect to the domain propagation
  * callback of the constraint handler.
  * A propagation frequency of 0 means that propagation is only applied in preprocessing and at the root node.
+ * A propagation frequency of -1 disables the propagation method of the constraint handler.
  *
  * \par CONSHDLR_EAGERFREQ: the default frequency for using all instead of only the useful constraints in separation, propagation and enforcement.
  * If \em constraint \em aging is activated, some constraints that were not useful in the past for propagation or
@@ -225,7 +227,7 @@
  * \par CONSHDLR_DELAYSEPA: the default for whether the separation method should be delayed, if other separators found cuts.
  * If the constraint handler's separation method is marked to be delayed, it is only executed after no other separator
  * or constraint handler found a cut during the price-and-cut loop.
- * If the separation method of the constraint handler is very expensive, you may want to mark it to be delayed after all
+ * If the separation method of the constraint handler is very expensive, you may want to mark it to be delayed until all
  * cheap separation methods have been executed.
  *
  * \par CONSHDLR_DELAYPROP: the default for whether the propagation method should be delayed, if other propagators found reductions.
@@ -271,7 +273,7 @@
  * At the bottom of "cons_subtour.c" you can find two interface methods, that also appear in "cons_subtour.h".
  * These are SCIPincludeConshdlrSubtour() and SCIPcreateConsSubtour().
  * \n
- * The method \b SCIPincludeConshdlrSubtour() has only to be adjusted slightly.
+ * The method SCIPincludeConshdlrSubtour() has only to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the constraint handler by calling the method
  * SCIPincludeConshdlr().
  * It is called by the user, if he wants to include the constraint handler, i.e., if he wants to make
@@ -294,7 +296,7 @@
  * You may also add user parameters for your constraint handler.
  * An example for this can be found in src/scip/cons_knapsack.c.
  *
- * The method \b SCIPcreateConsSubtour() is called to create a single constraint of the constraint handler's constraint
+ * The method SCIPcreateConsSubtour() is called to create a single constraint of the constraint handler's constraint
  * class.
  * It should allocate and fill the constraint data, and call SCIPcreateCons().
  * Take a look at the following example from the logicor constraint handler:
@@ -671,6 +673,12 @@
  * SCIPaddConflictUb(scip, y, bdchgidx) to tell SCIP, that the upper bounds of x and y at this point of time were
  * the reason for the deduction of the lower bound of z.
  *
+ * If conflict analysis should not be supported, the method has to set the result code to SCIP_DIDNOTFIND.
+ * Although this is viable approach to circumvent the implementation of the usually rather complex conflict resolving mehod,
+ * it will make the conflict analysis less effective. We suggest to first omit the conflict resolving method and check
+ * how effective the propagation method is. If it produces a lot of propagations for your application, you definitely should
+ * consider to implement the conflict resolving method.
+ *
  * @subsection CONSPRESOL
  *
  * The CONSPRESOL callback is called during preprocessing.
@@ -762,7 +770,7 @@
  *
  * \par PRICER_NAME: the name of the pricer.
  * This name is used in the interactive shell to address the pricer.
- * Additionally, if you are searching a pricer with SCIPfindPricer(), this name is looked up.
+ * Additionally, if you are searching for a pricer with SCIPfindPricer(), this name is looked up.
  * Names have to be unique: no two pricers may have the same name.
  *
  * \par PRICER_DESC: the description of the pricer.
@@ -820,8 +828,8 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_PricerData afterwards.
  *
- * You may also add user parameters for your pricer, see the method \b SCIPincludeConshdlrKnapsack() in src/scip/cons_knapsack.c
- * for an example.
+ * You may also add user parameters for your pricer, see the method SCIPincludeConshdlrKnapsack() in the knapsack constraint handler
+ * src/scip/cons_knapsack.c for an example of how to add user parameters.
  *
  * 
  * @section PRICER_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Pricer
@@ -978,7 +986,7 @@
  *
  * \par PRESOL_NAME: the name of the presolver.
  * This name is used in the interactive shell to address the presolver.
- * Additionally, if you are searching a presolver with SCIPfindPresol(), this name is looked up.
+ * Additionally, if you are searching for a presolver with SCIPfindPresol(), this name is looked up.
  * Names have to be unique: no two presolvers may have the same name.
  *
  * \par PRESOL_DESC: the description of the presolver.
@@ -1007,7 +1015,7 @@
  * \par PRESOL_DELAYPRESOL: the default for whether the presolver should be delayed, if other presolvers found reductions.
  * If the presolver is marked to be delayed, it is only executed if no other presolvers found a reduction during the current
  * presolving round.
- * If the presolver is very expensive, you may want to mark it to be delayed after all cheap presolving methods have been executed.
+ * If the presolver is very expensive, you may want to mark it to be delayed until all cheap presolving methods have been executed.
  * 
  *
  * @section PRESOL_DATA Presolver Data
@@ -1036,7 +1044,7 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_PresolData afterwards.
  *
- * You may also add user parameters for your presolver, see the method \b SCIPincludeConshdlrKnapsack() in src/scip/cons_knapsack.c
+ * You may also add user parameters for your presolver, see the method SCIPincludePresolProbing() in src/scip/presol_probing.c
  * for an example.
  *
  * 
@@ -1149,7 +1157,7 @@
  *
  * \par SEPA_NAME: the name of the separator.
  * This name is used in the interactive shell to address the separator.
- * Additionally, if you are searching a separator with SCIPfindSepa(), this name is looked up.
+ * Additionally, if you are searching for a separator with SCIPfindSepa(), this name is looked up.
  * Names have to be unique: no two separators may have the same name.
  *
  * \par SEPA_DESC: the description of the separator.
@@ -1174,6 +1182,7 @@
  * The frequency defines the depth levels at which the separation methods \ref SEPAEXECLP and \ref SEPAEXECSOL are called.
  * For example, a frequency of 7 means, that the separation callback is executed for subproblems that are in depth 
  * 0, 7, 14, ... of the branching tree. A frequency of 0 means, that the separation method is only called at the root node.
+ * A frequency of -1 disables the separator.
  * \n
  * The frequency can be adjusted by the user. The property of the separator only defines the default value of the frequency.
  * If you want to have a more flexible control of when to execute the separation algorithm, you have to assign
@@ -1185,18 +1194,21 @@
  * to the primal bound compared to the best node's dual bound (global dual bound) is considered. The separation method 
  * of the separator will only be applied at the node if this relative distance does not exceed SEPA_MAXBOUNDDIST. 
  * \n
- * For example, if the global dual bound is 0 and the primal bound is 10, SEPA_MAXBOUNDDIST = 0.25 means that separation 
- * is only applied if the current node's dual bound is in the first quarter of the interval [0,10], i.e., if it is less 
- * than or equal to 2.5. 
+ * For example, if the global dual bound is 50 and the primal bound is 60, SEPA_MAXBOUNDDIST = 0.25 means that separation 
+ * is only applied if the current node's dual bound is in the first quarter of the interval [50,60], i.e., if it is less 
+ * than or equal to 52.5.
  * \n
- * In particular, the extremal values 0.0 and 1.0 mean that separation is only applied at the current best node and at all 
- * nodes, respectively. Since separation seems to be most effective when applied at nodes that contribute to the global 
+ * In particular, the values 0.0 and 1.0 mean that separation is applied at the current best node only or at all 
+ * nodes, respectively. Since separation seems to be most important to apply at nodes that define to the global 
  * dual bound, 0.0 is probably a good choice for SEPA_MAXBOUNDDIST.
+ * Note that separators with a frequency of SEPA_FREQ = 0 are only applied at the root node.
+ * Obviously, at the root node the local dual bound is equal to the global dual bound and thus, the separator is called
+ * for any value of the SEPA_MAXBOUNDDIST setting.
  *
  * \par SEPA_DELAY: the default for whether the separation method should be delayed, if other separators or constraint handlers found cuts.
  * If the separator's separation method is marked to be delayed, it is only executed after no other separator
  * or constraint handler found a cut during the price-and-cut loop. 
- * If the separation method of the separator is very expensive, you may want to mark it to be delayed after all cheap 
+ * If the separation method of the separator is very expensive, you may want to mark it to be delayed until all cheap 
  * separation methods have been executed.
  *
  * @section SEPA_DATA Separator Data
@@ -1224,13 +1236,14 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_SepaData afterwards.
  *
- * You may also add user parameters for your separator, see the method \b SCIPincludeConshdlrKnapsack() 
- * in src/scip/cons_knapsack.c for an example.
+ * You may also add user parameters for your separator, see the method SCIPincludeSepaGomory() 
+ * in src/scip/sepa_gomory.c for an example.
  *
  * 
  * @section SEPA_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Separator
  *
  * Separator plugins do not have any fundamental callback methods. All callback methods are optional.
+ * Most probably, you want to use at least the \ref SEPAEXECLP callback to separate LP solutions.
  *
  * Additional documentation to the callback methods can be found in "type_sepa.h".
  *
@@ -1238,6 +1251,54 @@
  *
  * The additional callback methods need not to be implemented in every case.
  * They can be used, for example, to initialize and free private data.
+ * The main functions of the separator are the \ref SEPAEXECLP and \ref SEPAEXECSOL callbacks.
+ *
+ * @subsection SEPAEXECLP
+ *
+ * The SEPAEXECLP callback is executed during the price-and-cut loop of the subproblem processing.
+ * It should try to generate general purpose cutting planes in order to separate the current LP solution.
+ * The method is called in the LP solution loop, which means that a valid LP solution exists.
+ *
+ * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
+ * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
+ * In addition to LP rows, the callback may also produce domain reductions or add other constraints.
+ *
+ * Overall, the SEPAEXECLP callback has the following options, which is indicated by the return value of
+ * the 'result' variable:
+ *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
+ *  - adding an additional constraint (result SCIP_CONSADDED)
+ *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
+ *  - adding a cutting plane to the LP (result SCIP_SEPARATED)
+ *  - stating that the separator searched, but did not find domain reductions, cutting planes, or cut constraints
+ *    (result SCIP_DIDNOTFIND)
+ *  - stating that the separator was skipped (result SCIP_DIDNOTRUN)
+ *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
+ *
+ * @subsection SEPAEXECSOL
+ *
+ * The SEPAEXECSOL callback is executed during the separation loop on arbitrary primal solutions.
+ * It should try to generate general purpose cutting planes in order to separate the given primal solution.
+ * The method is not called in the LP solution loop, which means that there is no valid LP solution.
+ *
+ * In the standard SCIP environment, the SEPAEXECSOL callback is not used because only LP solutions are
+ * separated. The SEPAEXECSOL callback provides means to support external relaxation handlers like semidefinite
+ * relaxations that want to separate an intermediate primal solution vector. Thus, if you do not want to support
+ * such external plugins, you do not need to implement this callback method.
+ *
+ * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
+ * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
+ * In addition to LP rows, the callback may also produce domain reductions or add other constraints.
+ *
+ * Overall, the SEPAEXECSOL callback has the following options, which is indicated by the return value of
+ * the 'result' variable:
+ *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
+ *  - adding an additional constraint (result SCIP_CONSADDED)
+ *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
+ *  - adding a cutting plane to the LP (result SCIP_SEPARATED)
+ *  - stating that the separator searched, but did not find domain reductions, cutting planes, or cut constraints
+ *    (result SCIP_DIDNOTFIND)
+ *  - stating that the separator was skipped (result SCIP_DIDNOTRUN)
+ *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
  *
  * @subsection SEPAFREE
  *
@@ -1281,54 +1342,14 @@
  *
  * The SEPAEXITSOL callback is executed before the branch and bound process is freed. The separator should use this call 
  * to clean up its branch and bound data, in particular to release all LP rows that he has created or captured.
- *
- * @subsection SEPAEXECLP
- *
- * The SEPAEXECLP callback is executed during the price-and-cut loop of the subproblem processing.
- * It should try to generate general purpose cutting planes in order to separate the current LP solution.
- * The method is called in the LP solution loop, which means that a valid LP solution exists.
- *
- * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
- * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
- * However, it may also produce domain reductions or add other constraints.
- *
- * The SEPAEXECLP callback has the following options:
- *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
- *  - adding an additional constraint (result SCIP_CONSADDED)
- *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
- *  - adding a cutting plane to the LP (result SCIP_SEPARATED)
- *  - stating that the separator searched, but did not find domain reductions, cutting planes, or cut constraints
- *    (result SCIP_DIDNOTFIND)
- *  - stating that the separator was skipped (result SCIP_DIDNOTRUN)
- *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
- *
- * @subsection SEPAEXECSOL
- *
- * The SEPAEXECSOL callback is executed during separation loop on arbitrary primal solutions.
- * It should try to generate general purpose cutting planes in order to separate the given primal solution.
- * The method is not called in the LP solution loop, which means that there is no valid LP solution.
- *
- * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
- * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
- * However, it may also produce domain reductions or add other constraints.
- *
- * The SEPAEXECSOL callback has the following options:
- *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
- *  - adding an additional constraint (result SCIP_CONSADDED)
- *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
- *  - adding a cutting plane to the LP (result SCIP_SEPARATED)
- *  - stating that the separator searched, but did not find domain reductions, cutting planes, or cut constraints
- *    (result SCIP_DIDNOTFIND)
- *  - stating that the separator was skipped (result SCIP_DIDNOTRUN)
- *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page PROP How to add propagators
  *
- * Propagators are used to tighten the variable's domains. Like for cutting planes, there are two different types of 
+ * Propagators are used to tighten the domains of the variables. Like for cutting planes, there are two different types of 
  * domain propagations. Constraint based (primal) domain propagation algorithms are part of the corresponding constraint
- * handlers, see \ref CONSPROP. In contrast, domain propagators provide dual propagations, i.e., propagations that can be
+ * handlers, see \ref CONSPROP. In contrast, domain propagators usually provide dual propagations, i.e., propagations that can be
  * applied due to the objective function and the current best known primal solution.
  *
  * In the following, we explain how the user can add an own propagator.
@@ -1359,7 +1380,7 @@
  *
  * \par PROP_NAME: the name of the propagator.
  * This name is used in the interactive shell to address the propagator.
- * Additionally, if you are searching a propagator with SCIPfindProp(), this name is looked up.
+ * Additionally, if you are searching for a propagator with SCIPfindProp(), this name is looked up.
  * Names have to be unique: no two propagators may have the same name.
  *
  * \par PROP_DESC: the description of the propagator.
@@ -1382,7 +1403,7 @@
  * The frequency defines the depth levels at which the propagation method \ref PROPEXEC is called.
  * For example, a frequency of 7 means, that the propagation callback is executed for subproblems that are in depth 
  * 0, 7, 14, ... of the branching tree. A frequency of 0 means that propagation is only applied in preprocessing and 
- * at the root node.
+ * at the root node. A frequency of -1 disables the propagator.
  * \n
  * The frequency can be adjusted by the user. The property of the propagator only defines the default value of the 
  * frequency. If you want to have a more flexible control of when to execute the propagation algorithm, you have to assign
@@ -1391,9 +1412,8 @@
  *
  * \par PROP_DELAY: the default for whether the propagation method should be delayed, if other propagators or constraint handlers found domain reductions?
  * If the propagator's propagation method is marked to be delayed, it is only executed after no other propagator or 
- * constraint handler found a domain reduction during the price-and-cut loop and the current probing step if we are 
- * in the solving stage and presolving stage, respectively.
- * If the propagation method of the propagator is very expensive, you may want to mark it to be delayed after all cheap 
+ * constraint handler found a domain reduction in the current iteration of the domain propagation loop.
+ * If the propagation method of the propagator is very expensive, you may want to mark it to be delayed until all cheap 
  * propagation methods have been executed.
  *
  *
@@ -1425,8 +1445,8 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_PropData afterwards.
  *
- * You may also add user parameters for your propagator, see the method \b SCIPincludeConshdlrKnapsack() in 
- * src/scip/cons_knapsack.c for an example.
+ * You may also add user parameters for your propagator, see the method SCIPincludePropPseudoobj() in 
+ * src/scip/prop_pseudoobj.c for an example.
  *
  *
  * @section PROP_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Propagator
@@ -1443,12 +1463,12 @@
  *
  * The PROPEXEC callback is called during presolving and during the subproblem processing. 
  * It should perform the actual domain propagation, which means that it should tighten the variables' bounds.
- * This technique, which is the main workhorse of constraint programming, is called "node preprocessing" in the
+ * The technique of domain propagation, which is the main workhorse of constraint programming, is called "node preprocessing" in the
  * Integer Programming community.
  *
  * The PROPEXEC callback has the following options:
  *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
- *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
+ *  - reducing (i.e, tightening) the domains of some variables (result SCIP_REDUCEDDOM)
  *  - stating that the propagator searched, but did not find domain reductions, cutting planes, or cut constraints
  *    (result SCIP_DIDNOTFIND)
  *  - stating that the propagator was skipped (result SCIP_DIDNOTRUN)
@@ -1456,7 +1476,7 @@
  * 
  * @subsection PROPRESPROP
  *
- * If the propagator should support conflict analysis, it has to supply the PROPRESPROP method.
+ * If the propagator wants to support conflict analysis, it has to supply the PROPRESPROP method.
  * It also should call SCIPinferVarLbProp() or SCIPinferVarUbProp() in the domain propagation instead of SCIPchgVarLb() 
  * or SCIPchgVarUb() in order to deduce bound changes on variables.
  * In the SCIPinferVarLbProp() and SCIPinferVarUbProp() calls, the propagator provides a pointer to itself and an integer 
@@ -1470,6 +1490,12 @@
  *
  * See the description of the propagation conflict resolving method \ref CONSRESPROP of constraint handlers for 
  * further details.
+ *
+ * If conflict analysis should not be supported, the method has to set the result code to SCIP_DIDNOTFIND.
+ * Although this is viable approach to circumvent the implementation of the usually rather complex conflict resolving mehod,
+ * it will make the conflict analysis less effective. We suggest to first omit the conflict resolving method and check
+ * how effective the propagation method is. If it produces a lot of propagations for your application, you definitely should
+ * consider to implement the conflict resolving method.
  *
  *
  * @section PROP_ADDITIONALCALLBACKS Additional Callback Methods of a Propagator
@@ -1566,29 +1592,43 @@
  *
  * \par BRANCHRULE_NAME: the name of the branching rule.
  * This name is used in the interactive shell to address the branching rule.
- * Additionally, if you are searching a branching rule with SCIPfindBranchrule(), this name is looked up.
+ * Additionally, if you are searching for a branching rule with SCIPfindBranchrule(), this name is looked up.
  * Names have to be unique: no two branching rules may have the same name.
  *
  * \par BRANCHRULE_DESC: the description of the branching rule.
  * This string is printed as description of the branching rule in the interactive shell.
  *
- * \par BRANCHRULE_PRIORITY: the priority of the branching rule.
+ * \par BRANCHRULE_PRIORITY: the default value for the priority of the branching rule.
  * In the subproblem processing, the branching rules are called in decreasing order of their priority until 
- * one succeeded to branch. 
+ * one succeeded to branch. Since most branching rules are able to generate a branching in all situations,
+ * only the rule of highest priority is used. In combination with the BRANCHRULE_MAXDEPTH and
+ * BRANCHRULE_MAXBOUNDDIST settings, however, interesting strategies can be easily employed. For example,
+ * the user can set the priority of the "full strong branching" strategy to the highest value and assign the
+ * second highest value to the "reliable pseudo cost" rule. If he also sets the maximal depth for the
+ * "full strong branching" to 5, in the top 5 depth levels of the search tree the "full strong branching" is
+ * applied, while in the deeper levels "reliable pseudo cost branching" is used.
+ * \n
+ * Note that the BRANCHRULE_PRIORITY property only specifies the default value of the priority. The user can
+ * change this value arbitrarily.
  *
- * \par BRANCHRULE_MAXDEPTH: the maximal depth level of the branching rule.
+ * \par BRANCHRULE_MAXDEPTH: the default value for the maximal depth level of the branching rule.
  * This parameter denotes the maximal depth level in the branch-and-bound tree up to which the branching method of the 
  * branching rule will be applied. Use -1 for no limit.
+ * \n
+ * Note that this property only specifies the default value. The user can change this value arbitrarily.
  *
- * \par BRANCHRULE_MAXBOUNDDIST: the default maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching.
+ * \par BRANCHRULE_MAXBOUNDDIST: the default value for the maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching.
  * At the current branch-and-bound node, the relative distance from its dual bound (local dual bound) 
  * to the primal bound compared to the best node's dual bound (global dual bound) is considered. The branching method of 
  * the branching rule will only be applied at the node if this relative distance does not exceed BRANCHRULE_MAXBOUNDDIST. 
  * \n
- * For example, if the global dual bound is 0 and the primal bound is 10, BRANCHRULE_MAXBOUNDDIST = 0.25 means that 
- * branching is only applied if the current node's dual bound is in the first quarter of the interval [0,10], i.e., if it 
- * is less than or equal to 2.5. In particular, the extremal values 0.0 and 1.0 mean that branching is only applied at the 
- * current best node and at all nodes, respectively. 
+ * For example, if the global dual bound is 50 and the primal bound is 60, BRANCHRULE_MAXBOUNDDIST = 0.25 means that 
+ * branching is only applied if the current node's dual bound is in the first quarter of the interval [50,60], i.e., if it 
+ * is less than or equal to 52.5. In particular, the values 0.0 and 1.0 mean that the branching rule is applied at the
+ * current best node only or at all nodes, respectively.
+ * \n
+ * Note that the BRANCHRULE_MAXBOUNDDIST property only specifies the default value of the maximal bound distance.
+ * The user can change this value arbitrarily.
  * 
  *
  * @section BRANCHRULE_DATA Branching Rule Data
@@ -1619,21 +1659,111 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_BranchruleData afterwards.
  *
- * You may also add user parameters for your branching rule, see the method \b SCIPincludeConshdlrKnapsack() in 
- * src/scip/cons_knapsack.c for an example.
+ * You may also add user parameters for your branching rule, see the method SCIPincludeBranchruleRelpscost() in 
+ * src/scip/branch_relpscost.c for an example.
  *
  * 
  * @section BRANCHRULE_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Branching Rule
  *
  * Branching rules do not have any fundamental callback methods, i.e., all callback methods are optional.
+ * In most cases, however, you want to implement the \ref BRANCHEXECLP method and sometimes the \ref BRANCHEXECPS method.
  *
  *
  * @section BRANCHRULE_ADDITIONALCALLBACKS Additional Callback Methods of a Branching Rule
  *
  * The additional callback methods need not to be implemented in every case.
  * They can be used, for example, to initialize and free private data.
+ * The most important callback methods are the \ref BRANCHEXECLP and \ref BRANCHEXECPS methods, which perform the
+ * actual task of generating a branching.
  *
  * Additional documentation to the callback methods can be found in "type_branch.h".
+ *
+ * @subsection BRANCHEXECLP
+ *
+ * The BRANCHEXECLP callback is executed during node processing if a fractional LP solution is available. It should 
+ * split the current problem into subproblems. Usually, the branching is done in a way such that the current fractional
+ * LP solution is no longer feasible in the relaxation of the subproblems.
+ * It is, however, possible to create a child node for which the fractional LP solution is still feasible in the relaxation,
+ * for example, by branching on a variable with integral LP value.
+ * In every case, you have to make sure that each subproblem is a proper restriction of the current problem.
+ * Otherwise, you risk to produce an infinite path in the search tree.
+ *
+ * The user gains access to the branching candidates, i.e., to the fractional variables, and their LP solution values
+ * by calling the method SCIPgetLPBranchCands(). Furthermore, SCIP provides two methods for performing the actual 
+ * branching, namely SCIPbranchVar() and SCIPcreateChild(). 
+ *
+ * Given an integral variable \f$x\f$ with fractional LP solution value 
+ * \f$x^*\f$, the method SCIPbranchVar() creates two child nodes; one contains the bound \f$x \le \lfloor x^* \rfloor\f$ 
+ * and the other one contains the bound \f$x \ge \lceil x^* \rceil\f$, see the BRANCHEXECLP callback in 
+ * src/scip/branch_mostinf.c for an example. In addition, if a proven lower objective bound of a created child node is
+ * known, like after strong branching has been applied, the user may call the method SCIPupdateNodeLowerbound() in order
+ * to update the child node's lower bound.   
+ *
+ * In order to apply more general branching schemes, one should use the method SCIPcreateChild(). For each child node
+ * that the branching rule wants to generate, it has to call SCIPcreateChild() once. The branching rule has
+ * to assign two values to the new nodes: a node selection priority for each node and an estimate for the objective value 
+ * of the best feasible solution contained in the subtree after applying the branching. If the method SCIPbranchVar() 
+ * is used, these values are automatically assigned. Here, the user can calculate these values by calling the method 
+ * SCIPcalcNodeselPriority(), which takes into account the preferred branch direction of the branching variable, and
+ * the method SCIPcalcChildEstimate(), which is based on pseudo costs, and pass them to the SCIPcreateChild() call.     
+ * \n
+ * After having created a child node, the additional restrictions of the child node have to be added with calls
+ * to SCIPaddConsNode(), SCIPchgVarLbNode(), and SCIPchgVarUbNode().
+ *
+ * In some cases, the branching rule can tighten the current subproblem instead of producing a branching.
+ * Therefore, the BRANCHEXECLP callback may also produce domain reductions or add additional constraints to the current subproblem.
+ *
+ * The BRANCHEXECLP callback has the following options:
+ *  - detecting that the node is infeasible and can be cut off (result SCIP_CUTOFF)
+ *  - adding an additional constraint (e.g. a conflict constraint) (result SCIP_CONSADDED; note that this action
+ *    must not be performed if the input "allowaddcons" is FALSE)
+ *  - reducing the domain of a variable (result SCIP_REDUCEDDOM)
+ *  - adding a cutting plane to the LP (result SCIP_SEPARATED)
+ *  - applying a branching (result SCIP_BRANCHED)
+ *  - stating that the branching rule was skipped (result SCIP_DIDNOTRUN), which means that the branching rule with the
+ *    next largest priority is called.
+ *
+ * @subsection BRANCHEXECPS
+ *
+ * The BRANCHEXECPS callback is executed during node processing if no LP solution is available and at least one of the
+ * integer variables is not yet fixed. It should split the current problem into subproblems.
+ *
+ * The user gains access to the branching candidates, i.e., to the non-fixed integer variables, by calling the method 
+ * SCIPgetPseudoBranchCands(). Furthermore, SCIP provides two methods for performing the actual branching, namely 
+ * SCIPbranchVar() and SCIPcreateChild(). 
+ *
+ * Given an integral variable \f$x\f$ with pseudo solution value \f$x^*\f$, the method SCIPbranchVar() creates 
+ * three child nodes. Two of them contain the bounds \f$x \le x^* - 1 \f$ and \f$x \ge x^* + 1 \f$, respectively, such that the current 
+ * pseudo solution is cut off. In the third node, the variable \f$x\f$ is fixed to \f$ x^*\f$ and this hopefully reduces 
+ * other variables' domains and allows to cut off the current pseudo solution. See the BRANCHEXECPS callback in 
+ * src/scip/branch_random.c for an example. In addition, if a proven lower bound of a created child node is known the user 
+ * may call the method SCIPupdateNodeLowerbound() in order to update the child node's lower bound.   
+ *
+ * In order to apply more general branching schemes, one should use the method SCIPcreateChild(). The branching rule has
+ * to assign two values to the new nodes: a node selection priority for each node and an estimate for the objective value 
+ * of the best feasible solution contained in the subtree after applying the branching. If the method SCIPbranchVar() 
+ * is used, these values are automatically assigned. Here, the user can calculate these values by calling the method 
+ * SCIPcalcNodeselPriority(), which takes into account the preferred branch direction of the branching variable, and
+ * the method SCIPcalcChildEstimate(), which is based on pseudo costs, and pass them to the SCIPcreateChild() call.     
+ * \n
+ * After having created a child node, the additional restrictions of the child node have to be added with calls
+ * to SCIPaddConsNode(), SCIPchgVarLbNode(), and SCIPchgVarUbNode().
+ *
+ * In some cases, the branching rule can tighten the current subproblem instead of producing a branching. For example,
+ * strong branching might have proven that rounding up a variable would lead to an infeasible LP relaxation and thus,
+ * the variable must be rounded down. Therefore, the BRANCHEXECPS callback may also produce domain reductions or add
+ * additional constraints to the current subproblem.
+ *
+ * The BRANCHEXECPS callback has the following options:
+ *  - detecting that the node is infeasible and can be cut off (result SCIP_CUTOFF)
+ *  - adding an additional constraint (e.g. a conflict constraint) (result SCIP_CONSADDED; note that this action
+ *    must not be performed if the input "allowaddcons" is FALSE)
+ *  - reducing the domain of a variable that rendered the current LP solution to be infeasible (result SCIP_REDUCEDDOM)
+ *  - applying a branching (result SCIP_BRANCHED)
+ *  - stating that the branching rule was skipped (result SCIP_DIDNOTRUN).
+ *
+ * Note that in contrast to the BRANCHEXECLP callback, the BRANCHEXECPS callback cannot add cutting planes to the current
+ * LP relaxation.
  *
  * @subsection BRANCHFREE
  *
@@ -1679,74 +1809,6 @@
  *
  * The BRANCHEXITSOL callback is executed before the branch and bound process is freed.
  * The branching rule should use this call to clean up its branch and bound data.
- *
- * @subsection BRANCHEXECLP
- *
- * The BRANCHEXECLP callback is executed during node processing if a fractional LP solution is available. It should 
- * try to split the current problem into subproblems, for example, such that the current fractional LP solution is no 
- * longer feasible in the relaxation of the subproblems.
- *
- * The user gains access to the branching candidates, i.e., to the fractional variables, and their LP solution values
- * by calling the method SCIPgetLPBranchCands(). Furthermore, SCIP provides two methods for performing the actual 
- * branching, namely SCIPbranchVar() and SCIPcreateChild(). 
- *\n
- * Given a variable \f$x\f$ with fractional LP solution value 
- * \f$x^*\f$, the method \b SCIPbranchVar() creates two child nodes; one contains the bound \f$x \le \lfloor x^* \rfloor\f$ 
- * and the other one contains the bound \f$x \ge \lceil x^* \rceil\f$, see the BRANCHEXECLP callback in 
- * src/scip/branch_mostinf.c for an example. In addition, if a proven lower bound of a created child node is known, like 
- * in strong branching, the user may call the method SCIPupdateNodeLowerbound() in order to update the child node's lower 
- * bound.   
- * \n
- * In order to apply more general branching schemes, one should use the method \b SCIPcreateChild(). The branching rule has
- * to assign two values to the new nodes: a node selection priority for each node and an estimate for the objective value 
- * of the best feasible solution contained in the subtree after applying the branching. If the method SCIPbranchVar() 
- * is used, these values are automatically assigned. Here, the user can calculate these values by calling the method 
- * SCIPcalcNodeselPriority(), which takes into account the preferred branch direction of the branching variable, and
- * the method SCIPcalcChildEstimate(), which is based on pseudo costs, and pass them to the SCIPcreateChild() call.     
- *
- * However, the callback may also produce domain reductions or add additional constraints.
- *
- * The BRANCHEXECLP callback has the following options:
- *  - detecting that the node is infeasible and can be cut off (result SCIP_CUTOFF)
- *  - adding an additional constraint (e.g. a conflict constraint) (result SCIP_CONSADDED; note that this result code 
- *    must not be returned if the input "allowaddcons" is FALSE)
- *  - reducing the domain of a variable that rendered the current LP solution to be infeasible (result SCIP_REDUCEDDOM)
- *  - adding a cutting plane to the LP (result SCIP_SEPARATED)
- *  - applying a branching (result SCIP_BRANCHED)
- *  - stating that the branching rule was skipped (result SCIP_DIDNOTRUN).
- *
- * @subsection BRANCHEXECPS
- *
- * The BRANCHEXECPS callback is executed during node processing if a not completely fixed pseudo solution is 
- * available. It should try to split the current problem into subproblems.
- *
- * The user gains access to the branching candidates, i.e., to the non-fixed integer variables, by calling the method 
- * SCIPgetPseudoBranchCands(). Furthermore, SCIP provides two methods for performing the actual branching, namely 
- * SCIPbranchVar() and SCIPcreateChild(). 
- *\n
- * Given an integral variable \f$x\f$ with pseudo solution value \f$x^*\f$, the method \b SCIPbranchVar() creates 
- * three child nodes. Two of them contain the bounds \f$x \le x^* - 1 \f$ and \f$x \ge x^* + 1 \f$, such that the current 
- * pseudo solution is cut off. In the third node, the variable \f$x\f$ is fixed to \f$ x^*\f$ and this hopefully reduces 
- * other variables' domains and allows to cut off the current pseudo solution. See the BRANCHEXECPS callback in 
- * src/scip/branch_random.c for an example. In addition, if a proven lower bound of a created child node is known the user 
- * may call the method SCIPupdateNodeLowerbound() in order to update the child node's lower bound.   
- * \n
- * In order to apply more general branching schemes, one should use the method \b SCIPcreateChild(). The branching rule has
- * to assign two values to the new nodes: a node selection priority for each node and an estimate for the objective value 
- * of the best feasible solution contained in the subtree after applying the branching. If the method SCIPbranchVar() 
- * is used, these values are automatically assigned. Here, the user can calculate these values by calling the method 
- * SCIPcalcNodeselPriority(), which takes into account the preferred branch direction of the branching variable, and
- * the method SCIPcalcChildEstimate(), which is based on pseudo costs, and pass them to the SCIPcreateChild() call.     
- *
- * However, the callback may also produce domain reductions or add additional constraints.
- *
- * The BRANCHEXECLP callback has the following options:
- *  - detecting that the node is infeasible and can be cut off (result SCIP_CUTOFF)
- *  - adding an additional constraint (e.g. a conflict constraint) (result SCIP_CONSADDED; note that this result code 
- *    must not be returned if the input "allowaddcons" is FALSE)
- *  - reducing the domain of a variable that rendered the current LP solution to be infeasible (result SCIP_REDUCEDDOM)
- *  - applying a branching (result SCIP_BRANCHED)
- *  - stating that the branching rule was skipped (result SCIP_DIDNOTRUN).
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1784,7 +1846,7 @@
  *
  * \par NODESEL_NAME: the name of the node selector.
  * This name is used in the interactive shell to address the node selector.
- * Additionally, if you are searching a node selector with SCIPfindNodesel(), this name is looked up.
+ * Additionally, if you are searching for a node selector with SCIPfindNodesel(), this name is looked up.
  * Names have to be unique: no two node selectors may have the same name.
  * 
  * \par NODESEL_DESC: the description of the node selector.
@@ -1833,8 +1895,8 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_NodeselData afterwards.
  *
- * You may also add user parameters for your node selector, see the method \b SCIPincludeConshdlrKnapsack() in 
- * src/scip/cons_knapsack.c for an example.
+ * You may also add user parameters for your node selector, see the method SCIPincludeNodeselRestartdfs() in 
+ * src/scip/nodesel_restartdfs.c for an example.
  *
  * 
  * @section NODESEL_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Node Selector
@@ -1953,7 +2015,7 @@
  *
  * \par HEUR_NAME: the name of the primal heuristic.
  * This name is used in the interactive shell to address the primal heuristic.
- * Additionally, if you are searching a primal heuristic with SCIPfindHeur(), this name is looked up.
+ * Additionally, if you are searching for a primal heuristic with SCIPfindHeur(), this name is looked up.
  * Names have to be unique: no two primal heuristics may have the same name.
  *
  * \par HEUR_DESC: the description of the primal heuristic.
@@ -1980,6 +2042,7 @@
  * method of the primal heuristic \ref HEUREXEC is called. For example, a frequency of 7 together with a frequence offset 
  * of 0 means, that the callback is executed for subproblems that are in depth 0, 7, 14, ... of the branching tree. A 
  * frequency of 0 together with an frequence offset of 0 means, that the execution method is only called at the root node. 
+ * A frequency of -1 disables the heuristic.
  * \n
  * The frequency can be adjusted by the user. The property of the primal heuristic only defines the default value of the 
  * frequency. If you want to have a more flexible control of when to execute the primal heuristic, you have to assign
@@ -1989,7 +2052,7 @@
  *
  * \par HEUR_FREQOFS: the frequency offset for executing the primal heuristic.
  * The frequency offset defines the depth of the branching tree at which the primal heuristic is executed for the first 
- * time. For example, a frequency of 7 (see HEUR_FREQ) together with an frequency offset of 10 means, that the 
+ * time. For example, a frequency of 7 (see HEUR_FREQ) together with a frequency offset of 10 means, that the 
  * callback is executed for subproblems that are in depth 10, 17, 24, ... of the branching tree. In particular, assigning 
  * different offset values to heuristics of the same type, like diving heuristics, can be useful for evenly spreading the 
  * application of these heuristics across the branch-and-bound tree.
@@ -2065,8 +2128,8 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_HeurData afterwards.
  *
- * You may also add user parameters for your primal heuristic, see the method \b SCIPincludeConshdlrKnapsack() in 
- * src/scip/cons_knapsack.c for an example.
+ * You may also add user parameters for your primal heuristic, see the method SCIPincludeHeurFeaspump() in 
+ * src/scip/heur_feaspump.c for an example.
  *
  * 
  * @section HEUR_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Primal Heuristic
@@ -2184,7 +2247,7 @@
  *
  * \par RELAX_NAME: the name of the relaxation handler.
  * This name is used in the interactive shell to address the relaxation handler.
- * Additionally, if you are searching a relaxation handler with SCIPfindRelax(), this name is looked up.
+ * Additionally, if you are searching for a relaxation handler with SCIPfindRelax(), this name is looked up.
  * Names have to be unique: no two relaxation handlers may have the same name.
  *
  * \par RELAX_DESC: the description of the relaxation handler.
@@ -2209,7 +2272,7 @@
  * The frequency defines the depth levels at which the relaxation solving method \ref RELAXEXEC is called.
  * For example, a frequency of 7 means, that the relaxation solving callback is executed for subproblems that are in depth 
  * 0, 7, 14, ... of the branching tree. A frequency of 0 means that the callback is only executed at the root node, i.e., 
- * only the relaxation of the root problem is solved. 
+ * only the relaxation of the root problem is solved. A frequency of -1 disables the relaxation handler.
  *
  *
  * @section RELAX_DATA Relaxation Handler Data
@@ -2239,8 +2302,8 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_RelaxData afterwards.
  *
- * You may also add user parameters for your relaxation handler, see the method \b SCIPincludeConshdlrKnapsack() in 
- * src/scip/cons_knapsack.c for an example.
+ * You may also add user parameters for your relaxation handler, see the method SCIPincludeConshdlrKnapsack() in 
+ * the knapsack constraint handler src/scip/cons_knapsack.c for an example of how to add user parameters.
  *
  *
  * @section RELAX_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Relaxation Handler
@@ -2363,7 +2426,7 @@
  *
  * \par READER_NAME: the name of the file reader.
  * This name is used in the interactive shell to address the file reader.
- * Additionally, if you are searching a file reader with SCIPfindReader(), this name is looked up.
+ * Additionally, if you are searching for a file reader with SCIPfindReader(), this name is looked up.
  * Names have to be unique: no two file readers may have the same name.
  * 
  * \par READER_DESC: the description of the file reader.
@@ -2400,8 +2463,8 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_ReaderData afterwards.
  *
- * You may also add user parameters for your file reader, see the method \b SCIPincludeConshdlrKnapsack() in 
- * src/scip/cons_knapsack.c for an example.
+ * You may also add user parameters for your file reader, see the method SCIPincludeReaderLp() in 
+ * src/scip/reader_lp.c for an example.
  *
  *
  * @section READER_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a File Reader
@@ -2665,7 +2728,7 @@
  *
  * \par DISP_NAME: the name of the display column.
  * This name is used in the interactive shell to address the display column.
- * Additionally, if you are searching a display column with SCIPfindDisp(), this name is looked up.
+ * Additionally, if you are searching for a display column with SCIPfindDisp(), this name is looked up.
  * Names have to be unique: no two display columns may have the same name.
  *
  * \par DISP_DESC: the description of the display column.
@@ -2723,8 +2786,8 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_DispData afterwards.
  *
- * You may also add user parameters for your display column, see the method \b SCIPincludeConshdlrKnapsack() in 
- * src/scip/cons_knapsack.c for an example.
+ * Although this is very uncommon, you may also add user parameters for your display column, see the method
+ * SCIPincludeConshdlrKnapsack() in the knapsack constraint handler src/scip/cons_knapsack.c for an example.
  *
  * 
  * @section DISP_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Display Column

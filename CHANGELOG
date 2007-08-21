@@ -65,8 +65,7 @@ plugins:
 - less aggressive in Gomory cut separation
 - strong CG cuts are now also separated for integral slack variables
 - default dialog menu now includes the commands "set default" and "display parameters"
-- new dummy LP interface "lpi_non.c"; usefull for running SCIP without a LP solver
-- changed the dummy LP interface "lpi_non.c" to "lpi_none.c"
+- new dummy LP interface "lpi_none.c"; usefull for running SCIP without a LP solver
 
 parameters:
 - new parameter "separating/clique/backtrackfreq" to speed up clique cut separation in heuristic fashion
