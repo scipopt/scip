@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.29 2007/06/06 11:25:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.30 2007/08/21 14:39:05 bzfpfend Exp $"
 
 /**@file   cons_conjunction.c
  * @brief  constraint handler for conjunction constraints
@@ -543,11 +543,17 @@ SCIP_RETCODE SCIPcreateConsConjunction(
    const char*           name,               /**< name of constraint */
    int                   nconss,             /**< number of initial constraints in conjunction */
    SCIP_CONS**           conss,              /**< initial constraint in conjunction */
-   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
-   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
-   SCIP_Bool             local,              /**< is constraint only valid locally? */
-   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
-   SCIP_Bool             dynamic             /**< is constraint subject to aging? */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             local,              /**< is constraint only valid locally?
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
+                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
+                                              *   adds coefficients to this constraint. */
+   SCIP_Bool             dynamic             /**< is constraint subject to aging?
+                                              *   Usually set to TRUE. */
    )
 {
    SCIP_CONSHDLR* conshdlr;
