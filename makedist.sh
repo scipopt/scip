@@ -36,10 +36,6 @@ $NAME/examples/SamplePricer/* $NAME/examples/SamplePricer/doc/* $NAME/examples/S
 $NAME/examples/SamplePricer/make/make.* \
 $NAME/examples/SamplePricer/src/depend.* \
 $NAME/examples/SamplePricer/src/*.c $NAME/examples/SamplePricer/src/*.cpp $NAME/examples/SamplePricer/src/*.h \
-$NAME/examples/SamplePricer_C/* $NAME/examples/SamplePricer_C/doc/* $NAME/examples/SamplePricer_C/lib \
-$NAME/examples/SamplePricer_C/make/make.* \
-$NAME/examples/SamplePricer_C/src/depend.* \
-$NAME/examples/SamplePricer_C/src/*.c $NAME/examples/SamplePricer_C/src/*.cpp $NAME/examples/SamplePricer_C/src/*.h \
 $NAME/check/IP/miplib/bell3a.mps \
 $NAME/check/IP/miplib/bell5.mps \
 $NAME/check/IP/miplib/blend2.mps \
