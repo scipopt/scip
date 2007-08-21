@@ -1815,7 +1815,8 @@
 /**@page NODESEL How to add node selectors
  *
  * Node selectors are used to decide which of the leaves in the current branching tree is selected as next subproblem 
- * to be processed. The ordering relation of the tree's leaves is also defined by the node selectors.    
+ * to be processed. The ordering relation of the tree's leaves for storing them in the leave priority queue is also
+ * defined by the node selectors.    
  *
  * In the following, we explain how the user can add an own node selector.
  * Take the node selector for depth first search (src/scip/nodesel_dfs.c) as an example.
@@ -1852,19 +1853,28 @@
  * \par NODESEL_DESC: the description of the node selector.
  * This string is printed as description of the node selector in the interactive shell.
  *
- * \par NODESEL_STDPRIORITY: the priority of the node selector in the standard mode.
+ * \par NODESEL_STDPRIORITY: the default priority of the node selector in the standard mode.
  *
  * The first step of each iteration of the main solving loop is the selection of the next subproblem to be processed. 
  * The node selector of highest priority (the active node selector) is called to do this selection. 
  * Note that SCIP has two different operation modes: the standard mode and the memory saving mode. If the memory 
- * limit - given as a parameter by the user - is nearly reached, SCIP switches from the standard mode to the memory saving 
+ * limit - given as a parameter by the user - is almost reached, SCIP switches from the standard mode to the memory saving 
  * mode in which different priorities for the node selectors are applied. NODESEL_STDPRIORITY is the priority of the 
  * node selector used in the standard mode.
+ * \n
+ * Note that this property only defines the default value of the priority. The user may change this value arbitrarily by
+ * adjusting the corresponding parameter setting.
  *
- * \par NODESEL_MEMSAVEPRIORITY: the priority of the node selector in the memory saving mode.
+ * \par NODESEL_MEMSAVEPRIORITY: the default priority of the node selector in the memory saving mode.
  *
  * The priority NODESEL_MEMSAVEPRIORITY of the node selector has the same meaning as the priority NODESEL_STDPRIORITY, but 
  * is used in the memory saving mode.
+ * Usually, you want the best performing node selector, for example best estimate search, to have maximal
+ * standard priority, while you want a node selector which tends to keep the growth of the search tree limited, for example
+ * depth first search, to have maximal memory saving priority.
+ * \n
+ * Note that this property only defines the default value of the priority. The user may change this value arbitrarily by
+ * adjusting the corresponding parameter setting.
  *
  *
  * @section NODESEL_DATA Node Selector Data
@@ -1916,6 +1926,23 @@
  * the current node's children and siblings, and the "best" of the remaining leaves stored in the tree. This choice can 
  * have a large impact on the solver's performance, because it influences the finding of feasible solutions and the 
  * development of the global dual bound. 
+ *
+ * The following methods provide access to the various leaf nodes:
+ * - SCIPgetPrioChild() returns the child of the current node with the largest node selection priority, as assigned by the
+ *   branching rule, see the \ref BRANCHEXECLP and \ref BRANCHEXECPS callbacks of the branching rules. If no child is
+ *   available (for example, because the current node was pruned), a NULL pointer is returned.
+ * - SCIPgetBestChild() returns the best child of the current node with respect to the node selector's ordering relation as
+ *   defined by the \ref NODESELCOMP callback. If no child is available, a NULL pointer is returned.
+ * - SCIPgetPrioSibling() returns the sibling of the current node with the largest node selection priority.
+ *   If no sibling is available (for example, because all siblings of the current node have already been processed), a NULL
+ *   pointer is returned.
+ * - SCIPgetBestSibling() returns the best sibling of the current node with respect to the node selector's ordering relation
+ *   as defined by the \ref NODESELCOMP callback. If no sibling is available, a NULL pointer is returned.
+ * - SCIPgetBestNode() returns the best leaf in the qeueue of open subproblems with respect to the node selector's ordering
+ *   relation as defined by the \ref NODESELCOMP callback. If the queue is empty, a NULL pointer is returned.
+ * - SCIPgetBestboundNode() returns a leaf of the queue with the smallest lower (dual) objective bound.
+ *   If the queue is empty, a NULL pointer is returned.
+ *   
  *
  * @subsection NODESELCOMP
  *
