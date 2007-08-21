@@ -1938,10 +1938,12 @@
  *   pointer is returned.
  * - SCIPgetBestSibling() returns the best sibling of the current node with respect to the node selector's ordering relation
  *   as defined by the \ref NODESELCOMP callback. If no sibling is available, a NULL pointer is returned.
- * - SCIPgetBestNode() returns the best leaf in the qeueue of open subproblems with respect to the node selector's ordering
- *   relation as defined by the \ref NODESELCOMP callback. If the queue is empty, a NULL pointer is returned.
- * - SCIPgetBestboundNode() returns a leaf of the queue with the smallest lower (dual) objective bound.
- *   If the queue is empty, a NULL pointer is returned.
+ * - SCIPgetBestNode() returns the best leaf from the tree (children, siblings, or other leaves) with respect to the node
+ *   selector's ordering relation as defined by the \ref NODESELCOMP callback. If no open leaf exists, a NULL pointer is
+ *   returned. In this case, the optimization is finished, and the node selector should return a NULL pointer as 'selnode'.
+ * - SCIPgetBestboundNode() returns a leaf from the tree (children, siblings, or other leaves) with the smallest lower (dual)
+ *   objective bound. If the queue is empty, a NULL pointer is returned. In this case, the optimization is finished, and the
+ *   node selector should return a NULL pointer as 'selnode'.
  *   
  *
  * @subsection NODESELCOMP
@@ -2052,30 +2054,33 @@
  * In the interactive shell, this character is printed in the first column of a status information row, if the primal 
  * heuristic found the feasible solution belonging to the primal bound. Note that a star stands for an integral 
  * LP-relaxation.
- * Display characters have to be unique: no two primal heuristics may have the same display character.
+ * In order to avoid confusion, display characters should be unique: no two primal heuristics should have the same display character.
+ * You can get a list of all primal heuristics along with their display characters by entering "display heuristics" in the
+ * SCIP interactive shell.
  *
  * \par HEUR_PRIORITY: the priority of the primal heuristic.
  * At each of the different entry points of the primal heuristics during the solving process (see HEUR_TIMING), they are 
  * called in decreasing order of their priority. 
  * \n
- * The priority of a primal heuristic should be set according to the complexity of the heuristic and the impact of the 
- * feasible solution found: primal heuristics that provide fast algorithms that usually have a high impact (i.e., severely 
- * reduce the primal bound) should have a high priority. In addition, the interaction between different types of primal
- * heuristics should be taken into account. For example, improvement heuristics, which try to generate improved solutions 
- * by inspecting one or more of the feasible solutions that have already been found, should have a small priority.
+ * The priority of a primal heuristic should be set according to the complexity of the heuristic and the likelihood to find
+ * feasible solutions: primal heuristics that provide fast algorithms that often succeed in finding a feasible solution should have
+ * a high priority. In addition, the interaction between different types of primal heuristics should be taken into account.
+ * For example, improvement heuristics, which try to generate improved solutions  by inspecting one or more of the feasible
+ * solutions that have already been found, should have a small priority.
  *
  * \par HEUR_FREQ: the default frequency for executing the primal heuristic.
  * The frequency together with the frequency offset (see HEUR_FREQOFS) defines the depth levels at which the execution
  * method of the primal heuristic \ref HEUREXEC is called. For example, a frequency of 7 together with a frequence offset 
- * of 0 means, that the callback is executed for subproblems that are in depth 0, 7, 14, ... of the branching tree. A 
- * frequency of 0 together with an frequence offset of 0 means, that the execution method is only called at the root node. 
+ * of 5 means, that the \ref HEUREXEC callback is executed for subproblems that are in depth 5, 12, 19, ... of the branching tree. A 
+ * frequency of 0 together with a frequence offset of 3 means, that the execution method is only called at those nodes that are in
+ * depth level 3 (i.e., at most for \f$2^3 = 8\f$ nodes if binary branching is applied). A frequency of 0 and an offset of 0 means that
+ * the heuristic is only called at the root node. 
  * A frequency of -1 disables the heuristic.
  * \n
  * The frequency can be adjusted by the user. The property of the primal heuristic only defines the default value of the 
  * frequency. If you want to have a more flexible control of when to execute the primal heuristic, you have to assign
- * a frequency of 1 together with a frequency offset of 0 and implement a check at the beginning of your execution method 
- * whether you really want to search for feasible solutions or not. If you do not want to execute the method, set the 
- * result code to SCIP_DIDNOTRUN.
+ * a frequency of 1 and implement a check at the beginning of your execution method whether you really want to search for feasible
+ * solutions or not. If you do not want to execute the method, set the result code to SCIP_DIDNOTRUN.
  *
  * \par HEUR_FREQOFS: the frequency offset for executing the primal heuristic.
  * The frequency offset defines the depth of the branching tree at which the primal heuristic is executed for the first 
@@ -2083,7 +2088,9 @@
  * callback is executed for subproblems that are in depth 10, 17, 24, ... of the branching tree. In particular, assigning 
  * different offset values to heuristics of the same type, like diving heuristics, can be useful for evenly spreading the 
  * application of these heuristics across the branch-and-bound tree.
- * 
+ * Note that if the frequency is equal to 1, the heuristic is applied for all nodes with depth level larger or equal to
+ * the frequency offset.
+ *
  * \par HEUR_MAXDEPTH: the maximal depth level for executing the primal heuristic.
  * This parameter denotes the maximal depth level in the branching tree up to which the execution method of the primal 
  * heuristic is called. Use -1 for no limit. 
@@ -2093,18 +2100,22 @@
  * entry point at which the primal heuristic is executed first. 
  * \n
  * The primal heuristic can be called first:
- * \par
  * - before the processing of the node starts (SCIP_HEURTIMING_BEFORENODE)
  * - after each LP solving during the cut-and-price loop (SCIP_HEURTIMING_DURINGLPLOOP) 
  * - after the cut-and-price loop was finished (SCIP_HEURTIMING_AFTERLPLOOP) 
- * - after the processing of a node was finished (SCIP_HEURTIMING_AFTERNODE)
  * - after the processing of a node <em>with solved LP</em>  was finished (SCIP_HEURTIMING_AFTERLPNODE)
  * - after the processing of a node <em>without solved LP</em> was finished (SCIP_HEURTIMING_AFTERPSEUDONODE)
- * - after the processing of the last node in the current plunge was finished (SCIP_HEURTIMING_AFTERPLUNGE)
  * - after the processing of the last node in the current plunge was finished, <em>and only if the LP was solved for 
  *   this node</em> (SCIP_HEURTIMING_AFTERLPPLUNGE) 
  * - after the processing of the last node in the current plunge was finished, <em>and only if the LP was not solved 
  *   for this node</em> (SCIP_HEURTIMING_AFTERPSEUDOPLUNGE).
+ * \par
+ * These flags can be combined as or concatenations to call the heuristic at multiple times. Two useful combinations
+ * are already predefined:
+ * - after the processing of a node was finished (SCIP_HEURTIMING_AFTERNODE; combines SCIP_HEURTIMING_AFTERLPNODE and
+ *   SCIP_HEURTIMING_AFTERPSEUDONODE)
+ * - after the processing of the last node in the current plunge was finished (SCIP_HEURTIMING_AFTERPLUNGE; combines
+ *   SCIP_HEURTIMING_AFTERLPPLUNGE and SCIP_HEURTIMING_AFTERPSEUDOPLUNGE)
  * \par
  * Calling a primal heuristic "before the processing of the node starts" is particularly useful for heuristics 
  * that do not need to access the LP solution of the current node. If such a heuristic finds a feasible solution, the 
@@ -2114,19 +2125,25 @@
  * \n
  * Very fast primal heuristics that require an LP solution can also be called "after each LP solving during the 
  * cut-and-price loop". Rounding heuristics, like the simple and fast LP rounding heuristic 
- * (src/scip/heur_simplerounding.c), may belong to this group of primal heuristics. 
+ * (src/scip/heur_simplerounding.c), belong to this group of primal heuristics. 
  * \n
- * Most heuristics, however, are called either "after the cut-and-price loop was finished" or at one of the last six points
- * mentioned above. These points correspond to the situation where a node was completely processed, but differ by the 
- * type of node and by whether an LP solution is needed. For example, diving heuristics, like the LP diving heuristic 
- * (src/scip/heur_fracdiving.c), are often executed after the last node in the current plunge has been processed. 
+ * Most heuristics, however, are called either after the cut-and-price loop was finished, after a node was completely
+ * processed, or even only after a full plunge was finished. These points correspond to the situation where a node was completely
+ * processed, but differ by the type of node and by whether an LP solution is needed. For example, diving heuristics,
+ * like the LP diving heuristic (src/scip/heur_fracdiving.c), are often executed after the last node in the current
+ * plunge has been processed. A plunge is the successive solving of child and sibling nodes in the search tree. A plunge is
+ * finished, if the node selection selects an unrelated node from the queue of open subproblems, see \ref NODESEL.
  *
  * Computational experiments seem to indicate that for the overall performance of a MIP solver, it is important to evenly 
  * spread the application of the heuristics across the branch-and-bound tree. Thus, the assignment of the parameters 
- * HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS, and HEUR_TIMING should contribute to this aim. Note that experiment have also 
- * shown that the parameter HEUR_FREQ is the least important one out of these four parameters with respect to an even 
- * spread.
- *  
+ * HEUR_FREQ, HEUR_FREQOFS, and HEUR_TIMING should contribute to this aim.
+ *
+ * Note that all diving heuristics in the SCIP distribution (see, e.g., src/scip/heur_guideddiving.c) check whether other diving
+ * heuristics have already been called at the current node. This can be done by comparing SCIPgetLastDivenode(scip) and
+ * SCIPgetNNodes(scip). If the two are equal, and if the current node is not the root node (SCIPgetDepth(scip) > 0), diving
+ * heuristics should be delayed by returning the result code 'SCIP_DELAYED'. This is an additional contribution to the goal of
+ * not calling multiple heuristics at the same node.
+ *
  *
  * @section HEUR_DATA Primal Heuristic Data
  *
@@ -2238,7 +2255,7 @@
  *
  * SCIP provides specific support for LP relaxations of constraint integer programs. In addition, relaxation handlers, 
  * also called relaxators, can be used to include other relaxations, e.g., Lagrange relaxations or semidefinite 
- * relaxations. The relaxation handler manages the necessary structures and calls the relaxation solver to generate dual 
+ * relaxations. The relaxation handler manages the necessary data structures and calls the relaxation solver to generate dual 
  * bounds and primal solution candidates.
  * \n
  * However, the data to define a single relaxation must either be extracted by the relaxation handler itself (e.g., from
@@ -2294,6 +2311,9 @@
  * algorithm that usually has a high impact (i.e., the relaxation is a good approximation of the convex hull of the 
  * feasible region of the subproblem and the solution severely reduces the primal-dual gap), it should have a non-negative 
  * priority.
+ * \n
+ * Note that for certain applications, it is useful to disable the LP relaxation and only use your custom relaxation.
+ * This can easily be achieved by setting the "lp/solvefreq" parameter to -1.
  *
  * \par RELAX_FREQ: the default frequency for solving the relaxation.
  * The frequency defines the depth levels at which the relaxation solving method \ref RELAXEXEC is called.
@@ -2335,9 +2355,9 @@
  *
  * @section RELAX_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Relaxation Handler
  *
- * Relaxation handler plugins have only one fundamental callback method, namely the RELAXEXEC method.
+ * Relaxation handler plugins have only one fundamental callback method, namely the \ref RELAXEXEC method.
  * This method has to be implemented for every relaxation handler; the other callback methods are optional.
- * In the C++ wrapper class ObjRelax, the scip_exec() method (which corresponds to the RELAXEXEC callback) is a virtual
+ * In the C++ wrapper class ObjRelax, the scip_exec() method (which corresponds to the \ref RELAXEXEC callback) is a virtual
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your relaxation handler class.
  *
@@ -2348,12 +2368,20 @@
  * subproblem's relaxation.  
  *
  * Note that, like the LP relaxation, the relaxation handler should only operate on variables for which the corresponding 
- * column does exist in the transformed problem. Typical methods called by a relaxation handler are, for example, 
- * SCIPtreeGetFocusNode() for getting the currently processed subproblem and SCIPnodeUpdateLowerbound() for updating the 
- * node's dual bound after solving the relaxation. 
+ * column does exist in the transformed problem. Typical methods called by a relaxation handler are SCIPconstructLP() to
+ * make sure that the LP of the current node is constructed and its data can be accessed via calls to SCIPgetLPRowsData()
+ * and SCIPgetLPColsData(), SCIPseparateSol() to call the cutting plane separators for a given primal solution, and
+ * SCIPupdateLocalLowerbound() to update the current node's dual bound after having solved the relaxation.
+ * In addition, you may want to call SCIPtrySolFree() if you think that you have found a feasible primal solution.
  *
- * Usually, the callback only solves the relaxation. However, it may also produce domain reductions, add additional 
- * constraints or generate cutting planes. It has the following options:
+ * Note that the primal solution of the relaxation cannot be stored inside the data structures of SCIP, which means in
+ * particular, that the branching rules cannot take the solution as a guide on how to split the problem into subproblems.
+ * If you want to branch with respect to your relaxation solution, you have to implement your own branching rule and
+ * extract the primal solution vector from the relaxation directly.
+ *
+ * Usually, the callback only solves the relaxation and provides a lower (dual) bound with a call to SCIPupdateLocalLowerbound().
+ * However, it may also produce domain reductions, add additional constraints or generate cutting planes. It has the
+ * following options:
  *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
  *  - adding an additional constraint and stating that the relaxation handler should not be called again on the same 
  *    relaxation (result SCIP_CONSADDED)
@@ -2365,6 +2393,11 @@
  *    (result SCIP_SUCCESS)
  *  - interrupting the solving process to wait for additional input, e.g., cutting planes (SCIP_SUSPENDED) 
  *  - stating that the separator was skipped (result SCIP_DIDNOTRUN).
+ *
+ * In the above criteria, "the same relaxation" means that the LP relaxation stayed unmodified. This means in particular
+ * that no row has been added and no bounds have been modified. For example, changing the bounds of a variable will, as
+ * long as it was a COLUMN variable, lead to a modification in the LP such that the relaxation handler is called again
+ * after it returned with the result code SCIP_REDUCEDDOM.
  * 
  *
  * @section RELAX_ADDITIONALCALLBACKS Additional Callback Methods of a Relaxation Handler
@@ -2421,7 +2454,7 @@
 /**@page READER How to add file readers
  *
  * Mainly, file readers are called to parse an input file and generate a constraint integer programming model. They create 
- * constraints and variables and activate variable pricers if necessary. However, they can also be called to parse an 
+ * constraints and variables and activate variable pricers if necessary. However, they can also be called, for example, to parse an 
  * input file containing information about a primal solution or fixing of variables. 
  *
  * In the following, we explain how the user can add an own file reader.
@@ -2461,7 +2494,9 @@
  *
  * \par READER_EXTENSION: the file name extension of the file reader. 
  * Each file reader is hooked to a single file name extension. It is automatically called if the user wants to read in a 
- * file of corresponding name.
+ * file of corresponding name. The extensions of the different file readers have to be unique.
+ * Note that the additional extension '.gz', '.z', or '.Z' (indicating a gzip compressed file) are ignored for assigning
+ * an input file to a reader.
  *
  *
  * @section READER_DATA File Reader Data
@@ -2496,9 +2531,9 @@
  *
  * @section READER_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a File Reader
  *
- * File reader plugins have only one fundamental callback method, namely the READERREAD method.
+ * File reader plugins have only one fundamental callback method, namely the \ref READERREAD method.
  * This method has to be implemented for every file reader; the other callback method is optional.
- * In the C++ wrapper class ObjReader, the scip_read() method (which corresponds to the READERREAD callback) is a virtual
+ * In the C++ wrapper class ObjReader, the scip_read() method (which corresponds to the \ref READERREAD callback) is a virtual
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your file reader class.
  *
@@ -2507,24 +2542,23 @@
  * @subsection READERREAD
  *
  * The READERREAD callback is called when the user invokes SCIP to read in a file with file name extension 
- * corresponding to the file reader by calling the method SCIPreadProb() or by an interactive shell command. It should 
- * parse the input file and generate a constraint integer programming model, add a primal solution, or fix variables. 
+ * corresponding to the READER_EXTENSION property of the file reader. This is usually triggered by a call to the method
+ * SCIPreadProb() or by an interactive shell command. The READERREAD callback should parse the input file and perform
+ * the desired action, which usually means to generate a constraint integer programming model, to add a primal solution, or
+ * to fix variables in an existing model.
  * \n
  * Typical methods called by a file reader which is used to generate constraint integer programming models are, 
  * for example, 
  *
  * - creating an empty problem: SCIPcreateProb() 
- * - creating the constraints: SCIPcreateConsLinear(), SCIPaddCoefLinear(), SCIPchgLhsLinear(), SCIPchgRhsLinear(), 
- *   SCIPaddCons(), and SCIPreleaseCons()
  * - creating the variables: SCIPcreateVar(), SCIPchgVarType(), SCIPchgVarLb(), SCIPchgVarUb(), SCIPaddVar(), and 
  *   SCIPreleaseVar()      
- * - creating the objective function: SCIPchgVarObj() and SCIPsetObjsense().
+ * - modifying the objective function: SCIPchgVarObj() and SCIPsetObjsense().
+ * - creating the constraints: SCIPcreateConsLinear(), SCIPaddCoefLinear(), SCIPchgLhsLinear(), SCIPchgRhsLinear(), 
+ *   SCIPaddCons(), and SCIPreleaseCons()
  *
  * Primal solutions can only be created for the transformed problem. Therefore, the user has to call SCIPtransformProb()
  * before he reads in the file containing the solution and adds it to the solution pool via the method SCIPreadSol(). 
- * \n
- * Fixings can only be applied to variables in the original problem. Therefore, the user has to call SCIPfreeTransform() 
- * before he fixes original variables by calling the method SCIPfixVar().
  *
  * 
  * @section READER_ADDITIONALCALLBACKS Additional Callback Methods of a File Reader
@@ -2569,11 +2603,12 @@
  * features only one dialog handler, whereas there may exist different constraint handlers. 
  *
  * In the following, we explain how the user can extend the interactive shell by adding an own dialog.
- * We give the explanation for writting an own plugin for each additional dialog. Of course, you can collect 
- * different dialogs in one plugin. Take "src/scip/dialog_default.c", where all default dialogs are collected, as an 
+ * We give the explanation for creating an own source file for each additional dialog. Of course, you can collect 
+ * different dialogs in one source file. Take "src/scip/dialog_default.c", where all default dialog plugins are collected, as an 
  * example.
- * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjDialog wrapper
- * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_DIALOG... callback methods.
+ * As all other default plugins, the default dialog plungins and the template dialog are written in C. C++ users can easily
+ * adapt the code by using the ObjDialog wrapper base class and implement the scip_...() virtual methods instead of the
+ * SCIP_DECL_DIALOG... callback methods.
  *
  * Additional documentation for the callback methods of a dialog can be found in the file "type_dialog.h".
  *
@@ -2600,13 +2635,13 @@
  * \par DIALOG_NAME: the name of the dialog.
  * In the interactive shell, this name appears as command name of the dialog in the parent dialog. 
  * Additionally, if you are searching an entry in a menu with SCIPdialogFindEntry(), this name is looked up.
- * Names have to be unique: no two dialogs may have the same name.
+ * Names within one menu have to be unique: no two dialogs in the same menu may have the same name.
  *
  * \par DIALOG_DESC: the description of the dialog.
  * This string is printed as description of the dialog in the interactive shell if the DIALOGDESC callback
  * is not implemented.
  *
- * \par DIALOG_ISSUBMENU: the default for whether the dialog is a menu.
+ * \par DIALOG_ISSUBMENU: whether the dialog is a (sub)menu.
  * This parameter states whether the dialog is a menu in the interactive shell, i.e., is the parent of further 
  * dialogs.
  * 
@@ -2643,9 +2678,10 @@
  *
  * The interface method is called by the user, if he wants to include the dialog, i.e., if he wants to use the dialog in 
  * his application. 
- * Note that in order to be able to link the new dialog to an existing one it has to be included <b>after the 
+ * Note that in order to be able to link the new dialog to an existing default dialog it has to be included <b>after the 
  * default dialogs plugin</b>, i.e., the SCIPincludeDialogMydialog() call has to occure after the 
- * SCIPincludeDialogDefault() call.
+ * SCIPincludeDialogDefault() call. The SCIPincludeDialogDefault() method is called from within the SCIPincludeDefaultPlugins()
+ * method. Therefore, it suffices to include your dialog plugins after you have called SCIPincludeDefaultPlugins().
  *
  * If you are using dialog data, you have to allocate the memory for the data at this point.
  * You can do this by calling
@@ -2654,12 +2690,49 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_DialogData afterwards.
  *
+ * Consider the following example. The user wants to add a "drawgraph" command to the root menu of SCIP.
+ * He copies the "dialog_xxx.c" and "dialog_xxx.h" files into files "dialog_drawgraph.c" and "dialog_drawgraph.h", respectively.
+ * Then, he puts the following code into the SCIPincludeDialogDrawgraph() method, compare SCIPincludeDialogDefault() in
+ * src/scip/dialog_default.c:
+ * \code
+ * SCIP_RETCODE SCIPincludeDialogDrawgraph(
+ *    SCIP*                 scip
+ *    )
+ * {
+ *    SCIP_DIALOG* root;
+ *    SCIP_DIALOG* dialog;
+ * 
+ *    root = SCIPgetRootDialog(scip);
+ *    if( root == NULL )
+ *    {
+ *       SCIP_CALL( SCIPcreateDialog(scip, &root, SCIPdialogExecMenuLazy, NULL, NULL,
+ *             "SCIP", "SCIP's main menu", TRUE, NULL) );
+ *       SCIP_CALL( SCIPsetRootDialog(scip, root) );
+ *       SCIP_CALL( SCIPreleaseDialog(scip, &root) );
+ *       root = SCIPgetRootDialog(scip);
+ *    }
+ * 
+ *    if( !SCIPdialogHasEntry(root, "drawgraph") )
+ *    {
+ *       SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDrawgraph, NULL, NULL,
+ *             "drawgraph", "draws the graph for the current problem instance", FALSE, NULL) );
+ *       SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
+ *       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+ *    }
+ * 
+ *    return SCIP_OKAY;
+ * }
+ * \endcode
+ *
+ * Using this code, it is even possible to call SCIPincludeDialogDrawgraph() before including the default dialog plugins,
+ * and you can also call it multiple times without causing inconsistencies in the dialog structure.
+ *
  * 
  * @section DIALOG_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Dialog
  *
- * Dialogs have only one fundamental callback method, namely the DIALOGEXEC method.
+ * Dialogs have only one fundamental callback method, namely the \ref DIALOGEXEC method.
  * This method has to be implemented for every dialog; the other callback methods are optional.
- * In the C++ wrapper class ObjDialog, the scip_exec() method (which corresponds to the DIALOGEXEC callback) is a virtual
+ * In the C++ wrapper class ObjDialog, the scip_exec() method (which corresponds to the \ref DIALOGEXEC callback) is a virtual
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your dialog class.
  * 
@@ -2724,11 +2797,12 @@
  * in order to track problem or algorithm specific values.  
  *
  * In the following, we explain how the user can add an own display column. 
- * We give the explanation for writting an own plugin for each additional display column. Of course, you can collect 
- * different additional display columns in one plugin. 
+ * We give the explanation for creating an own source file for each additional display column. Of course, you can collect 
+ * different additional display columns in one source file.
  * Take "src/scip/disp_default.c", where all default display columns are collected, as an example.
- * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjDisp wrapper
- * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_DISP... callback methods.
+ * As all other default plugins, the default display column plugins and the display column template are written in C.
+ * C++ users can easily adapt the code by using the ObjDisp wrapper base class and implement the scip_...() virtual methods
+ * instead of the SCIP_DECL_DISP... callback methods.
  * 
  *
  * Additional documentation for the callback methods of a display column can be found in the file "type_disp.h".
@@ -2769,10 +2843,10 @@
  * greater than or equal to the number of characters in the header string. 
  *
  * \par DISP_PRIORITY: the priority of the display column.
- * The width of status information lines is bounded by the parameter "display width". The display columns actually contained
+ * The total width of status information lines is bounded by the parameter "display width". The display columns actually contained
  * in the status information display are selected in decreasing order of their priority. Furthermore, the user can force 
  * columns to be displayed or not to be displayed in the status information display. For that, he has to switch the value 
- * of the display column's parameter "active" from "auto" (its default value) to "on" and "off", respectively. 
+ * of the display column's parameter "active" from "auto" (its default value) to "on" or "off", respectively. 
  *
  * \par DISP_POSITION: the relative position of the display column.
  * In the status information display, the display columns are arranged from left to right in increasing order of their 
