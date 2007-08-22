@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.9 2006/01/03 12:22:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.10 2007/08/22 13:22:36 bzfpfend Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for C++ example project using SCIP as a callable library
@@ -26,11 +26,7 @@
 #include <iostream>
 
 #include "objscip/objscip.h"
-
-extern "C"
-{
-#include "scip/scipdefplugins.h"
-}
+#include "objscip/objscipdefplugins.h"
 
 
 static

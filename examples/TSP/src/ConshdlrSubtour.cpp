@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.12 2007/08/07 08:56:24 bzfberth Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.13 2007/08/22 13:22:36 bzfpfend Exp $"
 
 /**@file   ConshdlrSubtour.cpp
  * @brief  C++ file reader for TSP data files
@@ -29,6 +29,7 @@
 #include "ConshdlrSubtour.h"
 #include "GomoryHuTree.h"
 
+#include "objscip/objscip.h"
 extern "C" {
 #include "scip/cons_linear.h"
 }

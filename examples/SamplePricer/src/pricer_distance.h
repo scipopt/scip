@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_distance.h,v 1.3 2006/05/05 13:55:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer_distance.h,v 1.4 2007/08/22 13:22:36 bzfpfend Exp $"
 
 /**@file   pricer_distance.h
  * @brief  p-median pricer plugin
@@ -33,11 +33,8 @@
 ***/
 
 #include "objscip/objscip.h"
+#include "objscip/objscipdefplugins.h"
 
-extern "C" {
-#include "scip/cons_setppc.h"
-#include "scip/cons_linear.h"
-}
 
 #define SCIP_DEBUG
 

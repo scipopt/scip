@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: HeurFarthestInsert.cpp,v 1.6 2006/01/03 12:22:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: HeurFarthestInsert.cpp,v 1.7 2007/08/22 13:22:37 bzfpfend Exp $"
 
 /**@file   HeurFarthestInsert.cpp
  * @brief  farthest insert - combinatorial heuristic for TSP
@@ -22,8 +22,11 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 #include <iostream>
 #include <cassert>
+
+#include "objscip/objscip.h"
 #include "GomoryHuTree.h"
 #include "HeurFarthestInsert.h"
 #include "ProbDataTSP.h"

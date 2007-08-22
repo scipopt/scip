@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.9 2006/07/20 12:52:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.10 2007/08/22 13:22:37 bzfpfend Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for C++ TSP example using SCIP as a callable library
@@ -89,13 +89,7 @@
 
 /* include SCIP components */
 #include "objscip/objscip.h"
-
-
-extern "C"
-{
-#include "scip/scipdefplugins.h"
-#include "scip/scipshell.h"
-}
+#include "objscip/objscipdefplugins.h"
 
 /* include TSP specific components */
 #include "ReaderTSP.h"

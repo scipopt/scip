@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: EventhdlrNewSol.cpp,v 1.7 2006/05/12 09:34:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: EventhdlrNewSol.cpp,v 1.8 2007/08/22 13:22:36 bzfpfend Exp $"
 
 /**@file   EventhdlrNewSol.cpp
  * @brief  event handler for new solutions in TSP
@@ -28,6 +28,7 @@
 #include <iostream>
 #include <unistd.h>
 
+#include "objscip/objscip.h"
 #include "EventhdlrNewSol.h"
 #include "ProbDataTSP.h"
 #include "GomoryHuTree.h"

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cmain.c,v 1.2 2006/01/03 12:22:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cmain.c,v 1.3 2007/08/22 13:22:36 bzfpfend Exp $"
 
 /**@file   cmain.c
  * @brief  main file for healthcare pricer example
@@ -25,8 +25,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "scip/cons_setppc.h"
-#include "scip/cons_linear.h"
 #include "scip/scipdefplugins.h"
 
 /* user defined includes */

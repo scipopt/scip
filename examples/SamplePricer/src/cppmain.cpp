@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.4 2006/08/30 09:46:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.5 2007/08/22 13:22:36 bzfpfend Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for p-median pricer example
@@ -30,12 +30,8 @@
 #include <vector>
 
 // scip includes
-extern "C" {
-#include "scip/cons_setppc.h"
-#include "scip/cons_linear.h"
-#include "scip/scipdefplugins.h"
-}
-#include "objscip/objpricer.h"
+#include "objscip/objscip.h"
+#include "objscip/objscipdefplugins.h"
 
 // user defined includes
 #include "pricer_distance.h"

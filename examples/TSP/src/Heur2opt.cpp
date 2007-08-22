@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: Heur2opt.cpp,v 1.5 2006/01/03 12:22:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: Heur2opt.cpp,v 1.6 2007/08/22 13:22:36 bzfpfend Exp $"
 
 /**@file   heur2opt.cpp
  * @brief  2-Optimum - combinatorial improvement heuristic for TSP
@@ -25,6 +25,8 @@
 
 #include <cassert>
 #include <iostream>
+
+#include "objscip/objscip.h"
 #include "GomoryHuTree.h"
 #include "Heur2opt.h"
 #include "ProbDataTSP.h"

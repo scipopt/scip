@@ -1,12 +1,12 @@
-for i in MIPSolver SamplePricer SamplePricer_C TSP
+for i in MIPSolver SamplePricer SamplePricer_C TSP VRP
 do
     echo
     echo ===== $i =====
     echo
     cd $i
-    make OPT=opt depend
     make OPT=dbg depend
-    make OPT=opt
+    make OPT=opt depend
     make OPT=dbg
+    make OPT=opt
     cd -
 done

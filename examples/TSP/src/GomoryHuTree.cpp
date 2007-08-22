@@ -26,6 +26,8 @@
 
 #include <stdio.h>
 #include <assert.h>
+
+#include "objscip/objscip.h"
 #include "GomoryHuTree.h"
 
 #define  EPS  1.0E-10
