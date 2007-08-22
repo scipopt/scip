@@ -1,0 +1,24 @@
+NAME : eil7
+COMMENT : (Eilon et al, Min no of trucks: 2, Best value: 114)
+TYPE : CVRP
+DIMENSION : 7
+EDGE_WEIGHT_TYPE : EXPLICIT
+EDGE_WEIGHT_FORMAT: LOWER_DIAG_ROW 
+DISPLAY_DATA_TYPE: NO_DISPLAY
+CAPACITY : 3
+EDGE_WEIGHT_SECTION
+    10    20    25    25    20    10    12    20    25    30
+    20    10    11    22    30     2    11    25    10    20
+    12
+DEMAND_SECTION
+1 0
+2 1
+3 1
+4 1
+5 1
+6 1
+7 1
+DEPOT_SECTION
+1
+-1
+EOF
