@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.1 2007/08/22 13:25:58 bzfpfend Exp $
+# $Id: Makefile,v 1.2 2007/08/22 14:13:15 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ vehicle routing example using SCIP for branch-and-price
@@ -214,6 +214,10 @@ MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
 # Rules
 #-----------------------------------------------------------------------------
 
+ifeq ($(VERBOSE),false)
+.SILENT:	$(MAINFILE) $(MAINOBJFILES) $(MAINSHORTLINK)
+endif
+
 .PHONY: all
 all:            $(LIBDIR) $(LIBDIR)/scip $(MAINFILE) $(MAINSHORTLINK)
 
@@ -233,7 +237,7 @@ doc:
 
 $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
-		@ln -s $(MAIN) $@
+		ln -s $(MAIN) $@
 
 $(OBJDIR):	
 		@-mkdir -p $(OBJDIR)
@@ -258,31 +262,17 @@ depend:		$(LIBDIR)/scip
 
 $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
-ifeq ($(VERBOSE), true)
 		$(CXX) $(MAINOBJFILES) \
 		-L$(LIBDIR)/scip/lib -l$(SCIPLIB) -l$(OBJSCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) -o $@
-else
-		@$(CXX) $(MAINOBJFILES) \
-		-L$(LIBDIR)/scip/lib -l$(SCIPLIB) -l$(OBJSCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) -o $@
-endif
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
-ifeq ($(VERBOSE), true)
 		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< -o $@
-else
-		@$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< -o $@
-endif
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
 		@echo "-> compiling $@"
-ifeq ($(VERBOSE), true)
 		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< -o $@
-else
-		@$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< -o $@
-endif
 
 $(LIBDIR)/scip:
 		@$(SHELL) -ec 'if [ ! -e $@ ] ; \
