@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.253 2007/08/22 12:05:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.254 2007/08/22 13:20:56 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -258,7 +258,7 @@ SCIP_RETCODE propagateDomains(
    *cutoff = FALSE;
    propround = 0;
    propagain = TRUE;
-   while( propagain && !(*cutoff) && propround < maxproprounds )
+   while( propagain && !(*cutoff) && propround < maxproprounds && !SCIPsolveIsStopped(set, stat, FALSE) )
    {
       propround++;
 
@@ -1279,6 +1279,14 @@ SCIP_RETCODE SCIPpriceLoop(
       assert(lp->flushed);
       assert(lp->solved);
       assert(SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+
+      /* check if pricing loop should be aborted */
+      if( SCIPsolveIsStopped(set, stat, FALSE) )
+      {
+         SCIPwarningMessage("pricing has been interrupted -- LP of current node is invalid\n");
+         *lperror = TRUE;
+         break;
+      }
 
       /* price problem variables */
       SCIPdebugMessage("problem variable pricing\n");
