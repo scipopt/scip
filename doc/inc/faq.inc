@@ -13,10 +13,10 @@
       <a name="Q1">What is SCIP?</a>
     </p>
     <p class="a">
-      A standalone MIP-Solver as well as a branch-cut-and-price-framework.<br> 
+      SCIP is a standalone MIP-Solver as well as a branch-cut-and-price-framework.<br> 
       You can use the precompiled binaries with which you can solve MIPs in *.mps or *.lp file format,
-      you can use it as a subroutine for solving MIPs included in your own source code, 
-    or you can use it as a framework in which you implement your own plugins&mdash;or for a combination
+      you can SCIP as a subroutine for solving MIPs from your own source code, 
+      or you can use it as a framework in which you implement your own plugins&mdash;or for a combination
       of these three purposes.<br>
       In this FAQ there are separate sections for the three usages of SCIP.
     <p class="q">
@@ -32,9 +32,8 @@
     </p>
     <p class="a"> 
       As long as you use it for academical, non-commercial purposes: No. 
-      This will not change. 
-      For an explanation of the ZIB academic license, see 
-      <a href="http://www.zib.de/berthold/ZIBopt/ZIBLicence.html">ZIB Licenses</a>.
+      This will not change. For the other cases, check the explanation of the 
+      <a href="http://zibopt.zib.de/ZIBLicence.shtml">ZIB academic license</a>.
     </p>
     <p class="q">
       <a name="Q4">Do I need any extra software?</a>
@@ -44,27 +43,34 @@
       you need an underlying LP-Solver which has first to be installed and linked to the libraries 
       (see the &quot;INSTALL&quot; file in the SCIP root directory). 
       LP-solvers currently supported by SCIP are: 
-      <a href="http://www.zib.de/berthold/soplex/">SoPlex</a>,
-      <a href="http://www.ilog.com/products/cplex/">ILOG CPLEX</a>,
-      <a href="http://www.dashoptimization.com/home/products/products_optimizer.html">Dash XPress-MP</a>,
-      <a href="http://www.coin-or.org/Clp/">CLP</a>, and
-      <a href="http://www.mosek.com/">Mosek</a>.<br>
-      If you want to use SCIP as a standalone MIP-Solver you either need a program to generate *.mps 
-      or *.lp files or you use the modeling language <a href="http://www.zib.de/koch/zimpl/">ZIMPL</a>
-      which can be directly read by SCIP.
+    </p>
+    <ul>
+      <li><a href="http://www.zib.de/berthold/soplex/">SoPlex</a></li>
+      <li><a href="http://www.ilog.com/products/cplex/">ILOG CPLEX</a></li>
+      <li><a href="http://www.dashoptimization.com/home/products/products_optimizer.html">Dash XPress-MP</a></li>
+      <li><a href="http://www.coin-or.org/Clp/">CLP</a></li>
+      <li><a href="http://www.mosek.com/">Mosek</a></li>
+    </ul>
+    <p class="a">
+      You also might need a modeling language like <a href="http://www.zib.de/koch/zimpl/">ZIMPL</a> to generate *.mps 
+    or *.lp files. ZIMPL files can also directly be read by SCIP.
     </p>
     <p class="q">
       <a name="Q5">How do I get started?</a>
     </p>
     <p class="a">
-      The easiest thing would be to use the SCIP-binaries and call SCIP from shell. 
+      An easy way is to use the SCIP-binaries and call SCIP from a shell. 
       For that, you just have to download one of the precompiled binaries from the 
-      <a href="download.html">download section</a> or the zipped source code and compile it 
-      with your favourite settings.<br>
-      Next thing would be to use SCIP as a solver integrated into your own program sourcecode. 
+      <a href="download.shtml">download section</a> or the zipped source code and compile it 
+      with your favorite settings.
+    </p>
+    <p class="a">
+      Another way is to use SCIP as a solver integrated into your own program source code. 
       See the directory &quot;examples/MIPsolver/&quot; for a simple example and 
-      <a href="#Q12">this point</a>.<br>
-      Third step would be to implement your own plugins into SCIP. 
+      <a href="#Q12">this point</a>.
+    </p>
+    <p class="a">
+      A third way is to implement your own plugins into SCIP. 
       This is explained in the HowTos of all plugin types, which you can find at the 
       <a href="http://scip.zib.de/doc/html/index.html">doxygen documentation</a>.
     </p>
@@ -76,9 +82,9 @@
       For an explanation of the naming see the 
       <a href="http://scip.zib.de/doc/html/CODE.html">coding style guidelines</a>. <br> 
       The methods being of interest for you, should normally be found either in scip.h or in pub_*.h, 
-      see <a href="http://scip.zib.de/doc/html/DOC.html">here</a>.
+      see also <a href="http://scip.zib.de/doc/html/DOC.html">here</a>.
       In the doxygen documentation of <a href="http://scip.zib.de/doc/html/scip_8h.html">scip.h</a>, 
-      all methods are ordered in thematic groups, just below the dependancy graphs.		      
+      the methods are ordered by topics.		      
     </p>
     <p class="q">
       <a name="Q7">The methods SCIPgetVarSol() and SCIPvarGetSol() seem to have the same
@@ -91,21 +97,27 @@
       However, if you find another one, please contact us.
     </p>
      <p class="q">
-       <a name="Q27">What can I do against installation problems?</a>
+       <a name="Q27">I have installation problems. What can I do?</a>
     </p>
     <p class="a">
-      As long as you want to use <a href="http://soplex.zib.de/">SoPlex</a> as underlying LP-solver,
+      If you want to use <a href="http://soplex.zib.de/">SoPlex</a> as the underlying LP-solver,
       try the following:                   
-      First, download the ZIB Optimization Suite.
+      First, download the <a href="http://zibopt.zib.de">ZIB Optimization Suite</a>.
       Then, extract the file, change into the ziboptsuite directory, and enter 'make'.
       As long as you have all the necessary libraries installed in your system, it should generate a SCIP
-      binary linked to ZIMPL and Soplex. The nessary system libraries are:<br>
-        1. ZLIB (libz.a)<br>
-        2. GMP (libgmp.a)<br>
-        3. Readline (libreadline.a)<br>
+      binary linked to ZIMPL and Soplex. The necessary system libraries are:
+    </p>
+    <ol>
+        <li>ZLIB (libz.a)</li>
+        <li>GMP (libgmp.a)</li>
+        <li>Readline (libreadline.a)</li>
+    </ol>
+    <p class="a">
       If you do not have all of these libraries, read the INSTALL file in the ZIB Optimization
       Suite directory.<br>
       As a summary, the call of 'make ZIMPL=false ZLIB=false READLINE=false' should work on most systems.
+    </p>
+    <p class="a">
       If you have any problems while use an LP-solver different from SoPlex,
       please read the SCIP INSTALL file first.                                                     
     </p>
@@ -136,8 +148,8 @@
       <a name="Q22">The output is too wide for my terminal window. What can I do?</a>
     </p>
     <p class="a">
-      Type &quot;set display width&quot; followed by a appropriate number into the interactive shell.
-      Please also regard the <a href="#Q9">next question</a>.		      
+      Type &quot;set display width&quot; followed by an appropriate number into the interactive shell.
+      See also the <a href="#Q9">next question</a>.		      
     </p>
     <p class="q">
       <a name="Q9">What do the cryptic abbreviations for the columns mean which are displayed 
@@ -146,12 +158,12 @@
     <p class="a">
       Type "display display" in the interactive shell to get an explanation of them. 
       By the way: If a letter appears in front of a display row, it indicates, 
-      which heuristic found the new primal bound, a star standing for an integral LP-relaxation.<br>
+      which heuristic found the new primal bound, a star representing an integral LP-relaxation.<br>
       Typing "display statistics" after finishing or interrupting the solving process gives 
       you plenty of extra information about the solving process.
     </p>
     <p class="q">
-      <a name="Q10">How do I change the behavior of my solver?</a>
+      <a name="Q10">How do I change the behavior of SCIP?</a>
     </p>
     <p class="a">
       You can find a variety of different general settings for SCIP in the directory "settings". 
@@ -169,7 +181,7 @@
     <p class="a">
       For using a <b class="grey">non-default branching rule or node selection strategy</b> as standard, 
       you just have to give it the highest priority, using, e.g., 
-      &quot;set branching mostinf priority 9999999&quot;<br>
+      &quot;set branching mostinf priority 9999999&quot;.<br>
       If you want to completely <b class="grey">disable a heuristic or a separator</b> you have to set its 
       frequency to -1 and the sepafreq to -1 for separation by constraint handlers, respectively.<br>
       For <b class="grey">disabling a presolver</b>, you have to set its maxrounds parameter to 0.<br>
@@ -190,15 +202,14 @@
       <a name="Q12">How Do I construct a problem instance in SCIP?</a>
     </p>
     <p class="a">
-      First you have to create your SCIP object via SCIPcreate(), 
-      then you start to build up the problem via SCIPcreateProb().<br>
-      Now, it is time to fill in the variables by first creating them via SCIPcreateVar() 
-      and then adding them to the problem via SCIPaddVar().<br>
+      First you have to create a SCIP object via SCIPcreate(), 
+      then you start to build the problem via SCIPcreateProb().<br>
+      Then you create variables via SCIPcreateVar() and add them to the problem via SCIPaddVar().<br>
       The same has to be done for the constraints. 
       For example, if you want to fill in the rows of a general MIP, 
       you have to call SCIPcreateConsLinear(), SCIPaddConsLinear() and additionally SCIPreleaseCons() 
       after finishing.
-      In principle, you could now call SCIPsolve().<br>
+      If all variables and constraints are present, you can initiate the solution process via SCIPsolve().<br>
       Make sure to also call SCIPreleaseVar() if you do not need the variable pointer anymore.
       For an explanation of creating and releasing objects, please see the 
       <a href="http://scip.zib.de/doc/html/OBJ.html">doxygen documentation.</a>.
@@ -208,12 +219,12 @@
 	How do I do this?</a>
     </p>
     <p class="a">
-      At first you have to build up your problem, then you have to transform your problem 
+      First you have to build your problem, then you have to transform your problem 
       (SCIP only accepts solutions if it is at least in the transformed stage, 
       see <a href="#Q15">here</a>) via calling SCIPtransformProb(). 
       Next, you create a new SCIP primal solution by calling SCIPcreateSol() and set all nonzero values 
       by calling SCIPsetSolVal(). <br>
-      After finishing that, you add this solution by calling SCIPtrySol() 
+      After that, you add this solution by calling SCIPtrySol() 
       (success should be true afterwards, if your solution was correct) 
       and then release it by calling SCIPsolFree().
     </p>
@@ -233,9 +244,9 @@
       Before the solving process starts, the original problem is copied to a different memory area.
       This copy is called &quot;transformed problem&quot;, and all modifications during the presolving
       and solving process are only applied to the transformed problem.<br>
-      This has to main advantages: first, the user can also modify the problem after partially solving it.
+      This has two main advantages: first, the user can also modify the problem after partially solving it.
       All modifications done by SCIP (presolving, cuts, variable fixings) during the partial solving process will
-      be deleted together with the transformed, the user can modify the original problem and restart solving.<br>
+      be deleted together with the transformed problem, the user can modify the original problem and restart solving.<br>
       Second, the feasibility of solutions is always tested on the original problem!
     </p>
     <p class="q">
@@ -245,7 +256,7 @@
     <p class="a">
       This can have several reasons. Especially names of binary variables can get different 
       prefixes and suffixes.
-      Each transformed (see <a href="#Q15">here</a>) variable and constraint gets a &quot;t_&quot;
+      Each transformed variable and constraint (see <a href="#Q15">here</a>) gets a &quot;t_&quot;
       as prefix.
       Apart from that, the meaning of original and transformed variables and constraints
       is identical.<br>
@@ -256,13 +267,13 @@
       Variables can have negated counterparts, e.g. for a binary t_x its (also binary) negated would be 
       t_x_neg = 1 - t_x.<br>
       The knapsack constraint handler is able to disaggregate its constraints to cliques, which
-      are set packing constraints and get names that consist of the knapsack's name and 
-      a suffix &quot;_clq_&lt;int&gt;&quot;.<br>
+      are set packing constraints and create names that consist of the knapsack's name and 
+      a suffix &quot;_clq_&lt;int&gt;&quot;.
       E.g., a knapsack constraint 
       knap:&nbsp;x_1&nbsp;+&nbsp;x2&nbsp;+2&middot;x_3&nbsp;&le;&nbsp;2
       could be disaggregated to the set packing constraints 
       knap_clq_1:&nbsp;x_1&nbsp;+&nbsp;x_3&nbsp;&le;&nbsp;1 and 
-      knap_clq_2:&nbsp;x_2&nbsp;+&nbsp;x_3&nbsp;&le;&nbsp;1&nbsp;.
+      knap_clq_2:&nbsp;x_2&nbsp;+&nbsp;x_3&nbsp;&le;&nbsp;1.
     </p>
     <p class="q">
       <a name="Q17">What is SCIP_CALL()? Do I need this?</a>
@@ -270,7 +281,7 @@
     <p class="a">
       Yes, you do. SCIP_CALL() is a global define, which handles the return codes of all methods 
       which return a SCIP_RETCODE and should therefore parenthesize each such method.
-      SCIP_OKAY is the code which is returned if everything worked well, 
+      SCIP_OKAY is the code which is returned if everything worked well; 
       there are 18 different error codes, see type_retcode.h.
       Each method that calls methods which return a SCIP_RETCODE should itself return a SCIP_RETCODE.
       If this is not possible, use SCIP_CALL_ABORT() to catch the return codes of the methods.
@@ -300,24 +311,29 @@
      condition slightly and add cutting planes that do cut off feasible solutions, as long as
      at least one of the optimal solutions remains feasible.
 <br><br>
-      You want to use a constraint handler in the following cases:<br>
-      1. Some of your feasibility conditions can not be expressed by existing constraint types
+      You want to use a constraint handler in the following cases:
+     </p>
+     <ol> 
+      <li>Some of your feasibility conditions can not be expressed by existing constraint types
       (e.g., linear constraints), or you would need too many of them. For example, the
       &quot;nosubtour&quot; constraint in the TSP is equivalent to exponentially many linear constraints.
       Therefore, it is better to implement a &quot;nosubtour&quot; constraint handler that can inspect
       solutions for subtours and generate subtour elimination cuts and others (e.g., comb
-      inequalities) to strengthen the LP relaxation.<br>
-      2. Although you can express your feasibility condition by a reasonable number of existing
+      inequalities) to strengthen the LP relaxation.</li>
+      <li>Although you can express your feasibility condition by a reasonable number of existing
       constraint types, you can represent and process the condition in a more efficient way. For
       example, it may be that you can, due to your structural knowledge, implement a stronger or
       faster domain propagation or find tighter cutting planes than what one could do with the
-      sum of the individual &quot;simple&quot; constraints that model the feasibility condition.
-<br><br>
-      You want to use a cutting plane separator in the following cases:<br>
-      1. You have a general purpose cutting plane procedure that can be applied to any MIP. It
+      sum of the individual &quot;simple&quot; constraints that model the feasibility condition.</li>
+    </ol>
+    <p class="a">
+      You want to use a cutting plane separator in the following cases:
+    </p>
+    <ol>
+      <li>You have a general purpose cutting plane procedure that can be applied to any MIP. It
       does not use problem specific knowledge. It only looks at the LP, the integrality
-      conditions, and other deduced information like the implication graph.<br>
-      2. You can describe your feasibility condition by a set C of constraints of existing type
+      conditions, and other deduced information like the implication graph.</li>
+      <li>You can describe your feasibility condition by a set C of constraints of existing type
       (e.g., linear constraints). The cuts you want to separate are model specific, but apart
       from these cuts, there is nothing you can gain by substituting the set C of constraints
       with a special purpose constraint. For example, the preprocessing and the domain
@@ -328,11 +344,13 @@
       the model by your problem specific cutting plane separator to make the solving process
       faster. You can easily evaluate the performance impact of your cutting planes by enabling
       and disabling the separator.
-<br><br>
+      </li>
+    </ol>
+    <p class="a">
       Note that a constraint handler is defined by the type of constraints that it manages. For
       constraint handlers, always think in terms of constraint programming. For example, the
       &quot;nosubtour&quot; constraint handler in the TSP manages &quot;nosubtour&quot; constraints, which demand
-      that in a given graph no feasible solution must contain a tour that does not contain all
+      that in a given graph no feasible solution can contain a tour that does not contain all
       cities. In the usual TSP problem, there is only one &quot;nosubtour&quot; constraint, because there
       is only one graph for which subtours have to be ruled out.
       The &quot;nosubtour&quot; constraint handler has various ways of enforcing the &quot;nosubtour&quot; property
@@ -350,7 +368,7 @@
     <p class="a">
       Setting the status of a display column to 0 turns it off. 
       E.g., type "set display memused status 0" in the interactive shell to disable the 
-      memory information column from console, or include the line 
+      memory information column, or include the line 
       SCIPsetIntParam(scip, "display/memused/status", 0) into your source code.
       Adding an own display column can be realized via the SCIPincludeDisp() method, see the 
       <a href="http://scip.zib.de/doc/html/DISP.html">doxygen documentation</a>.<br>
@@ -370,7 +388,7 @@
       variable fixings and aggregations.<br>
       The <i>lhs</i> and <i>rhs</i> may take infinite values: a less-than inequality would
       have <i>lhs</i> = -&#8734;, and a greater-than inequality would have <i>rhs</i> = +&#8734;.
-      For equations it is <i>lhs</i> = <i>rhs</i>.
+      For equations <i>lhs</i> is equal to <i>rhs</i>.
       An infinite left hand side can be recognized by SCIPisInfinity(scip, -lhs),
       an infinite right hand side can be recognized by SCIPisInfinity(scip, rhs).
     </p>
@@ -411,8 +429,8 @@
       <a name="Q25">Are the variables and rows sorted in any particular order?</a>
     </p>
     <p class="a">The variable array which you get by SCIPgetVars() is internally sorted by variable types.
-      The binary variables are stored at position [0...nbinvars-1], 
-      the general integers at [nbinvars...nbinvars+nintvars-1], ... . 
+      The binary variables are stored at position [0,...,nbinvars-1], 
+      the general integers at [nbinvars,...,nbinvars+nintvars-1]. 
       It holds that nvars = nbinvars + ninitvars + nimplvars + ncontvars.
       There is no further sorting within these sections, as well as there is no sorting for the rows.
       But each column and each row has a unique index, 
