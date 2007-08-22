@@ -66,7 +66,7 @@
       <a href="#Q12">this point</a>.<br>
       Third step would be to implement your own plugins into SCIP. 
       This is explained in the HowTos of all plugin types, which you can find at the 
-      <a href="http://scip.zib.de/doc/index.html">doxygen documentation</a>.
+      <a href="http://scip.zib.de/doc/html/index.html">doxygen documentation</a>.
     </p>
     <p class="q">
       <a name="Q6"> I would like to check whether some functionality is implemented into SCIP. 
@@ -74,10 +74,10 @@
     </p>
     <p class="a">
       For an explanation of the naming see the 
-      <a href="http://scip.zib.de/doc/CODE.html">coding style guidelines</a>. <br> 
+      <a href="http://scip.zib.de/doc/html/CODE.html">coding style guidelines</a>. <br> 
       The methods being of interest for you, should normally be found either in scip.h or in pub_*.h, 
-      see <a href="http://scip.zib.de/doc/DOC.html">here</a>.
-      In the doxygen documentation of <a href="http://scip.zib.de/doc/scip_8h.html">scip.h</a>, 
+      see <a href="http://scip.zib.de/doc/html/DOC.html">here</a>.
+      In the doxygen documentation of <a href="http://scip.zib.de/doc/html/scip_8h.html">scip.h</a>, 
       all methods are ordered in thematic groups, just below the dependancy graphs.		      
     </p>
     <p class="q">
@@ -205,7 +205,7 @@
       In principle, you could now call SCIPsolve().<br>
       Make sure to also call SCIPreleaseVar() if you do not need the variable pointer anymore.
       For an explanation of creating and releasing objects, please see the 
-      <a href="http://scip.zib.de/doc/OBJ.html">doxygen documentation.</a>.
+      <a href="http://scip.zib.de/doc/html/OBJ.html">doxygen documentation.</a>.
     </p>
     <p class="q">
       <a name="Q13">I already know a solution in advance, which I want to pass to SCIP. 
@@ -288,7 +288,7 @@
       <a name="Q19">What types of plugins can I add and how do I do this?</a>
     </p>
     <p class="a">
-      See the <a href="http://scip.zib.de/doc/OBJ.html">doxygen documentation</a> for a list of 
+      See the <a href="http://scip.zib.de/doc/html/OBJ.html">doxygen documentation</a> for a list of 
       plugin types. There is a HowTo for each of them.
     </p>
     <p class="q">
@@ -359,7 +359,7 @@
       memory information column from console, or include the line 
       SCIPsetIntParam(scip, "display/memused/status", 0) into your source code.
       Adding an own display column can be realized via the SCIPincludeDisp() method, see the 
-      <a href="http://scip.zib.de/doc/DISP.html">doxygen documentation</a>.<br>
+      <a href="http://scip.zib.de/doc/html/DISP.html">doxygen documentation</a>.<br>
       The statistic display, which is shown by "display statistics" and SCIPprintStatistics(), 
       respectively, cannot be changed.
     </p>
