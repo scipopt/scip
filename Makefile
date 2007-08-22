@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.217 2007/08/22 14:21:24 bzfpfend Exp $
+# $Id: Makefile,v 1.218 2007/08/22 14:56:29 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -534,6 +534,9 @@ lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(MAINSRC)
 .PHONY: doc
 doc:		
 		cd doc; $(DOXY) $(MAINSHORTNAME).dxy
+
+.PHONY: check
+check:		test
 
 .PHONY: test
 test:		
