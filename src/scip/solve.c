@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.252 2007/08/15 12:22:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.253 2007/08/22 12:05:22 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1336,9 +1336,13 @@ SCIP_RETCODE SCIPpriceLoop(
       npricerounds++;
 
       /* display node information line */
-      if( displayinfo && mustprice && (SCIP_VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_FULL )
+      if( displayinfo && mustprice )
       {
-         SCIP_CALL( SCIPdispPrintLine(set, stat, NULL, TRUE) );
+         if( (SCIP_VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_FULL
+             || ((SCIP_VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_HIGH && npricerounds % 100 == 1) )
+         {
+            SCIP_CALL( SCIPdispPrintLine(set, stat, NULL, TRUE) );
+         }
       }
 
       /* if the LP is unbounded, we can stop pricing */
