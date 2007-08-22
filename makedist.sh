@@ -1,5 +1,8 @@
 #!/bin/sh
-VERSION="0.90.11"
+
+# For release versions, only use VERSION="x.xx".
+# For development versions, use VERSION="x.xx.xx" with subversion number.
+VERSION="1.00"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
