@@ -131,9 +131,7 @@
       Yes. There is a setting-file settings/emphasis/cpsolver.set. 
       Furthermore, you can compile SCIP without any LP-Solver by &quot;make LPS=none&quot;.
     </p>
-  </ul>
 <h4><a name="Section2">Using SCIP as a standalone MIP-Solver</a></h4>
-  <ul>
     <p class="q">
       <a name="Q22">The output is too wide for my terminal window. What can I do?</a>
     </p>
@@ -187,9 +185,7 @@
       For <b class="grey">weakening</b>, you should just do the opposite operation, i.e. reducing the values 
       you would raise for intensification and vice versa.
     </p>
-  </ul>
   <h4><a name="Section3">Using SCIP included in another source code</a></h4>
-  <ul>
     <p class="q">
       <a name="Q12">How Do I construct a problem instance in SCIP?</a>
     </p>
@@ -281,9 +277,7 @@
       If you do not want to use this either, you have to do the exception handling
       (i.e. the case that the return code is not SCIP_OKAY) on your own. 
     </p>		   
-  </ul>
 <h4><a name="Section4">Using SCIP as a Branch-Cut-And-Price-Framework</a></h4>
-  <ul>
     <p class="q">
       <a name="Q19">What types of plugins can I add and how do I do this?</a>
     </p>
