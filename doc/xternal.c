@@ -3001,5 +3001,6 @@
  */
 
 /**@page FAQ Frequently Asked Questions
+ * \htmlinclude faqcss.inc  
  * \htmlinclude faq.inc  
  */
