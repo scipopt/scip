@@ -6,11 +6,12 @@
 
  p.a {
   padding-left:   1em;
-  padding-bottom: 2em;
   type: circle;
 }
 h4 { 
   font-size: 14pt;
   color: #5050C0; 
+  padding-top: 2em;
 }
+
 </style>
