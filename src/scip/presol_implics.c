@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_implics.c,v 1.7 2007/06/06 11:25:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_implics.c,v 1.8 2007/08/24 16:02:19 bzfberth Exp $"
 
 /**@file   presol_implics.c
  * @brief  implics presolver
@@ -281,11 +281,11 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
 
       if( bdchgtypes[v] == SCIP_BOUNDTYPE_LOWER )
       {
-         SCIP_CALL( SCIPtightenVarLb(scip, bdchgvars[v], bdchgvals[v], &infeasible, &tightened) );
+         SCIP_CALL( SCIPtightenVarLb(scip, bdchgvars[v], bdchgvals[v], FALSE, &infeasible, &tightened) );
       }
       else
       {
-         SCIP_CALL( SCIPtightenVarUb(scip, bdchgvars[v], bdchgvals[v], &infeasible, &tightened) );
+         SCIP_CALL( SCIPtightenVarUb(scip, bdchgvars[v], bdchgvals[v], FALSE, &infeasible, &tightened) );
       }
 
       if( infeasible )

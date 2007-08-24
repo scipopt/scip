@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.28 2007/06/06 11:25:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.29 2007/08/24 16:02:20 bzfberth Exp $"
 /**@file   sepa_intobj.c
  * @brief  integer objective value separator
  * @author Tobias Achterberg
@@ -211,14 +211,14 @@ SCIP_RETCODE separateCuts(
    if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
    {
       intbound = SCIPceil(scip, objval) - sepadata->setoff;
-      SCIP_CALL( SCIPtightenVarLb(scip, sepadata->objvar, intbound, &infeasible, &tightened) );
+      SCIP_CALL( SCIPtightenVarLb(scip, sepadata->objvar, intbound, FALSE, &infeasible, &tightened) );
       SCIPdebugMessage("new objective variable lower bound: <%s>[%g,%g]\n", 
          SCIPvarGetName(sepadata->objvar), SCIPvarGetLbLocal(sepadata->objvar), SCIPvarGetUbLocal(sepadata->objvar));
    }
    else
    {
       intbound = SCIPfloor(scip, objval) - sepadata->setoff;
-      SCIP_CALL( SCIPtightenVarUb(scip, sepadata->objvar, intbound, &infeasible, &tightened) );
+      SCIP_CALL( SCIPtightenVarUb(scip, sepadata->objvar, intbound, FALSE, &infeasible, &tightened) );
       SCIPdebugMessage("new objective variable upper bound: <%s>[%g,%g]\n", 
          SCIPvarGetName(sepadata->objvar), SCIPvarGetLbLocal(sepadata->objvar), SCIPvarGetUbLocal(sepadata->objvar));
    }

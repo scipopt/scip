@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.44 2007/06/06 11:25:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.45 2007/08/24 16:02:19 bzfberth Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -829,7 +829,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
             if( SCIPisLbBetter(scip, newlb, oldlb, oldub) )
             {
                /* in both probings, variable j is deduced to be at least newlb: tighten lower bound */
-               SCIP_CALL( SCIPtightenVarLb(scip, vars[j], newlb, &cutoff, &tightened) );
+               SCIP_CALL( SCIPtightenVarLb(scip, vars[j], newlb, FALSE, &cutoff, &tightened) );
                if( tightened )
                {
                   SCIPdebugMessage("tightened lower bound of variable <%s>[%g,%g] to %g due to probing on <%s> with nlocks=(%d/%d)\n",
@@ -844,7 +844,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
             if( SCIPisUbBetter(scip, newub, oldlb, oldub) && !cutoff )
             {
                /* in both probings, variable j is deduced to be at most newub: tighten upper bound */
-               SCIP_CALL( SCIPtightenVarUb(scip, vars[j], newub, &cutoff, &tightened) );
+               SCIP_CALL( SCIPtightenVarUb(scip, vars[j], newub, FALSE, &cutoff, &tightened) );
                if( tightened )
                {
                   SCIPdebugMessage("tightened upper bound of variable <%s>[%g,%g] to %g due to probing on <%s> with nlocks=(%d/%d)\n",

@@ -47,6 +47,7 @@ interface:
 - SCIPsubversion() now returns an int instead of a const char*
 - new methods SCIPtightenVarLbGlobal() and SCIPtightenVarUbGlobal()
 - new method SCIPgetRootNode() (in combination with SCIPcutoffNode(), this allows the immediate finishing of the optimization)
+- new parameter "force" for SCIPtightenVarLb() and SCIPtightenVarUb()
 
 plugins:
 - new C templates disp_xxx.h and dialog_xxx.h, and C++ wrapper classes objdisp.h and objdialog.h, respectively
@@ -164,6 +165,7 @@ fixed bugs:
 - significantly improved performance of c-MIR and Gomory cuts by caching closest VLB and VUB info
 - fixed bug in root reduced cost fixing propagator that leads to an empty domain for a variable as a proof of optimality
   of the current incumbent
+- fixed bug in bounddisjunction constraint handler with propagation of multi-aggregated variables
 
 
 SCIP version 0.90

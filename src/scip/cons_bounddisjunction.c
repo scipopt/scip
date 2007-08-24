@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.11 2007/08/21 14:39:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.12 2007/08/24 16:02:19 bzfberth Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @brief  constraint handler for bound disjunction constraints
@@ -414,7 +414,7 @@ SCIP_RETCODE delCoefPos(
    return SCIP_OKAY;
 }
 
-/** deletes all variables with global bounds violating the literal, checks for global bounds satistying the literal */
+/** deletes all variables with global bounds violating the literal, checks for global bounds satisfying the literal */
 static
 SCIP_RETCODE applyGlobalBounds(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -737,12 +737,14 @@ SCIP_RETCODE processWatchedVars(
    {
       /* there is only one undecided literal:
        * - a modifiable constraint must be checked manually
+       * - we cannot change bounds of multi-aggregated variables and have to check manually
        * - an unmodifiable constraint is feasible and can be disabled after the remaining literal is satisfied
        */
       assert(0 <= watchedvar1 && watchedvar1 < nvars);
       assert(!isLiteralViolated(scip, consdata, watchedvar1));
       assert(!isLiteralSatisfied(scip, consdata, watchedvar1));
-      if( SCIPconsIsModifiable(cons) )
+      if( SCIPconsIsModifiable(cons)
+         || SCIPvarGetStatus(SCIPvarGetProbvar(vars[watchedvar1])) == SCIP_VARSTATUS_MULTAGGR )
          *mustcheck = TRUE;
       else
       {
@@ -1201,6 +1203,11 @@ SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
          SCIP_CALL( SCIPenableConsPropagation(scip, cons) );
       }
 
+      /**@todo replace variables by their representative active (or multi-aggregated) variables:
+       *       SCIPvarGetProbvar(var) -- need to implement lockRounding() and addCoef(), allows
+       *       to remove the SCIPvarGetProbvar(var) in processWatchedVars().
+       */
+
       /* remove all literals that are violated in global bounds, check redundancy due to global bounds */
       SCIP_CALL( applyGlobalBounds(scip, cons, conshdlrdata->eventhdlr, &redundant) );
 
@@ -1237,11 +1244,11 @@ SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
 
             if( consdata->boundtypes[0] == SCIP_BOUNDTYPE_LOWER )
             {
-               SCIP_CALL( SCIPtightenVarLb(scip, consdata->vars[0], consdata->bounds[0], &infeasible, &tightened) );
+               SCIP_CALL( SCIPtightenVarLb(scip, consdata->vars[0], consdata->bounds[0], TRUE, &infeasible, &tightened) );
             }
             else
             {
-               SCIP_CALL( SCIPtightenVarUb(scip, consdata->vars[0], consdata->bounds[0], &infeasible, &tightened) );
+               SCIP_CALL( SCIPtightenVarUb(scip, consdata->vars[0], consdata->bounds[0], TRUE, &infeasible, &tightened) );
             }
             if( infeasible )
             {

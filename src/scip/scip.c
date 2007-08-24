@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.419 2007/08/24 12:52:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.420 2007/08/24 16:02:19 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6036,6 +6036,7 @@ SCIP_RETCODE SCIPtightenVarLb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
    SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    )
@@ -6065,7 +6066,7 @@ SCIP_RETCODE SCIPtightenVarLb(
    }
    newbound = MIN(newbound, ub);
 
-   if( !SCIPsetIsLbBetter(scip->set, newbound, lb, ub) )
+   if( !force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -6105,6 +6106,7 @@ SCIP_RETCODE SCIPtightenVarUb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
    SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    )
@@ -6134,7 +6136,7 @@ SCIP_RETCODE SCIPtightenVarUb(
    }
    newbound = MAX(newbound, lb);
 
-   if( !SCIPsetIsUbBetter(scip->set, newbound, lb, ub) )
+   if( !force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -6647,6 +6649,7 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
    SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    )
@@ -6676,7 +6679,7 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
    }
    newbound = MIN(newbound, ub);
 
-   if( !SCIPsetIsLbBetter(scip->set, newbound, lb, ub) )
+   if( !force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -6720,6 +6723,7 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
    SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    )
@@ -6749,7 +6753,7 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
    }
    newbound = MAX(newbound, lb);
 
-   if( !SCIPsetIsUbBetter(scip->set, newbound, lb, ub) )
+   if( !force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )

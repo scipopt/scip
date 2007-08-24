@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.306 2007/08/24 12:52:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.307 2007/08/24 16:02:20 bzfberth Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2146,6 +2146,7 @@ SCIP_RETCODE SCIPtightenVarLb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
    SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
@@ -2160,6 +2161,7 @@ SCIP_RETCODE SCIPtightenVarUb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
    SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
@@ -2267,6 +2269,7 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
    SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
@@ -2280,6 +2283,7 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
    SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );

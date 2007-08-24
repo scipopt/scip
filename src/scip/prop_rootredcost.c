@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_rootredcost.c,v 1.6 2007/08/24 12:52:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_rootredcost.c,v 1.7 2007/08/24 16:02:19 bzfberth Exp $"
 
 /**@file   prop_rootredcost.c
  * @brief  reduced cost strengthening at the root node
@@ -188,7 +188,7 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
             /* strengthen upper bound */
             SCIPdebugMessage("root redcost strengthening upper bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
                SCIPvarGetName(var), oldlb, oldub, oldlb, newub, cutoffbound, lpobjval, redcost);
-            SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, newub, &infeasible, &tightened) );
+            SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, newub, FALSE, &infeasible, &tightened) );
             if( infeasible )
             {
                /* we are done with solving: cutoff root node */
@@ -233,7 +233,7 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
             /* strengthen lower bound */
             SCIPdebugMessage("root redcost strengthening lower bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
                SCIPvarGetName(var), oldlb, oldub, newlb, oldub, cutoffbound, lpobjval, redcost);
-            SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, newlb, &infeasible, &tightened) );
+            SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, newlb, FALSE, &infeasible, &tightened) );
             if( infeasible )
             {
                /* we are done with solving: cutoff root node */

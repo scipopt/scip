@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.62 2007/08/21 14:39:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.63 2007/08/24 16:02:19 bzfberth Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for variable bound constraints
@@ -708,7 +708,7 @@ SCIP_RETCODE applyFixings(
          {
             SCIP_Bool tightened;
             
-            SCIP_CALL( SCIPtightenVarLb(scip, var, (consdata->lhs - constant)/scalar, cutoff, &tightened) );
+            SCIP_CALL( SCIPtightenVarLb(scip, var, (consdata->lhs - constant)/scalar, FALSE, cutoff, &tightened) );
             if( tightened )
             {
                SCIPdebugMessage(" -> tightened lower bound: <%s> >= %g\n", 
@@ -720,7 +720,7 @@ SCIP_RETCODE applyFixings(
          {
             SCIP_Bool tightened;
             
-            SCIP_CALL( SCIPtightenVarUb(scip, var, (consdata->rhs - constant)/scalar, cutoff, &tightened) );
+            SCIP_CALL( SCIPtightenVarUb(scip, var, (consdata->rhs - constant)/scalar, FALSE, cutoff, &tightened) );
             if( tightened )
             {
                SCIPdebugMessage(" -> tightened upper bound: <%s> <= %g\n", 
@@ -735,7 +735,7 @@ SCIP_RETCODE applyFixings(
          {
             SCIP_Bool tightened;
             
-            SCIP_CALL( SCIPtightenVarUb(scip, var, (consdata->lhs - constant)/scalar, cutoff, &tightened) );
+            SCIP_CALL( SCIPtightenVarUb(scip, var, (consdata->lhs - constant)/scalar, FALSE, cutoff, &tightened) );
             if( tightened )
             {
                SCIPdebugMessage(" -> tightened upper bound: <%s> <= %g\n", 
@@ -747,7 +747,7 @@ SCIP_RETCODE applyFixings(
          {
             SCIP_Bool tightened;
             
-            SCIP_CALL( SCIPtightenVarLb(scip, var, (consdata->rhs - constant)/scalar, cutoff, &tightened) );
+            SCIP_CALL( SCIPtightenVarLb(scip, var, (consdata->rhs - constant)/scalar, FALSE, cutoff, &tightened) );
             if( tightened )
             {
                SCIPdebugMessage(" -> tightened lower bound: <%s> >= %g\n", 
@@ -783,7 +783,7 @@ SCIP_RETCODE applyFixings(
                   SCIP_Bool tightened;
 
                   SCIP_CALL( SCIPtightenVarLb(scip, consdata->vbdvar, (consdata->lhs - varconstant)/consdata->vbdcoef,
-                        cutoff, &tightened) );
+                        FALSE, cutoff, &tightened) );
                   if( tightened )
                   {
                      SCIPdebugMessage(" -> tightened lower bound: <%s> >= %g\n", 
@@ -796,7 +796,7 @@ SCIP_RETCODE applyFixings(
                   SCIP_Bool tightened;
 
                   SCIP_CALL( SCIPtightenVarUb(scip, consdata->vbdvar, (consdata->lhs - varconstant)/consdata->vbdcoef,
-                        cutoff, &tightened) );
+                        FALSE, cutoff, &tightened) );
                   if( tightened )
                   {
                      SCIPdebugMessage(" -> tightened upper bound: <%s> <= %g\n", 
@@ -812,7 +812,7 @@ SCIP_RETCODE applyFixings(
                   SCIP_Bool tightened;
 
                   SCIP_CALL( SCIPtightenVarUb(scip, consdata->vbdvar, (consdata->rhs - varconstant)/consdata->vbdcoef,
-                        cutoff, &tightened) );
+                        FALSE, cutoff, &tightened) );
                   if( tightened )
                   {
                      SCIPdebugMessage(" -> tightened upper bound: <%s> <= %g\n", 
@@ -825,7 +825,7 @@ SCIP_RETCODE applyFixings(
                   SCIP_Bool tightened;
 
                   SCIP_CALL( SCIPtightenVarLb(scip, consdata->vbdvar, (consdata->rhs - varconstant)/consdata->vbdcoef,
-                        cutoff, &tightened) );
+                        FALSE, cutoff, &tightened) );
                   if( tightened )
                   {
                      SCIPdebugMessage(" -> tightened lower bound: <%s> >= %g\n", 
@@ -887,7 +887,7 @@ SCIP_RETCODE applyFixings(
                SCIP_Bool tightened;
 
                SCIP_CALL( SCIPtightenVarLb(scip, consdata->var, consdata->lhs - consdata->vbdcoef * vbdvarconstant,
-                     cutoff, &tightened) );
+                     FALSE, cutoff, &tightened) );
                if( tightened )
                {
                   SCIPdebugMessage(" -> tightened lower bound: <%s> >= %g\n", 
@@ -900,7 +900,7 @@ SCIP_RETCODE applyFixings(
                SCIP_Bool tightened;
 
                SCIP_CALL( SCIPtightenVarUb(scip, consdata->var, consdata->rhs - consdata->vbdcoef * vbdvarconstant,
-                     cutoff, &tightened) );
+                     FALSE, cutoff, &tightened) );
                if( tightened )
                {
                   SCIPdebugMessage(" -> tightened upper bound: <%s> <= %g\n", 

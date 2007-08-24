@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.245 2007/08/21 14:39:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.246 2007/08/24 16:02:19 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -5898,7 +5898,7 @@ SCIP_RETCODE fullDualPresolve(
             SCIPdebugMessage("variable <%s> only locked down in linear constraints: dual presolve <%s>[%g,%g] <= %g\n",
                SCIPvarGetName(var), SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
                redlb[v - nbinvars]);
-            SCIP_CALL( SCIPtightenVarUb(scip, var, redlb[v - nbinvars], &infeasible, &tightened) );
+            SCIP_CALL( SCIPtightenVarUb(scip, var, redlb[v - nbinvars], FALSE, &infeasible, &tightened) );
             assert(!infeasible);
             redub[v - nbinvars] = MIN(redub[v - nbinvars],SCIPvarGetUbGlobal(var));
             if( tightened )
@@ -5918,7 +5918,7 @@ SCIP_RETCODE fullDualPresolve(
             SCIPdebugMessage("variable <%s> only locked up in linear constraints: dual presolve <%s>[%g,%g] >= %g\n",
                SCIPvarGetName(var), SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
                redub[v - nbinvars]);
-            SCIP_CALL( SCIPtightenVarLb(scip, var, redub[v - nbinvars], &infeasible, &tightened) );
+            SCIP_CALL( SCIPtightenVarLb(scip, var, redub[v - nbinvars], FALSE, &infeasible, &tightened) );
             assert(!infeasible);
             redlb[v - nbinvars] = MAX(redlb[v - nbinvars],SCIPvarGetLbGlobal(var));
             if( tightened )
