@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.418 2007/08/21 14:39:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.419 2007/08/24 12:52:25 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6639,6 +6639,152 @@ SCIP_RETCODE SCIPinferBinvarProp(
    return SCIP_OKAY;
 }
 
+/** changes global lower bound of variable in preprocessing or in the current node, if the new bound is tighter
+ *  (w.r.t. bound strengthening epsilon) than the current global bound; if possible, adjusts bound to integral value;
+ *  also tightens the local bound, if the global bound is better than the local bound
+ */
+SCIP_RETCODE SCIPtightenVarLbGlobal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   )
+{
+   SCIP_Real lb;
+   SCIP_Real ub;
+
+   assert(infeasible != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPtightenVarLbGlobal", FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   *infeasible = FALSE;
+   if( tightened != NULL )
+      *tightened = FALSE;
+
+   SCIPvarAdjustLb(var, scip->set, &newbound);
+
+   /* get current bounds */
+   lb = SCIPvarGetLbGlobal(var);
+   ub = SCIPvarGetUbGlobal(var);
+   assert(SCIPsetIsLE(scip->set, lb, ub));
+
+   if( SCIPsetIsFeasGT(scip->set, newbound, ub) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+   newbound = MIN(newbound, ub);
+
+   if( !SCIPsetIsLbBetter(scip->set, newbound, lb, ub) )
+      return SCIP_OKAY;
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      SCIP_CALL( SCIPvarChgLbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      SCIP_CALL( SCIPvarChgLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      SCIP_CALL( SCIPvarChgLbOriginal(var, scip->set, newbound) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_TRANSFORMING:
+      SCIP_CALL( SCIPvarChgLbGlobal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp,
+            scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
+      return SCIP_OKAY;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_ERROR;
+   }  /*lint !e788*/
+
+   if( tightened != NULL )
+      *tightened = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** changes global upper bound of variable in preprocessing or in the current node, if the new bound is tighter
+ *  (w.r.t. bound strengthening epsilon) than the current global bound; if possible, adjusts bound to integral value;
+ *  also tightens the local bound, if the global bound is better than the local bound
+ */
+SCIP_RETCODE SCIPtightenVarUbGlobal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   )
+{
+   SCIP_Real lb;
+   SCIP_Real ub;
+
+   assert(infeasible != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPtightenVarUbGlobal", FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   *infeasible = FALSE;
+   if( tightened != NULL )
+      *tightened = FALSE;
+
+   SCIPvarAdjustUb(var, scip->set, &newbound);
+
+   /* get current bounds */
+   lb = SCIPvarGetLbGlobal(var);
+   ub = SCIPvarGetUbGlobal(var);
+   assert(SCIPsetIsLE(scip->set, lb, ub));
+
+   if( SCIPsetIsFeasLT(scip->set, newbound, lb) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+   newbound = MAX(newbound, lb);
+
+   if( !SCIPsetIsUbBetter(scip->set, newbound, lb, ub) )
+      return SCIP_OKAY;
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      SCIP_CALL( SCIPvarChgUbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      SCIP_CALL( SCIPvarChgUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      SCIP_CALL( SCIPvarChgUbOriginal(var, scip->set, newbound) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_TRANSFORMING:
+      SCIP_CALL( SCIPvarChgUbGlobal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp,
+            scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
+      return SCIP_OKAY;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_ERROR;
+   }  /*lint !e788*/
+
+   if( tightened != NULL )
+      *tightened = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** returns LP solution value and index of variable lower bound that is closest to variable's current LP solution value;
  *  returns an index of -1 if no variable lower bound is available
  */
@@ -12085,6 +12231,16 @@ SCIP_NODE* SCIPgetCurrentNode(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetCurrentNode", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    return SCIPtreeGetCurrentNode(scip->tree);
+}
+
+/** gets the root node of the tree */
+SCIP_NODE* SCIPgetRootNode(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetRootNode", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPtreeGetRootNode(scip->tree);
 }
 
 /** returns whether the current node is already solved and only propagated again */

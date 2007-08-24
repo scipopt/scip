@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.200 2007/06/19 13:59:59 bzfberth Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.201 2007/08/24 12:52:26 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -5219,6 +5219,7 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
 #undef SCIPtreeGetCurrentDepth
 #undef SCIPtreeHasCurrentNodeLP
 #undef SCIPtreeGetEffectiveRootDepth
+#undef SCIPtreeGetRootNode
 
 /** gets the type of the node */
 SCIP_NODETYPE SCIPnodeGetType(
@@ -5525,5 +5526,15 @@ int SCIPtreeGetEffectiveRootDepth(
    assert(tree->effectiverootdepth >= 0);
 
    return tree->effectiverootdepth;
+}
+
+/** gets the root node of the tree */
+SCIP_NODE* SCIPtreeGetRootNode(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->root;
 }
 

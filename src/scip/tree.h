@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.94 2007/06/19 14:00:00 bzfberth Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.95 2007/08/24 12:52:26 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -599,6 +599,12 @@ int SCIPtreeGetEffectiveRootDepth(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
+/** gets the root node of the tree */
+extern
+SCIP_NODE* SCIPtreeGetRootNode(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -625,6 +631,7 @@ int SCIPtreeGetEffectiveRootDepth(
 #define SCIPtreeGetCurrentDepth(tree)   ((tree)->pathlen-1)
 #define SCIPtreeHasCurrentNodeLP(tree)  (SCIPtreeProbing(tree) ? (tree)->probingnodehaslp : SCIPtreeHasFocusNodeLP(tree))
 #define SCIPtreeGetEffectiveRootDepth(tree) ((tree)->effectiverootdepth)
+#define SCIPtreeGetRootNode(tree)       ((tree)->root)
 
 #endif
 

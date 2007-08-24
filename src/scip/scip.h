@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.305 2007/08/21 14:39:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.306 2007/08/24 12:52:26 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2256,6 +2256,32 @@ SCIP_RETCODE SCIPinferBinvarProp(
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
    SCIP_Bool*            tightened           /**< pointer to store whether the fixing tightened the local bounds, or NULL */
+   );
+
+/** changes global lower bound of variable in preprocessing or in the current node, if the new bound is tighter
+ *  (w.r.t. bound strengthening epsilon) than the current global bound; if possible, adjusts bound to integral value;
+ *  also tightens the local bound, if the global bound is better than the local bound
+ */
+extern
+SCIP_RETCODE SCIPtightenVarLbGlobal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   );
+
+/** changes global upper bound of variable in preprocessing or in the current node, if the new bound is tighter
+ *  (w.r.t. bound strengthening epsilon) than the current global bound; if possible, adjusts bound to integral value;
+ *  also tightens the local bound, if the global bound is better than the local bound
+ */
+extern
+SCIP_RETCODE SCIPtightenVarUbGlobal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
 
 /** returns LP solution value and index of variable lower bound that is closest to variable's current LP solution value;
@@ -4659,6 +4685,12 @@ SCIP_RETCODE SCIPdropVarEvent(
 /** gets current node in the tree */
 extern
 SCIP_NODE* SCIPgetCurrentNode(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets the root node of the tree */
+extern
+SCIP_NODE* SCIPgetRootNode(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

@@ -45,6 +45,8 @@ interface:
 - new method SCIPresetParams()
 - modified SCIP_SUBVERSION to be a number instead of a string (to be able to use #if SCIP_SUBVERSION >= ...)
 - SCIPsubversion() now returns an int instead of a const char*
+- new methods SCIPtightenVarLbGlobal() and SCIPtightenVarUbGlobal()
+- new method SCIPgetRootNode() (in combination with SCIPcutoffNode(), this allows the immediate finishing of the optimization)
 
 plugins:
 - new C templates disp_xxx.h and dialog_xxx.h, and C++ wrapper classes objdisp.h and objdialog.h, respectively
@@ -160,6 +162,8 @@ fixed bugs:
 - fixed bug with deleting variables from the transformed problem that are contained in the implication graph
 - fixed bug in oneopt heuristic: must not be called on pseudo nodes if continuous variables are present
 - significantly improved performance of c-MIR and Gomory cuts by caching closest VLB and VUB info
+- fixed bug in root reduced cost fixing propagator that leads to an empty domain for a variable as a proof of optimality
+  of the current incumbent
 
 
 SCIP version 0.90
