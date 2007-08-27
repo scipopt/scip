@@ -167,6 +167,7 @@ fixed bugs:
   of the current incumbent
 - fixed bug in bounddisjunction constraint handler with propagation of multi-aggregated variables
 - fixed bug with almost integral multi-aggregation in dual presolve of linear constraint handler
+- fixed bug with numerics in update of min/maxactivity in linear constraint handler
 
 
 SCIP version 0.90

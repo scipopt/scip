@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.248 2007/08/27 13:36:58 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.249 2007/08/27 14:03:18 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2292,8 +2292,10 @@ SCIP_RETCODE delCoefPos(
    }
    consdata->nvars--;
 
-   /* if no more variables are left, the activies should be recalculated (to give exactly 0.0) */
-   if( consdata->nvars == 0 )
+   /* if at most one variable is left, the activies should be recalculated (to correspond exactly to the bounds
+    * of the remaining variable, or give exactly 0.0)
+    */
+   if( consdata->nvars <= 1 )
       consdataInvalidateActivities(consdata);
 
    consdata->propagated = FALSE;
