@@ -166,6 +166,7 @@ fixed bugs:
 - fixed bug in root reduced cost fixing propagator that leads to an empty domain for a variable as a proof of optimality
   of the current incumbent
 - fixed bug in bounddisjunction constraint handler with propagation of multi-aggregated variables
+- fixed bug with almost integral multi-aggregation in dual presolve of linear constraint handler
 
 
 SCIP version 0.90

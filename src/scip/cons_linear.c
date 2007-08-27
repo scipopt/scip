@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.246 2007/08/24 16:02:19 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.247 2007/08/27 13:32:35 bzfwolte Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4812,15 +4812,23 @@ SCIP_RETCODE dualPresolve(
             aggrvars[naggrs] = consdata->vars[j];
             aggrcoefs[naggrs] = -consdata->vals[j]/consdata->vals[bestpos];
             SCIPdebugPrintf(" %+g<%s>", aggrcoefs[naggrs], SCIPvarGetName(aggrvars[naggrs]));
-            assert(!bestisint || SCIPisIntegral(scip, aggrcoefs[naggrs]));
+            if( bestisint )
+            {
+               /* coefficient must be integral: round it to exact integral value */
+               assert(SCIPisIntegral(scip, aggrcoefs[naggrs]));
+               aggrcoefs[naggrs] = SCIPfloor(scip, aggrcoefs[naggrs]+0.5);
+            }
             naggrs++;
          }
       }
       aggrconst = (bestislhs ? consdata->lhs/bestval : consdata->rhs/bestval);
       SCIPdebugPrintf(" %+g, bounds of <%s>: [%g,%g]\n", aggrconst, SCIPvarGetName(bestvar),
          SCIPvarGetLbGlobal(bestvar), SCIPvarGetUbGlobal(bestvar));
-      assert(!bestisint || SCIPisIntegral(scip, aggrconst));
       assert(naggrs == consdata->nvars-1);
+
+      /* right hand side must be integral: round it to exact integral value */
+      assert(!bestisint || SCIPisIntegral(scip, aggrconst));
+      aggrconst = SCIPfloor(scip, aggrconst+0.5);
 
       /* perform the multi-aggregation */
       SCIP_CALL( SCIPmultiaggregateVar(scip, bestvar, naggrs, aggrvars, aggrcoefs, aggrconst, &infeasible, &aggregated) );
