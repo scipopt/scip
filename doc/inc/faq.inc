@@ -61,7 +61,7 @@
     <p class="a">
       An easy way is to use the SCIP-binaries and call SCIP from a shell. 
       For that, you just have to download one of the precompiled binaries from the 
-      <a href="download.shtml">download section</a> or the zipped source code and compile it 
+      <a href="http://scip.zib.de/download.shtml">download section</a> or the zipped source code and compile it 
       with your favorite settings.
     </p>
     <p class="a">
