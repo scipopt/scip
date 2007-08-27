@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.219 2007/08/27 18:46:36 bzfpfets Exp $
+# $Id: Makefile,v 1.220 2007/08/27 20:48:36 bzfpfets Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -306,8 +306,8 @@ ifeq ($(ZIMPL),true)
 ifeq ($(ZLIB),false)
 $(error ZIMPL requires the ZLIB to be linked. Use either ZIMPL=false or ZLIB=true)
 endif
-FLAGS		+=	-DWITH_ZIMPL -I$(LIBDIR)/zimplinc
-LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)gmp$(LINKLIBSUFFIX)
+FLAGS		+=	-DWITH_ZIMPL -I$(LIBDIR)/zimplinc $(ZIMPL_FLAGS)
+LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)gmp$(LINKLIBSUFFIX) $(ZIMPL_LDFLAGS)
 DIRECTORIES	+=	$(LIBDIR)/zimplinc
 SOFTLINKS	+=	$(LIBDIR)/zimplinc/zimpl
 SOFTLINKS	+=	$(LIBDIR)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXT)
