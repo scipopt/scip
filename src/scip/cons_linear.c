@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.249 2007/08/27 14:03:18 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.250 2007/08/27 14:21:26 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3047,7 +3047,7 @@ SCIP_RETCODE analyzeConflict(
    return SCIP_OKAY;
 }
 
-#define BOUNDSCALETOL 1e-05
+#define BOUNDSCALETOL (1.0/(double)(1 << 17))  /* use a value with exact two-complement representation */
 /** tightens bounds of a single variable due to activity bounds */
 static
 SCIP_RETCODE tightenVarBounds(
