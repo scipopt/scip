@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.11 2007/08/22 14:13:15 bzfpfend Exp $
+# $Id: Makefile,v 1.12 2007/08/27 15:04:53 bzfberth Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ example project featuring a very simple pricer
@@ -273,7 +273,7 @@ $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< -o $@
 
-$(LIBDIR)/scip:
+$(LIBDIR)/scip:	$(LIBDIR)
 		@$(SHELL) -ec 'if [ ! -e $@ ] ; \
                         then \
                                 echo "** missing soft-link \"$@\"" ; \
