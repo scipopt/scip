@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.64 2007/06/06 11:32:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.65 2007/08/27 09:56:51 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.3.0
@@ -177,7 +177,7 @@ public:
          m_stat = SPxSolver::solve();
      
       }
-#if SOPLEX_VERSION >= 132
+#if SOPLEX_VERSION >= 133
       catch(SPxException x)
       {
          std::string s = x.what();      
@@ -214,7 +214,7 @@ public:
          
          m_stat = NO_PROBLEM;
       }
-#if SOPLEX_VERSION >= 132
+#if SOPLEX_VERSION >= 133
       catch(SPxException x)
       {
          std::string s = x.what();      
@@ -237,7 +237,7 @@ public:
          if( matrixIsSetup )
             SPxBasis::loadMatrixVecs(); /* bug workaround */
       }
-#if SOPLEX_VERSION >= 132
+#if SOPLEX_VERSION >= 133
       catch(SPxException x)
       {
          std::string s = x.what();      
@@ -259,7 +259,7 @@ public:
             SPxBasis::loadMatrixVecs(); /* bug workaround */
 
       }
-#if SOPLEX_VERSION >= 132
+#if SOPLEX_VERSION >= 133
       catch(SPxException x)
       {
          std::string s = x.what();      
@@ -279,7 +279,7 @@ public:
          if( matrixIsSetup )
             SPxBasis::loadMatrixVecs(); /* bug workaround */
       }
-#if SOPLEX_VERSION >= 132
+#if SOPLEX_VERSION >= 133
       catch(SPxException x)
       {
          std::string s = x.what();      
@@ -300,7 +300,7 @@ public:
             SPxBasis::loadMatrixVecs(); /* bug workaround */
 
       }
-#if SOPLEX_VERSION >= 132
+#if SOPLEX_VERSION >= 133
       catch(SPxException x)
       {
          std::string s = x.what();      
