@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.247 2007/08/27 13:32:35 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.248 2007/08/27 13:36:58 bzfwolte Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4827,8 +4827,11 @@ SCIP_RETCODE dualPresolve(
       assert(naggrs == consdata->nvars-1);
 
       /* right hand side must be integral: round it to exact integral value */
-      assert(!bestisint || SCIPisIntegral(scip, aggrconst));
-      aggrconst = SCIPfloor(scip, aggrconst+0.5);
+      if( bestisint )
+      {
+         assert(SCIPisIntegral(scip, aggrconst));
+         aggrconst = SCIPfloor(scip, aggrconst+0.5);
+      }
 
       /* perform the multi-aggregation */
       SCIP_CALL( SCIPmultiaggregateVar(scip, bestvar, naggrs, aggrvars, aggrcoefs, aggrconst, &infeasible, &aggregated) );
