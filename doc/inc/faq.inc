@@ -145,7 +145,7 @@
     </p>
 <h4><a name="Section2">Using SCIP as a standalone MIP-Solver</a></h4>
     <p class="q">
-      <a name="Q22">The output is too wide for my terminal window. What can I do?</a>
+      <a name="Q28">The output is too wide for my terminal window. What can I do?</a>
     </p>
     <p class="a">
       Type &quot;set display width&quot; followed by an appropriate number into the interactive shell.
