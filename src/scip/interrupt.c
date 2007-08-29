@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: interrupt.c,v 1.25 2007/06/06 11:25:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: interrupt.c,v 1.26 2007/08/29 10:35:02 bzfpfend Exp $"
 
 /**@file   interrupt.c
  * @brief  methods and datastructures for catching the user CTRL-C interrupt
@@ -119,9 +119,9 @@ void SCIPinterruptCapture(
       
       /* set new signal action, and remember old one */
       (void)sigaction(SIGINT, &newaction, &interrupt->oldsigaction);
+#endif
 
       ninterrupts = 0;
-#endif
    }
    interrupt->nuses++;
 }

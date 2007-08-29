@@ -1,3 +1,10 @@
+current version
+===============
+
+fixed bugs:
+- fixed CTRL-C if NO_SIGACTION is set (e.g., for MinGW)
+
+
 SCIP version 1.00
 =================
 
