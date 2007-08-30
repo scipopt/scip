@@ -19,7 +19,7 @@ END {
 
     echo available CPLEX tokens: $AVAILABLE
 
-    if [ $AVAILABLE -ge 2 ]
+    if test $AVAILABLE -ge 2
     then
 	break
     fi

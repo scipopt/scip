@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.43 2007/08/17 14:40:19 bzfpfend Exp $
+# $Id: check.sh,v 1.44 2007/08/30 14:21:06 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -31,11 +31,11 @@ VERSION=${12}
 
 SETDIR=../settings
 
-if [ ! -e results ]
+if test ! -e results
 then
     mkdir results
 fi
-if [ ! -e locks ]
+if test ! -e locks
 then
     mkdir locks
 fi
@@ -53,16 +53,16 @@ SETFILE=results/check.$TSTNAME.$BINID.$SETNAME.set
 
 SETTINGS=$SETDIR/$SETNAME.set
 
-if [ "$LOCK" == "true" ]
+if test "$LOCK" == "true"
 then
-    if [ -e $DONEFILE ]
+    if test -e $DONEFILE
     then
 	echo skipping test due to existing done file $DONEFILE
 	exit
     fi
-    if [ -e $LOCKFILE ]
+    if test -e $LOCKFILE
     then
-	if [ -e $RUNFILE ]
+	if test -e $RUNFILE
         then
 	    echo continuing aborted run with run file $RUNFILE
 	else
@@ -74,12 +74,12 @@ then
     date > $RUNFILE
 fi
 
-if [ ! -e $OUTFILE ]
+if test ! -e $OUTFILE
 then
     CONTINUE=false
 fi
 
-if [ "$CONTINUE" == "true" ]
+if test "$CONTINUE" == "true"
 then
     MVORCP=cp
 else
@@ -87,16 +87,16 @@ else
 fi
 
 DATEINT=`date +"%s"`
-if [ -e $OUTFILE ]
+if test -e $OUTFILE
 then
     $MVORCP $OUTFILE $OUTFILE.old-$DATEINT
 fi
-if [ -e $ERRFILE ]
+if test -e $ERRFILE
 then
     $MVORCP $ERRFILE $ERRFILE.old-$DATEINT
 fi
 
-if [ "$CONTINUE" == "true" ]
+if test "$CONTINUE" == "true"
 then
     LASTPROB=`getlastprob.awk $OUTFILE`
     echo Continuing benchmark. Last solved instance: $LASTPROB
@@ -112,28 +112,28 @@ uname -a >>$ERRFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-HARDTIMELIMIT=`echo $TIMELIMIT*1.1 | bc`
-HARDMEMLIMIT=`echo $MEMLIMIT*1.2 | bc`
-echo hard time limit: $HARDTIMELIMIT >>$OUTFILE
-echo hard mem limit: $HARDMEMLIMIT >>$OUTFILE
+HARDTIMELIMIT=`echo $TIMELIMIT+60 | bc`
+HARDMEMLIMIT=`echo ($MEMLIMIT+10)*1024 | bc`
+echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
+echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
 
 for i in `cat $TSTNAME.test` DONE
 do
-    if [ "$i" == "DONE" ]
+    if test "$i" == "DONE"
     then
 	date > $DONEFILE
 	break
     fi
 
-    if [ "$LASTPROB" == "" ]
+    if test "$LASTPROB" == ""
     then
 	LASTPROB=""
-	if [ -f $i ]
+	if test -f $i
 	then
 	    echo @01 $i ===========
 	    echo @01 $i ===========                >> $ERRFILE
 	    echo set load $SETTINGS                >  $TMPFILE
-	    if [ $FEASTOL != "default" ]
+	    if test $FEASTOL != "default"
 	    then
 		echo set numerics feastol $FEASTOL    >> $TMPFILE
 	    fi
@@ -159,7 +159,8 @@ do
 	    date >>$ERRFILE
 	    echo -----------------------------
 	    date +"@03 %s"
-	    tcsh -c "limit cputime $HARDTIMELIMIT s; limit memoryuse $HARDMEMLIMIT M; limit filesize 200 M; ../$2 < $TMPFILE" 2>>$ERRFILE
+#	    tcsh -c "limit cputime $HARDTIMELIMIT s; limit memoryuse $HARDMEMLIMIT k; limit filesize 200 M; ../$2 < $TMPFILE" 2>>$ERRFILE
+	    bash -c "ulimit -t $HARDTIMELIMIT -v $HARDMEMLIMIT -f 200000; ../$2 < $TMPFILE" 2>>$ERRFILE
 	    date +"@04 %s"
 	    echo -----------------------------
 	    date
@@ -173,7 +174,7 @@ do
 	fi
     else
 	echo skipping $i
-	if [ "$LASTPROB" == "$i" ]
+	if test "$LASTPROB" == "$i"
 	then
 	    LASTPROB=""
         fi
@@ -185,11 +186,11 @@ rm -f $TMPFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-if [ -e $DONEFILE ]
+if test -e $DONEFILE
 then
     ./evalcheck.sh $OUTFILE
 
-    if [ "$LOCK" == "true" ]
+    if test "$LOCK" == "true"
     then
 	rm -f $RUNFILE
     fi

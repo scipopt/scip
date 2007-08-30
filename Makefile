@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.223 2007/08/30 13:12:09 bzfpfend Exp $
+# $Id: Makefile,v 1.224 2007/08/30 14:21:06 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -269,8 +269,7 @@ LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 endif
 
 LPILIB		=	$(LPILIBNAME).$(BASE)
-LPILIBFILENAME	=	lib$(LPILIB).$(LIBEXT)
-LPILIBFILE	=	$(LIBDIR)/$(LPILIBFILENAME)
+LPILIBFILE	=	$(LIBDIR)/lib$(LPILIB).$(LIBEXT)
 LPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(LPILIBOBJ))
 LPILIBDEP	=	$(SRCDIR)/depend.lpilib.$(LPS).$(OPT)
 LPILIBLINK	=	$(LIBDIR)/lib$(LPILIBSHORTNAME).$(BASE).$(LIBEXT)
@@ -442,8 +441,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			tclique/tclique_graph.o
 
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
-SCIPLIBFILENAME	=	lib$(SCIPLIB).$(LIBEXT)
-SCIPLIBFILE	=	$(LIBDIR)/$(SCIPLIBFILENAME)
+SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).$(LIBEXT)
 SCIPLIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SCIPLIBOBJ))
 SCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(SCIPLIBOBJ:.o=.c))
 SCIPLIBDEP	=	$(SRCDIR)/depend.sciplib.$(OPT)
@@ -475,8 +473,7 @@ OBJSCIPLIBOBJ	=	objscip/objbranchrule.o \
 			objscip/objvardata.o
 
 OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
-OBJSCIPLIBFILENAME=	lib$(OBJSCIPLIB).$(LIBEXT)
-OBJSCIPLIBFILE	=	$(LIBDIR)/$(OBJSCIPLIBFILENAME)
+OBJSCIPLIBFILE	=	$(LIBDIR)/lib$(OBJSCIPLIB).$(LIBEXT)
 OBJSCIPLIBOBJFILES=	$(addprefix $(LIBOBJDIR)/,$(OBJSCIPLIBOBJ))
 OBJSCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(OBJSCIPLIBOBJ:.o=.cpp))
 OBJSCIPLIBDEP	=	$(SRCDIR)/depend.objsciplib.$(OPT)
@@ -502,8 +499,7 @@ MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.cpp))
 MAINDEP		=	$(SRCDIR)/depend.cppmain.$(OPT)
 endif
 
-MAINFILENAME	=	$(MAINNAME).$(BASE).$(LPS)$(EXEEXTENSION)
-MAINFILE	=	$(BINDIR)/$(MAINFILENAME)
+MAINFILE	=	$(BINDIR)/$(MAINNAME).$(BASE).$(LPS)$(EXEEXTENSION)
 MAINOBJFILES	=	$(addprefix $(BINOBJDIR)/,$(MAINOBJ))
 MAINLINK	=	$(BINDIR)/$(MAINSHORTNAME).$(BASE).$(LPS)$(EXEEXTENSION)
 MAINSHORTLINK	=	$(BINDIR)/$(MAINSHORTNAME)$(EXEEXTENSION)
@@ -543,38 +539,38 @@ check:		test
 .PHONY: test
 test:		
 		cd check; \
-		/bin/sh ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(MAINFILENAME).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION);
+		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION);
 
 .PHONY: testpre
 testpre:		
 		cd check; \
-		/bin/sh ./checkpre.sh $(TEST) $(MAINFILE) $(SETTINGS) $(MAINFILENAME).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
+		$(SHELL) ./checkpre.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
 
 .PHONY: testcplex
 testcplex:		
 		cd check; \
-		/bin/sh ./check_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE);
+		$(SHELL) ./check_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE);
 
 .PHONY: testcbc
 testcbc:		
 		cd check; \
-		/bin/sh ./check_cbc.sh $(TEST) $(CBC) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE);
+		$(SHELL) ./check_cbc.sh $(TEST) $(CBC) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE);
 
 $(LPILIBLINK):	$(LPILIBFILE)
 		@rm -f $@
-		cd $(dir $@) && ln -s $(LPILIBFILENAME) $(notdir $@)
+		cd $(dir $@) && ln -s $(notdir $(LPILIBFILE)) $(notdir $@)
 
 $(SCIPLIBLINK):	$(SCIPLIBFILE)
 		@rm -f $@
-		cd $(dir $@) && ln -s $(SCIPLIBFILENAME) $(notdir $@)
+		cd $(dir $@) && ln -s $(notdir $(SCIPLIBFILE)) $(notdir $@)
 
 $(OBJSCIPLIBLINK):	$(OBJSCIPLIBFILE)
 		@rm -f $@
-		cd $(dir $@) && ln -s $(OBJSCIPLIBFILENAME) $(notdir $@)
+		cd $(dir $@) && ln -s $(notdir $(OBJSCIPLIBFILE)) $(notdir $@)
 
 $(MAINLINK) $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
-		cd $(dir $@) && ln -s $(MAINFILENAME) $(notdir $@)
+		cd $(dir $@) && ln -s $(notdir $(MAINFILE)) $(notdir $@)
 
 $(OBJDIR):	
 		@-mkdir -p $(OBJDIR)

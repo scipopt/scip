@@ -25,10 +25,10 @@ do
     break
   done
   
-  if [ -f $atamtuerkres ]
+  if test -f $atamtuerkres
   then
       NTESTSETS=$(($NTESTSETS+1))
-  elif [ -f $normalres ]
+  elif test -f $normalres
   then
       NTESTSETS=$(($NTESTSETS+1))
   fi
@@ -75,10 +75,10 @@ do
       break
     done
 
-    if [ -f $atamtuerkres ]
+    if test -f $atamtuerkres
     then
 	ATAMTUERK="atamtuerk_"
-    elif [ -f $normalres ]
+    elif test -f $normalres
     then
 	ATAMTUERK=""
     fi
@@ -95,9 +95,9 @@ do
       break
     done
 
-    if [ -f $defaultres ]
+    if test -f $defaultres
     then
-	if [ -f $setres ]
+	if test -f $setres
 	then
 	    disscmpres.sh texsummaryshifted=1 onlygroup=$groupname texincfile=$TEXINCFILE texfile="disstables/Table_${setname}_${groupname}_${testset}.tex" texsummaryfile="$TEXSUMMARYFILE" texsummaryheader=$SUMMARYHEADER texsummaryweight=$weight textestset="$testset" results/check.diss_${testsetfile}*.*.default.res results/check.diss_${testsetfile}*.*.${setname}_*.res >> gendisstables.out
 	fi

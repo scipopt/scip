@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck.sh,v 1.8 2007/07/06 17:30:49 bzfberth Exp $
+# $Id: evalcheck.sh,v 1.9 2007/08/30 14:21:06 bzfpfend Exp $
 
 export LANG=C
 
@@ -23,7 +23,7 @@ AWKARGS=""
 FILES=""
 for i in $@
 do
-    if [ ! -e $i ]
+    if test ! -e $i
     then
 	AWKARGS="$AWKARGS $i"
     else
@@ -42,19 +42,19 @@ do
 
     TSTNAME=`echo $NAME | sed 's/check.\([a-zA-Z0-9_]*\).*/\1/g'`
 
-    if [ -f $TSTNAME.test ]
+    if test -f $TSTNAME.test
     then
 	TESTFILE=$TSTNAME.test
     else
 	TESTFILE=""
     fi
 
-    if [ -f $TSTNAME.solu ]
+    if test -f $TSTNAME.solu
     then
 	SOLUFILE=$TSTNAME.solu
-    else if [ -f mmm.solu ] 
+    else if test -f all.solu
     then
-	SOLUFILE=mmm.solu
+	SOLUFILE=all.solu
     else
         SOLUFILE=""
     fi

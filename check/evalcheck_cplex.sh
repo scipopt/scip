@@ -15,9 +15,23 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck_cplex.sh,v 1.2 2007/06/06 11:28:07 bzfpfend Exp $
+# $Id: evalcheck_cplex.sh,v 1.3 2007/08/30 14:21:06 bzfpfend Exp $
 
+export LANG=C
+
+AWKARGS=""
+FILES=""
 for i in $@
+do
+    if test ! -e $i
+    then
+	AWKARGS="$AWKARGS $i"
+    else
+	FILES="$FILES $i"
+    fi
+done
+
+for i in $FILES
 do
     NAME=`basename $i .out`
     DIR=`dirname $i`
@@ -30,10 +44,16 @@ do
     TSTNAME=`sed 's/check.\([a-zA-Z0-9_]*\).*/\1/g' $TMPFILE`
     rm $TMPFILE
 
-    if [ -f $TSTNAME.solu ]
+    if test -f $TSTNAME.solu
     then
-	gawk -f check_cplex.awk -vTEXFILE=$TEXFILE $TSTNAME.solu $OUTFILE | tee $RESFILE
+	SOLUFILE=$TSTNAME.solu
+    else if test -f all.solu
+    then
+	SOLUFILE=all.solu
     else
-	gawk -f check_cplex.awk -vTEXFILE=$TEXFILE $OUTFILE | tee $RESFILE
+        SOLUFILE=""
     fi
+    fi
+
+    gawk -f check_cplex.awk -v "TEXFILE=$TEXFILE" $AWKARGS $SOLUFILE $OUTFILE | tee $RESFILE
 done

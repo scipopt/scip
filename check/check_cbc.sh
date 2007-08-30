@@ -27,11 +27,11 @@ FEASTOL=$8
 MIPGAP=$9
 CONTINUE=${10}
 
-if [ ! -e results ]
+if test ! -e results
 then
     mkdir results
 fi
-if [ ! -e settings ]
+if test ! -e settings
 then
     mkdir settings
 fi
@@ -45,7 +45,7 @@ SETFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.cmd
 
 SETTINGS=settings/$SETNAME.cbcset
 
-if [ "$CONTINUE" == "true" ]
+if test "$CONTINUE" == "true"
 then
     MVORCP=cp
 else
@@ -53,16 +53,16 @@ else
 fi
 
 DATEINT=`date +"%s"`
-if [ -e $OUTFILE ]
+if test -e $OUTFILE
 then
     $MVORCP $OUTFILE $OUTFILE.old-$DATEINT
 fi
-if [ -e $ERRFILE ]
+if test -e $ERRFILE
 then
     $MVORCP $ERRFILE $ERRFILE.old-$DATEINT
 fi
 
-if [ "$CONTINUE" == "true" ]
+if test "$CONTINUE" == "true"
 then
     LASTPROB=`getlastprob.awk $OUTFILE`
     echo Continuing benchmark. Last solved instance: $LASTPROB
@@ -85,28 +85,28 @@ echo hard mem limit: $HARDMEMLIMIT >>$OUTFILE
 
 for i in `cat $TSTNAME.test`
 do
-    if [ "$LASTPROB" == "" ]
+    if test "$LASTPROB" == ""
     then
 	LASTPROB=""
-	if [ -f $i ]
+	if test -f $i
 	then
 	    rm -f $SETFILE
 	    echo @01 $i ===========
 	    echo @01 $i ===========                 >> $ERRFILE
 	    echo @03 SETTINGS: $SETNAME
-	    if [ $SETNAME != "default" ]
+	    if test $SETNAME != "default"
 	    then
 		cp $SETTINGS $TMPFILE
 	    else
 		echo ""                              > $TMPFILE
 	    fi
-	    if [ $FEASTOL != "default" ]
+	    if test $FEASTOL != "default"
 	    then
 		echo primalTolerance $FEASTOL       >> $TMPFILE
 		echo integerTolerance $FEASTOL      >> $TMPFILE
 	    fi
 	    echo seconds $TIMELIMIT                 >> $TMPFILE
-	    if [ $MIPGAP != "default" ]
+	    if test $MIPGAP != "default"
 	    then
 		echo ratioGap $MIPGAP               >> $TMPFILE
 	    fi
@@ -133,7 +133,7 @@ do
 	fi
     else
 	echo skipping $i
-	if [ "$LASTPROB" == "$i" ]
+	if test "$LASTPROB" == "$i"
 	then
 	    LASTPROB=""
         fi
@@ -145,7 +145,7 @@ rm -f $TMPFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-if [ -f $TSTNAME.solu ]
+if test -f $TSTNAME.solu
 then
     gawk -f check_cbc.awk -vTEXFILE=$TEXFILE $TSTNAME.solu $OUTFILE | tee $RESFILE
 else

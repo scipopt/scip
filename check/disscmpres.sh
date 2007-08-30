@@ -15,13 +15,13 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: disscmpres.sh,v 1.2 2007/06/06 11:28:06 bzfpfend Exp $
+# $Id: disscmpres.sh,v 1.3 2007/08/30 14:21:06 bzfpfend Exp $
 
 AWKARGS=""
 FILES=""
 for i in $@
 do
-    if [ ! -e $i ]
+    if test ! -e $i
     then
 	AWKARGS="$AWKARGS $i"
     else
