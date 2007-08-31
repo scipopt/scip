@@ -293,7 +293,7 @@
       <a name="Q19">What types of plugins can I add and how do I do this?</a>
     </p>
     <p class="a">
-      See the <a href="http://scip.zib.de/doc/html/OBJ.html">doxygen documentation</a> for a list of 
+      See the <a href="http://scip.zib.de/doc/html/index.html">doxygen documentation</a> for a list of 
       plugin types. There is a HowTo for each of them.
     </p>
     <p class="q">

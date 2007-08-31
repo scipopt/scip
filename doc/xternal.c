@@ -59,8 +59,9 @@
  *
  * - Indentation is 3 spaces. No tabs anywhere in the code.
  * - Always only one declaration in a line.
- * - Braces are on a new line and not indented.
+ * - Curly braces are on a new line and not indented.
  * - Spaces around all operators.
+ * - No spaces between control structure keywords like "if", "for", "while", "switch" and the corresponding braces.
  * - Use assert() to show preconditions for the parameters, invariants and postconditions.
  * - All global functions start with "SCIP". In the usual naming scheme this is followed by the object and a method name
  *   like in SCIPlpAddRow(). Functions return TRUE or FALSE should be named like SCIPlpiIsOptimal().
