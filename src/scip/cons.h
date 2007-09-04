@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.111 2007/08/21 14:39:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.112 2007/09/04 16:20:09 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -404,7 +404,8 @@ SCIP_RETCODE SCIPconsCreate(
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
-   SCIP_Bool             original            /**< is constraint belonging to the original problem? */
+   SCIP_Bool             original,           /**< is constraint belonging to the original problem? */
+   SCIP_Bool             deleteconsdata      /**< has the constraint data to be deleted if constraint is freed? */
    );
 
 /** frees a constraint and removes it from the conss array of its constraint handler */

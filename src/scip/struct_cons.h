@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.45 2007/06/06 11:25:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.46 2007/09/04 16:20:09 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -69,6 +69,7 @@ struct SCIP_Cons
    unsigned int          removable:1;        /**< TRUE iff relaxation should be removed from the LP due to aging or cleanup */
    unsigned int          stickingatnode:1;   /**< TRUE iff the node should always be kept at the node where it was added */
    unsigned int          original:1;         /**< TRUE iff constraint belongs to original problem */
+   unsigned int          deleteconsdata:1;   /**< TRUE iff constraint data has to be deleted if constraint is freed */
    unsigned int          active:1;           /**< TRUE iff constraint is active in the current node */
    unsigned int          enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in current node */
    unsigned int          obsolete:1;         /**< TRUE iff constraint is too seldomly used and therefore obsolete */

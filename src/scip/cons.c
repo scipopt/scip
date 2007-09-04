@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.162 2007/08/21 14:39:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.163 2007/09/04 16:20:09 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4298,12 +4298,14 @@ SCIP_RETCODE SCIPconsCreate(
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
-   SCIP_Bool             original            /**< is constraint belonging to the original problem? */
+   SCIP_Bool             original,           /**< is constraint belonging to the original problem? */
+   SCIP_Bool             deleteconsdata      /**< has the constraint data to be deleted if constraint is freed? */
    )
 {
    assert(cons != NULL);
    assert(blkmem != NULL);
    assert(conshdlr != NULL);
+   assert(!original || deleteconsdata);
 
    /* constraints of constraint handlers that don't need constraints cannot be created */
    if( !conshdlr->needscons )
@@ -4346,6 +4348,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->removable = removable;
    (*cons)->stickingatnode = stickingatnode;
    (*cons)->original = original;
+   (*cons)->deleteconsdata = deleteconsdata;
    (*cons)->active = FALSE;
    (*cons)->enabled = FALSE;
    (*cons)->obsolete = FALSE;
@@ -4411,7 +4414,7 @@ SCIP_RETCODE SCIPconsFree(
       (*cons)->name, (*cons)->consspos, (*cons)->conshdlr->name);
 
    /* free constraint data */
-   if( (*cons)->conshdlr->consdelete != NULL && (*cons)->consdata != NULL )
+   if( (*cons)->conshdlr->consdelete != NULL && (*cons)->consdata != NULL && (*cons)->deleteconsdata )
    {
       SCIP_CALL( (*cons)->conshdlr->consdelete(set->scip, (*cons)->conshdlr, *cons, &(*cons)->consdata) );
    }
@@ -4600,11 +4603,11 @@ SCIP_RETCODE SCIPconsTransform(
       }
       else
       {
-         /* create new constraint with empty constraint data */
-         SCIP_CALL( SCIPconsCreate(transcons, blkmem, set, origcons->name, origcons->conshdlr, NULL, origcons->initial,
+         /* create new constraint with a pointer copy of the constraint data */
+         SCIP_CALL( SCIPconsCreate(transcons, blkmem, set, origcons->name, origcons->conshdlr, origcons->consdata, origcons->initial,
                origcons->separate, origcons->enforce, origcons->check, origcons->propagate, 
                origcons->local, origcons->modifiable, origcons->dynamic, origcons->removable, origcons->stickingatnode,
-               FALSE) );
+               FALSE, FALSE) );
       }
 
       /* link original and transformed constraint */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.420 2007/08/24 16:02:19 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.421 2007/09/04 16:20:09 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8350,7 +8350,7 @@ SCIP_RETCODE SCIPcreateCons(
    {
    case SCIP_STAGE_PROBLEM:
       SCIP_CALL( SCIPconsCreate(cons, scip->mem->probmem, scip->set, name, conshdlr, consdata,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, TRUE) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, TRUE, TRUE) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -8359,7 +8359,7 @@ SCIP_RETCODE SCIPcreateCons(
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_FREESOLVE:
       SCIP_CALL( SCIPconsCreate(cons, scip->mem->solvemem, scip->set, name, conshdlr, consdata,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, FALSE) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, FALSE, TRUE) );
       return SCIP_OKAY;
 
    default:
