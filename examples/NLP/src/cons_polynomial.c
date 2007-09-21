@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_polynomial.c,v 1.2 2007/09/21 14:54:21 bzfniulf Exp $"
+#pragma ident "@(#) $Id: cons_polynomial.c,v 1.3 2007/09/21 15:01:22 bzfniulf Exp $"
 
 /**@file   cons_polynomial.c
 
@@ -32,7 +32,7 @@
 
 #include "scip/pub_var.h"
 
-#include "MyNLP.h"
+#include "solve_nlp.h"
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "polynomial"

@@ -1,16 +1,13 @@
-/* Copyright (C) 2005, 2006 International Business Machines and others.
- * All Rights Reserved.
- * This code is published under the Common Public License.
+/* 
+ * $Id: solve_nlp.c,v 1.3 2007/09/21 15:01:22 bzfniulf Exp $
  *
- * $Id: solve_nlp.c,v 1.2 2007/09/21 14:54:22 bzfniulf Exp $
- *
- * Authors:  Carl Laird, Andreas Waechter     IBM    2005-08-17
+ * 
  */
 #include "IpStdCInterface.h"
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
-#include "MyNLP.h"
+#include "solve_nlp.h"
 
 static NLP* nlp_param = NULL;
 /* Function Declarations */
