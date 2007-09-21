@@ -1,0 +1,11 @@
+#--- $Id: make.darwin.ppc.gnu.opt,v 1.1 2007/09/21 13:32:02 bzfpfend Exp $
+FLAGS		+=	-DNDEBUG -DNO_REMOVE_HISTORY # -DROUNDING_FE
+OFLAGS		+=	-O3 -fomit-frame-pointer
+CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
+CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
+ARFLAGS		=	crs
+LDFLAGS		+=	-lncurses # -static
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline
