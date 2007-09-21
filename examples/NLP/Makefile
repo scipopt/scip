@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.1 2007/09/21 13:32:01 bzfpfend Exp $
+# $Id: Makefile,v 1.2 2007/09/21 13:34:48 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ NLP example using SCIP as a callable library
@@ -201,7 +201,7 @@ OBJSCIPLIBFILE	=	$(LIBDIR)/scip/lib/lib$(OBJSCIPLIB).$(LIBEXT)
 MAINNAME	=	scipnlp
 MAINOBJ		=	cmain.o
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
-MAINDEP		=	$(SRCDIR)/depend.cppmain.$(OPT)
+MAINDEP		=	$(SRCDIR)/depend.cmain.$(OPT)
 
 MAIN		=	$(MAINNAME).$(BASE).$(LPS)$(EXEEXTENSION)
 MAINFILE	=	$(BINDIR)/$(MAIN)
