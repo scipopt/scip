@@ -3,22 +3,22 @@ Licensing Information For Commercial Users
 
 SCIP and SoPlex can be used without charge for academic purposes. ZIB
 also promotes the transfer of mathematics into industrial applications
-and is interested in commercial applications of SCIP and SoPlex. If
-you are applying SCIP/SoPlex in such a context, you need a
-license. The basic conditions for such a license are laid out in the
-following.
+and is interested in commercial applications of SCIP and SoPlex. 
+
+If you are applying SCIP/SoPlex in such a context, you need a
+commercial license from ZIB. The basic conditions for such a license
+are laid out in the following.
 
 
-1. When a Commercial License is Needed.
+1. When a Commercial License is Needed
 
    The basic rule is: whenever you add value by using SCIP, you need a
    license. This includes:
 
-   - selling a product that includes (parts) of SCIP/SoPlex, also in linked
+   - selling a product that includes (parts) of SCIP/SoPlex in linked
      binary form
    - selling results that were obtained by using SCIP/SoPlex
-   - using SCIP/SoPlex internally to save money
-   - applying for grants for which SCIP/SoPlex is an integral part
+   - using SCIP/SoPlex internally for nonacademic purposes
 
 
 2. License Fees
@@ -27,30 +27,37 @@ following.
    you can also obtain a license for SoPlex alone.
 
    - A development license costs about 2000 Euro.
-   - Selling SCIP/SoPlex with a binary code, costs about 1000 Euro per
-     code license; for larger quantities the fee reduces.
+   - Selling SCIP/SoPlex with a binary code costs about 1000 Euro per
+     copy sold; for larger quantities the fee reduces.
    
    The fees can be reduced in special situations, depending on
    negotiation. This point might apply, for example, if the price of
-   the original product is small or within an academic cooperation.
+   the original product is small or SCIP/SoPlex is used within an
+   academic cooperation.
+
+   A particular situation that has to be negotiated is when you are
+   from an academic institution and are applying for grants for which
+   SCIP/SoPlex is an integral part
 
 
 3. Licensing Conditions
 
    <Your company> obtains a perpetual and non exclusive license to use
    SCIP/SoPlex and to distribute SCIP/SoPlex in added value
-   products. In particular, ZIB guarantees <your company> against any
-   legal action about ownership rights. <Your company> does not have
-   the right to distribute a general purpose MIP, LP, or CP library or
-   an MIP/LP/CP solver based on SCIP/SoPlex. ZIB's own rights to use
-   and distribute SCIP/SoPlex are not affected by this agreement.
+   products. <Your company> does not have the right to distribute a
+   general purpose MIP, LP, or CP library or an MIP/LP/CP solver based
+   on SCIP/SoPlex. ZIB's own rights to use and distribute SCIP/SoPlex
+   are not affected by this agreement.
 
    ZIB takes no guarantee for the function of SCIP/SoPlex, and no
    liability for any consequences that the use of SCIP/SoPlex in
    products of <your company> or at <your company> itself may have.
+   ZIB also does not guarantee that SCIP/SoPlex is useful for any
+   purpose whatsoever.
 
    <Your company> has the right to distribute all or parts of
-   SCIP/SoPlex in its original or in modified form in its products.
+   SCIP/SoPlex or modifications thereof in binary form in its
+   products.
 
 
 4. Maintenance And Support
@@ -58,10 +65,12 @@ following.
    SCIP/SoPlex is sold "as is", no release is provided.
 
    ZIB is an academic institution and not a commercial company. We do
-   not offer maintenance, support, nor bug fixing.
+   not offer maintenance nor support. We are, however, always
+   interested in reported bugs and will try to fix them, but we will
+   not guarantee to do so.
 
+5. Test Licences
 
-5. Legal Venue
-
-   Any disputes arising hereunder will be settled before a competent
-   Berlin court of law.
+   ZIB may grant a test license for a limited time upon request that
+   allows to test SCIP/SoPlex for internal purposes. We of course hope
+   that this will lead to a regular license.
