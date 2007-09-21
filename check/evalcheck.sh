@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck.sh,v 1.9 2007/08/30 14:21:06 bzfpfend Exp $
+# $Id: evalcheck.sh,v 1.10 2007/09/21 10:39:48 bzfpfend Exp $
 
 export LANG=C
 

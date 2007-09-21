@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 TEXINCFILE="disstables/detailedtables.tex"
 

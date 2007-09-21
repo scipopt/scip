@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 while true
 do
     AVAILABLE=`/home/optimi/adm_cple/ilm-2.6/ilmlist | gawk --source '
