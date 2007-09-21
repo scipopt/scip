@@ -53,14 +53,14 @@ are laid out in the following.
    product which includes (parts of) SCIP/SoPlex or modifications
    thereof in binary form.
 
-   <Your company> does not have the right to distribute a general
+   Your company does not have the right to distribute a general
    purpose MIP, LP, or CP library or an MIP/LP/CP solver based on
    SCIP/SoPlex. ZIB's own rights to use and distribute SCIP/SoPlex are
    not affected by this agreement.
 
    ZIB takes no guarantee for the function of SCIP/SoPlex, and no
    liability for any consequences that the use of SCIP/SoPlex in
-   products of <your company> or at <your company> itself may have.
+   products of your company or at your company itself may have.
    ZIB also does not guarantee that SCIP/SoPlex is useful for any
    purpose whatsoever.
 
