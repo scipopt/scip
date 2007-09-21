@@ -27,7 +27,18 @@ typedef struct PolynomialIpoptTag
 } PolynomialIpopt;
 
 typedef struct NLPTag {
-   int nvars;                   /* the dimension of variables */
+   int nvars;                   /* the dimension of variables, this is the total number of the vars */
+   int nbinvars;                /* the number of binary variables */
+   int nintvars;                /* the number of integer variables */
+   int nimplvars;               /* the number of implicite variables */
+   int ncontvars;               /* the number of continuous variables */
+   int nactivevars;             /* the number of active variables after presolving */
+   int nnonactivevars;          /* the number of nonactive variables after presolving */
+   int nfixed;                  /* the number of variables which are fixed to constant after presolving */
+   int naggr;                   /* the number of variables which are aggregated */
+   int nmultaggr;               /* the number of variables which are multiaggregated */
+   int nnegation;               /* the number of variables which are the negations of other variables */
+   
    SCIP_Real * c;               /* a array of dimension nvars, coefficients of the linear objective function */
    SCIP_Real * x;               /* a array of dimension nvars, variable values used in ipopt, when call ipopt from scip, it store the inintial values for the variables , when ipopt improve the solution it pass the better solution back to scip */
    SCIP_Real * lb;              /* a array of dimension nvars, the lower bound of variables */
@@ -68,4 +79,3 @@ int Callipopt(SCIP* scip, NLP* nlp_data );
 
 #endif
 
-

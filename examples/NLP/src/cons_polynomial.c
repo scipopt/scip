@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_polynomial.c,v 1.1 2007/09/21 14:50:43 bzfniulf Exp $"
+#pragma ident "@(#) $Id: cons_polynomial.c,v 1.2 2007/09/21 14:54:21 bzfniulf Exp $"
 
 /**@file   cons_polynomial.c
 
@@ -29,6 +29,8 @@
 #include "scip/struct_var.h"
 
 #include "scip/cons_polynomial.h"
+
+#include "scip/pub_var.h"
 
 #include "MyNLP.h"
 
@@ -526,28 +528,49 @@ SCIP_RETCODE ipoptSolve( SCIP* scip, SCIP_CONS** conss, int nconss, SCIP_SOL* so
    int k;
    int ind;
    int nvars;
-   SCIP_ROW ** rows = NULL;
-   SCIP_COL ** cols = NULL;
+   SCIP_VAR** vars = NULL;
+   SCIP_ROW** rows = NULL;
+   SCIP_COL** cols = NULL;
    SCIP_Real val;
    SCIP_CONSDATA* consdata;
    NLP nlp;
+
+   int        tem_int;
+   SCIP_Real  tem_real;
+   SCIP_Real* tem_real_array = NULL;
+   SCIP_VAR*  tem_var        = NULL;
+   SCIP_VAR** tem_var_array  = NULL;
 
    /* prepare for the NLP structure for Ipopt in four steps */
    
    /* prepare some parameters for alloc memoery and fill in the simple data in NLP structure */
 
-   /* since we already called SCIP_CALL( SCIPgetVarsData(scip, &scip_vars, &scip_nvars, &scip_nbinvars, &scip_implvars, &scip_ncontvars) ); 
+   /* since we already called SCIP_CALL( SCIPgetVarsData(scip, &scip_vars, &scip_nvars, &scip_nbinvars, &scip_nimplvars, &scip_ncontvars) ); 
     *  in the improvedByiIpopt, so in scip_vars should already instore the pointer for vars, we only need to check here */
    assert(scip_vars != NULL );
-   printf("start to get the LP part in ipoptSol");
+
+   printf("gather the general information for NLP. \n");
+   //   nlp.nvars = scip_ncontvars;
+   nlp.nvars = scip_nvars;
+   nlp.nbinvars = scip_nbinvars;
+   nlp.nintvars = scip_nintvars;
+   nlp.nimplvars = scip_nimplvars;
+   nlp.ncontvars = scip_ncontvars;
+   nlp.nactivevars = SCIPgetNVars(scip);
+   nlp.nnonactivevars = SCIPgetNFixedVars(scip);
+
+   assert(nlp.nvars == nlp.nbinvars + nlp.nintvars + nlp.nimplvars + nlp.ncontvars);
+   assert(nlp.nvars == nlp.nactivevars + nlp.nnonactivevars);
 
    SCIP_CALL( SCIPgetLPRowsData (scip, &rows, &n_lprows) );
 
-   nlp.nvars = scip_ncontvars;
-   nlp.mcons = nconss+n_lprows;
-   nlp.m_LP  = n_lprows;
+   nlp.m_LP  = n_lprows + nlp.nnonactivevars;
    nlp.m_NLP = nconss;
+   //   nlp.mcons = nconss+n_lprows;
+   nlp.mcons = nlp.m_LP + nlp.m_NLP;
 
+   printf("There are %d variables, %d constraints, %d are linear constraits, %d are nonlinear constriants.\n", nlp.nvars, nlp.mcons, nlp.m_LP, nlp.m_NLP);
+   
    SCIP_CALL( SCIPallocBufferArray( scip, &(nlp.c),  nlp.nvars ) );
    SCIP_CALL( SCIPallocBufferArray( scip, &(nlp.x),  nlp.nvars ) );
    SCIP_CALL( SCIPallocBufferArray( scip, &(nlp.lb), nlp.nvars ) );
@@ -562,53 +585,40 @@ SCIP_RETCODE ipoptSolve( SCIP* scip, SCIP_CONS** conss, int nconss, SCIP_SOL* so
    SCIP_CALL( SCIPallocBufferArray( scip, &(nlp.rhs), nlp.mcons ) ); 
    SCIP_CALL( SCIPallocBufferArray( scip, &(nlp.lhs), nlp.mcons ) );
 
+
    /** prepare the data for linear objective function and variables */
    for( j = 0; j < nlp.nvars; ++j )
    {
       nlp.lb[j] = - SCIP_DEFAULT_INFINITY; 
       nlp.ub[j] =   SCIP_DEFAULT_INFINITY; /* its value is 10^20 */
    }
-   
-   SCIP_CALL( SCIPgetLPColsData(scip, &cols, &n_lpcols) );
-   /* set the lb, ub, the coefficient of the linear ojective function and the initial values for variables 
-    *  NOTICE now we only handle the case all the variables in the objective function should be also has a 
-    *  col in LP at least some bound constraint */
-   for(j =0; j<n_lpcols; ++j)
-   {
-      nlp.c[j]  = SCIPcolGetObj( cols[j] );
-      /* nlp.x[j]  = SCIPgetSolVal( scip, NULL, SCIPcolGetVar( cols[j] ) ); */
-      nlp.x[j]  = SCIPgetSolVal( scip, sol, SCIPcolGetVar( cols[j] ) );
-      nlp.lb[j] = SCIPcolGetLb( cols[j] );
-      nlp.ub[j] = SCIPcolGetUb( cols[j] );      
-   }
 
-    /*   for( j = 0; j < n_lpcols; ++j )
-      {
-       ** this seems a more general way to create data if you think about the case where you have some variables
-        *  which are occoured only in the nonlinear constraints, notice only occours in the nonliear part means it is 
-        *  either in the objective function or in the bounds  because these case are the one SCIP can handle
-        *  it without nonlinear constriant hander. Now lets talk about in detail. If a vriable only occour in the objective
-        *  function without a bounnd except the nonlinear constriants, there must be a col corresponding to this variable,
-        *  although at last the solution is ubounded. But if a variable does not occour in the objective function that means the 
-        *  coeeficient to this variable is 0, but it has a finite bound, if it does not occour in the nonlinear part, then it is 
-        *  OK for SCIP deleminate it in the presoling process, but what happened when it occour in the nonlinear constriants, in that
-        *  case also it is not explicately occour in the objectivce iunction, but this variable might be affect the optimal value 
-        *  in the implicate way, and the current SCIP preprocessing is only for the linear part, Then SCIP might delete this variable
-        *  What we should do now? switch off the presolving process it seems stupid. I think it might be better to recognize this special
-        *  kind of variables then leave them when delelte other redundant variables 
-        *  
-        *   // get the index of var 
-        *   ind = indexOfVar( scip, SCIPcolGetVar( cols[j] ) );
-        *   ind = ind - scip_begin_of_contvars;
-        *   nlp.lb[ind] = SCIPcolGetLb( cols[ind] );
-        *   nlp.ub[ind] = SCIPcolGetUb( cols[ind] );
-        *   // set the coefficient if objective 
-        *   nlp.c[ind]  = SCIPcolGetObj( cols[j] );
-        *   // set the objective value 
-        *   nlp.x[j]  = SCIPgetSolVal( scip, NULL, SCIPcolGetVar( cols[ind] ) );
-        *   }
-        *   */
-        /** prepare the linear constriants row by row */
+   /** since when scip call ipopt, all the integer include binary aready fixed to integer values,
+       we fix their lb and ub the integer values. Notice these variables might also occur in the
+       NLP part
+   */
+   for(j = 0; j< (nlp.nbinvars + nlp.nintvars) ; ++j)
+   {
+      nlp.c[j]  = SCIPvarGetObj(scip_vars[j] );
+      nlp.x[j]  = SCIPgetSolVal( scip, sol, scip_vars[j] );
+      nlp.lb[j] = nlp.x[j];
+      nlp.ub[j] = nlp.x[j];
+   }
+   
+   /**@todo now, we do not fix the implicite integral part, since we also get the LP part from scip,
+      the soultion should be integer for there vairables, if not, either the presolving of scip is
+      wrong, or the solution given by ipopt is not exact for these variables
+   */
+   for(j =(nlp.nbinvars + nlp.nintvars) ; j<nlp.nvars; ++j)
+   {
+      nlp.c[j]  = SCIPvarGetObj(scip_vars[j] );
+      nlp.x[j]  = SCIPgetSolVal( scip, sol, scip_vars[j] );
+      nlp.lb[j] = SCIPvarGetLbLocal( scip_vars[j] );
+      nlp.ub[j] = SCIPvarGetUbLocal( scip_vars[j] );      
+   }
+      
+   printf("start to get the LP part in ipoptSol");
+   SCIP_CALL( SCIPgetLPColsData(scip, &cols, &n_lpcols) );
    for( i = 0; i < n_lprows; ++i )
    {
        val = SCIProwGetConstant( rows[i] );
@@ -626,17 +636,142 @@ SCIP_RETCODE ipoptSolve( SCIP* scip, SCIP_CONS** conss, int nconss, SCIP_SOL* so
        /* get the index of var */
        printf("name %s %p \n", SCIPvarGetName( SCIPcolGetVar( cols[j] )), SCIPcolGetVar( cols[j] ));
        ind = indexOfVar( scip, SCIPcolGetVar( cols[j] ) );
-       ind = ind - scip_begin_of_contvars;
+       //ind = ind - scip_begin_of_contvars;
        /* set the coefficient in row sparse mode */
        nlp.jCols[i][j] = ind;
        }
    }
-    
+
+   printf("\n the LP part finished.\n");
+   
+   /** reconstruct the missing part because of presolving */
+   assert(i == n_lprows);
+   
+   nlp.nactivevars = SCIPgetNVars(scip);
+   nlp.nnonactivevars = SCIPgetNFixedVars(scip);
+   nlp.nfixed = 0;
+   nlp.naggr = 0;
+   nlp.nmultaggr = 0;
+   nlp.nnegation = 0;
+
+   if(nlp.nnonactivevars == 0)
+   {
+      vars = SCIPgetFixedVars(scip);
+
+      for( k=0; k < nlp.nnonactivevars ; ++k)
+      {
+         /** for each fixed variable, we add a linear constriant to it */
+
+         switch( SCIPvarGetStatus( vars[k] ))
+         {
+         case SCIP_VARSTATUS_FIXED:     /** 3 variable is fixed to specific value in the transformed problem */
+            nlp.rhs[i] =  SCIPvarGetLbLocal(vars[k]);
+            nlp.lhs[i] =  SCIPvarGetLbLocal(vars[k]);
+            nlp.nnonz[i] = 1;
+            SCIP_CALL( SCIPallocBufferArray( scip, &( nlp.jCols[i] ),nlp.nnonz[i] ) );
+            SCIP_CALL( SCIPallocBufferArray( scip, &( nlp.values[i]),nlp.nnonz[i] ) );
+
+            nlp.values[i][0] = 1.0;
+            printf("name %s %p \n", SCIPvarGetName( vars[k] ), vars[k] );
+            ind = indexOfVar( scip, vars[k] );
+            //ind = ind - scip_begin_of_contvars;
+            nlp.jCols[i][0] = ind;
+            nlp.nfixed += 1;
+            i += 1;
+
+            break;
+         case SCIP_VARSTATUS_AGGREGATED: /** 4  variable is aggregated to x = a*y + c in the transformed problem */
+            tem_var = SCIPvarGetAggrVar( vars[k] );
+            tem_real = SCIPvarGetAggrConstant( vars[k] );
+            nlp.rhs[i] = tem_real;
+            nlp.lhs[i] = tem_real;
+            nlp.nnonz[i] = 2;
+            SCIP_CALL( SCIPallocBufferArray( scip, &( nlp.jCols[i] ),nlp.nnonz[i] ) );
+            SCIP_CALL( SCIPallocBufferArray( scip, &( nlp.values[i]),nlp.nnonz[i] ) );
+
+            tem_real = SCIPvarGetAggrScalar( vars[k] );
+
+            nlp.values[i][0] = 1.0;
+            printf("name %s %p \n", SCIPvarGetName( vars[k] ), vars[k] );
+            ind = indexOfVar( scip, vars[k] );
+            //ind = ind - scip_begin_of_contvars;
+            nlp.jCols[i][0] = ind;
+
+            nlp.values[i][1] = -tem_real;
+            printf("name %s %p \n", SCIPvarGetName( tem_var ), tem_var );
+            ind = indexOfVar( scip, tem_var);
+            //ind = ind - scip_begin_of_contvars;
+            nlp.jCols[i][1] = ind;
+            nlp.naggr += 1;
+            i += 1;
+
+            break;
+         case SCIP_VARSTATUS_MULTAGGR:   /** 5  variable is aggregated to x = a_1*y_1 + ... + a_k*y_k + c */
+            tem_real = SCIPvarGetMultaggrConstant(vars[k]);
+            nlp.lhs[i] = -tem_real;
+            nlp.rhs[i] = -tem_real;
+
+            tem_int = SCIPvarGetMultaggrNVars( vars[k] );
+            nlp.nnonz[i] = tem_int + 1;
+
+            SCIP_CALL( SCIPallocBufferArray( scip, &( nlp.jCols[i] ),nlp.nnonz[i] ) );
+            SCIP_CALL( SCIPallocBufferArray( scip, &( nlp.values[i]),nlp.nnonz[i] ) );
+            tem_var_array = SCIPvarGetMultaggrVars( vars[k] );
+            tem_real_array =  SCIPvarGetMultaggrScalars( vars[k] );
+
+            for( j = 0; j < tem_int; ++j )
+            {
+               nlp.values[i][j] = tem_real_array[j];
+               printf("name %s %p \n", SCIPvarGetName( tem_var_array[j] ), tem_var_array[j] );
+               ind = indexOfVar( scip, tem_var_array[j] );
+               //ind = ind - scip_begin_of_contvars;
+               nlp.jCols[i][j] = ind;
+            }
+
+            nlp.values[i][j] = -1.0;
+            printf("name %s %p \n", SCIPvarGetName( vars[k] ), vars[k] );
+            ind = indexOfVar( scip, vars[k] );
+            //ind = ind - scip_begin_of_contvars;
+            nlp.jCols[i][j] = ind;
+            nlp.nmultaggr += 1;
+            i += 1;
+
+            break;
+         case SCIP_VARSTATUS_NEGATED:  /** 6  variable is the negation of an original or transformed variable */
+            /** gets the negation variable x of a negated variable x' = offset - x */
+            tem_real = SCIPvarGetNegationConstant( vars[k] );
+            nlp.lhs[i] = tem_real;
+            nlp.rhs[i] = tem_real;
+
+            tem_var = SCIPvarGetNegationVar( vars[k]);
+
+            nlp.nnonz[i] = 2;
+            SCIP_CALL( SCIPallocBufferArray( scip, &( nlp.jCols[i] ),nlp.nnonz[i] ) );
+            SCIP_CALL( SCIPallocBufferArray( scip, &( nlp.values[i]),nlp.nnonz[i] ) );
+
+            nlp.values[i][0] = 1.0;
+            printf("name %s %p \n", SCIPvarGetName( vars[k] ), vars[k] );
+            ind = indexOfVar( scip, vars[k] );
+            //ind = ind - scip_begin_of_contvars;
+            nlp.jCols[i][0] = ind;
+
+            nlp.values[i][1] = 1.0;
+            printf("name %s %p \n", SCIPvarGetName( tem_var ), tem_var );
+            ind = indexOfVar( scip, tem_var );
+            // ind = ind - scip_begin_of_contvars;
+            nlp.jCols[i][1] = ind;
+
+            i += 1;
+            break;
+         default:
+
+            printf("var %p is not a var deliminate in the presolving, its status is %d, please check code.\n", vars[j],SCIPvarGetStatus( vars[k] ));
+            exit(0);
+         }
+      }
+   }
+
    /** prepare data for polynomial nonlinear constraints */
-
-   /*SCIP_Longint* buffer = NULL;
-
-   BMSallocBlockMemoryArray( &buffer, n_lpcols ); */
 
    for( i = 0; i < nlp.m_NLP ; ++i )  /* for each polynomial in constraints */
    {
@@ -644,18 +779,10 @@ SCIP_RETCODE ipoptSolve( SCIP* scip, SCIP_CONS** conss, int nconss, SCIP_SOL* so
        assert(consdata != NULL);
        assert( is_consdata_valid(consdata) == TRUE);
        consdataPrint(scip,consdata,NULL);
-       /**       if(is_consdata_valid(consdata) != TRUE)
-       {
-          printf("consdata is invalid!");
-          }*/
+   
        SCIP_CALL( SCIPallocBuffer(scip, &(nlp.polynomials[i]) ));
        nlp.polynomials[i]->nMonomials = consdata->polynomial->nMonomials;
        SCIP_CALL( SCIPallocBufferArray( scip, &(nlp.polynomials[i]->monomials), nlp.polynomials[i]->nMonomials ) );
-
-       /* Initial the variable flag to zeros to count the variables in this polynomial */
-       /* for( j = 0; j < n_lpcols; ++j ) {
-      buffer[j] = 0;
-       } */
 
        for( j = 0; j < nlp.polynomials[i]->nMonomials; ++j ) /* for each monomial */
        {
@@ -680,7 +807,8 @@ SCIP_RETCODE ipoptSolve( SCIP* scip, SCIP_CONS** conss, int nconss, SCIP_SOL* so
              printf("name %s %p \n", SCIPvarGetName( consdata->polynomial->monomials[j]->vars[k] ), consdata->polynomial->monomials[j]->vars[k]);
 
              printf("we get the index and power of this variable\n");
-             nlp.polynomials[i]->monomials[j]->indicies[k] = indexOfVar( scip, consdata->polynomial->monomials[j]->vars[k] ) - scip_begin_of_contvars;
+             // nlp.polynomials[i]->monomials[j]->indicies[k] = indexOfVar( scip, consdata->polynomial->monomials[j]->vars[k] ) - scip_begin_of_contvars;
+             nlp.polynomials[i]->monomials[j]->indicies[k] = indexOfVar( scip, consdata->polynomial->monomials[j]->vars[k] );
              nlp.polynomials[i]->monomials[j]->power[k] = consdata->polynomial->monomials[j]->power[k];
              printf("we finish the job of getting the index and power for this variable\n");
              /* need to count the variables in the polynomial here */
@@ -691,17 +819,15 @@ SCIP_RETCODE ipoptSolve( SCIP* scip, SCIP_CONS** conss, int nconss, SCIP_SOL* so
 
        nlp.lhs[i + nlp.m_LP] = consdata->lhs;
        nlp.rhs[i + nlp.m_LP] = consdata->rhs;
-       /* calculate the count of variables in polynomial */
-       /* nlp.polynomials[i]->nvars = 0;
-       for( j = 0; j < n_lpcols; ++j ) 
-       {
-      nlp.polynomials[i]->nvars += buffer[j];
-       } */
       
    }
    /* until now we already fill all the information for nlp */
 
-   /** print the nlp struct here, let us to see whether we get all the information, and whethere they are correct*/
+
+   printf("There are %d variables, %d constraints, %d are linear constraits, %d are nonlinear constriants.\n", nlp.nvars, nlp.mcons, nlp.m_LP, nlp.m_NLP);
+
+
+   /** print the nlp struct here, let us see whether we get all the information, and whethere they are correct*/
 
    PrintNLP( scip, &nlp );
    
@@ -716,6 +842,7 @@ SCIP_RETCODE ipoptSolve( SCIP* scip, SCIP_CONS** conss, int nconss, SCIP_SOL* so
       contVarsVals[i] = nlp.x[i];
    }
    /** free the memory for nlp here */
+
    SCIPfreeBufferArray( scip, &(nlp.c) );
    SCIPfreeBufferArray( scip, &(nlp.x) );
    SCIPfreeBufferArray( scip, &(nlp.ub) );
