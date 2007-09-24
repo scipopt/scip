@@ -14,11 +14,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_polynomial.h,v 1.2 2007/09/21 14:54:22 bzfniulf Exp $"
+#pragma ident "@(#) $Id: cons_polynomial.h,v 1.3 2007/09/24 13:55:54 bzfkocht Exp $"
 
 /**@file   cons_polynomial.h
  * @brief  constraint handler for polynomial constraints
- * @author Tobias Achterberg
+ * @author Lignfeng Niu, Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -28,6 +28,7 @@
 
 
 #include "scip/scip.h"
+
 /** constraint data for polynomial constraints */
 typedef struct MonomialTag
 {

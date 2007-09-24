@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cmain.c,v 1.1 2007/09/21 13:32:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cmain.c,v 1.2 2007/09/24 13:55:54 bzfkocht Exp $"
 
 /**@file   cmain.c
  * @brief  main file for C++ TSP example using SCIP as a callable library
@@ -31,7 +31,7 @@
 #include "scip/scipdefplugins.h"
 
 /* include NLP specific components */
-/*#include "cons_polynomial.h"*/
+#include "cons_polynomial.h"
 
 static
 SCIP_RETCODE runSCIP(
@@ -50,8 +50,8 @@ SCIP_RETCODE runSCIP(
    SCIP_CALL( SCIPcreate(&scip) );
 
    /* include NLP specific plugins */
-   /*SCIP_CALL( SCIPincludeConshdlrPolynomial(scip) ); */
-   
+   SCIP_CALL( SCIPincludeConshdlrPolynomial(scip) ); 
+
    /* include default SCIP plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 

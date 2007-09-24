@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.22 2007/09/24 13:55:54 bzfkocht Exp $"
+#pragma ident "@(#) $Id: reader_zpl_nlp.c,v 1.1 2007/09/24 13:55:54 bzfkocht Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -33,7 +33,7 @@
 
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
-//#include "scip/cons_polynomial.h"
+#include "cons_polynomial.h"
 
 /* include the ZIMPL headers necessary to define the LP construction interface */
 #include "zimpl/bool.h"
@@ -241,27 +241,83 @@ Con* xlp_addcon_term(const char* name, ConType type, const Numb* lhs, const Numb
    dynamic = ((flags & LP_FLAG_CON_SEPAR) != 0);
    removable = dynamic;
 
-   assert(term_is_linear(term));
-
-   SCIP_CALL_ABORT( SCIPcreateConsLinear(scip_, &cons, name, 0, NULL, NULL, sciplhs, sciprhs,
-                       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
-   zplcon = (Con*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the CONS will not be
-                           destroyed by SCIPreleaseCons() */
-   SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
-
-   for(i = 0; i < term_get_elements(term); i++)
+   if (term_is_linear(term))
    {
-      SCIP_VAR* scipvar;
-      SCIP_Real scipval;
+      SCIP_CALL_ABORT( SCIPcreateConsLinear(scip_, &cons, name, 0, NULL, NULL, sciplhs, sciprhs,
+                          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+      zplcon = (Con*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the CONS will not be
+                           destroyed by SCIPreleaseCons() */
+      SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
 
-      assert(!numb_equal(mono_get_coeff(term_get_element(term, i)), numb_zero()));
-      assert(mono_is_linear(term_get_element(term, i)));
+      for(i = 0; i < term_get_elements(term); i++)
+      {
+         SCIP_VAR* scipvar;
+         SCIP_Real scipval;
+
+         assert(!numb_equal(mono_get_coeff(term_get_element(term, i)), numb_zero()));
+         assert(mono_is_linear(term_get_element(term, i)));
       
-      scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
-      scipval = numb_todbl(mono_get_coeff(term_get_element(term, i)));
+         scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
+         scipval = numb_todbl(mono_get_coeff(term_get_element(term, i)));
 
-      SCIP_CALL_ABORT( SCIPaddCoefLinear(scip_, cons, scipvar, scipval) );
+         SCIP_CALL_ABORT( SCIPaddCoefLinear(scip_, cons, scipvar, scipval) );
+      }
    }
+   else
+   {
+      Polynomial* polynomial;
+      Monomial**  monomials;
+
+      SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &monomials, term_get_elements(term)) );
+
+      term_print(stdout, term, FALSE);
+      
+      for(i = 0; i < term_get_elements(term); i++)
+      {
+         const Mono*     mono = term_get_element(term, i);
+         const MonoElem* e;
+         int             k;
+         SCIP_VAR**      vars;
+         SCIP_Real*      power;
+         SCIP_Real       coef = numb_todbl(mono_get_coeff(mono));
+
+         SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &vars, mono_get_count(mono)) );
+         SCIP_CALL_ABORT( SCIPallocBufferArray(scip_, &power, mono_get_count(mono)) );
+#if 0
+         for(i = 0; i < mono_get_count(mono); i++)
+         {
+            vars [i] = mono_get_var(mono, i);
+            power[i] = numb_todbl(mono_get_power(mono, i));
+         }
+#else
+         for(e = &mono->first, k = 0; e != NULL; e = e->next, k++)
+         {
+            vars [k] = (SCIP_VAR*)entry_get_var(e->entry);
+            power[k] = numb_todbl(e->power);
+         }
+#endif
+         monomialCreate(scip_, &monomials[i], mono->count, vars, power, coef);
+
+         SCIPfreeBufferArray(scip_, &vars);
+         SCIPfreeBufferArray(scip_, &power);
+      }
+      SCIP_CALL_ABORT( polynomialCreate(scip_, &polynomial, term_get_elements(term), monomials) );
+
+      SCIP_CALL_ABORT( SCIPcreateConsPolynomial(scip_, &cons, name, polynomial, sciplhs, sciprhs,
+                          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+      zplcon = (Con*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the CONS will not be
+                           destroyed by SCIPreleaseCons() */
+
+      SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
+      releasePolynomial(scip_, &polynomial);
+
+      for(i = 0; i < term_get_elements(term); i++)
+      {
+         releaseMonomial(scip_, &monomials[i]);
+      }
+      SCIPfreeBufferArray(scip_, &monomials);
+   }
+
    SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
    
    return zplcon;

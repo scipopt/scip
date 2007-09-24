@@ -13,11 +13,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_polynomial.c,v 1.3 2007/09/21 15:01:22 bzfniulf Exp $"
+#pragma ident "@(#) $Id: cons_polynomial.c,v 1.4 2007/09/24 13:55:54 bzfkocht Exp $"
 
 /**@file   cons_polynomial.c
 
- * @author Tobias Achterberg
+ * @author Lingfeng Niu, Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -25,10 +25,8 @@
 #include <assert.h>
 
 #include "scip/pub_lp.h"
-
 #include "scip/struct_var.h"
-
-#include "scip/cons_polynomial.h"
+#include "cons_polynomial.h"
 
 #include "scip/pub_var.h"
 
@@ -83,7 +81,9 @@ struct SCIP_ConshdlrData
  * Static data used in this file
  */
 
+/* ??? */
 static SCIP_VAR ** scip_vars = NULL;
+/* ??? */
 static int scip_nvars, scip_nbinvars, scip_nintvars, scip_nimplvars, scip_ncontvars, scip_begin_of_contvars;
 
 
@@ -132,6 +132,9 @@ SCIP_Real evaluateMonomial( SCIP * scip , SCIP_SOL * sol , Monomial * monomial )
    int i;
    SCIP_Real val = monomial->coefficient;
    printf("The monomial's coefficient is %g \n", monomial->coefficient);
+
+   /* ??? Why can val be 0 ? */
+
    for( i = 0; i < monomial->nvars && val != 0; ++i)
    {
       val = val * pow( SCIPgetSolVal(scip, sol, monomial->vars[i]), monomial->power[i] );

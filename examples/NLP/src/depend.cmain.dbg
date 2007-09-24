@@ -71,4 +71,110 @@ $(OBJDIR)/cmain.o: src/cmain.c lib/scip/src/scip/scip.h lib/scip/src/scip/def.h 
   lib/scip/src/scip/sepa_flowcover.h lib/scip/src/scip/sepa_gomory.h \
   lib/scip/src/scip/sepa_impliedbounds.h lib/scip/src/scip/sepa_intobj.h \
   lib/scip/src/scip/sepa_redcost.h lib/scip/src/scip/sepa_strongcg.h \
-  lib/scip/src/scip/scipshell.h
+  lib/scip/src/scip/scipshell.h src/cons_polynomial.h
+$(OBJDIR)/cons_polynomial.o: src/cons_polynomial.c lib/scip/src/scip/pub_lp.h \
+  lib/scip/src/scip/def.h lib/scip/src/scip/type_retcode.h \
+  lib/scip/src/scip/message.h lib/scip/src/scip/type_message.h \
+  lib/scip/src/scip/struct_message.h lib/scip/src/scip/pub_message.h \
+  lib/scip/src/blockmemshell/memory.h lib/scip/src/scip/type_set.h \
+  lib/scip/src/scip/type_stat.h lib/scip/src/scip/type_lpi.h \
+  lib/scip/src/scip/type_lp.h lib/scip/src/scip/type_var.h \
+  lib/scip/src/scip/type_sol.h lib/scip/src/scip/struct_var.h \
+  lib/scip/src/scip/type_history.h lib/scip/src/scip/type_event.h \
+  lib/scip/src/scip/type_scip.h lib/scip/src/scip/type_implics.h \
+  lib/scip/src/scip/type_cons.h lib/scip/src/scip/type_result.h \
+  lib/scip/src/scip/type_prop.h src/cons_polynomial.h \
+  lib/scip/src/scip/scip.h lib/scip/src/scip/type_clock.h \
+  lib/scip/src/scip/type_misc.h lib/scip/src/scip/type_paramset.h \
+  lib/scip/src/scip/type_prob.h lib/scip/src/scip/type_tree.h \
+  lib/scip/src/scip/type_branch.h lib/scip/src/scip/type_conflict.h \
+  lib/scip/src/scip/type_dialog.h lib/scip/src/scip/type_disp.h \
+  lib/scip/src/scip/type_heur.h lib/scip/src/scip/type_nodesel.h \
+  lib/scip/src/scip/type_presol.h lib/scip/src/scip/type_pricer.h \
+  lib/scip/src/scip/type_reader.h lib/scip/src/scip/type_relax.h \
+  lib/scip/src/scip/type_sepa.h lib/scip/src/scip/pub_branch.h \
+  lib/scip/src/scip/pub_conflict.h lib/scip/src/scip/pub_cons.h \
+  lib/scip/src/scip/pub_cutpool.h lib/scip/src/scip/type_cutpool.h \
+  lib/scip/src/scip/pub_dialog.h lib/scip/src/scip/pub_disp.h \
+  lib/scip/src/scip/pub_event.h lib/scip/src/scip/pub_fileio.h \
+  lib/scip/src/scip/pub_heur.h lib/scip/src/scip/pub_implics.h \
+  lib/scip/src/scip/pub_lp.h lib/scip/src/scip/pub_misc.h \
+  lib/scip/src/scip/pub_nodesel.h lib/scip/src/scip/pub_paramset.h \
+  lib/scip/src/scip/pub_presol.h lib/scip/src/scip/pub_pricer.h \
+  lib/scip/src/scip/pub_reader.h lib/scip/src/scip/pub_relax.h \
+  lib/scip/src/scip/pub_sepa.h lib/scip/src/scip/pub_prop.h \
+  lib/scip/src/scip/pub_sol.h lib/scip/src/scip/pub_tree.h \
+  lib/scip/src/scip/pub_var.h lib/scip/src/scip/lpi.h \
+  lib/scip/src/scip/pub_var.h src/solve_nlp.h
+$(OBJDIR)/solve_nlp.o: src/solve_nlp.c ../../ipopt/include/ipopt/IpStdCInterface.h \
+  ../../ipopt/include/ipopt/IpReturnCodes.h \
+  ../../ipopt/include/ipopt/IpReturnCodes_inc.h src/solve_nlp.h \
+  lib/scip/src/scip/scip.h lib/scip/src/scip/def.h \
+  lib/scip/src/scip/type_retcode.h lib/scip/src/scip/message.h \
+  lib/scip/src/scip/type_message.h lib/scip/src/scip/struct_message.h \
+  lib/scip/src/scip/pub_message.h lib/scip/src/blockmemshell/memory.h \
+  lib/scip/src/scip/type_result.h lib/scip/src/scip/type_clock.h \
+  lib/scip/src/scip/type_misc.h lib/scip/src/scip/type_paramset.h \
+  lib/scip/src/scip/type_scip.h lib/scip/src/scip/type_event.h \
+  lib/scip/src/scip/type_lp.h lib/scip/src/scip/type_var.h \
+  lib/scip/src/scip/type_prob.h lib/scip/src/scip/type_tree.h \
+  lib/scip/src/scip/type_branch.h lib/scip/src/scip/type_conflict.h \
+  lib/scip/src/scip/type_cons.h lib/scip/src/scip/type_sol.h \
+  lib/scip/src/scip/type_dialog.h lib/scip/src/scip/type_disp.h \
+  lib/scip/src/scip/type_heur.h lib/scip/src/scip/type_nodesel.h \
+  lib/scip/src/scip/type_presol.h lib/scip/src/scip/type_pricer.h \
+  lib/scip/src/scip/type_reader.h lib/scip/src/scip/type_relax.h \
+  lib/scip/src/scip/type_sepa.h lib/scip/src/scip/type_prop.h \
+  lib/scip/src/scip/pub_branch.h lib/scip/src/scip/pub_conflict.h \
+  lib/scip/src/scip/pub_cons.h lib/scip/src/scip/pub_cutpool.h \
+  lib/scip/src/scip/type_cutpool.h lib/scip/src/scip/pub_dialog.h \
+  lib/scip/src/scip/pub_disp.h lib/scip/src/scip/pub_event.h \
+  lib/scip/src/scip/pub_fileio.h lib/scip/src/scip/pub_heur.h \
+  lib/scip/src/scip/pub_implics.h lib/scip/src/scip/type_implics.h \
+  lib/scip/src/scip/pub_lp.h lib/scip/src/scip/type_set.h \
+  lib/scip/src/scip/type_stat.h lib/scip/src/scip/type_lpi.h \
+  lib/scip/src/scip/pub_misc.h lib/scip/src/scip/pub_nodesel.h \
+  lib/scip/src/scip/pub_paramset.h lib/scip/src/scip/pub_presol.h \
+  lib/scip/src/scip/pub_pricer.h lib/scip/src/scip/pub_reader.h \
+  lib/scip/src/scip/pub_relax.h lib/scip/src/scip/pub_sepa.h \
+  lib/scip/src/scip/pub_prop.h lib/scip/src/scip/pub_sol.h \
+  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/pub_var.h \
+  lib/scip/src/scip/type_history.h lib/scip/src/scip/lpi.h
+$(OBJDIR)/reader_zpl_nlp.o: src/reader_zpl_nlp.c lib/scip/src/scip/reader_zpl.h \
+  lib/scip/src/scip/scip.h lib/scip/src/scip/def.h \
+  lib/scip/src/scip/type_retcode.h lib/scip/src/scip/message.h \
+  lib/scip/src/scip/type_message.h lib/scip/src/scip/struct_message.h \
+  lib/scip/src/scip/pub_message.h lib/scip/src/blockmemshell/memory.h \
+  lib/scip/src/scip/type_result.h lib/scip/src/scip/type_clock.h \
+  lib/scip/src/scip/type_misc.h lib/scip/src/scip/type_paramset.h \
+  lib/scip/src/scip/type_scip.h lib/scip/src/scip/type_event.h \
+  lib/scip/src/scip/type_lp.h lib/scip/src/scip/type_var.h \
+  lib/scip/src/scip/type_prob.h lib/scip/src/scip/type_tree.h \
+  lib/scip/src/scip/type_branch.h lib/scip/src/scip/type_conflict.h \
+  lib/scip/src/scip/type_cons.h lib/scip/src/scip/type_sol.h \
+  lib/scip/src/scip/type_dialog.h lib/scip/src/scip/type_disp.h \
+  lib/scip/src/scip/type_heur.h lib/scip/src/scip/type_nodesel.h \
+  lib/scip/src/scip/type_presol.h lib/scip/src/scip/type_pricer.h \
+  lib/scip/src/scip/type_reader.h lib/scip/src/scip/type_relax.h \
+  lib/scip/src/scip/type_sepa.h lib/scip/src/scip/type_prop.h \
+  lib/scip/src/scip/pub_branch.h lib/scip/src/scip/pub_conflict.h \
+  lib/scip/src/scip/pub_cons.h lib/scip/src/scip/pub_cutpool.h \
+  lib/scip/src/scip/type_cutpool.h lib/scip/src/scip/pub_dialog.h \
+  lib/scip/src/scip/pub_disp.h lib/scip/src/scip/pub_event.h \
+  lib/scip/src/scip/pub_fileio.h lib/scip/src/scip/pub_heur.h \
+  lib/scip/src/scip/pub_implics.h lib/scip/src/scip/type_implics.h \
+  lib/scip/src/scip/pub_lp.h lib/scip/src/scip/type_set.h \
+  lib/scip/src/scip/type_stat.h lib/scip/src/scip/type_lpi.h \
+  lib/scip/src/scip/pub_misc.h lib/scip/src/scip/pub_nodesel.h \
+  lib/scip/src/scip/pub_paramset.h lib/scip/src/scip/pub_presol.h \
+  lib/scip/src/scip/pub_pricer.h lib/scip/src/scip/pub_reader.h \
+  lib/scip/src/scip/pub_relax.h lib/scip/src/scip/pub_sepa.h \
+  lib/scip/src/scip/pub_prop.h lib/scip/src/scip/pub_sol.h \
+  lib/scip/src/scip/pub_tree.h lib/scip/src/scip/pub_var.h \
+  lib/scip/src/scip/type_history.h lib/scip/src/scip/lpi.h \
+  lib/scip/src/scip/cons_linear.h lib/scip/src/scip/cons_setppc.h \
+  src/cons_polynomial.h lib/scip/src/scip/scip.h \
+  lib/scip/lib/zimplinc/zimpl/bool.h \
+  lib/scip/lib/zimplinc/zimpl/ratlptypes.h \
+  lib/scip/lib/zimplinc/zimpl/mme.h lib/scip/lib/zimplinc/zimpl/mono.h \
+  lib/scip/lib/zimplinc/zimpl/xlpglue.h
