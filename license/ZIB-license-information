@@ -1,9 +1,10 @@
 Licensing Information For Commercial Users
 ------------------------------------------
 
-SCIP and SoPlex can be used without charge for academic purposes. ZIB
-also promotes the transfer of mathematics into industrial applications
-and is interested in commercial applications of SCIP and SoPlex. 
+SCIP and SoPlex can be used without charge exclusively for academic
+purposes. ZIB also promotes the transfer of mathematics into
+industrial applications and is interested in commercial applications
+of SCIP and SoPlex.
 
 If you are applying SCIP/SoPlex in such a context, you need a
 commercial license from ZIB. The basic conditions for such a license
@@ -44,6 +45,7 @@ are laid out in the following.
    member of an academic institution and are applying for grants for which
    SCIP/SoPlex is an integral part.
 
+   All fees do not include taxes.
 
 3. Overview of Licensing Conditions
 
@@ -75,7 +77,7 @@ are laid out in the following.
    not guarantee to do so.
 
 
-5. Evaluation Licences
+5. Evaluation Licenses
 
    ZIB may grant an evaluation license for a limited time upon request
    that allows to test SCIP/SoPlex for internal purposes. We of course
