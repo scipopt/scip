@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.h,v 1.13 2007/08/22 13:20:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.h,v 1.14 2007/09/25 13:59:10 bzfpfend Exp $"
 
 /**@file   scipdefplugins.h
  * @brief  default SCIP plugins
@@ -100,6 +100,7 @@
 #include "scip/sepa_gomory.h"
 #include "scip/sepa_impliedbounds.h"
 #include "scip/sepa_intobj.h"
+#include "scip/sepa_mcf.h"
 #include "scip/sepa_redcost.h"
 #include "scip/sepa_strongcg.h"
 #include "scip/scipshell.h"

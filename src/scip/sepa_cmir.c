@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.67 2007/07/27 12:22:34 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.68 2007/09/25 13:59:10 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -1345,7 +1345,6 @@ SCIP_DECL_SEPAFREE(sepaFreeCmir)
    SCIPsepaSetData(sepa, NULL);
 
    return SCIP_OKAY;
-
 }
 
 
