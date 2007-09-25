@@ -1,4 +1,4 @@
-$(LIBOBJDIR)/cppmain.o: src/cppmain.cpp src/scip/scip.h src/scip/def.h \
+$(BINOBJDIR)/cppmain.o: src/cppmain.cpp src/scip/scip.h src/scip/def.h \
   src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
   src/scip/struct_message.h src/scip/pub_message.h \
   src/blockmemshell/memory.h src/scip/type_result.h src/scip/type_clock.h \
@@ -19,4 +19,4 @@ $(LIBOBJDIR)/cppmain.o: src/cppmain.cpp src/scip/scip.h src/scip/def.h \
   src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
   src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
   src/scip/pub_tree.h src/scip/pub_var.h src/scip/type_history.h \
-  src/scip/lpi.h src/scip/scipdefplugins.h
+  src/scip/lpi.h src/scip/scipshell.h
