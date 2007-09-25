@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.2 2007/09/25 14:01:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.3 2007/09/25 14:32:03 bzfpfend Exp $"
 
 #define SCIP_DEBUG
 /**@file   sepa_mcf.c
@@ -148,14 +148,13 @@ SCIP_RETCODE mcfnetworkExtract(
    SCIP_MCFNETWORK* mcf;
    SCIP_ROW** rows;
    SCIP_COL** cols;
-   SCIP_ROW** flowrows;
-   SCIP_Real* flowscalars;
-   SCIP_ROW** capacityrows;
-   unsigned int* capacitysigns;
+   unsigned char* flowrowsigns;
+   SCIP_Real* flowrowscalars;
+   unsigned char* capacityrowsigns;
+   int* pluscom;
+   int* minuscom;
    int nrows;
    int ncols;
-   int nflowrows;
-   int ncapacityrows;
    int r;
 
    assert(mcfnetwork != NULL);
@@ -170,12 +169,9 @@ SCIP_RETCODE mcfnetworkExtract(
    SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
 
    /* extract candidates for flow conservation and capacity constraints */
-   SCIP_CALL( SCIPallocBufferArray(scip, &flowrows, nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &flowscalars, nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &capacityrows, nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &capacitysigns, nrows) );
-   nflowrows = 0;
-   ncapacityrows = 0;
+   SCIP_CALL( SCIPallocBufferArray(scip, &flowrowsigns, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &flowrowscalars, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &capacityrowsigns, nrows) );
    for( r = 0; r < nrows; r++ )
    {
       SCIP_ROW* row;
@@ -190,6 +186,12 @@ SCIP_RETCODE mcfnetworkExtract(
       int i;
 
       row = rows[r];
+      assert(SCIProwGetLPPos(row) == r);
+
+      flowrowsigns[r] = 0;
+      flowrowscalars[r] = 0.0;
+      capacityrowsigns[r] = 0;
+
       rowlen = SCIProwGetNNonz(row);
       if( rowlen == 0 )
          continue;
@@ -208,9 +210,11 @@ SCIP_RETCODE mcfnetworkExtract(
       }
       if( i == rowlen )
       {
-         flowrows[nflowrows] = row;
-         flowscalars[nflowrows] = 1.0/coef;
-         nflowrows++;
+         if( !SCIPisInfinity(scip, -rowlhs) )
+            flowrowsigns[r] |= LHSPOSSIBLE;
+         if( !SCIPisInfinity(scip, rowrhs) )
+            flowrowsigns[r] |= RHSPOSSIBLE;
+         flowrowscalars[r] = 1.0/coef;
       }
 
       /* identify capacity constraints */
@@ -241,32 +245,37 @@ SCIP_RETCODE mcfnetworkExtract(
             }
          }
       }
-      if( i == rowlen && hasinteger && rowsign > 0 )
-      {
-         capacityrows[ncapacityrows] = row;
-         capacitysigns[ncapacityrows] = rowsign;
-         ncapacityrows++;
-      }
+      if( i == rowlen && hasinteger )
+         capacityrowsigns[r] = rowsign;
    }
 
-   SCIPdebugMessage("identified %d flow conservation candidates:\n", nflowrows);
-   for( r = 0; r < nflowrows; r++ )
+   SCIPdebugMessage("flow conservation candidates:\n");
+   for( r = 0; r < nrows; r++ )
    {
-      SCIPdebug(SCIPprintRow(scip, flowrows[r], NULL));
+      if( flowrowsigns[r] != 0 )
+      {
+         //SCIPdebug(SCIPprintRow(scip, rows[r], NULL));
+         SCIPdebugMessage("%s\n", SCIProwGetName(rows[r]));
+      }
    }
-   SCIPdebugMessage("identified %d capacity candidates:\n", ncapacityrows);
-   for( r = 0; r < ncapacityrows; r++ )
+   SCIPdebugMessage("capacity candidates:\n");
+   for( r = 0; r < nrows; r++ )
    {
-      SCIPdebug(SCIPprintRow(scip, capacityrows[r], NULL));
+      if( capacityrowsigns[r] != 0 )
+      {
+         //SCIPdebug(SCIPprintRow(scip, rows[r], NULL));
+         SCIPdebugMessage("%s\n", SCIProwGetName(rows[r]));
+      }
    }
 
    /* Algorithm to identify multi-commodity-flow network with capacity constraints
     *
     * 1. Initialize pluscom[c] = -1 and minuscom[c] = -1 for all columns c.
-    * 2. Find next node flow conservation constraint for commodity 0.
-    *    (a) For all columns already known in commodity 0 with only one entry:
+    * 2. For all commodities k: Find next node flow conservation constraint for commodity k.
+    *    (a) For all columns already known in commodity k with only one entry:
     *        (i) For all flow conservation rows in which this column appears:
     *            - Check if it fits to this commodity. If yes, take it and goto 3.
+    *    (b) If nothing fits, exit.
     * 3. For all newly introduced arc flow variables of commodity 0 due to the new row,
     *    find capacity constraints.
     * 4. For first new capacity constraint (just pick one, it is only used as search
@@ -283,12 +292,33 @@ SCIP_RETCODE mcfnetworkExtract(
     *              If yes, generate new commodity and add the row.
     * 5. Goto 2.
     */
+   SCIP_CALL( SCIPallocBufferArray(scip, &pluscom, &ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &minuscom, &ncols) );
+
+   /* 1. Initialize pluscom[c] = -1 and minuscom[c] = -1 for all columns c. */
+   for( c = 0; c < ncols; c++ )
+   {
+      pluscom[c] = -1;
+      minuscom[c] = -1;
+   }
+
+   while( TRUE )
+   {
+      /* 2. For all commodities k: Find next node flow conservation constraint for commodity k.
+       *    (a) For all columns already known in commodity k with only one entry:
+       *        (i) For all flow conservation rows in which this column appears:
+       *            - Check if it fits to this commodity. If yes, take it and goto 3.
+       *    (b) If nothing fits, exit.
+       */
+      
+   }
 
    /* free memory */
-   SCIPfreeBufferArray(scip, &capacitysigns);
-   SCIPfreeBufferArray(scip, &capacityrows);
-   SCIPfreeBufferArray(scip, &flowscalars);
-   SCIPfreeBufferArray(scip, &flowrows);
+   SCIPfreeBufferArray(scip, &minuscom);
+   SCIPfreeBufferArray(scip, &pluscom);
+   SCIPfreeBufferArray(scip, &capacityrowsigns);
+   SCIPfreeBufferArray(scip, &flowrowscalars);
+   SCIPfreeBufferArray(scip, &flowrowsigns);
 
    return SCIP_OKAY;
 }
@@ -439,7 +469,7 @@ SCIP_RETCODE SCIPincludeSepaMcf(
    SCIP_SEPADATA* sepadata;
 
    /* disabled, because separator is not yet finished */
-   return SCIP_OKAY;
+   //return SCIP_OKAY;
 
    /* create cmir separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
