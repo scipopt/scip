@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.3 2007/09/25 14:32:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.4 2007/09/25 14:32:23 bzfpfend Exp $"
 
 #define SCIP_DEBUG
 /**@file   sepa_mcf.c
@@ -469,7 +469,7 @@ SCIP_RETCODE SCIPincludeSepaMcf(
    SCIP_SEPADATA* sepadata;
 
    /* disabled, because separator is not yet finished */
-   //return SCIP_OKAY;
+   return SCIP_OKAY;
 
    /* create cmir separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
