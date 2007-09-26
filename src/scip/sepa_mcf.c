@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.4 2007/09/25 14:32:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.5 2007/09/26 12:40:19 bzfpfend Exp $"
 
 #define SCIP_DEBUG
 /**@file   sepa_mcf.c
@@ -156,6 +156,7 @@ SCIP_RETCODE mcfnetworkExtract(
    int nrows;
    int ncols;
    int r;
+   int c;
 
    assert(mcfnetwork != NULL);
 
@@ -292,8 +293,8 @@ SCIP_RETCODE mcfnetworkExtract(
     *              If yes, generate new commodity and add the row.
     * 5. Goto 2.
     */
-   SCIP_CALL( SCIPallocBufferArray(scip, &pluscom, &ncols) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &minuscom, &ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pluscom, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &minuscom, ncols) );
 
    /* 1. Initialize pluscom[c] = -1 and minuscom[c] = -1 for all columns c. */
    for( c = 0; c < ncols; c++ )
