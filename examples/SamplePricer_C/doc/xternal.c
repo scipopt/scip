@@ -26,22 +26,6 @@
  * @version  0.1
  * @author   Tobias Achterberg
  *
- * This file illustrates how to create a doxygen main menu file. To add a linked
- * subpage, use the following:
- *
- * - \ref LINK1  "this is a link"
- * - \ref LINK2  "this is a second link"
-*/
-
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page LINK1 first subpage
- *
- * Here you can insert some text.
+ * The p-median problem is solved via pricing for an example with 3 centers and p = 2.
+ * It gives an example for implementing a pricing routine.
  */
-
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page LINK2 second subpage
- *
- * Here you can insert some other text.
- */
-
