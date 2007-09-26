@@ -14,10 +14,10 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.12 2007/08/27 15:04:53 bzfberth Exp $
+# $Id: Makefile,v 1.13 2007/09/26 15:54:45 bzfpfets Exp $
 
 #@file    Makefile
-#@brief   Makefile for C++ example project featuring a very simple pricer
+#@brief   Makefile for C example project featuring a very simple pricer
 #@author  Thorsten Koch
 #@author  Tobias Achterberg
 
