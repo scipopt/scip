@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.40 2007/08/01 13:34:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.41 2007/09/28 16:21:20 bzfberth Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -404,7 +404,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - nfixedvars      : pointer to count total number of variables fixed of all presolvers
  *  - naggrvars       : pointer to count total number of variables aggregated of all presolvers
  *  - nchgvartypes    : pointer to count total number of variable type changes of all presolvers
- *  - nchgbds         : pointer to count total number of variable bounds tightend of all presolvers
+ *  - nchgbds         : pointer to count total number of variable bounds tightened of all presolvers
  *  - naddholes       : pointer to count total number of domain holes added of all presolvers
  *  - ndelconss       : pointer to count total number of deleted constraints of all presolvers
  *  - nupgdconss      : pointer to count total number of upgraded constraints of all presolvers

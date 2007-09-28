@@ -1,11 +1,15 @@
 current version
 ===============
 
+features:
+- added SOS2 example
+- extended TSP example
+
 fixed bugs:
 - fixed CTRL-C if NO_SIGACTION is set (e.g., for MinGW)
 - fixed bug that a missing CONSTRANS in constraint handler leads to NULL pointer as constraint data for the
   copied constraints instead of pointer copies of the consdata (as explained in the constraint handler "HowTo")
-
+- fixed bug with reading empty lines in TSP example
 
 SCIP version 1.00
 =================
