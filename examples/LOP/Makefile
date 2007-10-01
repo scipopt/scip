@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.1 2007/10/01 13:41:52 bzfpfets Exp $
+# $Id: Makefile,v 1.2 2007/10/01 20:02:50 bzfpfets Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ example project featuring a very simple pricer
@@ -254,7 +254,7 @@ clean:
 
 .PHONY: depend
 depend:		$(LIBDIR)/scip
-		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(MAINSRC) \
+		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(MAINSRC) \
 		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-z_/]*\).c|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(MAINDEP)'
 
@@ -271,6 +271,9 @@ else
 		-L$(LIBDIR)/scip/lib -l$(SCIPLIB) -l$(OBJSCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) -o $@
 endif
+
+genRandomLOPInstance: $(BINDIR)
+		$(CC) -o $(BINDIR)/genRandomLOPInstance $(SRCDIR)/genRandomLOPInstance.c
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
