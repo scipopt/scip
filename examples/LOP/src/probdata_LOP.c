@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_LOP.c,v 1.2 2007/10/01 14:43:41 bzfpfets Exp $"
+#pragma ident "@(#) $Id: probdata_LOP.c,v 1.3 2007/10/01 20:03:08 bzfpfets Exp $"
 
 #include "probdata_LOP.h"
 
@@ -164,13 +164,15 @@ SCIP_RETCODE LOPcreateProb(
    /* allocate memory */
    SCIP_CALL( SCIPallocMemory(scip, &probdata) );
 
-   /* read file */
-   SCIP_CALL( LOPreadFile(scip, filename, probdata) );
-   probdata->Vars = NULL;
-
    /* take filename as problem name */
    filenameCopy = strdup(filename);     /* need copy since some implementations of basename modify filename */
    probname = basename(filenameCopy);
+
+   SCIPmessagePrintInfo("Problem name: %s\n\n", probname);
+
+   /* read file */
+   SCIP_CALL( LOPreadFile(scip, filename, probdata) );
+   probdata->Vars = NULL;
 
    SCIP_CALL( SCIPcreateProb(scip, probname, probdelorigLOP, probtransLOP, probdeltransLOP,
 			     probinitsolLOP, probexitsolLOP, probdata) );
