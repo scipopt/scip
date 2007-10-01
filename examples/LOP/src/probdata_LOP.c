@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_LOP.c,v 1.1 2007/10/01 13:41:53 bzfpfets Exp $"
+#pragma ident "@(#) $Id: probdata_LOP.c,v 1.2 2007/10/01 14:43:41 bzfpfets Exp $"
 
 #include "probdata_LOP.h"
 
@@ -76,9 +76,10 @@ SCIP_DECL_PROBDELORIG(probdelorigLOP)
 
 /* ----------------- auxiliary functions ------------------------ */
 
-/** read weight matrix from file
+/** read weight matrix from file (in LOLIB format)
  *
  *  Format:
+ *  comment line
  *  # of elements
  *  weight matrix (doubles)
  */
@@ -94,6 +95,7 @@ SCIP_RETCODE LOPreadFile(
    int status;
    int n;
    SCIP_Real** W;
+   char s[SCIP_MAXSTRLEN];
 
    /* open file */
    file = fopen(filename, "r");
@@ -102,6 +104,10 @@ SCIP_RETCODE LOPreadFile(
       SCIPerrorMessage("Could not open file %s.\n", filename);
       return SCIP_NOFILE;
    }
+
+   /* skip one line */
+   fgets(s, SCIP_MAXSTRLEN, file);
+
    /* read number of elements */
    status = fscanf(file, "%d", &n);
    if ( ! status )
@@ -212,6 +218,9 @@ SCIP_RETCODE LOPgenerateModel(
    SCIP_CALL( LOcreateCons(scip, &cons, "LOP", probdata->n, probdata->Vars, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE));
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   /* set maximization */
+   SCIP_CALL_ABORT( SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE) );
 
    return SCIP_OKAY;
 }
