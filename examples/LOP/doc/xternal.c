@@ -1,0 +1,64 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                           */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
+/*                                                                           */
+/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*                                                                           */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/**@file   xternal.c
+ * @brief  main document page
+ * @author Marc Pfetsch
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@mainpage Linear Ordering Example
+ * @version  0.1
+ * @author   Marc Pfetsch
+ *
+ * The linear ordering gives another example for setting up a
+ * constraint handler.
+ *
+ * The linear ordering problem is the following:
+ *
+ * Given a positive interger n and an n x n matrix W the goal is to
+ * find a linear order of {1, ..., n} such that the sum of weights \f$
+ * w_{ij}\f$ for all pairs in which i comes before j in the order is
+ * minimized.
+ *
+ * We use the integer programming following model: We have binary
+ * variables \f$ x_{ij}\f$ for all pairs \f$ (i,j)\f$ with \f$ i \neq
+ * j\f$, where \f$ x_{ij} = 1\f$ if and only if i comes before j in the
+ * encoded order. The basic model is then:
+ * \f[
+ *     \min \{ \sum_{i,j} w_{ij} x_{ij}\;:\; x_{ij} = x_{ji} \mbox{ for all } j \neq i\}.
+ * \f]
+ * To ensure that x encodes a linear order one has to add the
+ * following @em triangle @em inequalities:
+ * \f[
+ *     x_{ij} + x_{jk} + x_{ki} \leq 2 \quad\mbox{for all }i,j,k.
+ * \f]
+ * Using the equations above, one can of course eliminate half of the
+ * variables (and change the triangle inequalies accordingly), but we
+ * do not do this explicitly in order to keep a simpler
+ * formulation. In fact, SCIP will do some of the eliminations
+ * automatically.
+ *
+ * The following files provide the example code:
+ * - cmain.c: Here the main function is located. It sets up SCIP, the
+ * linear order project, and solves the problem.
+ * - probdata_LOP.c: this file provides code for reading the corresponding weight matrix 
+ * and setting up the above model.
+ * - cons_LO.c: contains the constraint handler that care of the
+ * equations and the triangle inequalities.
+ */
