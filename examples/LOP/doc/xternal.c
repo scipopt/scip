@@ -34,14 +34,14 @@
  * Given a positive interger n and an n x n matrix W the goal is to
  * find a linear order of {1, ..., n} such that the sum of weights \f$
  * w_{ij}\f$ for all pairs in which i comes before j in the order is
- * minimized.
+ * maximized.
  *
  * We use the integer programming following model: We have binary
  * variables \f$ x_{ij}\f$ for all pairs \f$ (i,j)\f$ with \f$ i \neq
  * j\f$, where \f$ x_{ij} = 1\f$ if and only if i comes before j in the
  * encoded order. The basic model is then:
  * \f[
- *     \min \{ \sum_{i,j} w_{ij} x_{ij}\;:\; x_{ij} = x_{ji} \mbox{ for all } j \neq i\}.
+ *     \max \{ \sum_{i,j} w_{ij} x_{ij}\;:\; x_{ij} = x_{ji} \mbox{ for all } j \neq i\}.
  * \f]
  * To ensure that x encodes a linear order one has to add the
  * following @em triangle @em inequalities:
