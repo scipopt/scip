@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_LO.h,v 1.1 2007/10/01 13:41:53 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_LO.h,v 1.2 2007/10/04 18:10:09 bzfwolte Exp $"
 
 /**@file   cons_LO.h
  * @brief  constraint handler for linear ordering constraints
@@ -44,13 +44,13 @@
 
 /** creates the handler for linear ordering constraints and includes it in SCIP */
 extern
-SCIP_RETCODE LOincludeConshdlr(
+SCIP_RETCODE SCIPincludeConshdlrLO(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** creates and captures a linear ordering constraint */
 extern
-SCIP_RETCODE LOcreateCons(
+SCIP_RETCODE SCIPcreateConsLO(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
@@ -61,7 +61,12 @@ SCIP_RETCODE LOcreateCons(
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   SCIP_Bool             local               /**< is constraint only valid locally? */
+   SCIP_Bool             local,               /**< is constraint only valid locally? */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node? */
    );
 
 #endif

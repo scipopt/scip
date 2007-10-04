@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cmain.c,v 1.1 2007/10/01 13:41:53 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cmain.c,v 1.2 2007/10/04 18:10:09 bzfwolte Exp $"
 
 /**@file   cmain.c
  * @brief  main file for linear ordering example
@@ -87,7 +87,7 @@ int main(
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    /* include linear ordering constraint handler */
-   SCIP_CALL( LOincludeConshdlr(scip) );
+   SCIP_CALL( SCIPincludeConshdlrLO(scip) );
 
    /* read parameters if requested */
    if( argc == 3 )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_LO.c,v 1.1 2007/10/01 13:41:53 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_LO.c,v 1.2 2007/10/04 18:10:09 bzfwolte Exp $"
 //#define SCIP_DEBUG
 
 /**@file   cons_LO.c
@@ -44,7 +44,7 @@
 #define CONSHDLR_SEPAFREQ            10 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
-                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -60,16 +60,15 @@ struct SCIP_ConsData
 };
 
 
-
 /** separate triangle inequalities */
 static
 SCIP_RETCODE LOseparateTriangle(
-		SCIP* scip,         /**< SCIP pointer */
-		int n,              /**< number of elements */
-		SCIP_VAR*** Vars,   /**< n x n matrix of variables */
-		SCIP_SOL* sol,      /**< solution to be separated */
-		int* nGen           /**< output: number of added rows */
-		)
+   SCIP* scip,         /**< SCIP pointer */
+   int n,              /**< number of elements */
+   SCIP_VAR*** Vars,   /**< n x n matrix of variables */
+   SCIP_SOL* sol,      /**< solution to be separated */
+   int* nGen           /**< output: number of added rows */
+   )
 {
    int i, j, k;
 
@@ -170,7 +169,6 @@ SCIP_DECL_CONSDELETE(consDeleteLO)
    return SCIP_OKAY;
 }
 
-
 /** transforms constraint data into data belonging to the transformed problem */
 static
 SCIP_DECL_CONSTRANS(consTransLO)
@@ -198,7 +196,7 @@ SCIP_DECL_CONSTRANS(consTransLO)
    n = sourcedata->n;
    consdata->n = n;
 
-   /* transfrom variables */
+   /* transform variables */
    SCIPallocBlockMemoryArray(scip, &consdata->Vars, n);
    for (i = 0; i < n; ++i)
    {
@@ -216,16 +214,14 @@ SCIP_DECL_CONSTRANS(consTransLO)
    sprintf(s, "t_%s", SCIPconsGetName(sourcecons));
 
    SCIP_CALL( SCIPcreateCons(scip, targetcons, s, conshdlr, consdata,
-			     SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons),
-			     SCIPconsIsEnforced(sourcecons), SCIPconsIsChecked(sourcecons),
-			     SCIPconsIsPropagated(sourcecons), SCIPconsIsLocal(sourcecons),
-			     SCIPconsIsModifiable(sourcecons), SCIPconsIsDynamic(sourcecons),
-			     SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+         SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons),
+         SCIPconsIsEnforced(sourcecons), SCIPconsIsChecked(sourcecons),
+         SCIPconsIsPropagated(sourcecons), SCIPconsIsLocal(sourcecons),
+         SCIPconsIsModifiable(sourcecons), SCIPconsIsDynamic(sourcecons),
+         SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
 
    return SCIP_OKAY;
 }
-
-
 
 /** LP initialization method of constraint handler */
 static
@@ -283,7 +279,6 @@ SCIP_DECL_CONSINITLP(consInitlpLO)
    return SCIP_OKAY;
 }
 
-
 /** separation method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSSEPALP(consSepalpLO)
@@ -321,8 +316,6 @@ SCIP_DECL_CONSSEPALP(consSepalpLO)
    return SCIP_OKAY;
 }
 
-
-
 /** separation method of constraint handler for arbitrary primal solutions */
 static
 SCIP_DECL_CONSSEPASOL(consSepasolLO)
@@ -358,7 +351,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolLO)
 
    return SCIP_OKAY;
 }
-
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
@@ -400,7 +392,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpLO)
    return SCIP_OKAY;
 }
 
-
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsLO)
@@ -408,7 +399,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsLO)
    *result = SCIP_FEASIBLE;
    return SCIP_OKAY;
 }
-
 
 /** feasibility check method of constraint handler for integral solutions */
 static
@@ -488,7 +478,6 @@ SCIP_DECL_CONSCHECK(consCheckLO)
    *result = SCIP_FEASIBLE;
    return SCIP_OKAY;
 }
-
 
 /** domain propagation method of constraint handler */
 static
@@ -593,10 +582,8 @@ SCIP_DECL_CONSPROP(consPropLO)
    return SCIP_OKAY;
 }
 
-
 /** presolving method of constraint handler */
 #define consPresolLO NULL
-
 
 /** propagation conflict resolving method of constraint handler */
 static
@@ -683,7 +670,6 @@ SCIP_DECL_CONSRESPROP(consRespropLO)
    return SCIP_OKAY;
 }
 
-
 /** variable rounding lock method of constraint handler */
 static
 SCIP_DECL_CONSLOCK(consLockLO)
@@ -721,7 +707,6 @@ SCIP_DECL_CONSLOCK(consLockLO)
 
    return SCIP_OKAY;
 }
-
 
 /** constraint activation notification method of constraint handler */
 #define consActiveLO NULL
@@ -776,11 +761,8 @@ SCIP_DECL_CONSPRINT(consPrintLO)
 }
 
 
-
-
-
 /** creates the handler for LO constraints and includes it in SCIP */
-SCIP_RETCODE LOincludeConshdlr(
+SCIP_RETCODE SCIPincludeConshdlrLO(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -802,9 +784,8 @@ SCIP_RETCODE LOincludeConshdlr(
    return SCIP_OKAY;
 }
 
-
 /** creates and captures a LO constraint */
-SCIP_RETCODE LOcreateCons(
+SCIP_RETCODE SCIPcreateConsLO(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
@@ -815,7 +796,12 @@ SCIP_RETCODE LOcreateCons(
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
    SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
    SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   SCIP_Bool             local               /**< is constraint only valid locally? */
+   SCIP_Bool             local,               /**< is constraint only valid locally? */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node? */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -849,7 +835,7 @@ SCIP_RETCODE LOcreateCons(
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-			     local, FALSE, FALSE, FALSE, FALSE) );
+         local, modifiable, dynamic, removable, stickingatnode) );
 
    return SCIP_OKAY;
 }

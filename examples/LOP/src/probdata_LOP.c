@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_LOP.c,v 1.3 2007/10/01 20:03:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: probdata_LOP.c,v 1.4 2007/10/04 18:10:09 bzfwolte Exp $"
 
 #include "probdata_LOP.h"
 
@@ -217,7 +217,8 @@ SCIP_RETCODE LOPgenerateModel(
    }
 
    /* generate linear ordering constraint */
-   SCIP_CALL( LOcreateCons(scip, &cons, "LOP", probdata->n, probdata->Vars, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE));
+   SCIP_CALL( SCIPcreateConsLO(scip, &cons, "LOP", probdata->n, probdata->Vars, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE,
+         FALSE, FALSE, FALSE, FALSE));
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
