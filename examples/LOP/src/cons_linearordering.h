@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_LO.h,v 1.2 2007/10/04 18:10:09 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_linearordering.h,v 1.1 2007/10/05 09:02:04 bzfpfets Exp $"
 
 /**@file   cons_LO.h
  * @brief  constraint handler for linear ordering constraints
