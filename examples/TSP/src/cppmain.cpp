@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.10 2007/08/22 13:22:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.11 2007/10/05 11:10:04 bzfberth Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for C++ TSP example using SCIP as a callable library
@@ -96,6 +96,7 @@
 #include "ConshdlrSubtour.h"
 #include "HeurFarthestInsert.h"
 #include "Heur2opt.h"
+#include "HeurFrats.h"
 #include "EventhdlrNewSol.h"
 
 using namespace scip;
@@ -124,7 +125,8 @@ SCIP_RETCODE runSCIP(
    SCIP_CALL( SCIPincludeObjEventhdlr(scip, new EventhdlrNewSol(), TRUE) );
    SCIP_CALL( SCIPincludeObjHeur(scip, new HeurFarthestInsert(), TRUE) );
    SCIP_CALL( SCIPincludeObjHeur(scip, new Heur2opt(), TRUE) );
-   
+   SCIP_CALL( SCIPincludeObjHeur(scip, new HeurFrats(), TRUE) );
+
    /* include default SCIP plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 

@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.18 2007/08/27 15:04:53 bzfberth Exp $
+# $Id: Makefile,v 1.19 2007/10/05 11:10:03 bzfberth Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ TSP example using SCIP as a callable library
@@ -206,6 +206,7 @@ MAINOBJ		=	cppmain.o \
 			GomoryHuTree.o \
 			EventhdlrNewSol.o \
 			HeurFarthestInsert.o \
+			HeurFrats.o \
 			Heur2opt.o
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.cpp))
 MAINDEP		=	$(SRCDIR)/depend.cppmain.$(OPT)
