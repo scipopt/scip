@@ -1,0 +1,16 @@
+# frequency for displaying node information lines
+display/freq = 10
+
+# maximal number of fixings found, until probing is interrupted (0: don't iterrupt)
+# [type: int, range: [0,2147483647], default: 50]
+presolving/probing/maxfixings = 0
+
+lp/rowagelimit = 5
+
+# take maximum norm for choosing constraints
+separating/efficacynorm = m
+
+lp/cleanuprows = TRUE
+lp/cleanuprowsroot = TRUE
+
+constraints/LO/sepafreq = 1
