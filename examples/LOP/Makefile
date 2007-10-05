@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.2 2007/10/01 20:02:50 bzfpfets Exp $
+# $Id: Makefile,v 1.3 2007/10/05 09:38:28 bzfpfets Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ example project featuring a very simple pricer
@@ -203,8 +203,8 @@ OBJSCIPLIBFILE	=	$(LIBDIR)/scip/lib/lib$(OBJSCIPLIB).$(LIBEXT)
 # Main Program
 #-----------------------------------------------------------------------------
 
-MAINNAME	=	LOP
-MAINOBJ		=	cmain.o probdata_LOP.o cons_LO.o
+MAINNAME	=	lop
+MAINOBJ		=	cmain.o probdata_lop.o cons_linearordering.o
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
 MAINDEP		=	$(SRCDIR)/depend.cmain.$(OPT)
 
