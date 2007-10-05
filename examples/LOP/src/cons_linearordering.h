@@ -14,9 +14,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linearordering.h,v 1.1 2007/10/05 09:02:04 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_linearordering.h,v 1.2 2007/10/05 09:39:10 bzfpfets Exp $"
 
-/**@file   cons_LO.h
+/**@file   cons_linearordering.h
  * @brief  constraint handler for linear ordering constraints
  * @author Marc Pfetsch
  *
@@ -35,8 +35,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_LO_H__
-#define __SCIP_CONS_LO_H__
+#ifndef __SCIP_CONS_LINEARORDERING_H__
+#define __SCIP_CONS_LINEARORDERING_H__
 
 
 #include "scip/scip.h"
@@ -44,13 +44,13 @@
 
 /** creates the handler for linear ordering constraints and includes it in SCIP */
 extern
-SCIP_RETCODE SCIPincludeConshdlrLO(
+SCIP_RETCODE SCIPincludeConshdlrLinearOrdering(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** creates and captures a linear ordering constraint */
 extern
-SCIP_RETCODE SCIPcreateConsLO(
+SCIP_RETCODE SCIPcreateConsLinearOrdering(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */

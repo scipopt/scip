@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linearordering.c,v 1.1 2007/10/05 09:02:04 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_linearordering.c,v 1.2 2007/10/05 09:39:09 bzfpfets Exp $"
 //#define SCIP_DEBUG
 
-/**@file   cons_LO.c
+/**@file   cons_linearordering.c
  * @brief  example constraint handler for linear ordering constraints
  * @author Marc Pfetsch
  *
@@ -28,7 +28,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "cons_LO.h"
+#include "cons_linearordering.h"
 
 #include <assert.h>
 #include <string.h>
@@ -36,7 +36,7 @@
 
 
 /* constraint handler properties */
-#define CONSHDLR_NAME          "LO"
+#define CONSHDLR_NAME          "linearordering"
 #define CONSHDLR_DESC          "linear ordering constraint handler"
 #define CONSHDLR_SEPAPRIORITY       100 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY      -100 /**< priority of the constraint handler for constraint enforcing */
@@ -52,7 +52,7 @@
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 
-/** constraint data for LO constraints */
+/** constraint data for linear ordering constraints */
 struct SCIP_ConsData
 {
    int n;             /**< number of elements */
@@ -62,7 +62,7 @@ struct SCIP_ConsData
 
 /** separate triangle inequalities */
 static
-SCIP_RETCODE LOseparateTriangle(
+SCIP_RETCODE LinearOrderingSeparateTriangle(
    SCIP* scip,         /**< SCIP pointer */
    int n,              /**< number of elements */
    SCIP_VAR*** Vars,   /**< n x n matrix of variables */
@@ -124,29 +124,29 @@ SCIP_RETCODE LOseparateTriangle(
 
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
-#define consFreeLO NULL
+#define consFreeLinearOrdering NULL
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#define consInitLO NULL
+#define consInitLinearOrdering NULL
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitLO NULL
+#define consExitLinearOrdering NULL
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreLO NULL
+#define consInitpreLinearOrdering NULL
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreLO NULL
+#define consExitpreLinearOrdering NULL
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolLO NULL
+#define consInitsolLinearOrdering NULL
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#define consExitsolLO NULL
+#define consExitsolLinearOrdering NULL
 
 /** frees specific constraint data */
 static
-SCIP_DECL_CONSDELETE(consDeleteLO)
+SCIP_DECL_CONSDELETE(consDeleteLinearOrdering)
 {
    int i, n;
 
@@ -158,7 +158,7 @@ SCIP_DECL_CONSDELETE(consDeleteLO)
    assert( *consdata != NULL);
    assert( (*consdata)->Vars != NULL );
 
-   SCIPdebugMessage("deleting LO constraint <%s>.\n", SCIPconsGetName(cons));
+   SCIPdebugMessage("deleting linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
 
    n = (*consdata)->n;
    for (i = 0; i < n; ++i)
@@ -171,7 +171,7 @@ SCIP_DECL_CONSDELETE(consDeleteLO)
 
 /** transforms constraint data into data belonging to the transformed problem */
 static
-SCIP_DECL_CONSTRANS(consTransLO)
+SCIP_DECL_CONSTRANS(consTransLinearOrdering)
 {
    SCIP_CONSDATA* consdata;
    SCIP_CONSDATA* sourcedata;
@@ -184,7 +184,7 @@ SCIP_DECL_CONSTRANS(consTransLO)
    assert( sourcecons != NULL );
    assert( targetcons != NULL );
 
-   SCIPdebugMessage("transforming LO constraint <%s>.\n", SCIPconsGetName(sourcecons) );
+   SCIPdebugMessage("transforming linear ordering constraint <%s>.\n", SCIPconsGetName(sourcecons) );
 
    /* get data of original constraint */
    sourcedata = SCIPconsGetData(sourcecons);
@@ -225,7 +225,7 @@ SCIP_DECL_CONSTRANS(consTransLO)
 
 /** LP initialization method of constraint handler */
 static
-SCIP_DECL_CONSINITLP(consInitlpLO)
+SCIP_DECL_CONSINITLP(consInitlpLinearOrdering)
 {
    int c;
    int nGen = 0;
@@ -243,7 +243,7 @@ SCIP_DECL_CONSINITLP(consInitlpLO)
 
       assert( conss != NULL );
       assert( conss[c] != NULL );
-      SCIPdebugMessage("adding initial rows for LO constraint <%s>.\n", SCIPconsGetName(conss[c]));
+      SCIPdebugMessage("adding initial rows for linear ordering constraint <%s>.\n", SCIPconsGetName(conss[c]));
 
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
@@ -281,7 +281,7 @@ SCIP_DECL_CONSINITLP(consInitlpLO)
 
 /** separation method of constraint handler for LP solutions */
 static
-SCIP_DECL_CONSSEPALP(consSepalpLO)
+SCIP_DECL_CONSSEPALP(consSepalpLinearOrdering)
 {
    int c;
    int nGen = 0;
@@ -301,13 +301,13 @@ SCIP_DECL_CONSSEPALP(consSepalpLO)
 
       cons = conss[c];
       assert( cons != NULL );
-      SCIPdebugMessage("separating LP solution for LO constraint <%s>.\n", SCIPconsGetName(cons));
+      SCIPdebugMessage("separating LP solution for linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
 
       consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
 
       *result = SCIP_DIDNOTFIND;
-      SCIP_CALL( LOseparateTriangle(scip, consdata->n, consdata->Vars, NULL, &nGen) );
+      SCIP_CALL( LinearOrderingSeparateTriangle(scip, consdata->n, consdata->Vars, NULL, &nGen) );
    }
    if (nGen > 0)
       *result = SCIP_SEPARATED;
@@ -318,7 +318,7 @@ SCIP_DECL_CONSSEPALP(consSepalpLO)
 
 /** separation method of constraint handler for arbitrary primal solutions */
 static
-SCIP_DECL_CONSSEPASOL(consSepasolLO)
+SCIP_DECL_CONSSEPASOL(consSepasolLinearOrdering)
 {
    int c;
    int nGen = 0;
@@ -338,13 +338,13 @@ SCIP_DECL_CONSSEPASOL(consSepasolLO)
 
       cons = conss[c];
       assert( cons != NULL );
-      SCIPdebugMessage("separating solution for LO constraint <%s>.\n", SCIPconsGetName(cons));
+      SCIPdebugMessage("separating solution for linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
 
       consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
 
       *result = SCIP_DIDNOTFIND;
-      SCIP_CALL( LOseparateTriangle(scip, consdata->n, consdata->Vars, NULL, &nGen) );
+      SCIP_CALL( LinearOrderingSeparateTriangle(scip, consdata->n, consdata->Vars, NULL, &nGen) );
    }
    if (nGen > 0)
       *result = SCIP_SEPARATED;
@@ -354,7 +354,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolLO)
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
-SCIP_DECL_CONSENFOLP(consEnfolpLO)
+SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 {
    int c;
    int nGen = 0;
@@ -374,35 +374,27 @@ SCIP_DECL_CONSENFOLP(consEnfolpLO)
 
       cons = conss[c];
       assert( cons != NULL );
-      SCIPdebugMessage("enforcing lp solution for LO constraint <%s>.\n", SCIPconsGetName(cons));
+      SCIPdebugMessage("enforcing lp solution for linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
 
       consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
 
       /* we separate triangle inequalities */
-      SCIP_CALL( LOseparateTriangle(scip, consdata->n, consdata->Vars, NULL, &nGen) );
+      SCIP_CALL( LinearOrderingSeparateTriangle(scip, consdata->n, consdata->Vars, NULL, &nGen) );
       if (nGen > 0)
       {
 	 *result = SCIP_SEPARATED;
 	 return SCIP_OKAY;
       }
    }
-   SCIPdebugMessage("all LO constraints are feasible.\n");
+   SCIPdebugMessage("all linear ordering constraints are feasible.\n");
    *result = SCIP_FEASIBLE;
    return SCIP_OKAY;
 }
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
-SCIP_DECL_CONSENFOPS(consEnfopsLO)
-{
-   *result = SCIP_FEASIBLE;
-   return SCIP_OKAY;
-}
-
-/** feasibility check method of constraint handler for integral solutions */
-static
-SCIP_DECL_CONSCHECK(consCheckLO)
+SCIP_DECL_CONSENFOPS(consEnfopsLinearOrdering)
 {
    int c;
 
@@ -422,7 +414,7 @@ SCIP_DECL_CONSCHECK(consCheckLO)
 
       cons = conss[c];
       assert( cons != NULL );
-      SCIPdebugMessage("checking LO constraint <%s>.\n", SCIPconsGetName(cons));
+      SCIPdebugMessage("enforcing pseudo solution for linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
 
       consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
@@ -440,14 +432,92 @@ SCIP_DECL_CONSCHECK(consCheckLO)
 	       continue;
 
 	    /* the priorities should ensure that the solution is integral */
+	    assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, NULL, Vars[i][j])) );
+	    assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, NULL, Vars[j][i])) );
+	    valIJ = SCIPisGT(scip, SCIPgetSolVal(scip, NULL, Vars[i][j]), 0.5);
+
+	    if ( valIJ && SCIPisGT(scip, SCIPgetSolVal(scip, NULL, Vars[j][i]), 0.5) )
+	    {
+	       SCIPdebugMessage("constraint <%s> infeasible (violated equation).\n", SCIPconsGetName(cons));
+	       *result = SCIP_INFEASIBLE;
+	       return SCIP_OKAY;
+	    }
+
+	    for (k = 0; k < n; ++k)
+	    {
+	       SCIP_Bool valJK, valKI;
+	       if (k == i || k == j)
+		  continue;
+
+	       assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, NULL, Vars[j][k])) );
+	       assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, NULL, Vars[k][i])) );
+	       valJK = SCIPisGT(scip, SCIPgetSolVal(scip, NULL, Vars[j][k]), 0.5);
+	       valKI = SCIPisGT(scip, SCIPgetSolVal(scip, NULL, Vars[k][i]), 0.5);
+
+	       /* if triangle inequality is violated */
+	       if ( valIJ && valJK && valKI )
+	       {
+		  SCIPdebugMessage("constraint <%s> infeasible (violated triangle ineq.).\n", SCIPconsGetName(cons));
+		  *result = SCIP_INFEASIBLE;
+		  return SCIP_OKAY;
+	       }
+	    }
+	 }
+      }
+   }
+   SCIPdebugMessage("all linear ordering constraints are feasible.\n");
+   *result = SCIP_FEASIBLE;
+   return SCIP_OKAY;
+}
+
+/** feasibility check method of constraint handler for integral solutions */
+static
+SCIP_DECL_CONSCHECK(consCheckLinearOrdering)
+{
+   int c;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( conss != NULL );
+   assert( result != NULL );
+
+   /* loop through all constraints */
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CONSDATA* consdata;
+      SCIP_CONS* cons;
+      SCIP_VAR*** Vars;
+      int i, j, k, n;
+
+      cons = conss[c];
+      assert( cons != NULL );
+      SCIPdebugMessage("checking linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
+
+      consdata = SCIPconsGetData(cons);
+      assert( consdata != NULL );
+      assert( consdata->Vars != NULL );
+      Vars = consdata->Vars;
+      n = consdata->n;
+
+      /* check triangle inequalities and symmetry equations */
+      for (i = 0; i < n; ++i)
+      {
+	 for (j = 0; j < n; ++j)
+	 {
+	    SCIP_Bool valIJ;
+	    if (j == i)
+	       continue;
+
+	    /* the priorities should ensure that the solution is integral */
 	    assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, sol, Vars[i][j])) );
 	    assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, sol, Vars[j][i])) );
 	    valIJ = SCIPisGT(scip, SCIPgetSolVal(scip, sol, Vars[i][j]), 0.5);
 
+	    /* check symmetry equations */
 	    if ( valIJ && SCIPisGT(scip, SCIPgetSolVal(scip, sol, Vars[j][i]), 0.5) )
 	    {
 	       SCIPdebugMessage("constraint <%s> infeasible (violated equation).\n", SCIPconsGetName(cons));
-	       abort();
 	       *result = SCIP_INFEASIBLE;
 	       return SCIP_OKAY;
 	    }
@@ -474,14 +544,14 @@ SCIP_DECL_CONSCHECK(consCheckLO)
 	 }
       }
    }
-   SCIPdebugMessage("all LO constraints are feasible.\n");
+   SCIPdebugMessage("all linear ordering constraints are feasible.\n");
    *result = SCIP_FEASIBLE;
    return SCIP_OKAY;
 }
 
 /** domain propagation method of constraint handler */
 static
-SCIP_DECL_CONSPROP(consPropLO)
+SCIP_DECL_CONSPROP(consPropLinearOrdering)
 {
    int c;
    int nGen = 0;
@@ -503,7 +573,7 @@ SCIP_DECL_CONSPROP(consPropLO)
 
       cons = conss[c];
       assert( cons != NULL );
-      SCIPdebugMessage("propagating LO constraint <%s>.\n", SCIPconsGetName(cons));
+      SCIPdebugMessage("propagating linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
 
       *result = SCIP_DIDNOTFIND;
       consdata = SCIPconsGetData(cons);
@@ -583,11 +653,11 @@ SCIP_DECL_CONSPROP(consPropLO)
 }
 
 /** presolving method of constraint handler */
-#define consPresolLO NULL
+#define consPresolLinearOrdering NULL
 
 /** propagation conflict resolving method of constraint handler */
 static
-SCIP_DECL_CONSRESPROP(consRespropLO)
+SCIP_DECL_CONSRESPROP(consRespropLinearOrdering)
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR*** Vars;
@@ -672,7 +742,7 @@ SCIP_DECL_CONSRESPROP(consRespropLO)
 
 /** variable rounding lock method of constraint handler */
 static
-SCIP_DECL_CONSLOCK(consLockLO)
+SCIP_DECL_CONSLOCK(consLockLinearOrdering)
 {
    int i, j;
    SCIP_CONSDATA* consdata;
@@ -684,7 +754,7 @@ SCIP_DECL_CONSLOCK(consLockLO)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( cons != NULL );
 
-   SCIPdebugMessage("Locking LO constraint <%s>.\n", SCIPconsGetName(cons));
+   SCIPdebugMessage("Locking linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
 
    /* get data of constraint */
    consdata = SCIPconsGetData(cons);
@@ -709,20 +779,20 @@ SCIP_DECL_CONSLOCK(consLockLO)
 }
 
 /** constraint activation notification method of constraint handler */
-#define consActiveLO NULL
+#define consActiveLinearOrdering NULL
 
 /** constraint deactivation notification method of constraint handler */
-#define consDeactiveLO NULL
+#define consDeactiveLinearOrdering NULL
 
 /** constraint enabling notification method of constraint handler */
-#define consEnableLO NULL
+#define consEnableLinearOrdering NULL
 
 /** constraint disabling notification method of constraint handler */
-#define consDisableLO NULL
+#define consDisableLinearOrdering NULL
 
 /** constraint display method of constraint handler */
 static
-SCIP_DECL_CONSPRINT(consPrintLO)
+SCIP_DECL_CONSPRINT(consPrintLinearOrdering)
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR*** Vars;
@@ -739,7 +809,7 @@ SCIP_DECL_CONSPRINT(consPrintLO)
    n = consdata->n;
    Vars = consdata->Vars;
 
-   SCIPinfoMessage(scip, file, "LO[");
+   SCIPinfoMessage(scip, file, "linearordering[");
    for (i = 0; i < n; ++i)
    {
       if ( i > 0 )
@@ -761,8 +831,8 @@ SCIP_DECL_CONSPRINT(consPrintLO)
 }
 
 
-/** creates the handler for LO constraints and includes it in SCIP */
-SCIP_RETCODE SCIPincludeConshdlrLO(
+/** creates the handler for linear ordering constraints and includes it in SCIP */
+SCIP_RETCODE SCIPincludeConshdlrLinearOrdering(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -771,21 +841,21 @@ SCIP_RETCODE SCIPincludeConshdlrLO(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         consFreeLO, consInitLO, consExitLO,
-         consInitpreLO, consExitpreLO, consInitsolLO, consExitsolLO,
-         consDeleteLO, consTransLO, consInitlpLO,
-         consSepalpLO, consSepasolLO, consEnfolpLO, consEnfopsLO, consCheckLO,
-         consPropLO, consPresolLO, consRespropLO, consLockLO,
-         consActiveLO, consDeactiveLO,
-         consEnableLO, consDisableLO,
-         consPrintLO,
+         consFreeLinearOrdering, consInitLinearOrdering, consExitLinearOrdering,
+         consInitpreLinearOrdering, consExitpreLinearOrdering, consInitsolLinearOrdering, consExitsolLinearOrdering,
+         consDeleteLinearOrdering, consTransLinearOrdering, consInitlpLinearOrdering,
+         consSepalpLinearOrdering, consSepasolLinearOrdering, consEnfolpLinearOrdering, consEnfopsLinearOrdering, 
+	 consCheckLinearOrdering, consPropLinearOrdering, consPresolLinearOrdering, consRespropLinearOrdering, 
+         consLockLinearOrdering, consActiveLinearOrdering, consDeactiveLinearOrdering,
+         consEnableLinearOrdering, consDisableLinearOrdering,
+         consPrintLinearOrdering,
          NULL) );
 
    return SCIP_OKAY;
 }
 
-/** creates and captures a LO constraint */
-SCIP_RETCODE SCIPcreateConsLO(
+/** creates and captures a linear ordering constraint */
+SCIP_RETCODE SCIPcreateConsLinearOrdering(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
@@ -808,11 +878,11 @@ SCIP_RETCODE SCIPcreateConsLO(
    SCIP_CONSDATA* consdata;
    int i, j;
 
-   /* find the LO constraint handler */
+   /* find the linear ordering constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if (conshdlr == NULL)
    {
-      SCIPerrorMessage("LO constraint handler not found\n");
+      SCIPerrorMessage("linear ordering constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 
