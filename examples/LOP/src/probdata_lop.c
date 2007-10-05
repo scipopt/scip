@@ -14,13 +14,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_lop.c,v 1.1 2007/10/05 09:02:07 bzfpfets Exp $"
+#pragma ident "@(#) $Id: probdata_lop.c,v 1.2 2007/10/05 09:39:28 bzfpfets Exp $"
 
-#include "probdata_LOP.h"
+#include "probdata_lop.h"
 
-#include "cons_LO.h"
-#include <string.h>
-#include <libgen.h>
+#include "cons_linearordering.h"
 
 
 struct SCIP_ProbData
@@ -151,6 +149,59 @@ SCIP_RETCODE LOPreadFile(
 
 /* ----------------- outside interface functions ------------------------ */
 
+/** get problem name
+ *
+ *  Returns NULL on error
+ */
+static
+int getProblemName(
+		   const char* filename,   /**< input filename */
+		   char* probname,         /**< output problemname */
+		   int maxSize             /**< maximum size of probname */
+		   ) 
+{
+   int i = 0;
+   int l = -1;
+   int result = 1;
+   int j = 0;
+
+   /* first find end of string */
+   while ( filename[i] != 0)
+      ++i;
+   l = i;
+
+   /* go back until '.' or '/' or '\' appears */
+   while ((i > 0) && (filename[i] != '.') && (filename[i] != '/') && (filename[i] != '\\'))
+      --i;
+
+   /* if we found '.', search for '/' or '\\' */
+   if (filename[i] == '.')
+   {
+      l = i;
+      while ((i > 0) && (filename[i] != '/') && (filename[i] != '\\'))
+	 --i;
+   }
+
+   /* correct counter */
+   if ((filename[i] == '/') || (filename[i] != '\\'))
+      ++i;
+      
+   /* copy name */
+   while ( (i < l) && (filename[i] != 0) )
+   {
+      probname[j++] = filename[i++];
+      if (j > maxSize-1)
+      {
+	 result = 0;
+	 break;
+      }
+   }
+   probname[j] = 0;
+   return result;
+}
+
+
+
 /** create linear ordering problem instance */
 SCIP_RETCODE LOPcreateProb(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -158,15 +209,13 @@ SCIP_RETCODE LOPcreateProb(
    )
 {
    SCIP_PROBDATA* probdata = NULL;
-   char* filenameCopy;
-   char* probname;
+   char probname[SCIP_MAXSTRLEN];
 
    /* allocate memory */
    SCIP_CALL( SCIPallocMemory(scip, &probdata) );
 
    /* take filename as problem name */
-   filenameCopy = strdup(filename);     /* need copy since some implementations of basename modify filename */
-   probname = basename(filenameCopy);
+   getProblemName(filename, probname, SCIP_MAXSTRLEN);
 
    SCIPmessagePrintInfo("Problem name: %s\n\n", probname);
 
@@ -176,8 +225,6 @@ SCIP_RETCODE LOPcreateProb(
 
    SCIP_CALL( SCIPcreateProb(scip, probname, probdelorigLOP, probtransLOP, probdeltransLOP,
 			     probinitsolLOP, probexitsolLOP, probdata) );
-
-   free((char*) filenameCopy);
 
    return SCIP_OKAY;
 }
@@ -217,8 +264,8 @@ SCIP_RETCODE LOPgenerateModel(
    }
 
    /* generate linear ordering constraint */
-   SCIP_CALL( SCIPcreateConsLO(scip, &cons, "LOP", probdata->n, probdata->Vars, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE,
-         FALSE, FALSE, FALSE, FALSE));
+   SCIP_CALL( SCIPcreateConsLinearOrdering(scip, &cons, "LOP", probdata->n, probdata->Vars, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE,
+					   FALSE, FALSE, FALSE, FALSE));
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -238,7 +285,7 @@ SCIP_RETCODE LOPevalSolution(
    int i, j, n;
    SCIP_VAR*** Vars;
    SCIP_SOL* sol;
-   SCIP_Real* inDegree;
+   SCIP_Real* outDegree;
    int* indices;
 
    /* get problem data */
@@ -254,10 +301,10 @@ SCIP_RETCODE LOPevalSolution(
       printf("No solution found.\n");
    else
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &inDegree, n) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &outDegree, n) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &indices, n) );
       
-      /* compute in-degree */
+      /* compute out-degree */
       for (i = 0; i < n; ++i)
       {
 	 int deg = 0;
@@ -269,15 +316,15 @@ SCIP_RETCODE LOPevalSolution(
 	    SCIP_Real val = 0.0;
 	    val = SCIPgetSolVal(scip, sol, Vars[i][j]);
 	    assert( SCIPisIntegral(scip, val) );
-	    if ( val > 0.5 )
+	    if ( val < 0.5 )
 	       ++deg;
 	 }
-	 inDegree[i] = (SCIP_Real) deg;
+	 outDegree[i] = (SCIP_Real) deg;
 	 indices[i] = i;
       }
 
       /* sort such that degrees are non-decreasing */
-      SCIPbsortRealPtr(inDegree, (void**) indices, n);
+      SCIPbsortRealPtr(outDegree, (void**) indices, n);
       
       /* output */
       printf("\nFinal order:\n");
@@ -285,7 +332,7 @@ SCIP_RETCODE LOPevalSolution(
 	 printf("%d ", indices[i]);
       printf("\n");
       
-      SCIPfreeMemoryArray(scip, &inDegree);
+      SCIPfreeMemoryArray(scip, &outDegree);
       SCIPfreeMemoryArray(scip, &indices);
    }
 
