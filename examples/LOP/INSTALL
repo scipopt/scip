@@ -87,8 +87,8 @@ using SCIP as a library running:
    - ln -s <path to SCIP> lib/scip
      (e.g. "ln -s /scip lib/scip")
 
-3. To run the program enter "bin/LOP.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
-   (e.g. "bin/LOP.linux.x86.gnu.opt.spx")
+3. To run the program enter "bin/lop.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
+   (e.g. "bin/lop.linux.x86.gnu.opt.spx")
 
 4. To generate the documentation, you need to have doxygen installed, and
    enter "make doc"
