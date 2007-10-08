@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.226 2007/09/25 14:01:10 bzfpfend Exp $
+# $Id: Makefile,v 1.227 2007/10/08 11:55:49 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -732,7 +732,7 @@ $(DIRECTORIES):
 .PHONY: $(SOFTLINKS)
 $(SOFTLINKS):
 ifeq ($(MAKESOFTLINKS), true)
-		@$(SHELL) -ec 'if [ ! -e $@ ] ; \
+		@$(SHELL) -ec 'if test ! -e $@ ; \
 			then \
 				DIRNAME=`dirname $@` ; \
 				BASENAMEA=`basename $@ .$(LIBEXT)` ; \
