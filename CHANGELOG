@@ -6,6 +6,7 @@ features:
 - extended TSP example
 
 fixed bugs:
+- fixed handling of unbounded variables with 0 objective in SCIPlpGetModifiedPseudo[Proved]Objval() (lp.c)
 - fixed CTRL-C if NO_SIGACTION is set (e.g., for MinGW)
 - fixed bug that a missing CONSTRANS in constraint handler leads to NULL pointer as constraint data for the
   copied constraints instead of pointer copies of the consdata (as explained in the constraint handler "HowTo")
