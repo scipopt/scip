@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.248 2007/08/16 10:20:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.249 2007/10/08 15:22:41 bzfpfets Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -10231,20 +10231,22 @@ SCIP_Real SCIPlpGetModifiedPseudoObjval(
 {
    SCIP_Real pseudoobjval;
    int pseudoobjvalinf;
-   
+   SCIP_Real obj;
+
    pseudoobjval = lp->pseudoobjval;
    pseudoobjvalinf = lp->pseudoobjvalinf;
-   if( boundtype == SCIPvarGetBestBoundType(var) )
+   obj = SCIPvarGetObj(var);
+   if( !SCIPsetIsZero(set, obj) && boundtype == SCIPvarGetBestBoundType(var) )
    {
       if( SCIPsetIsInfinity(set, REALABS(oldbound)) )
-         pseudoobjvalinf--;
+	 pseudoobjvalinf--;
       else
-         pseudoobjval -= oldbound * SCIPvarGetObj(var);
+	 pseudoobjval -= oldbound * obj;
       assert(pseudoobjvalinf >= 0);
       if( SCIPsetIsInfinity(set, REALABS(newbound)) )
-         pseudoobjvalinf++;
+	 pseudoobjvalinf++;
       else
-         pseudoobjval += newbound * SCIPvarGetObj(var);
+	 pseudoobjval += newbound * obj;
    }
    assert(pseudoobjvalinf >= 0);
 
@@ -10268,25 +10270,27 @@ SCIP_Real SCIPlpGetModifiedProvedPseudoObjval(
 {
    SCIP_Real pseudoobjval;
    int pseudoobjvalinf;
-   
+   SCIP_Real obj;
+
    pseudoobjval = lp->pseudoobjval;
    pseudoobjvalinf = lp->pseudoobjvalinf;
-   if( boundtype == SCIPvarGetBestBoundType(var) )
+   obj = SCIPvarGetObj(var);
+   if( !SCIPsetIsZero(set, obj) && boundtype == SCIPvarGetBestBoundType(var) )
    {
-      SCIP_INTERVAL obj;
+      SCIP_INTERVAL objint;
       SCIP_INTERVAL bd;
       SCIP_INTERVAL prod;
       SCIP_INTERVAL psval;
 
       SCIPintervalSet(&psval, pseudoobjval);
-      SCIPintervalSet(&obj, SCIPvarGetObj(var));
+      SCIPintervalSet(&objint, SCIPvarGetObj(var));
 
       if( SCIPsetIsInfinity(set, REALABS(oldbound)) )
          pseudoobjvalinf--;
       else
       {
          SCIPintervalSet(&bd, oldbound);
-         SCIPintervalMul(&prod, bd, obj);
+         SCIPintervalMul(&prod, bd, objint);
          SCIPintervalSub(&psval, psval, prod);
       }
       assert(pseudoobjvalinf >= 0);
@@ -10295,7 +10299,7 @@ SCIP_Real SCIPlpGetModifiedProvedPseudoObjval(
       else
       {
          SCIPintervalSet(&bd, newbound);
-         SCIPintervalMul(&prod, bd, obj);
+         SCIPintervalMul(&prod, bd, objint);
          SCIPintervalAdd(&psval, psval, prod);
       }
 
