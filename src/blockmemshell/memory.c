@@ -14,7 +14,7 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.11 2007/08/01 19:57:30 bzfpfets Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.12 2007/10/09 12:19:08 bzfpfend Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -436,9 +436,9 @@ struct Chunk
 {
    void*                 store;              /**< data storage */
    void*                 storeend;           /**< points to the first byte in memory not belonging to the chunk */
-   FREELIST*        eagerfree;          /**< eager free list */
-   CHUNK*           nexteager;          /**< next chunk, that has a non-empty eager free list */
-   CHUNK*           preveager;          /**< previous chunk, that has a non-empty eager free list */
+   FREELIST*             eagerfree;          /**< eager free list */
+   CHUNK*                nexteager;          /**< next chunk, that has a non-empty eager free list */
+   CHUNK*                preveager;          /**< previous chunk, that has a non-empty eager free list */
    BMS_CHKMEM*           chkmem;             /**< chunk memory collection, this chunk belongs to */
    int                   elemsize;           /**< size of each element in the chunk */
    int                   storesize;          /**< number of elements in this chunk */
@@ -449,9 +449,9 @@ struct Chunk
 /** collection of memory chunks of the same element size */
 struct BMS_ChkMem
 {
-   FREELIST*        lazyfree;           /**< lazy free list of unused memory elements of all chunks of this chunk block */
-   CHUNK**          chunks;             /**< array with the chunks of the chunk header */
-   CHUNK*           firsteager;         /**< first chunk with a non-empty eager free list */ 
+   FREELIST*             lazyfree;           /**< lazy free list of unused memory elements of all chunks of this chunk block */
+   CHUNK**               chunks;             /**< array with the chunks of the chunk header */
+   CHUNK*                firsteager;         /**< first chunk with a non-empty eager free list */ 
    BMS_CHKMEM*           nextchkmem;         /**< next chunk block in the block memory's hash list */
    int                   elemsize;           /**< size of each memory element in the chunk memory */
    int                   chunkssize;         /**< size of the chunks array */
