@@ -59,6 +59,6 @@
  * linear order project, and solves the problem.
  * - probdata_LOP.c: this file provides code for reading the corresponding weight matrix 
  * and setting up the above model.
- * - cons_LO.c: contains the constraint handler that care of the
+ * - cons_LO.c: contains the constraint handler that takes care of the
  * equations and the triangle inequalities.
  */
