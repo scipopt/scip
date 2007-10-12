@@ -316,7 +316,8 @@
  *    SCIP_Bool             local,
  *    SCIP_Bool             modifiable,
  *    SCIP_Bool             dynamic,
- *    SCIP_Bool             removable
+ *    SCIP_Bool             removable,
+ *    SCIP_Bool             stickingatnode
  *    )
  * {
  *    SCIP_CONSHDLR* conshdlr;
@@ -334,7 +335,7 @@
  *    SCIP_CALL( consdataCreate(scip, &consdata, nvars, vars) );
  * 
  *    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
- *          local, modifiable, dynamic, removable) );
+ *          local, modifiable, dynamic, removable, stickingatnode) );
  * 
  *    return SCIP_OKAY;
  * }
@@ -578,7 +579,8 @@
  *          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
  *          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
  *          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
- *          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons)) );
+ *          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons),
+ *          SCIPconsIsStickingAtNode(sourcecons)) );
  * 
  *    return SCIP_OKAY;
  * }
