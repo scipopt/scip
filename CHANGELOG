@@ -5,6 +5,9 @@ features:
 - added SOS2 example
 - extended TSP example
 
+plugins:
+- added first version of SOS type 1 constraint handler (cons_sos.{c,h})
+
 fixed bugs:
 - fixed handling of unbounded variables with 0 objective in SCIPlpGetModifiedPseudo[Proved]Objval() (lp.c)
 - fixed CTRL-C if NO_SIGACTION is set (e.g., for MinGW)
