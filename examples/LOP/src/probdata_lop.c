@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_lop.c,v 1.2 2007/10/05 09:39:28 bzfpfets Exp $"
+#pragma ident "@(#) $Id: probdata_lop.c,v 1.3 2007/10/12 17:52:11 bzfpfets Exp $"
 
 #include "probdata_lop.h"
 
@@ -158,7 +158,7 @@ int getProblemName(
 		   const char* filename,   /**< input filename */
 		   char* probname,         /**< output problemname */
 		   int maxSize             /**< maximum size of probname */
-		   ) 
+		   )
 {
    int i = 0;
    int l = -1;
@@ -185,7 +185,7 @@ int getProblemName(
    /* correct counter */
    if ((filename[i] == '/') || (filename[i] != '\\'))
       ++i;
-      
+
    /* copy name */
    while ( (i < l) && (filename[i] != 0) )
    {
@@ -303,7 +303,7 @@ SCIP_RETCODE LOPevalSolution(
    {
       SCIP_CALL( SCIPallocMemoryArray(scip, &outDegree, n) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &indices, n) );
-      
+
       /* compute out-degree */
       for (i = 0; i < n; ++i)
       {
@@ -312,7 +312,7 @@ SCIP_RETCODE LOPevalSolution(
 	 {
 	    if (j == i)
 	       continue;
-	    
+
 	    SCIP_Real val = 0.0;
 	    val = SCIPgetSolVal(scip, sol, Vars[i][j]);
 	    assert( SCIPisIntegral(scip, val) );
@@ -325,13 +325,13 @@ SCIP_RETCODE LOPevalSolution(
 
       /* sort such that degrees are non-decreasing */
       SCIPbsortRealPtr(outDegree, (void**) indices, n);
-      
+
       /* output */
       printf("\nFinal order:\n");
       for (i = 0; i < n; ++i)
 	 printf("%d ", indices[i]);
       printf("\n");
-      
+
       SCIPfreeMemoryArray(scip, &outDegree);
       SCIPfreeMemoryArray(scip, &indices);
    }
