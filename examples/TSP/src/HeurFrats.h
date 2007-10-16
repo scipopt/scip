@@ -42,7 +42,7 @@ namespace tsp
       /** default constructor */
       HeurFrats(
       )
-         : ObjHeur("frats", "fractional travelling salesman: TSP rounding heuristic", 'T',-50000, 1, 0, -1,
+         : ObjHeur("frats", "fractional travelling salesman: TSP rounding heuristic", 'T',-50000, 5, 0, -1,
             SCIP_HEURTIMING_AFTERLPNODE)
       {
       }   

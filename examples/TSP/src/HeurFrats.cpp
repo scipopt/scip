@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: HeurFrats.cpp,v 1.1 2007/10/12 20:27:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: HeurFrats.cpp,v 1.2 2007/10/16 13:11:19 bzfberth Exp $"
 
 /**@file   heur_frats.c
  * @brief  fractional travelling salesman heuristic
@@ -60,6 +60,7 @@ SCIP_RETCODE HeurFrats::scip_init(
    /* create heuristic data */
    SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
    
+   /* load the problem specific data */
    probdata = dynamic_cast<ProbDataTSP*>(SCIPgetObjProbData(scip));
    assert( probdata != NULL );
 
@@ -77,6 +78,7 @@ SCIP_RETCODE HeurFrats::scip_exit(
    SCIP_HEUR*         heur                /**< the primal heuristic itself */
    )
 {
+   /* free everything which was created in scip_init */
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
    release_graph(&graph);
 
@@ -119,7 +121,6 @@ SCIP_RETCODE HeurFrats::scip_exec(
 {  /*lint --e{715}*/
 
    SCIP_SOL* newsol;
-
    GRAPHNODE* currnode;   
    SCIP_Bool* visited;   
    int nnodes;
@@ -127,6 +128,7 @@ SCIP_RETCODE HeurFrats::scip_exec(
    SCIP_Bool success;
 
    assert( result != NULL );
+   /* since the timing is SCIP_HEURTIMING_AFTERLPNODE, the current node should have an LP */
    assert( SCIPhasCurrentNodeLP(scip) );
 
    *result = SCIP_DIDNOTRUN;
@@ -143,10 +145,12 @@ SCIP_RETCODE HeurFrats::scip_exec(
 
    *result = SCIP_DIDNOTFIND;
 
+   /* choose the first node as starting point*/
    currnode = &graph->nodes[0];   
    nnodes = graph->nnodes;
    success = TRUE;
    
+   /* allocate local memory */
    SCIP_CALL( SCIPcreateSol (scip, &newsol, heur) );      
    SCIP_CALL( SCIPallocBufferArray(scip, &visited, nnodes) ); 
    BMSclearMemoryArray(visited, nnodes);
@@ -154,21 +158,26 @@ SCIP_RETCODE HeurFrats::scip_exec(
    assert( currnode->id == 0 );
    visited[0] = TRUE;
 
+   /*exactly nnodes edges have to be inserted into the tour */
    for( i = 0; i < nnodes; i++ )
    {
       GRAPHEDGE* edge;
       SCIP_Real bestval; 
       GRAPHEDGE* bestedge;
 
+      /* initialization */
       bestedge = NULL;
       bestval = -1;
 
+      /* the graph works with adjacency lists */
       edge = currnode->first_edge; 
       
+      /* the last edge is treated separately */
       if( i != nnodes-1 )
       {
          while( edge != NULL )
          {
+            /* update, if an edge has a better LP value AND was not visited yet AND was not globally dixed to zero */
             if( SCIPgetSolVal(scip, sol, edge->var) > bestval && !visited[edge->adjac->id] 
                && SCIPvarGetUbGlobal(edge->var) == 1.0 )
             {
@@ -182,6 +191,8 @@ SCIP_RETCODE HeurFrats::scip_exec(
       {
          GRAPHNODE* finalnode;
          finalnode = &graph->nodes[0]; 
+
+         /* find the last edge which closes the tour */
          while( edge != NULL )
          {
             if( edge->adjac == finalnode )
@@ -197,15 +208,18 @@ SCIP_RETCODE HeurFrats::scip_exec(
          }
       }
 
+      /* it may happen that we were not able to build a complete tour */
       if( bestval == -1 )
       {
          success = FALSE;
          break;
-      }    
-      assert( bestval >= 0 );
+      }
+      /* assert that the data is not corrupted */
       assert( bestedge != NULL );
+      assert( 0 <= bestval && bestval <= 1 );
       assert( bestval ==  SCIPgetSolVal(scip, sol, bestedge->var) );
 
+      /* fix the variable which represents the best edge to one in the new solution and proceed to next node */
       SCIP_CALL( SCIPsetSolVal(scip, newsol, bestedge->var, 1.0) );
       currnode = bestedge->adjac;
       assert( currnode != NULL );
@@ -214,16 +228,19 @@ SCIP_RETCODE HeurFrats::scip_exec(
          assert( !visited[currnode->id] );
       visited[currnode->id] = TRUE;
    }
+   /* if we were able to construct a complete tour, try to add the solution to SCIP */
    if( success )
    {
       for( i = 0; i < nnodes; i++ )
          assert( visited[graph->nodes[i].id] );
       
       success = FALSE;
+      /* due to construction we already know, that the solution will be feasible */
       SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, FALSE, FALSE, &success) );
       if( success )
          *result = SCIP_FOUNDSOL;  
    }
+   /* free all local memory */
    SCIP_CALL( SCIPfreeSol(scip, &newsol) );      
    SCIPfreeBufferArray(scip, &visited);
    
