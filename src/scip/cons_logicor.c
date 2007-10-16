@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.108 2007/08/21 14:39:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.109 2007/10/16 14:57:47 bzfheinz Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -1835,7 +1835,7 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
          conshdlrdata) );
 
    /* include the linear constraint to logicor constraint upgrade in the linear constraint handler */
-   SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdLogicor, LINCONSUPGD_PRIORITY) );
+   SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdLogicor, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
 
    return SCIP_OKAY;
 }

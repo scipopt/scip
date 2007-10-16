@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.h,v 1.50 2007/08/21 14:39:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.h,v 1.51 2007/10/16 14:57:47 bzfheinz Exp $"
 
 /**@file   cons_linear.h
  * @brief  constraint handler for linear constraints
@@ -90,7 +90,8 @@ extern
 SCIP_RETCODE SCIPincludeLinconsUpgrade(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_LINCONSUPGD((*linconsupgd)),    /**< method to call for upgrading linear constraint */
-   int                   priority            /**< priority of upgrading method */
+   int                   priority,           /**< priority of upgrading method */
+   const char*           conshdlrname        /**< name off the constraint handler */
    );
 
 /** creates and captures a linear constraint */

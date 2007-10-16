@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.250 2007/08/27 14:21:26 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.251 2007/10/16 14:57:46 bzfheinz Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -177,6 +177,7 @@ struct SCIP_LinConsUpgrade
 {
    SCIP_DECL_LINCONSUPGD((*linconsupgd));    /**< method to call for upgrading linear constraint */
    int                   priority;           /**< priority of upgrading method */
+   SCIP_Bool             active;             /**< is upgrading enabled */
 };
 
 
@@ -358,6 +359,7 @@ SCIP_RETCODE linconsupgradeCreate(
    SCIP_CALL( SCIPallocMemory(scip, linconsupgrade) );
    (*linconsupgrade)->linconsupgd = linconsupgd;
    (*linconsupgrade)->priority = priority;
+   (*linconsupgrade)->active = TRUE;
 
    return SCIP_OKAY;
 }
@@ -435,7 +437,7 @@ SCIP_RETCODE conshdlrdataIncludeUpgrade(
    assert(linconsupgrade != NULL);
 
    SCIP_CALL( conshdlrdataEnsureLinconsupgradesSize(scip, conshdlrdata, conshdlrdata->nlinconsupgrades+1) );
-
+   
    for( i = conshdlrdata->nlinconsupgrades;
         i > 0 && conshdlrdata->linconsupgrades[i-1]->priority < linconsupgrade->priority; --i )
    {
@@ -7213,14 +7215,18 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
 SCIP_RETCODE SCIPincludeLinconsUpgrade(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_LINCONSUPGD((*linconsupgd)),    /**< method to call for upgrading linear constraint */
-   int                   priority            /**< priority of upgrading method */
+   int                   priority,           /**< priority of upgrading method */
+   const char*           conshdlrname        /**< name off the constraint handler */
    )
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_LINCONSUPGRADE* linconsupgrade;
-
+   char paramname[SCIP_MAXSTRLEN];
+   char paramdesc[SCIP_MAXSTRLEN];
+   
    assert(linconsupgd != NULL);
+   assert( conshdlrname != NULL );
 
    /* find the linear constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -7238,6 +7244,14 @@ SCIP_RETCODE SCIPincludeLinconsUpgrade(
 
    /* insert linear constraint update method into constraint handler data */
    SCIP_CALL( conshdlrdataIncludeUpgrade(scip, conshdlrdata, linconsupgrade) );
+
+   /* adds parameter to turn on and off the upgrading step */
+   sprintf(paramname, "constraints/linear/upgrade/%s", conshdlrname);
+   sprintf(paramdesc, "enable linear upgrading for constraint handler <%s>", conshdlrname);
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         paramname, paramdesc,
+         &linconsupgrade->active, FALSE, TRUE, NULL, NULL) );
+
 
    return SCIP_OKAY;
 }
@@ -7757,15 +7771,18 @@ SCIP_RETCODE SCIPupgradeConsLinear(
       ncoeffspone, ncoeffsnone, ncoeffspint, ncoeffsnint, ncoeffspfrac, ncoeffsnfrac,
       poscoeffsum, negcoeffsum, integral);
 
-   /* try all upgrading methods in priority order */
+   /* try all upgrading methods in priority order in case the upgrading step is enable  */
    for( i = 0; i < conshdlrdata->nlinconsupgrades && *upgdcons == NULL; ++i )
    {
-      SCIP_CALL( conshdlrdata->linconsupgrades[i]->linconsupgd(scip, cons, consdata->nvars,
-            consdata->vars, consdata->vals, consdata->lhs, consdata->rhs,
-            nposbin, nnegbin, nposint, nnegint, nposimpl, nnegimpl, nposcont, nnegcont,
-            ncoeffspone, ncoeffsnone, ncoeffspint, ncoeffsnint, ncoeffspfrac, ncoeffsnfrac,
-            poscoeffsum, negcoeffsum, integral,
-            upgdcons) );
+      if( conshdlrdata->linconsupgrades[i]->active )
+      {
+         SCIP_CALL( conshdlrdata->linconsupgrades[i]->linconsupgd(scip, cons, consdata->nvars,
+               consdata->vars, consdata->vals, consdata->lhs, consdata->rhs,
+               nposbin, nnegbin, nposint, nnegint, nposimpl, nnegimpl, nposcont, nnegcont,
+               ncoeffspone, ncoeffsnone, ncoeffspint, ncoeffsnint, ncoeffspfrac, ncoeffsnfrac,
+               poscoeffsum, negcoeffsum, integral,
+               upgdcons) );
+      }
    }
 
 #ifdef SCIP_DEBUG

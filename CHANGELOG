@@ -1,12 +1,24 @@
 current version
 ===============
 
+interface:
+- new parameter "conshdlrname" in SCIPincludeLinconsUpgrade() 
+
 features:
 - added SOS2 example
 - extended TSP example
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos.{c,h})
+
+parameters:
+- new parameter "constraint/linear/binpack" to enable or disable the linear upgrading process
+- new parameter "constraint/linear/eqknapsack" to enable or disable the linear upgrading process
+- new parameter "constraint/linear/invarknapsack" to enable or disable the linear upgrading process
+- new parameter "constraint/linear/knapsack" to enable or disable the linear upgrading process
+- new parameter "constraint/linear/logicor" to enable or disable the linear upgrading process
+- new parameter "constraint/linear/setppc" to enable or disable the linear upgrading process
+- new parameter "constraint/linear/varbound" to enable or disable the linear upgrading process
 
 fixed bugs:
 - fixed handling of unbounded variables with 0 objective in SCIPlpGetModifiedPseudo[Proved]Objval() (lp.c)
