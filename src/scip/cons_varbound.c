@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.64 2007/10/16 14:57:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.65 2007/10/16 15:03:59 bzfberth Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for variable bound constraints
@@ -64,6 +64,7 @@ struct SCIP_ConsData
    SCIP_VAR*             vbdvar;             /**< binary, integer or implicit integer bounding variable y */
    SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
    unsigned int          propagated:1;       /**< is the variable bound constraint already propagated? */
+   unsigned int          presolved:1;        /**< is the variable bound constraint already presolved? */
 };
 
 
@@ -161,6 +162,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->rhs = rhs;
    (*consdata)->row = NULL;
    (*consdata)->propagated = FALSE;
+   (*consdata)->presolved = FALSE;
 
    /* if we are in the transformed problem, get transformed variables, add variable bound information, and catch events */
    if( SCIPisTransformed(scip) )
@@ -1323,10 +1325,11 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
 
       /* force presolving the constraint in the initial round */
       if( nrounds == 0 )
-         consdata->propagated = FALSE;
+         consdata->presolved = FALSE;
 
-      if( consdata->propagated )
+      if( consdata->presolved )
          continue;
+      consdata->presolved = TRUE;
 
       /* incorporate fixings and aggregations in constraint */
       SCIP_CALL( applyFixings(scip, conss[i], &cutoff, nchgbds, ndelconss) );
@@ -1352,7 +1355,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
       *result = SCIP_SUCCESS;
    else
       *result = SCIP_DIDNOTFIND;
-
+   
    return SCIP_OKAY;
 }
 
@@ -1531,6 +1534,7 @@ SCIP_DECL_EVENTEXEC(eventExecVarbound)
    assert(consdata != NULL);
 
    consdata->propagated = FALSE;
+   consdata->presolved = FALSE;
 
    return SCIP_OKAY;
 }
