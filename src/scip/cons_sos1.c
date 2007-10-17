@@ -14,22 +14,14 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.c,v 1.1 2007/10/12 20:47:47 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_sos1.c,v 1.2 2007/10/17 19:30:35 bzfpfets Exp $"
 //#define SCIP_DEBUG
 
 /**@file   cons_sos1.c
  * @brief  constraint handler for SOS type 1 constraints
  * @author Marc Pfetsch
  *
- * A specially ordered set of type 1 (SOS1) is a set of variables such
- * that at most one variable is nonzero. The special case of two
- * variables arises, for instance, from equilibrium or complementary
- * conditions like x * y = 0.
- *
- * This implementation of this constraint handler is based on classical ideas, see e.g.@n
- *  "Special Facilities in General Mathematical Programming System for
- *  Non-Convex Problems Using Ordered Sets of Variables"@n
- *  E. Beale and J. Tomlin, Proc. 5th IFORS Conference, 447-454 (1970)
+ * See also the comments in the .h file.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -44,13 +36,13 @@
 /* constraint handler properties */
 #define CONSHDLR_NAME          "SOS1"
 #define CONSHDLR_DESC          "SOS1 constraint handler"
-#define CONSHDLR_SEPAPRIORITY         0 /**< priority of the constraint handler for separation */
+#define CONSHDLR_SEPAPRIORITY        10 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY       100 /**< priority of the constraint handler for constraint enforcing */
-#define CONSHDLR_CHECKPRIORITY        0 /**< priority of the constraint handler for checking feasibility */
-#define CONSHDLR_SEPAFREQ             1 /**< frequency for separating cuts; zero means to separate only in the root node */
+#define CONSHDLR_CHECKPRIORITY      -10 /**< priority of the constraint handler for checking feasibility */
+#define CONSHDLR_SEPAFREQ             0 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
-                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -69,10 +61,11 @@
 struct SCIP_ConsData
 {
    int nVars;              /**< number of variables in the constraint */
-   int maxVars;            /**< maximal number of variables */
-   SCIP_VAR** Vars;        /**< variables in constraint */
-   SCIP_ROW* row;          /**< row corresponding to upper and lower bound inequalities */
+   int maxVars;            /**< maximal number of variables (= size of storage) */
    int nFixedNonzero;      /**< number of variables fixed to be nonzero */
+   SCIP_VAR** Vars;        /**< variables in constraint */
+   SCIP_ROW* row;          /**< row corresponding to upper and lower bound inequalities, or NULL if not yet created */
+   SCIP_Real* weights;     /**< weights determining the order (descending), or NULL if not used */
 };
 
 /** SOS1 constraint handler data */
@@ -86,7 +79,7 @@ struct SCIP_ConshdlrData
 
 
 
-/** fix variable in given node to 0 */
+/** fix variable in given node to 0 or add constraint if variable is multi-aggregated */
 static
 SCIP_RETCODE fixVariableZeroNode(
 	     SCIP* scip,            /**< SCIP pointer */
@@ -97,7 +90,7 @@ SCIP_RETCODE fixVariableZeroNode(
 {
    /* if variable cannot be nonzero */
    *infeasible = FALSE;
-   if ( SCIPisPositive(scip, SCIPvarGetLbLocal(var)) || SCIPisNegative(scip, SCIPvarGetUbLocal(var)) )
+   if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) || SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var)) )
    {
       *infeasible = TRUE;
       return SCIP_OKAY;
@@ -109,7 +102,7 @@ SCIP_RETCODE fixVariableZeroNode(
       SCIP_CONS* cons;
       SCIP_Real val = 1.0;
 
-      if ( ! SCIPisZero(scip, SCIPvarGetLbLocal(var)) || ! SCIPisZero(scip, SCIPvarGetUbLocal(var)) )
+      if ( ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) )
       {
 	 SCIPdebugMessage("creating constraint to force multi aggregated variable <%s> to 0.\n", SCIPvarGetName(var));
 	 /* we have to insert a local constraint var = 0 */
@@ -121,9 +114,9 @@ SCIP_RETCODE fixVariableZeroNode(
    }
    else
    {
-      if ( ! SCIPisZero(scip, SCIPvarGetLbLocal(var)) )
+      if ( ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) )
 	 SCIP_CALL( SCIPchgVarLbNode(scip, node, var, 0.0) );
-      if ( ! SCIPisZero(scip, SCIPvarGetUbLocal(var)) )
+      if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) )
 	 SCIP_CALL( SCIPchgVarUbNode(scip, node, var, 0.0) );
    }
 
@@ -131,7 +124,7 @@ SCIP_RETCODE fixVariableZeroNode(
 }
 
 
-/** fix variable in local node to 0 */
+/** fix variable in local node to 0, and return whether the operation was feasible */
 static
 SCIP_RETCODE inferVariableZero(
 	     SCIP* scip,            /**< SCIP pointer */
@@ -146,7 +139,7 @@ SCIP_RETCODE inferVariableZero(
    *tightened = FALSE;
 
    /* if variable cannot be nonzero */
-   if ( SCIPisPositive(scip, SCIPvarGetLbLocal(var)) || SCIPisNegative(scip, SCIPvarGetUbLocal(var)) )
+   if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) || SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var)) )
    {
       *infeasible = TRUE;
       return SCIP_OKAY;
@@ -170,202 +163,124 @@ SCIP_RETCODE inferVariableZero(
 }
 
 
-
-
-/** fix all variables except given one to 0 */
+/** add lock on variable */
 static
-SCIP_RETCODE fixOtherZero(
-	     SCIP* scip,           /**< SCIP pointer */
-	     SCIP_CONS* cons,      /**< constraint */
-	     int nVars,            /**< number of variables */
-	     SCIP_VAR** Vars,      /**< variables in constraint */
-	     int ind,              /**< index of variable which is nonzero */
-	     SCIP_RESULT* result   /**< result */
-	     )
+SCIP_RETCODE lockVariableSOS1(
+   SCIP*       scip,    /**< SCIP data structure */
+   SCIP_CONS*  cons,    /**< constraint */
+   SCIP_VAR*   var      /**< variable */
+   )
 {
-   SCIP_Bool tightened = FALSE;
-   int j;
-   assert( SCIPisPositive(scip, SCIPvarGetLbLocal(Vars[ind])) || SCIPisNegative(scip, SCIPvarGetUbLocal(Vars[ind])) );
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( var != NULL );
 
-   for (j = 0; j < nVars; ++j)
-   {
-      if ( j != ind )
-      {
-	 SCIP_Bool infeasible, tighten;
+   /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
+   SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)), SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
 
-	 /* fix lower bound */
-	 SCIP_CALL( SCIPinferVarLbCons(scip, Vars[j], 0.0, cons, 0, &infeasible, &tighten) );
-	 if ( infeasible )
-	 {
-	    *result = SCIP_CUTOFF;
-	    return SCIP_OKAY;
-	 }
-	 tightened = tightened || tighten;
+   return SCIP_OKAY;;
+}
 
-	 /* fix upper bound */
-	 SCIP_CALL( SCIPinferVarUbCons(scip, Vars[j], 0.0, cons, 0, &infeasible, &tighten) );
-	 if ( infeasible )
-	 {
-	    *result = SCIP_CUTOFF;
-	    return SCIP_OKAY;
-	 }
-	 tightened = tightened || tighten;
-      }
-   }
-   if ( tightened )
-      *result = SCIP_REDUCEDDOM;
+
+/* remove lock on variable */
+static
+SCIP_RETCODE unlockVariableSOS1(
+   SCIP*       scip,    /**< SCIP data structure */
+   SCIP_CONS*  cons,    /**< constraint */
+   SCIP_VAR*   var      /**< variable */
+   )
+{
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( var != NULL );
+
+   /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
+   SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)), SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
 
    return SCIP_OKAY;
 }
 
 
 
-/** enforcement method
- *
- *  We check whether the current solution is feasible, i.e., contains
- *  at most one nonzero variable. If not, we branch along the lines
- *  indicated by Beale and Tomlin:
- *
- *  We first compute \f$W = \sum_{j=1}^n |x_i|\f$ and \f$w =
- *  \sum_{j=1}^n j\, |x_i|\f$. Then we search for the index k that
- *  satisfies
- *  \f[
- *        k \leq \frac{w}{W} < k+1.
- *  \f]
- *  The branches are then
- *  \f[
- *        x_1 = 0, \ldots, x_{k-1} = 0 \qquad \mbox{and}\qquad
- *        x_{k+1} = 0, \ldots, x_n = 0.
- *  \f]
- */
+/** ensures that the Vars and weights array can store at least num entries */
 static
-SCIP_RETCODE enforceSOS1(
-			 SCIP* scip,           /**< SCIP pointer */
-			 SCIP_CONS* cons,      /**< constraint */
-			 int nVars,            /**< number of variables */
-			 SCIP_VAR** Vars,      /**< variables in constraint */
-			 SCIP_RESULT* result   /**< result */
-			 )
+SCIP_RETCODE consdataEnsureVarsSizeSOS1(
+   SCIP*           scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*  consdata,           /**< constraint data */
+   int             num,                /**< minimum number of entries to store */
+   SCIP_Bool       reserveWeights      /**< whether the weights array is handled */
+   )
 {
-   SCIP_Bool infeasible, tightened;
-   SCIP_NODE* node1;
-   SCIP_NODE* node2;
-   int j;
-   SCIP_Real weight1 = 0.0;
-   SCIP_Real weight2 = 0.0;
-   SCIP_Real w = 0.0;
-   int ind;
-   int cnt = 0;
+   assert( consdata != NULL );
+   assert( consdata->nVars <= consdata->maxVars );
 
-   assert( scip != NULL );
-   assert( Vars != NULL );
-   assert( result != NULL );
-
-   if ( nVars == 2 )
+   if ( num > consdata->maxVars )
    {
-      /* if the bounds of the first variable are such that it cannot be 0 */
-      if ( SCIPisPositive(scip, SCIPvarGetLbLocal(Vars[0])) || SCIPisNegative(scip, SCIPvarGetUbLocal(Vars[0])) )
-      {
-	 SCIPdebugMessage("Variable <%s> is fixed to be nonzero.\n", SCIPvarGetName(Vars[0]));
-	 SCIP_CALL( inferVariableZero(scip, Vars[1], cons, 0, &infeasible, &tightened) );
-	 if ( infeasible )
-	 {
-	    *result = SCIP_CUTOFF;
-	    return SCIP_OKAY;
-	 }
-	 if ( tightened )
-	 {
-	    *result = SCIP_REDUCEDDOM;
-	    return SCIP_OKAY;
-	 }
-      }
+      int newsize;
 
-      /* if the bounds of the second variable are such that it cannot be 0 */
-      if ( SCIPisPositive(scip, SCIPvarGetLbLocal(Vars[1])) || SCIPisNegative(scip, SCIPvarGetUbLocal(Vars[1])) )
-      {
-	 SCIPdebugMessage("Variable <%s> is fixed to be nonzero.\n", SCIPvarGetName(Vars[1]));
-	 SCIP_CALL( inferVariableZero(scip, Vars[0], cons, 1, &infeasible, &tightened) );
-	 if ( infeasible )
-	 {
-	    *result = SCIP_CUTOFF;
-	    return SCIP_OKAY;
-	 }
-	 if ( tightened )
-	 {
-	    *result = SCIP_REDUCEDDOM;
-	    return SCIP_OKAY;
-	 }
-      }
-
-      /* if constraint is infeasible */
-      if ( ! SCIPisZero(scip, SCIPgetSolVal(scip, NULL, Vars[0])) && ! SCIPisZero(scip, SCIPgetSolVal(scip, NULL, Vars[1])) )
-      {
-	 /* create branches */
-	 SCIPdebugMessage("Creating two branches.\n");
-
-	 SCIP_CALL( SCIPcreateChild(scip, &node1, 0.0, SCIPgetSolTransObj(scip, NULL) ) );
-	 SCIP_CALL( fixVariableZeroNode(scip, Vars[0], node1, &infeasible) );
-	 assert( ! infeasible );
-
-	 SCIP_CALL( SCIPcreateChild(scip, &node2, 0.0, SCIPgetSolTransObj(scip, NULL) ) );
-	 SCIP_CALL( fixVariableZeroNode(scip, Vars[1], node2, &infeasible) );
-	 assert( ! infeasible );
-
-	 *result = SCIP_BRANCHED;
-      }
+      newsize = SCIPcalcMemGrowSize(scip, num);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->Vars, consdata->maxVars, newsize) );
+      if ( reserveWeights )
+	 SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->weights, consdata->maxVars, newsize) );
+      consdata->maxVars = newsize;
    }
-   else
+   assert( num <= consdata->maxVars );
+
+   return SCIP_OKAY;
+}
+
+
+
+/** handle new variable */
+static
+SCIP_RETCODE handleNewVariableSOS1(
+   SCIP*           scip,               /**< SCIP data structure */
+   SCIP_CONS*      cons,               /**< constraint */
+   SCIP_CONSDATA*  consdata,           /**< constraint data */
+   SCIP_VAR*       var,                /**< variable */
+   SCIP_Bool       transformed         /**< whether original variable was transformed */
+   )
+{
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( consdata != NULL );
+   assert( var != NULL );
+
+   /* if we are in transformed problem, catch the variable's events */
+   if ( transformed )
    {
-      /* compute weight */
-      for (j = 0; j < nVars; ++j)
-      {
-	 SCIP_Real val = fabs(SCIPgetSolVal(scip, NULL, Vars[j]));
-	 weight1 += val * (SCIP_Real) j;
-	 weight2 += val;
-	 if ( ! SCIPisFeasZero(scip, val) )
-	    ++cnt;
+      SCIP_CONSHDLR* conshdlr;
+      SCIP_CONSHDLRDATA* conshdlrdata;
 
-	 /* if the bounds of the variable are such that it cannot be 0 */
-	 if ( SCIPisPositive(scip, SCIPvarGetLbLocal(Vars[j])) || SCIPisNegative(scip, SCIPvarGetUbLocal(Vars[j])) )
-	 {
-	    SCIP_CALL( fixOtherZero(scip, cons, nVars, Vars, j, result) );
-	    if (*result == SCIP_REDUCEDDOM || *result == SCIP_CUTOFF )
-	       return SCIP_OKAY;
-	 }
-      }
+      /* get event handler */
+      conshdlr = SCIPconsGetHdlr(cons);
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
+      assert( conshdlrdata->eventhdlr != NULL );
 
-      /* if at most one variable is nonzero, the constraint is feasible -> return */
-      if ( cnt <= 1 )
-	 return SCIP_OKAY;
+      /* catch bound change events of variable */
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
+				   (SCIP_EVENTDATA*)consdata, NULL) );
 
-      assert( cnt >= 2 );
-      assert( !SCIPisFeasZero(scip, weight2) );
-      w = weight1/weight2;
+      /* if the variable if fixed to nonzero */
+      assert( consdata->nFixedNonzero >= 0 );
+      if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) || SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var)) )
+	 ++consdata->nFixedNonzero;
+   }
 
-      ind = SCIPfloor(scip, w);
-      if ( ind >= nVars )
-	 ind = nVars;
-      assert( 0 <= ind && ind < nVars );
+   /* install the rounding locks for the new variable */
+   SCIP_CALL( lockVariableSOS1(scip, cons, var) );
 
-      /* create branches */
-      SCIPdebugMessage("Branching on variable %d.\n", ind);
-
-      /* branch on variable ind: either all variables before ind or all variables after ind are zero */
-      SCIP_CALL( SCIPcreateChild(scip, &node1, 0.0, SCIPgetSolTransObj(scip, NULL) ) );
-      for (j = 0; j < ind; ++j)
-      {
-	 SCIP_CALL( fixVariableZeroNode(scip, Vars[j], node1, &infeasible) );
-	 assert( ! infeasible );
-      }
-
-      SCIP_CALL( SCIPcreateChild(scip, &node2, 0.0, SCIPgetSolTransObj(scip, NULL) ) );
-      for (j = ind+1; j < nVars; ++j)
-      {
-	 SCIP_CALL( fixVariableZeroNode(scip, Vars[j], node2, &infeasible) );
-	 assert( ! infeasible );
-      }
-
-      *result = SCIP_BRANCHED;
+   /* add the new coefficient to the LP row, if necessary */
+   if ( consdata->row != NULL )
+   {
+      /* this is currently dead code, since the constraint is not modifiable */
+      SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, var, 1.0) );
+      /* update lhs and rhs if necessary */
+      if ( SCIPisFeasGT(scip, SCIPvarGetUbLocal(var), SCIProwGetRhs(consdata->row)) )
+	 SCIP_CALL( SCIPchgRowRhs(scip, consdata->row, SCIPvarGetUbLocal(var) ) );
+      if ( SCIPisFeasLT(scip, SCIPvarGetLbLocal(var), SCIProwGetLhs(consdata->row)) )
+	 SCIP_CALL( SCIPchgRowLhs(scip, consdata->row, SCIPvarGetLbLocal(var) ) );
    }
 
    return SCIP_OKAY;
@@ -373,84 +288,138 @@ SCIP_RETCODE enforceSOS1(
 
 
 
-/** Generate row
- *
- *  We generate the rows corresponding to the following simple valid inequalities:
- *  \f[
- *         x_1 + \ldots + x_n \leq \max\{u_1, \ldots, u_n\}\qquad\mbox{and}\qquad
- *         x_1 + \ldots + x_n \geq \min\{l_1, \ldots, l_n\},
- *  \f]
- *  where \f$l_1, \ldots, l_n\f$ and \f$u_1, \ldots, u_n\f$ are the
- *  lower and upper bounds of the variables \f$x_1, \ldots, x_n\f$.
- *  Of course, these inequalities are only added if the upper and
- *  lower bounds are all finite and at least one lower bound is less
- *  than 0 (lower bounds > 0 are detected in presolving).
- */
+/** adds a variable to an SOS1 constraint, a position given by weight */
 static
-SCIP_RETCODE generateRowsSOS1(
-		  SCIP* scip,               /**< SCIP pointer */
-		  SCIP_CONSDATA* consdata   /**< constraint data */
-		  )
+SCIP_RETCODE addVarSOS1(
+   SCIP*        scip,     /**< SCIP data structure */
+   SCIP_CONS*   cons,     /**< constraint */
+   SCIP_VAR*    var,      /**< variable to add to the constraint */
+   SCIP_Real    weight    /**< weight to determine position */
+   )
 {
-   SCIP_VAR** Vars;
-   SCIP_Real minLb = SCIPinfinity(scip);
-   SCIP_Real maxUb = -SCIPinfinity(scip);
-   SCIP_ROW* row;
-   int j, nVars;
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool transformed;
+   int j, pos = -1;
 
-   assert( scip != NULL );
+   assert( var != NULL );
+   assert( cons != NULL );
+
+   if ( consdata->weights != NULL && consdata->maxVars > 0 )
+   {
+      SCIPerrorMessage("cannot add variable to SOS1 constraint <%s> that does not contain weights.\n", SCIPconsGetName(cons));
+      return SCIP_INVALIDCALL;
+   }
+
+   consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
-   nVars = consdata->nVars;
-   Vars = consdata->Vars;
-   assert( Vars != NULL );
+   /* are we in the transformed problem? */
+   transformed = SCIPconsIsTransformed(cons);
 
-   /* find minimum and maximum lower and upper bounds */
-   for (j = 0; j < nVars; ++j)
+   /* always use transformed variables in transformed constraints */
+   if ( transformed )
    {
-      minLb = MIN( SCIPvarGetLbLocal(Vars[j]), minLb );
-      maxUb = MAX( SCIPvarGetUbLocal(Vars[j]), maxUb );
+      SCIP_CALL( SCIPgetTransformedVar(scip, var, &var) );
    }
-   /* ignore trivial inequality if all lower bounds are 0 */
-   if ( ! SCIPisNegative(scip, minLb) )
-      minLb = -SCIPinfinity(scip);
+   assert( var != NULL );
+   assert( transformed == SCIPvarIsTransformed(var) );
 
-   /* create upper and lower bound inequality */
-   if ( maxUb < SCIPinfinity(scip) || minLb > -SCIPinfinity(scip) )
+   SCIP_CALL( consdataEnsureVarsSizeSOS1(scip, consdata, consdata->nVars + 1, TRUE) );
+   assert( consdata->weights != NULL );
+
+   /* find variable position */
+   for (pos = 0; pos < consdata->nVars; ++pos)
    {
-      SCIP_CALL( SCIPcreateEmptyRow(scip, &row, "sosbnd", minLb, maxUb, FALSE, FALSE, FALSE) );
-      SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-      for (j = 0; j < nVars; ++j)
-	 SCIP_CALL( SCIPaddVarToRow(scip, row, Vars[j], 1.0) );
-      SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-      consdata->row = row;
-#ifdef SCIP_DEBUG
-      SCIP_CALL( SCIPprintRow(scip, row, NULL) );
-#endif
+      if ( consdata->weights[j] < weight )
+	 break;
    }
+   assert( 0 <= pos && pos <= consdata->nVars );
+
+   /* move other variables, if necessary */
+   for (j = consdata->nVars; j > pos; --j)
+      consdata->Vars[j] = consdata->Vars[j-1];
+
+   /* insert variable */
+   consdata->Vars[pos] = var;
+   consdata->weights[pos] = weight;
+   ++consdata->nVars;
+
+   /* handle the new variable */
+   SCIP_CALL( handleNewVariableSOS1(scip, cons, consdata, var, transformed) );
 
    return SCIP_OKAY;
 }
 
+
+
+/** appends a variable to an SOS1 constraint */
+static
+SCIP_RETCODE appendVarSOS1(
+   SCIP*        scip,     /**< SCIP data structure */
+   SCIP_CONS*   cons,     /**< constraint */
+   SCIP_VAR*    var       /**< variable to add to the constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool transformed;
+
+   assert( var != NULL );
+   assert( cons != NULL );
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   /* are we in the transformed problem? */
+   transformed = SCIPconsIsTransformed(cons);
+
+   /* always use transformed variables in transformed constraints */
+   if ( transformed )
+   {
+      SCIP_CALL( SCIPgetTransformedVar(scip, var, &var) );
+   }
+   assert( var != NULL );
+   assert( transformed == SCIPvarIsTransformed(var) );
+
+   SCIP_CALL( consdataEnsureVarsSizeSOS1(scip, consdata, consdata->nVars + 1, FALSE) );
+
+   /* insert variable */
+   consdata->Vars[consdata->nVars] = var;
+   assert( consdata->weights != NULL || consdata->nVars > 0 );
+   if ( consdata->weights != NULL && consdata->nVars > 0 )
+      consdata->weights[consdata->nVars] = consdata->weights[consdata->nVars-1] + 1.0;
+   ++consdata->nVars;
+
+   /* handle the new variable */
+   SCIP_CALL( handleNewVariableSOS1(scip, cons, consdata, var, transformed) );
+
+   return SCIP_OKAY;
+}
 
 
 
 
 /** propagate changed variables */
 static
-SCIP_RETCODE propSOS1(SCIP* scip, SCIP_CONS* cons, SCIP_CONSDATA* consdata, SCIP_RESULT* result, int* nGen)
+SCIP_RETCODE propSOS1(
+	 SCIP* scip,               /**< SCIP pointer */
+	 SCIP_CONS* cons,          /**< constraint */
+	 SCIP_CONSDATA* consdata,  /**< constraint data */
+	 SCIP_Bool* cutoff,        /**< whether a cutoff happend */
+	 int* nGen                 /**< number of domain changes */
+   )
 {
    assert( scip != NULL );
    assert( cons != NULL );
    assert( consdata != NULL );
-   assert( result != NULL );
+   assert( cutoff != NULL );
    assert( nGen != NULL );
+
+   *cutoff = FALSE;
 
    /* if more than one variable is fixed to be nonzero */
    if ( consdata->nFixedNonzero > 1 )
    {
       SCIPdebugMessage("The node is infeasible, more than 1 variable is fixed to be nonzero.\n");
-      *result = SCIP_CUTOFF;
+      *cutoff = TRUE;
       return SCIP_OKAY;
    }
 
@@ -464,10 +433,10 @@ SCIP_RETCODE propSOS1(SCIP* scip, SCIP_CONS* cons, SCIP_CONSDATA* consdata, SCIP
       Vars = consdata->Vars;
       assert( Vars != NULL );
 
-      /* search nonzero variable - it is needed for propinfo */
+      /* search nonzero variable - is needed for propinfo */
       for (j = 0; j < nVars; ++j)
       {
-	 if ( SCIPisPositive(scip, SCIPvarGetLbLocal(Vars[j])) || SCIPisNegative(scip, SCIPvarGetUbLocal(Vars[j])) )
+	 if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(Vars[j])) || SCIPisFeasNegative(scip, SCIPvarGetUbLocal(Vars[j])) )
 	 {
 	    firstFixedNonzero = j;
 	    break;
@@ -501,16 +470,237 @@ SCIP_RETCODE propSOS1(SCIP* scip, SCIP_CONS* cons, SCIP_CONSDATA* consdata, SCIP
 	 if ( infeasible )
 	 {
 	    SCIPdebugMessage("The node is infeasible.\n");
-	    *result = SCIP_CUTOFF;
+	    *cutoff = TRUE;
 	    return SCIP_OKAY;
 	 }
 
 	 if ( tightened )
 	    ++(*nGen);
       }
+
+      /* reset constraint age counter */
+      if ( *nGen > 0 )
+	 SCIP_CALL( SCIPresetConsAge(scip, cons) );
+
+      /* delete constraint locally */
+      assert( !SCIPconsIsModifiable(cons) );
+      SCIP_CALL( SCIPdelConsLocal(scip, cons) );
    }
+
    return SCIP_OKAY;
 }
+
+
+
+
+/** enforcement method
+ *
+ *  We check whether the current solution is feasible, i.e., contains
+ *  at most one nonzero variable. If not, we branch along the lines
+ *  indicated by Beale and Tomlin:
+ *
+ *  We first compute \f$W = \sum_{j=1}^n |x_i|\f$ and \f$w =
+ *  \sum_{j=1}^n j\, |x_i|\f$. Then we search for the index k that
+ *  satisfies
+ *  \f[
+ *        k \leq \frac{w}{W} < k+1.
+ *  \f]
+ *  The branches are then
+ *  \f[
+ *        x_1 = 0, \ldots, x_{k-1} = 0 \qquad \mbox{and}\qquad
+ *        x_{k+1} = 0, \ldots, x_n = 0.
+ *  \f]
+ *
+ *  If the constraint contains two variables, the branching of course
+ *  simplifies.
+ */
+static
+SCIP_RETCODE enforceSOS1(
+	 SCIP* scip,               /**< SCIP pointer */
+	 SCIP_CONS* cons,          /**< constraint */
+	 SCIP_CONSDATA* consdata,  /**< constraint data */
+	 SCIP_RESULT* result       /**< result */
+	 )
+{
+   SCIP_Bool cutoff;
+   SCIP_NODE* node1;
+   SCIP_NODE* node2;
+   SCIP_VAR** Vars;
+   int nVars;
+   int cnt = 0;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( consdata != NULL );
+   assert( result != NULL );
+
+   nVars = consdata->nVars;
+   Vars = consdata->Vars;
+
+   /* do nothing if there are not enough variables - this is usually eliminated by preprocessing */
+   if ( nVars < 2 )
+      return SCIP_OKAY;
+
+   /* first perform propagation (it might happen that standard propagation is turned off */
+   SCIP_CALL( propSOS1(scip, cons, consdata, &cutoff, &cnt) );
+   SCIPdebugMessage("propagated in enforcing (cutoff: %d, domain reductions: %d).\n", cutoff, cnt);
+   if ( cutoff )
+   {
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
+   if ( cnt > 0 )
+   {
+      *result = SCIP_REDUCEDDOM;
+      return SCIP_OKAY;
+   }
+
+   if ( nVars == 2 )
+   {
+      SCIP_Bool infeasible;
+
+      /* if constraint is infeasible */
+      if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, Vars[0])) && ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, Vars[1])) )
+      {
+	 /* create branches */
+	 SCIPdebugMessage("Creating two branches.\n");
+
+	 SCIP_CALL( SCIPcreateChild(scip, &node1, 0.0, SCIPcalcChildEstimate(scip, Vars[0], 0.0) ) );
+	 SCIP_CALL( fixVariableZeroNode(scip, Vars[0], node1, &infeasible) );
+	 assert( ! infeasible );
+
+	 SCIP_CALL( SCIPcreateChild(scip, &node2, 0.0, SCIPcalcChildEstimate(scip, Vars[1], 0.0) ) );
+	 SCIP_CALL( fixVariableZeroNode(scip, Vars[1], node2, &infeasible) );
+	 assert( ! infeasible );
+
+	 *result = SCIP_BRANCHED;
+      }
+   }
+   else
+   {
+      SCIP_Bool infeasible;
+      SCIP_Real weight1 = 0.0;
+      SCIP_Real weight2 = 0.0;
+      SCIP_Real w = 0.0;
+      int j, ind;
+
+      /* compute weight */
+      assert( cnt == 0 );
+      for (j = 0; j < nVars; ++j)
+      {
+	 SCIP_Real val = fabs(SCIPgetSolVal(scip, NULL, Vars[j]));
+	 weight1 += val * (SCIP_Real) j;
+	 weight2 += val;
+
+	 if ( ! SCIPisFeasZero(scip, val) )
+	    ++cnt;
+      }
+
+      /* if at most one variable is nonzero, the constraint is feasible -> return */
+      if ( cnt <= 1 )
+	 return SCIP_OKAY;
+
+      assert( cnt >= 2 );
+      assert( !SCIPisFeasZero(scip, weight2) );
+      w = weight1/weight2;
+
+      ind = SCIPfloor(scip, w);
+      assert( 0 <= ind && ind < nVars-1 );
+
+      /* create branches */
+      SCIPdebugMessage("Branching on variable %d.\n", ind);
+
+      /* branch on variable ind: either all variables before ind or all variables after ind are zero */
+      SCIP_CALL( SCIPcreateChild(scip, &node1, 0.0, SCIPgetLocalTransEstimate(scip) ) );
+      for (j = 0; j <= ind; ++j)
+      {
+	 SCIP_CALL( fixVariableZeroNode(scip, Vars[j], node1, &infeasible) );
+	 assert( ! infeasible );
+      }
+
+      SCIP_CALL( SCIPcreateChild(scip, &node2, 0.0, SCIPgetLocalTransEstimate(scip) ) );
+      for (j = ind+1; j < nVars; ++j)
+      {
+	 SCIP_CALL( fixVariableZeroNode(scip, Vars[j], node2, &infeasible) );
+	 assert( ! infeasible );
+      }
+
+      *result = SCIP_BRANCHED;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+
+
+/** Generate row
+ *
+ *  We generate the rows corresponding to the following simple valid inequalities:
+ *  \f[
+ *         x_1 + \ldots + x_n \leq \max\{u_1, \ldots, u_n\}\qquad\mbox{and}\qquad
+ *         x_1 + \ldots + x_n \geq \min\{l_1, \ldots, l_n\},
+ *  \f]
+
+ *  where \f$l_1, \ldots, l_n\f$ and \f$u_1, \ldots, u_n\f$ are the
+ *  lower and upper bounds of the variables \f$x_1, \ldots, x_n\f$.
+ *  Of course, these inequalities are only added if the upper and
+ *  lower bounds are all finite and at least one lower bound is < 0 or
+ *  one upper bound is > 0 (lower bounds > 0 and upper bounds < 0 are
+ *  usually detected in presolving).
+ */
+static
+SCIP_RETCODE generateRowsSOS1(
+	  SCIP* scip,               /**< SCIP pointer */
+	  SCIP_CONSDATA* consdata   /**< constraint data */
+	  )
+{
+   SCIP_VAR** Vars;
+   SCIP_Real minLb = SCIPinfinity(scip);
+   SCIP_Real maxUb = -SCIPinfinity(scip);
+   SCIP_ROW* row;
+   int j, nVars;
+
+   assert( scip != NULL );
+   assert( consdata != NULL );
+   assert( consdata->row == NULL );
+
+   nVars = consdata->nVars;
+   Vars = consdata->Vars;
+   assert( Vars != NULL );
+
+   /* find minimum and maximum lower and upper bounds */
+   for (j = 0; j < nVars; ++j)
+   {
+      minLb = MIN( SCIPvarGetLbLocal(Vars[j]), minLb );
+      maxUb = MAX( SCIPvarGetUbLocal(Vars[j]), maxUb );
+   }
+   /* ignore trivial inequality if all lower bounds are 0 */
+   if ( SCIPisFeasZero(scip, minLb) )
+      minLb = -SCIPinfinity(scip);
+
+   /* ignore trivial inequality if all upper bounds are 0 */
+   if ( SCIPisFeasZero(scip, maxUb) )
+      maxUb = SCIPinfinity(scip);
+
+   /* create upper and lower bound inequality */
+   if ( maxUb < SCIPinfinity(scip) || minLb > -SCIPinfinity(scip) )
+   {
+      SCIP_CALL( SCIPcreateEmptyRow(scip, &row, "sosbnd", minLb, maxUb, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, row, nVars, Vars, 1.0) );
+      consdata->row = row;
+#ifdef SCIP_DEBUG
+      SCIP_CALL( SCIPprintRow(scip, row, NULL) );
+#endif
+   }
+
+   return SCIP_OKAY;
+}
+
+
+
+
+
 
 
 
@@ -531,7 +721,7 @@ SCIP_DECL_CONSFREE(consFreeSOS1)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPfreeBlockMemory(scip, &conshdlrdata);
+   SCIPfreeMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -561,7 +751,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOS1)
       SCIPdebugMessage("Initializing SOS1 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
 
       /* generate rows */
-      generateRowsSOS1(scip, consdata);
+      SCIP_CALL( generateRowsSOS1(scip, consdata) );
    }
 
    return SCIP_OKAY;
@@ -606,28 +796,32 @@ SCIP_DECL_CONSDELETE(consDeleteSOS1)
    assert( conshdlr != NULL );
    assert( cons != NULL );
    assert( consdata != NULL );
-   assert( (*consdata)->nVars > 0 );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
 
    SCIPdebugMessage("Deleting SOS1 constraint <%s>.\n", SCIPconsGetName(cons) );
 
    /* drop events on transfromed variables */
-   if ( (*consdata)->nVars > 0 && SCIPvarIsTransformed((*consdata)->Vars[0]) )
+   if ( SCIPconsIsTransformed(cons) )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
+      int j;
 
       /* get constraint handler data */
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert( conshdlrdata != NULL );
       assert( conshdlrdata->eventhdlr != NULL );
 
-      int j;
       for (j = 0; j < (*consdata)->nVars; ++j)
-	 SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->Vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*)*consdata, -1) );
+      {
+	 SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->Vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
+				     (SCIP_EVENTDATA*)*consdata, -1) );
+      }
    }
 
-
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->Vars, (*consdata)->maxVars);
+   if ( (*consdata)->weights != NULL )
+      SCIPfreeBlockMemoryArray(scip, &(*consdata)->weights, (*consdata)->maxVars);
+
    assert( (*consdata)->row == NULL );
    SCIPfreeBlockMemory(scip, consdata);
 
@@ -662,6 +856,7 @@ SCIP_DECL_CONSTRANS(consTransSOS1)
    sourcedata = SCIPconsGetData(sourcecons);
    assert( sourcedata != NULL );
    assert( sourcedata->nVars > 0 );
+   assert( sourcedata->nVars <= sourcedata->maxVars );
 
    /* create constraint data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
@@ -671,12 +866,19 @@ SCIP_DECL_CONSTRANS(consTransSOS1)
    consdata->row = NULL;
    consdata->nFixedNonzero = 0;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->Vars, consdata->nVars) );
+   /* if weights where used */
+   if ( sourcedata->weights != NULL )
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->weights, sourcedata->weights, consdata->nVars) );
+   else
+      consdata->weights = NULL;
+
    for (j = 0; j < sourcedata->nVars; ++j)
    {
       assert( sourcedata->Vars[j] != 0 );
       SCIP_CALL( SCIPgetTransformedVar(scip, sourcedata->Vars[j], &(consdata->Vars[j])) );
+
       /* if variable is fixed to be nonzero */
-      if ( SCIPisPositive(scip, SCIPvarGetLbLocal(consdata->Vars[j])) || SCIPisNegative(scip, SCIPvarGetUbLocal(consdata->Vars[j])) )
+      if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(consdata->Vars[j])) || SCIPisFeasNegative(scip, SCIPvarGetUbLocal(consdata->Vars[j])) )
 	 ++(consdata->nFixedNonzero);
    }
 
@@ -692,46 +894,21 @@ SCIP_DECL_CONSTRANS(consTransSOS1)
    /* catch bound change events on variable */
    for (j = 0; j < consdata->nVars; ++j)
    {
-      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->Vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
+      SCIP_CALL( SCIPcatchVarEvent(scip, consdata->Vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
+				   (SCIP_EVENTDATA*)consdata, NULL) );
    }
 
 #ifdef SCIP_DEBUG
    if ( consdata->nFixedNonzero > 0 )
    {
-      SCIPdebugMessage("constraint <%s> has %d variables fixed to be nonzero.\n", SCIPconsGetName(*targetcons), consdata->nFixedNonzero );
+      SCIPdebugMessage("constraint <%s> has %d variables fixed to be nonzero.\n", SCIPconsGetName(*targetcons),
+		       consdata->nFixedNonzero );
    }
 #endif
 
    return SCIP_OKAY;
 }
 
-
-
-
-/* remove lock on variable */
-static
-SCIP_RETCODE unlockVariableSOS1(SCIP* scip, SCIP_VAR* var, SCIP_CONS* cons)
-{
-   if ( SCIPisFeasZero(scip, SCIPvarGetLbGlobal(var)) )
-   {
-      /* rounding up == bad, rounding down = o.k. */
-      SCIP_CALL( SCIPunlockVarCons(scip, var, cons, FALSE, TRUE) );
-   }
-   else
-   {
-      if ( ! SCIPisPositive(scip, SCIPvarGetUbGlobal(var)) )
-      {
-	 /* rounding up == o.k., rounding down = bad */
-	 SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, FALSE) );
-      }
-      else
-      {
-	 /* any rounding == bad */
-	 SCIP_CALL( SCIPunlockVarCons(scip, var, cons, TRUE, TRUE) );
-      }
-   }
-   return SCIP_OKAY;
-}
 
 
 
@@ -778,6 +955,8 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
       cons = conss[c];
       consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
+      assert( consdata->nVars >= 0 );
+      assert( consdata->nVars <= consdata->maxVars );
       assert( ! SCIPconsIsModifiable(cons) );
 
       SCIPdebugMessage("Presolving SOS1 constraint <%s>.\n", SCIPconsGetName(cons) );
@@ -788,12 +967,14 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
       if ( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || *nfixedvars > oldnfixedvars )
       {
 	 SCIP_VAR** Vars;
+	 SCIP_Real* weights;
 	 int nFixedNonzero = 0;
 	 int lastFixedNonzero = -1;
 	 int nVars;
 	 int j = 0;
 
 	 nVars = consdata->nVars;
+	 weights = consdata->weights;
 	 Vars = consdata->Vars;
 
 	 /* check for variables fixed to 0 and bounds that fix a variable to be nonzero */
@@ -801,11 +982,11 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
 	 {
 	    SCIP_Real lb,ub;
 
-	    lb = SCIPvarGetLbGlobal(Vars[j]);
-	    ub = SCIPvarGetUbGlobal(Vars[j]);
+	    lb = SCIPvarGetLbLocal(Vars[j]);
+	    ub = SCIPvarGetUbLocal(Vars[j]);
 
 	    /* if the variable if fixed to nonzero */
-	    if ( SCIPisPositive(scip, lb) || SCIPisNegative(scip, ub) )
+	    if ( SCIPisFeasPositive(scip, lb) || SCIPisFeasNegative(scip, ub) )
 	    {
 	       ++nFixedNonzero;
 	       lastFixedNonzero = j;
@@ -815,16 +996,22 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
 	    if ( SCIPisFeasZero(scip, lb) && SCIPisFeasZero(scip, ub) )
 	    {
 	       int l;
+
 	       /* remove lock of variable */
-	       SCIP_CALL( unlockVariableSOS1(scip, Vars[j], cons) );
+	       SCIP_CALL( unlockVariableSOS1(scip, cons, Vars[j]) );
 
 	       /* drop events on variable */
-	       SCIP_CALL( SCIPdropVarEvent(scip, Vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
+	       SCIP_CALL( SCIPdropVarEvent(scip, Vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
+					   (SCIP_EVENTDATA*)consdata, -1) );
 
 	       /* delete variable - need to copy since order is important */
 	       ++removedvars;
 	       for (l = j; l < nVars-1; ++l)
+	       {
 		  Vars[l] = Vars[l+1];
+		  if ( weights != NULL )
+		     weights[l] = weights[l+1];
+	       }
 	       --nVars;
 	    }
 	    else
@@ -837,6 +1024,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
 	 {
 	    SCIPdebugMessage("Deleting constraint with < 2 variables.\n");
 	    /* delete constraint */
+	    assert( ! SCIPconsIsModifiable(cons) );
 	    SCIP_CALL( SCIPdelCons(scip, cons) );
 	    ++(*ndelconss);
 	    *result = SCIP_SUCCESS;
@@ -870,10 +1058,12 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
 	       }
 	    }
 	    /* delete original constraint */
+	    assert( ! SCIPconsIsModifiable(cons) );
 	    SCIP_CALL( SCIPdelCons(scip, cons) );
 	    ++(*ndelconss);
 	    *result = SCIP_SUCCESS;
 	 }
+	 /* note: there is no need to updata consdata->nFixedNonzero, since the constraint is deleted as soon nFixedNonzero > 0. */
       }
    }
 
@@ -911,7 +1101,7 @@ SCIP_DECL_CONSINITLP(consInitlpSOS1)
       /* put corresponding rows into LP if they are usefull */
       if ( consdata->row != NULL )
       {
-	 SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, TRUE) );
+	 SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE) );
 #ifdef SCIP_DEBUG
 	 SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL) );
 #endif
@@ -998,7 +1188,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS1)
 
       /* put corresponding row into LP if it is usefull */
       row = consdata->row;
-      if ( row != NULL && SCIPisCutEfficacious(scip, sol, row) )
+      if ( row != NULL && ! SCIProwIsInLP(row) && SCIPisCutEfficacious(scip, sol, row) )
       {
 	 SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
 #ifdef SCIP_DEBUG
@@ -1040,9 +1230,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOS1)
       assert( consdata != NULL );
       SCIPdebugMessage("Enforcing SOS1 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
 
-      SCIP_CALL( enforceSOS1(scip, conss[c], consdata->nVars, consdata->Vars, result) );
+      SCIP_CALL( enforceSOS1(scip, conss[c], consdata, result) );
 
-      if ( *result == SCIP_BRANCHED )
+      if ( *result != SCIP_FEASIBLE )
 	 return SCIP_OKAY;
    }
    SCIPdebugMessage("All SOS1 constraints are feasible.\n");
@@ -1076,9 +1266,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsSOS1)
       assert( consdata != NULL );
       SCIPdebugMessage("Enforcing SOS1 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
 
-      SCIP_CALL( enforceSOS1(scip, conss[c], consdata->nVars, consdata->Vars, result) );
+      SCIP_CALL( enforceSOS1(scip, conss[c], consdata, result) );
 
-      if ( *result == SCIP_BRANCHED )
+      if ( *result != SCIP_FEASIBLE )
 	 return SCIP_OKAY;
    }
    SCIPdebugMessage("All SOS1 constraints are feasible.\n");
@@ -1123,13 +1313,13 @@ SCIP_DECL_CONSCHECK(consCheckSOS1)
 	 /* if variable is nonzero */
 	 if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->Vars[j])) )
 	 {
+	    ++cnt;
 	    /* if more than one variable is nonzero */
-	    if ( cnt > 0 )
+	    if ( cnt > 1 )
 	    {
 	       *result = SCIP_INFEASIBLE;
 	       return SCIP_OKAY;
 	    }
-	    ++cnt;
 	 }
       }
    }
@@ -1163,6 +1353,7 @@ SCIP_DECL_CONSPROP(consPropSOS1)
    {
       SCIP_CONS* cons;
       SCIP_CONSDATA* consdata;
+      SCIP_Bool cutoff;
 
       *result = SCIP_DIDNOTFIND;
       assert( conss[c] != NULL );
@@ -1172,7 +1363,12 @@ SCIP_DECL_CONSPROP(consPropSOS1)
       SCIPdebugMessage("Propagating SOS1 constraint <%s>.\n", SCIPconsGetName(cons) );
 
       *result = SCIP_DIDNOTFIND;
-      SCIP_CALL( propSOS1(scip, cons, consdata, result, &nGen) );
+      SCIP_CALL( propSOS1(scip, cons, consdata, &cutoff, &nGen) );
+      if ( cutoff )
+      {
+	 *result = SCIP_CUTOFF;
+	 return SCIP_OKAY;
+      }
    }
    SCIPdebugMessage("Propagated %d domains.\n", nGen);
    if ( nGen > 0 )
@@ -1211,15 +1407,15 @@ SCIP_DECL_CONSRESPROP(consRespropSOS1)
    var = consdata->Vars[inferinfo];
    assert( var != infervar );
 
-   /* check if lower bound was changed */
-   if ( SCIPisLT(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE), SCIPvarGetLbAtIndex(var, bdchgidx, TRUE)) )
+   /* check if lower bound of var was the reason */
+   if ( SCIPisFeasPositive(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) )
    {
       SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
       *result = SCIP_SUCCESS;
    }
 
-   /* check if upper bound was changed */
-   if ( SCIPisLT(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE), SCIPvarGetUbAtIndex(var, bdchgidx, TRUE)) )
+   /* check if upper bound of var was the reason */
+   if ( SCIPisFeasNegative(scip, SCIPvarGetUbAtIndex(var, bdchgidx, FALSE)) )
    {
       SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
       *result = SCIP_SUCCESS;
@@ -1234,14 +1430,14 @@ SCIP_DECL_CONSRESPROP(consRespropSOS1)
 /** variable rounding lock method of constraint handler
  *
  *  Let lb and ub be the lower and upper bounds of a
- *  variable. Preprocessing makes sure that lb <= 0 <= ub.
+ *  variable. Preprocessing usually makes sure that lb <= 0 <= ub.
  *
- *  - If lb == 0 then rounding up the variable may violate the
- *    constraint, but rounding down does not (as this will yield 0).
- *  - If ub == 0 then rounding down the variable may violate the
- *    constraint, but rounding up does not (as this will yield 0).
- *  - In all other cases rounding the variable in any direction
- *    may violated the constraint.
+ *  - If lb < 0 then rounding down may violate the constraint.
+ *  - If ub > 0 then rounding up may violated the constraint.
+ *  - If lb > 0 or ub < 0 then the constraint is infeasible and we do
+ *    not have to deal with it here.
+ *  - If lb == 0 then rounding down does not violate the constraint.
+ *  - If ub == 0 then rounding up does not violate the constraint.
  */
 static
 SCIP_DECL_CONSLOCK(consLockSOS1)
@@ -1264,24 +1460,16 @@ SCIP_DECL_CONSLOCK(consLockSOS1)
 
    for (j = 0; j < consdata->nVars; ++j)
    {
-      if ( SCIPisFeasZero(scip, SCIPvarGetLbGlobal(Vars[j])) )
-      {
-	 /* rounding up == bad, rounding down = o.k. */
-	 SCIP_CALL( SCIPaddVarLocks(scip, consdata->Vars[j], nlocksneg, nlockspos) );
-      }
-      else
-      {
-	 if ( ! SCIPisPositive(scip, SCIPvarGetUbGlobal(Vars[j])) )
-	 {
-	    /* rounding up == o.k., rounding down = bad */
-	    SCIP_CALL( SCIPaddVarLocks(scip, consdata->Vars[j], nlockspos, nlocksneg) );
-	 }
-	 else
-	 {
-	    /* any rounding == bad */
-	    SCIP_CALL( SCIPaddVarLocks(scip, consdata->Vars[j], nlockspos + nlocksneg, nlockspos + nlocksneg) );
-	 }
-      }
+      SCIP_VAR* var;
+      var = consdata->Vars[j];
+
+      /* if lower bound is negative, rounding down may violate constraint */
+      if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) )
+	 SCIP_CALL( SCIPaddVarLocks(scip, var, nlockspos, nlocksneg) );
+
+      /* additionally: if upper bound is positive, rounding up may violate constraint */
+      if ( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
+	 SCIP_CALL( SCIPaddVarLocks(scip, var, nlocksneg, nlockspos) );
    }
 
    return SCIP_OKAY;
@@ -1308,7 +1496,10 @@ SCIP_DECL_CONSPRINT(consPrintSOS1)
    {
       if ( j > 0 )
 	 SCIPinfoMessage(scip, file, ", ");
-      SCIPinfoMessage(scip, file, "%s", SCIPvarGetName(consdata->Vars[j]));
+      if ( consdata->weights == NULL )
+	 SCIPinfoMessage(scip, file, "%s", SCIPvarGetName(consdata->Vars[j]));
+      else
+	 SCIPinfoMessage(scip, file, "%s (%3.2f)", SCIPvarGetName(consdata->Vars[j]), consdata->weights[j]);
    }
    SCIPinfoMessage(scip, file, "]\n");
 
@@ -1374,26 +1565,26 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
    newbound = SCIPeventGetNewbound(event);
 
    eventtype = SCIPeventGetType(event);
-   switch( eventtype )
+   switch ( eventtype )
    {
    case SCIP_EVENTTYPE_LBTIGHTENED:
       /* if variable is now fixed to be nonzero */
-      if ( ! SCIPisPositive(scip, oldbound) && SCIPisPositive(scip, newbound) )
+      if ( ! SCIPisFeasPositive(scip, oldbound) && SCIPisFeasPositive(scip, newbound) )
 	 ++(consdata->nFixedNonzero);
       break;
    case SCIP_EVENTTYPE_UBTIGHTENED:
       /* if variable is now fixed to be nonzero */
-      if ( ! SCIPisNegative(scip, oldbound) && SCIPisNegative(scip, newbound) )
+      if ( ! SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
 	 ++(consdata->nFixedNonzero);
       break;
    case SCIP_EVENTTYPE_LBRELAXED:
       /* if variable is not fixed to be nonzero anymore */
-      if ( SCIPisPositive(scip, oldbound) && ! SCIPisPositive(scip, newbound) )
+      if ( SCIPisFeasPositive(scip, oldbound) && ! SCIPisFeasPositive(scip, newbound) )
 	 --(consdata->nFixedNonzero);
       break;
    case SCIP_EVENTTYPE_UBRELAXED:
       /* if variable is not fixed to be nonzero anymore */
-      if ( SCIPisNegative(scip, oldbound) && ! SCIPisNegative(scip, newbound) )
+      if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
 	 --(consdata->nFixedNonzero);
       break;
    default:
@@ -1410,9 +1601,8 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
 
 
 
-/*
- * constraint specific interface methods
- */
+
+/* ---------------- Constraint specific interface methods ---------------- */
 
 /** creates the handler for SOS1 constraints and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrSOS1(
@@ -1426,7 +1616,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
 			 NULL, NULL, NULL, NULL, NULL, NULL, eventExecSOS1, NULL) );
 
    /* create constraint handler data */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
 
    /* get event handler for bound change events */
    conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
@@ -1455,9 +1645,12 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
 }
 
 
+
 /** creates and captures a SOS1 constraint
  *
- *  We set the constraint to not be modifable and non be sticking at a node
+ *  We set the constraint to not be modifable and not be sticking at a node.
+ *  If the weights are non NULL, the variables are ordered according to these
+ *  weights.
  */
 SCIP_RETCODE SCIPcreateConsSOS1(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1465,6 +1658,7 @@ SCIP_RETCODE SCIPcreateConsSOS1(
    const char*           name,               /**< name of constraint */
    int                   nvars,              /**< number of variables in the constraint */
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
+   SCIP_Real*            weights,            /**< weights determining the variable order, or NULL if natural order should be used */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -1485,12 +1679,7 @@ SCIP_RETCODE SCIPcreateConsSOS1(
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
-
-   if ( nvars < 2 )
-   {
-      SCIPerrorMessage("Need at least 2 variables.\n");
-      return SCIP_ERROR;
-   }
+   SCIP_Bool modifiable = FALSE;
 
    /* find the SOS1 constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -1506,11 +1695,121 @@ SCIP_RETCODE SCIPcreateConsSOS1(
    consdata->maxVars = nvars;
    consdata->row = NULL;
    consdata->nFixedNonzero = -1;
+   consdata->weights = NULL;
    SCIPduplicateBlockMemoryArray(scip, &consdata->Vars, vars, nvars);
+
+   /* check weights */
+   if ( weights != NULL )
+   {
+      /* store weights */
+      SCIPduplicateBlockMemoryArray(scip, &consdata->weights, weights, nvars);
+      /* sort variables */
+      SCIPbsortRealPtr(consdata->weights, (void**) consdata->Vars, nvars);
+   }
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-			     local, FALSE, dynamic, removable, FALSE) );
+			     local, modifiable, dynamic, removable, FALSE) );
 
    return SCIP_OKAY;
+}
+
+
+/** adds variable to SOS1 constraint, the position is determined by the given weight */
+SCIP_RETCODE SCIPaddVarSOS1(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var,                /**< variable to add to the constraint */
+   SCIP_Real             weight              /**< weight determining position of variable */
+   )
+{
+   assert( scip != NULL );
+   assert( var != NULL );
+   assert( cons != NULL );
+
+   SCIPdebugMessage("adding variable <%s> to constraint <%s>\n", SCIPvarGetName(var), SCIPconsGetName(cons));
+
+   if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not an SOS1 constraint.\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( addVarSOS1(scip, cons, var, weight) );
+
+   return SCIP_OKAY;
+}
+
+
+/** appends variable to SOS1 constraint */
+extern
+SCIP_RETCODE SCIPappendVarSOS1(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var                 /**< variable to add to the constraint */
+   )
+{
+   assert( scip != NULL );
+   assert( var != NULL );
+   assert( cons != NULL );
+
+   SCIPdebugMessage("appending variable <%s> to constraint <%s>\n", SCIPvarGetName(var), SCIPconsGetName(cons));
+
+   if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not an SOS1 constraint.\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( appendVarSOS1(scip, cons, var) );
+
+   return SCIP_OKAY;
+}
+
+
+/** gets number of variables in SOS1 constraint */
+int SCIPgetNVarsSOS1(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+
+   if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not an SOS1 constraint.\n");
+      SCIPABORT();
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   return consdata->nVars;
+}
+
+
+/** gets array of variables in SOS1 constraint */
+SCIP_VAR** SCIPgetVarsSOS1(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+
+   if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not an SOS1 constraint.\n");
+      SCIPABORT();
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   return consdata->Vars;
 }
