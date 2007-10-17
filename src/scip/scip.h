@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.307 2007/08/24 16:02:20 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.308 2007/10/17 19:57:45 bzfheinz Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3398,7 +3398,7 @@ SCIP_RETCODE SCIPwriteMIP(
    const char*           fname,              /**< file name */
    SCIP_Bool             genericnames,       /**< should generic names like x_i and row_j be used in order to avoid
                                               *   with reservated strings? */
-   SCIP_Bool             addobjoffset        /**< should the objective offset be integrated via an artificial variable? */
+   SCIP_Bool             origobj             /**< should the original objective function be used? */
    );
 
 /** gets the LP interface of SCIP;

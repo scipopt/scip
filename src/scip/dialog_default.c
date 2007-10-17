@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.71 2007/08/20 12:42:55 bzfwolte Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.72 2007/10/17 19:57:43 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -94,6 +94,44 @@ SCIP_RETCODE dialogExecMenu(
 
    return SCIP_OKAY;
 }
+
+
+/* parse the given string to detect a bool value and returns it */
+static
+SCIP_Bool parseBoolValue(
+   SCIP*                 scip,               /**< SCIP data structure */                
+   const char*           valuestr,           /**< string to parse */  
+   SCIP_Bool*            error               /**< pointer to store the error result */
+   )
+{
+   assert( scip  != NULL );
+   assert( valuestr != NULL );
+   assert( error != NULL );
+
+   *error = FALSE;
+
+   switch( valuestr[0] )
+   {
+   case 'f':
+   case 'F':
+   case '0':
+   case 'n':
+   case 'N':
+      return FALSE;
+   case 't':
+   case 'T':
+   case '1':
+   case 'y':
+   case 'Y':
+      return TRUE;
+   default:
+      SCIPdialogMessage(scip, NULL, "\ninvalid parameter value <%s>\n\n", valuestr);
+      *error = TRUE;
+      break;
+   }
+
+   return FALSE;
+}        
 
 /** standard menu dialog execution method, that displays it's help screen if the remaining command line is empty */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecMenu)
@@ -1046,11 +1084,13 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
    SCIP_PARAM* param;
    char prompt[SCIP_MAXSTRLEN];
    char* valuestr;
+   SCIP_Bool boolval;
    int intval;
    SCIP_Longint longintval;
    SCIP_Real realval;
    char charval;
    SCIP_Bool endoffile;
+   SCIP_Bool error;
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -1072,30 +1112,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
 
-      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
+      boolval = parseBoolValue(scip, valuestr, &error);
 
-      switch( valuestr[0] )
-      {
-      case 'f':
-      case 'F':
-      case '0':
-      case 'n':
-      case 'N':
-         SCIP_CALL( SCIPparamSetBool(param, scip, FALSE) );
-         SCIPdialogMessage(scip, NULL, "parameter <%s> set to FALSE\n", SCIPparamGetName(param));
-         break;
-      case 't':
-      case 'T':
-      case '1':
-      case 'y':
-      case 'Y':
-         SCIP_CALL( SCIPparamSetBool(param, scip, TRUE) );
-         SCIPdialogMessage(scip, NULL, "parameter <%s> set to TRUE\n", SCIPparamGetName(param));
-         break;
-      default:
-         SCIPdialogMessage(scip, NULL, "\ninvalid parameter value <%s>\n\n", valuestr);
-         break;
+      if( !error )
+      {      
+         SCIP_CALL( SCIPparamSetBool(param, scip, boolval) );
+         SCIPdialogMessage(scip, NULL, "parameter <%s> set to %s\n", SCIPparamGetName(param), boolval ? "TRUE" : "FALSE");
+         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, boolval ? "TRUE" : "FALSE", TRUE) );
       }
+      
       break;
 
    case SCIP_PARAMTYPE_INT:
@@ -1544,40 +1569,89 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteLp)
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
 {  /*lint --e{715}*/
-   char* filename;
+   char command[SCIP_MAXSTRLEN];
+   char filename[SCIP_MAXSTRLEN];
    SCIP_Bool endoffile;
+   char* valuestr;
+   SCIP_Bool offset;
+   SCIP_Bool generic;
+   SCIP_Bool error;
 
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   
    /* node relaxations only exist in solving & solved stage */
    if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
    {
       SCIPdialogMessage(scip, NULL, "There is no node MIP relaxation before solving starts\n");
-      *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
       return SCIP_OKAY;
    }
    if( SCIPgetStage(scip) > SCIP_STAGE_SOLVED )
    {
       SCIPdialogMessage(scip, NULL, "There is no node MIP relaxation after problem was solved\n");
-      *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
+   /* first get file name */
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &valuestr, &endoffile) );
    if( endoffile )
    {
       *nextdialog = NULL;
       return SCIP_OKAY;
    }
-   if( filename[0] != '\0' )
+   if( valuestr[0] == '\0' )
+      return SCIP_OKAY;
+   
+   strncpy(filename, valuestr, SCIP_MAXSTRLEN);
+
+   /* second ask for generic variable and row names */
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, 
+         "using generic variable and row names (TRUE/FALSE): ", 
+         &valuestr, &endoffile) );
+      
+   if( endoffile )
    {
-      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
-      SCIP_CALL( SCIPwriteMIP(scip, filename, FALSE, FALSE) );
-      SCIPdialogMessage(scip, NULL, "written node MIP relaxation to file <%s>\n", filename);
+      *nextdialog = NULL;
+      return SCIP_OKAY;
    }
+   if( valuestr[0] == '\0' )
+      return SCIP_OKAY;
 
+   generic = parseBoolValue(scip, valuestr, &error);
+   
+   if( error )
+      return SCIP_OKAY;
+
+   /* adjust command and add to the history */
+   SCIPescapeString(command, SCIP_MAXSTRLEN, filename); 
+   sprintf(command, "%s %s", command, generic ? "TRUE" : "FALSE"); 
+
+   /* third ask if for adjusting the objective offset */
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, 
+         "using original objective function (TRUE/FALSE): ", 
+         &valuestr, &endoffile) );
+   
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
+   if( valuestr[0] == '\0' )
+      return SCIP_OKAY;
+   
+   offset = parseBoolValue(scip, valuestr, &error);
+   
+   if( error )
+      return SCIP_OKAY;
+
+   sprintf(command, "%s %s", command, offset ? "TRUE" : "FALSE"); 
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, command, FALSE) );
+   
+   /* execute command */
+   SCIP_CALL( SCIPwriteMIP(scip, filename, generic, offset) );
+   SCIPdialogMessage(scip, NULL, "written node MIP relaxation to file <%s>\n", filename);
+   
    SCIPdialogMessage(scip, NULL, "\n");
-
-   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
-
+   
    return SCIP_OKAY;
 }
 

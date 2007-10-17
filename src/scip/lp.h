@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.125 2007/07/27 12:22:34 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.126 2007/10/17 19:57:44 bzfheinz Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -1142,25 +1142,19 @@ SCIP_RETCODE SCIPlpWrite(
    const char*           fname               /**< file name */
    );
 
-/** writes LP to a file */
+/** writes MIP to a file */
 extern 
-SCIP_RETCODE SCIPlpWriteMipGenericNames(
+SCIP_RETCODE SCIPlpWriteMip(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           fname,              /**< file name */
-   SCIP_Real             objoffset,           /**< objective offset, eg. caused by variable fixings in presolving */
-   SCIP_Bool             addobjoffset        /**< should the objective offset be integrated via an artificial variable? */
-   );
-
-/** writes LP to a file */
-extern 
-SCIP_RETCODE SCIPlpWriteMipOriginalNames(
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   const char*           fname,              /**< file name */
-   SCIP_Real             objoffset,           /**< objective offset, eg. caused by variable fixings in presolving */
-   SCIP_Bool             addobjoffset        /**< should the objective offset be integrated via an artificial variable? */
-   );
+   SCIP_Bool             genericnames,       /**< should generic names like x_i and row_j be used in order to avoid
+                                              *   troubles with reserved symbols? */
+   SCIP_Bool             origobj,            /**< should the original objective function be used? */
+   SCIP_OBJSENSE         objsense,           /**< objective sense */
+   SCIP_Real             objscale,           /**< objective scaling faktor */
+   SCIP_Real             objoffset           /**< objective offset, eg. caused by variable fixings in presolving */
+);
 
 #ifndef NDEBUG
 
