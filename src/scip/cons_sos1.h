@@ -14,11 +14,36 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.h,v 1.1 2007/10/12 20:47:47 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_sos1.h,v 1.2 2007/10/17 19:30:53 bzfpfets Exp $"
 
 /**@file   cons_sos1.h
  * @brief  constraint handler for SOS type 1 constraints
  * @author Marc Pfetsch
+ *
+ * A specially ordered set of type 1 (SOS1) is a set of variables such
+ * that at most one variable is nonzero. The special case of two
+ * variables arises, for instance, from equilibrium or complementary
+ * conditions like x * y = 0.
+ *
+ * This implementation of this constraint handler is based on classical ideas, see e.g.@n
+ *  "Special Facilities in General Mathematical Programming System for
+ *  Non-Convex Problems Using Ordered Sets of Variables"@n
+ *  E. Beale and J. Tomlin, Proc. 5th IFORS Conference, 447-454 (1970)
+ *
+ *
+ * The order of the variables is determined as follows:
+ *
+ * - If the constraint is created with SCIPcreateConsSOS1() and
+ *   weights are given, the weights determine the order (decreasing
+ *   weights). Additional variables can be added with SCIPaddVarSOS1(),
+ *   which adds a variable with given weight.
+ *
+ * - If an empty constraint is created and then variables are added
+ *   with SCIPaddVarSOS1(), weights are needed and stored.
+ *
+ * - All other calls ignore the weights, i.e., if an nonempty
+ *   constraint is created or variables are added with
+ *   SCIPappendVarSOS1().
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -44,6 +69,7 @@ SCIP_RETCODE SCIPcreateConsSOS1(
    const char*           name,               /**< name of constraint */
    int                   nvars,              /**< number of variables in the constraint */
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
+   SCIP_Real*            weights,            /**< weights determining the variable order, or NULL if natural order should be used */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -60,6 +86,36 @@ SCIP_RETCODE SCIPcreateConsSOS1(
                                               *   Usually set to TRUE. */
    SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   );
+
+/** adds variable to SOS1 constraint, the position is determined by the given weight */
+extern
+SCIP_RETCODE SCIPaddVarSOS1(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var,                /**< variable to add to the constraint */
+   SCIP_Real             weight              /**< weight determining position of variable */
+   );
+
+/** appends variable to SOS1 constraint */
+extern
+SCIP_RETCODE SCIPappendVarSOS1(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var                 /**< variable to add to the constraint */
+   );
+
+/** gets number of variables in SOS1 constraint */
+extern
+int SCIPgetNVarsSOS1(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** gets array of variables in SOS1 constraint */
+SCIP_VAR** SCIPgetVarsSOS1(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
    );
 
 #endif
