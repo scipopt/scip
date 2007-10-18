@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_dualfix.c,v 1.26 2007/06/06 11:25:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_dualfix.c,v 1.27 2007/10/18 16:52:32 bzfpfets Exp $"
 
 /**@file   presol_dualfix.c
  * @brief  fixing roundable variables to best bound
@@ -95,24 +95,42 @@ SCIP_DECL_PRESOLEXEC(presolExecDualfix)
 
       obj = SCIPvarGetObj(vars[v]);
 
-      /* if it is always possible to round variable in direction of objective value,
-       * fix it to its proper bound
-       */
-      if( SCIPvarMayRoundDown(vars[v]) && !SCIPisNegative(scip, obj) )
+      /* if the objective coefficient of the variable is 0 and it may be rounded both
+       * up and down, then fix it to the closest feasible value to 0 */
+      if( SCIPisZero(scip, obj) && SCIPvarMayRoundDown(vars[v]) && SCIPvarMayRoundUp(vars[v]) )
       {
          bound = SCIPvarGetLbGlobal(vars[v]);
-         SCIPdebugMessage("variable <%s> with objective %g fixed to lower bound %g\n",
-            SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), bound);
-      }
-      else if( SCIPvarMayRoundUp(vars[v]) && !SCIPisPositive(scip, obj) )
-      {
-         bound = SCIPvarGetUbGlobal(vars[v]);
-         SCIPdebugMessage("variable <%s> with objective %g fixed to upper bound %g\n",
-            SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), bound);
+	 if( SCIPisLT(scip, bound, 0.0) )
+	 {
+	    if( SCIPisLE(scip, 0.0, SCIPvarGetUbGlobal(vars[v])) )
+	       bound = 0.0;
+	    else
+	       bound = SCIPvarGetUbGlobal(vars[v]);
+	 }
+         SCIPdebugMessage("variable <%s> with objective 0 fixed to %g\n",
+            SCIPvarGetName(vars[v]), bound);
       }
       else
-         continue;
-      
+      {
+	 /* if it is always possible to round variable in direction of objective value,
+	  * fix it to its proper bound
+	  */
+	 if( SCIPvarMayRoundDown(vars[v]) && !SCIPisNegative(scip, obj) )
+	 {
+	    bound = SCIPvarGetLbGlobal(vars[v]);
+	    SCIPdebugMessage("variable <%s> with objective %g fixed to lower bound %g\n",
+			     SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), bound);
+	 }
+	 else if( SCIPvarMayRoundUp(vars[v]) && !SCIPisPositive(scip, obj) )
+	 {
+	    bound = SCIPvarGetUbGlobal(vars[v]);
+	    SCIPdebugMessage("variable <%s> with objective %g fixed to upper bound %g\n",
+			     SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), bound);
+	 }
+	 else
+	    continue;
+      }
+
       /* apply the fixing */
       if( SCIPisInfinity(scip, REALABS(bound)) && !SCIPisZero(scip, obj) )
       {
@@ -158,7 +176,7 @@ SCIP_RETCODE SCIPincludePresolDualfix(
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
-         presolFreeDualfix, presolInitDualfix, presolExitDualfix, 
+         presolFreeDualfix, presolInitDualfix, presolExitDualfix,
          presolInitpreDualfix, presolExitpreDualfix, presolExecDualfix,
          presoldata) );
 
