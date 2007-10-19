@@ -21,6 +21,7 @@ parameters:
 - new parameter "constraint/linear/varbound" to enable or disable the linear upgrading process
 
 fixed bugs:
+- added handling of the case of roundable variables with 0 objective in presol_dualfix.c
 - fixed handling of unbounded variables with 0 objective in SCIPlpGetModifiedPseudo[Proved]Objval() (lp.c)
 - fixed CTRL-C if NO_SIGACTION is set (e.g., for MinGW)
 - fixed bug that a missing CONSTRANS in constraint handler leads to NULL pointer as constraint data for the
@@ -28,6 +29,7 @@ fixed bugs:
 - fixed bug with reading empty lines in TSP example
 - fixed bug with writing the MIP relaxation to a file concerning the objective function; in case the original 
   objective function is requested, the transformed objective function gets re-transformed (scaling, offset)  
+- added checks whether a plugin (handler) has already been included to avoid later complications e.g. with parameters.
 
 SCIP version 1.00
 =================
