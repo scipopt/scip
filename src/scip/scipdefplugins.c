@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.67 2007/09/25 13:59:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.68 2007/10/19 18:21:19 bzfpfets Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -42,6 +42,8 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrLogicor(scip) );
    SCIP_CALL( SCIPincludeConshdlrOr(scip) );
    SCIP_CALL( SCIPincludeConshdlrSetppc(scip) );
+   SCIP_CALL( SCIPincludeConshdlrSOS1(scip) );
+   SCIP_CALL( SCIPincludeConshdlrSOS2(scip) );
    SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
    SCIP_CALL( SCIPincludeConshdlrXor(scip) );
 

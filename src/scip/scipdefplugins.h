@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.h,v 1.14 2007/09/25 13:59:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.h,v 1.15 2007/10/19 18:21:19 bzfpfets Exp $"
 
 /**@file   scipdefplugins.h
  * @brief  default SCIP plugins
@@ -49,6 +49,8 @@
 #include "scip/cons_logicor.h"
 #include "scip/cons_or.h"
 #include "scip/cons_setppc.h"
+#include "scip/cons_sos1.h"
+#include "scip/cons_sos2.h"
 #include "scip/cons_varbound.h"
 #include "scip/cons_xor.h"
 #include "scip/dialog_default.h"
