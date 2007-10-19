@@ -14,16 +14,17 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.h,v 1.2 2007/10/17 19:30:53 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_sos1.h,v 1.3 2007/10/19 18:23:47 bzfpfets Exp $"
 
 /**@file   cons_sos1.h
  * @brief  constraint handler for SOS type 1 constraints
  * @author Marc Pfetsch
  *
- * A specially ordered set of type 1 (SOS1) is a set of variables such
- * that at most one variable is nonzero. The special case of two
+ * A specially ordered set of type 1 (SOS1) is a sequence of variables
+ * such that at most one variable is nonzero. The special case of two
  * variables arises, for instance, from equilibrium or complementary
- * conditions like x * y = 0.
+ * conditions like x * y = 0. Note that it is in principle allowed
+ * that a variables appears twice, but it then can be fixed to 0.
  *
  * This implementation of this constraint handler is based on classical ideas, see e.g.@n
  *  "Special Facilities in General Mathematical Programming System for
@@ -84,8 +85,11 @@ SCIP_RETCODE SCIPcreateConsSOS1(
                                               *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to TRUE. */
-   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node?
+                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
 /** adds variable to SOS1 constraint, the position is determined by the given weight */
