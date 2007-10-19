@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.22 2007/09/24 13:55:54 bzfkocht Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.23 2007/10/19 18:22:14 bzfpfets Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -33,6 +33,8 @@
 
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
+#include "scip/cons_sos1.h"
+#include "scip/cons_sos2.h"
 //#include "scip/cons_polynomial.h"
 
 /* include the ZIMPL headers necessary to define the LP construction interface */
@@ -199,7 +201,7 @@ Con* xlp_addcon_term(const char* name, ConType type, const Numb* lhs, const Numb
    SCIP_Bool removable;
    Con* zplcon;
    int  i;
-   
+
    switch( type )
    {
    case CON_FREE:
@@ -256,14 +258,14 @@ Con* xlp_addcon_term(const char* name, ConType type, const Numb* lhs, const Numb
 
       assert(!numb_equal(mono_get_coeff(term_get_element(term, i)), numb_zero()));
       assert(mono_is_linear(term_get_element(term, i)));
-      
+
       scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
       scipval = numb_todbl(mono_get_coeff(term_get_element(term, i)));
 
       SCIP_CALL_ABORT( SCIPaddCoefLinear(scip_, cons, scipvar, scipval) );
    }
    SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
-   
+
    return zplcon;
 }
 
@@ -370,15 +372,45 @@ Sos* xlp_addsos(const char* name, SosType type, const Numb* priority)
    SCIP_Bool modifiable;
    SCIP_Bool dynamic;
    SCIP_Bool removable;
-   Sos* zplsos;
+   Sos* zplsos = NULL;
 
    switch( type )
    {
    case SOS_TYPE1:
+      initial = TRUE;
+      separate = TRUE;
+      enforce = TRUE;
+      check = enforce;
+      propagate = TRUE;
+      local = FALSE;
+      modifiable = FALSE;
+      dynamic = FALSE;
+      removable = dynamic;
+
+      SCIP_CALL_ABORT( SCIPcreateConsSOS1(scip_, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
+					  local, dynamic, removable, FALSE) );
+      zplsos = (Sos*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the CONS will not be
+			      destroyed by SCIPreleaseCons() */
+      SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
+      SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
       break;
    case SOS_TYPE2:
-      SCIPwarningMessage("SOS type 2 is not supported by SCIP\n");
-      readerror_ = TRUE;
+      initial = TRUE;
+      separate = TRUE;
+      enforce = TRUE;
+      check = enforce;
+      propagate = TRUE;
+      local = FALSE;
+      modifiable = FALSE;
+      dynamic = FALSE;
+      removable = dynamic;
+
+      SCIP_CALL_ABORT( SCIPcreateConsSOS2(scip_, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
+					  local, dynamic, removable, FALSE) );
+      zplsos = (Sos*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the CONS will not be
+			      destroyed by SCIPreleaseCons() */
+      SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
+      SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
       break;
    case SOS_ERR:
    default:
@@ -387,26 +419,11 @@ Sos* xlp_addsos(const char* name, SosType type, const Numb* priority)
       break;
    }
 
-   initial = TRUE;
-   separate = TRUE;
-   enforce = TRUE;
-   check = enforce;
-   propagate = TRUE;
-   local = FALSE;
-   modifiable = FALSE;
-   dynamic = FALSE;
-   removable = dynamic;
-
-   SCIP_CALL_ABORT( SCIPcreateConsSetpack(scip_, &cons, name, 0, NULL,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
-   zplsos = (Sos*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the CONS will not be
-                           destroyed by SCIPreleaseCons() */
-   SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
-   SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
-
    return zplsos;
 }
 
+/* this function should maybe get the type of the sos constraint, this
+   would simplify the code below. */
 void xlp_addtosos(Sos* sos, Var* var, const Numb* weight)
 {
    SCIP_CONS* scipcons;
@@ -415,7 +432,10 @@ void xlp_addtosos(Sos* sos, Var* var, const Numb* weight)
    scipcons = (SCIP_CONS*)sos;
    scipvar = (SCIP_VAR*)var;
 
-   SCIP_CALL_ABORT( SCIPaddCoefSetppc(scip_, scipcons, scipvar) );
+   if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(scipcons)), "SOS1") == 0 )
+      SCIP_CALL_ABORT( SCIPaddVarSOS1(scip_, scipcons, scipvar, numb_todbl(weight)) );
+   else
+      SCIP_CALL_ABORT( SCIPaddVarSOS2(scip_, scipcons, scipvar, numb_todbl(weight)) );
 }
 
 VarClass xlp_getclass(const Var* var)
@@ -697,7 +717,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
          else
             argc++;
       }
-      
+
       /* append file name as last argument */
       SCIP_CALL( SCIPduplicateBufferArray(scip, &argv[argc], filename, strlen(filename)+1) );
       argc++;
@@ -763,7 +783,7 @@ SCIP_RETCODE SCIPincludeReaderZpl(
 
    /* create zpl reader data */
    readerdata = NULL;
-   
+
    /* include zpl reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
          readerFreeZpl, readerReadZpl, readerdata) );
@@ -772,7 +792,7 @@ SCIP_RETCODE SCIPincludeReaderZpl(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/zplreader/dynamiccols", "should columns be added and removed dynamically to the LP?",
          NULL, FALSE, FALSE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, 
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/zplreader/changedir", "should the current directory be changed to that of the ZIMPL file before parsing?",
          NULL, FALSE, TRUE, NULL, NULL) );
    SCIP_CALL( SCIPaddStringParam(scip,
