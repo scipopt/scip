@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.422 2007/10/17 19:57:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.423 2007/10/19 16:07:28 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -844,7 +844,7 @@ SCIP_RETCODE SCIPaddIntParam(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddIntParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsetAddIntParam(scip->set, scip->mem->setmem, name, desc, valueptr, isadvanced, defaultvalue, minvalue, 
+   SCIP_CALL( SCIPsetAddIntParam(scip->set, scip->mem->setmem, name, desc, valueptr, isadvanced, defaultvalue, minvalue,
          maxvalue, paramchgd, paramdata) );
 
    return SCIP_OKAY;
@@ -888,7 +888,7 @@ SCIP_RETCODE SCIPaddRealParam(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddRealParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsetAddRealParam(scip->set, scip->mem->setmem, name, desc, valueptr, isadvanced, defaultvalue, minvalue, 
+   SCIP_CALL( SCIPsetAddRealParam(scip->set, scip->mem->setmem, name, desc, valueptr, isadvanced, defaultvalue, minvalue,
          maxvalue, paramchgd, paramdata) );
 
    return SCIP_OKAY;
@@ -909,7 +909,7 @@ SCIP_RETCODE SCIPaddCharParam(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddCharParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsetAddCharParam(scip->set, scip->mem->setmem, name, desc, valueptr, isadvanced, defaultvalue, 
+   SCIP_CALL( SCIPsetAddCharParam(scip->set, scip->mem->setmem, name, desc, valueptr, isadvanced, defaultvalue,
          allowedvalues, paramchgd, paramdata) );
 
    return SCIP_OKAY;
@@ -1185,6 +1185,13 @@ SCIP_RETCODE SCIPincludeReader(
 
    SCIP_CALL( checkStage(scip, "SCIPincludeReader", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
+   /* check whether reader is already present */
+   if( SCIPfindReader(scip, name) != NULL )
+   {
+      SCIPerrorMessage("reader <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
    SCIP_CALL( SCIPreaderCreate(&reader, name, desc, extension, readerfree, readerread, readerdata) );
    SCIP_CALL( SCIPsetIncludeReader(scip->set, reader) );
 
@@ -1252,6 +1259,13 @@ SCIP_RETCODE SCIPincludePricer(
    SCIP_PRICER* pricer;
 
    SCIP_CALL( checkStage(scip, "SCIPincludePricer", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether pricer is already present */
+   if( SCIPfindPricer(scip, name) != NULL )
+   {
+      SCIPerrorMessage("pricer <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
 
    SCIP_CALL( SCIPpricerCreate(&pricer, scip->set, scip->mem->setmem,
          name, desc, priority, delay,
@@ -1385,6 +1399,13 @@ SCIP_RETCODE SCIPincludeConshdlr(
 
    SCIP_CALL( checkStage(scip, "SCIPincludeConshdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
+   /* check whether constraint handler is already present */
+   if( SCIPfindConshdlr(scip, name) != NULL )
+   {
+      SCIPerrorMessage("constraint handler <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
    SCIP_CALL( SCIPconshdlrCreate(&conshdlr, scip->set, scip->mem->setmem,
          name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, eagerfreq, maxprerounds,
          delaysepa, delayprop, delaypresol, needscons,
@@ -1448,6 +1469,13 @@ SCIP_RETCODE SCIPincludeConflicthdlr(
    SCIP_CONFLICTHDLR* conflicthdlr;
 
    SCIP_CALL( checkStage(scip, "SCIPincludeConflicthdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether conflict handler is already present */
+   if( SCIPfindConflicthdlr(scip, name) != NULL )
+   {
+      SCIPerrorMessage("conflict handler <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
 
    SCIP_CALL( SCIPconflicthdlrCreate(&conflicthdlr, scip->set, scip->mem->setmem, name, desc, priority,
          conflictfree, conflictinit, conflictexit, conflictinitsol, conflictexitsol, conflictexec,
@@ -1527,6 +1555,13 @@ SCIP_RETCODE SCIPincludePresol(
 
    SCIP_CALL( checkStage(scip, "SCIPincludePresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
+   /* check whether presolver is already present */
+   if( SCIPfindPresol(scip, name) != NULL )
+   {
+      SCIPerrorMessage("presolver <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
    SCIP_CALL( SCIPpresolCreate(&presol, scip->set, scip->mem->setmem, name, desc, priority, maxrounds, delay,
          presolfree, presolinit, presolexit, presolinitpre, presolexitpre, presolexec, presoldata) );
    SCIP_CALL( SCIPsetIncludePresol(scip->set, presol) );
@@ -1602,6 +1637,13 @@ SCIP_RETCODE SCIPincludeRelax(
    SCIP_RELAX* relax;
 
    SCIP_CALL( checkStage(scip, "SCIPincludeRelax", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether relaxator is already present */
+   if( SCIPfindRelax(scip, name) != NULL )
+   {
+      SCIPerrorMessage("relaxator <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
 
    SCIP_CALL( SCIPrelaxCreate(&relax, scip->set, scip->mem->setmem,
          name, desc, priority, freq,
@@ -1684,6 +1726,13 @@ SCIP_RETCODE SCIPincludeSepa(
 
    SCIP_CALL( checkStage(scip, "SCIPincludeSepa", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
+   /* check whether separator is already present */
+   if( SCIPfindSepa(scip, name) != NULL )
+   {
+      SCIPerrorMessage("separator <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
    SCIP_CALL( SCIPsepaCreate(&sepa, scip->set, scip->mem->setmem,
          name, desc, priority, freq, maxbounddist, delay,
          sepafree, sepainit, sepaexit, sepainitsol, sepaexitsol, sepaexeclp, sepaexecsol, sepadata) );
@@ -1762,6 +1811,13 @@ SCIP_RETCODE SCIPincludeProp(
    SCIP_PROP* prop;
 
    SCIP_CALL( checkStage(scip, "SCIPincludeProp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether propagator is already present */
+   if( SCIPfindProp(scip, name) != NULL )
+   {
+      SCIPerrorMessage("propagator <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
 
    SCIP_CALL( SCIPpropCreate(&prop, scip->set, scip->mem->setmem,
          name, desc, priority, freq, delay,
@@ -1844,6 +1900,13 @@ SCIP_RETCODE SCIPincludeHeur(
 
    SCIP_CALL( checkStage(scip, "SCIPincludeHeur", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
+   /* check whether heuristic is already present */
+   if( SCIPfindHeur(scip, name) != NULL )
+   {
+      SCIPerrorMessage("heuristic <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
    SCIP_CALL( SCIPheurCreate(&heur, scip->set, scip->mem->setmem,
          name, desc, dispchar, priority, freq, freqofs, maxdepth, timingmask,
          heurfree, heurinit, heurexit, heurinitsol, heurexitsol, heurexec, heurdata) );
@@ -1920,6 +1983,13 @@ SCIP_RETCODE SCIPincludeEventhdlr(
 
    SCIP_CALL( checkStage(scip, "SCIPincludeEventhdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
+   /* check whether event handler is already present */
+   if( SCIPfindEventhdlr(scip, name) != NULL )
+   {
+      SCIPerrorMessage("event handler <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
    SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, name, desc,
          eventfree, eventinit, eventexit, eventinitsol, eventexitsol, eventdelete, eventexec,
          eventhdlrdata) );
@@ -1981,6 +2051,13 @@ SCIP_RETCODE SCIPincludeNodesel(
    SCIP_NODESEL* nodesel;
 
    SCIP_CALL( checkStage(scip, "SCIPincludeNodesel", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether node selector is already present */
+   if( SCIPfindNodesel(scip, name) != NULL )
+   {
+      SCIPerrorMessage("node selector <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
 
    SCIP_CALL( SCIPnodeselCreate(&nodesel, scip->set, scip->mem->setmem, name, desc, stdpriority, memsavepriority,
          nodeselfree, nodeselinit, nodeselexit, nodeselinitsol, nodeselexitsol,
@@ -2084,6 +2161,13 @@ SCIP_RETCODE SCIPincludeBranchrule(
    SCIP_BRANCHRULE* branchrule;
 
    SCIP_CALL( checkStage(scip, "SCIPincludeBranchrule", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether branching rule is already present */
+   if( SCIPfindBranchrule(scip, name) != NULL )
+   {
+      SCIPerrorMessage("branching rule <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
 
    SCIP_CALL( SCIPbranchruleCreate(&branchrule, scip->mem->setmem, scip->set, name, desc, priority, maxdepth,
          maxbounddist, branchfree, branchinit, branchexit, branchinitsol, branchexitsol,
@@ -2193,6 +2277,13 @@ SCIP_RETCODE SCIPincludeDisp(
    SCIP_DISP* disp;
 
    SCIP_CALL( checkStage(scip, "SCIPincludeDisp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* check whether display column is already present */
+   if( SCIPfindDisp(scip, name) != NULL )
+   {
+      SCIPerrorMessage("display column <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
 
    SCIP_CALL( SCIPdispCreate(&disp, scip->set, scip->mem->setmem,
          name, desc, header, dispstatus, dispfree, dispinit, dispexit, dispinitsol, dispexitsol, dispoutput, dispdata,
@@ -2347,7 +2438,7 @@ SCIP_RETCODE SCIPaddDialogInputLine(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPaddDialogInputLine", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-   
+
    SCIP_CALL( SCIPdialoghdlrAddInputLine(scip->dialoghdlr, inputline) );
 
    return SCIP_OKAY;
@@ -2360,7 +2451,7 @@ SCIP_RETCODE SCIPaddDialogHistoryLine(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPaddDialogHistoryLine", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-   
+
    SCIP_CALL( SCIPdialoghdlrAddHistory(scip->dialoghdlr, NULL, inputline, FALSE) );
 
    return SCIP_OKAY;
@@ -4181,7 +4272,7 @@ SCIP_RETCODE presolveRound(
       if( onlydelayed && !SCIPconshdlrWasPresolvingDelayed(scip->set->conshdlrs[i]) )
          continue;
 
-      SCIPdebugMessage("executing presolve method of constraint handler <%s>\n", 
+      SCIPdebugMessage("executing presolve method of constraint handler <%s>\n",
          SCIPconshdlrGetName(scip->set->conshdlrs[i]));
       SCIP_CALL( SCIPconshdlrPresolve(scip->set->conshdlrs[i], scip->mem->solvemem, scip->set, scip->stat,
             onlydelayed, scip->stat->npresolrounds,
@@ -5334,7 +5425,7 @@ SCIP_RETCODE SCIPgetBinvarRepresentative(
 }
 
 
-/** returns the reduced costs of the variable in the current node's LP relaxation, 
+/** returns the reduced costs of the variable in the current node's LP relaxation,
  *  if the variable is not in the current LP, SCIP_INVALID will be returned,
  *  the current node has to have an LP
  */
@@ -9243,10 +9334,10 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Bool             fixintegralrhs,     /**< should complementation tried to be adjusted such that rhs gets fractional? */
-   int*                  boundsfortrans,     /**< bounds that should be used for transformed variables: vlb_idx/vub_idx,  
+   int*                  boundsfortrans,     /**< bounds that should be used for transformed variables: vlb_idx/vub_idx,
                                               *   -1 for global lb/ub, -2 for local lb/ub, or -3 for using closest bound;
                                               *   NULL for using closest bound for all variables */
-   SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bounds that should be used for transformed variables; 
+   SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bounds that should be used for transformed variables;
                                               *   NULL for using closest bound for all variables */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
@@ -9264,7 +9355,7 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_CALL( checkStage(scip, "SCIPcalcMIR", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPlpCalcMIR(scip->lp, scip->set, scip->stat, scip->transprob,
-         boundswitch, usevbds, allowlocal, fixintegralrhs, boundsfortrans, boundtypesfortrans, maxweightrange, 
+         boundswitch, usevbds, allowlocal, fixintegralrhs, boundsfortrans, boundtypesfortrans, maxweightrange,
          minfrac, maxfrac, weights, scale, mksetcoefs, mircoef, mirrhs, cutactivity, success, cutislocal) );
 
    return SCIP_OKAY;
@@ -9300,7 +9391,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
 
 /** reads a given solution file, problem has to be transformed in advance */
 SCIP_RETCODE SCIPreadSol(
-   SCIP*                 scip,              /**< SCIP data structure */   
+   SCIP*                 scip,              /**< SCIP data structure */
    const char*           fname              /**< name of the input file */
    )
 {
@@ -9323,7 +9414,7 @@ SCIP_RETCODE SCIPreadSol(
       SCIPerrorMessage("cannot open file <%s> for reading\n", fname);
       perror(fname);
       return SCIP_NOFILE;
-   }   
+   }
 
    /* create primal solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
@@ -9354,7 +9445,7 @@ SCIP_RETCODE SCIPreadSol(
          continue;
 
       /* parse the line */
-      nread = sscanf(buffer, "%s %s %s\n", varname, valuestring, objstring); 
+      nread = sscanf(buffer, "%s %s %s\n", varname, valuestring, objstring);
        if( nread < 2 )
       {
          SCIPwarningMessage("invalid input line %d in solution file <%s>: <%s>\n", lineno, fname, buffer);
@@ -9405,7 +9496,7 @@ SCIP_RETCODE SCIPreadSol(
    {
       /* add and free the solution */
       SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, &stored) );
-      
+
       /* display result */
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal solution from solution file <%s> was %s\n",
          fname, stored ? "accepted" : "rejected - solution is infeasible or objective too poor");
@@ -9444,9 +9535,9 @@ SCIP_RETCODE SCIPwriteMIP(
 {
    SCIP_CALL( checkStage(scip, "SCIPwriteMIP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPlpWriteMip(scip->lp, scip->set, fname, genericnames, 
+   SCIP_CALL( SCIPlpWriteMip(scip->lp, scip->set, fname, genericnames,
          origobj, scip->origprob->objsense, scip->transprob->objscale, scip->transprob->objoffset) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -11085,7 +11176,7 @@ SCIP_Real SCIPcalcNodeselPriority(
    return SCIPtreeCalcNodeselPriority(scip->tree, scip->set, scip->stat, var, targetvalue);
 }
 
-/** calculates an estimate for the objective of the best feasible solution contained in the subtree after applying the given 
+/** calculates an estimate for the objective of the best feasible solution contained in the subtree after applying the given
  *  branching; this estimate can be given to the SCIPcreateChild() call
  */
 SCIP_Real SCIPcalcChildEstimate(
