@@ -7,9 +7,11 @@ interface:
 features:
 - added SOS2 example
 - extended TSP example
+- the ZIMPL reader now understands SOS type 1 and 2 constraints
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos.{c,h})
+- added first version of SOS type 2 constraint handler (cons_sos.{c,h})
 
 parameters:
 - new parameter "constraint/linear/binpack" to enable or disable the linear upgrading process
